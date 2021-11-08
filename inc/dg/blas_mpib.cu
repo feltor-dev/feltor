@@ -144,7 +144,7 @@ int main( int argc, char* argv[])
     for( int i=0; i<multi; i++)
         dg::blas2::symv( 1., dg::asDenseMatrix(matrix_ptrs), coeffs, 0.,  x);
     t.toc();
-    if(rank==0)std::cout<<"Dense Matrix Symv (Mc = x)       "<<t.diff()/multi<<"s\t"<<32*gbytes*multi/t.diff()<<"GB/s\n";
+    if(rank==0)std::cout<<"Dense Matrix Symv (Mc = x)       "<<t.diff()/multi<<"s\t"<<(coeffs.size()+2)*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////
     if(rank==0)std::cout<<"\nLocal communication\n";
     Matrix M;

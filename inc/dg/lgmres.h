@@ -133,50 +133,13 @@ class LGMRES
      * multiplied to achieve the desired precision
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
-     * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
+     * @tparam Preconditioner A type for which the blas2::gemv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
      * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
     unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
   private:
-    // this summation is numerically preferable over axpby's
-    // does not influence performance because it is only called on every restart
-    void summation( std::vector<value_type>& alpha, const std::vector<const ContainerType*>& v, value_type beta, ContainerType& result, unsigned size)
-    {
-        dg::blas1::scal( result, beta);
-        //// This takes almost 100 iterations more in tests !!!
-        //for( unsigned i=0; i<size; i++)
-        //    dg::blas1::axpby( alpha[i], *v[i], 1., result);
-        unsigned i=0;
-        if( size >= 8)
-            for( i=0; i<size/8; i++)
-                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
-                        alpha[i*8+0], *v[i*8+0],
-                        alpha[i*8+1], *v[i*8+1],
-                        alpha[i*8+2], *v[i*8+2],
-                        alpha[i*8+3], *v[i*8+3],
-                        alpha[i*8+4], *v[i*8+4],
-                        alpha[i*8+5], *v[i*8+5],
-                        alpha[i*8+6], *v[i*8+6],
-                        alpha[i*8+7], *v[i*8+7]);
-        unsigned l=0;
-        if( size%8 >= 4)
-            for( l=0; l<(size%8)/4; l++)
-                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
-                        alpha[i*8+l*4+0], *v[i*8+l*4+0],
-                        alpha[i*8+l*4+1], *v[i*8+l*4+1],
-                        alpha[i*8+l*4+2], *v[i*8+l*4+2],
-                        alpha[i*8+l*4+3], *v[i*8+l*4+3]);
-        unsigned k=0;
-        if( (size%8)%4 >= 2)
-            for( k=0; k<((size%8)%4)/2; k++)
-                dg::blas1::evaluate( result, dg::plus_equals(), dg::PairSum(),
-                        alpha[i*8+l*4+k*2+0], *v[i*8+l*4+k*2+0],
-                        alpha[i*8+l*4+k*2+1], *v[i*8+l*4+k*2+1]);
-        if( ((size%8)%4)%2 == 1)
-            dg::blas1::axpby( alpha[i*8+l*4+k*2], *v[i*8+l*4+k*2], 1., result);
-    }
     template <class Preconditioner, class ContainerType0>
     void Update(Preconditioner& P, ContainerType &dx, ContainerType0 &x,
             unsigned dimension, const std::vector<std::vector<value_type>> &H,
@@ -212,10 +175,9 @@ void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
 	}
 
     // Finally update the approximation. V_m*s
-    //summation( s, W, 0., dx, dimension+1);
-    dg::blas2::symv( 1., dg::asDenseMatrix( W, dimension+1), std::vector<value_type>( s.begin(), s.begin()+dimension+1), 0., dx);
+    dg::blas2::gemv( dg::asDenseMatrix( W, dimension+1), std::vector<value_type>( s.begin(), s.begin()+dimension+1), dx);
     // right preconditioner
-    dg::blas2::symv( P, dx, m_tmp);
+    dg::blas2::gemv( P, dx, m_tmp);
     dg::blas1::axpby(1.,m_tmp,1.,x);
 }
 
@@ -241,7 +203,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
     value_type rho = 1.;
     do
 	{
-        dg::blas2::symv(A,x,m_residual);
+        dg::blas2::gemv(A,x,m_residual);
         dg::blas1::axpby(1.,b,-1.,m_residual);
         rho = sqrt(dg::blas2::dot(S,m_residual));
         counter ++;
@@ -260,8 +222,8 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
             unsigned outer_w_count = std::min(restartCycle,m_outer_k);
             if(iteration < m_krylovDimension-outer_w_count){
                 m_W[iteration] = &m_V[iteration];
-                dg::blas2::symv(P,*m_W[iteration],m_tmp);
-                dg::blas2::symv(A,m_tmp,m_V[iteration+1]);
+                dg::blas2::gemv(P,*m_W[iteration],m_tmp);
+                dg::blas2::gemv(A,m_tmp,m_V[iteration+1]);
                 counter++;
             } else if( iteration < m_krylovDimension){ // size of W
                 // MW: one could get this matrix-vector multiplication from VHy_s
@@ -359,8 +321,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
                 for( unsigned k=0; k<m_krylovDimension; k++)
                     coeffs[i] = DG_FMA( m_HH[i][k],m_s[k], coeffs[i]);
             }
-            //summation( coeffs, m_Vptr, 0., m_outer_Az[0], m_krylovDimension+1);
-            dg::blas2::symv( 1., dg::asDenseMatrix( m_Vptr), coeffs, 0., m_outer_Az[0]);
+            dg::blas2::gemv( dg::asDenseMatrix( m_Vptr), coeffs, m_outer_Az[0]);
         }
 
         restartCycle ++;

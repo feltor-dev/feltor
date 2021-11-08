@@ -133,15 +133,15 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
 
         tu = DG_FMA( dt,m_rk.c(i),t0); //l=0
         dg::blas1::copy( u0, delta);
-        dg::blas2::symv( dt, dg::asDenseMatrix( m_k_ptrs, i), coeffs, 1.,
+        dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs, i), coeffs, 1.,
             delta);
 
         f( tu, delta, m_k[i]);
     }
     //Now add everything up to get solution and error estimate
     dg::blas1::copy( u0, u1);
-    dg::blas2::symv( dt, dg::asDenseMatrix(m_k_ptrs), m_rkb, 1., u1);
-    dg::blas2::symv( dt, dg::asDenseMatrix(m_k_ptrs), m_rkd, 0., delta);
+    dg::blas2::gemv( dt, dg::asDenseMatrix(m_k_ptrs), m_rkb, 1., u1);
+    dg::blas2::gemv( dt, dg::asDenseMatrix(m_k_ptrs), m_rkd, 0., delta);
     //make sure (t1,u1) is the last call to f
     m_t1 = t1 = t0 + dt;
     if(!m_rk.isFsal() )
@@ -324,8 +324,8 @@ struct ARKStep
         m_rkd.resize( m_k_ptrs.size());
         for( unsigned i=0; i<m_rkI.num_stages(); i++)
         {
-            m_k_ptrs[2*i] = m_rkE[i];
-            m_k_ptrs[2*i+1] = m_rkI[i];
+            m_k_ptrs[2*i] = &m_kE[i];
+            m_k_ptrs[2*i+1] = &m_kI[i];
             m_rkb[2*i] = m_rkE.b(i);
             m_rkb[2*i+1] = m_rkI.b(i);
             m_rkd[2*i] = m_rkE.d(i);
@@ -359,7 +359,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
         }
         tu = DG_FMA( m_rkI.c(i),dt, t0);
         dg::blas1::copy( u0, m_rhs);
-        dg::blas2::symv( dt, dg::asDenseMatrix( m_k_ptrs, i), coeffs, 1., m_rhs);
+        dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs, 2*i), coeffs, 1., m_rhs);
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(i,i), im, tu, delta, m_rhs);
         ex(tu, delta, m_kE[i]);
@@ -369,8 +369,8 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     //Now compute result and error estimate
 
     dg::blas1::copy( u0, u1);
-    dg::blas2::symv( dt, dg::asDenseMatrix( m_k_ptrs), m_rkb, 1., u1);
-    dg::blas2::symv( dt, dg::asDenseMatrix( m_k_ptrs), m_rkd, 0., delta);
+    dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs), m_rkb, 1., u1);
+    dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs), m_rkd, 0., delta);
     //make sure (t1,u1) is the last call to ex
     ex(t1,u1,m_kE[0]);
 }
@@ -737,7 +737,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
         std::vector<value_type> coeffs( i);
         for( unsigned l=0; l<i; l++)
             coeffs[l] = m_rkI.a(i,l);
-        dg::blas2::symv( dt, dg::asDenseMatrix(m_kIptr,i), coeffs, 1., m_rhs);
+        dg::blas2::gemv( dt, dg::asDenseMatrix(m_kIptr,i), coeffs, 1., m_rhs);
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
         rhs(tu, delta, m_kI[i]);
@@ -745,8 +745,8 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     t1 = t0 + dt;
     //Now compute result and error estimate
     dg::blas1::copy( u0, u1);
-    dg::blas2::symv( dt, dg::asDenseMatrix( m_kIptr), m_rkIb, 1., u1);
-    dg::blas2::symv( dt, dg::asDenseMatrix( m_kIptr), m_rkId, 0., delta);
+    dg::blas2::gemv( dt, dg::asDenseMatrix( m_kIptr), m_rkIb, 1., u1);
+    dg::blas2::gemv( dt, dg::asDenseMatrix( m_kIptr), m_rkId, 0., delta);
 }
 ///@endcond
 /**

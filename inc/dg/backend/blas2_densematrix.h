@@ -208,7 +208,7 @@ inline void doSymv(
               Vector2& y,
               DenseMatrixTag)
 {
-    doSymv( 1., std::forward<Matrix>(m), x, 0., y, SparseBlockMatrixTag());
+    doSymv( 1., std::forward<Matrix>(m), x, 0., y, DenseMatrixTag());
 }
 
 } //namespace detail

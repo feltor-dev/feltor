@@ -136,9 +136,10 @@ int main()
     std::vector<value_type> coeffs( 10, 0.5);
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas2::symv( 1., dg::asDenseMatrix(matrix_ptrs), coeffs, 0.,  x);
+        dg::blas2::gemv( 1., dg::asDenseMatrix(matrix_ptrs), coeffs, 0.,  x);
     t.toc();
-    std::cout<<"Dense Matrix Symv (Mc = x)       "<<t.diff()/multi<<"s\t"<<32*gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"Dense Matrix Symv (Mc = x)       "<<t.diff()/multi
+             <<"s\t"<<(coeffs.size()+2)*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////
     std::cout<<"\nLocal communication\n";
     Matrix M;
