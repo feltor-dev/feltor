@@ -65,7 +65,7 @@ int main()
     std::array<std::vector<dg::DVec>,1> recursive{ arrdvec1};
     dg::blas2::symv( arrdvec1[0], recursive, recursive);
     std::cout << "symv deep Recursion               "<<( recursive[0][0][0] == 52*52) << std::endl;
-    dg::blas2::symv( 0.5, dg::asDenseMatrix(dg::asPointers(arrdvec1)),
+    dg::blas2::symv( 0.5, dg::asDenseMatrix<dg::DVec>({&arrdvec1[0], &arrdvec1[1], &arrdvec1[2]}),
             std::array<double,3>({0.1, 10, 1000}), 0.001, dvec1);
     std::cout << "symv as DenseMatrix               "<<( dvec1[0] == 66462.974) << std::endl;
 
