@@ -36,6 +36,7 @@
  *     @}
  *     @defgroup typedefs Useful Typedefs
  *     @defgroup sparsematrix Sparse matrix formats
+ *     @defgroup densematrix Dense matrix formats
  *     @defgroup view Vector view
  *     @defgroup mpi_structures MPI backend
  *

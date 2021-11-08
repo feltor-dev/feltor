@@ -13,12 +13,14 @@
 namespace dg{
 
 /**
-* @brief Helper class mainly for the assembly of Matrices
+* @brief A square nxn matrix
 *
-* @ingroup lowlevel
-* In principle it's an enhanced quadratic dynamic matrix
-* for which arithmetic operators are overloaded
-* but it's not meant for performance critical code.
+* @ingroup densematrix
+* In principle an enhanced square dynamic matrix
+* for which arithmetic operators are overloaded.
+* It is not meant for performance critical code but very convenient
+* for example for the assembly of matrices.
+* @sa \c dg::inverse and \c dg::transpose
 * @tparam T value type
 */
 template< class T>
@@ -360,19 +362,16 @@ class Operator
 
 namespace create
 {
-///@cond
-namespace detail
-{
-
 /*! @brief LU Decomposition with partial pivoting
  *
  * @tparam T value type
  * @throw std::runtime_error if the matrix is singular
- * @note computes with extended accuracy using exblas which makes it quite robust
+ * @note uses extended accuracy of \c dg::exblas which makes it quite robust
  * against almost singular matrices
+ * @ingroup densematrix
  */
 template< class T>
-T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
+T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
 {
     //from numerical recipes
     T pivot, determinant=(T)1;
@@ -433,50 +432,46 @@ T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
  * @brief Solve the linear system with the LU decomposition
  *
  * @tparam T value type
- * @param lr result of lr_pivot
+ * @param lu result of \c dg::create::lu_pivot
  * @param p pivot vector
- * @param b right hand side
+ * @param b right hand side (contains solution on output)
+ * @ingroup densematrix
  */
 template<class T>
-void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::vector<T>& b)
+void lu_solve( const dg::Operator<T>& lu, const std::vector<unsigned>& p, std::vector<T>& b)
 {
-    assert(p.size() == lr.size() && p.size() == b.size());
+    assert(p.size() == lu.size() && p.size() == b.size());
     const size_t n = p.size();
     // Vorwärtseinsetzen
     for( size_t i = 0; i<n; i++)
     {
         //mache Zeilentausch
         std::swap( b[ p[i] ], b[i]);
-        thrust::host_vector<T> lri(i), bi(i);
+        thrust::host_vector<T> lui(i), bi(i);
         for( size_t j = 0; j < i; j++)
-            lri[j] = lr(i,j), bi[j] = b[j];
-        b[i] -= dg::blas1::dot( lri, bi);
+            lui[j] = lu(i,j), bi[j] = b[j];
+        b[i] -= dg::blas1::dot( lui, bi);
     }
     // Rückwärtseinsetzen
     for( int i = n-1; i>=0; i--)
     {
-        thrust::host_vector<T> lri(n-(i+1)), bi(n-(i+1));
+        thrust::host_vector<T> lui(n-(i+1)), bi(n-(i+1));
         for( size_t j = i+1; j < n; j++)
-            lri[j-(i+1)] = lr(i,j), bi[j-(i+1)] = b[j];
-        b[i] -= dg::blas1::dot( lri, bi);
-        b[i] /= lr(i,i);
+            lui[j-(i+1)] = lu(i,j), bi[j-(i+1)] = b[j];
+        b[i] -= dg::blas1::dot( lui, bi);
+        b[i] /= lu(i,i);
     }
 }
 
-}//namespace detail
-///@endcond
-
-
-
-///@addtogroup lowlevel
-///@{
 //
 /**
  * @brief Compute the inverse of a square matrix
  *
+ * using lu decomposition in combination with our accurate scalar products
  * @tparam T value type
  * @param in input matrix
  *
+ * @ingroup densematrix
  * @return the inverse of in if it exists
  * @throw std::runtime_error if in is singular
  */
@@ -486,20 +481,23 @@ dg::Operator<T> inverse( const dg::Operator<T>& in)
     dg::Operator<T> out(in);
     const unsigned n = in.size();
     std::vector<unsigned> pivot( n);
-    dg::Operator<T> lr(in);
-    T determinant = detail::lr_pivot( lr, pivot);
+    dg::Operator<T> lu(in);
+    T determinant = lu_pivot( lu, pivot);
     if( fabs(determinant ) < 1e-14)
         throw std::runtime_error( "Determinant zero!");
     for( unsigned i=0; i<n; i++)
     {
         std::vector<T> unit(n, 0);
         unit[i] = 1;
-        detail::lr_solve( lr, pivot, unit);
+        lu_solve( lu, pivot, unit);
         for( unsigned j=0; j<n; j++)
             out(j,i) = unit[j];
     }
     return out;
 }
+
+///@addtogroup lowlevel
+///@{
 
 /**
  * @brief Create the unit matrix
