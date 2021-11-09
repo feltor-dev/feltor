@@ -6,7 +6,7 @@ namespace dg{
 namespace blas2{
 namespace detail{
 
-// symv will call this function first
+// s.a. the detail::gemm algorithm in runge_kutta.h
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
@@ -31,7 +31,6 @@ inline void doSymv(
     if( size_x != m.num_cols()) {
         throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
     }
-    dg::blas1::scal( y, beta);
     // naive summation
     //for( unsigned i=0; i<size; i++)
     //    dg::blas1::axpby( alpha[i], *m.get()[i], 1., y);
@@ -40,7 +39,7 @@ inline void doSymv(
     unsigned i=0;
     if( size >= 8)
         for( i=0; i<size/8; i++)
-            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha,1.), dg::PairSum(),
+            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha, i == 0 ? beta : 1.), dg::PairSum(),
                     x[i*8+0], *m.get()[i*8+0],
                     x[i*8+1], *m.get()[i*8+1],
                     x[i*8+2], *m.get()[i*8+2],
@@ -52,7 +51,7 @@ inline void doSymv(
     unsigned l=0;
     if( size%8 >= 4)
         for( l=0; l<(size%8)/4; l++)
-            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha,1.), dg::PairSum(),
+            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha,size < 8 ? beta : 1.), dg::PairSum(),
                     x[i*8+l*4+0], *m.get()[i*8+l*4+0],
                     x[i*8+l*4+1], *m.get()[i*8+l*4+1],
                     x[i*8+l*4+2], *m.get()[i*8+l*4+2],
@@ -60,11 +59,11 @@ inline void doSymv(
     unsigned k=0;
     if( (size%8)%4 >= 2)
         for( k=0; k<((size%8)%4)/2; k++)
-            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha,1.), dg::PairSum(),
+            dg::blas1::evaluate( y, dg::Axpby<value_type>(alpha, size < 4 ? beta : 1.), dg::PairSum(),
                     x[i*8+l*4+k*2+0], *m.get()[i*8+l*4+k*2+0],
                     x[i*8+l*4+k*2+1], *m.get()[i*8+l*4+k*2+1]);
     if( ((size%8)%4)%2 == 1)
-        dg::blas1::axpby( alpha*x[i*8+l*4+k*2], *m.get()[i*8+l*4+k*2], 1., y);
+        dg::blas1::axpby( alpha*x[i*8+l*4+k*2], *m.get()[i*8+l*4+k*2], size < 2 ? beta: 1., y);
 }
 
 template< class Matrix, class Vector1, class Vector2>

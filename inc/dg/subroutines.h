@@ -149,15 +149,15 @@ DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
 ///@addtogroup variadic_subroutines
 ///@{
 
-///@brief \f$ y = \sum_i a_i x_i,\quad \tilde y = \sum_i \tilde a_i x_i \f$
+///@brief \f$ y = \sum_i a_i x_i + b y,\quad \tilde y = \sum_i \tilde a_i x_i + \tilde b y \f$
 struct EmbeddedPairSum
 {
     ///@brief \f[ \sum_i \alpha_i x_i \f]
     template< class T1, class ...Ts>
-DG_DEVICE void operator()( T1& y, T1& yt, T1 a, T1 at, T1 x, Ts... rest) const
+DG_DEVICE void operator()( T1& y, T1& yt, T1 b, T1 bt, Ts... rest) const
     {
-        y = a*x;
-        yt = at*x;
+        y = b*y;
+        yt = bt*yt;
         sum( y, yt, rest...);
     }
     private:

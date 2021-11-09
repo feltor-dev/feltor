@@ -14,6 +14,56 @@
  */
 
 namespace dg{
+///@cond
+namespace detail{
+// this is a dense matrix-matrix multiplication
+// a generalization of the corresponding blas2::gemv DenseMatrix algorithm
+template<class ContainerType>
+void gemm(
+        const std::array<double,2>& alpha,
+        const DenseMatrix<ContainerType>& m,
+        const std::array<const std::vector<double>*,2> x,
+        const std::array<double,2>& beta,
+        std::array<ContainerType*,2>&& y)
+{
+    const unsigned size = m.num_cols();
+    unsigned i=0;
+    if( size >= 8)
+        for( i=0; i<size/8; i++)
+            dg::blas1::subroutine( dg::EmbeddedPairSum(),
+                    *y[0], *y[1], i==0 ? beta[0] : 1., i==0 ? beta[1] : 1.,
+                    alpha[0]*(*x[0])[i*8+0], alpha[1]*(*x[1])[i*8+0], *m.get()[i*8+0],
+                    alpha[0]*(*x[0])[i*8+1], alpha[1]*(*x[1])[i*8+1], *m.get()[i*8+1],
+                    alpha[0]*(*x[0])[i*8+2], alpha[1]*(*x[1])[i*8+2], *m.get()[i*8+2],
+                    alpha[0]*(*x[0])[i*8+3], alpha[1]*(*x[1])[i*8+3], *m.get()[i*8+3],
+                    alpha[0]*(*x[0])[i*8+4], alpha[1]*(*x[1])[i*8+4], *m.get()[i*8+4],
+                    alpha[0]*(*x[0])[i*8+5], alpha[1]*(*x[1])[i*8+5], *m.get()[i*8+5],
+                    alpha[0]*(*x[0])[i*8+6], alpha[1]*(*x[1])[i*8+6], *m.get()[i*8+6],
+                    alpha[0]*(*x[0])[i*8+7], alpha[1]*(*x[1])[i*8+7], *m.get()[i*8+7]);
+    unsigned l=0;
+    if( size%8 >= 4)
+        for( l=0; l<(size%8)/4; l++)
+            dg::blas1::subroutine( dg::EmbeddedPairSum(),
+                    *y[0], *y[1], size < 8 ?  beta[0]  : 1., size < 8 ? beta[1] : 1.,
+                    alpha[0]*(*x[0])[i*8+l*4+0], alpha[1]*(*x[1])[i*8+l*4+0], *m.get()[i*8+l*4+0],
+                    alpha[0]*(*x[0])[i*8+l*4+1], alpha[1]*(*x[1])[i*8+l*4+1], *m.get()[i*8+l*4+1],
+                    alpha[0]*(*x[0])[i*8+l*4+2], alpha[1]*(*x[1])[i*8+l*4+2], *m.get()[i*8+l*4+2],
+                    alpha[0]*(*x[0])[i*8+l*4+3], alpha[1]*(*x[1])[i*8+l*4+3], *m.get()[i*8+l*4+3]);
+    unsigned k=0;
+    if( (size%8)%4 >= 2)
+        for( k=0; k<((size%8)%4)/2; k++)
+            dg::blas1::subroutine( dg::EmbeddedPairSum(),
+                    *y[0], *y[1], size < 4 ?  beta[0]  : 1., size < 4 ? beta[1] : 1.,
+                    alpha[0]*(*x[0])[i*8+l*4+k*2+0], alpha[1]*(*x[1])[i*8+l*4+k*2+0], *m.get()[i*8+l*4+k*2+0],
+                    alpha[0]*(*x[0])[i*8+l*4+k*2+1], alpha[1]*(*x[1])[i*8+l*4+k*2+1], *m.get()[i*8+l*4+k*2+1]);
+    if( ((size%8)%4)%2 == 1)
+        dg::blas1::subroutine( dg::EmbeddedPairSum(),
+                    *y[0], *y[1], size < 2 ?  beta[0]  : 1., size < 2 ? beta[1] : 1.,
+                    alpha[0]*(*x[0])[i*8+l*4+k*2], alpha[1]*(*x[1])[i*8+l*4+k*2], *m.get()[i*8+l*4+k*2]);
+
+}
+} // namespace detail
+///@endcond
 
  /** @class hide_rhs
   * @tparam RHS The right hand side
@@ -140,8 +190,8 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
     }
     //Now add everything up to get solution and error estimate
     dg::blas1::copy( u0, u1);
-    dg::blas2::gemv( dt, dg::asDenseMatrix(m_k_ptrs), m_rkb, 1., u1);
-    dg::blas2::gemv( dt, dg::asDenseMatrix(m_k_ptrs), m_rkd, 0., delta);
+    detail::gemm( {dt,dt}, dg::asDenseMatrix(m_k_ptrs), {&m_rkb, &m_rkd},
+            {1.,0.}, {&u1, &delta});
     //make sure (t1,u1) is the last call to f
     m_t1 = t1 = t0 + dt;
     if(!m_rk.isFsal() )
@@ -369,8 +419,8 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     //Now compute result and error estimate
 
     dg::blas1::copy( u0, u1);
-    dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs), m_rkb, 1., u1);
-    dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs), m_rkd, 0., delta);
+    detail::gemm( {dt,dt}, dg::asDenseMatrix(m_k_ptrs), {&m_rkb, &m_rkd},
+            {1.,0.}, {&u1, &delta});
     //make sure (t1,u1) is the last call to ex
     ex(t1,u1,m_kE[0]);
 }
@@ -745,8 +795,8 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     t1 = t0 + dt;
     //Now compute result and error estimate
     dg::blas1::copy( u0, u1);
-    dg::blas2::gemv( dt, dg::asDenseMatrix( m_kIptr), m_rkIb, 1., u1);
-    dg::blas2::gemv( dt, dg::asDenseMatrix( m_kIptr), m_rkId, 0., delta);
+    detail::gemm( {dt,dt}, dg::asDenseMatrix(m_kIptr), {&m_rkIb, &m_rkId},
+            {1.,0.}, {&u1, &delta});
 }
 ///@endcond
 /**

@@ -57,6 +57,8 @@ struct TensorTraits<DenseMatrix<Container> >
     std::vector<value_type> coeffs( 10, 0.5);
     dg::blas2::gemv( 1., dg::asDenseMatrix(matrix_ptrs), coeffs, 0.,  x);
  * @endcode
+ * @note the implemented summation algorithm is a pairwise summation algorithm
+ * optimized for small sized number of columns ( <= 64)
  * @param in a collection of pointers that form the columns of the dense matrix
  * @return an opaque type that internally  adds a Tag that
  * tells the compiler that the \c std::vector
