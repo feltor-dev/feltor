@@ -2,6 +2,6 @@
 
     "rows": 4, //# of rows
     "cols": 1, //# of cols
-    "width": 1000, //window width (in pixel)
-    "height": 1000 //window height(in pixel)
+    "width": 500, //window width (in pixel)
+    "height": 2000 //window height(in pixel)
 }

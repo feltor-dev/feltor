@@ -361,7 +361,7 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
     dg::blas2::symv( m_lapMperpN, m_iota, m_omega); //-nabla_perp^2 rh*(ne-bgprofamp-profamp)
     dg::blas1::axpby(-sqrt(1.+m_p.tau[1])*m_p.lambda*0.5*m_p.tau[1]*m_p.mu[1], m_omega, 1.0, yp[1]);
     
-    //source
+    //density source
     if (m_p.source_type == "flux")
     {
         dg::blas1::axpby( m_p.omega_s, m_source, 1.0, yp[1]);
@@ -377,6 +377,11 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
         solveSne(t, m_chi, m_psi[0], y[0], m_omega);
     }
     dg::blas1::axpby( m_p.omega_s, m_omega, 1.0, yp[0]);
+ 
+//     //vorticity sink term
+//     dg::blas1::axpbypgz(- m_p.omega_s, y[0], m_p.omega_s, m_gamma_n,  0.0, m_iota);
+//     dg::blas1::pointwiseDot(1.0, m_iota, m_lh, 1.0, yp[0]);
+    
     return;
 }
 

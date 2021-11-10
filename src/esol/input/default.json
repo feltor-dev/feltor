@@ -38,11 +38,11 @@
     {
     "curvature": 0.00015, 
     "tau"  : 1.0,  
-    "alpha"  : 0.005, 
+    "alpha"  : 0.00, 
     "lambda"  : 0.000001, 
     "mu_e"  : -0.000272121, 
-    "equations": "ff-lwl", 
-    "xfac_sep"  : 0.5, 
+    "equations": "ff-lwl-OB", 
+    "xfac_sep"  : -1000, 
     "sigma_sep"  : 1.0
     },
 "source":
