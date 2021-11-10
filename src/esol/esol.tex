@@ -145,6 +145,20 @@ Note that this results into the following term in the vorticity density equation
 \Lambda_{n,\parallel,+} = -\lambda  h_{+}(x)  n \sqrt{1 + \tau} \left[1  -  
 \frac{1}{\sqrt{1 + \tau}}\exp{(\Lambda_{sh} - \phi)} \right]
 \end{align}
+In order to circumvent \ExB shear flows on the boundaries when we choose Dirichlet boundary conditions we can renormalize our potential. We choose
+\begin{align}
+ \phi' := \phi - \Lambda_{sh}+ \ln{\sqrt{1+\tau}}
+\end{align}
+and substitute into the relevant closure term
+\begin{align}
+ \Lambda_{n,\parallel,+} &:= -\sqrt{1 + \tau}h_{+}(x) n \lambda \exp{(- \phi')} 
+\end{align}
+to obtain
+\begin{align}
+ \Lambda_{\mathcal{W},\parallel,+} :=  -\lambda  h_{+}(x)  n \sqrt{1 + \tau} \left[1  -  
+\exp{(-\phi')} \right]
+\end{align}
+which is vanishing for \(\phi'=0\) at the boundaries.
 \subsubsection{Sources}
 The particle source is related to the the ion gyro-center source 
 and the electric potential via the transformation rule

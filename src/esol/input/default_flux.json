@@ -39,7 +39,7 @@
     "curvature": 0.00015, 
     "tau"  : 0.0,  
     "alpha"  : 0.0, 
-    "lambda"  : 2e-4, 
+    "lambda"  : 0e-4, 
     "mu_e"  : -0.000272121, 
     "equations": "ff-lwl-OB", 
     "xfac_sep"  : -100.0, 
@@ -47,6 +47,7 @@
     },
 "source":
     {
+     "source_shape" :"gaussian",
      "source_type" : "flux", 
      "source_rel" : "zero-pol", 
      "omega_s" : 0.055,
@@ -65,6 +66,7 @@
     "type": "bath", 
     "amplitude": 0.1, 
     "my": 1.0, 
+    "mx": 1.0,
     "sigma": 5.0, 
     "posX": 0.5, 
     "posY": 0.5,

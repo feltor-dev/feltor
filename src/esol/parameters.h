@@ -19,7 +19,8 @@ struct Parameters
     unsigned stages;
     unsigned maxiter_sqrt;
     unsigned maxiter_cauchy;
-
+    
+    bool renormalize;
     std::vector<double> eps_pol;
 
     double eps_gamma0, eps_gamma1, eps_cauchy;
@@ -80,6 +81,7 @@ struct Parameters
         alpha = ws["physical"].get("alpha",0.005).asDouble();
         lambda = ws["physical"].get("lambda",0.000001).asDouble();
         equations = ws["physical"].get("equations", "ff-O2").asString();        
+        renormalize = ws["physical"].get("renormalize", "false").asBool(); 
         xfac_sep = ws["physical"].get("xfac_sep",0.3).asDouble();
         sigma_sep = ws["physical"].get("sigma_sep",0.5).asDouble();
         mu[0] = ws["physical"].get("mu_e", -0.000272121).asDouble();

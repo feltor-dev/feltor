@@ -359,7 +359,8 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
     //sheath dissipation
     dg::blas1::axpby(-1.,m_psi[0], 0., m_omega, m_omega);      //omega = - phi
     dg::blas1::transform(m_omega, m_omega, dg::EXP<double>()); //omega = exp(-phi) 
-    dg::blas1::pointwiseDot(-m_p.lambda/sqrt(2.*M_PI*fabs(m_p.mu[0])),m_rh, m_omega, m_N[0], 1.0,yp[0]); 
+    if (m_p.renormalize == false) dg::blas1::pointwiseDot(-m_p.lambda/sqrt(2.*M_PI*fabs(m_p.mu[0])),m_rh, m_omega, m_N[0], 1.0,yp[0]); 
+    else dg::blas1::pointwiseDot(-m_p.lambda*sqrt(1.+m_p.tau[1]),m_rh, m_omega, m_N[0], 1.0,yp[0]); 
     
     dg::blas1::pointwiseDot(m_N[0], m_rh, m_iota); 
     dg::blas1::axpby(-sqrt(1.+m_p.tau[1])*m_p.lambda, m_iota, 1.0, yp[1]);        
