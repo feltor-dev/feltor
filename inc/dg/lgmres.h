@@ -165,12 +165,10 @@ void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
     for (int lupe = dimension; lupe >= 0; --lupe)
     {
         s[lupe] = s[lupe]/H[lupe][lupe];
-        if(lupe > 0){
-            for (int innerLupe = lupe - 1; innerLupe >= 0; --innerLupe)
-            {
-                // Subtract off the parts from the upper diagonal of the matrix.
-                s[innerLupe] -=  s[lupe]*H[innerLupe][lupe];
-            }
+        for (int innerLupe = lupe - 1; innerLupe >= 0; --innerLupe)
+        {
+            // Subtract off the parts from the upper diagonal of the matrix.
+            s[innerLupe] =  DG_FMA( -s[lupe],H[innerLupe][lupe], s[innerLupe]);
         }
 	}
 
@@ -226,8 +224,6 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
                 dg::blas2::gemv(A,m_tmp,m_V[iteration+1]);
                 counter++;
             } else if( iteration < m_krylovDimension){ // size of W
-                // MW: one could get this matrix-vector multiplication from VHy_s
-                // but we unfortunately destroy m_H
                 unsigned w_idx = iteration - (m_krylovDimension - outer_w_count);
                 m_W[iteration] = &m_outer_w[w_idx];
                 dg::blas1::copy( m_outer_Az[w_idx], m_V[iteration+1]);
@@ -249,6 +245,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
             // Now solve the least squares problem
             // using Givens Rotations transforming H into
             // an upper triangular matrix (see Saad Chapter 6.5.3)
+            // corresponding to QR-decomposition of H
 
             // First apply previous rotations to the current matrix.
             value_type tmp = 0;

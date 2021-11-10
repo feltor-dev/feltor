@@ -38,7 +38,7 @@ int main()
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid, dg::normed);
 
     // allocate memory
-    dg::AndersonAcceleration<dg::HVec > acc( copyable_vector, 3);
+    dg::AndersonAcceleration<dg::HVec > acc( copyable_vector, 10);
 
     // Evaluate right hand side and solution on the grid
     dg::HVec b = dg::evaluate ( laplace_fct, grid);

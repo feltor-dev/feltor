@@ -10,6 +10,7 @@
 #include "multigrid.h"
 #include "lgmres.h"
 #include "bicgstabl.h"
+#include "andersonacc.h"
 
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
@@ -164,7 +165,7 @@ int main()
     std::cout << " "<<sqrt( err/norm_var) << "\n";
     // NOW TEST LGMRES AND BICGSTABl
     unsigned inner_m = 30, outer_k = 3;
-    //std::cout << " Type inner and outer iterations (30 3)!\n";
+    //std::cout << " Type inner and outer iterations (8 3)!\n";
     //std::cin >> inner_m >> outer_k;
     dg::LGMRES<dg::DVec> lgmres( x, inner_m, outer_k, 100);
     pol_forward.set_norm( dg::normed);
@@ -184,6 +185,21 @@ int main()
     number = bicg.solve( pol_forward, x, b, chi_inv, w2d, eps);
     t.toc();
     std::cout << "# of bicgstabl iterations "<<number<<" took "<<t.diff()<<"s\n";
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << " "<<sqrt( err/norm) << "\n";
+    unsigned mMax = 8;
+    double damping = 1e-5;
+    double restart = 8;
+    std::cout << "Type mMAx (8), damping ( 1e-5), restart (8)\n";
+    std::cin >> mMax >> damping >> restart;
+    dg::AndersonAcceleration<dg::DVec> anderson( x, mMax);
+    pol_forward.set_norm( dg::normed);
+    dg::blas1::copy( 0., x);
+    t.tic();
+    number = anderson.solve( pol_forward, x, b, w2d, eps, eps, 3000, damping, restart, false );
+    t.toc();
+    std::cout << "# of anderson iterations "<<number<<" took "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm) << "\n";
