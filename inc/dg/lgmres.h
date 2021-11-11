@@ -144,7 +144,8 @@ class LGMRES
     void Update(Preconditioner& P, ContainerType &dx, ContainerType0 &x,
             unsigned dimension, const std::vector<std::vector<value_type>> &H,
             std::vector<value_type> &s, const std::vector<const ContainerType*> &W);
-    std::vector<std::vector<value_type>> m_H, m_HH, m_givens;
+    std::vector<std::array<value_type,2>> m_givens;
+    std::vector<std::vector<value_type>> m_H, m_HH;
     ContainerType m_tmp, m_dx, m_residual;
     std::vector<ContainerType> m_V, m_outer_w, m_outer_Az;
     std::vector<ContainerType const*> m_W, m_Vptr;
@@ -172,7 +173,7 @@ void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
         }
 	}
 
-    // Finally update the approximation. V_m*s
+    // Finally update the approximation. W_m*s
     dg::blas2::gemv( dg::asDenseMatrix( W, dimension+1), std::vector<value_type>( s.begin(), s.begin()+dimension+1), dx);
     // right preconditioner
     dg::blas2::gemv( P, dx, m_tmp);

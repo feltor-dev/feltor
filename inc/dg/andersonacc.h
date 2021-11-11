@@ -8,33 +8,34 @@ namespace dg{
 //const double m_EPS = 2.2204460492503131e-16;
 namespace detail{
 
-template<class ContainerType, class Mat>
-void QRdelete1(std::vector<ContainerType>& Q,Mat& R, unsigned m)
+template<class ContainerType, class Matrix>
+void QRdelete1(std::vector<ContainerType>& Q,Matrix& R, unsigned mMax)
 {
-    // only used if mMax <= restart+2
     using value_type = dg::get_value_type<ContainerType>;
-    for(unsigned i = 0; i<m-1;i++){
+    for(unsigned i = 0; i<mMax-1;i++){
         value_type temp = sqrt(R[i][i+1]*R[i][i+1]+R[i+1][i+1]*R[i+1][i+1]);
         value_type c = R[i][i+1]/temp;
         value_type s = R[i+1][i+1]/temp;
         R[i][i+1] = temp;
         R[i+1][i+1] = 0;
-        if (i < m-2) {
-            for (unsigned j = i+2; j < m; j++){
+        if (i < mMax-2) {
+            for (unsigned j = i+2; j < mMax; j++){
                 temp = c * R[i][j] + s * R[i+1][j];
                 R[i+1][j] = - s * R[i][j] + c * R[i+1][j];
                 R[i][j] = temp;
             }
         }
-        //Collapse look into blas1 routines
-        dg::blas1::axpby(-s,Q[i],c,Q[i+1]); // Q(i + 1) = s ∗ Q(ℓ, i) + c ∗ Q(ℓ, i + 1).
+        // we use the deleted column as a temporary
+        dg::blas1::axpbypgz(-s,Q[i],c,Q[i+1],0., Q[mMax-1]); // Q(i + 1) = s ∗ Q(ℓ, i) + c ∗ Q(ℓ, i + 1).
         dg::blas1::axpbypgz(c,Q[i],s,Q[i+1],0.,Q[i]); //Q(i) = c ∗ Q(ℓ, i) + s ∗ Q(ℓ, i + 1).
+        std::swap( Q[i+1], Q[mMax-1]);
     } //Check for error in keeping the last row.!!!
-    for(int i = 0; i<(int)m-1;i++)
-        for(int j = 0; j < (int)m-1; j++)
+    for(unsigned i = 0; i<mMax-1;i++)
+        for(unsigned j = 0; j < mMax-1; j++)
             R[i][j] = R[i][j+1];
     return;
 }
+
 }//namespace detail
 ///@endcond
 
@@ -69,7 +70,7 @@ struct AndersonAcceleration
         m_g_old( copyable), m_fval( copyable), m_f_old(copyable),
         m_DG( mMax, copyable), m_Q( m_DG),
         m_DG_ptrs( dg::asPointers(m_DG)),
-        m_gamma( mMax, 0.), m_Ry( m_gamma),
+        m_gamma( mMax, 0.),
         m_R( mMax, m_gamma), m_mMax( mMax)
     {
     }
@@ -96,12 +97,12 @@ struct AndersonAcceleration
      * @param f The function \c y=f(x) in the form \c f(x,y). The first argument is the input and the second the output.
      * @param x Contains an initial guess on input and the solution on output.
      * @param b The right hand side vector.
-     * @param weights The weights define the norm for the stopping condition of the solver
+     * @param weights The weights define the norm for the stopping condition of the solver and the scalar product in which the least square problem is computed
      * @param rtol Relative error condition with respect to \c b
      * @param atol Absolute error condition
      * @param max_iter Maxmimum number of iterations
      * @param damping Paramter to prevent too large jumps around the actual solution. Hard to determine in general but values between 0.1 and 1e-3 are good values to begin with. This is the parameter that appears in Richardson iteration.
-     * @param restart Number >= 1 that indicates after how many iterations to restart the acceleration. Periodic restarts are important for this method.  Per default it should be the same value as \c mMax but \c mMax+1 or higher could also be valuable to consider.
+     * @param restart Number >= 1 that indicates after how many iterations to restart the acceleration. Periodic restarts are important for this method.  Per default it should be the same value as \c mMax but \c mMax+1 or higher could also be valuable to consider. Lower values \c restart<mMax are equivalent to setting \c mMax=restart.
      * @param verbose If true writes intermediate errors to \c std::cout . Avoid in MPI code.
      * @return Number of iterations used to achieve desired precision
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
@@ -116,7 +117,7 @@ struct AndersonAcceleration
     ContainerType m_g_old, m_fval, m_f_old;
     std::vector<ContainerType> m_DG, m_Q;
     std::vector<const ContainerType*> m_DG_ptrs;
-    std::vector<value_type> m_gamma, m_Ry;
+    std::vector<value_type> m_gamma;
     std::vector<std::vector<value_type>> m_R;
 
     unsigned m_mMax;
@@ -169,16 +170,16 @@ unsigned AndersonAcceleration<ContainerType>::solve(
 
         if( iter == 0)
         {
-            dg::blas1::copy(m_fval,m_f_old);                                //m_f_old = m_fval;
-            dg::blas1::copy(m_gval,m_g_old);                                //m_g_old = m_gval;
+            std::swap(m_fval,m_f_old);
+            dg::blas1::copy(m_gval,m_g_old);
             continue;
         }
 
         // Apply Anderson acceleration.
-        dg::blas1::axpby(1.,m_fval,-1.,m_f_old, m_Q[mAA]);                 //Q = m_fval-m_f_old;
 
         if (mAA < m_mMax) {
 
+            dg::blas1::axpby(1.,m_fval,-1.,m_f_old, m_Q[mAA]);                 //Q = m_fval-m_f_old;
             dg::blas1::axpby(1.,m_gval,-1.,m_g_old,m_DG[mAA]);        //Update m_DG = [m_DG   m_gval-m_g_old];
 
         } else {
@@ -186,23 +187,15 @@ unsigned AndersonAcceleration<ContainerType>::solve(
             std::rotate(m_DG.begin(), m_DG.begin() + 1, m_DG.end());  //Rotate to the left hopefully this works... otherwise for i = 0 .. mMax-2 m_DG[i] = m_DG[i+1], and finally m_DG[mMax-1] = update...
             dg::blas1::axpby(1.,m_gval,-1.,m_g_old,m_DG[m_mMax-1]);     //Update last m_DG entry
 
-        }
-
-        dg::blas1::copy(m_fval,m_f_old);                                //m_f_old = m_fval;
-
-        dg::blas1::copy(m_gval,m_g_old);                                //m_g_old = m_gval;
-
-        //  update the QR decomposition.
-
-        if ((mAA+1 > m_mMax)) {                                 // If the column dimension of Q is mMax, delete the first column and update the decomposition.
-            // only used if mMax <= restart+2
-
-            mAA = mAA - 1;
-            detail::QRdelete1(m_Q,m_R,mAA+1);
+            detail::QRdelete1(m_Q,m_R,m_mMax);                      // If the column dimension of Q is mMax, delete the last column and update the decomposition.
+            dg::blas1::axpby(1.,m_fval,-1.,m_f_old, m_Q[m_mMax-1]);                 //Q = m_fval-m_f_old;
+            mAA = m_mMax-1; // mAA = m_mMax-1
 
         }
+
+
         // update the QR decomposition to incorporate the new column.
-        // MW: this is wrong, we need a QRadd algorithm like in gmres (maybe even test separately)
+        // MW: This is modified Gram-Schmidt which delivers a reduced QR-factorization
         for (unsigned j = 0; j < mAA; j++) {
             m_R[j][mAA] = dg::blas2::dot(m_Q[j],weights,m_Q[mAA]);      //Q(:,j)’*Q(mAA); //Changed mAA -> mAA-1
 
@@ -224,10 +217,14 @@ unsigned AndersonAcceleration<ContainerType>::solve(
             m_gamma[i] /= m_R[i][i];
         }
 
+        std::swap(m_fval,m_f_old);
+        dg::blas1::copy(m_gval,m_g_old);
+
         //Update new approximate solution x = m_gval - m_DG*gamma
         //for (unsigned i = 0; i < mAA+1; i++) {
         //    dg::blas1::axpby(-m_gamma[i],m_DG[i],1.,x);
         //}
+        // ATTENTION: x is an alias for gval
         dg::blas2::gemv( -1., dg::asDenseMatrix( m_DG_ptrs, mAA+1),
             std::vector<value_type>{m_gamma.begin(), m_gamma.begin()+mAA+1},
             1., x);

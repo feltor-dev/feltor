@@ -165,9 +165,9 @@ int main()
     std::cout << " "<<sqrt( err/norm_var) << "\n";
     // NOW TEST LGMRES AND BICGSTABl
     unsigned inner_m = 30, outer_k = 3;
-    //std::cout << " Type inner and outer iterations (8 3)!\n";
+    //std::cout << " Type inner and outer iterations (30 3)!\n";
     //std::cin >> inner_m >> outer_k;
-    dg::LGMRES<dg::DVec> lgmres( x, inner_m, outer_k, 100);
+    dg::LGMRES<dg::DVec> lgmres( x, inner_m, outer_k, 10000/inner_m);
     pol_forward.set_norm( dg::normed);
     dg::blas1::copy( 0., x);
     dg::Timer t;
