@@ -86,6 +86,16 @@ std::array<dg::x::DVec,2> init_from_file( std::string file_name, const dg::x::Ca
         
         dg::assign( transferOUTvec[i], y0[i]); //ne-nbc
         dg::blas1::plus(y0[i],-1.0*(pIN.bgprofamp + pIN.profamp));
+        
+        if (pIN.formulation == "ln")
+        {
+            for( unsigned i=0; i<y0.size(); i++) 
+            {
+                dg::blas1::plus(y0[i],+1.0*(pIN.bgprofamp + pIN.profamp));
+                dg::blas1::scal(y0[i],1.0/(pIN.bgprofamp + pIN.profamp));
+                dg::blas1::transform( y0[i], y0[i], dg::LN<double>() );
+            }
+        }
     }
     errIN = nc_close(ncidIN);
     /// ///////////////Now Construct initial fields ////////////////////////
