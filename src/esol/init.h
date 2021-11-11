@@ -86,6 +86,17 @@ std::array<dg::x::DVec,2> initial_conditions(
     }
     else
         throw dg::Error( dg::Message() << "Initial condition "<<initial<<" not recognized! Is there a spelling error? I assume you do not want to continue with the wrong initial condition so I exit! Bye Bye :)");
+    
+    //reformulate to ln (n/a)
+    if (p.formulation == "ln")
+    {
+        for( unsigned i=0; i<y0.size(); i++) 
+        {
+            dg::blas1::plus(y0[i],+1.0*(p.bgprofamp + p.profamp));
+            dg::blas1::scal(y0[i],1.0/(p.bgprofamp + p.profamp));
+            dg::blas1::transform( y0[i], y0[i], dg::LN<double>() );
+        }
+    }
     return y0;
 };
 }//namespace esol

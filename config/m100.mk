@@ -17,17 +17,18 @@ LIBS    +=-L$(NETCDF_LIB) -lnetcdf -lcurl
 LIBS    +=-L$(BOOST_LIB)
 endif
 #########################Modules to load ##################
-#module load cuda/10.2
+#module load profile/base
+#module load cuda/11.0
 #module load gnu/8.4.0
-#module load spectrum_mpi/10.3.1--binar
+#module load spectrum_mpi/10.3.1--binary
 #module load binutils/2.34
-#
-#module load zlib/1.2.11--gnu--8.4.0 
+#module load zlib/1.2.11--gnu--8.4.0
 #module load szip/2.1.1--gnu--8.4.0
 #module load hdf5/1.12.0--gnu--8.4.0
 #module load netcdf/4.7.3--gnu--8.4.0
 #module load jsoncpp/1.9.3--spectrum_mpi--10.3.1--binary
-#module load boost/1.72.0--spectrum_mpi--10.3.1--binary  
-
+#module load boost/1.72.0--spectrum_mpi--10.3.1--binary
+#module load blas/3.8.0--gnu--8.4.0
+#module load lapack/3.9.0--gnu--8.4.0
 
 

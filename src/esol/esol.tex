@@ -219,7 +219,7 @@ We initialize
 \begin{align}
     N &= \Gamma_1^{-1} n 
 \end{align}
-\subsubsection{Gaussian with zero polarization charge density("blob")}
+\subsubsection{Gaussian with zero polarization charge density("blob\_zeropol")}
 Initialization of $n$ is a Gaussian 
 \begin{align}
     n(x,y,0) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
@@ -291,8 +291,8 @@ Input file format: json
 {
     "type": "adaptive", //"adaptive" (explicit adaptive RK) or "multistep" (explicit multistep)
     "tableau": "Bogacki-Shampine-4-2-3", // recommended "Bogacki-Shampine-4-2-3" (default adaptive) or "TVB-3-3" (multistep)
-    "rtol": 1e-10, //relative tolerance of adaptive time stepper
-    "atol": 1e-12, //absolute tolerance of adaptive time stepper
+    "rtol": 1e-5, //relative tolerance of adaptive time stepper
+    "atol": 1e-7, //absolute tolerance of adaptive time stepper
     "dt" : 0.1   //time step in units of $c_s/\rho_s$ for multistep. Also determines together with itstep output step $dt_{out} = dt itstp$
 },
 "output":
@@ -327,22 +327,25 @@ Input file format: json
     "lambda"  : 0.000001,    //sheath dissipation $\lambda:= \rho_{s0}/L_\parallel$
     "mu_e"  : -0.000272121, //$\mu_e:=m_e/(Z_e m_i)$ negative electron to ion mass ratio
     "equations": "ff-O2",   //model $\in$ ("ff-lwl-OB" ,"ff-O2-OB" ,"ff-lwl" ,"ff-O2" ,"ff-O4" )
+    "renormalize": true,    //Renormalize potential (useful for DIR conditions with finite sheath dissipation)
     "xfac_sep"  : 0.3,      //$f_s$ x-position of separatrix in units of $l_x$     
-    "sigma_sep"  : 0.5      //$sigma_s$ width of damping function $h_{pm}$ of separatrix in units of $\rho_{s0}$    
+    "sigma_sep"  : 0.5      //$\sigma_s$ width of damping function $h_{pm}$ of separatrix in units of $\rho_{s0}$    
 },
 "source":
 {
+     "source_shape" :"cauchy",  //type of profile $\in$ ("cauchy", "gaussian")
      "source_type" : "flux",    //type of source $\in$ ("forced", "flux")
      "source_rel" : "zero_pol", //relation for source, $\in$ ("zero-pol", "finite-pol")
      "omega_s" : 0.005,         //source rate in units of $\Omega_i$
      "xfac_s": 0.1,             //position of source in units of the $l_x$
-     "sigma_s" : 2.0              //width of source in units of $\rho_{s0}$
+     "sigma_s" : 5.0              //width of source in units of $\rho_{s0}$
 },
 "profile":
 {
+     "bgproftype": "exp",  //type of background profile $\in$ ("exp","tanh")
      "bgprofamp" : 1.0, //amplitude of background in units of $n_{e0}$, typically 1
      "profamp": 0.0,    //amplitude of profile in units of $n_{e0}$
-     "sigma_p": 20.0    //width of gradient region of the profile in units of $\rho_{s0}$
+     "ln": 20.0    //width of gradient region of the profile in units of $\rho_{s0}$
 },
 "init":
 {
@@ -353,9 +356,12 @@ Input file format: json
     "sigma"  : 5,           //$\sigma$ of Gaussian blob units of $\rho_s$
     "posX"  : 0.5,          //x initial position $\in (0,1)$
     "posY"  : 0.5           //y initial position $\in (0,1)$
+    "xfac_d": 0.05,         //damping position of initial perturbation at left and right boundaries in x
+    "sigma_d" : 4.0         //damping transition width
 },
 "nu_perp"  : 0e-5,          //hyper-diffusion parameter
-"bc_x"  : "DIR_NEU",        //Boundary condtion in x
+"bc_x"  : "DIR_NEU",        //Boundary condtion in x for $\phi$ and $\psi$
+"bc_N_x": "NEU",            //Boundary condition in x for the densities
 "bc_y"  : "PER"             //Boundary condtion in y
 \end{minted}
 \subsection{Structure of output file}

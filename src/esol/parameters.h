@@ -30,7 +30,7 @@ struct Parameters
     double kappa,  nu;
     double lambda, alpha;
     double omega_s, xfac_s, sigma_s;
-    
+    double omega_n, n_min;
     double xfac_sep, sigma_sep, xfac_d, sigma_d;
     double bgprofamp, profamp, ln;
     
@@ -39,7 +39,7 @@ struct Parameters
     double lx, ly;
     dg::bc bc_x, bc_y, bc_N_x;
 
-    std::string init, equations, output, timestepper, source_rel, source_type, source_shape, bgproftype;
+    std::string init, equations, output, timestepper, source_rel, source_type, source_shape, bgproftype, formulation;
 
     Parameters( const dg::file::WrappedJsonValue& ws ) {
         n  = ws["grid"].get("n", 5).asUInt();
@@ -93,6 +93,8 @@ struct Parameters
         omega_s = ws["source"].get("omega_s", 0.05).asDouble();
         xfac_s = ws["source"].get("xfac_s", 0.1).asDouble();
         sigma_s = ws["source"].get("sigma_s", 0.5).asDouble();
+        n_min = ws["source"].get("n_min", 0.001).asDouble();
+        omega_n = ws["source"].get("omega_n", 0.05).asDouble();
         
         bgproftype = ws["profile"].get("bgproftype", "tanh").asString();
         bgprofamp = ws["profile"].get("bgprofamp", 1.0).asDouble();
@@ -113,6 +115,7 @@ struct Parameters
         bc_x = dg::str2bc(ws["bc_x"].asString());
         bc_y = dg::str2bc(ws["bc_y"].asString());
         bc_N_x = dg::str2bc(ws["bc_N_x"].asString());
+        formulation = ws["formulation"].asString();
     }
 
 };

@@ -9,7 +9,7 @@
      //"tableau": "TVB-3-3",
      "rtol": 1e-5,
      "atol": 1e-6,
-     "dt": 20
+     "dt": 5
      }, 
 "output": 
     {
