@@ -91,7 +91,7 @@ int main( int argc, char* argv[])
             std::cout << " (maximum)"<<std::endl;
         double psip0 = mag.psip()(mag.R0(), 0);
         std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
-        double fx_0 = 1./8.;
+        double fx_0 = js["grid"].get( "fx_0", 1./8.).asDouble(); // must evenly divide Npsi
         psipmax = -fx_0/(1.-fx_0)*psipO;
     }
     double width_factor = js.get("width-factor",1.0).asDouble();
@@ -197,7 +197,7 @@ int main( int argc, char* argv[])
         )
     {
         std::cout << "Generate orthogonal flux-aligned grid ... \n";
-        double fx_0 = 1./8.;
+        double fx_0 = js["grid"].get( "fx_0", 1./8.).asDouble(); // must evenly divide Npsi
         psipmax = -fx_0/(1.-fx_0)*psipO;
         std::cout << "psi 1 is          "<<psipmax<<"\n";
         // this one is actually slightly better than the X-point grid

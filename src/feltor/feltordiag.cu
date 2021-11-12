@@ -79,11 +79,9 @@ int main( int argc, char* argv[])
         n_out, Nx_out, Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
     //create RHS
-    if( p.modify_B)
-        mag = mod_mag;
     if( p.periodify)
-        mag = dg::geo::periodify( mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
-    dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
+        mod_mag = dg::geo::periodify( mod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
+    dg::HVec psipog2d = dg::evaluate( mod_mag.psip(), g2d_out);
     // Construct weights and temporaries
 
     dg::HVec transferH2d = dg::evaluate(dg::zero,g2d_out);
@@ -107,7 +105,7 @@ int main( int argc, char* argv[])
         std::cout << " (minimum)"<<std::endl;
     if( point == 2 )
         std::cout << " (maximum)"<<std::endl;
-    double fx_0 = 1./8.;
+    double fx_0 = config.get( "fx_0", 1./8.).asDouble(); //must evenly divide Npsi
     double psipmax = -fx_0/(1.-fx_0)*psipO;
     std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
     std::cout << "Generate orthogonal flux-aligned grid ... \n";
@@ -164,7 +162,7 @@ int main( int argc, char* argv[])
     dg::blas1::transform( rho, rho, dg::SQRT<double>());
     map1d.emplace_back("rho_p", rho,
         "Alternative flux label rho_p = sqrt(1-psi/psimin)");
-    dg::geo::SafetyFactor qprof( mag);
+    dg::geo::SafetyFactor qprof( mod_mag);
     dg::HVec psi_vals = dg::evaluate( dg::cooX1d, g1d_out);
     // we need to avoid calling SafetyFactor outside closed fieldlines
     dg::blas1::subroutine( [psipO]( double& psi){
@@ -334,7 +332,7 @@ int main( int argc, char* argv[])
     }
     std::cout << "Construct Fieldaligned derivative ... \n";
 
-    auto bhat = dg::geo::createBHat( mag);
+    auto bhat = dg::geo::createBHat( mod_mag);
     dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
         bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
         p.rk4eps, 5, 5, -1, "dg");
