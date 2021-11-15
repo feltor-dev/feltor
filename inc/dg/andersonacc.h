@@ -77,7 +77,6 @@ struct AndersonAcceleration
     AndersonAcceleration(const ContainerType& copyable, unsigned mMax ):
         m_g_old( copyable), m_fval( copyable), m_f_old(copyable),
         m_DG( mMax, copyable), m_Q( m_DG),
-        m_DG_ptrs( dg::asPointers(m_DG)),
         m_gamma( mMax, 0.),
         m_R( mMax), m_mMax( mMax)
     {
@@ -133,7 +132,6 @@ struct AndersonAcceleration
     private:
     ContainerType m_g_old, m_fval, m_f_old;
     std::vector<ContainerType> m_DG, m_Q;
-    std::vector<const ContainerType*> m_DG_ptrs;
     std::vector<value_type> m_gamma;
     dg::Operator<value_type> m_R;
 
@@ -244,7 +242,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
         //    dg::blas1::axpby(-m_gamma[i],m_DG[i],1.,x);
         //}
         // ATTENTION: x is an alias for gval
-        dg::blas2::gemv( -1., dg::asDenseMatrix( m_DG_ptrs, mAA+1),
+        dg::blas2::gemv( -1., dg::asDenseMatrix( dg::asPointers(m_DG), mAA+1),
             std::vector<value_type>{m_gamma.begin(), m_gamma.begin()+mAA+1},
             1., x);
 

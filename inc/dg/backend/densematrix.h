@@ -92,6 +92,7 @@ auto asDenseMatrix( const std::vector<const ContainerType*>& in, unsigned size)
  * @endcode
  * @param in a collection of vectors that form the columns of the dense matrix
  * @return a vector of pointers with ptrs[i] = &in[i]
+ * @attention DO NOT HOLD POINTERS AS PRIVATE DATA MEMBERS IN A CLASS unless you also plan to overload the copy and assignment operators
  * @copydoc hide_ContainerType
  * @ingroup densematrix
  */

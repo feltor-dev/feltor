@@ -117,7 +117,7 @@ struct ERKStep
     }
     ///@copydoc RungeKutta::construct()
     ERKStep( ConvertsToButcherTableau<value_type> tableau, const ContainerType&
-        copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable), m_k_ptrs( asPointers(m_k))
+        copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
     {
         m_rkb.resize(m_k.size()), m_rkd.resize(m_k.size());
         for( unsigned i=0; i<m_k.size(); i++)
@@ -159,7 +159,6 @@ struct ERKStep
     ButcherTableau<value_type> m_rk;
     std::vector<value_type> m_rkb, m_rkd;
     std::vector<ContainerType> m_k;
-    std::vector<const ContainerType*> m_k_ptrs;
     value_type m_t1 = 1e300;//remember the last timestep at which ERK is called
     bool m_ignore_fsal = false;
 };
@@ -170,6 +169,7 @@ template< class RHS>
 void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rk.num_stages();
+    std::vector<const ContainerType*> k_ptrs = dg::asPointers( m_k);
     //0 stage: probe
     value_type tu = t0;
     if( t0 != m_t1 || m_ignore_fsal)
@@ -177,20 +177,20 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
     //else take from last call
     for ( unsigned i=1; i<s; i++)
     {
-        std::vector<value_type> coeffs( i);
+        std::vector<value_type> rka( i);
         for( unsigned l=0; l<i; l++)
-            coeffs[l] = m_rk.a(i,l);
+            rka[l] = m_rk.a(i,l);
 
         tu = DG_FMA( dt,m_rk.c(i),t0); //l=0
         dg::blas1::copy( u0, delta);
-        dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs, i), coeffs, 1.,
+        dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, i), rka, 1.,
             delta);
 
         f( tu, delta, m_k[i]);
     }
     //Now add everything up to get solution and error estimate
     dg::blas1::copy( u0, u1);
-    detail::gemm( {dt,dt}, dg::asDenseMatrix(m_k_ptrs), {&m_rkb, &m_rkd},
+    detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkd},
             {1.,0.}, {&u1, &delta});
     //make sure (t1,u1) is the last call to f
     m_t1 = t1 = t0 + dt;
@@ -266,7 +266,7 @@ struct ARKStep
         assert( m_rkI.a(0,0) == 0);
         assert( m_rkI.c(m_rkI.num_stages()-1) == 1);
         check_implicit_fsal();
-        assign_pointers();
+        assign_coeffs();
     }
     ///@copydoc construct()
     template<class ...SolverParams>
@@ -286,7 +286,7 @@ struct ARKStep
         assert( m_rkI.a(0,0) == 0);
         assert( m_rkI.c(m_rkI.num_stages()-1) == 1);
         check_implicit_fsal();
-        assign_pointers();
+        assign_coeffs();
     }
     /*!@brief Construct with two Butcher Tableaus
      *
@@ -357,7 +357,6 @@ struct ARKStep
     ContainerType m_rhs;
     ButcherTableau<value_type> m_rkE, m_rkI;
     std::vector<ContainerType> m_kE, m_kI;
-    std::vector<const ContainerType*> m_k_ptrs;
     std::vector<value_type> m_rkb, m_rkd;
     value_type m_t1 = 1e300;
     bool m_implicit_fsal = false;
@@ -367,21 +366,17 @@ struct ARKStep
             if( m_rkI.a(i,0) != 0)
                 m_implicit_fsal = false;
     }
-    void assign_pointers()
+    void assign_coeffs()
     {
-        m_k_ptrs.resize( 2*m_rkI.num_stages());
-        m_rkb.resize( m_k_ptrs.size());
-        m_rkd.resize( m_k_ptrs.size());
+        m_rkb.resize( 2*m_rkI.num_stages());
+        m_rkd.resize( 2*m_rkI.num_stages());
         for( unsigned i=0; i<m_rkI.num_stages(); i++)
         {
-            m_k_ptrs[2*i] = &m_kE[i];
-            m_k_ptrs[2*i+1] = &m_kI[i];
             m_rkb[2*i] = m_rkE.b(i);
             m_rkb[2*i+1] = m_rkI.b(i);
             m_rkd[2*i] = m_rkE.d(i);
             m_rkd[2*i+1] = m_rkI.d(i);
         }
-
     }
 };
 
@@ -398,18 +393,25 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
         ex(t0, u0, m_kE[0]); //freshly compute k_0
     if( !m_implicit_fsal) // all a(i,0) == 0
         im(t0, u0, m_kI[0]);
+    // DO NOT HOLD POINTERS AS PRVIATE MEMBERS
+    std::vector<const ContainerType*> k_ptrs( 2*m_rkI.num_stages());
+    for( unsigned i=0; i<m_rkI.num_stages(); i++)
+    {
+        k_ptrs[2*i  ] = &m_kE[i];
+        k_ptrs[2*i+1] = &m_kI[i];
+    }
 
     for( unsigned i=1; i<s; i++)
     {
-        std::vector<value_type> coeffs( 2*i);
+        std::vector<value_type> rka( 2*i);
         for(unsigned l=0; l<i; l++)
         {
-            coeffs[2*l]   = m_rkE.a(i,l);
-            coeffs[2*l+1] = m_rkI.a(i,l);
+            rka[2*l]   = m_rkE.a(i,l);
+            rka[2*l+1] = m_rkI.a(i,l);
         }
         tu = DG_FMA( m_rkI.c(i),dt, t0);
         dg::blas1::copy( u0, m_rhs);
-        dg::blas2::gemv( dt, dg::asDenseMatrix( m_k_ptrs, 2*i), coeffs, 1., m_rhs);
+        dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, 2*i), rka, 1., m_rhs);
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(i,i), im, tu, delta, m_rhs);
         ex(tu, delta, m_kE[i]);
@@ -419,7 +421,7 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
     //Now compute result and error estimate
 
     dg::blas1::copy( u0, u1);
-    detail::gemm( {dt,dt}, dg::asDenseMatrix(m_k_ptrs), {&m_rkb, &m_rkd},
+    detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkd},
             {1.,0.}, {&u1, &delta});
     //make sure (t1,u1) is the last call to ex
     ex(t1,u1,m_kE[0]);
@@ -689,8 +691,7 @@ struct DIRKStep
          m_solver( std::forward<SolverParams>(ps)...),
          m_rhs( m_solver.copyable()),
          m_rkI(im_tableau),
-         m_kI(m_rkI.num_stages(), m_rhs),
-         m_kIptr( asPointers( m_kI))
+         m_kI(m_rkI.num_stages(), m_rhs)
     {
         m_rkIb.resize(m_kI.size()), m_rkId.resize(m_kI.size());
         for( unsigned i=0; i<m_kI.size(); i++)
@@ -762,7 +763,6 @@ struct DIRKStep
     ButcherTableau<value_type> m_rkI;
     std::vector<ContainerType> m_kI;
     std::vector<value_type> m_rkIb, m_rkId;
-    std::vector<const ContainerType*> m_kIptr;
 };
 
 ///@cond
@@ -779,15 +779,16 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     if( !(m_rkI.a(0,0)==0) )
         m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
     rhs(tu, delta, m_kI[0]);
+    std::vector<const ContainerType*> kIptr = dg::asPointers( m_kI);
 
     for( unsigned i=1; i<s; i++)
     {
         tu = DG_FMA( m_rkI.c(i),dt, t0);
         dg::blas1::copy( u0, m_rhs);
-        std::vector<value_type> coeffs( i);
+        std::vector<value_type> rkIa( i);
         for( unsigned l=0; l<i; l++)
-            coeffs[l] = m_rkI.a(i,l);
-        dg::blas2::gemv( dt, dg::asDenseMatrix(m_kIptr,i), coeffs, 1., m_rhs);
+            rkIa[l] = m_rkI.a(i,l);
+        dg::blas2::gemv( dt, dg::asDenseMatrix(kIptr,i), rkIa, 1., m_rhs);
         blas1::copy( m_rhs, delta); //better init with rhs
         m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
         rhs(tu, delta, m_kI[i]);
@@ -795,7 +796,7 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     t1 = t0 + dt;
     //Now compute result and error estimate
     dg::blas1::copy( u0, u1);
-    detail::gemm( {dt,dt}, dg::asDenseMatrix(m_kIptr), {&m_rkIb, &m_rkId},
+    detail::gemm( {dt,dt}, dg::asDenseMatrix(kIptr), {&m_rkIb, &m_rkId},
             {1.,0.}, {&u1, &delta});
 }
 ///@endcond

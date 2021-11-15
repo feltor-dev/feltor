@@ -97,7 +97,7 @@ struct TensorTraits< detail::ImplicitWithoutWeights<M, V> >
  * works only for linear positive definite operators as it uses a conjugate
  * gradient solver to invert the equation
  * @copydoc hide_ContainerType
- * @sa Karniadakis ARKStep DIRKStep
+ * @sa ImExMultistep ImplicitMultistep ARKStep DIRKStep
  * @ingroup invert
  */
 template<class ContainerType>
@@ -158,7 +158,7 @@ struct DefaultSolver
  *  y_{k+1}  = \rho - \alpha\hat I(t,y_k)
  *  \f]
  * @copydoc hide_ContainerType
- * @sa Karniadakis ARKStep DIRKStep
+ * @sa ImExMultistep ImplicitMultistep ARKStep DIRKStep
  * @ingroup invert
  */
 template<class ContainerType>
@@ -224,7 +224,7 @@ struct FixedPointSolver
  *
  * for given t, alpha and rho.
  * @copydoc hide_ContainerType
- * @sa AndersonAcceleration Karniadakis ARKStep DIRKStep
+ * @sa AndersonAcceleration ImExMultistep ImplicitMultistep ARKStep DIRKStep
  * @ingroup invert
  */
 template<class ContainerType>
@@ -235,20 +235,34 @@ struct AndersonSolver
     ///No memory allocation
     AndersonSolver(){}
     /*!
-    * @param copyable vector of the size that is later used in \c solve (
-     it does not matter what values \c copyable contains, but its size is important;
-     the \c solve method can only be called with vectors of the same size)
-     * @param mMax \c mMax+1 is the maximum number of vectors to include in the optimization procedure.
-     *  Something between 3 and 10 are good values but higher values mean more storage space that needs to be reserved.
-     *  If \c mMax==0 then the algorithm is equivalent to Fixed Point (or Richardson if the damping parameter is used in the \c solver method) iteration
-    * @param eps accuracy parameter for (rtol=atol=eps)
-    * @param max_iter maximum iteration number
-     * @param damping Paramter to prevent too large jumps around the actual solution. Hard to determine in general but values between 0.1 and 1e-3 are good values to begin with. This is the parameter that appears in Richardson iteration.
-     * @param restart Number >= 1 that indicates after how many iterations to restart the acceleration. Periodic restarts are important for this method.  Per default it should be the same value as \c mMax but \c mMax+1 or higher could also be valuable to consider.
+     * @param copyable vector of the size that is later used in \c solve (
+      it does not matter what values \c copyable contains, but its size is important;
+      the \c solve method can only be called with vectors of the same size)
+     * @param mMax The maximum number of vectors to include in the optimization
+     * procedure. \c mMax+1 is the number of solutions involved in computing
+     * the new solution.  Something between 3 and 10 are good values but higher
+     * values mean more storage space that needs to be reserved.  If \c mMax==0
+     * then the algorithm is equivalent to Fixed Point (or Richardson if the
+     * damping parameter is used in the \c solve() method) iteration i.e. no
+     * optimization and only 1 solution needed to compute a new solution.
+     * @param eps accuracy parameter for (rtol=atol=eps)
+     * @param max_iter Maxmimum number of iterations
+     * @param damping Paramter to prevent too large jumps around the actual
+     * solution. Hard to determine in general but values between 1e-2 and 1e-4
+     * are good values to begin with. This is the parameter that appears in
+     * Richardson iteration. It is beter to have it too small than too large
+     * (where it can lead to divergence of the solver)
+     * @param restart Number >= mMax that indicates after how many iterations
+     * to restart the acceleration. Periodic restarts are important for this
+     * method.  Per default it should be the same value as \c mMax but \c mMax+1
+     * or higher could be valuable to consider (but usually are worse
+     * than \c mMax). Lower values \c restart<mMax are equivalent to setting
+     * \c mMax=restart.
      */
-    AndersonSolver( const ContainerType& copyable, unsigned mMax, value_type eps, unsigned max_iter,
-        value_type damping, unsigned restart):
-        m_acc(copyable, mMax), m_eps(eps), m_damp(damping), m_max(max_iter), m_restart(restart)
+    AndersonSolver( const ContainerType& copyable, unsigned mMax, value_type
+            eps, unsigned max_iter, value_type damping, unsigned restart):
+        m_acc(copyable, mMax), m_eps(eps), m_damp(damping), m_max(max_iter),
+        m_restart(restart)
         {}
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important

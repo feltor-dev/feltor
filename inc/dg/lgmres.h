@@ -83,11 +83,6 @@ class LGMRES
         //Declare s that minimizes the residual:
         m_s.assign(m_krylovDimension+1,0);
         // m+k+1 orthogonal basis vectors:
-        m_V.assign(m_krylovDimension+1,copyable);
-        m_W.assign(m_krylovDimension,nullptr);
-        m_Vptr.assign(m_krylovDimension+1,nullptr);
-        for( unsigned i=0; i<m_krylovDimension+1; i++)
-            m_Vptr[i] = &m_V[i];
         // k augmented pairs
         m_outer_w.assign(m_outer_k,copyable);
         m_outer_Az.assign(m_outer_k,copyable);
@@ -148,7 +143,6 @@ class LGMRES
     std::vector<std::vector<value_type>> m_H, m_HH;
     ContainerType m_tmp, m_dx, m_residual;
     std::vector<ContainerType> m_V, m_outer_w, m_outer_Az;
-    std::vector<ContainerType const*> m_W, m_Vptr;
     std::vector<value_type> m_s;
     unsigned m_maxRestarts, m_inner_m, m_outer_k, m_krylovDimension;
 };
@@ -200,6 +194,13 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
     unsigned restartCycle = 0;
     unsigned counter = 0;
     value_type rho = 1.;
+    // DO NOT HOLD THESE AS PRIVATE!! MAKES BUG IN COPY!!
+    std::vector<ContainerType const*> m_W, m_Vptr;
+    m_V.assign(m_krylovDimension+1,copyable);
+    m_W.assign(m_krylovDimension,nullptr);
+    m_Vptr.assign(m_krylovDimension+1,nullptr);
+    for( unsigned i=0; i<m_krylovDimension+1; i++)
+        m_Vptr[i] = &m_V[i];
     do
 	{
         dg::blas2::gemv(A,x,m_residual);
