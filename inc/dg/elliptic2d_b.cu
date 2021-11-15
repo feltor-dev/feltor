@@ -191,8 +191,8 @@ int main()
     unsigned mMax = 8;
     double damping = 1e-5;
     double restart = 8;
-    std::cout << "Type mMAx (8), damping ( 1e-5), restart (8)\n";
-    std::cin >> mMax >> damping >> restart;
+    //std::cout << "Type mMAx (8), damping ( 1e-5), restart (8)\n";
+    //std::cin >> mMax >> damping >> restart;
     dg::AndersonAcceleration<dg::DVec> anderson( x, mMax);
     pol_forward.set_norm( dg::normed);
     dg::blas1::copy( 0., x);

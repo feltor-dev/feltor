@@ -26,7 +26,7 @@ void QRdelete1( std::vector<ContainerType>& Q, dg::Operator<value_type>& R, unsi
                 R(i,j) = temp;
             }
         }
-        dg::blas1::subroutine( [&]DG_DEVICE( double& qi, double& qip) {
+        dg::blas1::subroutine( [c,s]DG_DEVICE( double& qi, double& qip) {
                 double tmp = c*qi + s*qip;
                 qip = - s*qi + c*qip;
                 qi = tmp;
@@ -66,10 +66,13 @@ struct AndersonAcceleration
     /*! @brief Allocate memory for the object
      *
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param mMax The maximum number of vectors to include in the optimization procedure. \c mMax+1 is the number
-     * of solutions involved in computing the new solution.
-     *  Something between 3 and 10 are good values but higher values mean more storage space that needs to be reserved.
-     *  If \c mMax==0 then the algorithm is equivalent to Fixed Point (or Richardson if the damping parameter is used in the \c solve() method) iteration i.e. no optimization and only 1 solution needed to compute a new solution.
+     * @param mMax The maximum number of vectors to include in the optimization
+     * procedure. \c mMax+1 is the number of solutions involved in computing
+     * the new solution.  Something between 3 and 10 are good values but higher
+     * values mean more storage space that needs to be reserved.  If \c mMax==0
+     * then the algorithm is equivalent to Fixed Point (or Richardson if the
+     * damping parameter is used in the \c solve() method) iteration i.e. no
+     * optimization and only 1 solution needed to compute a new solution.
      */
     AndersonAcceleration(const ContainerType& copyable, unsigned mMax ):
         m_g_old( copyable), m_fval( copyable), m_f_old(copyable),
@@ -93,7 +96,7 @@ struct AndersonAcceleration
         *this = AndersonAcceleration( std::forward<Params>( ps)...);
     }
 
-    const ContainerType& copyable() const{ return m_DG[0];}
+    const ContainerType& copyable() const{ return m_fval;}
 
     /*!@brief Solve the system \f$ f(x) = b \f$ in the given norm
      *
@@ -106,8 +109,17 @@ struct AndersonAcceleration
      * @param rtol Relative error condition with respect to \c b
      * @param atol Absolute error condition
      * @param max_iter Maxmimum number of iterations
-     * @param damping Paramter to prevent too large jumps around the actual solution. Hard to determine in general but values between 1e-2 and 1e-4 are good values to begin with. This is the parameter that appears in Richardson iteration. It is beter to have it too small than too large (where it can lead to divergence of the solver)
-     * @param restart Number >= mMax that indicates after how many iterations to restart the acceleration. Periodic restarts are important for this method.  Per default it should be the same value as \c mMax but \c mMax+1 or higher could be valuable to consider (but usually are worse than mMax). Lower values \c restart<mMax are equivalent to setting \c mMax=restart.
+     * @param damping Paramter to prevent too large jumps around the actual
+     * solution. Hard to determine in general but values between 1e-2 and 1e-4
+     * are good values to begin with. This is the parameter that appears in
+     * Richardson iteration. It is beter to have it too small than too large
+     * (where it can lead to divergence of the solver)
+     * @param restart Number >= mMax that indicates after how many iterations
+     * to restart the acceleration. Periodic restarts are important for this
+     * method.  Per default it should be the same value as \c mMax but \c mMax+1
+     * or higher could be valuable to consider (but usually are worse
+     * than \c mMax). Lower values \c restart<mMax are equivalent to setting
+     * \c mMax=restart.
      * @param verbose If true writes intermediate errors to \c std::cout
      * @return Number of iterations used to achieve desired precision
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
@@ -147,13 +159,15 @@ unsigned AndersonAcceleration<ContainerType>::solve(
     unsigned mAA = 0;
     value_type nrmb = sqrt( dg::blas2::dot( b, weights, b));
     value_type tol = atol+rtol*nrmb;
-    if(verbose)DG_RANK0 std::cout << "tol = " << tol << std::endl;
+    if(verbose)DG_RANK0 std::cout << "Solve with mMax = "<<m_mMax<<" rtol = "
+        <<rtol<<" atol = "<<atol<< " tol = " << tol <<" max_iter =  "<<max_iter
+        <<" damping = "<<damping<<" restart = "<<restart<<std::endl;
 
     ContainerType0& m_gval = x;
     // - use SquareNorm for orthogonalization (works because minimization is also true if V_m is unitary in the S scalar product
     for(unsigned iter=0;iter < max_iter; iter++)
     {
-        if (iter % (restart) == 0) {
+        if ( restart != 0 && iter % (restart) == 0) {
             mAA = 0;
             if(verbose)DG_RANK0 std::cout << "Iter = " << iter << std::endl;
         }
