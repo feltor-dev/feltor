@@ -39,7 +39,7 @@ struct Parameters
     double lx, ly;
     dg::bc bc_x, bc_y, bc_N_x;
 
-    std::string init, equations, output, timestepper, source_rel, source_type, source_shape, bgproftype, formulation;
+    std::string init, equations, output, timestepper, source_rel, source_type, source_shape, bgproftype, formulation, hwmode;
 
     Parameters( const dg::file::WrappedJsonValue& ws ) {
         n  = ws["grid"].get("n", 5).asUInt();
@@ -79,6 +79,7 @@ struct Parameters
         tau[1] = ws["physical"].get("tau",1.0).asDouble();
         kappa = ws["physical"].get("curvature",0.00015).asDouble();
         alpha = ws["physical"].get("alpha",0.005).asDouble();
+        hwmode = ws["physical"].get("hwmode", "modified").asString(); 
         lambda = ws["physical"].get("lambda",0.000001).asDouble();
         equations = ws["physical"].get("equations", "ff-O2").asString();        
         renormalize = ws["physical"].get("renormalize", "false").asBool(); 

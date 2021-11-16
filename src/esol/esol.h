@@ -352,12 +352,23 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
         //adiabaticity term
         if (m_p.alpha != 0.0)
         {
-            dg::blas1::transform( m_N[0], m_logn, dg::LN<double>());
-            m_polavg(m_logn, m_iota);       //<ln(ne)> 
-            m_polavg(m_psi[0], m_chi);        //<phi>
-            dg::blas1::axpby(1., m_psi[0],  -1., m_chi, m_chi);       // delta(phi) 
-            dg::blas1::axpbypgz(1., m_chi, -1., m_logn, 1.0, m_iota); // delta(phi)  - delta(ln(ne))
-            dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
+            if (m_p.hwmode == "modified")
+            {
+                dg::blas1::transform( m_N[0], m_logn, dg::LN<double>());
+                m_polavg(m_logn, m_iota);       //<ln(ne)> 
+                m_polavg(m_psi[0], m_chi);        //<phi>
+                dg::blas1::axpby(1., m_psi[0],  -1., m_chi, m_chi);       // delta(phi) 
+                dg::blas1::axpbypgz(1., m_chi, -1., m_logn, 1.0, m_iota); // delta(phi)  - delta(ln(ne))
+                dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
+            }
+            else if (m_p.hwmode == "ordinary")
+            {
+                m_polavg(m_N[0], m_iota);       //<ln(ne)> 
+                dg::blas1::pointwiseDivide(m_N[0], m_iota, m_itoa);
+                dg::blas1::transform( m_iota, m_chi, dg::LN<double>());
+                dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne/<ne>)
+                dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
+            }
         }
         
         //sheath dissipation
@@ -453,13 +464,25 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
         //adiabaticity term
         if (m_p.alpha != 0.0)
         {
-            m_polavg(y[0], m_iota);       //<ln(ne/a)> 
-            m_polavg(m_psi[0], m_chi);        //<phi>
-            dg::blas1::axpby(1., m_psi[0],  -1., m_chi, m_chi);       // tilde(phi) 
-            dg::blas1::axpbypgz(1., m_chi, -1., y[0], 1.0, m_iota); // tilde(phi)  - tilde(ln(ne))
-            dg::blas1::pointwiseDot(m_p.alpha, m_hm, m_iota, 0.0, m_iota);
-            dg::blas1::pointwiseDivide(m_iota,  m_N[0], m_iota);
-            dg::blas1::axpby(1.0, m_iota, 1.0, yp[0]); // dt ln n += alpha hm/n (tilde phi - tilde ln ne)
+            if (m_p.hwmode == "modified")
+            {
+                m_polavg(y[0], m_iota);       //<ln(ne/a)> 
+                m_polavg(m_psi[0], m_chi);        //<phi>
+                dg::blas1::axpby(1., m_psi[0],  -1., m_chi, m_chi);       // tilde(phi) 
+                dg::blas1::axpbypgz(1., m_chi, -1., y[0], 1.0, m_iota); // tilde(phi)  - tilde(ln(ne))
+                dg::blas1::pointwiseDot(m_p.alpha, m_hm, m_iota, 0.0, m_iota);
+                dg::blas1::pointwiseDivide(m_iota,  m_N[0], m_iota);
+                dg::blas1::axpby(1.0, m_iota, 1.0, yp[0]); // dt ln n += alpha hm/n (tilde phi - tilde ln ne)
+            }
+            else if (m_p.hwmode == "ordinary")
+            {
+                m_polavg(m_N[0], m_iota);       //<ln(ne)> 
+                dg::blas1::pointwiseDivide(m_N[0], m_iota, m_itoa);
+                dg::blas1::transform( m_iota, m_chi, dg::LN<double>());
+                dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne/<ne>)
+                dg::blas1::pointwiseDivide(m_iota,  m_N[0], m_iota);
+                dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
+            }
         }
         
         //sheath dissipation
@@ -468,14 +491,12 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
             dg::blas1::axpby(-1., m_psi[0], 0., m_omega, m_omega);      //omega = - phi
             dg::blas1::transform(m_omega, m_omega, dg::EXP<double>()); //omega = exp(-phi) 
             if (m_p.renormalize == false) dg::blas1::pointwiseDot(-m_p.lambda/sqrt(2.*M_PI*fabs(m_p.mu[0])), m_hp, m_omega, 0.0, m_omega); 
-            else dg::blas1::pointwiseDot(-m_p.lambda*sqrt(1.+m_p.tau[1]), m_hp, m_omega,  1.0, yp[0]);  // dt ln(ne) += -lambda hp sqrt(1+tau) e^(-phi)
-            
+            else dg::blas1::pointwiseDot(-m_p.lambda*sqrt(1.+m_p.tau[1]), m_hp, m_omega,  1.0, yp[0]);  // dt ln(ne) += -lambda hp sqrt(1+tau) e^(-phi)            
             
             dg::blas1::pointwiseDot(m_N[0], m_hp, m_iota); 
-            dg::blas1::pointwiseDivide(-sqrt(1.+m_p.tau[1])*m_p.lambda, m_iota, m_N[1], 1.0, yp[1]); // dt ln Ni += -lambda hp/Ni sqrt(1+tau) 
+            dg::blas1::pointwiseDivide(-sqrt(1.+m_p.tau[1])*m_p.lambda, m_iota, m_N[1], 1.0, yp[1]); // dt ln Ni += -lambda ne hp/Ni sqrt(1+tau) 
             dg::blas1::pointwiseDot(m_dN[0], m_hp, m_iota); //hp*(ne-bgprofamp-profamp)
-            dg::blas2::symv( m_lapMperpN, m_iota, m_omega); //-nabla_perp^2 hp*(ne-bgprofamp-profamp)
-            
+            dg::blas2::symv( m_lapMperpN, m_iota, m_omega); //-nabla_perp^2 hp*(ne-bgprofamp-profamp)            
             dg::blas1::pointwiseDivide(-sqrt(1.+m_p.tau[1])*m_p.lambda*0.5*m_p.tau[1]*m_p.mu[1], m_omega, m_N[1], 1.0, yp[1]);
         }
         
