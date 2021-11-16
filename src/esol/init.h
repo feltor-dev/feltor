@@ -27,7 +27,7 @@ std::array<dg::x::DVec,2> initial_conditions(
        dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
        dg::blas1::plus(y0[0],1.0);
        if(p.bgproftype == "tanh"){
-           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_p, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
        }
        else if(p.bgproftype == "exp"){
            y0[1] = dg::evaluate( dg::ExpProfX(p.profamp, p.bgprofamp, p.ln), grid);
@@ -43,7 +43,7 @@ std::array<dg::x::DVec,2> initial_conditions(
        dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
        dg::blas1::plus(y0[0],1.0);
        if(p.bgproftype == "tanh"){
-           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_p, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
        }
        else if(p.bgproftype == "exp"){
            y0[1] = dg::evaluate( dg::ExpProfX(p.profamp,p.bgprofamp, p.ln), grid);
@@ -59,7 +59,7 @@ std::array<dg::x::DVec,2> initial_conditions(
        dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
        dg::blas1::plus(y0[0],1.0);
        if(p.bgproftype == "tanh"){
-           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_p, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
        }
        else if(p.bgproftype == "exp"){
            y0[1] = dg::evaluate( dg::ExpProfX(p.profamp,p.bgprofamp, p.ln), grid);
@@ -75,7 +75,7 @@ std::array<dg::x::DVec,2> initial_conditions(
         dg::blas1::pointwiseDot(y0[1],y0[0],y0[0]);
         dg::blas1::plus(y0[0],1.0);
         if(p.bgproftype == "tanh"){
-           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+           y0[1] = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_p, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
        }
        else if(p.bgproftype == "exp"){
            y0[1] = dg::evaluate( dg::ExpProfX(p.profamp, p.bgprofamp, p.ln), grid);

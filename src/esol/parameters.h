@@ -31,7 +31,7 @@ struct Parameters
     double lambda, alpha;
     double omega_s, xfac_s, sigma_s;
     double omega_n, n_min;
-    double xfac_sep, sigma_sep, xfac_d, sigma_d;
+    double xfac_sep, sigma_sep, xfac_d, sigma_d, xfac_p;
     double bgprofamp, profamp, ln;
     
     double amp, mx, my, sigma, posX, posY;
@@ -100,6 +100,7 @@ struct Parameters
         bgproftype = ws["profile"].get("bgproftype", "tanh").asString();
         bgprofamp = ws["profile"].get("bgprofamp", 1.0).asDouble();
         profamp = ws["profile"].get("profamp", 9.0).asDouble();
+        xfac_p = ws["profile"].get("xfac_p", 0.5).asDouble();
         ln = ws["profile"].get("ln", 128.0).asDouble();
         
         init = ws["init"].get("type", "blob").asString();

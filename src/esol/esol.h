@@ -200,7 +200,7 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     m_sqrtsolve.construct( m_multi_g0[0], grid, m_chi,  p.eps_cauchy, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma0);
     
     if(p.bgproftype == "tanh"){
-           m_prof = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_sep, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
+           m_prof = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_p, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
     }
     else if(p.bgproftype == "exp"){
            m_prof = dg::evaluate( dg::ExpProfX(p.profamp, p.bgprofamp, p.ln), grid);
@@ -364,7 +364,7 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
             else if (m_p.hwmode == "ordinary")
             {
                 m_polavg(m_N[0], m_iota);       //<ln(ne)> 
-                dg::blas1::pointwiseDivide(m_N[0], m_iota, m_itoa);
+                dg::blas1::pointwiseDivide(m_N[0], m_iota, m_iota);
                 dg::blas1::transform( m_iota, m_chi, dg::LN<double>());
                 dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne/<ne>)
                 dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
@@ -477,7 +477,7 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
             else if (m_p.hwmode == "ordinary")
             {
                 m_polavg(m_N[0], m_iota);       //<ln(ne)> 
-                dg::blas1::pointwiseDivide(m_N[0], m_iota, m_itoa);
+                dg::blas1::pointwiseDivide(m_N[0], m_iota, m_iota);
                 dg::blas1::transform( m_iota, m_chi, dg::LN<double>());
                 dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne/<ne>)
                 dg::blas1::pointwiseDivide(m_iota,  m_N[0], m_iota);
