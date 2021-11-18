@@ -86,6 +86,7 @@ class LGMRES
         // k augmented pairs
         m_outer_w.assign(m_outer_k,copyable);
         m_outer_Az.assign(m_outer_k,copyable);
+        m_V.assign(m_krylovDimension+1,copyable);
     }
     /**
     * @brief Perfect forward parameters to one of the constructors
@@ -196,7 +197,6 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
     value_type rho = 1.;
     // DO NOT HOLD THESE AS PRIVATE!! MAKES BUG IN COPY!!
     std::vector<ContainerType const*> m_W, m_Vptr;
-    m_V.assign(m_krylovDimension+1,copyable);
     m_W.assign(m_krylovDimension,nullptr);
     m_Vptr.assign(m_krylovDimension+1,nullptr);
     for( unsigned i=0; i<m_krylovDimension+1; i++)
