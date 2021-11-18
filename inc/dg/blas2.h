@@ -174,16 +174,46 @@ inline void doSymv( MatrixType&& M,
             get_tensor_category<ContainerType1>());
 }
 
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( get_value_type<ContainerType1> alpha,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y,
+                  NotATensorTag)
+{
+    // if a compiler error message brings you here then you need to overload
+    // the parenthesis operator for your class
+    // void operator()( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y)
+    M(alpha,x,beta,y);
+}
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y,
+                  NotATensorTag)
+{
+    // if a compiler error message brings you here then you need to overload
+    // the parenthesis operator for your class
+    // void operator()( const ContainerType1& x, ContainerType2& y)
+    M(x,y);
+}
+
 }//namespace detail
 ///@endcond
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$
  *
  * This routine computes \f[ y = \alpha M x + \beta y \f]
- * where \f$ M\f$ is a matrix.
+ * where \f$ M\f$ is a matrix (or functor that is called like \c M(alpha,x,beta,y)).
  * @copydoc hide_code_blas2_symv
  * @param alpha A Scalar
- * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
+ * @param M The Matrix.
+ * There is nothing that prevents you from making the matrix \c M non-symmetric or even
+ * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
+ * multiplication) is misleading.  For better code readability we introduce
+ * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
+ * \c dg::apply (general, possibly non-linear functor application).
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
@@ -212,9 +242,14 @@ inline void symv( get_value_type<ContainerType1> alpha,
 /*! @brief \f$ y = M x\f$
  *
  * This routine computes \f[ y = M x \f]
- * where \f$ M\f$ is a matrix.
+ * where \f$ M\f$ is a matrix (or functor that is called like \c M(x,y)).
  * @copydoc hide_code_blas2_symv
- * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
+ * @param M The Matrix.
+ * There is nothing that prevents you from making the matrix \c M non-symmetric or even
+ * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
+ * multiplication) is misleading.  For better code readability we introduce
+ * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
+ * \c dg::apply (general, possibly non-linear functor application)
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
@@ -280,4 +315,37 @@ inline void transfer( const MatrixType& x, AnotherMatrixType& y)
 ///@}
 
 } //namespace blas2
+/*! @brief \f$ y = \alpha M(x) + \beta y \f$;
+ * (alias for \c dg::blas2::symv)
+ *
+ * This Alias exists for code readability: if your matrix is not actually a matrix but
+ * a functor then it may seem unnatural to write \c blas2::symv in your code especially
+ * if  \c M is non-linear.
+ * @ingroup backend
+ */
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void apply( get_value_type<ContainerType1> alpha,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y)
+{
+    dg::blas2::symv( alpha, std::forward<MatrixType>(M), x, beta, y);
+}
+
+/*! @brief \f$ y = M( x)\f$;
+ * (alias for \c dg::blas2::symv)
+ *
+ * This Alias exists for code readability: if your matrix is not actually a matrix but
+ * a functor then it may seem unnatural to write \c blas2::symv in your code especially
+ * if  \c M is non-linear.
+ * @ingroup backend
+ */
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void apply( MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y)
+{
+    dg::blas2::symv( std::forward<MatrixType>(M), x, y);
+}
 } //namespace dg

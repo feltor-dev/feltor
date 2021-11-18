@@ -11,6 +11,8 @@
 namespace dg{
 ///@addtogroup dispatch
 ///@{
+
+
 /*! @brief The vector traits
 
 Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions.
@@ -25,7 +27,12 @@ possible parallelization and optimization strategies.
 \see \ref dispatch
 */
 template< class Vector, class Enable=void>
-struct TensorTraits;
+struct TensorTraits
+{
+    using value_type = void;
+    using tensor_category = NotATensorTag;
+    using execution_policy = NoPolicyTag;
+};
 
 template<class Vector>
 using get_value_type = typename TensorTraits<std::decay_t<Vector>>::value_type;

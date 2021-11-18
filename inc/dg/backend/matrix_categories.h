@@ -6,6 +6,8 @@ namespace dg{
 ///@addtogroup dispatch
 ///@{
 struct AnyMatrixTag{};
+///Indicate that a type is not a tensor
+struct NotATensorTag{};
 ///@}
 
 

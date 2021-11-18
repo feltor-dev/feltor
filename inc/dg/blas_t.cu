@@ -13,6 +13,17 @@ struct Expression{
    }
 };
 
+struct Functor{
+    template<class T>
+    void operator()( const T& in, T&  out){
+        dg::blas1::axpby( 1., in, 0., out);
+    }
+};
+
+struct NoFunctor{
+
+};
+
 int main()
 {
     std::cout << "This program tests the many different possibilities to call blas1 and blas2 functions.\n";
@@ -68,6 +79,12 @@ int main()
     dg::blas2::symv( 0.5, dg::asDenseMatrix<dg::DVec>({&arrdvec1[0], &arrdvec1[1], &arrdvec1[2]}),
             std::array<double,3>({0.1, 10, 1000}), 0.001, dvec1);
     std::cout << "symv as DenseMatrix               "<<( dvec1[0] == 66462.974) << std::endl;
+    Functor f;
+    dg::blas2::symv( f, arrdvec1[0], dvec1);
+    std::cout << "symv with functor "<< ( dvec1[0] == 52) << std::endl;
+    //Check compiler error:
+    //NoFunctor nof;
+    //dg::blas2::symv( nof, arrdvec1[0], dvec1);
 
     return 0;
 }

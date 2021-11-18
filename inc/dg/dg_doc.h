@@ -176,16 +176,20 @@
   * @tparam MatrixType
   * Any class for which a specialization of \c TensorTraits exists and which fullfills
   * the requirements of the there defined Matrix tags derived from \c AnyMatrixTag.
+  * Missing a specialization of \c TensorTraits the class is assumed a Functor.
   * The \c MatrixType can for example be one of:
   *  - \c scalar or \c Container: Scalars and containers act as diagonal matrices.
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>
   *  - \c dg::MDMatrix with \c dg::MDVec or \c std::vector<dg::MDVec>
+  *  - If a specialization of \c TensorTraits does not exist then the compiler assumes a **functor**
+  *  type, (e.g. will try to call <tt> operator()( const ContainerType0&, ContainerType1&) </tt>)
   *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
-  *  that have a corresponding member function in the Matrix class (e.g. \c symv( const ContainerType0&, ContainerType1&); ) can be called.
+  *  that have a corresponding member function in the Matrix class (e.g. <tt> symv( const ContainerType0&, ContainerType1&); </tt> ) can be called.
   *  .
-  *  If a \c Container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
+  * If a \c Container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements unless
+  * the type has the \c SelfMadeMatrixTag or is a Functor.
   */
   /** @class hide_geometry
   * @tparam Geometry
@@ -207,7 +211,9 @@
   * @tparam Geometry
   * A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c Container types can be used:
   * @tparam Matrix
-  * A class for which the blas2 functions are callable in connection with the \c Container class and to which the return type of \c create::dx() can be converted using \c dg::blas2::transfer.
+  * A class for which the \c dg::blas2::symv functions are callable in connection with the
+  * \c Container class and to which the return type of \c dg::create::dx() can be
+  * converted using \c dg::blas2::transfer.
   * The \c Matrix type can be one of:
   *  - \c dg::HMatrix with \c dg::HVec and one of the shared memory geometries
   *  - \c dg::DMatrix with \c dg::DVec and one of the shared memory geometries
@@ -295,16 +301,28 @@
  *      and return.
  *
  * @subsection dispatch_symv The symv function
- * The execution of the \c dg::blas2::symv (and \c dg::blas2::gemv) functions is hard to discribe in general
- * since each matrix class has individual prerequisites and execution paths.
- * Still, we can identify some general rules:
- *   -# The Matrix type can be either a Scalar (promotes to Scalar times the Unit Matrix), a Vector (promotes to a diagonal Matrix) or a Matrix
- *   -# If the Matrix is either a Scalar or a Vector and the remaining types do not have the \c dg::RecursiveVectorTag tensor category, then \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
- *   -# If the Matrix has the \c dg::SelfMadeMatrixTag tensor category, then all parameters are immediately forwarded to the \c symv member function. No asserts are performed and none of the following applies.
+ * In the execution of the \c dg::blas2::symv (and its aliases \c dg::blas2::gemv and \c dg::apply)
+ * each matrix type has individual prerequisites and execution paths.
+ * We can identify some general rules:
+ *   -# The Matrix type can be either a Scalar (promotes to Scalar times the
+ *   Unit Matrix), a Vector (promotes to a diagonal Matrix), a Matrix or a
+ *   Functor
+ *   -# If the Matrix type is either a Scalar or a Vector and the remaining types do
+ *   not have the \c dg::RecursiveVectorTag tensor category, then
+ *   \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
+ *   -# If the Matrix type has the \c dg::SelfMadeMatrixTag tensor category,
+ *   then all parameters are immediately forwarded to the \c symv member
+ *   function.  No asserts are performed and none of the following applies.
+ *   -# If the tensor category is \c dg::NotATensorTag (any type has this tag
+ *   by default unless it is overwritten by a specialization of
+ *   \c dg::TensorTraits ) then the compiler assumes that the type is a functor
+ *   type and immediately forwards all parameters to the \c operator() member
+ *   and none of the following applies
  *   -# The container template parameters must be Vectors or Scalars and must
  *   have compatible execution policies. Vectors must be compatible.
  *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
- *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
+ *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is
+ *   recursively called with the Matrix on all elements of the Vectors.
  *
  * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
