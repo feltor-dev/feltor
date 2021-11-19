@@ -33,15 +33,13 @@ int main()
     std::cout << "TEST 3D VERSION\n";
     dg::Grid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, dg::PER);
     const dg::DVec w3d = dg::create::weights( g3d);
-    const dg::DVec v3d = dg::create::inv_weights( g3d);
     dg::DVec x3 = dg::evaluate( initial, g3d);
     dg::DVec b3 = dg::evaluate ( laplace_fct, g3d);
-    dg::blas2::symv( w3d, b3, b3);
 
-    dg::Elliptic<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> lap(g3d, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> lap(g3d, dg::forward );
     dg::CG<dg::DVec > pcg( x3, g3d.size());
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( lap, x3, b3, v3d, eps, sqrt(lz))<<std::endl;
+    std::cout << "Number of pcg iterations "<< pcg.solve( lap, x3, b3, 1., w3d, eps, sqrt(lz))<<std::endl;
     t.toc();
     std::cout << "... for a precision of "<< eps<<std::endl;
     std::cout << "... on the device took "<< t.diff()<<"s\n";

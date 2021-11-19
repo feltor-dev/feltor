@@ -3,7 +3,7 @@
 
 #include <mpi.h>
 
-#include "cg.h"
+#include "pcg.h"
 #include "elliptic.h"
 
 #include "backend/timer.h"
@@ -52,16 +52,14 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny);
+    dg::PCG< dg::MDVec > pcg( x, n*n*Nx*Ny);
     if(rank==0)std::cout<<"Expand right hand side\n";
     const dg::MDVec solution = dg::evaluate ( fct, grid);
     const dg::MDVec deriv = dg::evaluate( derivative, grid);
     dg::MDVec b = dg::evaluate ( laplace_fct, grid);
-    //compute W b
-    dg::blas2::symv( w2d, b, b);
     //////////////////////////////////////////////////////////////////////
     t.tic(comm);
-    int number = pcg( lap, x, b, v2d, eps);
+    int number = pcg( lap, x, b, 1., w2d, eps);
     t.toc(comm);
     if( rank == 0)
     {

@@ -11,7 +11,7 @@ struct Diffusion
     Diffusion( const Geometry& g, imp::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g, g.bcx(), g.bcy(),  dg::centered)
     {
     }
     void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
@@ -34,11 +34,10 @@ struct Diffusion
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return LaplacianM_perp.weights();}
-    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const imp::Parameters p;
-    container temp;    
+    container temp;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
 
@@ -103,7 +102,7 @@ struct ToeflI
      * @return integrated total energy diffusion
      */
     double energy_diffusion( ){ return ediff_;}
-    const container& polarization( const std::vector<container>& y);
+    const container& polarization( double t, const std::vector<container>& y);
 
 private:
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
@@ -121,9 +120,10 @@ private:
     Helmholtz< Geometry, Matrix, container > gamma1;
     ArakawaX< Geometry, Matrix, container> arakawa; 
     dg::Elliptic< Geometry, Matrix, container > pol, laplaceM; 
-    dg::Invert<container> invert_pol, invert_invgamma;
+    dg::PCG<container> invert_pol, invert_invgamma;
+    dg::Extrapolation<container> extra_pol, extra_invgamma;
 
-    const container w2d, v2d, one;
+    const container w2d;
 
     double mass_, energy_, diff_, ediff_;
 
@@ -139,11 +139,12 @@ ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Paramet
     gamma_n( 2, chi),
     gamma1(  grid, -0.5*p.tau[1]),
     arakawa( grid),
-    pol(     grid, not_normed, centered),
-    laplaceM( grid, normed, centered),
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
-    w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)), p(p)
+    pol(      grid, centered),
+    laplaceM( grid, centered),
+    invert_pol(      omega, omega.size()),
+    invert_invgamma( omega, omega.size()),
+    extra_pol( 2, omega),
+    w2d( create::volume(grid)), p(p)
     {
     }
 
@@ -153,7 +154,9 @@ template< class G, class M, class container>
 const container& ToeflI<G, M, container>::compute_psi( const container& potential, int idx)
 {
     gamma1.alpha() = -0.5*p.tau[idx]*p.mu[idx];
-    invert_invgamma( gamma1, phi[idx], potential);
+
+    invert_invgamma.solve( gamma1, phi[idx], potential, gamma1.precond(),
+            gamma1.weights(), p.eps_gamma);
 
     pol.variation(binv,potential, omega); // u_E^2
 
@@ -163,7 +166,7 @@ const container& ToeflI<G, M, container>::compute_psi( const container& potentia
 
 
 template<class G, class Matrix, class container>
-const container& ToeflI<G, Matrix, container>::polarization( const std::vector<container>& y)
+const container& ToeflI<G, Matrix, container>::polarization( double t, const std::vector<container>& y)
 {
     //\chi = p.ai \p.mui n_i + p.as \p.mus n_s
     blas1::axpby( p.a[1]*p.mu[1], y[1], 0., chi); 
@@ -174,17 +177,23 @@ const container& ToeflI<G, Matrix, container>::polarization( const std::vector<c
     pol.set_chi( chi);                              //set chi of polarisation: nablp.aperp (chi nablp.aperp )
 
     gamma1.alpha() = -0.5*p.tau[1]*p.mu[1];
-    invert_invgamma( gamma1, gamma_n[0], y[1]);
+    invert_invgamma.solve( gamma1, gamma_n[0], y[1], gamma1.precond(),
+            gamma1.weights(), p.eps_gamma);
     gamma1.alpha() = -0.5*p.tau[2]*p.mu[2];
-    invert_invgamma( gamma1, gamma_n[1], y[2]);
+    invert_invgamma.solve( gamma1, gamma_n[1], y[2], gamma1.precond(),
+            gamma1.weights(), p.eps_gamma );
 
     dg::blas1::axpby( -1., y[0], 0., chi);
     dg::blas1::axpby( +p.a[1], gamma_n[0], 1., chi);
     dg::blas1::axpby( +p.a[2], gamma_n[1], 1., chi);
 
-    unsigned number = invert_pol( pol, phi[0], chi);//p.ajGamma n_j + p.aiGamma n_i -ne = -nabla chi nabla phi
+    extra_pol.extrapolate( t, phi[0]);
+    unsigned number = invert_pol.solve( pol, phi[0], chi, pol.precond(),
+            pol.weights(), p.eps_pol);
+    //p.ajGamma n_j + p.aiGamma n_i -ne = -nabla chi nabla phi
     if(  number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
+    extra_pol.update( t, phi[0]);
     return phi[0];
 }
 
@@ -198,7 +207,7 @@ void ToeflI< G, M, container>::operator()(double t, const std::vector<container>
     assert( y.size() == 3);
     assert( y.size() == yp.size());
 
-    phi[0] = polarization( y);
+    phi[0] = polarization(t, y);
     phi[1] = compute_psi( phi[0], 1);
     phi[2] = compute_psi( phi[0], 2);
     for( unsigned i=0; i<y.size(); i++)
@@ -210,7 +219,7 @@ void ToeflI< G, M, container>::operator()(double t, const std::vector<container>
     }
 
     //update energetics, 2% of total time
-        mass_ = blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
+        mass_ = blas2::dot( 1., w2d, y[0] ); //take real ion density which is electron density!!
         double Se = blas2::dot( ype[0], w2d, lny[0]);
         double Si = p.a[1]*p.tau[1]*blas2::dot( ype[1], w2d, lny[1]);
         double Sz = p.a[2]*p.tau[2]*blas2::dot( ype[2], w2d, lny[2]);
@@ -218,11 +227,11 @@ void ToeflI< G, M, container>::operator()(double t, const std::vector<container>
         double Uphiz = 0.5*p.a[2]*p.mu[2]*blas2::dot( ype[2], w2d, omega); 
         energy_ = Se + Si + Sz + Uphii + Uphiz;
 
-        diff_ = -p.nu*blas2::dot( one, w2d, lapy[0]);
+        diff_ = -p.nu*blas2::dot( 1., w2d, lapy[0]);
         double Gi[3];
-        Gi[0] = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, lny[0]); // minus 
+        Gi[0] = - blas2::dot( 1., w2d, lapy[0]) - blas2::dot( lapy[0], w2d, lny[0]); // minus 
         for( unsigned i=1; i<3; i++)
-            Gi[i] = - p.tau[i]*(blas2::dot( one, w2d, lapy[i]) + blas2::dot( lapy[i], w2d, lny[i])); // minus 
+            Gi[i] = - p.tau[i]*(blas2::dot( 1., w2d, lapy[i]) + blas2::dot( lapy[i], w2d, lny[i])); // minus 
         double Gphi[3];
         for( unsigned i=0; i<3; i++)
             Gphi[i] = -blas2::dot( phi[i], w2d, lapy[i]);

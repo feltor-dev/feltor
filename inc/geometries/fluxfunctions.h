@@ -1,7 +1,6 @@
 #pragma once
 #include <functional>
-#include "dg/backend/memory.h"
-#include "dg/topology/geometry.h"
+#include "dg/algorithm.h"
 
 namespace dg
 {

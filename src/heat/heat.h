@@ -15,9 +15,9 @@ struct Implicit
         m_p(p),
         m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
               p.rk4eps, p.mx, p.my),
-        m_ellipticForward( g, dg::normed, dg::forward),
-        m_ellipticBackward( g, dg::normed, dg::backward),
-        m_ellipticPerp( g, dg::normed, dg::centered)
+        m_ellipticForward( g,  dg::forward),
+        m_ellipticBackward( g,  dg::backward),
+        m_ellipticPerp( g,  dg::centered)
     {
         dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat( mag);
         dg::SparseTensor<container> bb, hh;
@@ -110,9 +110,9 @@ Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g,
     m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
           p.rk4eps, p.mx, p.my),
     m_p(p),
-    m_ellipticForward( g, dg::normed, dg::forward),
-    m_ellipticBackward(g, dg::normed, dg::backward),
-    m_ellipticPerp(g, dg::normed, dg::centered)
+    m_ellipticForward( g,  dg::forward),
+    m_ellipticBackward(g,  dg::backward),
+    m_ellipticPerp(g,  dg::centered)
 {
     //----------------------------init fields----------------------
     dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_invB);

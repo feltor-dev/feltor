@@ -5,7 +5,7 @@
 #include "helmholtz.h"
 #include "backend/exceptions.h"
 #include "multistep.h"
-#include "cg.h"
+#include "pcg.h"
 #include "functors.h"
 
 const double eps = 1e-8;
@@ -45,20 +45,20 @@ int main()
 
     dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
     dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
-    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > lapperp(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
+    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > lapperp(grid2d,grid2d.bcx(), grid2d.bcy(), dg::centered);
     gamma2inv.set_chi(chi);
 
 
 
     dg::DVec x_(rho.size(), 0.);
-    dg::Invert<dg::DVec> invert( x_, grid2d.size(), eps);
+    dg::PCG<dg::DVec> pcg( x_, grid2d.size());
     dg::blas2::gemv(lapperp,rho,rholap); //lambda = - nabla_perp^2 phi
     dg::blas1::scal(rholap,alpha); // lambda = 0.5*tau_i*nabla_perp^2 phi
 
     //test gamma2
-    unsigned number = invert( gamma2inv, x_, rholap);
-            if(  number == invert.get_max())
-            throw dg::Fail( eps);
+    unsigned number = pcg.solve( gamma2inv, x_, rholap, 1., w2d, eps);
+    if(  number == pcg.get_max())
+        throw dg::Fail( eps);
 
     dg::blas1::axpby( 1., sol, -1., x_);
     dg::exblas::udouble res;
@@ -68,9 +68,9 @@ int main()
     std::cout << "abs error " << res.d<<"\t"<<res.i<<std::endl;
     std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, x_)/ dg::blas2::dot( w2d, sol))<<std::endl;
 
-    number = invert( gamma1inv, x_, rho1);
-            if(  number == invert.get_max())
-            throw dg::Fail( eps);
+    number = pcg.solve( gamma1inv, x_, rho1, 1., w2d, eps);
+    if(  number == pcg.get_max())
+        throw dg::Fail( eps);
     //test gamma 1
     dg::blas1::axpby( 1., sol1, -1., x_);
     res.d = sqrt( dg::blas2::dot( w2d, x_));

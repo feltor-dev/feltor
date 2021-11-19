@@ -13,7 +13,7 @@
 
 void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const dg::geo::CurvilinearGridX2d& g2d, dg::DVec& x, double psi_0, double psi_1, double eps)
 {
-    dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+    dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::forward);
     ////////////////////////blob solution////////////////////////////////////////
     dg::DVec b        = dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
     const dg::DVec chi      = dg::pullback( dg::ONE(), g2d);
@@ -35,18 +35,14 @@ void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const dg::g
     ////////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol2d = dg::create::volume( g2d);
-    const dg::DVec inv_vol2d = dg::create::inv_volume( g2d);
-    const dg::DVec v2d = dg::create::inv_weights( g2d);
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
     std::cout << eps<<"\t";
     dg::Timer t;
     t.tic();
-    dg::CG<dg::DVec > invert( x, g2d.size());
-    dg::blas2::symv( pol.weights(), b, b);
-    //unsigned number = invert(pol, x,b, vol2d, inv_vol2d );
-    unsigned number = invert(pol, x,b, v2d, v2d, eps ); //inv weights are better preconditioners
+    dg::PCG<dg::DVec > pcg( x, g2d.size());
+    unsigned number = pcg.solve(pol, x,b, pol.precond(), vol2d, eps );
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

@@ -1,10 +1,6 @@
 #pragma once
 
-#include "dg/topology/gridX.h"
-#include "dg/topology/interpolationX.h"
-#include "dg/topology/evaluationX.h"
-#include "dg/topology/weightsX.h"
-#include "dg/runge_kutta.h"
+#include "dg/algorithm.h"
 #include "generatorX.h"
 #include "utilitiesX.h"
 

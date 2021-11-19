@@ -14,7 +14,7 @@ struct Diffusion
     Diffusion( const Geometry& g, double nu):
         nu_(nu), 
         temp( dg::evaluate(dg::zero, g)), 
-        LaplacianM_perp( g, dg::normed, dg::centered){
+        LaplacianM_perp( g,  dg::centered){
     }
     void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
@@ -32,12 +32,11 @@ struct Diffusion
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return LaplacianM_perp.weights();}
-    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
 
   private:
     double nu_;
-    const container w2d, v2d;
+    const container w2d;
     container temp;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
@@ -112,7 +111,7 @@ struct ToeflR
   private:
     //use chi and omega as helpers to compute square velocity in omega
     void compute_psi( const container& potential);
-    const container& polarisation( const std::vector<container>& y);
+    const container& polarisation( double t, const std::vector<container>& y);
 
     container chi, omega;
     const container binv; //magnetic field
@@ -126,9 +125,10 @@ struct ToeflR
     dg::Helmholtz<Geometry,  Matrix, container> gamma1;
     dg::ArakawaX< Geometry, Matrix, container> arakawa; 
 
-    dg::Invert<container> invert_pol, invert_invgamma;
+    dg::PCG<container> invert_pol, invert_invgamma;
+    dg::Extrapolation<container> extra_pol;
 
-    const container w2d, v2d, one;
+    const container w2d;
     const double eps_pol, eps_gamma, kappa, nu; 
     double tau[2], mu[2], z[2];
     const std::string equations;
@@ -145,13 +145,14 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters&
     binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
     gamma_n(chi), potential_(chi), psi( 2, chi), dypsi( psi), ype(psi),
     dyy(2,chi), lny( dyy), lapy(dyy),
-    pol(     grid, dg::not_normed, dg::centered),
-    laplaceM( grid, dg::normed, dg::centered),
+    pol(     grid,  dg::centered),
+    laplaceM( grid,  dg::centered),
     gamma1(  grid, 0., dg::centered),
     arakawa( grid),
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
-    w2d( dg::create::volume(grid)), v2d( dg::create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
+    invert_pol(      omega, omega.size()),
+    invert_invgamma( omega, omega.size()),
+    extra_pol(2, omega),
+    w2d( dg::create::volume(grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), nu(p.nu), debye_( p.debye)
 {
     tau[0] = p.tau[0], tau[1] = p.tau[1];
@@ -165,7 +166,7 @@ void ToeflR<G, M, container>::compute_psi( const container& phi)
     for( unsigned i=0; i<2; i++)
     {
         gamma1.alpha() = -0.5*mu[i]*tau[i];
-        unsigned number = invert_invgamma( gamma1, psi[i], phi);
+        unsigned number = invert_invgamma.solve( gamma1, psi[i], phi, gamma1.precond(), gamma1.weights(), eps_gamma);
         if(  number == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
 
@@ -176,7 +177,7 @@ void ToeflR<G, M, container>::compute_psi( const container& phi)
 
 
 template<class G, class M, class container>
-const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
+const container& ToeflR<G, M, container>::polarisation( double t, const std::vector<container>& y)
 {
     //compute chi and polarisation
     dg::blas1::scal( chi, 0.);
@@ -196,14 +197,17 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
     for( unsigned i=0; i<2; i++)
     {
         gamma1.alpha() = -0.5*tau[i]*mu[i];
-        unsigned number = invert_invgamma( gamma1, gamma_n, y[i]);
+        unsigned number = invert_invgamma.solve( gamma1, gamma_n, y[i], gamma1.precond(), gamma1.weights(), eps_gamma);
         if(  number == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
         dg::blas1::axpby( z[i], gamma_n, 1., omega); 
     }
-    unsigned number = invert_pol( pol, potential_, omega);
+    extra_pol.extrapolate( t, potential_);
+    unsigned number = invert_pol.solve( pol, potential_, omega, pol.precond(),
+            pol.weights(), eps_pol);
     if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
+    extra_pol.update( t, potential_);
     return potential_;
 }
 
@@ -215,7 +219,7 @@ void ToeflR<G, M, container>::operator()(double t, const std::vector<container>&
     assert( y.size() == 2);
     assert( y.size() == yp.size());
 
-    potential_ = polarisation( y);
+    potential_ = polarisation(t, y);
     compute_psi(potential_);
 
     { //update energetics, 2% of total time
@@ -226,18 +230,18 @@ void ToeflR<G, M, container>::operator()(double t, const std::vector<container>&
         dg::blas2::symv( laplaceM, y[i], lapy[i]);
     }
 
-        mass_ = dg::blas2::dot( one, w2d, y[0] ) + dg::blas2::dot( one, w2d, y[1]); //take real ion density which is electron density!!
-        diff_ = nu*( dg::blas2::dot( one, w2d, lapy[0]) + dg::blas2::dot( one, w2d, lapy[1]));
+        mass_ = dg::blas2::dot( 1., w2d, y[0] ) + dg::blas2::dot( 1., w2d, y[1]); //take real ion density which is electron density!!
+        diff_ = nu*( dg::blas2::dot( 1., w2d, lapy[0]) + dg::blas2::dot( 1., w2d, lapy[1]));
         double Ue = z[0]*tau[0]*dg::blas2::dot( lny[0], w2d, ype[0]);
         double Up = z[1]*tau[1]*dg::blas2::dot( lny[1], w2d, ype[1]);
         double Uphi = 0.5*dg::blas2::dot( ype[0], w2d, omega) + 0.5*dg::blas2::dot( ype[1], w2d, omega); 
         pol.variation(potential_, omega); 
-        double UE = debye_*dg::blas2::dot( one, w2d, omega);
+        double UE = debye_*dg::blas2::dot( 1., w2d, omega);
         energy_ = Ue + Up + Uphi + UE;
         //std::cout << "Ue "<<Ue<< "Up "<<Up<< "Uphi "<<Uphi<< "UE "<<UE<<"\n";
 
-        double Ge = - tau[0]*(dg::blas2::dot( one, w2d, lapy[0]) + dg::blas2::dot( lapy[0], w2d, lny[0])); // minus because of laplace
-        double Gp = - tau[1]*(dg::blas2::dot( one, w2d, lapy[1]) + dg::blas2::dot( lapy[1], w2d, lny[1])); // minus because of laplace
+        double Ge = - tau[0]*(dg::blas2::dot( 1., w2d, lapy[0]) + dg::blas2::dot( lapy[0], w2d, lny[0])); // minus because of laplace
+        double Gp = - tau[1]*(dg::blas2::dot( 1., w2d, lapy[1]) + dg::blas2::dot( lapy[1], w2d, lny[1])); // minus because of laplace
         double Gpsie = -dg::blas2::dot( psi[0], w2d, lapy[0]);
         double Gpsip = -dg::blas2::dot( psi[1], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gp "<<Gp<<" gpsie "<<Gpsie<<" gpsip "<<Gpsip<<"\n";

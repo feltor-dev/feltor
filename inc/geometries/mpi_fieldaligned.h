@@ -1,15 +1,6 @@
 #pragma once
 
-#include "dg/backend/mpi_matrix.h"
-#include "dg/backend/blas2_dispatch_mpi.h"
-#include "dg/backend/mpi_collective.h"
-#include "dg/topology/grid.h"
-#include "dg/topology/mpi_evaluation.h"
-#include "dg/topology/mpi_grid.h"
-#include "dg/topology/mpi_projection.h"
-#include "dg/topology/interpolation.h"
-#include "dg/topology/functions.h"
-#include "dg/runge_kutta.h"
+#include "dg/algorithm.h"
 #include "fieldaligned.h"
 #include "dg/backend/timer.h"
 

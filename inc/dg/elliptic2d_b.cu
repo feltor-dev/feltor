@@ -96,7 +96,7 @@ int main()
 
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, jfactor);
+        multi_pol[u].construct( multigrid.grid(u), dg::centered, jfactor);
         //this tests if elliptic can recover from NaN in the preconditioner
         multi_pol[u].set_chi(0.);
         // here we test if we can set the tensor part in elliptic
@@ -131,22 +131,21 @@ int main()
     //derivative converges with p-1, for p = 1 with 1/2
 
     }
-
     {
     std::cout << "Forward Elliptic\n";
     x = temp;
-    //![invert]
-    //create an Elliptic object without volume form (not normed)
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
+    //![pcg]
+    //create an Elliptic object
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::centered, jfactor);
 
     //Set the chi function (chi is a dg::DVec of size grid.size())
     pol_forward.set_chi( chi);
 
-    //construct an invert object
-    dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
+    //construct an pcg object
+    dg::PCG<dg::DVec > pcg( x, n*n*Nx*Ny);
 
     //invert the elliptic equation
-    invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
+    pcg.solve( pol_forward, x, b, chi_inv, w2d, eps);
 
     //compute the error (solution contains analytic solution
     dg::blas1::axpby( 1.,x,-1., solution, error);
@@ -156,7 +155,7 @@ int main()
 
     //output the relative error
     std::cout << " "<<sqrt( err/norm) << "\n";
-    //![invert]
+    //![pcg]
     std::cout << "Compute variation in forward Elliptic\n";
     pol_forward.variation( 1., chi, x, 0., error);
     dg::blas1::axpby( 1., variatio, -1., error);
@@ -168,7 +167,6 @@ int main()
     //std::cout << " Type inner and outer iterations (30 3)!\n";
     //std::cin >> inner_m >> outer_k;
     dg::LGMRES<dg::DVec> lgmres( x, inner_m, outer_k, 10000/inner_m);
-    pol_forward.set_norm( dg::normed);
     dg::blas1::copy( 0., x);
     dg::Timer t;
     t.tic();
@@ -195,7 +193,6 @@ int main()
     //std::cout << "Type mMAx (8), damping ( 1e-5), restart (8)\n";
     //std::cin >> mMax >> damping >> restart;
     dg::AndersonAcceleration<dg::DVec> anderson( x, mMax);
-    pol_forward.set_norm( dg::normed);
     dg::blas1::copy( 0., x);
     t.tic();
     number = anderson.solve( pol_forward, x, b, w2d, eps, eps, 3000, damping, restart, false );
@@ -206,15 +203,16 @@ int main()
     std::cout << " "<<sqrt( err/norm) << "\n";
     }
 
+    dg::PCG<dg::DVec > pcg( x, n*n*Nx*Ny);
+
     {
         std::cout << "Compute 2d handle of Elliptic3d\n";
 	    dg::CartesianGrid3d grid( 0, lx, 0, ly, 0,1,n, Nx, Ny, 1, bcx, bcy, dg::PER);
-		dg::Elliptic3d<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+		dg::Elliptic3d<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::backward, jfactor);
         pol_backward.set_compute_in_2d(true);
 		pol_backward.set_chi( chi);
 		x = temp;
-		dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-		invert_bw( pol_backward, x, b, w2d, v2d, chi_inv);
+		pcg.solve( pol_backward, x, b, chi_inv, w2d, eps);
 		dg::blas1::axpby( 1.,x,-1., solution, error);
 		double err = dg::blas2::dot( w2d, error);
         err = sqrt( err/norm); res.d = err;
@@ -224,13 +222,12 @@ int main()
         //try the Hyperelliptic operator
         std::cout << "HyperElliptic operator\n";
 	    dg::CartesianGrid2d grid( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);
-		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::backward, jfactor);
 		x = temp;
-		dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
         chi = temp;
 		x = temp;
-		invert( pol_backward, chi, solution);
-		invert( pol_backward, x, chi);
+		pcg.solve( pol_backward, chi, solution, 1., w2d, eps);
+		pcg.solve( pol_backward, x, chi, 1., w2d, eps);
 		dg::blas1::axpby( 1.,x,-0.25, solution, error);
 		double err = dg::blas2::dot( w2d, error);
         err = sqrt( err/norm); res.d = err;

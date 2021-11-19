@@ -15,7 +15,7 @@ struct Diffusion
         m_temp[0] = dg::evaluate( dg::zero, g);
         m_temp[1] = dg::evaluate( dg::zero, g);
         enum dg::direction dir = dg::str2direction( "centered");
-        m_LaplacianM.construct( g, dg::normed, dir, 1);
+        m_LaplacianM.construct( g, dir, 1);
         m_nu = nu;
         m_order = order;
     }
@@ -36,7 +36,6 @@ struct Diffusion
             dg::blas1::scal( y, 0);
     }
     const Container& weights(){ return m_LaplacianM.weights();}
-    const Container& inv_weights(){ return m_LaplacianM.inv_weights();}
     const Container& precond(){ return m_LaplacianM.precond();}
   private:
     unsigned m_order;
@@ -76,7 +75,6 @@ int main()
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
 	dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
-    dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     const dg::DVec b =    dg::evaluate( rhs, grid);

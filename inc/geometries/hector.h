@@ -1,11 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "dg/topology/grid.h"
-#include "dg/topology/interpolation.h"
-#include "dg/topology/geometry.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 #include "fluxfunctions.h"
 #include "curvilinear.h"
 #include "flux.h"
@@ -372,14 +368,13 @@ struct Hector : public aGenerator2d
         double eps = 1e10, eps_old = 2e10;
         dg::geo::CurvilinearGrid2d g2d_old = m_g2d;
         container adapt = dg::pullback(chi, g2d_old);
-        dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::centered);
         ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
-        dg::CG<container > invert_old( u_old, g2d_old.size());
+        dg::PCG<container > invert_old( u_old, g2d_old.size());
         container lapu = dg::pullback( lapChiPsi, g2d_old);
-        dg::blas2::symv( ellipticD_old.weights(), lapu, lapu);
-        unsigned number = invert_old( ellipticD_old, u_old, lapu, ellipticD_old.precond(), ellipticD_old.inv_weights(), eps_u);
+        unsigned number = invert_old.solve( ellipticD_old, u_old, lapu, ellipticD_old.precond(), ellipticD_old.weights(), eps_u);
         if(verbose) std::cout << "Nx "<<m_g2d.Nx()<<" Ny "<<m_g2d.Ny()<<std::flush;
         if(verbose) std::cout <<" iter "<<number<<" error "<<eps<<"\n";
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
@@ -387,7 +382,7 @@ struct Hector : public aGenerator2d
             eps = eps_old;
             m_g2d.multiplyCellNumbers(2,2);
             if(verbose) std::cout << "Nx "<<m_g2d.Nx()<<" Ny "<<m_g2d.Ny()<<std::flush;
-            dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( m_g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( m_g2d, dg::DIR, dg::PER, dg::centered);
             adapt = dg::pullback(chi, m_g2d);
             ellipticD.set_chi( adapt);
             const container vol2d = dg::create::weights( m_g2d);
@@ -396,10 +391,9 @@ struct Hector : public aGenerator2d
             dg::blas2::gemv( Q, u_old, u_diff);
             u = u_diff;
 
-            dg::CG<container > invert( u_diff, m_g2d.size());
+            dg::PCG<container > invert( u_diff, m_g2d.size());
             lapu = dg::pullback( lapChiPsi, m_g2d);
-            dg::blas2::symv( ellipticD.weights(), lapu, lapu);
-            number = invert( ellipticD, u, lapu, ellipticD.precond(), ellipticD.inv_weights(), 0.1*eps_u);
+            number = invert.solve( ellipticD, u, lapu, ellipticD.precond(), ellipticD.weights(), 0.1*eps_u);
             dg::blas1::axpby( 1. ,u, -1., u_diff);
             eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
             if(verbose) std::cout <<" iter "<<number<<" error "<<eps<<"\n";
@@ -417,23 +411,22 @@ struct Hector : public aGenerator2d
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
         dg::geo::CurvilinearGrid2d g2d_old = m_g2d;
-        dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::centered);
         dg::SparseTensor<container> chi_t;
         dg::pushForwardPerp( chi.xx(), chi.xy(), chi.yy(), chi_t, g2d_old);
 
         ellipticD_old.set_chi( chi_t);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
-        dg::CG<container > invert_old( u_old, g2d_old.size());
+        dg::PCG<container > invert_old( u_old, g2d_old.size());
         container lapu = dg::pullback( lapChiPsi, g2d_old);
-        dg::blas2::symv( ellipticD_old.weights(), lapu, lapu);
-        unsigned number = invert_old( ellipticD_old, u_old, lapu, ellipticD_old.precond(), ellipticD_old.inv_weights(), eps_u);
+        unsigned number = invert_old.solve( ellipticD_old, u_old, lapu, ellipticD_old.precond(), ellipticD_old.weights(), eps_u);
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
         {
             eps = eps_old;
             m_g2d.multiplyCellNumbers(2,2);
             if(verbose) std::cout << "Nx "<<m_g2d.Nx()<<" Ny "<<m_g2d.Ny()<<std::flush;
-            dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( m_g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::Elliptic2d<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( m_g2d, dg::DIR, dg::PER, dg::centered);
             dg::pushForwardPerp( chi.xx(), chi.xy(), chi.yy(), chi_t, m_g2d);
 
             ellipticD.set_chi( chi_t );
@@ -443,10 +436,9 @@ struct Hector : public aGenerator2d
             dg::blas2::gemv( Q, u_old, u_diff);
             u = u_diff;
 
-            dg::CG<container > invert( u_diff, m_g2d.size());
+            dg::PCG<container > invert( u_diff, m_g2d.size());
             lapu = dg::pullback( lapChiPsi, m_g2d);
-            dg::blas2::symv( ellipticD.weights(), lapu, lapu);
-            number = invert( ellipticD, u, lapu, ellipticD.precond(), ellipticD.inv_weights(), 0.1*eps_u);
+            number = invert.solve( ellipticD, u, lapu, ellipticD.precond(), ellipticD.weights(), 0.1*eps_u);
             dg::blas1::axpby( 1. ,u, -1., u_diff);
             eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
             if(verbose) std::cout <<" iter "<<number<<" error "<<eps<<"\n";

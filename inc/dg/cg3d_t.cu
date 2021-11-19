@@ -4,7 +4,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "cg.h"
+#include "pcg.h"
 #include "elliptic.h"
 
 const unsigned n = 3; //global relative error in L2 norm is O(h^P)
@@ -32,13 +32,11 @@ int main()
     dg::HVec v3d = dg::create::inv_weights( g3d);
     dg::HVec x3 = dg::evaluate( initial, g3d);
 
-    dg::Elliptic<dg::CartesianGrid3d, dg::HMatrix, dg::HVec> A3( g3d, dg::not_normed);
-    dg::HVec b3 = dg::evaluate ( laplace_fct, g3d);
+    dg::Elliptic<dg::CartesianGrid3d, dg::HMatrix, dg::HVec> A3( g3d);
+    const dg::HVec b3 = dg::evaluate ( laplace_fct, g3d);
     const dg::HVec solution3 = dg::evaluate ( fct, g3d);
-    dg::blas2::symv( w3d, b3, b3);
-    dg::CG<dg::HVec > pcg3( x3, g3d.size());
-    std::cout << "Number of pcg iterations "<< pcg3( A3, x3, b3, v3d, eps_)<<std::endl;
-    //std::cout << "Number of cg iterations "<< pcg( A, x, b, dg::Identity<double>(), eps)<<endl;
+    dg::PCG<dg::HVec > pcg3( x3, g3d.size());
+    std::cout << "Number of pcg iterations "<< pcg3.solve( A3, x3, b3, 1., w3d, eps_)<<std::endl;
     std::cout << "For a precision of "<< eps_<<std::endl;
     //compute error
     dg::HVec error3( solution3);

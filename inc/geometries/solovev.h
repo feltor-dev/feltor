@@ -6,8 +6,7 @@
 
 #include "dg/blas.h"
 
-#include "dg/topology/functions.h"
-#include "dg/functors.h"
+#include "dg/algorithm.h"
 #include "solovev_parameters.h"
 #include "magnetic_field.h"
 #include "modified.h"

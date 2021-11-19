@@ -324,9 +324,9 @@ int main( int argc, char* argv[])
         std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
         dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
         dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
-            dg::create::fast_projection( grid, 1, cx, cy, dg::normed);
+            dg::create::fast_projection( grid, 1, cx, cy);
         dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
-            dg::create::fast_projection( grid, 1, cx, cy, dg::normed);
+            dg::create::fast_projection( grid, 1, cx, cy);
         dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
         dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
         dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);

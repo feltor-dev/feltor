@@ -124,7 +124,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM( grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM( grid,  dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid

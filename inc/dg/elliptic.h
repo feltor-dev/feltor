@@ -80,17 +80,15 @@ class Elliptic
      * @brief Construct from Grid
      *
      * @param g The Grid, boundary conditions are taken from here
-     * @param no choose \c dg::normed if you want to directly use the object,
-     *  \c dg::not_normed if you want to invert the elliptic equation
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed the metric per default
      */
-    Elliptic( const Geometry& g, norm no = not_normed,
+    Elliptic( const Geometry& g,
         direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
-        Elliptic( g, g.bcx(), g.bcy(), no, dir, jfactor, chi_weight_jump)
+        Elliptic( g, g.bcx(), g.bcy(), dir, jfactor, chi_weight_jump)
     {
     }
 
@@ -99,8 +97,6 @@ class Elliptic
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
-     * @param no choose \c dg::normed if you want to directly use the object,
-     *  \c dg::not_normed if you want to invert the elliptic equation
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
@@ -108,10 +104,10 @@ class Elliptic
      * @note chi is assumed the metric per default
      */
     Elliptic( const Geometry& g, bc bcx, bc bcy,
-        norm no = not_normed, direction dir = forward,
+        direction dir = forward,
         value_type jfactor=1., bool chi_weight_jump = false)
     {
-        m_no=no, m_jfactor=jfactor;
+        m_jfactor=jfactor;
         m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
@@ -120,13 +116,11 @@ class Elliptic
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
 
-        dg::assign( dg::create::inv_volume(g),    m_inv_weights);
         dg::assign( dg::create::volume(g),        m_weights);
-        dg::assign( dg::create::inv_weights(g),   m_precond);
-        m_temp = m_tempx = m_tempy = m_inv_weights;
+        dg::assign( dg::evaluate( dg::one, g),    m_precond);
+        m_temp = m_tempx = m_tempy = m_weights;
         m_chi=g.metric();
         m_sigma = m_vol = dg::tensor::volume(m_chi);
-        dg::assign( dg::create::weights(g), m_weights_wo_vol);
     }
 
     /**
@@ -161,7 +155,7 @@ class Elliptic
     {
         dg::blas1::pointwiseDot( sigma, m_vol, m_sigma);
         //update preconditioner
-        dg::blas1::pointwiseDivide( m_inv_weights, sigma, m_precond);
+        dg::blas1::pointwiseDivide( 1., sigma, m_precond);
         // sigma is possibly zero, which will invalidate the preconditioner
         // it is important to call this blas1 function because it can
         // overwrite NaN in m_precond in the next update
@@ -186,16 +180,7 @@ class Elliptic
     }
 
     /**
-     * @brief Return the vector missing in the un-normed symmetric matrix
-     *
-     * i.e. the inverse of the weights() function
-     * @return inverse volume form including inverse weights
-     */
-    const Container& inv_weights()const {
-        return m_inv_weights;
-    }
-    /**
-     * @brief Return the vector making the matrix symmetric
+     * @brief Return the weights making the operator self-adjoint
      *
      * i.e. the volume form
      * @return volume form including weights
@@ -206,28 +191,13 @@ class Elliptic
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
      *
-     * Currently returns the inverse weights without volume elment divided by the scalar part of \f$ \sigma\f$.
-     * This is especially good when \f$ \sigma\f$ exhibits large amplitudes or variations
+     * Currently returns 1 divided by the scalar part of \f$ \sigma\f$.
+     * This is especially good when \f$ \sigma\f$ exhibits large amplitudes or
+     * variations
      * @return the inverse of \f$\sigma\f$.
      */
     const Container& precond()const {
         return m_precond;
-    }
-    /**
-     * @brief Determine if weights are multiplied to make operator symmetric or not
-     *
-     * @param new_norm new setting
-     */
-    void set_norm( dg::norm new_norm) {
-        m_no = new_norm;
-    }
-    /**
-     * @brief Determine if weights are multiplied to make operator symmetric or not
-     *
-     * @return current norm
-     */
-    dg::norm get_norm( ) const{
-        return m_no;
     }
     /**
      * @brief Set the currently used jfactor (\f$ \alpha \f$)
@@ -314,10 +284,7 @@ class Elliptic
                 dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
             }
         }
-        if( m_no == normed)
-            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
-        if( m_no == not_normed)//multiply weights without volume
-            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+        dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
     }
 
     /**
@@ -367,9 +334,8 @@ class Elliptic
 
     private:
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
-    Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
+    Container m_weights, m_precond;
     Container m_tempx, m_tempy, m_temp;
-    norm m_no;
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
@@ -441,8 +407,6 @@ class Elliptic3d
      * @brief Construct from Grid
      *
      * @param g The Grid; boundary conditions are taken from here
-     * @param no choose \c dg::normed if you want to directly use the object,
-     *  \c dg::not_normed if you want to invert the elliptic equation
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
@@ -450,8 +414,8 @@ class Elliptic3d
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed the metric per default
      */
-    Elliptic3d( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
-        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), no, dir, jfactor, chi_weight_jump)
+    Elliptic3d( const Geometry& g, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
+        Elliptic3d( g, g.bcx(), g.bcy(), g.bcz(), dir, jfactor, chi_weight_jump)
     {
     }
 
@@ -461,8 +425,6 @@ class Elliptic3d
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param bcz boundary contition in z
-     * @param no choose \c dg::normed if you want to directly use the object,
-     *  \c dg::not_normed if you want to invert the elliptic equation
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * the direction of the z derivative is always \c dg::centered
@@ -470,9 +432,9 @@ class Elliptic3d
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is the metric tensor multiplied by the volume element per default
      */
-    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward, value_type jfactor = 1., bool chi_weight_jump = false)
+    Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, direction dir = forward, value_type jfactor = 1., bool chi_weight_jump = false)
     {
-        m_no=no, m_jfactor=jfactor;
+        m_jfactor=jfactor;
         m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
@@ -483,13 +445,11 @@ class Elliptic3d
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
 
-        dg::assign( dg::create::inv_volume(g),    m_inv_weights);
         dg::assign( dg::create::volume(g),        m_weights);
-        dg::assign( dg::create::inv_weights(g),   m_precond);
-        m_temp = m_tempx = m_tempy = m_tempz = m_inv_weights;
+        dg::assign( dg::evaluate( dg::one, g),    m_precond);
+        m_temp = m_tempx = m_tempy = m_tempz = m_weights;
         m_chi=g.metric();
         m_sigma = m_vol = dg::tensor::volume(m_chi);
-        dg::assign( dg::create::weights(g), m_weights_wo_vol);
     }
     ///@copydoc Elliptic::construct()
     template<class ...Params>
@@ -505,7 +465,7 @@ class Elliptic3d
     {
         dg::blas1::pointwiseDot( sigma, m_vol, m_sigma);
         //update preconditioner
-        dg::blas1::pointwiseDivide( m_inv_weights, sigma, m_precond);
+        dg::blas1::pointwiseDivide( 1., sigma, m_precond);
         // sigma is possibly zero, which will invalidate the preconditioner
         // it is important to call this blas1 function because it can
         // overwrite NaN in m_precond in the next update
@@ -518,10 +478,6 @@ class Elliptic3d
         m_chi = SparseTensor<Container>(tau);
     }
 
-    ///@copydoc Elliptic::inv_weights()
-    const Container& inv_weights()const {
-        return m_inv_weights;
-    }
     ///@copydoc Elliptic::weights()
     const Container& weights()const {
         return m_weights;
@@ -529,14 +485,6 @@ class Elliptic3d
     ///@copydoc Elliptic::precond()
     const Container& precond()const {
         return m_precond;
-    }
-    ///@copydoc Elliptic::set_norm(dg::norm)
-    void set_norm( dg::norm new_norm) {
-        m_no = new_norm;
-    }
-    ///@copydoc Elliptic::get_norm()
-    dg::norm get_norm( ) const{
-        return m_no;
     }
     ///@copydoc Elliptic::set_jfactor()
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
@@ -603,10 +551,7 @@ class Elliptic3d
                 dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
             }
         }
-        if( m_no == normed)
-            dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
-        if( m_no == not_normed)//multiply weights without volume
-            dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, y);
+        dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
     }
 
     ///@copydoc Elliptic::variation(const ContainerType0&,ContainerType1&)
@@ -634,9 +579,8 @@ class Elliptic3d
 
     private:
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
-    Container m_weights, m_inv_weights, m_precond, m_weights_wo_vol;
+    Container m_weights, m_precond;
     Container m_tempx, m_tempy, m_tempz, m_temp;
-    norm m_no;
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;

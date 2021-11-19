@@ -113,7 +113,7 @@ class PCG
      * @tparam Preconditioner A type for which the \c blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2 >
-    unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, const ContainerType2& W, value_type eps = 1e-12, value_type nrmb_correction = 1, int test_frequency = 1);
+    unsigned solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type eps = 1e-12, value_type nrmb_correction = 1, int test_frequency = 1);
   private:
     ContainerType r, p, ap;
     unsigned max_iter;

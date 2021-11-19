@@ -14,47 +14,12 @@ namespace shu
 
 // Improvement: make Diffusion a friend to Shu to save memory and duplicate code
 template< class Geometry, class Matrix, class Container>
-struct Diffusion
-{
-    Diffusion( const Geometry& g, dg::file::WrappedJsonValue& js)
-    {
-        //only allocate if needed
-        std::string regularization = js[ "regularization"].get( "type", "modal").asString();
-        std::string timestepper = js[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
-        if( "ImExMultistep" == timestepper &&  "viscosity" == regularization)
-        {
-            m_nu = js[ "regularization"].get( "nu", 1e-3).asDouble();
-            m_order = js[ "regularization"].get( "order", 1).asUInt();
-            m_temp = dg::evaluate( dg::zero, g);
-            enum dg::direction dir = dg::str2direction(
-                    js[ "regularization"].get( "direction", "centered").asString());
-            m_LaplacianM.construct( g, dg::normed, dir, 1);
-        }
-    }
-    void operator()(double t, const Container& x, Container& y)
-    {
-        dg::blas1::copy( x, y);
-        for( unsigned p=0; p<m_order; p++)
-        {
-            using std::swap;
-            swap( m_temp, y);
-            dg::blas2::symv( m_nu, m_LaplacianM, m_temp, 0., y);
-        }
-        dg::blas1::scal( y, -1.);
-    }
-    const Container& weights(){ return m_LaplacianM.weights();}
-    const Container& inv_weights(){ return m_LaplacianM.inv_weights();}
-    const Container& precond(){ return m_LaplacianM.precond();}
-  private:
-    double m_nu;
-    unsigned m_order;
-    Container m_temp;
-    dg::Elliptic<Geometry, Matrix,Container> m_LaplacianM;
-};
+struct Diffusion;
 
 template< class Geometry, class Matrix, class Container >
 struct Shu
 {
+    friend class Diffusion<Geometry, Matrix, Container>;
     using value_type = dg::get_value_type<Container>;
 
     Shu( const Geometry& grid, dg::file::WrappedJsonValue& js);
@@ -67,10 +32,14 @@ struct Shu
     Matrix& dy() {return m_centered[1];}
 
     void operator()(double t, const Container& y, Container& yp);
+    void add_implicit(double alpha, const Container& x, double beta, Container& yp);
 
     void set_mms_source( double sigma, double velocity, double ly) {
         m_mms = shu::MMSSource( sigma, velocity, ly);
         m_add_mms = true;
+    }
+    const Container& weights(){
+        return m_LaplacianM.weights();
     }
   private:
     Container m_psi, m_v, m_temp[3], m_fine_psi, m_fine_v, m_fine_temp[3], m_fine_y, m_fine_yp;
@@ -91,9 +60,9 @@ struct Shu
     shu::MMSSource m_mms;
     bool m_add_mms = false;
     Container m_x, m_y;
-    double m_nu; // for Diffusion
-    unsigned m_order; // for Diffusion
-    bool m_add_viscosity = false;
+    double m_nu = 0.; // for Diffusion
+    unsigned m_order = 1; // for Diffusion
+    bool m_partitioned = false, m_update = true;
 };
 
 template<class Geometry, class Matrix, class Container>
@@ -106,6 +75,12 @@ Shu< Geometry, Matrix, Container>::Shu(
 {
     m_advection = js[ "advection"].get( "type", "arakawa").asString();
     m_multiplication = js[ "advection"].get( "multiplication", "pointwise").asString();
+    std::string stepper = js[ "timestepper"].get( "type",
+            "FilteredExplicitMultistep").asString();
+    if( stepper == "ImExMultistep" || stepper == "ARK")
+        m_partitioned = true;
+    if( stepper == "FilteredImplicitMultistep" || stepper == "DIRK")
+        m_update = false;
     m_metric = g.metric();
 
     m_psi = dg::evaluate( dg::zero, g);
@@ -165,18 +140,16 @@ Shu< Geometry, Matrix, Container>::Shu(
             js[ "elliptic"].get( "direction", "centered").asString());
     m_multi_laplaceM.resize(stages);
     for( unsigned u=0; u<stages; u++)
-        m_multi_laplaceM[u].construct( m_multigrid.grid(u), dg::not_normed, dir, 1);
+        m_multi_laplaceM[u].construct( m_multigrid.grid(u),  dir, 1);
     // explicit Diffusion term
     std::string regularization = js[ "regularization"].get( "type", "modal").asString();
-    std::string timestepper = js[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
-    if( !("ImExMultistep" == timestepper) &&  "viscosity" == regularization)
+    if( "viscosity" == regularization )
     {
         m_nu = js[ "regularization"].get( "nu", 1e-3).asDouble();
         m_order = js[ "regularization"].get( "order", 1).asUInt();
         enum dg::direction dir = dg::str2direction(
                 js["regularization"].get( "direction", "centered").asString());
-        m_LaplacianM.construct( g, dg::normed, dir, 1);
-        m_add_viscosity = true;
+        m_LaplacianM.construct( g,  dir, 1);
     }
 }
 
@@ -184,9 +157,13 @@ template< class Geometry, class Matrix, class Container>
 void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, Container& yp)
 {
     //solve elliptic equation
-    m_old_psi.extrapolate( t, m_psi);
+    //if( m_update)
+        m_old_psi.extrapolate( t, m_psi);
+    //else
+    //    dg::blas1::copy( 0., m_psi);
     std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_laplaceM, m_psi, y, m_eps);
-    m_old_psi.update( t, m_psi);
+    //if( m_update)
+        m_old_psi.update( t, m_psi);
     if( number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_eps[0]);
     //now do advection with various schemes
@@ -320,21 +297,50 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
     }
     if( m_add_mms) //for the manufactured solution we need to add a source term
         dg::blas1::evaluate( yp, dg::plus_equals(), m_mms, m_x, m_y, t);
-    if( m_add_viscosity)
+
+    if( !m_partitioned)
+        add_implicit( 1., y, 1., yp);
+}
+
+template< class Geometry, class Matrix, class Container>
+void Shu<Geometry,Matrix,Container>::add_implicit( double alpha, const Container& x, double beta, Container& yp)
+{
+    if( m_nu != 0)
     {
-        dg::blas1::copy( y, m_temp[1]);
+        dg::blas1::copy( x, m_temp[1]);
         for( unsigned p=0; p<m_order; p++)
         {
             using std::swap;
             swap( m_temp[0], m_temp[1]);
             dg::blas2::symv( m_nu, m_LaplacianM, m_temp[0], 0., m_temp[1]);
         }
-        dg::blas1::axpby( -1., m_temp[1], 1., yp);
+        dg::blas1::axpby( -alpha, m_temp[1], beta, yp);
     }
-
-
-
+    else
+        dg::blas1::scal( yp, beta);
 }
+
+template< class Geometry, class Matrix, class Container>
+struct Diffusion
+{
+    Diffusion( Shu<Geometry,Matrix,Container>& shu): m_shu(&shu){
+        //m_weights = shu.m_temp[0];
+        //dg::blas1::copy( 1., m_weights);
+        m_weights =  m_shu->m_LaplacianM.weights();
+    }
+    void operator()(double t, const Container& x, Container& y)
+    {
+        m_shu->add_implicit( 1., x, 0., y);
+    }
+    const Container& weights(){
+        return m_weights;
+    }
+    const Container& inv_weights(){ return m_shu->m_LaplacianM.inv_weights();}
+    const Container& precond(){ return m_shu->m_LaplacianM.precond();}
+  private:
+    Container m_weights;
+    Shu<Geometry,Matrix,Container>* m_shu;
+};
 
 }//namespace shu
 

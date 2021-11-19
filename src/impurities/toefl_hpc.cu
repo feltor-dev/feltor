@@ -136,7 +136,7 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //Potential
-    transfer = toeflI.polarization( y0);
+    transfer = toeflI.polarization( time, y0);
     dg::blas2::symv( interpolate, transfer, transferD);
     dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );

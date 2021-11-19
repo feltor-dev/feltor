@@ -566,9 +566,9 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
-    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER, dg::normed, m_p.diff_dir),
-    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER, dg::normed, m_p.diff_dir),
-    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER, dg::normed, dg::centered),
+    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER,  m_p.diff_dir),
+    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER,  m_p.diff_dir),
+    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER,  dg::centered),
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
     m_lapperpP.set_chi( m_hh);
@@ -601,7 +601,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     for( unsigned u=0; u<p.stages; u++)
     {
         m_multi_pol[u].construct( m_multigrid.grid(u),
-            p.bcxP, p.bcyP, dg::PER, dg::not_normed,
+            p.bcxP, p.bcyP, dg::PER, 
             p.pol_dir, p.jfactor);
         m_multi_invgammaP[u].construct(  m_multigrid.grid(u),
             p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], p.pol_dir);

@@ -68,8 +68,6 @@ int main(int argc, char* argv[] )
 
     if(rank==0)std::cout <<rank<< "Create Polarisation object and set chi!\n";
     t.tic();
-    //dg::Elliptic<dg::RealCartesianMPIGrid2d<value_type>, Matrix, Vector> pol( grid, dg::not_normed, dg::centered);
-    //pol.set_chi( chi);
     unsigned stages = 3;
 
     dg::MultigridCG2d<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector > multigrid( grid, stages, 0);
@@ -79,15 +77,13 @@ int main(int argc, char* argv[] )
 
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered);
+        multi_pol[u].construct( multigrid.grid(u), dg::centered);
         multi_pol[u].set_chi( chi_[u]);
     }
     t.toc();
     if(rank==0)std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
-    //dg::Invert<Vector > invert( x, n*n*Nx*Ny, eps);
     t.tic();
-    //unsigned number = invert( pol, x, b);
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, x, b, eps);
     t.toc();
     for( unsigned u=0; u<number.size(); u++)

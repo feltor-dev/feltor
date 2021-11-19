@@ -24,8 +24,8 @@ struct Implicit
     Implicit( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
-        LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g,g.bcx(),g.bcy(),  dg::centered),
+        LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(),  dg::centered)
     {
     }
     void operator()( double t, const std::vector<container>& x, std::vector<container>& y)
@@ -102,7 +102,6 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gammaN,multi_gammaPhi;
     
-    dg::Invert<container> invert_pol,invert_invgamma;
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
     
@@ -126,9 +125,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
-    lapperpM ( g,g.bcx(), g.bcy(),       dg::normed,         dg::centered),
-    invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
-    invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    lapperpM ( g,g.bcx(), g.bcy(),                dg::centered),
     multigrid( g, 3),
     old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
     polavg(g,dg::coo2d::y),
@@ -149,7 +146,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     multi_gammaPhi.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct(      multigrid.grid(u), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
+        multi_pol[u].construct(      multigrid.grid(u), p.bc_x_phi, g.bcy(),  dg::centered, p.jfactor);
         multi_gammaN[u].construct(   multigrid.grid(u), g.bcx(),    g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
         multi_gammaPhi[u].construct( multigrid.grid(u), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
@@ -179,7 +176,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
         old_gammaN.extrapolate( chi);
         std::vector<unsigned> numberG = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
         old_gammaN.update(chi);
-        if(  numberG[0] == invert_invgamma.get_max())
+        if( numberG[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
@@ -187,7 +184,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     old_phi.extrapolate( phi[0]);
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
     old_phi.update( phi[0]);
-    if(  number[0] == invert_pol.get_max())
+    if( number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);
     return phi[0];
 }
@@ -202,7 +199,7 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
         old_psi.extrapolate( phi[1]);
         std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);    
-        if(  number[0] == invert_invgamma.get_max())
+        if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }
     multi_pol[0].variation(binv, potential, omega);        // omega = u_E^2
@@ -219,7 +216,7 @@ void Explicit<G, Matrix, container>::initializene( const container& src, contain
     } 
     else {
         std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
-        if(  number[0] == invert_invgamma.get_max())
+        if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }
 }

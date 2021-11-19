@@ -8,7 +8,7 @@ include ../config/devices/devices.mk
 INCLUDE+= -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 
-TARGETS =  compare histdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag vmaxnc feltorSHvmaxdiag toeflRdiag impRdiag feltorShwmerger feltorShwradstat feltorShwstat growthrate toeflEPdiag normdiag reco2Ddiag
+TARGETS =  compare histdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag vmaxnc feltorSHvmaxdiag toeflRdiag impRdiag feltorShwmerger feltorShwradstat feltorShwstat growthrate toeflEPdiag normdiag
 
 all: $(TARGETS)
 

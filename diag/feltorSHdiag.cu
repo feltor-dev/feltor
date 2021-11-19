@@ -138,16 +138,16 @@ int main( int argc, char* argv[])
     const double hy = g2d.hy()/(double)g2d.n();
     unsigned Nx = p.Nx*p.n; 
     //routiens to compute ti
-    dg::Invert<dg::DVec> invert_invgamma2( helper, helper.size(), 1e-3);
+    //dg::PCG<dg::DVec> invert_invgamma2( helper, helper.size(), 1e-3);
     dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > invgamma2( g2d,g2d.bcx(), g2d.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered);
     dg::DVec binv(dg::evaluate( dg::LinearX( p.mcv, 1.), g2d) );
     dg::DVec B2(dg::evaluate( dg::one, g2d));
     dg::blas1::pointwiseDivide(B2,binv,B2);
     dg::blas1::pointwiseDivide(B2,binv,B2);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> polti(g2d, g2d.bcx(), g2d.bcy(), dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> polti(g2d, g2d.bcx(), g2d.bcy(), dg::centered);
     
     //weiss field
-    //dg::Weiss<dg::DMatrix,dg::DVec,dg::DVec> weissfield(g2d,dg::normed, dg::centered);  
+    //dg::Weiss<dg::DMatrix,dg::DVec,dg::DVec> weissfield(g2d, dg::centered);  
     //BLOB COMPACTNESS Heaviside function
     Heaviside2d heavi(2.0* p.sigma);
     double normalize = 1.;

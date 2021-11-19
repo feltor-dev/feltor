@@ -177,15 +177,13 @@ int main(int argc, char* argv[])
     if( !(Nz > 2))
     {
         const Vector ellw3d = dg::create::volume(gridEll);
-        const Vector ellv3d = dg::create::inv_volume(gridEll);
-        dg::Elliptic<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+        dg::Elliptic<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::centered);
         const Vector solution = dg::evaluate ( fct, gridEll);
         x = dg::evaluate( initial, gridEll);
-        Vector b = dg::evaluate ( laplace_fct, gridEll);
-        dg::blas2::symv( ellw3d, b, b);
-        dg::CG< Vector > pcg( x, 1000);
+        const Vector b = dg::evaluate ( laplace_fct, gridEll);
+        dg::PCG< Vector > pcg( x, 1000);
         t.tic();
-        unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
+        unsigned number = pcg.solve(laplace, x, b, 1., ellw3d, 1e-6);
         t.toc();
         if(rank==0)std::cout <<" "<< number << " "<<t.diff()/(double)number<<std::flush;
         dg::blas1::axpby( 1., solution, -1., x);
@@ -197,15 +195,13 @@ int main(int argc, char* argv[])
     {
         //Elliptic3d
         const Vector ellw3d = dg::create::volume(gridEll);
-        const Vector ellv3d = dg::create::inv_volume(gridEll);
-        dg::Elliptic3d<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+        dg::Elliptic3d<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::centered);
         const Vector solution = dg::evaluate ( fct3d, gridEll);
         x = dg::evaluate( initial, gridEll);
-        Vector b = dg::evaluate ( laplace_fct3d, gridEll);
-        dg::blas2::symv( ellw3d, b, b);
-        dg::CG< Vector > pcg( x, multi);
+        const Vector b = dg::evaluate ( laplace_fct3d, gridEll);
+        dg::PCG< Vector > pcg( x, multi);
         t.tic();
-        unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
+        unsigned number = pcg.solve(laplace, x, b, 1., ellw3d, 1e-6);
         t.toc();
         if(rank==0)std::cout <<" "<< number << " "<<t.diff()/(double)number<<std::flush;
         dg::blas1::axpby( 1., solution, -1., x);
@@ -213,7 +209,7 @@ int main(int argc, char* argv[])
         //Application of ds
         double R0 = 10, I0=20;
         double a = 1.;
-        dg::CylindricalMPIGrid3d g3d( R0-a,R0+a, -a,+a, 0, 2.*M_PI, n, Nx
+        dg::CylindricalMPIGrid3d g3d( R0-a, R0+a, -a, +a, 0, 2.*M_PI, n, Nx
             ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
         dg::geo::TokamakMagneticField mag =
             dg::geo::createGuentherField(R0, I0);

@@ -1,13 +1,6 @@
 #pragma once
 
-#include "dg/topology/grid.h"
-#include "dg/topology/functions.h"
-#include "dg/topology/interpolation.h"
-#include "dg/topology/derivatives.h"
-#include "dg/topology/geometry.h"
-#include "dg/functors.h"
-#include "dg/runge_kutta.h"
-#include "dg/nullstelle.h"
+#include "dg/algorithm.h"
 #include "fluxfunctions.h"
 #include "ribeiro.h"
 

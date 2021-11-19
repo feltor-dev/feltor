@@ -50,7 +50,6 @@ int main()
 
     dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
-    dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
@@ -76,14 +75,14 @@ int main()
     std::cout << "\nPrecision EVE is "<<eps_ev<<"\n";
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed,
+        multi_pol[u].construct( multigrid.grid(u),
             dg::centered, jfactor);
         multi_pol[u].set_chi( multi_chi[u]);
         //estimate EVs
         multi_eve[u].construct( multi_chi[u]);
         dg::blas2::symv(multi_pol[u].weights(), multi_b[u], multi_b[u]);
         counter = multi_eve[u].solve( multi_pol[u], multi_x[u], multi_b[u],
-                multi_pol[u].precond(),
+                multi_pol[u].precond(), multi_pol[u].weights(),
             multi_ev[u], eps_ev);
         //multi_ev[u]/=hxhy;
         std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";

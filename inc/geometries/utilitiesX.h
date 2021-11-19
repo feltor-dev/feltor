@@ -1,7 +1,6 @@
 #pragma once
 
-#include "dg/functors.h"
-#include "dg/nullstelle.h"
+#include "dg/algorithm.h"
 #include "utilities.h"
 
 namespace dg

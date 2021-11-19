@@ -288,7 +288,7 @@ int main( int argc, char* argv[])
         //basically just tests if g_xy is really 0
         dg::HVec err = dg::tensor::volume2d( metric);
         dg::blas1::evaluate( err, dg::minus_equals(),
-                [](double g_xx, double g_yy){ return 1./sqrt(g_xx*g_yy); },
+                []DG_DEVICE(double g_xx, double g_yy){ return 1./sqrt(g_xx*g_yy); },
                 metric.value(0,0), metric.value(1,1));
         double error = dg::blas2::dot( err, vol2d, err);
         std::cout << "Error 1/sqrt( g_xx g_yy) - vol: "<<error<< "\n";

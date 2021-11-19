@@ -100,8 +100,7 @@ int main( )
         g3d.Ny(), g3d.Nz(), g3d.bcx(), g3d.bcy(), g3d.bcz());
     dg::DVec vol3dP = dg::create::volume( g3dP);
 
-    dg::Elliptic<dg::aProductGeometry3d, dg::DMatrix, dg::DVec> elliptic(g3d,
-        dg::normed);
+    dg::Elliptic<dg::aProductGeometry3d, dg::DMatrix, dg::DVec> elliptic(g3d);
     dg::DVec variation(fun);
     elliptic.variation( fun, variation);
     dg::blas1::transform( variation, variation, []DG_DEVICE( double var){
@@ -113,7 +112,7 @@ int main( )
     double errVar0 = dg::blas2::dot( vol3d, var0)/ dg::blas2::dot( vol3d, variation);
     std::cout << "# error variation before: "<<sqrt(errVar0)<<"\n";
     // convergence: converges order P
-    elliptic.construct(g3dP, dg::normed);
+    elliptic.construct(g3dP);
     elliptic.variation( derivative, variation);
     dg::blas1::transform( variation, variation, []DG_DEVICE( double var){
             return var/sqrt(var);});

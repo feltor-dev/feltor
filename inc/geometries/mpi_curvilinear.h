@@ -2,9 +2,7 @@
 
 #include <mpi.h>
 
-#include "dg/topology/mpi_evaluation.h"
-#include "dg/topology/mpi_grid.h"
-#include "dg/topology/mpi_base.h"
+#include "dg/algorithm.h"
 #include "curvilinear.h"
 #include "generator.h"
 

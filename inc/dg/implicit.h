@@ -1,46 +1,17 @@
 #pragma once
-#include "cg.h"
+#include "pcg.h"
 #include "andersonacc.h"
 
 namespace dg{
 ///@cond
 namespace detail{
 
-//compute: y + alpha f(y,t)
 template< class LinearOp, class ContainerType>
-struct ImplicitWithWeights
+struct ImplicitWrapper
 {
     using value_type = get_value_type<ContainerType>;
-    ImplicitWithWeights(){}
-    ImplicitWithWeights( value_type alpha, value_type t, LinearOp& f):
-        f_(f), alpha_(alpha), t_(t){}
-    void construct( value_type alpha, value_type t, LinearOp& f){
-        f_ = f; alpha_=alpha; t_=t;
-    }
-    void symv( const ContainerType& x, ContainerType& y)
-    {
-        if( alpha_ != 0)
-            f_(t_,x,y);
-        blas1::axpby( 1., x, alpha_, y, y);
-        blas2::symv( f_.weights(), y, y);
-    }
-    void operator()( const ContainerType& x, ContainerType& y){ symv(x,y);}
-
-    value_type& alpha( ){  return alpha_;}
-    value_type alpha( ) const  {return alpha_;}
-    value_type& time( ){  return t_;}
-    value_type time( ) const  {return t_;}
-  private:
-    LinearOp& f_;
-    value_type alpha_;
-    value_type t_;
-};
-template< class LinearOp, class ContainerType>
-struct ImplicitWithoutWeights
-{
-    using value_type = get_value_type<ContainerType>;
-    ImplicitWithoutWeights(){}
-    ImplicitWithoutWeights( value_type alpha, value_type t, LinearOp& f):
+    ImplicitWrapper(){}
+    ImplicitWrapper( value_type alpha, value_type t, LinearOp& f):
         f_(f), alpha_(alpha), t_(t){}
     void construct( value_type alpha, value_type t, LinearOp& f){
         f_ = f; alpha_=alpha; t_=t;
@@ -64,13 +35,7 @@ struct ImplicitWithoutWeights
 
 }//namespace detail
 template< class M, class V>
-struct TensorTraits< detail::ImplicitWithWeights<M, V> >
-{
-    using value_type = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-template< class M, class V>
-struct TensorTraits< detail::ImplicitWithoutWeights<M, V> >
+struct TensorTraits< detail::ImplicitWrapper<M, V> >
 {
     using value_type = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
@@ -115,11 +80,11 @@ struct DefaultSolver
     * @param eps accuracy parameter for cg
     */
     DefaultSolver( const ContainerType& copyable, unsigned max_iter, value_type eps):
-        m_pcg(copyable, max_iter), m_rhs( copyable), m_eps(eps)
+        m_pcg(copyable, max_iter), m_eps(eps)
         {}
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_rhs;}
+    const ContainerType& copyable()const{ return m_pcg.copyable();}
     ///@brief Set or unset performance timings during iterations
     ///@param benchmark If true, additional output will be written to \c std::cout during solution
     void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
@@ -131,12 +96,11 @@ struct DefaultSolver
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
-        detail::ImplicitWithWeights<Implicit, ContainerType> implicit( alpha,
+        detail::ImplicitWrapper<Implicit, ContainerType> wrapper( alpha,
                 t, im);
-        blas2::symv( im.weights(), rhs, m_rhs);
         Timer ti;
         if(m_benchmark) ti.tic();
-        unsigned number = m_pcg( implicit, y, m_rhs, im.precond(), im.inv_weights(), m_eps);
+        unsigned number = m_pcg.solve( wrapper, y, rhs, im.precond(), im.weights(), m_eps);
         if( m_benchmark)
         {
             ti.toc();
@@ -144,8 +108,7 @@ struct DefaultSolver
         }
     }
     private:
-    CG< ContainerType> m_pcg;
-    ContainerType m_rhs;
+    PCG< ContainerType> m_pcg;
     value_type m_eps;
     bool m_benchmark = true;
 };
@@ -278,8 +241,7 @@ struct AndersonSolver
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
-        //dg::WhichType<Implicit> {};
-        detail::ImplicitWithoutWeights<Implicit, ContainerType> implicit(
+        detail::ImplicitWrapper<Implicit, ContainerType> implicit(
                 alpha, t, im);
         Timer ti;
         if( m_benchmark) ti.tic();

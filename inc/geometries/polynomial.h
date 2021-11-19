@@ -4,10 +4,7 @@
 #include <cmath>
 #include <vector>
 
-#include "dg/blas.h"
-
-#include "dg/topology/functions.h"
-#include "dg/functors.h"
+#include "dg/algorithm.h"
 #include "modified.h"
 #include "polynomial_parameters.h"
 #include "magnetic_field.h"

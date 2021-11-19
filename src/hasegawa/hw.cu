@@ -35,7 +35,8 @@ int main( int argc, char* argv[])
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     bool mhw = (p.equations == "modified");
-    hw::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, mhw); 
+    hw::HW<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa,
+            p.tau, p.nu, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
@@ -53,7 +54,7 @@ int main( int argc, char* argv[])
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     //dg::TVB< std::vector<dg::DVec> > ab( y0);
     dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
-    hw::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    hw::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -68,7 +69,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM(grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM(grid,  dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         if( p.bc_x == dg::PER && p.bc_y == dg::PER)

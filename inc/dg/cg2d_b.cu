@@ -43,8 +43,8 @@ int main()
     std::cout << "Create Laplacian...\n";
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::normed, dg::forward );
-    dg::Elliptic<dg::RealCartesianGrid2d<float>, dg::fDMatrix, dg::fDVec> flap(gridf, dg::normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::forward );
+    dg::Elliptic<dg::RealCartesianGrid2d<float>, dg::fDMatrix, dg::fDVec> flap(gridf, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -60,8 +60,7 @@ int main()
     std::cout << "... for a precision of "<< eps<<std::endl;
     x = dg::evaluate( initial, grid);
     t.tic();
-    double precond = 1.;
-    std::cout << "Number of pcg iterations "<< pcg.solve( lap, x, b, precond, w2d, eps)<<std::endl;
+    std::cout << "Number of pcg iterations "<< pcg.solve( lap, x, b, 1., w2d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
 

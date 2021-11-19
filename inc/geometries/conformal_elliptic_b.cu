@@ -1,9 +1,7 @@
 #include <iostream>
 #include "json/json.h"
 
-#include "dg/topology/grid.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 
 //Grids
 #include "curvilinear.h"
@@ -14,7 +12,6 @@
 #include "solovev.h"
 //#include "guenther.h"
 #include "testfunctors.h"
-#include "dg/backend/timer.h"
 
 const unsigned nIter=6;
 template<class Geometry>
@@ -22,17 +19,17 @@ void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const Geome
 {
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
     /////////////////////////////DirNeu/////FLUXALIGNED//////////////////////
-    //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR_NEU, dg::PER, dg::not_normed, dg::forward);
+    //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR_NEU, dg::PER, dg::forward);
     //const dg::DVec b =    dg::pullback( dg::geo::EllipticDirPerM(c, psi_0, 2.*psi_1-psi_0, 0), g2d);
     //const dg::DVec chi =  dg::pullback( dg::geo::Bmodule(c), g2d);
     //const dg::DVec solution = dg::pullback( dg::geo::FuncDirPer(c, psi_0, 2.*psi_1-psi_0, 0 ), g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
+    //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::forward);
     //const dg::DVec b =    dg::pullback( dg::geo::EllipticDirPerM(c, psi_0, psi_1, 4), g2d);
     //const dg::DVec chi =  dg::pullback( dg::geo::Bmodule(c), g2d);
     //const dg::DVec solution = dg::pullback( dg::geo::FuncDirPer(c, psi_0, psi_1, 4 ), g2d);
     /////////////////////////////Dir//////BLOB/////////////////////////////
-    dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
+    dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::forward);
     const dg::DVec b =    dg::pullback( dg::geo::EllipticDirNeuM(c, psi_0, psi_1, 440, -220, 40.,1.), g2d);
     const dg::DVec chi =  dg::pullback( dg::geo::BmodTheta(c), g2d);
     const dg::DVec solution = dg::pullback(dg::geo::FuncDirNeu(c, psi_0, psi_1, 440, -220, 40.,1.), g2d);
@@ -44,8 +41,8 @@ void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const Geome
     std::cout << eps<<"\t"<<g2d.n()<<"\t"<<g2d.Nx()<<"\t"<<g2d.Ny()<<"\t";
     dg::Timer t;
     t.tic();
-    dg::Invert<dg::DVec > invert( x, g2d.size(), eps);
-    unsigned number = invert(pol, x,b);
+    dg::PCG<dg::DVec > pcg( x, g2d.size());
+    unsigned number = pcg.solve(pol, x,b, pol.precond(), pol.weights(), eps);
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

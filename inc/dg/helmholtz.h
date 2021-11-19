@@ -16,7 +16,7 @@ namespace dg{
  *
  * @ingroup matrixoperators
  *
- * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
+ * Discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
  *
@@ -38,12 +38,12 @@ struct Helmholtz
      * @brief Construct from given elliptic object
      * @param alpha Scalar in the above formula
      * @param elliptic an existing elliptic operator
-     * @attention \c elliptic must be not_normed
      */
     Helmholtz( value_type alpha, Elliptic<Geometry, Matrix, Container> elliptic):
         m_alpha(alpha), m_laplaceM(elliptic),
         m_chi( m_laplaceM.weights())
     {
+        dg::blas1::copy( 1., m_chi);
     }
     /**
      * @brief Construct
@@ -52,7 +52,7 @@ struct Helmholtz
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
+     * @note The default value of \f$\chi\f$ is one.
      */
     Helmholtz( const Geometry& g, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
         Helmholtz( g, g.bcx(), g.bcy(), alpha, dir, jfactor)
@@ -67,11 +67,11 @@ struct Helmholtz
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
+     * @note The default value of \f$\chi\f$ is one.
      */
     Helmholtz( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
-        m_laplaceM( g, bcx, bcy, dg::not_normed, dir, jfactor),
-        m_chi( m_laplaceM.weights()),
+        m_laplaceM( g, bcx, bcy, dir, jfactor),
+        m_chi( dg::construct<Container>( dg::evaluate( dg::one, g))),
         m_alpha(alpha)
     {
     }
@@ -94,7 +94,7 @@ struct Helmholtz
      * \f[ y = W( \chi + \alpha\Delta) x \f] to make the matrix symmetric
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
-     * @tparam ContainerTypes must be usable with \c container_type in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container_type in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y)
@@ -106,12 +106,10 @@ struct Helmholtz
     }
     ///@copydoc Elliptic::weights()const
     const Container& weights()const {return m_laplaceM.weights();}
-    ///@copydoc Elliptic::inv_weights()const
-    const Container& inv_weights()const {return m_laplaceM.inv_weights();}
     /**
      * @brief Preconditioner to use in conjugate gradient solvers
      *
-     * @return inverse weights without volume
+     * @return 1 (by default)
      */
     const Container& precond()const {return m_laplaceM.precond();}
     ///Write access to the elliptic class
@@ -133,12 +131,12 @@ struct Helmholtz
     /**
      * @brief Set Chi in the above formula
      *
-     * @param chi new container
-     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
+     * @param chi new Container
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
     void set_chi( const ContainerType0& chi) {
-        dg::blas1::pointwiseDot( m_laplaceM.weights(), chi, m_chi);
+        dg::blas1::copy( chi, m_chi);
     }
     /**
      * @brief Access chi
@@ -157,7 +155,7 @@ struct Helmholtz
  * @ingroup matrixoperators
  *
  * This is the three-dimensional version of \c Helmholtz
- * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
+ * Discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the CG class.
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
@@ -175,8 +173,9 @@ struct Helmholtz3d
     ///@copydoc Helmholtz::Helmholtz(value_type,Elliptic<Geometry,Matrix,Container>)
     Helmholtz3d( value_type alpha, Elliptic3d<Geometry, Matrix, Container> elliptic):
         m_alpha(alpha), m_laplaceM(elliptic),
-        m_chi( m_laplaceM.weights())
+        m_chi( elliptic.copyable())
     {
+        dg::blas1::copy( 1., m_chi);
     }
     ///@copydoc Helmholtz::Helmholtz(const Geometry&,value_type,direction,value_type)
     Helmholtz3d( const Geometry& g, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
@@ -193,11 +192,11 @@ struct Helmholtz3d
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
+     * @note The default value of \f$\chi\f$ is one.
      */
     Helmholtz3d( const Geometry& g, bc bcx, bc bcy, bc bcz, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.):
-        m_laplaceM( g, bcx, bcy, bcz, dg::not_normed, dir, jfactor),
-        m_chi( m_laplaceM.weights()),
+        m_laplaceM( g, bcx, bcy, bcz, dir, jfactor),
+        m_chi( dg::construct<Container>( dg::evaluate( dg::one, g))),
         m_alpha(alpha)
     {
     }
@@ -219,8 +218,6 @@ struct Helmholtz3d
     }
     ///@copydoc Elliptic::weights()const
     const Container& weights()const {return m_laplaceM.weights();}
-    ///@copydoc Elliptic::inv_weights()const
-    const Container& inv_weights()const {return m_laplaceM.inv_weights();}
     ///@copydoc Helmholtz::precond()const
     const Container& precond()const {return m_laplaceM.precond();}
     ///Write access to the elliptic class
@@ -234,7 +231,7 @@ struct Helmholtz3d
     ///@copydoc Helmholtz::set_chi()
     template<class ContainerType0>
     void set_chi( const ContainerType0& chi) {
-        dg::blas1::pointwiseDot( m_laplaceM.weights(), chi, m_chi);
+        dg::blas1::copy( chi, m_chi);
     }
     ///@copydoc Helmholtz::chi()
     const Container& chi() const{return m_chi;}
@@ -255,10 +252,9 @@ using Helmholtz2d = Helmholtz<Geometry, Matrix, Container>;
  *
  * @ingroup matrixoperators
  *
- * Unnormed discretization of
+ * Discretization of
  * \f[ \left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
- * Can be used by the Invert class
  * @copydoc hide_geometry_matrix_container
  * @note The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
  * @attention It is MUCH better to solve the normal \c Helmholtz operator twice,
@@ -305,7 +301,7 @@ struct Helmholtz2
     ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,bc,bc,value_type,direction,value_type)
     void construct( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1, direction dir = dg::forward, value_type jfactor = 1.)
     {
-        m_laplaceM.construct( g, bcx, bcy, dg::normed, dir, jfactor);
+        m_laplaceM.construct( g, bcx, bcy, dir, jfactor);
         dg::assign( dg::evaluate( dg::one, g), temp1_);
         dg::assign( dg::evaluate( dg::one, g), temp2_);
         alpha_ = alpha;
@@ -335,17 +331,13 @@ struct Helmholtz2
         blas1::pointwiseDot( chi_, x, y); //y = chi*x
         blas1::axpby( 1., y, -2.*alpha_, temp1_, y);
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
-        blas2::symv( m_laplaceM.weights(), y, y);//Helmholtz is never normed
     }
     ///@copydoc Elliptic::weights()const
     const Container& weights()const {return m_laplaceM.weights();}
-    ///@copydoc Elliptic::inv_weights()const
-    const Container& inv_weights()const {return m_laplaceM.inv_weights();}
     /**
      * @brief Preconditioner to use in conjugate gradient solvers
      *
-     * multiply result by these coefficients to get the normed result
-     * @return the inverse weights without volume
+     * @return 1 by default
      */
     const Container& precond()const {return m_laplaceM.precond();}
     /**

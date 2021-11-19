@@ -35,7 +35,7 @@ int main()
     const dg::HVec w2d = dg::create::weights( grid);
 
     // Create normalized Laplacian
-    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid, dg::normed);
+    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid);
 
     // allocate memory
     dg::AndersonAcceleration<dg::HVec > acc( copyable_vector, 10);

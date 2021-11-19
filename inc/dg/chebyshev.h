@@ -14,7 +14,7 @@ namespace dg
 
 /**
 * @brief Preconditioned Chebyshev iteration for solving
-* \f[ M^{-1}Ax=M^{-1}b\f]
+* \f[ PAx=Pb\f]
 *
 * Chebyshev iteration is not well-suited for solving matrix equations
 * on its own. Rather, it is suited as a smoother for a multigrid algorithm
@@ -24,24 +24,24 @@ namespace dg
 *
 * Given the minimum and maximum Eigenvalue of the matrix A we define
 * \f[ \theta = (\lambda_\min+\lambda_\max)/2 \quad \delta = (\lambda_\max - \lambda_\min)/2 \\
-*     \rho_0 := \frac{\delta}{\theta},\ x_0 := x, \ x_{1} = x_0+\frac{1}{\theta} M^{-1}(b-Ax_0) \\
+*     \rho_0 := \frac{\delta}{\theta},\ x_0 := x, \ x_{1} = x_0+\frac{1}{\theta} P(b-Ax_0) \\
 *     \rho_{k}:=\left(\frac{2\theta}{\delta}-\rho_{k-1}\right)^{-1} \\
 *     x_{k+1} := x_k + \rho_k\left( \rho_{k-1}(x_k - x_{k-1})
-*     + \frac{2}{\delta} M^{-1}( b - Ax_k) \right)
+*     + \frac{2}{\delta} P( b - Ax_k) \right)
 * \f]
 * The preconditioned version is obtained by applying the regular version to
  * \f$ \bar A\bar x = \bar b\f$ with \f$ \bar A
  * := {E^{-1}}^\mathrm{T} A E^{-1} \f$, \f$ \bar x := Ex\f$ and \f$ \bar b :=
- * {E^{-1}}^\mathrm{T}\f$, where \f$ M^{-1} = {E^{-1}}^\mathrm{T} E^{-1}\f$ is
- * the preconditioner. The bounds on the spectrum then need to be on the \f$M^{-1}A\f$ matrix.
-* @note The maximum Eigenvalue of \f$ A\f$ and \f$ M^{-1} A\f$ can be estimated
+ * {E^{-1}}^\mathrm{T}\f$, where \f$ P = {E^{-1}}^\mathrm{T} E^{-1}\f$ is
+ * the preconditioner. The bounds on the spectrum then need to be on the \f$PA\f$ matrix.
+* @note The maximum Eigenvalue of \f$ A\f$ and \f$ P A\f$ can be estimated
 * using the \c EVE class.
 * \sa For more information see the book
 * <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * @note If the initial vector is zero Chebyshev iteration will produce the
 * Chebyshev polynomial \f$ C_k( A) b\f$ applied to the right hand side
 * and the preconditioned version produces
-* \f$ C_{k-1}(M^{-1}A)M^{-1}b = E^{-1} C_{k-1}(
+* \f$ C_{k-1}(PA)Pb = E^{-1} C_{k-1}(
 * {E^{-1}}^\mathrm{T} A E^{-1}){E^{-1}}^\mathrm{T}\f$
 *
 * @attention Chebyshev iteration may diverge if the elliptical bound of the
@@ -98,7 +98,7 @@ class ChebyshevIteration
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b,
+    void solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b,
         value_type min_ev, value_type max_ev, unsigned num_iter, bool x_is_zero = false)
     {
         if( num_iter == 0)
@@ -109,7 +109,7 @@ class ChebyshevIteration
         if( !x_is_zero)
         {
             dg::blas1::copy( x, m_xm1); //x_{k-1}
-            dg::blas2::symv( A, x, m_ax);
+            dg::blas2::symv( std::forward<MatrixType>(A), x, m_ax);
             dg::blas1::axpbypgz( 1./theta, b, -1./theta, m_ax, 1., x); //x_1
         }
         else
@@ -120,7 +120,7 @@ class ChebyshevIteration
         for ( unsigned k=1; k<num_iter; k++)
         {
             rhok = 1./(2.*theta/delta - rhokm1);
-            dg::blas2::symv( A, x, m_ax);
+            dg::blas2::symv( std::forward<MatrixType>(A), x, m_ax);
             dg::blas1::evaluate( m_xm1, dg::equals(), PairSum(),
                              1.+rhok*rhokm1, x,
                             -rhok*rhokm1,    m_xm1,
@@ -133,7 +133,7 @@ class ChebyshevIteration
         }
     }
     /**
-     * @brief Solve the system \f$ M^{-1}Ax = M^{-1}b \f$ using Preconditioned Chebyshev iteration
+     * @brief Solve the system \f$ PAx = Pb \f$ using Preconditioned Chebyshev iteration
      *
      * The iteration stops when the maximum number of iterations is reached
      * @param A A symmetric, positive definit matrix
@@ -141,7 +141,7 @@ class ChebyshevIteration
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P the Preconditioner (\f$ M^{-1}\f$ in the above notation
      * @param min_ev an estimate of the minimum Eigenvalue
-     * @param max_ev an estimate of the maximum Eigenvalue of \f$ M^{-1} A\f$ (must be larger than \c min_ev)
+     * @param max_ev an estimate of the maximum Eigenvalue of \f$ P A\f$ (must be larger than \c min_ev)
      * Use \c EVE to get this value
      * @param num_iter the number of iterations k (equals the number of times \c A is applied)
      * If 0 the function returns immediately
@@ -149,15 +149,15 @@ class ChebyshevIteration
      * by assuming x is zero. (This works even if x is not actually 0)
      * This is in particular in the case when Chebyshev Iteration is used as a Preconditioner
      * @note In the \c x_is_zero mode \c k iterations  will produce the \c k-1 Chebyshev polynomial applied to
-     * the right hand side \f$ x = C_{k-1}(M^{-1}A)M^{-1}b = E^{-1} C_{k-1}(
+     * the right hand side \f$ x = C_{k-1}(PA)Pb = E^{-1} C_{k-1}(
      * {E^{-1}}^\mathrm{T} A E^{-1}){E^{-1}}^\mathrm{T}\f$
      *
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      */
     template< class MatrixType, class Preconditioner, class ContainerType0, class ContainerType1>
-    void solve( MatrixType& A, ContainerType0& x, const ContainerType1& b,
-            Preconditioner& P, value_type min_ev, value_type max_ev, unsigned num_iter,
+    void solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b,
+            Preconditioner&& P, value_type min_ev, value_type max_ev, unsigned num_iter,
             bool x_is_zero = false)
     {
         if( num_iter == 0)
@@ -168,14 +168,14 @@ class ChebyshevIteration
         if( !x_is_zero)
         {
             dg::blas1::copy( x, m_xm1); //x_{k-1}
-            dg::blas2::symv( A, x, m_ax);
+            dg::blas2::symv( std::forward<MatrixType>(A), x, m_ax);
             dg::blas1::axpby( 1., b, -1., m_ax); //r_0
-            dg::blas2::symv( P, m_ax, m_z);
+            dg::blas2::symv( std::forward<Preconditioner>(P), m_ax, m_z);
             dg::blas1::axpby( 1./theta, m_z, 1., x); //x_{k-1}
         }
         else
         {
-            dg::blas2::symv( P, b, x);
+            dg::blas2::symv( std::forward<Preconditioner>(P), b, x);
             if( num_iter == 1) return;
             dg::blas1::scal( m_xm1, 0.);
             dg::blas1::scal( x, 1./theta);
@@ -183,7 +183,7 @@ class ChebyshevIteration
         for ( unsigned k=1; k<num_iter; k++)
         {
             rhok = 1./(2.*theta/delta - rhokm1);
-            dg::blas2::symv( A, x, m_ax);
+            dg::blas2::symv( std::forward<MatrixType>(A), x, m_ax);
             dg::blas1::axpby( 1., b, -1., m_ax); //r_k
             dg::blas2::symv( P, m_ax, m_z);
             dg::blas1::axpbypgz(
