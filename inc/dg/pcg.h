@@ -123,7 +123,7 @@ class PCG
 ///@cond
 template< class ContainerType>
 template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2>
-unsigned PCG< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, const ContainerType2& W, value_type eps, value_type nrmb_correction, int save_on_dots )
+unsigned PCG< ContainerType>::solve( Matrix&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type eps, value_type nrmb_correction, int save_on_dots )
 {
     // self-adjoint: apply PCG algorithm to (P 1/W) (W A) x = (P 1/W) (W b) : P' A' x = P' b'
     // This effectively just replaces all scalar products with the weighted one
@@ -143,16 +143,16 @@ unsigned PCG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Contain
         blas1::copy( 0., x);
         return 0;
     }
-    blas2::symv( A,x,r);
+    blas2::symv( std::forward<Matrix>(A),x,r);
     blas1::axpby( 1., b, -1., r);
     if( sqrt( blas2::dot(W,r) ) < tol) //if x happens to be the solution
         return 0;
-    blas2::symv( P, r, p );
+    blas2::symv( std::forward<Preconditioner>(P), r, p );
     value_type nrmzr_old = blas2::dot( p,W,r); //and store the scalar product
     value_type alpha, nrmzr_new;
     for( unsigned i=1; i<max_iter; i++)
     {
-        blas2::symv( A, p, ap);
+        blas2::symv( std::forward<Matrix>(A), p, ap);
         alpha =  nrmzr_old/blas2::dot( p, W, ap);
         blas1::axpby( alpha, p, 1.,x);
         blas1::axpby( -alpha, ap, 1., r);
@@ -167,7 +167,7 @@ unsigned PCG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Contain
             if( sqrt( blas2::dot(W,r)) < tol)
                 return i;
         }
-        blas2::symv(P,r,ap);
+        blas2::symv(std::forward<Preconditioner>(P),r,ap);
         nrmzr_new = blas2::dot( ap, W, r);
         blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
         nrmzr_old=nrmzr_new;

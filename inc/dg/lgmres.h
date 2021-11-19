@@ -119,7 +119,7 @@ class LGMRES
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
-     * @param S A diagonal matrix (a vector) that is used to define the scalar
+     * @param W A diagonal matrix (a vector) that is used to define the scalar
      * product in which the orthogonalization in LGMRES is computed and that
      * defines the norm in which the stopping criterion is computed
      * @param eps The relative error to be respected
@@ -130,14 +130,13 @@ class LGMRES
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      * @tparam Preconditioner A type for which the blas2::gemv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
-     * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
-    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
-    unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2 >
+    unsigned solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
   private:
     template <class Preconditioner, class ContainerType0>
-    void Update(Preconditioner& P, ContainerType &dx, ContainerType0 &x,
+    void Update(Preconditioner&& P, ContainerType &dx, ContainerType0 &x,
             unsigned dimension, const std::vector<std::vector<value_type>> &H,
             std::vector<value_type> &s, const std::vector<const ContainerType*> &W);
     std::vector<std::array<value_type,2>> m_givens;
@@ -151,7 +150,7 @@ class LGMRES
 
 template< class ContainerType>
 template < class Preconditioner, class ContainerType0>
-void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
+void LGMRES<ContainerType>::Update(Preconditioner&& P, ContainerType &dx,
         ContainerType0 &x,
         unsigned dimension, const std::vector<std::vector<value_type>> &H,
         std::vector<value_type> &s, const std::vector<const ContainerType*> &W)
@@ -171,19 +170,19 @@ void LGMRES<ContainerType>::Update(Preconditioner& P, ContainerType &dx,
     // Finally update the approximation. W_m*s
     dg::blas2::gemv( dg::asDenseMatrix( W, dimension+1), std::vector<value_type>( s.begin(), s.begin()+dimension+1), dx);
     // right preconditioner
-    dg::blas2::gemv( P, dx, m_tmp);
+    dg::blas2::gemv( std::forward<Preconditioner>(P), dx, m_tmp);
     dg::blas1::axpby(1.,m_tmp,1.,x);
 }
 
 template< class ContainerType>
-template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
-unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2>
+unsigned LGMRES< ContainerType>::solve( Matrix&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& S, value_type eps, value_type nrmb_correction)
 {
     // Improvements over old implementation:
     // - Use right preconditioned system such that residual norm is available in minimization
     // - do not compute Az explicitly but save on iterations
     // - first cycle equivalent to GMRES(m+k)
-    // - use SquareNorm for orthogonalization (works because in Saad book 6.29 and 6.30 are also true if V_m is unitary in the S scalar product, the Hessenberg matrix is still formed in the regular 2-norm, just define J(y) with S-norm in 6.26 and form V_m with a Gram-Schmidt process in the S-norm)
+    // - use weights for orthogonalization (works because in Saad book 6.29 and 6.30 are also true if V_m is unitary in the S scalar product, the Hessenberg matrix is still formed in the regular 2-norm, just define J(y) with S-norm in 6.26 and form V_m with a Gram-Schmidt process in the W-norm)
     value_type nrmb = sqrt( blas2::dot( S, b));
     value_type tol = eps*(nrmb + nrmb_correction);
     if( nrmb == 0)
@@ -203,7 +202,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
         m_Vptr[i] = &m_V[i];
     do
 	{
-        dg::blas2::gemv(A,x,m_residual);
+        dg::blas2::gemv(std::forward<Matrix>(A),x,m_residual);
         dg::blas1::axpby(1.,b,-1.,m_residual);
         rho = sqrt(dg::blas2::dot(S,m_residual));
         counter ++;
@@ -222,8 +221,8 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
             unsigned outer_w_count = std::min(restartCycle,m_outer_k);
             if(iteration < m_krylovDimension-outer_w_count){
                 m_W[iteration] = &m_V[iteration];
-                dg::blas2::gemv(P,*m_W[iteration],m_tmp);
-                dg::blas2::gemv(A,m_tmp,m_V[iteration+1]);
+                dg::blas2::gemv(std::forward<Preconditioner>(P),*m_W[iteration],m_tmp);
+                dg::blas2::gemv(std::forward<Matrix>(A),m_tmp,m_V[iteration+1]);
                 counter++;
             } else if( iteration < m_krylovDimension){ // size of W
                 unsigned w_idx = iteration - (m_krylovDimension - outer_w_count);
@@ -299,11 +298,11 @@ unsigned LGMRES< ContainerType>::solve( Matrix& A, ContainerType0& x, const Cont
             rho = fabs(m_s[iteration+1]);
             if( rho < tol)
 			{
-                Update(P,m_dx,x,iteration,m_H,m_s,m_W);
+                Update(std::forward<Preconditioner>(P),m_dx,x,iteration,m_H,m_s,m_W);
                 return counter;
             }
         }
-        Update(P,m_dx,x,m_krylovDimension-1,m_H,m_s,m_W);
+        Update(std::forward<Preconditioner>(P),m_dx,x,m_krylovDimension-1,m_H,m_s,m_W);
         if( m_outer_k > 1)
         {
             std::rotate(m_outer_w.rbegin(),m_outer_w.rbegin()+1,m_outer_w.rend());

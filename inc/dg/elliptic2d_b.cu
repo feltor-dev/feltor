@@ -65,7 +65,7 @@ int main()
     dg::DVec chi =  dg::evaluate( pol, grid);
     dg::DVec chi_inv(chi);
     dg::blas1::transform( chi, chi_inv, dg::INVERT<double>());
-    dg::blas1::pointwiseDot( chi_inv, v2d, chi_inv);
+    //dg::blas1::pointwiseDot( chi_inv, v2d, chi_inv);
     dg::DVec temp = x;
     //compute error
     const dg::DVec solution = dg::evaluate( sol, grid);
@@ -172,7 +172,8 @@ int main()
     dg::blas1::copy( 0., x);
     dg::Timer t;
     t.tic();
-    unsigned number = lgmres.solve( pol_forward, x, b, chi_inv, w2d, eps);
+    //unsigned number = lgmres.solve( pol_forward, x, b, chi_inv, w2d, eps);
+    unsigned number = lgmres.solve( pol_forward, x, b, 1., w2d, eps);
     t.toc();
     std::cout << "# of lgmres iterations "<<number<<" took "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1.,x,-1., solution, error);

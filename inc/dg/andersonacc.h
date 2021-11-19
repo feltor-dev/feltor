@@ -122,10 +122,9 @@ struct AndersonAcceleration
      * @param verbose If true writes intermediate errors to \c std::cout
      * @return Number of iterations used to achieve desired precision
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
-     * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
-    template<class BinarySubroutine, class ContainerType0, class ContainerType1, class SquareNorm>
-    unsigned solve( BinarySubroutine& f, ContainerType0& x, const ContainerType1& b, const SquareNorm& weights,
+    template<class BinarySubroutine, class ContainerType0, class ContainerType1, class ContainerType2>
+    unsigned solve( BinarySubroutine&& f, ContainerType0& x, const ContainerType1& b, const ContainerType2& weights,
         value_type rtol, value_type atol, unsigned max_iter,
         value_type damping, unsigned restart, bool verbose);
 
@@ -140,9 +139,9 @@ struct AndersonAcceleration
 ///@cond
 
 template<class ContainerType>
-template<class BinarySubroutine, class ContainerType0, class ContainerType1, class SquareNorm>
+template<class BinarySubroutine, class ContainerType0, class ContainerType1, class ContainerType2>
 unsigned AndersonAcceleration<ContainerType>::solve(
-    BinarySubroutine& func, ContainerType0& x, const ContainerType1& b, const SquareNorm& weights,
+    BinarySubroutine&& func, ContainerType0& x, const ContainerType1& b, const ContainerType2& weights,
     value_type rtol, value_type atol, unsigned max_iter,
     value_type damping, unsigned restart,  bool verbose )
 {
@@ -162,7 +161,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
         <<" damping = "<<damping<<" restart = "<<restart<<std::endl;
 
     ContainerType0& m_gval = x;
-    // - use SquareNorm for orthogonalization (works because minimization is also true if V_m is unitary in the S scalar product
+    // - use weights for orthogonalization (works because minimization is also true if V_m is unitary in the W scalar product
     for(unsigned iter=0;iter < max_iter; iter++)
     {
         if ( restart != 0 && iter % (restart) == 0) {
@@ -170,7 +169,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
             if(verbose)DG_RANK0 std::cout << "Iter = " << iter << std::endl;
         }
 
-        dg::apply( func, x, m_fval);
+        dg::apply( std::forward<BinarySubroutine>(func), x, m_fval);
         dg::blas1::axpby( -1., b, 1., m_fval); //f(x) = func - b (residual)
         value_type res_norm = sqrt(dg::blas2::dot(m_fval,weights,m_fval));  //l2norm(m_fval)
 

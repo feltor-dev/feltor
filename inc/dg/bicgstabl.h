@@ -97,18 +97,17 @@ class BICGSTABl
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may not be the same vector.
      * @param P The preconditioner to be used
-     * @param S Weights used to compute the norm for the error condition (and only for that;)
+     * @param W Weights used to define the scalar product and the norm for the error condition
      * @param eps The relative error to be respected
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      *
      * @return Number of iterations used to achieve desired precision (in each iteration the matrix has to be applied twice)
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
-     * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
-     * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
+     * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&&, const ContainerType&, ContainerType&) function is callable.
      */
-    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
-    unsigned solve( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2 >
+    unsigned solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
   private:
     unsigned max_iter, m_l;
@@ -123,26 +122,26 @@ class BICGSTABl
 ///@cond
 
 template< class ContainerType>
-template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
-unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2>
+unsigned BICGSTABl< ContainerType>::solve( Matrix&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type eps, value_type nrmb_correction)
 {
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif //MPI
-    dg::blas2::symv(P,b,m_tmp);
-    value_type nrmb = sqrt(dg::blas2::dot(S,m_tmp));
+    dg::blas2::symv(std::forward<Preconditioner>(P),b,m_tmp);
+    value_type nrmb = sqrt(dg::blas2::dot(W,m_tmp));
     value_type tol = eps*(nrmb + nrmb_correction);
     if( nrmb == 0)
     {
         blas1::copy( 0., x);
         return 0;
     }
-    dg::blas2::symv(A,x,m_tmp);
+    dg::blas2::symv(std::forward<Matrix>(A),x,m_tmp);
     dg::blas1::axpby(1.,b,-1.,m_tmp);
-    if( sqrt( blas2::dot(S,m_tmp) ) < tol) //if x happens to be the solution
+    if( sqrt( blas2::dot(W,m_tmp) ) < tol) //if x happens to be the solution
         return 0;
-    dg::blas2::symv(P,m_tmp,rhat[0]);
+    dg::blas2::symv(std::forward<Preconditioner>(P),m_tmp,rhat[0]);
 
     dg::blas1::copy(0., uhat[0]);
 
@@ -158,36 +157,36 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
         /// Bi-CG part ///
         for(unsigned j = 0; j<m_l;j++)
         {
-            value_type rho_1 = dg::blas1::dot(rhat[j],b);
+            value_type rho_1 = dg::blas2::dot(rhat[j],W,b);
             value_type beta = alpha*rho_1/rho_0;
             rho_0 = rho_1;
             for(unsigned i = 0; i<=j;i++)
             {
                 dg::blas1::axpby(1.,rhat[i],-1.0*beta,uhat[i]);
             }
-            dg::blas2::symv(A,uhat[j],m_tmp);
-            dg::blas2::symv(P,m_tmp,uhat[j+1]);
+            dg::blas2::symv(std::forward<Matrix>(A),uhat[j],m_tmp);
+            dg::blas2::symv(std::forward<Preconditioner>(P),m_tmp,uhat[j+1]);
             if( rho_0 == 0)
                 alpha = 0;
             else
-                alpha = rho_0/dg::blas1::dot(uhat[j+1],b);
+                alpha = rho_0/dg::blas2::dot(uhat[j+1],W,b);
             for(unsigned i = 0; i<=j; i++)
             {
                 dg::blas1::axpby(-1.0*alpha,uhat[i+1],1.,rhat[i]);
             }
-            dg::blas2::symv(A,rhat[j],m_tmp);
-            dg::blas2::symv(P,m_tmp,rhat[j+1]);
+            dg::blas2::symv(std::forward<Matrix>(A),rhat[j],m_tmp);
+            dg::blas2::symv(std::forward<Preconditioner>(P),m_tmp,rhat[j+1]);
             dg::blas1::axpby(alpha,uhat[0],1.,xhat);
         }
 
         /// Minimal Residual part: modified Gram-Schmidt ///
         for(unsigned j = 1; j<=m_l; j++){
             for(unsigned i = 1; i<j;i++){
-                tau[i][j] = 1.0/sigma[i]*dg::blas1::dot(rhat[j],rhat[i]);
+                tau[i][j] = 1.0/sigma[i]*dg::blas2::dot(rhat[j],W,rhat[i]);
                 dg::blas1::axpby(-tau[i][j],rhat[i],1.,rhat[j]);
             }
-            sigma[j] = dg::blas1::dot(rhat[j],rhat[j]);
-            gammap[j] = 1.0/sigma[j]*dg::blas1::dot(rhat[0],rhat[j]);
+            sigma[j] = dg::blas2::dot(rhat[j],W,rhat[j]);
+            gammap[j] = 1.0/sigma[j]*dg::blas2::dot(rhat[0],W,rhat[j]);
         }
 
         gamma[m_l] = gammap[m_l];
@@ -217,7 +216,7 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix& A, ContainerType0& x, const C
         }
 
         // rhat[0] is P dot the actual residual
-        value_type err = sqrt(dg::blas2::dot(S,rhat[0]));
+        value_type err = sqrt(dg::blas2::dot(W,rhat[0]));
         if( m_verbose)
             DG_RANK0 std::cout << "# Error is now : " << err << " Against " << tol << std::endl;
         if( err < tol){
