@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "cg.h"
+#include "pcg.h"
 #include "elliptic.h"
 
 #include "backend/timer.h"
@@ -43,26 +43,25 @@ int main()
     std::cout << "Create Laplacian...\n";
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::not_normed, dg::forward );
-    dg::Elliptic<dg::RealCartesianGrid2d<float>, dg::fDMatrix, dg::fDVec> flap(gridf, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::normed, dg::forward );
+    dg::Elliptic<dg::RealCartesianGrid2d<float>, dg::fDMatrix, dg::fDVec> flap(gridf, dg::normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny);
+    dg::PCG< dg::DVec > pcg( x, n*n*Nx*Ny);
 
     std::cout<<"Expand right hand side\n";
     const dg::DVec solution = dg::evaluate ( fct, grid);
     const dg::DVec deriv = dg::evaluate( derivative, grid);
     dg::DVec b = dg::evaluate ( laplace_fct, grid);
-    //compute S b
-    dg::blas1::pointwiseDivide( b, lap.inv_weights(), b);
     //////////////////////////////////////////////////////////////////////
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
 
     std::cout << "... for a precision of "<< eps<<std::endl;
     x = dg::evaluate( initial, grid);
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg.solve( lap, x, b, v2d, eps)<<std::endl;
+    double precond = 1.;
+    std::cout << "Number of pcg iterations "<< pcg.solve( lap, x, b, precond, w2d, eps)<<std::endl;
     t.toc();
     std::cout << "... on the device took "<< t.diff()<<"s\n";
 

@@ -18,6 +18,7 @@
 #include "blas.h"
 #include "helmholtz.h"
 #include "cg.h"
+#include "pcg.h"
 #include "bicgstabl.h"
 #include "lgmres.h"
 #include "functors.h"

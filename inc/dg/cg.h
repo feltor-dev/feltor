@@ -11,7 +11,7 @@
 #include "backend/timer.h"
 
 /*!@file
- * Conjugate gradient class and functions
+ * DEPRECATED Conjugate gradient class and functions
  */
 
 namespace dg{
@@ -19,14 +19,16 @@ namespace dg{
 //// TO DO: check for better stopping criteria using condition number estimates?
 
 /**
-* @brief Preconditioned conjugate gradient method to solve
+* @brief DEPRECATED Use dg::PCG instead
+*
+* Preconditioned conjugate gradient method to solve
 * \f[ M^{-1}Ax=M^{-1}b\f]
 *
 * @ingroup invert
 *
 * @sa This implements the PCG algorithm as given in https://en.wikipedia.org/wiki/Conjugate_gradient_method
 or the book
-* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
+* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iterative Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * @note Conjugate gradients might become unstable for positive semidefinite
 * matrices arising e.g. in the discretization of the periodic laplacian
 * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
@@ -277,7 +279,9 @@ unsigned CG< ContainerType>::solve( Matrix& A, ContainerType0& x, const Containe
 
 
 /**
- * @brief Wrapper around CG and Extrapolation to solve the Equation \f[ Ax = W  b \f]
+ * @brief DEPRECATED: use dg::PCG and dg::Extrapolation
+ *
+ * Wrapper around CG and Extrapolation to solve the Equation \f[ Ax = W  b \f]
  *
  * where \f$A\f$ was made symmetric
  * by appropriate weights \f$W\f$ (s. comment below).
