@@ -46,9 +46,15 @@ struct Esol
      */
     void gamma1_y( const container& y, container& yp)
     {
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, yp, y, m_p.eps_gamma1);
-        if(  number[0] == m_multigrid.max_iter())
-            throw dg::Fail( m_p.eps_gamma1);
+        if (m_p.tau[1]==0.0) 
+            dg::blas1::copy(y,yp);
+        else
+        {
+            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, yp, y, m_p.eps_gamma1);
+            if(  number[0] == m_multigrid.max_iter())
+                throw dg::Fail( m_p.eps_gamma1);
+        }
+        
     }
     /**
      * @brief compute \f$  \Gamma_1 yp = y \f$ (or \f$ \sqrt{\Gamma_1} yp =  y \f$ )
@@ -57,8 +63,13 @@ struct Esol
      */
     void gamma1inv_y( const container& y, container& yp)
     {
-        dg::blas2::symv( m_multi_g1dag[0], y, m_chi); //invG ne-1
-        dg::blas2::symv( m_v2d, m_chi, yp);
+        if (m_p.tau[1]==0.0) 
+            dg::blas1::copy(y, yp);
+        else
+        {
+            dg::blas2::symv( m_multi_g1dag[0], y, m_chi); //invG ne-1
+            dg::blas2::symv( m_v2d, m_chi, yp);
+        }
     }
     /**
      * @brief Invert \f$ -\nabla \cdot (1/B \nabla_\perp yp) = y \f$ where y equals the ExB vorticity
@@ -89,12 +100,17 @@ struct Esol
         if (m_p.source_rel == "zero-pol" || m_p.source_rel == "finite-pol")
         {
             // Compute Gamma1 SNi
-            m_gamma_SNi_ex.extrapolate(t, m_omega);
-            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, m_omega, SNi, m_p.eps_gamma1);
-            m_gamma_SNi_ex.update(t, m_omega);
-            if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_gamma1);
-            dg::blas1::axpby(1.0, m_omega, 0.0, Sne);
+            if (m_p.tau[1]==0.0)
+                dg::blas1::copy(SNi,Sne);
+            else
+            {
+                m_gamma_SNi_ex.extrapolate(t, m_omega);
+                std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, m_omega, SNi, m_p.eps_gamma1);
+                m_gamma_SNi_ex.update(t, m_omega);
+                if(  number[0] == m_multigrid.max_iter())
+                    throw dg::Fail( m_p.eps_gamma1);
+                dg::blas1::axpby(1.0, m_omega, 0.0, Sne);
+            }
         }
         if (m_p.source_rel == "finite-pol")
         {
@@ -163,7 +179,7 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     m_volume( dg::create::volume(grid)), m_v2d( dg::create::inv_weights(grid)), m_one( dg::evaluate(dg::one, grid)),
     m_hm( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, -1), grid)),
     m_hp( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, 1), grid)),
-    m_polavg(grid, dg::coo2d::y),
+    m_polavg(grid, dg::coo2d::y,"simple"),
     m_p(p)
 {
     if(p.source_type == "flux") {
@@ -211,8 +227,8 @@ template< class G,  class M, class container>
 const container& Esol<G,  M,  container>::compute_psi( double t, const container& potential)
 {
 
-    if (m_p.tau[1] == 0.) {
-        dg::blas1::axpby( 1., potential, 0., m_psi1); 
+    if (m_p.tau[1] == 0.0) {
+        dg::blas1::copy( potential, m_psi1); 
     }
     else {
         m_psi1_ex.extrapolate( t, m_psi1);
@@ -256,12 +272,18 @@ const container& Esol<G,  M, container>::polarisation( double t, const std::arra
     }
     
     //Compute rho
-    m_gamma_n_ex.extrapolate(t, m_gamma_n);
-    std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, m_gamma_n, y[1], m_p.eps_gamma1);
-    m_gamma_n_ex.update(t, m_gamma_n);
-    if(  number[0] == m_multigrid.max_iter())
-        throw dg::Fail( m_p.eps_gamma1);
-    
+    if (m_p.tau[1]==0.0)
+    {
+        dg::blas1::copy(y[1],m_gamma_n);
+    }
+    else
+    {
+        m_gamma_n_ex.extrapolate(t, m_gamma_n);
+        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, m_gamma_n, y[1], m_p.eps_gamma1);
+        m_gamma_n_ex.update(t, m_gamma_n);
+        if(  number[0] == m_multigrid.max_iter())
+            throw dg::Fail( m_p.eps_gamma1);
+    }
  //"ff-lwl" || "ff-lwl-OB" || "ff-O2-OB" ||  "ff-O2"
     dg::blas1::axpby( 1., m_gamma_n, -1., y[0], m_omega); 
     if (m_p.equations == "ff-O2-OB") {            
@@ -331,7 +353,7 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
                 dg::blas1::copy(m_chi, m_gradphi[1]);
                 dg::blas1::scal(m_gradphi[1], -1.0);
             }
-            m_adv.upwind( -1., m_chi, m_iota, y[i], 0., yp[i]);   
+            m_adv.upwind( -1., m_chi, m_iota, y[i], 0., yp[i]);  
             dg::blas1::pointwiseDot( m_binv, yp[i], yp[i]);
             
             //Grad-B drift and ExB compression
@@ -359,7 +381,6 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
                 m_polavg(m_psi[0], m_chi);        //<phi>
                 dg::blas1::axpby(1., m_psi[0],  -1., m_chi, m_chi);       // delta(phi) 
                 dg::blas1::axpbypgz(1., m_chi, -1., m_logn, 1.0, m_iota); // delta(phi)  - delta(ln(ne))
-                dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
             }
             else if (m_p.hwmode == "ordinary")
             {
@@ -367,8 +388,14 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
                 dg::blas1::pointwiseDivide(m_N[0], m_iota, m_iota);
                 dg::blas1::transform( m_iota, m_chi, dg::LN<double>());
                 dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne/<ne>)
-                dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
             }
+            else if (m_p.hwmode == "ordinary_nonper")
+            {
+                dg::blas1::transform( m_N[0], m_chi, dg::LN<double>());
+                dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne)
+            }
+            dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
+
         }
         
         //sheath dissipation
@@ -470,9 +497,6 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
                 m_polavg(m_psi[0], m_chi);        //<phi>
                 dg::blas1::axpby(1., m_psi[0],  -1., m_chi, m_chi);       // tilde(phi) 
                 dg::blas1::axpbypgz(1., m_chi, -1., y[0], 1.0, m_iota); // tilde(phi)  - tilde(ln(ne))
-                dg::blas1::pointwiseDot(m_p.alpha, m_hm, m_iota, 0.0, m_iota);
-                dg::blas1::pointwiseDivide(m_iota,  m_N[0], m_iota);
-                dg::blas1::axpby(1.0, m_iota, 1.0, yp[0]); // dt ln n += alpha hm/n (tilde phi - tilde ln ne)
             }
             else if (m_p.hwmode == "ordinary")
             {
@@ -480,9 +504,14 @@ void Esol<G,  M,  container>::operator()( double t, const std::array<container,2
                 dg::blas1::pointwiseDivide(m_N[0], m_iota, m_iota);
                 dg::blas1::transform( m_iota, m_chi, dg::LN<double>());
                 dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne/<ne>)
-                dg::blas1::pointwiseDivide(m_iota,  m_N[0], m_iota);
-                dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
             }
+            else if (m_p.hwmode == "ordinary_nonper")
+            {
+                dg::blas1::transform( m_N[0], m_chi, dg::LN<double>());
+                dg::blas1::axpby(1., m_psi[0], -1., m_chi, m_iota); // phi  - ln(ne/<ne>)
+            }
+            dg::blas1::pointwiseDivide(m_iota,  m_N[0], m_iota);
+            dg::blas1::pointwiseDot(m_p.alpha, m_iota, m_hm, 1.0,yp[0]);
         }
         
         //sheath dissipation

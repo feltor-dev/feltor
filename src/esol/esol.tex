@@ -106,7 +106,7 @@ The complete parallel closure consists then of two contributions:
 \Lambda_{N,\parallel,b}
 \end{align}
 
-\paragraph{Edge:} In the edge region we take the modified Hasegawa-Waktani 
+\paragraph{Edge:} In the edge region we take the modified Hasegawa-Waktani ("modified")
 closure~\cite{Held2018}
 \begin{align}
  \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\widetilde{\phi} - 
@@ -117,7 +117,19 @@ with the fluctuation given by \(\widetilde{f} := f - \langle f\rangle_y\) and
 the y-average \(\langle f\rangle_y:= \int dy f / L_y\). The adiabaticity 
 parameter is defined as \(\alpha := T_{e,\parallel} 
 k_\parallel^2/(\eta_\parallel e^2 n_{e,0} \Omega_{i,0} )\).
-
+\\
+Alternatively, the ordinary Hasegawa-Wakatani ("ordinary") closure is given by~\cite{Held2018}
+\begin{align}
+ \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\phi - 
+\ln(n/\langle n\rangle) \right] \\
+ \Lambda_{N,\parallel,-} &= 0
+\end{align}
+The third option is to normalize the logarithmic term to a constant reference density ("ordinary_nonper")
+\begin{align}
+ \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\phi - 
+\ln(n/n_0) \right] \\
+ \Lambda_{N,\parallel,-} &= 0
+\end{align}
 \paragraph{Scrape-off-Layer:} In the scrape off layer we assume Bohm sheath 
 boundary conditions~\cite{Mosetto2015}~\footnote{Note that strictly speaking the 
 boundary conditions for the density and electric potential are Neumann, in 
@@ -158,7 +170,7 @@ to obtain
  \Lambda_{\mathcal{W},\parallel,+} :=  -\lambda  h_{+}(x)  n \sqrt{1 + \tau} \left[1  -  
 \exp{(-\phi')} \right]
 \end{align}
-which is vanishing for \(\phi'=0\) at the boundaries.
+which is vanishing for \(\phi'=0\) at the boundaries. Note that the density and vorticity density sink rate increases with \(\tau\)!
 \subsubsection{Sources}
 The particle source is related to the the ion gyro-center source 
 and the electric potential via the transformation rule
@@ -324,6 +336,7 @@ Input file format: json
     "curvature"  : 0.00015, //$\kappa$
     "tau"  : 4.0,           //$\tau_i = T_{i0}/(T_{e0} Z_i)$
     "alpha"  : 0.005,       //adiabaticity $\alpha:= T_{e,\parallel} k_\parallel^2/(\eta_\parallel e^2 n_{e,0} \Omega_{i,0} )$
+    "hwmode" : "modified"   //hasegawa-wakatani model $\in$ ("modified" ,"ordinary" ,"ordinary_nonper" )
     "lambda"  : 0.000001,    //sheath dissipation $\lambda:= \rho_{s0}/L_\parallel$
     "mu_e"  : -0.000272121, //$\mu_e:=m_e/(Z_e m_i)$ negative electron to ion mass ratio
     "equations": "ff-O2",   //model $\in$ ("ff-lwl-OB" ,"ff-O2-OB" ,"ff-lwl" ,"ff-O2" ,"ff-O4" )
@@ -338,14 +351,17 @@ Input file format: json
      "source_rel" : "zero_pol", //relation for source, $\in$ ("zero-pol", "finite-pol")
      "omega_s" : 0.005,         //source rate in units of $\Omega_i$
      "xfac_s": 0.1,             //position of source in units of the $l_x$
-     "sigma_s" : 5.0              //width of source in units of $\rho_{s0}$
+     "sigma_s" : 5.0,           //width of source in units of $\rho_{s0}$
+     "n_min" :1e-3,             //minimum density that is enforced
+     "omega_n": 1e8             //forcing rate for minimum density 
 },
 "profile":
 {
      "bgproftype": "exp",  //type of background profile $\in$ ("exp","tanh")
      "bgprofamp" : 1.0, //amplitude of background in units of $n_{e0}$, typically 1
      "profamp": 0.0,    //amplitude of profile in units of $n_{e0}$
-     "ln": 20.0    //width of gradient region of the profile in units of $\rho_{s0}$
+     "ln": 20.0,    //width of gradient region of the profile in units of $\rho_{s0}$
+     "xfac_p": 0.5   //position of tanh profile in units of box size in x-direction
 },
 "init":
 {
@@ -362,7 +378,8 @@ Input file format: json
 "nu_perp"  : 0e-5,          //hyper-diffusion parameter
 "bc_x"  : "DIR_NEU",        //Boundary condtion in x for $\phi$ and $\psi$
 "bc_N_x": "NEU",            //Boundary condition in x for the densities
-"bc_y"  : "PER"             //Boundary condtion in y
+"bc_y"  : "PER",             //Boundary condtion in y
+"formulation": "conservative"//formulation of the continuity equations $\in ("conservative","ln")$
 \end{minted}
 \subsection{Structure of output file}
 Output file format: netcdf-4/hdf5

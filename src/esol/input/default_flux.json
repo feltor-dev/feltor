@@ -1,6 +1,6 @@
 {
 "grid": 
-    {"n": 3, "Nx": 32, "Ny": 32, "lx": 100, "ly": 100}, 
+    {"n": 3, "Nx": 16, "Ny": 16, "lx": 32, "ly": 32}, 
 "timestepper": 
     {
      "type": "adaptive", 
@@ -9,13 +9,13 @@
      //"tableau": "TVB-3-3",
      "rtol": 1e-5,
      "atol": 1e-6,
-     "dt": 5
+     "dt": 20.0
      }, 
 "output": 
     {
     "type": "glfw", 
     "itstp": 1, 
-    "maxout": 2e6, 
+    "maxout": 5000, 
     "n": 3, 
     "Nx": 32, 
     "Ny": 32
@@ -23,43 +23,48 @@
 "elliptic": 
     {
     "stages": 3, 
-    "eps_pol": [1e-6, 1.0,1.0], 
+    "eps_pol": [1e-7, 2.0,2.0], 
     "jumpfactor": 1
     },
 "helmholtz": 
     {
-     "eps_gamma1": 1e-6, 
-     "eps_gamma0": 1e-6, 
+     "eps_gamma1": 1e-8, 
+     "eps_gamma0": 1e-8, 
      "maxiter_sqrt": 500, 
      "maxiter_cauchy": 30, 
      "eps_cauchy": 1e-12
      }, 
 "physical": 
     {
-    "curvature": 0.00015, 
+    "curvature": 2e-03, 
     "tau"  : 0.0,  
-    "alpha"  : 0.0, 
-    "lambda"  : 0e-4, 
+    "alpha"  : 0e-04, 
+    "hwmode" : "modified",
+    "lambda"  : 1e-04, 
     "mu_e"  : -0.000272121, 
-    "equations": "ff-lwl-OB", 
-    "xfac_sep"  : -100.0, 
-    "sigma_sep"  : 5.0
+    "equations": "ff-lwl", 
+    "renormalize": true,
+    "xfac_sep"  : 1e14, 
+    "sigma_sep"  : 3.0
     },
 "source":
     {
-     "source_shape" :"gaussian",
+     "source_shape" :"cauchy",
      "source_type" : "flux", 
-     "source_rel" : "zero-pol", 
-     "omega_s" : 0.055,
-     "xfac_s": 0.075,
-     "sigma_s" : 6.0
+     "source_rel" : "finite-pol", 
+     "omega_s" : 0.005,
+     "xfac_s": 0.1,
+     "sigma_s" : 10.0,
+     "n_min" :0e-3,
+     "omega_n": 0e8
     },
 "profile":
     {
-     "bgproftype": "exp",
+     "bgproftype": "tanh",
      "bgprofamp" : 1.0,
-     "profamp": 0.0,
-     "ln": 32.0
+     "profamp": 4.0,
+     "ln": 5.0,
+     "xfac_p": 0.5
      },
 "init": 
     {
@@ -73,8 +78,9 @@
     "xfac_d": 0.05,
     "sigma_d" : 4.0
     },
-"nu_perp": 1e-02, 
+"nu_perp": 1e-03, 
 "bc_x": "DIR_NEU", 
 "bc_N_x": "NEU", 
-"bc_y": "PER"
+"bc_y": "PER",
+"formulation": "conservative"
 }
