@@ -16,6 +16,182 @@
 namespace dg
 {
 
+template<class Geometry, class Matrix, class Container>
+struct NestedGrids
+{
+    using geometry_type = Geometry;
+    using matrix_type = Matrix;
+    using container_type = Container;
+    using value_type = get_value_type<Container>;
+    NestedGrids(): m_stages(0), m_grids(0), m_inter(0), m_project(0){}
+    template<class ...Params>
+    NestedGrids( const Geometry& grid, const unsigned stages, Params&& ...ps):
+        m_stages(stages),
+        m_grids( stages),
+        m_inter(    stages-1),
+        m_project(  stages-1),
+        m_x( stages)
+    {
+        if(stages < 1 )
+            throw Error( Message(_ping_)<<" There must be minimum 1 stage in nested Grids construction! You gave " << stages);
+        m_grids[0].reset( grid);
+        //m_grids[0].get().display();
+
+		for(unsigned u=1; u<stages; u++)
+        {
+            m_grids[u] = m_grids[u-1]; // deep copy
+            m_grids[u]->multiplyCellNumbers(0.5, 0.5);
+            //m_grids[u]->display();
+        }
+
+		for(unsigned u=0; u<stages-1; u++)
+        {
+            // Projecting from one grid to the next is the same as
+            // projecting from the original grid to the coarse grids
+            m_project[u].construct( dg::create::fast_projection(*m_grids[u], 1,
+                        2, 2), std::forward<Params>(ps)...);
+            m_inter[u].construct( dg::create::fast_interpolation(*m_grids[u+1],
+                        1, 2, 2), std::forward<Params>(ps)...);
+        }
+        for( unsigned u=0; u<m_stages; u++)
+            m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero,
+                        *m_grids[u]), std::forward<Params>(ps)...);
+
+    }
+    /**
+    * @brief Project vector to all involved grids
+    * @param src the input vector (may alias first element of out)
+    * @param out the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
+    * @note \c out is not resized
+    */
+    template<class ContainerType0>
+    void project( const ContainerType0& src, std::vector<ContainerType0>& out) const
+    {
+        dg::blas1::copy( src, out[0]);
+        for( unsigned u=0; u<m_stages-1; u++)
+            dg::blas2::gemv( m_project[u], out[u], out[u+1]);
+    }
+
+    /**
+    * @brief Project vector to all involved grids (allocate memory version)
+    * @param src the input vector
+    * @return the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
+    */
+    template<class ContainerType0>
+    std::vector<ContainerType0> project( const ContainerType0& src) const
+    {
+        //use the fact that m_x has the correct sizes from the constructor
+        std::vector<ContainerType0> out( m_x);
+        project( src, out);
+        return out;
+
+    }
+    ///@return number of stages (same as \c num_stages)
+    unsigned stages()const{return m_stages;}
+    ///@return number of stages (same as \c stages)
+    unsigned num_stages()const{return m_stages;}
+
+    ///@brief return the grid at given stage
+    ///@param stage must fulfill \c 0 <= stage < stages()
+    const Geometry& grid( unsigned stage) const {
+        return *(m_grids[stage]);
+    }
+
+    ///@brief return the interpolation matrix at given stage
+    ///@param stage must fulfill \c 0 <= stage < stages()-1
+    const MultiMatrix<Matrix, Container>& interpolation( unsigned stage) const
+    {
+        return m_inter[0];
+    }
+    ///@brief return the projection matrix at given stage
+    ///@param stage must fulfill \c 0 <= stage < stages()-1
+    const MultiMatrix<Matrix, Container>& projection( unsigned stage) const
+    {
+        return m_project[0];
+    }
+    Container& x(unsigned stage){ return m_x[stage];}
+
+    private:
+    unsigned m_stages;
+    std::vector< dg::ClonePtr< Geometry> > m_grids;
+    std::vector< MultiMatrix<Matrix, Container> >  m_inter;
+    std::vector< MultiMatrix<Matrix, Container> >  m_project;
+    std::vector< Container> m_x;
+};
+
+template<class Solver, class Nested>
+struct NestedIterations
+{
+    NestedIterations() = default;
+    template<class ...SolverParams>
+    NestedIterations( const Nested& nested, SolverParams&& ...ps):
+        m_nested(nested), m_solver( nested.stages())
+    {
+        for( unsigned u=0; u<m_nested.stages(); u++)
+            m_solver[u] = Solver( std::forward<SolverParams>(ps[u])...);
+
+    }
+    const Nested& nested() const{return m_nested;}
+    ///@brief Set or unset performance timings during iterations
+    ///@param benchmark If true, additional output will be written to \c std::cout during solution
+    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
+
+	template<class Operator, class ContainerType0, class ContainerType1,
+        class ...SolverParams >
+    std::vector<unsigned> residuum_solve( std::vector<Operator>& op,
+            ContainerType0&  x, const ContainerType1& b, SolverParams&& ...ps )
+    {
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
+        std::vector<unsigned> number(m_nested.stages(), 0);
+        // compute residual r = Wb - A x
+        dg::blas2::symv(op[0], x, m_r[0]);
+        dg::blas1::axpby(-1.0, m_r[0], 1.0, b, m_r[0]);
+        // project residual down to coarse grid
+        for( unsigned u=0; u<m_nested.stages()-1; u++)
+            dg::blas2::gemv( m_nested.project(u), m_r[u], m_r[u+1]);
+
+        dg::blas1::copy( 0., m_nested.x(m_nested.stages()-1));
+        //now solve residual equations
+		for( unsigned u=m_nested.stages()-1; u>0; u--)
+        {
+            if(m_benchmark)m_timer.tic();
+            number[u] = m_solver[u].solve( op[u], m_nested.x(u), m_r[u],
+                std::forward<SolverParams>(ps[u])...);
+            dg::blas2::symv( m_nested.interpolation(u-1), m_nested.x(u),
+                    m_nested.x(u-1));
+            if( m_benchmark)
+            {
+                m_timer.toc();
+                DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<m_timer.diff()<<"s\n";
+            }
+
+        }
+        if( m_benchmark) m_timer.tic();
+
+        //update initial guess
+        dg::blas1::axpby( 1., m_nested.x(0), 1., x);
+        number[0] = m_solver.solve( op[0], x, b,
+                std::forward<SolverParams>(ps[0])...);
+        if( m_benchmark)
+        {
+            m_timer.toc();
+            DG_RANK0 std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<m_timer.diff()<<"s\n";
+        }
+
+        return number;
+    }
+
+    private:
+    Nested m_nested;
+    std::vector<Solver> m_solver;
+    bool m_benchmark = true;
+    std::vector<typename Nested::container_type> m_r;
+    Timer m_timer;
+};
+
 /**
 * @brief Solves the Equation \f[ \frac{1}{W} \hat O \phi = \rho \f]
 *
@@ -64,6 +240,7 @@ struct MultigridCG2d
         m_cheby( stages),
         m_x( stages)
     {
+        // Why would that be an issue?
         if(stages < 2 )
             throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
 
@@ -117,7 +294,7 @@ struct MultigridCG2d
     * @note \c out is not resized
     */
     template<class ContainerType0>
-    void project( const ContainerType0& src, std::vector<ContainerType0>& out)
+    void project( const ContainerType0& src, std::vector<ContainerType0>& out) const
     {
         dg::blas1::copy( src, out[0]);
         for( unsigned u=0; u<m_stages-1; u++)
@@ -130,7 +307,7 @@ struct MultigridCG2d
     * @return the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
     */
     template<class ContainerType0>
-    std::vector<ContainerType0> project( const ContainerType0& src)
+    std::vector<ContainerType0> project( const ContainerType0& src) const
     {
         //use the fact that m_x has the correct sizes from the constructor
         std::vector<Container> out( m_x);
