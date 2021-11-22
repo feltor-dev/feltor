@@ -1,78 +1,86 @@
 {
 "grid": 
-    {"n": 3, "Nx": 64, "Ny": 32, "lx": 200, "ly": 100}, 
+    {"n": 3, "Nx": 16, "Ny": 16, "lx": 32, "ly": 32}, 
 "timestepper": 
     {
      "type": "adaptive", 
      "tableau": "Bogacki-Shampine-4-2-3", 
      //"type": "multistep",
      //"tableau": "TVB-3-3",
-     "rtol": 1e-6,
-     "atol": 1e-10,
-     "dt": 4.0
+     "rtol": 1e-5,
+     "atol": 1e-6,
+     "dt": 20.0
      }, 
 "output": 
     {
     "type": "glfw", 
     "itstp": 1, 
-    "maxout": 1000000, 
+    "maxout": 5000, 
     "n": 3, 
-    "Nx": 64, 
+    "Nx": 32, 
     "Ny": 32
     }, 
 "elliptic": 
     {
     "stages": 3, 
-    "eps_pol": [1e-7, 1.0,1.0], 
+    "eps_pol": [1e-7, 2.0,2.0], 
     "jumpfactor": 1
     },
 "helmholtz": 
     {
-     "eps_gamma1": 1e-7, 
-     "eps_gamma0": 1e-7, 
+     "eps_gamma1": 1e-8, 
+     "eps_gamma0": 1e-8, 
      "maxiter_sqrt": 500, 
      "maxiter_cauchy": 30, 
      "eps_cauchy": 1e-12
      }, 
 "physical": 
     {
-    "curvature": 0.00015, 
-    "tau"  : 1.0,  
-    "alpha"  : 0.00, 
-    "lambda"  : 0.000001, 
+    "curvature": 2e-03, 
+    "tau"  : 0.0,  
+    "alpha"  : 0e-04, 
+    "hwmode" : "modified",
+    "lambda"  : 1e-04, 
     "mu_e"  : -0.000272121, 
-    "equations": "ff-lwl-OB", 
-    "xfac_sep"  : -1000, 
-    "sigma_sep"  : 1.0
+    "equations": "ff-lwl", 
+    "renormalize": true,
+    "xfac_sep"  : 1e14, 
+    "sigma_sep"  : 3.0
     },
 "source":
     {
-     "source_type" : "forced", 
+     "source_shape" :"cauchy",
+     "source_type" : "flux", 
      "source_rel" : "finite-pol", 
-     "omega_s" : 0.00,
-     "xfac_s": 0.3,
-     "sigma_s" : 5.0
+     "omega_s" : 0.005,
+     "xfac_s": 0.1,
+     "sigma_s" : 10.0,
+     "n_min" :0e-3,
+     "omega_n": 0e8
     },
 "profile":
     {
-     "bgproftype": "exp",
+     "bgproftype": "tanh",
      "bgprofamp" : 1.0,
-     "profamp": 1.0,
-     "ln": 32.0
+     "profamp": 4.0,
+     "ln": 5.0,
+     "xfac_p": 0.5
      },
 "init": 
     {
     "type": "bath", 
-    "amplitude": 0.01, 
+    "amplitude": 0.1, 
     "my": 1.0, 
+    "mx": 1.0,
     "sigma": 5.0, 
     "posX": 0.5, 
     "posY": 0.5,
-    "xfac_d": 0.02,
-    "sigma_d" : 2.0
+    "xfac_d": 0.05,
+    "sigma_d" : 4.0
     },
 "nu_perp": 1e-03, 
 "bc_x": "DIR_NEU", 
-"bc_N_x": "DIR_NEU", 
-"bc_y": "PER"
+"bc_N_x": "NEU", 
+"bc_y": "PER",
+"formulation": "conservative"
 }
