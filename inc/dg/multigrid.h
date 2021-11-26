@@ -119,6 +119,22 @@ struct NestedGrids
     std::vector< Container> m_x;
 };
 
+
+//Convenience function that binds a solver and an object to form the inverse
+//When called, computes the inverse
+template<class Operator, class Solver, class ...SolverParams>
+auto inverse_operator( Operator&& op, Solver&& solve, SolverParams&& ... ps){
+    // we want to call solve( op, x, b, ps...);
+    // as inverse( b, x);
+    return std::bind(
+        &Solver::solve,
+        &solve,
+        std::forward<Operator>(op),
+        std::placeholders::_2,
+        std::placeholders::_1,
+        std::forward<SolverParams>( ps)...);
+}
+
 template<class Nested>
 struct NestedIterations
 {
