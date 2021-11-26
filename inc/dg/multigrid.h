@@ -119,27 +119,22 @@ struct NestedGrids
     std::vector< Container> m_x;
 };
 
-template<class Solver, class Nested>
+template<class Nested>
 struct NestedIterations
 {
     NestedIterations() = default;
-    template<class ...SolverParams>
-    NestedIterations( const Nested& nested, SolverParams&& ...ps):
-        m_nested(nested), m_solver( nested.stages())
+    NestedIterations( const Nested& nested):
+        m_nested(nested)
     {
-        for( unsigned u=0; u<m_nested.stages(); u++)
-            m_solver[u] = Solver( std::forward<SolverParams>(ps[u])...);
-
     }
     const Nested& nested() const{return m_nested;}
     ///@brief Set or unset performance timings during iterations
     ///@param benchmark If true, additional output will be written to \c std::cout during solution
     void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
 
-	template<class Operator, class ContainerType0, class ContainerType1,
-        class ...SolverParams >
-    std::vector<unsigned> residuum_solve( std::vector<Operator>& op,
-            ContainerType0&  x, const ContainerType1& b, SolverParams&& ...ps )
+	template<class Operator, class ContainerType0, class ContainerType1>
+    std::vector<unsigned> solve( std::vector<Operator>&& op, ContainerType0& x, const ContainerType1& b,
+        std::vector<std::function<void( const ContainerType1&, ContainerType0&)>> inverse_op)
     {
 #ifdef MPI_VERSION
         int rank;
@@ -150,16 +145,23 @@ struct NestedIterations
         dg::blas2::symv(op[0], x, m_r[0]);
         dg::blas1::axpby(-1.0, m_r[0], 1.0, b, m_r[0]);
         // project residual down to coarse grid
+        dg::blas1::copy( x, m_nested.x(0));
         for( unsigned u=0; u<m_nested.stages()-1; u++)
+        {
             dg::blas2::gemv( m_nested.project(u), m_r[u], m_r[u+1]);
+            dg::blas2::gemv( m_nested.project(u), m_nested.x(u), m_nested.x(u+1));
+        }
 
-        dg::blas1::copy( 0., m_nested.x(m_nested.stages()-1));
         //now solve residual equations
 		for( unsigned u=m_nested.stages()-1; u>0; u--)
         {
             if(m_benchmark)m_timer.tic();
-            number[u] = m_solver[u].solve( op[u], m_nested.x(u), m_r[u],
-                std::forward<SolverParams>(ps[u])...);
+            // compute FAS right hand side
+            dg::blas2::symv( op[u], m_nested.x(u), m_nested.b(u));
+            dg::blas1::axpby( 1., m_nested.b(u), 1., m_r[u], m_nested.b(u));
+            dg::blas1::copy( m_nested.x(u), m_r[u]);
+            inverse_op[u](  m_r[u], m_nested.x(u));
+            dg::blas1::axpby( 1., m_nested.x(u), -1., m_r[u], m_nested.x(u) );
             dg::blas2::symv( m_nested.interpolation(u-1), m_nested.x(u),
                     m_nested.x(u-1));
             if( m_benchmark)
@@ -173,8 +175,7 @@ struct NestedIterations
 
         //update initial guess
         dg::blas1::axpby( 1., m_nested.x(0), 1., x);
-        number[0] = m_solver.solve( op[0], x, b,
-                std::forward<SolverParams>(ps[0])...);
+        inverse_op[0]( b, x);
         if( m_benchmark)
         {
             m_timer.toc();
@@ -186,7 +187,6 @@ struct NestedIterations
 
     private:
     Nested m_nested;
-    std::vector<Solver> m_solver;
     bool m_benchmark = true;
     std::vector<typename Nested::container_type> m_r;
     Timer m_timer;
