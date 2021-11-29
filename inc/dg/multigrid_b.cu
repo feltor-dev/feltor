@@ -60,46 +60,61 @@ int main()
     std::cout<< "Type number of stages (3) and jfactor (10) !\n";
     std::cin >> stages >> jfactor;
     std::cout << stages << " "<<jfactor<<std::endl;
-    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid(
-        grid, stages);
-    const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
-
-    std::vector<dg::DVec> multi_x = multigrid.project( x);
-    std::vector<dg::DVec> multi_b = multigrid.project( b);
-    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
-    std::vector<dg::EVE<dg::DVec> > multi_eve(stages);
-    std::vector<double> multi_ev(stages);
-    double eps_ev = 1e-10;
-    double hxhy = lx*ly/(n*n*Nx*Ny);
-    unsigned counter;
-    std::cout << "\nPrecision EVE is "<<eps_ev<<"\n";
-    for(unsigned u=0; u<stages; u++)
-    {
-        multi_pol[u].construct( multigrid.grid(u),
-            dg::centered, jfactor);
-        multi_pol[u].set_chi( multi_chi[u]);
-        //estimate EVs
-        multi_eve[u].construct( multi_chi[u]);
-        dg::blas2::symv(multi_pol[u].weights(), multi_b[u], multi_b[u]);
-        counter = multi_eve[u].solve( multi_pol[u], multi_x[u], multi_b[u],
-                multi_pol[u].precond(), multi_pol[u].weights(),
-            multi_ev[u], eps_ev);
-        //multi_ev[u]/=hxhy;
-        std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
-        std::cout << " with "<<counter<<" iterations\n";
-        hxhy*=4;
-    }
-    std::cout << "\n\n";
-    ////////////////////////////////////////////////////
     std::cout << "Type nu1 (20), nu2 (20) gamma (1) \n";
     unsigned nu1, nu2, gamma;
     std::cin >> nu1 >> nu2 >> gamma;
     std::cout << nu1 << " "<<nu2<<" "<<gamma<<std::endl;
+    dg::NestedGrids<dg::aGeometry2d, dg::DMatrix, dg::DVec> nested( grid, stages);
+    const std::vector<dg::DVec> multi_chi = nested.project( chi);
+
+    std::vector<dg::DVec> multi_x = nested.project( x);
+    std::vector<dg::DVec> multi_b = nested.project( b);
+    std::vector<dg::EVE<dg::DVec> > multi_eve(stages);
+    std::vector<dg::PCG<dg::DVec> > multi_pcg( stages);
+    std::vector<dg::ChebyshevIteration<dg::DVec> > multi_cheby( stages);
+    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> >
+        multi_pol( stages);
+    std::vector<std::function<void( const dg::DVec&, dg::DVec&)> >
+        multi_inv_pol(stages);
+    std::vector<double> multi_ev(stages);
+    double eps_ev = 1e-10;
+    unsigned counter;
+    std::cout << "\nPrecision EVE is "<<eps_ev<<"\n";
+    for(unsigned u=0; u<stages; u++)
+    {
+        multi_pol[u].construct( nested.grid(u),
+            dg::centered, jfactor);
+        multi_pol[u].set_chi( multi_chi[u]);
+        multi_pcg[u].construct( multi_x[u], 1000);
+        multi_cheby[u].construct( multi_x[u]);
+
+        //estimate EVs
+        multi_eve[u].construct( multi_chi[u]);
+        counter = multi_eve[u].solve( multi_pol[u], multi_x[u], multi_b[u],
+                multi_pol[u].precond(), multi_pol[u].weights(),
+            multi_ev[u], eps_ev);
+        std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
+        std::cout << " with "<<counter<<" iterations\n";
+        auto precond = [&](const dg::DVec& y, dg::DVec& x)
+        {
+            multi_cheby[u].solve( multi_pol[u], x, y, multi_pol[u].precond(),
+                    multi_ev[u]/100., multi_ev[u]*1.1, nu2+1, true);
+        };
+        multi_inv_pol[u] = [&, precond]( const dg::DVec& y, dg::DVec& x)
+        {
+            multi_pcg[u].solve( multi_pol[u], x, y, precond, eps,
+                1,1);
+        };
+            //eps, 1., (u == 0 ? 1 : 10));
+    }
+    std::cout << "\n\n";
+    ////////////////////////////////////////////////////
     dg::Timer t;
     std::cout << "MULTIGRID NESTED ITERATIONS SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();
-    multigrid.direct_solve(multi_pol, x, b, eps);
+    //multigrid.direct_solve(multi_pol, x, b, eps);
+    nested_iterations( multi_pol, x, b, multi_inv_pol, nested);
     t.toc();
     double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);
@@ -109,6 +124,8 @@ int main()
     std::cout << " Error of nested iterations "<<err<<"\n";
     std::cout << "Took "<<t.diff()<<"s\n\n";
     ////////////////////////////////////////////////////
+    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid(
+        grid, stages);
     std::cout << "MULTIGRID NESTED ITERATIONS WITH CHEBYSHEV SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();

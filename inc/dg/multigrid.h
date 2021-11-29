@@ -56,6 +56,7 @@ struct NestedGrids
         for( unsigned u=0; u<m_stages; u++)
             m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero,
                         *m_grids[u]), std::forward<Params>(ps)...);
+        m_r = m_b = m_x;
 
     }
     /**
@@ -81,7 +82,7 @@ struct NestedGrids
     std::vector<ContainerType0> project( const ContainerType0& src) const
     {
         //use the fact that m_x has the correct sizes from the constructor
-        std::vector<ContainerType0> out( m_x);
+        std::vector<Container> out( m_x);
         project( src, out);
         return out;
 
@@ -110,103 +111,79 @@ struct NestedGrids
         return m_project[0];
     }
     Container& x(unsigned stage){ return m_x[stage];}
+    const Container& x(unsigned stage) const{ return m_x[stage];}
+    Container& r(unsigned stage){ return m_r[stage];}
+    const Container& r(unsigned stage) const{ return m_r[stage];}
+    Container& b(unsigned stage){ return m_b[stage];}
+    const Container& b(unsigned stage) const{ return m_b[stage];}
 
     private:
     unsigned m_stages;
     std::vector< dg::ClonePtr< Geometry> > m_grids;
     std::vector< MultiMatrix<Matrix, Container> >  m_inter;
     std::vector< MultiMatrix<Matrix, Container> >  m_project;
-    std::vector< Container> m_x;
+    std::vector< Container> m_x, m_r, m_b;
 };
 
 
-//Convenience function that binds a solver and an object to form the inverse
-//When called, computes the inverse
-template<class Operator, class Solver, class ...SolverParams>
-auto inverse_operator( Operator&& op, Solver&& solve, SolverParams&& ... ps){
-    // we want to call solve( op, x, b, ps...);
-    // as inverse( b, x);
-    return std::bind(
-        &Solver::solve,
-        &solve,
-        std::forward<Operator>(op),
-        std::placeholders::_2,
-        std::placeholders::_1,
-        std::forward<SolverParams>( ps)...);
-}
-
-template<class Nested>
-struct NestedIterations
+template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
+std::vector<unsigned> nested_iterations(
+    NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
+    std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>
+        inverse_op,
+    Nested& nested,
+    bool benchmark = true
+)
 {
-    NestedIterations() = default;
-    NestedIterations( const Nested& nested):
-        m_nested(nested)
-    {
-    }
-    const Nested& nested() const{return m_nested;}
-    ///@brief Set or unset performance timings during iterations
-    ///@param benchmark If true, additional output will be written to \c std::cout during solution
-    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
-
-	template<class Operator, class ContainerType0, class ContainerType1>
-    std::vector<unsigned> solve( std::vector<Operator>&& op, ContainerType0& x, const ContainerType1& b,
-        std::vector<std::function<void( const ContainerType1&, ContainerType0&)>> inverse_op)
-    {
 #ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif //MPI
-        std::vector<unsigned> number(m_nested.stages(), 0);
-        // compute residual r = Wb - A x
-        dg::blas2::symv(op[0], x, m_r[0]);
-        dg::blas1::axpby(-1.0, m_r[0], 1.0, b, m_r[0]);
-        // project residual down to coarse grid
-        dg::blas1::copy( x, m_nested.x(0));
-        for( unsigned u=0; u<m_nested.stages()-1; u++)
-        {
-            dg::blas2::gemv( m_nested.project(u), m_r[u], m_r[u+1]);
-            dg::blas2::gemv( m_nested.project(u), m_nested.x(u), m_nested.x(u+1));
-        }
-
-        //now solve residual equations
-		for( unsigned u=m_nested.stages()-1; u>0; u--)
-        {
-            if(m_benchmark)m_timer.tic();
-            // compute FAS right hand side
-            dg::blas2::symv( op[u], m_nested.x(u), m_nested.b(u));
-            dg::blas1::axpby( 1., m_nested.b(u), 1., m_r[u], m_nested.b(u));
-            dg::blas1::copy( m_nested.x(u), m_r[u]);
-            inverse_op[u](  m_r[u], m_nested.x(u));
-            dg::blas1::axpby( 1., m_nested.x(u), -1., m_r[u], m_nested.x(u) );
-            dg::blas2::symv( m_nested.interpolation(u-1), m_nested.x(u),
-                    m_nested.x(u-1));
-            if( m_benchmark)
-            {
-                m_timer.toc();
-                DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<m_timer.diff()<<"s\n";
-            }
-
-        }
-        if( m_benchmark) m_timer.tic();
-
-        //update initial guess
-        dg::blas1::axpby( 1., m_nested.x(0), 1., x);
-        inverse_op[0]( b, x);
-        if( m_benchmark)
-        {
-            m_timer.toc();
-            DG_RANK0 std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<m_timer.diff()<<"s\n";
-        }
-
-        return number;
+    dg::Timer timer;
+    std::vector<unsigned> number(nested.stages(), 0);
+    // compute residual r = Wb - A x
+    dg::blas2::symv(op[0], x, nested.r(0));
+    dg::blas1::axpby(-1.0, nested.r(0), 1.0, b, nested.r(0));
+    // project residual down to coarse grid
+    dg::blas1::copy( x, nested.x(0));
+    for( unsigned u=0; u<nested.stages()-1; u++)
+    {
+        dg::blas2::gemv( nested.projection(u), nested.r(u), nested.r(u+1));
+        dg::blas2::gemv( nested.projection(u), nested.x(u), nested.x(u+1));
     }
 
-    private:
-    Nested m_nested;
-    bool m_benchmark = true;
-    std::vector<typename Nested::container_type> m_r;
-    Timer m_timer;
-};
+    //now solve residual equations
+    for( unsigned u=nested.stages()-1; u>0; u--)
+    {
+        if( benchmark)timer.tic();
+        // compute FAS right hand side
+        dg::blas2::symv( op[u], nested.x(u), nested.b(u));
+        dg::blas1::axpby( 1., nested.b(u), 1., nested.r(u), nested.b(u));
+        dg::blas1::copy( nested.x(u), nested.r(u));
+        inverse_op[u](  nested.r(u), nested.x(u));
+        dg::blas1::axpby( 1., nested.x(u), -1., nested.r(u), nested.x(u) );
+        dg::blas2::symv( nested.interpolation(u-1), nested.x(u),
+                nested.x(u-1));
+        if( benchmark)
+        {
+            timer.toc();
+            DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<timer.diff()<<"s\n";
+        }
+
+    }
+    if( benchmark) timer.tic();
+
+    //update initial guess
+    dg::blas1::axpby( 1., nested.x(0), 1., x);
+    inverse_op[0]( b, x);
+    if( benchmark)
+    {
+        timer.toc();
+        DG_RANK0 std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<timer.diff()<<"s\n";
+    }
+
+    return number;
+}
 
 /**
 * @brief Solves the Equation \f[ \frac{1}{W} \hat O \phi = \rho \f]
