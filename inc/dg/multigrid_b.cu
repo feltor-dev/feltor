@@ -57,9 +57,9 @@ int main()
     const dg::DVec solution = dg::evaluate( sol, grid);
 
     unsigned stages = 3;
-    std::cout<< "Type number of stages (3) and jfactor (10) !\n";
-    std::cin >> stages >> jfactor;
-    std::cout << stages << " "<<jfactor<<std::endl;
+    //std::cout<< "Type number of stages (3) and jfactor (1) !\n";
+    //std::cin >> stages >> jfactor;
+    //std::cout << stages << " "<<jfactor<<std::endl;
     std::cout << "Type nu1 (20), nu2 (20) gamma (1) \n";
     unsigned nu1, nu2, gamma;
     std::cin >> nu1 >> nu2 >> gamma;
@@ -96,14 +96,18 @@ int main()
 
         std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
         std::cout << " with "<<counter<<" iterations\n";
-        auto precond = [=, &multi_pol, &multi_cheby](const dg::DVec& y, dg::DVec& x)
+        auto precond = [nu2, ev = multi_ev[u], &pol = multi_pol[u], &cheby = multi_cheby[u]](
+            const dg::DVec& y, dg::DVec& x)
         {
             //multi_cheby[u].solve( multi_pol[u], x, y, multi_pol[u].precond(),
-            multi_cheby[u].solve( multi_pol[u], x, y, 1.,
-                    multi_ev[u]/100., multi_ev[u]*1.1, nu2+1, true);
+            cheby.solve( pol, x, y, 1., ev/100., ev*1.1, nu2+1, true);
         };
-        auto inverse = [=, &multi_pol, &multi_pcg]( const dg::DVec& y, dg::DVec& x)
+        multi_inv_pol[u] = [&, &pcg = multi_pcg[u], &pol = multi_pol[u], p =
+            std::move( precond) ]( const auto& y, auto& x)
         {
+            // Watch Back To Basics: Lambdas from Scratch by Arthur O'Dwyer on YT
+            // generic lambda (auto makes it a template)
+            // init capture (C++14 move objects could be interesting)
 #ifdef MPI_VERSION
             int rank;
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -112,16 +116,15 @@ int main()
             t.tic();
             int number;
             if ( u == 0)
-                number = multi_pcg[u].solve( multi_pol[u], x, y, 1., multi_pol[u].weights(), eps,
+                number = pcg.solve( pol, x, y, 1., pol.weights(), eps,
                     1, 1);
             else
-                number = multi_pcg[u].solve( multi_pol[u], x, y, 1., multi_pol[u].weights(), eps,
-                //number = multi_pcg[u].solve( multi_pol[u], x, y, precond, multi_pol[u].weights(), eps,
+                number = pcg.solve( pol, x, y, 1., pol.weights(), eps,
+                //number = pcg.solve( pol, x, y, precond, pol.weights(), eps,
                 1, 10);
             t.toc();
             DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number << ", took "<<t.diff()<<"s\n";
         };
-        multi_inv_pol[u] = inverse;
     }
 
     std::cout << "\n\n";

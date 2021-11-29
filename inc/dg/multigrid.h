@@ -130,8 +130,7 @@ template<class Nested, class NestedOperator, class ContainerType0, class Contain
 std::vector<unsigned> nested_iterations(
     NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
     std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>
-        inverse_op,
-    Nested& nested
+        inverse_op, Nested& nested
 )
 {
     std::vector<unsigned> number(nested.stages(), 0);
