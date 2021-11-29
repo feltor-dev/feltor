@@ -102,13 +102,13 @@ struct NestedGrids
     ///@param stage must fulfill \c 0 <= stage < stages()-1
     const MultiMatrix<Matrix, Container>& interpolation( unsigned stage) const
     {
-        return m_inter[0];
+        return m_inter[stage];
     }
     ///@brief return the projection matrix at given stage
     ///@param stage must fulfill \c 0 <= stage < stages()-1
     const MultiMatrix<Matrix, Container>& projection( unsigned stage) const
     {
-        return m_project[0];
+        return m_project[stage];
     }
     Container& x(unsigned stage){ return m_x[stage];}
     const Container& x(unsigned stage) const{ return m_x[stage];}
@@ -131,15 +131,9 @@ std::vector<unsigned> nested_iterations(
     NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
     std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>
         inverse_op,
-    Nested& nested,
-    bool benchmark = true
+    Nested& nested
 )
 {
-#ifdef MPI_VERSION
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif //MPI
-    dg::Timer timer;
     std::vector<unsigned> number(nested.stages(), 0);
     // compute residual r = Wb - A x
     dg::blas2::symv(op[0], x, nested.r(0));
@@ -155,32 +149,18 @@ std::vector<unsigned> nested_iterations(
     //now solve residual equations
     for( unsigned u=nested.stages()-1; u>0; u--)
     {
-        if( benchmark)timer.tic();
         // compute FAS right hand side
         dg::blas2::symv( op[u], nested.x(u), nested.b(u));
         dg::blas1::axpby( 1., nested.b(u), 1., nested.r(u), nested.b(u));
         dg::blas1::copy( nested.x(u), nested.r(u));
-        inverse_op[u](  nested.r(u), nested.x(u));
+        inverse_op[u](  nested.b(u), nested.x(u));
         dg::blas1::axpby( 1., nested.x(u), -1., nested.r(u), nested.x(u) );
         dg::blas2::symv( nested.interpolation(u-1), nested.x(u),
                 nested.x(u-1));
-        if( benchmark)
-        {
-            timer.toc();
-            DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<timer.diff()<<"s\n";
-        }
-
     }
-    if( benchmark) timer.tic();
-
     //update initial guess
     dg::blas1::axpby( 1., nested.x(0), 1., x);
     inverse_op[0]( b, x);
-    if( benchmark)
-    {
-        timer.toc();
-        DG_RANK0 std::cout << "# Nested iterations stage: " << 0 << ", iter: " << number[0] << ", took "<<timer.diff()<<"s\n";
-    }
 
     return number;
 }

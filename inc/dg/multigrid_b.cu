@@ -91,22 +91,39 @@ int main()
         //estimate EVs
         multi_eve[u].construct( multi_chi[u]);
         counter = multi_eve[u].solve( multi_pol[u], multi_x[u], multi_b[u],
-                multi_pol[u].precond(), multi_pol[u].weights(),
-            multi_ev[u], eps_ev);
+            //multi_pol[u].precond(), multi_pol[u].weights(), multi_ev[u], eps_ev);
+            1., multi_pol[u].weights(), multi_ev[u], eps_ev);
+
         std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
         std::cout << " with "<<counter<<" iterations\n";
-        auto precond = [&](const dg::DVec& y, dg::DVec& x)
+        auto precond = [=, &multi_pol, &multi_cheby](const dg::DVec& y, dg::DVec& x)
         {
-            multi_cheby[u].solve( multi_pol[u], x, y, multi_pol[u].precond(),
+            //multi_cheby[u].solve( multi_pol[u], x, y, multi_pol[u].precond(),
+            multi_cheby[u].solve( multi_pol[u], x, y, 1.,
                     multi_ev[u]/100., multi_ev[u]*1.1, nu2+1, true);
         };
-        multi_inv_pol[u] = [&, precond]( const dg::DVec& y, dg::DVec& x)
+        auto inverse = [=, &multi_pol, &multi_pcg]( const dg::DVec& y, dg::DVec& x)
         {
-            multi_pcg[u].solve( multi_pol[u], x, y, precond, eps,
-                1,1);
+#ifdef MPI_VERSION
+            int rank;
+            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
+            dg::Timer t;
+            t.tic();
+            int number;
+            if ( u == 0)
+                number = multi_pcg[u].solve( multi_pol[u], x, y, 1., multi_pol[u].weights(), eps,
+                    1, 1);
+            else
+                number = multi_pcg[u].solve( multi_pol[u], x, y, 1., multi_pol[u].weights(), eps,
+                //number = multi_pcg[u].solve( multi_pol[u], x, y, precond, multi_pol[u].weights(), eps,
+                1, 10);
+            t.toc();
+            DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number << ", took "<<t.diff()<<"s\n";
         };
-            //eps, 1., (u == 0 ? 1 : 10));
+        multi_inv_pol[u] = inverse;
     }
+
     std::cout << "\n\n";
     ////////////////////////////////////////////////////
     dg::Timer t;
