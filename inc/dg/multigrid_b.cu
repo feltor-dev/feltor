@@ -102,7 +102,7 @@ int main()
             //multi_cheby[u].solve( multi_pol[u], x, y, multi_pol[u].precond(),
             cheby.solve( pol, x, y, 1., ev/100., ev*1.1, nu2+1, true);
         };
-        multi_inv_pol[u] = [&, &pcg = multi_pcg[u], &pol = multi_pol[u], p =
+        multi_inv_pol[u] = [u, eps, &pcg = multi_pcg[u], &pol = multi_pol[u], p =
             std::move( precond) ]( const auto& y, auto& x)
         {
             // Watch Back To Basics: Lambdas from Scratch by Arthur O'Dwyer on YT
@@ -116,10 +116,10 @@ int main()
             t.tic();
             int number;
             if ( u == 0)
-                number = pcg.solve( pol, x, y, 1., pol.weights(), eps,
+                number = pcg.solve( pol, x, y, pol.precond(), pol.weights(), eps,
                     1, 1);
             else
-                number = pcg.solve( pol, x, y, 1., pol.weights(), eps,
+                number = pcg.solve( pol, x, y, pol.precond(), pol.weights(), eps,
                 //number = pcg.solve( pol, x, y, precond, pol.weights(), eps,
                 1, 10);
             t.toc();
@@ -129,11 +129,12 @@ int main()
 
     std::cout << "\n\n";
     ////////////////////////////////////////////////////
+    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid(
+        grid, stages);
     dg::Timer t;
     std::cout << "MULTIGRID NESTED ITERATIONS SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();
-    //multigrid.direct_solve(multi_pol, x, b, eps);
     nested_iterations( multi_pol, x, b, multi_inv_pol, nested);
     t.toc();
     double norm = dg::blas2::dot( w2d, solution);
@@ -144,8 +145,6 @@ int main()
     std::cout << " Error of nested iterations "<<err<<"\n";
     std::cout << "Took "<<t.diff()<<"s\n\n";
     ////////////////////////////////////////////////////
-    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid(
-        grid, stages);
     std::cout << "MULTIGRID NESTED ITERATIONS WITH CHEBYSHEV SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();
@@ -162,7 +161,8 @@ int main()
         std::cout << "MULTIGRID PCG SOLVE:\n";
         x = dg::evaluate( initial, grid);
         t.tic();
-        multigrid.pcg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
+        //multigrid.pcg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
+        multigrid.direct_solve(multi_pol, x, b, {eps,eps,eps});
         t.toc();
         std::cout << "Took "<<t.diff()<<"s\n";
         const double norm = dg::blas2::dot( w2d, solution);

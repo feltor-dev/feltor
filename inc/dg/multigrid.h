@@ -56,7 +56,7 @@ struct NestedGrids
         for( unsigned u=0; u<m_stages; u++)
             m_x[u] = dg::construct<Container>( dg::evaluate( dg::zero,
                         *m_grids[u]), std::forward<Params>(ps)...);
-        m_r = m_b = m_x;
+        m_w = m_r = m_b = m_x;
 
     }
     /**
@@ -116,54 +116,213 @@ struct NestedGrids
     const Container& r(unsigned stage) const{ return m_r[stage];}
     Container& b(unsigned stage){ return m_b[stage];}
     const Container& b(unsigned stage) const{ return m_b[stage];}
+    Container& w(unsigned stage){ return m_w[stage];}
+    const Container& w(unsigned stage) const{ return m_w[stage];}
 
     private:
     unsigned m_stages;
     std::vector< dg::ClonePtr< Geometry> > m_grids;
     std::vector< MultiMatrix<Matrix, Container> >  m_inter;
     std::vector< MultiMatrix<Matrix, Container> >  m_project;
-    std::vector< Container> m_x, m_r, m_b;
+    std::vector< Container> m_x, m_r, m_b, m_w;
 };
 
 
+/*!@brief Full approximation nested Iterations
+ *
+ * Solve \f$ f(x_0^{h})  = b^{h}\f$ for given \f$ b^h\f$ and initial guess \f$ x_0^h\f$:
+ * - Compute \f$ r_0^h = b^h - f(x_0^h)\f$
+ * - Project \f$ r_0^{2h} = P r_0^h\f$ and \f$ x_0^{2h} = Px_0^h\f$
+ * - Compute \f$ b^{2h} = f(x_0^{2h}) + r_0^{2h}\f$
+ * - Cycle: \f$ f(x^{2h})  = b^{2h}\f$ with initial guess \f$ x_0^{2h}\f$:
+ *      - (residuum \f$ r_0^{2h}\f$ remains unchanged)
+ *      - \f$ r_0^{4h} = Pr_0^{2h}\f$ and \f$ x_0^{4h} = Px_0^{2h}\f$
+ *      - Compute \f$ b^{4h} = f(x_0^{4h}) + r_0^{4h}\f$
+ *      - Cycle (on coarsest grid solve): \f$ f(x^{4h}) = b^{4h}\f$ with initial guess \f$x_0^{4h}\f$:
+ *          - ...
+ *      - \f$ \delta^{4h} = x^{4h} - x_0^{4h}\f$
+ *      - \f$ \tilde x_0^{2h} = x_0^{2h} + I \delta^{4h}\f$
+ *      - Solve \f$ f(x^{2h}) = b^{2h}\f$ with initial guess \f$ \tilde x_0^{2h}\f$
+ *      .
+ * - \f$ \delta^{2h} = x^{2h} - x_0^{2h}\f$
+ * - \f$ \tilde x_0^h = x_0^h + I \delta^{2h}\f$
+ * - Solve \f$ f(x^h) = b^h\f$ with initial guess \f$ \tilde x_0^h\f$
+ * .
+ * This algorithm is equivalent to a multigrid V-cycle with zero down-grid smoothing
+ * and infinite (i.e. solving) upgrid smoothing.
+ * @ingroup multigrid
+ * @param op a container (usually \c std::vector of operators)
+     Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param x (read/write) contains initial guess on input and the solution on
+ * output (if the initial guess is good enough the solve may return
+ * immediately)
+ * @param b The right hand side
+ * @param inverse_op a vector of inverse operators (usually lambda functions combining operators and solvers)
+ * @param nested provides projection and interapolation operations and workspace
+ */
 template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
-std::vector<unsigned> nested_iterations(
+void nested_iterations(
     NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
-    std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>
-        inverse_op, Nested& nested
-)
+    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
+        inverse_op, Nested& nested)
 {
-    std::vector<unsigned> number(nested.stages(), 0);
-    // compute residual r = Wb - A x
+    // compute residual r = b - A x
     dg::blas2::symv(op[0], x, nested.r(0));
-    dg::blas1::axpby(-1.0, nested.r(0), 1.0, b, nested.r(0));
+    dg::blas1::axpby(1., b, -1., nested.r(0));
     // project residual down to coarse grid
     dg::blas1::copy( x, nested.x(0));
     for( unsigned u=0; u<nested.stages()-1; u++)
     {
         dg::blas2::gemv( nested.projection(u), nested.r(u), nested.r(u+1));
         dg::blas2::gemv( nested.projection(u), nested.x(u), nested.x(u+1));
+        // compute FAS right hand side
+        dg::blas2::symv( op[u+1], nested.x(u+1), nested.b(u+1));
+        dg::blas1::axpby( 1., nested.b(u+1), 1., nested.r(u+1), nested.b(u+1));
+        dg::blas1::copy( nested.x(u+1), nested.w(u+1)); // remember x0
     }
 
     //now solve residual equations
     for( unsigned u=nested.stages()-1; u>0; u--)
     {
-        // compute FAS right hand side
-        dg::blas2::symv( op[u], nested.x(u), nested.b(u));
-        dg::blas1::axpby( 1., nested.b(u), 1., nested.r(u), nested.b(u));
-        dg::blas1::copy( nested.x(u), nested.r(u));
         inverse_op[u](  nested.b(u), nested.x(u));
-        dg::blas1::axpby( 1., nested.x(u), -1., nested.r(u), nested.x(u) );
-        dg::blas2::symv( nested.interpolation(u-1), nested.x(u),
+        // delta
+        dg::blas1::axpby( 1., nested.x(u), -1., nested.w(u), nested.x(u) );
+        // update x
+        dg::blas2::symv( 1., nested.interpolation(u-1), nested.x(u), 1.,
                 nested.x(u-1));
     }
     //update initial guess
-    dg::blas1::axpby( 1., nested.x(0), 1., x);
+    dg::blas1::copy( nested.x(0), x);
     inverse_op[0]( b, x);
+}
+/*!@brief Full approximation multigrid cycle
+ *
+ * @sa https://www.osti.gov/servlets/purl/15002749
+ *
+ * Compute \f$ x_0^h \leftarrow C_{\nu_1}^{\nu_2}(x_0^h, b^h)\f$ for given \f$ b^h\f$ and initial guess \f$ x_0^h\f$: \n
+ * Note that we need to save the initial guess \f$ w_0^h := x_0^h\f$
+ * in a multigrid cycle because we need it to compute the error for the next upper level.
+ * - Smooth \f$ f(x^h) = b^h\f$ with initial guess \f$x_0^{h}\f$, overwrite \f$ x_0^h\f$
+ * - Compute \f$ r_0^h = b^h - f(x_0^h)\f$
+ * - Project \f$ r_0^{2h} = P r_0^h\f$ and \f$ x_0^{2h} = Px_0^h\f$
+ * - Compute \f$ b^{2h} = f(x_0^{2h}) + r_0^{2h}\f$
+ * - \f$ w_0^{2h} = x_0^{2h}\f$
+ * - recursively call itself \f$\gamma\f$ times or solve \f$ f(x^{2h})  = b^{2h}\f$ with initial guess \f$ x_0^{2h}\f$, overwrite \f$ x_0^{2h}\f$
+ *      - ...
+ * - \f$ \delta^{2h} = x_0^{2h} - w_0^{2h}\f$ (Here we need the saved initial guess \f$ w_0^{2h}\f$)
+ * - \f$ x_0^h = x_0^h + I \delta^{2h}\f$
+ * - Smooth \f$ f(x^h) = b^h\f$ with initial guess \f$ x_0^h\f$, overwrite \f$ x_0^h\f$
+ * .
+ * This algorithm forms the core of multigrid algorithms.
+ * @ingroup multigrid
+ * @param op a container (usually \c std::vector of operators)
+     Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param inverse_op_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
+ * @param coarse_solver an inverse operator that computes the solution on the coarsest grid
+ * @param inverse_op_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
+ * @param nested provides projection and interapolation operations and workspace
+ * @param gamma The shape of the multigrid cycle:
+    typically 1 (V-cycle) or 2 (W-cycle)
+ * @param p The current stage \c h
+ */
+template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
+void multigrid_cycle(
+    NestedOperator&& op,
+    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
+        inverse_op_down, //stages-1
+    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
+        inverse_op_up, // stages
+    Nested& nested, unsigned gamma, unsigned p)
+{
+    // 1 multigrid cycle beginning on grid p
+    // p < m_stages-1
+    // x[p]    READ-write, initial guess on input, solution on output
+    // x[p+1]  write only, solution on next stage on output
+    // w[p]    untouched, copy of initial guess on current stage
+    // w[p+1]  write only, contains delta solution on next stage on output
+    // b[p]    READ only, right hand side on current stage
+    // b[p+1]  write only new right hand side on next stage
+    // r[p]    write only residuum at current stage
+    // r[p+1]  write only, residuum on next stage
 
-    return number;
+    // 1. Pre-Smooth times
+    inverse_op_down[p]( nested.b(p), nested.x(p));
+    // 2. Residuum
+    dg::blas2::symv( op[p], nested.x(p), nested.r(p));
+    dg::blas1::axpby( 1., nested.b(p), -1., nested.r(p));
+    // 3. Coarsen
+    dg::blas2::symv( nested.projection(p), nested.r(p), nested.r(p+1));
+    dg::blas2::symv( nested.projection(p), nested.x(p), nested.x(p+1));
+    dg::blas2::symv( op[p+1], nested.x(p+1), nested.b(p+1));
+    dg::blas1::axpby( 1., nested.r(p+1), 1., nested.b(p+1));
+    // 4. Solve or recursive call to get x[p+1] with initial guess 0
+    dg::blas1::copy( nested.x(p+1), nested.w(p+1));
+    if( p+1 == nested.stages()-1)
+    {
+        inverse_op_up[p+1]( nested.b(p+1), nested.x(p+1));
+    }
+    else
+    {
+        //update x[p+1] gamma times
+        for( unsigned u=0; u<gamma; u++)
+        {
+            multigrid_cycle( op, inverse_op_down, inverse_op_up,
+                nested, gamma, p+1);
+        }
+    }
+
+    // 5. Correct
+    dg::blas1::axpby( 1., nested.x(p+1), -1., nested.w(p+1));
+    dg::blas2::symv( 1., nested.interpolation(p), nested.w[p+1], 1., nested.x(p));
+    // 6. Post-Smooth nu2 times
+    inverse_op_up[p]( nested.b(p), nested.x(p));
 }
 
+template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
+void full_multigrid(
+    NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
+    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
+        inverse_op_down, //stages-1
+    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
+        inverse_op_up, // stages
+    Nested& nested, unsigned gamma, unsigned mu)
+{
+    // Like nested iterations, just uses multigrid-cycles instead of solves
+    // compute residual r = b - A x
+    dg::blas2::symv(op[0], x, nested.r(0));
+    dg::blas1::axpby(1., b, -1., nested.r(0));
+    // project residual down to coarse grid
+    dg::blas1::copy( x, nested.x(0));
+    for( unsigned u=0; u<nested.stages()-1; u++)
+    {
+        dg::blas2::gemv( nested.projection(u), nested.r(u), nested.r(u+1));
+        dg::blas2::gemv( nested.projection(u), nested.x(u), nested.x(u+1));
+        // compute FAS right hand side
+        dg::blas2::symv( op[u+1], nested.x(u+1), nested.b(u+1));
+        dg::blas1::axpby( 1., nested.b(u+1), 1., nested.r(u+1), nested.b(u+1));
+        dg::blas1::copy( nested.x(u+1), nested.w(u+1)); // remember x0
+    }
+
+    //begin on coarsest level and cycle through to highest
+    unsigned s = nested.stages()-1;
+    inverse_op_up[s]( nested.b(s), nested.x(s));
+    dg::blas1::axpby( 1., nested.x(s), -1., nested.w(s), nested.x(s) );
+    dg::blas2::symv( 1., nested.interpolation(s-1), nested.x(s), 1.,
+            nested.x(s-1));
+
+    for( int p=nested.stages()-2; p>=1; p--)
+    {
+        for( unsigned u=0; u<mu; u++)
+            multigrid_cycle( op, inverse_op_down, inverse_op_up, gamma, p);
+        dg::blas1::axpby( 1., nested.x(p), -1., nested.w(p), nested.x(p) );
+        dg::blas2::symv( 1., nested.interpolation(p-1), nested.x(p), 1.,
+                nested.x(p-1));
+    }
+    dg::blas1::copy( b, nested.b(0));
+    for( unsigned u=0; u<mu; u++)
+        multigrid_cycle( op, inverse_op_down, inverse_op_up, gamma, 0);
+    dg::blas1::copy( nested.x(0), x);
+}
 /**
 * @brief Solves the Equation \f[ \frac{1}{W} \hat O \phi = \rho \f]
 *
@@ -331,7 +490,7 @@ struct MultigridCG2d
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
      * @param x (read/write) contains initial guess on input and the solution on output (if the initial guess is good enough the solve may return immediately)
-     * @param b The right hand side (will be multiplied by \c weights)
+     * @param b The right hand side
      * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon(
      * ||b|| + 1) \f$. If needed (and it is recommended to tune these values)
      * the accuracy can be set for each stage separately. Per default the same
