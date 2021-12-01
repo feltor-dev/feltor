@@ -75,11 +75,6 @@ int main( int argc, char* argv[])
     dg::blas2::symv( gamma, gauss, y0[0]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     gamma.alpha() = -0.5*p.tau[1]*p.mu[1];
     dg::blas2::symv( gamma, gauss, y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    {
-        dg::MDVec v2d = dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[0], y0[0]);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-    }
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), 1e-9);

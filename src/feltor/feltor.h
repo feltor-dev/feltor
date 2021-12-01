@@ -1489,11 +1489,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
             else // "bohm" == m_p.sheath_bc
             {
                 //u_e,sh = s*1/sqrt(|mu_e|2pi) exp(-phi)
-                double mue = fabs(m_p.mu[0]);
                 dg::blas1::evaluate( yp[1][0], dg::plus_equals(),
-                    [mue, sheath_rate]DG_DEVICE( double sheath_coord, double
-                        sheath, double phi) {
-                        return sheath_rate*sheath_coord*sheath*exp(-phi)/sqrt( mue*2.*M_PI);
+                    [mue = fabs(m_p.mu[0]), sheath_rate, tau =
+                    m_p.tau[1]]DG_DEVICE( double sheath_coord, double sheath,
+                        double phi) {
+                        return sheath_rate * sheath_coord * sheath *
+                            sqrt(1.+tau) * exp(-phi) / sqrt( mue*2.*M_PI);
                     },
                     m_sheath_coordinate, m_sheath, m_potentialST[0]);
             }
@@ -1843,7 +1844,6 @@ struct ImplicitVelocityMatrix
         if( m_ex->m_p.beta != 0)
         {
             dg::blas2::symv( m_ex->m_multi_ampere[0], w[2], wp[2]);
-            dg::blas1::pointwiseDot( m_ex->m_multi_ampere[0].inv_weights(), wp[2], wp[2]);
             dg::blas1::pointwiseDot( -m_ex->m_p.beta, m_ex->m_densityST[1], w[1],
                                       m_ex->m_p.beta, m_ex->m_densityST[0], w[0],
                                       1., wp[2]);
@@ -1900,8 +1900,8 @@ struct ImplicitSolver
         m_imvelo.set_params( alpha, t);
 
         dg::blas2::symv( m_ex->m_lapperpN.weights(), rhs[0], m_ex->m_dssU);
-        unsigned number = m_pcg( m_imdens, y[0], m_ex->m_dssU,
-            m_ex->m_lapperpN.precond(), m_ex->m_lapperpN.inv_weights(), m_eps_time);
+        unsigned number = m_pcg.solve( m_imdens, y[0], m_ex->m_dssU,
+            m_ex->m_lapperpN.precond(), m_ex->m_lapperpN.weights(), m_eps_time);
         ti.toc();
         DG_RANK0 std::cout << "# of PCG iterations time solver: "<<number<<"/"
                   <<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
@@ -1933,7 +1933,7 @@ struct ImplicitSolver
     }
     private:
     Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
-    dg::CG< std::array<Container,2>> m_pcg;
+    dg::PCG< std::array<Container,2>> m_pcg;
     dg::LGMRES<std::array<Container,3>> m_lgmres;
     dg::BICGSTABl<std::array<Container,3>> m_bicgstabl;
     ImplicitDensityMatrix<Geometry,IMatrix, Matrix,Container> m_imdens;

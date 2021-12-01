@@ -67,8 +67,6 @@ int main( int argc, char* argv[])
         {   gamma.alpha() = -0.5*p.tau[1];
             y0[0] = dg::evaluate( gaussian, grid);
             dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-            dg::MDVec v2d=dg::create::inv_weights(grid);
-            dg::blas2::symv( v2d, y0[1], y0[1]);
             dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
             y0[2] = dg::evaluate( dg::zero, grid);
         }
@@ -84,8 +82,6 @@ int main( int argc, char* argv[])
         dg::MDVec wallv = dg::evaluate( wall, grid);
         gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         dg::blas2::symv( gamma, wallv, y0[2]);
-        dg::MDVec v2d=dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] != 0.)
             dg::blas1::scal( y0[2], 1./p.a[2]); //n_z ~1./a_z
 
@@ -93,7 +89,6 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau[1];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]);
-        dg::blas1::pointwiseDot( v2d, y0[1], y0[1]);
         if( p.a[2] == 1)
         {   std::cerr << "No blob with trace ions possible!\n";
             return -1;
@@ -108,8 +103,6 @@ int main( int argc, char* argv[])
     {   gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[2]);
-        dg::MDVec v2d=dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] == 0)
         {   std::cerr << "No impurity blob with trace impurities possible!\n";
             return -1;

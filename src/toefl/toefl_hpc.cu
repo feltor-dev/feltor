@@ -53,10 +53,6 @@ int main( int argc, char* argv[])
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     std::vector<dg::x::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( exp.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    {
-        dg::x::DVec v2d = dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-    }
     if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }

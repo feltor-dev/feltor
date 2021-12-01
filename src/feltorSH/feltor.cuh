@@ -48,7 +48,6 @@ struct Implicit
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return LaplacianM_perp.weights();}
-    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
@@ -93,7 +92,7 @@ struct Explicit
     const container binv;
     const container one;
     container B2;
-    const container w2d, v2d;
+    const container w2d;
     std::vector<container> phi; // =(phi,psi_i), (0,chi_i)
     std::vector<container> ype, logype; 
 
@@ -121,7 +120,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
     B2( dg::evaluate( dg::one, g)),    
-    w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
+    w2d( dg::create::weights(g)),
     phi( 2, chi),chii(chi),uE2(chi),// (phi,psi), (chi_i), u_ExB
     ype(4,chi), logype(ype), // y+(bgamp+profamp) , log(ype)
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC

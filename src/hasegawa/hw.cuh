@@ -116,7 +116,7 @@ struct HW
     dg::Average<Container> average;
     dg::Elliptic<Geometry, Matrix, Container> A, laplaceM;
 
-    const Container w2d, v2d;
+    const Container w2d;
     const double alpha;
     const double g;
     const double nu;
@@ -136,7 +136,7 @@ HW<Geometry,Matrix, Container>::HW( const Geometry& grid, double alpha, double g
     pcg( omega, omega.size()), 
     average( grid,dg::coo2d::y),
     A( grid,  dg::centered), laplaceM( grid,  dg::centered),
-    w2d( dg::create::weights(grid)), v2d( dg::create::inv_weights(grid)),
+    w2d( dg::create::weights(grid)),
     alpha( alpha), g(g), nu( nu), eps_pol(eps_pol), mhw( mhw)
 {
 

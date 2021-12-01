@@ -114,7 +114,7 @@ struct Explicit
     const container binv;
     const container one;
     container B2;
-    const container w2d, v2d;
+    const container w2d;
     std::vector<container> phi; // =(phi,psi_i), (0,chi_i)
     std::vector<container> n, logn,pr, logpr,te, logte,tetilde;  
 
@@ -141,7 +141,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.-p.mcv*p.posX*p.lx), g) ),
     one( dg::evaluate( dg::one, g)),    
     B2( dg::evaluate( dg::one, g)),    
-    w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
+    w2d( dg::create::weights(g)),
     phi( 2, chi),chii(chi),uE2(chi),// (phi,psi), (chi_i), u_ExB
     n(2,chi), logn(n), pr(n), logpr(n), te(n), logte(n), tetilde(n),
     poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first  N,P then phi BC

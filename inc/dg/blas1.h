@@ -91,7 +91,7 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
 
 /*! @brief \f$ x_0 \otimes x_1 \otimes \dots \otimes x_{N-1} \f$ Custom reduction
  *
- * This routine computes \f[ s = s_0 + x_0 \otimes x_1 \otimes \dots \otimes x_i \otimes \dots \otimes x_{N-1} \f]
+ * This routine computes \f[ s = s_0 \otimes x_0 \otimes x_1 \otimes \dots \otimes x_i \otimes \dots \otimes x_{N-1} \f]
  * where \f$ \otimes \f$ is an arbitrary **commutative** and **associative** binary operator, \f$ s_0\f$ is the initial value and
  * @copydoc hide_iterations
  *

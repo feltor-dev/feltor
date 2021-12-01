@@ -46,8 +46,7 @@ struct Implicit
 
     }
     const container& weights(){return m_ds.weights();}
-    const container& inv_weights(){return m_ds.inv_weights();}
-    const container& precond(){return m_ds.precond();}
+    const container& precond(){return m_ellipticPerp.precond();}
   private:
     const heat::Parameters m_p;
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds;
