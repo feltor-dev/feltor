@@ -93,6 +93,8 @@ class Error : public std::exception
         m = message.str();
     }
 
+    std::string get_message( ) const{return m;}
+
     /// @return file, line and the message given in the constructor as a string of char
     virtual const char* what() const throw()
     {
@@ -103,10 +105,10 @@ class Error : public std::exception
 
 
 /**
- * @brief Class you might want to throw in case of a non convergence
+ * @brief Indicate failure to converge
  * @ingroup misc
  */
-struct Fail : public std::exception
+struct Fail : public Error
 {
 
     /**
@@ -114,19 +116,23 @@ struct Fail : public std::exception
      *
      * @param eps accuracy not reached
      */
-    Fail( double eps): eps( eps) {}
+    Fail( double eps): Fail(eps, Message("")){}
+
+    /**
+     * @brief Construct from error limit
+     *
+     * @param eps accuracy not reached
+     * @param m additional message
+     */
+    Fail( double eps, const Message& m): Error(
+            Message("\n    FAILED to converge to ")<< eps << "! "<<m),
+            eps( eps) {}
     /**
      * @brief Return error limit
      *
      * @return eps
      */
     double epsilon() const { return eps;}
-    /**
-     * @brief What string
-     *
-     * @return string "Failed to converge"
-     */
-    char const* what() const throw(){ return "Failed to converge";}
     virtual ~Fail() throw(){}
   private:
     double eps;

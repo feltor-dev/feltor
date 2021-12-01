@@ -233,6 +233,22 @@ int main()
         err = sqrt( err/norm); res.d = err;
         std::cout << " "<<err << "\t"<<res.i<<std::endl;
     }
+    try{
+        dg::blas1::copy( 0., x);
+        dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_f( grid);
+        // We expect it not to converge
+        dg::LGMRES<dg::DVec> lgmres( x, 10, 3, 1);
+        unsigned number = lgmres.solve( pol_f, x, b, 1., w2d, eps);
+        if( !lgmres.converged())
+            throw dg::Fail( eps, dg::Message( _ping_)<<
+                    "LGMRES failed to converge in "<<number<<" iterations!"
+                );
+    }catch( dg::Fail& fail)
+    {
+        std::cerr << "Test failure message";
+        std::cerr << fail.what()<<std::endl;
+        std::cerr << "End Test failure message\n";
+    }
 
 
 

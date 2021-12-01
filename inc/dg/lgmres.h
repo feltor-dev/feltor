@@ -39,7 +39,7 @@ namespace dg{
 * The storage requirement is m+3k vectors
 *
 * @note We use **right preconditioning** because this makes the residual norm automatically available in each iteration
-* @note the orthogonalization is done with respect to a user-provided inner product \c S.
+* @note the orthogonalization is done with respect to a user-provided inner product \c W.
 * @note the first cycle of LGMRES(m,k) is equivalent to the first cycle of GMRES(m+k)
 * @note Only \c m matrix-vector multiplications need to be computed in LGMRES(m,k) per restart cycle irrespective of the value of \c k
 *
@@ -62,13 +62,13 @@ class LGMRES
      * @param max_inner Maximum number inner gmres iterations per restart.
      * Usually 20-30 seems to be a decent number. Per iteration a matrix-vector product and a preconditioner-vector product needs to be computed.
      * @param max_outer Maximum number of solutions (actually approximations to the error) saved for restart. Usually 1...3 is a good number. The Krylov Dimension is thus augmented to \c max_inner+max_outer. No new matrix-vector products need to be computed for the additional solutions. \c max_outer=0 corresponds to standard GMRES.
-     * @param Restarts Maximum number of restarts. The total maximum number of iterations/ matrix-vector products is thus \c restarts*max_inner
+     * @param max_restarts Maximum number of restarts. The total maximum number of iterations/ matrix-vector products is thus \c restarts*max_inner
      */
-    LGMRES( const ContainerType& copyable, unsigned max_inner, unsigned max_outer, unsigned Restarts):
+    LGMRES( const ContainerType& copyable, unsigned max_inner, unsigned max_outer, unsigned max_restarts):
         m_tmp(copyable),
         m_dx(copyable),
         m_residual( copyable),
-        m_maxRestarts( Restarts),
+        m_maxRestarts( max_restarts),
         m_inner_m( max_inner),
         m_outer_k( max_outer),
         m_krylovDimension( max_inner+max_outer)
@@ -113,8 +113,8 @@ class LGMRES
     /**
      * @brief Solve \f$ Ax = b\f$ using a right preconditioned LGMRES method
      *
-     * The iteration stops if \f$ ||Ax-b||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
-     * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
+     * The iteration stops if \f$ ||Ax-b||_W < \epsilon( ||b||_W + C) \f$ where \f$C\f$ is
+     * the absolute error in units of \f$ \epsilon\f$ and \f$ W \f$ defines a square norm
      * @param A A matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
@@ -134,6 +134,15 @@ class LGMRES
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2 >
     unsigned solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
+    /**
+     * @brief If last call to solve converged or not
+     *
+     * @return true if convergence was reached, false else
+     */
+    bool converged() const{
+        return m_converged;
+    }
+
   private:
     template <class Preconditioner, class ContainerType0>
     void Update(Preconditioner&& P, ContainerType &dx, ContainerType0 &x,
@@ -145,6 +154,7 @@ class LGMRES
     std::vector<ContainerType> m_V, m_outer_w, m_outer_Az;
     std::vector<value_type> m_s;
     unsigned m_maxRestarts, m_inner_m, m_outer_k, m_krylovDimension;
+    bool m_converged = true;
 };
 ///@cond
 
@@ -185,6 +195,7 @@ unsigned LGMRES< ContainerType>::solve( Matrix&& A, ContainerType0& x, const Con
     // - use weights for orthogonalization (works because in Saad book 6.29 and 6.30 are also true if V_m is unitary in the S scalar product, the Hessenberg matrix is still formed in the regular 2-norm, just define J(y) with S-norm in 6.26 and form V_m with a Gram-Schmidt process in the W-norm)
     value_type nrmb = sqrt( blas2::dot( S, b));
     value_type tol = eps*(nrmb + nrmb_correction);
+    m_converged = true;
     if( nrmb == 0)
     {
         blas1::copy( 0., x);
@@ -325,6 +336,8 @@ unsigned LGMRES< ContainerType>::solve( Matrix&& A, ContainerType0& x, const Con
         restartCycle ++;
     // Go through the requisite number of restarts.
     } while( (restartCycle < m_maxRestarts) && (rho > tol));
+    std::cout << "rho "<<rho<< " tol "<<tol<<"\n";
+    if( rho > tol) m_converged = false;
     return counter;
 }
 ///@endcond

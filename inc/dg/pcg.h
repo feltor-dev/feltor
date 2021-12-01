@@ -89,7 +89,7 @@ class PCG
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
      *
      * The iteration stops if \f$ ||Ax-b||_W < \epsilon( ||b||_W + C) \f$ where \f$C\f$ is
-     * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
+     * the absolute error in units of \f$ \epsilon\f$ and \f$ W \f$ defines a square norm
      * @param A A self-adjoint positive definit matrix with respect to the weights \c W
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector.
@@ -135,7 +135,7 @@ unsigned PCG< ContainerType>::solve( Matrix&& A, ContainerType0& x, const Contai
 #endif //MPI
     if( m_verbose)
     {
-        DG_RANK0 std::cout << "# Norm of S b "<<nrmb <<"\n";
+        DG_RANK0 std::cout << "# Norm of W b "<<nrmb <<"\n";
         DG_RANK0 std::cout << "# Residual errors: \n";
     }
     if( nrmb == 0)

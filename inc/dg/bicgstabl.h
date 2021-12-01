@@ -90,9 +90,9 @@ class BICGSTABl
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned BICGSTABl method
      *
-     * The iteration stops if \f$ ||P(Ax-b)||_S < \epsilon( ||Pb||_S + C) \f$ where \f$C\f$ is
-     * the absolute error in units of \f$ \epsilon\f$ and \f$ S \f$ defines a square norm
-     * @attention The stopping criterion differs from that of \c CG or \c LGMRES by the preconditioner. It is unfortunately cumbersome to obtain the real residual in this algorithm. If \c P is diagonal there is the opportunity to use \c S to offset its effect.
+     * The iteration stops if \f$ ||P(Ax-b)||_W < \epsilon( ||Pb||_S + C) \f$ where \f$C\f$ is
+     * the absolute error in units of \f$ \epsilon\f$ and \f$ W \f$ defines a square norm
+     * @attention The stopping criterion differs from that of \c CG or \c LGMRES by the preconditioner. It is unfortunately cumbersome to obtain the real residual in this algorithm. If \c P is diagonal there is the opportunity to use \c W to offset its effect.
      * @param A A matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may not be the same vector.
