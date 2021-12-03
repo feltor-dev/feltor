@@ -3,44 +3,6 @@
 #include "andersonacc.h"
 
 namespace dg{
-///@cond
-namespace detail{
-
-template< class LinearOp, class ContainerType>
-struct ImplicitWrapper
-{
-    using value_type = get_value_type<ContainerType>;
-    ImplicitWrapper(){}
-    ImplicitWrapper( value_type alpha, value_type t, LinearOp& f):
-        f_(f), alpha_(alpha), t_(t){}
-    void construct( value_type alpha, value_type t, LinearOp& f){
-        f_ = f; alpha_=alpha; t_=t;
-    }
-    void symv( const ContainerType& x, ContainerType& y)
-    {
-        if( alpha_ != 0)
-            f_(t_,x,y);
-        blas1::axpby( 1., x, alpha_, y, y);
-    }
-    void operator()( const ContainerType& x, ContainerType& y){ symv(x,y);}
-    value_type& alpha( ){  return alpha_;}
-    value_type alpha( ) const  {return alpha_;}
-    value_type& time( ){  return t_;}
-    value_type time( ) const  {return t_;}
-  private:
-    LinearOp& f_;
-    value_type alpha_;
-    value_type t_;
-};
-
-}//namespace detail
-template< class M, class V>
-struct TensorTraits< detail::ImplicitWrapper<M, V> >
-{
-    using value_type = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-///@endcond
 
 /*! @class hide_SolverType
  *
@@ -90,14 +52,17 @@ struct DefaultSolver
     void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
 
     template< class Implicit>
-    void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
+    void solve( value_type alpha, Implicit& im, value_type time, ContainerType& y, const ContainerType& rhs)
     {
 #ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
-        detail::ImplicitWrapper<Implicit, ContainerType> wrapper( alpha,
-                t, im);
+        auto wrapper = [a = alpha, t = time, &i = im]( const auto& x, auto& y){
+            if( a != 0)
+                i( t, x, y);
+            dg::blas1::axpby( 1., x, a, y);
+        };
         Timer ti;
         if(m_benchmark) ti.tic();
         unsigned number = m_pcg.solve( wrapper, y, rhs, im.precond(), im.weights(), m_eps);
@@ -241,8 +206,11 @@ struct AndersonSolver
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
-        detail::ImplicitWrapper<Implicit, ContainerType> implicit(
-                alpha, t, im);
+        auto implicit = [a = alpha, t = t, &i = im]( const auto& x, auto& y){
+            if( a != 0)
+                i( t, x, y);
+            dg::blas1::axpby( 1., x, a, y);
+        };
         Timer ti;
         if( m_benchmark) ti.tic();
         unsigned number = m_acc.solve( implicit, y, rhs, im.weights(), m_eps,
