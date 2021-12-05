@@ -245,7 +245,7 @@ struct ARKStep
     ///@copydoc RungeKutta::RungeKutta()
     ARKStep(){ }
     /*!@brief Construct with given name
-     * @param name Currently, one of "ARK-4-2-3", "ARK-6-3-4" or "ARK-8-4-5"
+     * @param name Currently, one of "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" or "ARK-8-4-5"
      * @param ps Parameters that
      * are forwarded to the constructor of \c SolverType
      * @tparam SolverParams Type of parameters (deduced by the compiler)
@@ -689,9 +689,8 @@ struct DIRKStep
              SolverParams&& ...ps
              ):
          m_solver( std::forward<SolverParams>(ps)...),
-         m_rhs( m_solver.copyable()),
          m_rkI(im_tableau),
-         m_kI(m_rkI.num_stages(), m_rhs)
+         m_kI(m_rkI.num_stages(), m_solver.copyable())
     {
         m_rkIb.resize(m_kI.size()), m_rkId.resize(m_kI.size());
         for( unsigned i=0; i<m_kI.size(); i++)
@@ -721,7 +720,7 @@ struct DIRKStep
     }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_rhs;}
+    const ContainerType& copyable()const{ return m_kI[0];}
 
     ///Write access to the internal solver for the implicit part
     SolverType& solver() { return m_solver;}
@@ -759,7 +758,6 @@ struct DIRKStep
 
     private:
     SolverType m_solver;
-    ContainerType m_rhs;
     ButcherTableau<value_type> m_rkI;
     std::vector<ContainerType> m_kI;
     std::vector<value_type> m_rkIb, m_rkId;
@@ -784,13 +782,13 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
     for( unsigned i=1; i<s; i++)
     {
         tu = DG_FMA( m_rkI.c(i),dt, t0);
-        dg::blas1::copy( u0, m_rhs);
+        dg::blas1::copy( u0, m_kI[i]);
         std::vector<value_type> rkIa( i);
         for( unsigned l=0; l<i; l++)
             rkIa[l] = m_rkI.a(i,l);
-        dg::blas2::gemv( dt, dg::asDenseMatrix(kIptr,i), rkIa, 1., m_rhs);
-        blas1::copy( m_rhs, delta); //better init with rhs
-        m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_rhs);
+        dg::blas2::gemv( dt, dg::asDenseMatrix(kIptr,i), rkIa, 1., m_kI[i]);
+        blas1::copy( m_kI[i], delta); //better init with rhs
+        m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_kI[i]);
         rhs(tu, delta, m_kI[i]);
     }
     t1 = t0 + dt;
