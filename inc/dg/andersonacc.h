@@ -95,7 +95,12 @@ struct AndersonAcceleration
         *this = AndersonAcceleration( std::forward<Params>( ps)...);
     }
 
+    ///@copydoc dg::PCG::copyable()
     const ContainerType& copyable() const{ return m_fval;}
+    ///@copydoc dg::PCG::set_throw_on_fail(bool)
+    void set_throw_on_fail( bool throw_on_fail){
+        m_throw_on_fail = throw_on_fail;
+    }
 
     /*!@brief Solve the system \f$ f(x) = b \f$ in the given norm
      *
@@ -121,6 +126,8 @@ struct AndersonAcceleration
      * \c mMax=restart.
      * @param verbose If true writes intermediate errors to \c std::cout
      * @return Number of iterations used to achieve desired precision
+     * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_iterations
+     * You can unset this behaviour with the \c set_throw_on_fail member
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      */
     template<class BinarySubroutine, class ContainerType0, class ContainerType1, class ContainerType2>
@@ -135,6 +142,7 @@ struct AndersonAcceleration
     dg::Operator<value_type> m_R;
 
     unsigned m_mMax;
+    bool m_throw_on_fail = true;
 };
 ///@cond
 
@@ -246,6 +254,11 @@ unsigned AndersonAcceleration<ContainerType>::solve(
             1., x);
 
         mAA++;
+    }
+    if( m_throw_on_fail)
+    {
+        throw dg::Fail( tol, Message(_ping_)
+            <<"After "<<max_iter<<" Anderson iterations with rtol "<<rtol<<" atol "<<atol<<" damping "<<damping<<" restart "<<restart);
     }
     return max_iter;
 

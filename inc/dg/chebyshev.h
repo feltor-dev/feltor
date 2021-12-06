@@ -76,7 +76,7 @@ class ChebyshevIteration
         m_xm1 = m_z = m_ax = copyable;
     }
     /**
-     * @brief Solve the system \f$ Ax = b\f$ using Chebyshev iteration
+     * @brief Solve the system \f$ Ax = b\f$ using \c num_iter Chebyshev iteration
      *
      * The iteration stops when the maximum number of iterations is reached
      * @param A A symmetric, positive definit matrix
@@ -133,7 +133,7 @@ class ChebyshevIteration
         }
     }
     /**
-     * @brief Solve the system \f$ PAx = Pb \f$ using Preconditioned Chebyshev iteration
+     * @brief Solve the system \f$ PAx = Pb\f$ using \c num_iter Preconditioned Chebyshev iteration
      *
      * The iteration stops when the maximum number of iterations is reached
      * @param A A symmetric, positive definit matrix

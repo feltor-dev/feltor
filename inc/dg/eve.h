@@ -58,6 +58,10 @@ class EVE
     }
     /// Get maximum number of iterations
     unsigned get_max() const {   return m_max_iter; }
+    ///@copydoc dg::PCG::set_throw_on_fail(bool)
+    void set_throw_on_fail( bool throw_on_fail){
+        m_throw_on_fail = throw_on_fail;
+    }
     /**
      * @brief Preconditioned CG to estimate maximum Eigenvalue of the generalized problem \f$ PAx = \lambda x\f$
      *
@@ -74,6 +78,8 @@ class EVE
      * @param eps_ev The desired accuracy of the largest Eigenvalue
      *
      * @return Number of iterations used to achieve desired precision or max_iterations
+     * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_iterations
+     * You can unset this behaviour with the \c set_throw_on_fail member
      * @copydoc hide_matrix
      */
     template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2>
@@ -81,6 +87,7 @@ class EVE
   private:
     ContainerType r, p, ap;
     unsigned m_max_iter;
+    bool m_throw_on_fail = true;
 };
 
 ///@cond
@@ -121,6 +128,11 @@ unsigned EVE< ContainerType>::solve( Matrix&& A, ContainerType0& x, const Contai
         blas1::axpby(1.,ap, delta, p );
         nrmzr_old=nrmzr_new;
         ev_est = ev_max;
+    }
+    if( m_throw_on_fail)
+    {
+        throw dg::Fail( eps_ev, Message(_ping_)
+            <<"After "<<m_max_iter<<" EVE iterations");
     }
     return m_max_iter;
 }

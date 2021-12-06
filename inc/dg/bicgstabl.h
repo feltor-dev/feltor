@@ -87,6 +87,11 @@ class BICGSTABl
     ///@param verbose If true, additional output will be written to \c std::cout during solution
     void set_verbose( bool verbose){ m_verbose = verbose;}
 
+    ///@copydoc dg::PCG::set_throw_on_fail(bool)
+    void set_throw_on_fail( bool throw_on_fail){
+        m_throw_on_fail = throw_on_fail;
+    }
+
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned BICGSTABl method
      *
@@ -102,6 +107,8 @@ class BICGSTABl
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      *
      * @return Number of iterations used to achieve desired precision (in each iteration the matrix has to be applied twice)
+     * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_iterations
+     * You can unset this behaviour with the \c set_throw_on_fail member
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&&, const ContainerType&, ContainerType&) function is callable.
@@ -116,7 +123,7 @@ class BICGSTABl
     std::vector<ContainerType> uhat;
     std::vector<value_type> sigma, gamma, gammap, gammapp;
     std::vector<std::vector<value_type>> tau;
-    bool m_verbose = false;
+    bool m_verbose = false, m_throw_on_fail = true;
 
 };
 ///@cond
@@ -227,6 +234,11 @@ unsigned BICGSTABl< ContainerType>::solve( Matrix&& A, ContainerType0& x, const 
     }
     if( m_verbose)
         DG_RANK0 std::cout << "# Failed to converge within max_iter" << std::endl;
+    if( m_throw_on_fail)
+    {
+        throw dg::Fail( tol, Message(_ping_)
+                <<"After "<<max_iter<<" BICGSTABL iterations with rtol "<<eps<<" and atol "<<eps*nrmb_correction );
+    }
     return max_iter;
 }
 ///@endcond

@@ -72,6 +72,12 @@ class PCG
     ///@brief Set or unset debugging output during iterations
     ///@param verbose If true, additional output will be written to \c std::cout during solution
     void set_verbose( bool verbose){ m_verbose = verbose;}
+    ///@brief Set or unset a throw on failure-to-converge
+    ///@param throw_on_fail If true, the solve method will thow a dg::Fail if it is unable to converge
+    ///@note the default value is true
+    void set_throw_on_fail( bool throw_on_fail){
+        m_throw_on_fail = throw_on_fail;
+    }
 
     /**
     * @brief Perfect forward parameters to one of the constructors
@@ -105,6 +111,8 @@ class PCG
      * errror condition is only evaluated every 10th iteration.
      *
      * @return Number of iterations used to achieve desired precision
+     * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_iterations
+     * You can unset this behaviour with the \c set_throw_on_fail member
      * @note Required memops per iteration (\c P is assumed vector):
              - 15  reads + 4 writes
              - plus the number of memops for \c A;
@@ -117,7 +125,7 @@ class PCG
   private:
     ContainerType r, p, ap;
     unsigned max_iter;
-    bool m_verbose = false;
+    bool m_verbose = false, m_throw_on_fail = true;
 };
 
 ///@cond
@@ -171,6 +179,11 @@ unsigned PCG< ContainerType>::solve( Matrix&& A, ContainerType0& x, const Contai
         nrmzr_new = blas2::dot( ap, W, r);
         blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
         nrmzr_old=nrmzr_new;
+    }
+    if( m_throw_on_fail)
+    {
+        throw dg::Fail( tol, Message(_ping_)
+            <<"After "<<max_iter<<" PCG iterations with rtol "<<eps<<" and atol "<<eps*nrmb_correction );
     }
     return max_iter;
 }

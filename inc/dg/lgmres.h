@@ -106,6 +106,10 @@ class LGMRES
     ///@brief Get the current maximum number of restarts
     ///@return the current maximum of restarts
     unsigned get_max() const {return m_maxRestarts;}
+    ///@copydoc dg::PCG::set_throw_on_fail(bool)
+    void set_throw_on_fail( bool throw_on_fail){
+        m_throw_on_fail = throw_on_fail;
+    }
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_tmp;}
@@ -127,6 +131,8 @@ class LGMRES
      *
      * @return Number of times the matrix A and the preconditioner P were
      * multiplied to achieve the desired precision
+     * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_restarts
+     * You can unset this behaviour with the \c set_throw_on_fail member
      * @copydoc hide_matrix
      * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      * @tparam Preconditioner A type for which the blas2::gemv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
@@ -154,7 +160,7 @@ class LGMRES
     std::vector<ContainerType> m_V, m_outer_w, m_outer_Az;
     std::vector<value_type> m_s;
     unsigned m_maxRestarts, m_inner_m, m_outer_k, m_krylovDimension;
-    bool m_converged = true;
+    bool m_converged = true, m_throw_on_fail = true;
 };
 ///@cond
 
@@ -337,7 +343,15 @@ unsigned LGMRES< ContainerType>::solve( Matrix&& A, ContainerType0& x, const Con
     // Go through the requisite number of restarts.
     } while( (restartCycle < m_maxRestarts) && (rho > tol));
     std::cout << "rho "<<rho<< " tol "<<tol<<"\n";
-    if( rho > tol) m_converged = false;
+    if( rho > tol)
+    {
+        if( m_throw_on_fail)
+        {
+            throw dg::Fail( eps, Message(_ping_)
+                <<"After "<<counter<<" LGMRES iterations");
+        }
+        m_converged = false;
+    }
     return counter;
 }
 ///@endcond
