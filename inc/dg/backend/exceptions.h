@@ -95,6 +95,20 @@ class Error : public std::exception
 
     std::string get_message( ) const{return m;}
 
+
+    ///@brief Appends a message verbatim to the what string
+    ///@param message message to append
+    void append( const Message& message)
+    {
+        m+= message.str();
+    }
+
+    ///@brief Appends a newline and a message verbatim to the what string
+    ///@param message message to append after newline
+    void append_line( const Message& message)
+    {
+        m+= "\n"+message.str();
+    }
     /// @return file, line and the message given in the constructor as a string of char
     virtual const char* what() const throw()
     {
