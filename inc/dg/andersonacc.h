@@ -63,6 +63,15 @@ struct AndersonAcceleration
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@brief Allocate nothing, Call \c construct method before usage
     AndersonAcceleration(){}
+    /*! @brief Allocate memory for Fixed point iteration
+     *
+     * This version sets mMax to zero reducing the solve method to Fixed Point
+     * (or Richardson if the damping parameter is != 1 in the \c solve()
+     * method) iteration
+     * @param copyable A ContainerType must be copy-constructible from this
+     */
+    AndersonAcceleration(const ContainerType& copyable):
+        AndersonAcceleration( copyable, 0){}
     /*! @brief Allocate memory for the object
      *
      * @param copyable A ContainerType must be copy-constructible from this
@@ -71,7 +80,7 @@ struct AndersonAcceleration
      * the new solution.  Something between 3 and 10 are good values but higher
      * values mean more storage space that needs to be reserved.  If \c mMax==0
      * then the algorithm is equivalent to Fixed Point (or Richardson if the
-     * damping parameter is used in the \c solve() method) iteration i.e. no
+     * damping parameter is != 1 in the \c solve() method) iteration i.e. no
      * optimization and only 1 solution needed to compute a new solution.
      */
     AndersonAcceleration(const ContainerType& copyable, unsigned mMax ):
@@ -264,5 +273,11 @@ unsigned AndersonAcceleration<ContainerType>::solve(
 
 }
 ///@endcond
+//
+/*!
+ * @brief If you are looking for fixed point iteration: it is a special case of Anderson Acceleration
+ */
+template<class ContainerType>
+using FixedPointIteration = AndersonAcceleration<ContainerType>;
 
 }//namespace dg
