@@ -1,6 +1,5 @@
 #pragma once
 
-#include "implicit.h"
 #include "runge_kutta.h"
 
 namespace dg
@@ -249,12 +248,7 @@ struct Adaptive
         dg::blas1::copy( 1., m_next);
         m_size = dg::blas1::dot( m_next, 1.);
     }
-    /**
-    * @brief Perfect forward parameters to one of the constructors
-    *
-    * @tparam Params deduced by the compiler
-    * @param ps parameters forwarded to constructors
-    */
+    ///@copydoc hide_construct
     template<class ...Params>
     void construct(Params&& ...ps)
     {

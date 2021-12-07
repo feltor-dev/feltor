@@ -68,12 +68,7 @@ struct NestedGrids
 
     }
 
-    /**
-    * @brief Perfect forward parameters to one of the constructors
-    *
-    * @tparam Params deduced by the compiler
-    * @param ps parameters forwarded to constructors
-    */
+    ///@copydoc hide_construct
     template<class ...Params>
     void construct( Params&& ...ps)
     {

@@ -160,6 +160,17 @@
   *  - real_type operator()(real_type, real_type, real_type) const
   */
 
+/** @class hide_construct
+* @brief Perfect forward parameters to one of the constructors
+*
+* @tparam Params deduced by the compiler
+* @param ps parameters forwarded to constructors
+*/
+/** @class hide_copyable
+* @brief Return an object of same size as the object used for construction
+* @return A copyable object; what it contains is undefined, its size is important
+*/
+
  /** @class hide_ContainerType
   * @tparam ContainerType
   * Any class for which a specialization of \c TensorTraits exists and which

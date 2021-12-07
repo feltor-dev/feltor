@@ -14,13 +14,30 @@
 
 
 //![function]
-void rhs(double t, const std::array<double,2>& y, std::array<double,2>& yp,
-        double damping, double omega_0, double omega_drive){
-    //damped driven harmonic oscillator
-    // x -> y[0] , v -> y[1]
-    yp[0] = y[1];
-    yp[1] = -2.*damping*omega_0*y[1] - omega_0*omega_0*y[0] + sin(omega_drive*t);
-}
+struct RHS
+{
+    RHS( double damping, double omega_0, double omega_drive) :
+        m_d( damping), m_w0( omega_0), m_wd( omega_drive){}
+    void operator()( double t, const std::array<double,2>& y,
+            std::array<double,2>& yp)
+    {
+        //damped driven harmonic oscillator
+        // x -> y[0] , v -> y[1]
+        yp[0] = y[1];
+        yp[1] = -2.*m_d*m_w0*y[1] - m_w0*m_w0*y[0] + sin(m_wd*t);
+    }
+    void solve( double alpha, double t, std::array<double,2>& y,
+            const std::array<double,2>& yp)
+    {
+        // y - alpha RHS( t, y) = rho
+        // can be solved analytically
+        y[1] = ( yp[1] + alpha*sin(m_wd*t) - alpha* m_w0*m_w0*yp[0])/
+               (1.+2.*alpha*m_d*m_w0+alpha*alpha*m_w0*m_w0);
+        y[0] = yp[0] + alpha*y[1];
+    }
+    private:
+    double m_d, m_w0, m_wd;
+};
 //![function]
 
 std::array<double, 2> solution( double t, double damping, double omega_0,
@@ -50,8 +67,7 @@ int main()
     std::array<double,2> u_start = solution(t_start, damping, omega_0,
             omega_drive), u_end(u_start);
     //construct a functor with the right interface
-    using namespace std::placeholders; //for _1, _2, _3
-    auto functor = std::bind( rhs, _1, _2, _3, damping, omega_0, omega_drive);
+    RHS functor( damping, omega_0, omega_drive);
     double dt= 0;
     //integration
     int counter = dg::integrateERK( "Dormand-Prince-7-4-5", functor, t_start,
@@ -119,10 +135,8 @@ int main()
     {
         dt = 0;
         u_start = solution(t_start, damping, omega_0, omega_drive);
-        dg::Adaptive< dg::DIRKStep<
-            std::array<double,2>, dg::FixedPointSolver<std::array<double,2> > > >
-                pd( name, u_start, 100, 1e-14);
-        pd.stepper().solver().set_benchmark(false);
+        dg::Adaptive< dg::DIRKStep< std::array<double,2> > >
+                pd( name, u_start);
         counter = integrateAdaptive( pd, functor, t_start, u_start, t_end,
             u_end, dt, dg::im_control, dg::l2norm, 1e-6, 1e-10);
 

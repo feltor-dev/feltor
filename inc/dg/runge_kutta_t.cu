@@ -12,12 +12,30 @@
 
 
 //![function]
-void rhs(double t, const std::array<double,2>& y, std::array<double,2>& yp, double damping, double omega_0, double omega_drive){
-    //damped driven harmonic oscillator
-    // x -> y[0] , v -> y[1]
-    yp[0] = y[1];
-    yp[1] = -2.*damping*omega_0*y[1] - omega_0*omega_0*y[0] + sin(omega_drive*t);
-}
+struct RHS
+{
+    RHS( double damping, double omega_0, double omega_drive) :
+        m_d( damping), m_w0( omega_0), m_wd( omega_drive){}
+    void operator()( double t, const std::array<double,2>& y,
+            std::array<double,2>& yp)
+    {
+        //damped driven harmonic oscillator
+        // x -> y[0] , v -> y[1]
+        yp[0] = y[1];
+        yp[1] = -2.*m_d*m_w0*y[1] - m_w0*m_w0*y[0] + sin(m_wd*t);
+    }
+    void solve( double alpha, double t, std::array<double,2>& y,
+            const std::array<double,2>& yp)
+    {
+        // y - alpha RHS( t, y) = rho
+        // can be solved analytically
+        y[1] = ( yp[1] + alpha*sin(m_wd*t) - alpha* m_w0*m_w0*yp[0])/
+               (1.+2.*alpha*m_d*m_w0+alpha*alpha*m_w0*m_w0);
+        y[0] = yp[0] + alpha*y[1];
+    }
+    private:
+    double m_d, m_w0, m_wd;
+};
 //![function]
 
 std::array<double, 2> solution( double t, double damping, double omega_0, double omega_drive)
@@ -48,8 +66,7 @@ int main()
     //construct Runge Kutta class
     dg::RungeKutta<std::array<double,2> >  rk( "Runge-Kutta-4-4", u);
     //construct a functor with the right interface
-    using namespace std::placeholders; //for _1, _2, _3
-    auto functor = std::bind( rhs, _1, _2, _3, damping, omega_0, omega_drive);
+    RHS functor( damping, omega_0, omega_drive);
     //integration loop
     double t=t_start;
     for( unsigned i=0; i<N; i++)
@@ -124,7 +141,7 @@ int main()
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
     ///-------------------------------Implicit Methods----------------------//
-    const unsigned N_im = 10; //we can take fewer steps
+    const unsigned N_im = 20; //we can take fewer steps
     const double dt_im = (t_end - t_start)/(double)N_im;
     std::cout << "Implicit Methods with "<<N_im<<" steps:\n";
     std::vector<std::string> implicit_names{
@@ -149,9 +166,7 @@ int main()
     {
         u = solution(t_start, damping, omega_0, omega_drive);
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
-        dg::ImplicitRungeKutta<std::array<double,2>,
-            dg::FixedPointSolver<std::array<double,2>> > irk( name, u, 100, 1e-14);
-        irk.solver().set_benchmark(false);
+        dg::ImplicitRungeKutta<std::array<double,2>> irk( name, u);
         double t=t_start;
         for( unsigned i=0; i<N_im; i++)
             irk.step( functor, t, u1, t, u1, dt_im); //step inplace

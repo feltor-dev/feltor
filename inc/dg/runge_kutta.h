@@ -7,7 +7,6 @@
 #include "backend/exceptions.h"
 #include "tableau.h"
 #include "blas1.h"
-#include "implicit.h"
 
 /*! @file
  * @brief Runge-Kutta explicit time-integrators
@@ -72,6 +71,9 @@ void gemm(
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
+        If RHS is used in an implicit stepper the second member is of signature
+        <tt> void solve( value_type alpha, value_type t, ContainerType& y, const ContainerType& yp); </tt>
+        Here, alpha is always positive and non-zero.
   */
  /** @class hide_limiter
   * @tparam Limiter The filter or limiter class to use in connection with the time-stepper
@@ -127,11 +129,14 @@ struct ERKStep
         }
     }
 
-    ///@copydoc RungeKutta::construct()
-    void construct( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable ){
-        *this = ERKStep( tableau, copyable);
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = ERKStep( std::forward<Params>( ps)...);
     }
-    ///@copydoc RungeKutta::copyable()
+    ///@copydoc hide_copyable
     const ContainerType& copyable()const{ return m_k[0];}
 
     ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
@@ -205,9 +210,6 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
 ///@endcond
 
 
-//MW: if ever we want to change the SolverType at runtime (with an input parameter e.g.) make it a new parameter in the solve method (either abstract type or template like RHS)
-
-
 /*!
  * @brief Additive Runge Kutta (semi-implicit) time-step with error estimate
  * following
@@ -233,60 +235,27 @@ nonstiff terms. It would manifest itself as a loss in stability or a forced redu
 terms. A more expensive fully implicit approach might then be required, and hence, methods that leak
 substantial stiffness might best be avoided".
  *
- * @copydoc hide_SolverType
  * @copydoc hide_ContainerType
  * @ingroup time
  */
-template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+template<class ContainerType>
 struct ARKStep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    ARKStep(){ }
+    ARKStep(){ m_kI.resize(1); }
     /*!@brief Construct with given name
      * @param name Currently, one of "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" or "ARK-8-4-5"
-     * @param ps Parameters that
-     * are forwarded to the constructor of \c SolverType
-     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     * @param copyable vector of the size that is later used in \c step (
+      it does not matter what values \c copyable contains, but its size is important;
+      the \c step method can only be called with vectors of the same size)
      */
-    template<class ...SolverParams>
-    ARKStep( std::string name, SolverParams&& ...ps) :
-         m_solver( std::forward<SolverParams>(ps)...),
-         m_rhs( m_solver.copyable())
+    ARKStep( std::string name, const ContainerType& copyable)
     {
         std::string exp_name = name+" (explicit)";
         std::string imp_name = name+" (implicit)";
-        m_rkE = ConvertsToButcherTableau<value_type>( exp_name);
-        m_rkI = ConvertsToButcherTableau<value_type>( imp_name);
-        assert( m_rkE.num_stages() == m_rkI.num_stages());
-        m_kE.assign(m_rkE.num_stages(), m_rhs);
-        m_kI.assign(m_rkI.num_stages(), m_rhs);
-        // check fsal
-        assert( m_rkI.a(0,0) == 0);
-        assert( m_rkI.c(m_rkI.num_stages()-1) == 1);
-        check_implicit_fsal();
-        assign_coeffs();
-    }
-    ///@copydoc construct()
-    template<class ...SolverParams>
-    ARKStep( ConvertsToButcherTableau<value_type> ex_tableau,
-             ConvertsToButcherTableau<value_type> im_tableau,
-             SolverParams&& ...ps
-             ):
-         m_solver( std::forward<SolverParams>(ps)...),
-         m_rhs( m_solver.copyable()),
-         m_rkE(ex_tableau),
-         m_rkI(im_tableau),
-         m_kE(m_rkE.num_stages(), m_rhs),
-         m_kI(m_rkI.num_stages(), m_rhs)
-    {
-        assert( m_rkE.num_stages() == m_rkI.num_stages());
-        // check fsal
-        assert( m_rkI.a(0,0) == 0);
-        assert( m_rkI.c(m_rkI.num_stages()-1) == 1);
-        check_implicit_fsal();
-        assign_coeffs();
+        *this = ARKStep( exp_name, imp_name, copyable);
     }
     /*!@brief Construct with two Butcher Tableaus
      *
@@ -298,27 +267,35 @@ struct ARKStep
      *
      * @param ex_tableau Tableau for the explicit part
      * @param im_tableau Tableau for the implicit part (must have the same number of stages as \c ex_tableau )
-     * @param ps Parameters that
-     * are forwarded to the constructor of \c SolverType
-     * @tparam SolverParams Type of parameters (deduced by the compiler)
+     * @param copyable vector of the size that is later used in \c step (
+      it does not matter what values \c copyable contains, but its size is important;
+      the \c step method can only be called with vectors of the same size)
      */
-    template<class ...SolverParams>
-    void construct(
-             ConvertsToButcherTableau<value_type> ex_tableau,
+    ARKStep( ConvertsToButcherTableau<value_type> ex_tableau,
              ConvertsToButcherTableau<value_type> im_tableau,
-             SolverParams&& ...ps
-             )
+             const ContainerType& copyable
+             ):
+         m_rkE(ex_tableau),
+         m_rkI(im_tableau),
+         m_kE(m_rkE.num_stages(), copyable),
+         m_kI(m_rkI.num_stages(), copyable)
     {
-        *this = ARKStep( ex_tableau, im_tableau, std::forward<SolverParams>(ps)...);
+        assert( m_rkE.num_stages() == m_rkI.num_stages());
+        // check fsal
+        assert( m_rkI.a(0,0) == 0);
+        assert( m_rkI.c(m_rkI.num_stages()-1) == 1);
+        check_implicit_fsal();
+        assign_coeffs();
     }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_rhs;}
-
-    ///Write access to the internal solver for the implicit part
-    SolverType& solver() { return m_solver;}
-    ///Read access to the internal solver for the implicit part
-    const SolverType& solver() const { return m_solver;}
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = ARKStep( std::forward<Params>( ps)...);
+    }
+    ///@copydoc hide_copyable
+    const ContainerType& copyable()const{ return m_kI[0];}
 
     /**
     * @brief Advance one step
@@ -336,7 +313,7 @@ struct ARKStep
     * state, which is then updated to the new timestep and/or if \c im changes
     * the state of \c ex through the friend construct.
     * @note After a \c solve we immediately
-    * call both \c ex and \c im on the solution
+    * call \c ex on the solution
     */
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
@@ -353,8 +330,6 @@ struct ARKStep
         return m_rkE.num_stages();
     }
     private:
-    SolverType m_solver;
-    ContainerType m_rhs;
     ButcherTableau<value_type> m_rkE, m_rkI;
     std::vector<ContainerType> m_kE, m_kI;
     std::vector<value_type> m_rkb, m_rkd;
@@ -381,9 +356,9 @@ struct ARKStep
 };
 
 ///@cond
-template<class ContainerType, class SolverType>
+template<class ContainerType>
 template< class Explicit, class Implicit>
-void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rkE.num_stages();
     value_type tu = t0;
@@ -410,12 +385,12 @@ void ARKStep<ContainerType, SolverType>::step( Explicit& ex, Implicit& im, value
             rka[2*l+1] = m_rkI.a(i,l);
         }
         tu = DG_FMA( m_rkI.c(i),dt, t0);
-        dg::blas1::copy( u0, m_rhs);
-        dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, 2*i), rka, 1., m_rhs);
-        blas1::copy( m_rhs, delta); //better init with rhs
-        m_solver.solve( -dt*m_rkI.a(i,i), im, tu, delta, m_rhs);
+        dg::blas1::copy( u0, m_kI[i]);
+        dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, 2*i), rka, 1., m_kI[i]);
+        value_type alpha = dt*m_rkI.a(i,i);
+        im.solve( alpha, tu, delta, m_kI[i]);
+        dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
         ex(tu, delta, m_kE[i]);
-        im(tu, delta, m_kI[i]);
     }
     m_t1 = t1 = tu;
     //Now compute result and error estimate
@@ -460,9 +435,6 @@ struct RungeKutta
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@brief No memory allocation, Call \c construct before using the object
     RungeKutta(){}
-    ///@copydoc construct()
-    RungeKutta( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable): m_erk( tableau, copyable), m_delta( copyable)
-        { }
     /**
     * @brief Reserve internal workspace for the integration
     *
@@ -471,11 +443,16 @@ struct RungeKutta
      it does not matter what values \c copyable contains, but its size is important;
      the \c step method can only be called with vectors of the same size)
     */
-    void construct(ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable){
-        *this = RungeKutta( tableau, copyable);
+    RungeKutta( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable): m_erk( tableau, copyable), m_delta( copyable)
+        { }
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = RungeKutta( std::forward<Params>( ps)...);
     }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
+    ///@copydoc hide_copyable
     const ContainerType& copyable()const{ return m_delta;}
     /**
     * @brief Advance one step
@@ -579,11 +556,14 @@ struct ShuOsher
     ///@copydoc RungeKutta::construct()
     ShuOsher( dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable): m_t( tableau), m_u(  m_t.num_stages(), copyable), m_k(m_u), m_temp(copyable)
         { }
-    ///@copydoc RungeKutta::construct()
-    void construct(dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable){
-        *this = ShuOsher( tableau, copyable);
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = ShuOsher( std::forward<Params>( ps)...);
     }
-    ///@copydoc RungeKutta::copyable()
+    ///@copydoc hide_copyable
     const ContainerType& copyable()const{ return m_temp;}
 
     /**
@@ -671,26 +651,31 @@ struct ShuOsher
  * in the following table:
  * @copydoc hide_implicit_butcher_tableaus
  *
- * @copydoc hide_SolverType
  * @copydoc hide_ContainerType
  * @ingroup time
  */
-template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+template<class ContainerType>
 struct DIRKStep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    DIRKStep(){ }
+    DIRKStep(){ m_kI.resize(1); } // make copyable work
 
-    ///@copydoc construct()
-    template<class ...SolverParams>
+    /*!@brief Construct with a diagonally implicit Butcher Tableau
+     *
+     * The tableau may be one of the implict methods listed in
+     * \c ConvertsToButcherTableau, or you provide your own tableau.
+     *
+     * @param im_tableau diagonally implicit tableau, name or identifier that \c ConvertsToButcherTableau
+     * @param copyable vector of the size that is later used in \c step (
+      it does not matter what values \c copyable contains, but its size is important;
+      the \c step method can only be called with vectors of the same size)
+     */
     DIRKStep( ConvertsToButcherTableau<value_type> im_tableau,
-             SolverParams&& ...ps
-             ):
-         m_solver( std::forward<SolverParams>(ps)...),
+               const ContainerType& copyable):
          m_rkI(im_tableau),
-         m_kI(m_rkI.num_stages(), m_solver.copyable())
+         m_kI(m_rkI.num_stages(), copyable)
     {
         m_rkIb.resize(m_kI.size()), m_rkId.resize(m_kI.size());
         for( unsigned i=0; i<m_kI.size(); i++)
@@ -700,32 +685,15 @@ struct DIRKStep
         }
     }
 
-    /*!@brief Construct with a diagonally implicit Butcher Tableau
-     *
-     * The tableau may be one of the implict methods listed in
-     * \c ConvertsToButcherTableau, or you provide your own tableau.
-     *
-     * @param im_tableau diagonally implicit tableau, name or identifier that \c ConvertsToButcherTableau
-     * @param ps Parameters that
-     * are forwarded to the constructor of \c SolverType
-     * @tparam SolverParams Type of parameters (deduced by the compiler)
-     */
-    template<class ...SolverParams>
-    void construct(
-             ConvertsToButcherTableau<value_type> im_tableau,
-             SolverParams&& ...ps
-             )
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
     {
-        *this = DIRKStep( im_tableau, std::forward<SolverParams>(ps)...);
+        //construct and swap
+        *this = DIRKStep( std::forward<Params>( ps)...);
     }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
+    ///@copydoc hide_copyable
     const ContainerType& copyable()const{ return m_kI[0];}
-
-    ///Write access to the internal solver for the implicit part
-    SolverType& solver() { return m_solver;}
-    ///Read access to the internal solver for the implicit part
-    const SolverType& solver() const { return m_solver;}
 
     /**
     * @brief Advance one step
@@ -739,7 +707,6 @@ struct DIRKStep
     * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
-    * @note after a \c solve, we call the \c rhs immediately on the solution
     */
     template< class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
@@ -757,26 +724,30 @@ struct DIRKStep
     }
 
     private:
-    SolverType m_solver;
     ButcherTableau<value_type> m_rkI;
     std::vector<ContainerType> m_kI;
     std::vector<value_type> m_rkIb, m_rkId;
 };
 
 ///@cond
-template<class ContainerType, class SolverType>
+template<class ContainerType>
 template< class RHS>
-void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rkI.num_stages();
     value_type tu = t0;
     //0 stage
     //rhs = u0
     tu = DG_FMA( m_rkI.c(0),dt, t0);
-    blas1::copy( u0, delta); //better init with rhs
-    if( !(m_rkI.a(0,0)==0) )
-        m_solver.solve( -dt*m_rkI.a(0,0), rhs, tu, delta, u0);
-    rhs(tu, delta, m_kI[0]);
+    value_type alpha;
+    if( m_rkI.a(0,0) !=0 )
+    {
+        alpha = dt*m_rkI.a(0,0);
+        rhs.solve( alpha, tu, delta, u0);
+        dg::blas1::axpby( 1./alpha, delta, -1./alpha, u0, m_kI[0]);
+    }
+    else
+        rhs(tu, u0, m_kI[0]);
     std::vector<const ContainerType*> kIptr = dg::asPointers( m_kI);
 
     for( unsigned i=1; i<s; i++)
@@ -787,9 +758,14 @@ void DIRKStep<ContainerType, SolverType>::step( RHS& rhs, value_type t0, const C
         for( unsigned l=0; l<i; l++)
             rkIa[l] = m_rkI.a(i,l);
         dg::blas2::gemv( dt, dg::asDenseMatrix(kIptr,i), rkIa, 1., m_kI[i]);
-        blas1::copy( m_kI[i], delta); //better init with rhs
-        m_solver.solve( -dt*m_rkI.a(i,i), rhs, tu, delta, m_kI[i]);
-        rhs(tu, delta, m_kI[i]);
+        if( m_rkI.a(i,i) !=0 )
+        {
+            alpha = dt*m_rkI.a(i,i);
+            rhs.solve( alpha, tu, delta, m_kI[i]);
+            dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
+        }
+        else
+            rhs(tu, delta, m_kI[i]);
     }
     t1 = t0 + dt;
     //Now compute result and error estimate
@@ -817,9 +793,8 @@ You can provide your own coefficients or use one of our predefined methods:
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
-* @copydoc hide_SolverType
 */
-template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+template<class ContainerType>
 struct ImplicitRungeKutta
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
@@ -827,27 +802,19 @@ struct ImplicitRungeKutta
     ///@brief No memory allocation, Call \c construct before using the object
     ImplicitRungeKutta(){}
 
-    ///@copydoc DIRKStep::construct()
-    template<class ...SolverParams>
+    ///@copydoc DIRKStep::DIRKStep()
     ImplicitRungeKutta( ConvertsToButcherTableau<value_type> im_tableau,
-             SolverParams&& ...ps
-             ): m_dirk( im_tableau, std::forward<SolverParams>(ps)...), m_delta(m_dirk.copyable())
+               const ContainerType& copyable
+             ): m_dirk( im_tableau, copyable), m_delta(copyable)
              {}
-    ///@copydoc DIRKStep::construct()
-    template<class ...SolverParams>
-    void construct( ConvertsToButcherTableau<value_type> im_tableau,
-             SolverParams&& ...ps
-             )
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct(Params&& ...ps)
     {
-        *this = ImplicitRungeKutta( im_tableau, std::forward<SolverParams>(ps)...);
+        *this = ImplicitRungeKutta( std::forward<Params>(ps)...);
     }
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
+    ///@copydoc hide_copyable
     const ContainerType& copyable()const{ return m_delta;}
-    ///Write access to the internal solver for the implicit part
-    SolverType& solver() { return m_dirk.solver();}
-    ///Read access to the internal solver for the implicit part
-    const SolverType& solver() const { return m_dirk.solver();}
     /**
     * @brief Advance one step
     *
@@ -873,7 +840,7 @@ struct ImplicitRungeKutta
         return m_dirk.num_stages();
     }
   private:
-    DIRKStep<ContainerType, SolverType> m_dirk;
+    DIRKStep<ContainerType> m_dirk;
     ContainerType m_delta;
 };
 
