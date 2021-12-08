@@ -232,6 +232,49 @@ void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, value_type& t,
 
 }
 ///@endcond
+template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
+struct ImExMultistep_s
+{
+    using value_type = get_value_type<ContainerType>;
+    using container_type = ContainerType;
+    ImExMultistep_s(){}
+    template<class ...SolverParams>
+    ImExMultistep_s(
+            ConvertsToMultistepTableau<value_type> tableau,
+            SolverParams&& ...ps):
+         m_solver( std::forward<SolverParams>(ps)...),
+         m_multi(tableau, m_solver.copyable())
+    {
+    }
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = ImExMultistep_s( std::forward<Params>( ps)...);
+    }
+    const ContainerType& copyable()const{ return m_multi.copyable();}
+
+    template< class Explicit, class Implicit>
+    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType&
+            u0, value_type dt)
+    {
+        dg::detail::Adaptor<Implicit,SolverType> adapt(im,m_solver);
+        m_multi.init( ex, adapt, t0, u0, dt);
+    }
+
+    template< class Explicit, class Implicit>
+    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u)
+    {
+        dg::detail::Adaptor<Implicit,SolverType> adapt(im,m_solver);
+        m_multi.step( ex, adapt, t, u);
+    }
+
+  private:
+    SolverType m_solver;
+    ImExMultistep<ContainerType> m_multi;
+
+};
 
 
 /**

@@ -3,6 +3,28 @@
 #include "andersonacc.h"
 
 namespace dg{
+///@cond
+namespace detail{
+template<class Implicit, class Solver>
+struct Adaptor
+{
+    Adaptor( Implicit& im, Solver& solver) : m_im(im), m_solver(solver){}
+    template<class ContainerType, class value_type>
+    void operator()( value_type t, const ContainerType& x, ContainerType& y)
+    {
+        m_im( t,x,y);
+    }
+    template<class ContainerType, class value_type>
+    void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& yp)
+    {
+        m_solver.solve( alpha, m_im, t, y, yp);
+    }
+    private:
+    Implicit& m_im;
+    Solver& m_solver;
+};
+}
+///@endcond
 
 /*! @class hide_SolverType
  *
@@ -65,6 +87,7 @@ struct DefaultSolver
         };
         Timer ti;
         if(m_benchmark) ti.tic();
+        dg::blas1::copy( rhs, y); // take rhs as initial guess
         unsigned number = m_pcg.solve( wrapper, y, rhs, im.precond(), im.weights(), m_eps);
         if( m_benchmark)
         {
