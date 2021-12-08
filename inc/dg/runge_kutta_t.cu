@@ -7,7 +7,6 @@
 
 #include "backend/typedefs.h"
 #include "topology/evaluation.h"
-#include "arakawa.h"
 #include "runge_kutta.h"
 
 
@@ -24,7 +23,7 @@ struct RHS
         yp[0] = y[1];
         yp[1] = -2.*m_d*m_w0*y[1] - m_w0*m_w0*y[0] + sin(m_wd*t);
     }
-    void solve( double alpha, double t, std::array<double,2>& y,
+    void operator()( double alpha, double t, std::array<double,2>& y,
             const std::array<double,2>& yp)
     {
         // y - alpha RHS( t, y) = rho

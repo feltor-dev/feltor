@@ -4,7 +4,6 @@
 
 #include "multistep.h"
 #include "adaptive.h"
-#include "elliptic.h"
 
 //method of manufactured solution
 std::array<double,2> solution( double t, double nu) {
@@ -36,7 +35,7 @@ struct Implicit
         Tp[0] = -m_nu*T[0];
         Tp[1] = -m_nu*T[1];
     }
-    void solve( double alpha, double t, std::array<double,2>& y, const
+    void operator()( double alpha, double t, std::array<double,2>& y, const
             std::array<double,2>& rhs)
     {
         // solve y - alpha I(t,y)  = rhs
@@ -57,7 +56,7 @@ struct FullImplicit
         Tp[0] = m_nu*cos(t) - sin(t) - m_nu*T[0];
         Tp[1] = m_nu*sin(t) + cos(t) - m_nu*T[1];
     }
-    void solve( double alpha, double t, std::array<double,2>& y, const
+    void operator()( double alpha, double t, std::array<double,2>& y, const
             std::array<double,2>& rhs)
     {
         y[0] = (rhs[0]+alpha*(m_nu*cos(t) - sin(t)))/(1+alpha*m_nu);

@@ -388,7 +388,7 @@ void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, value_type t0, co
         dg::blas1::copy( u0, m_kI[i]);
         dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, 2*i), rka, 1., m_kI[i]);
         value_type alpha = dt*m_rkI.a(i,i);
-        im.solve( alpha, tu, delta, m_kI[i]);
+        im( alpha, tu, delta, m_kI[i]);
         dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
         ex(tu, delta, m_kE[i]);
     }
@@ -743,7 +743,7 @@ void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType
     if( m_rkI.a(0,0) !=0 )
     {
         alpha = dt*m_rkI.a(0,0);
-        rhs.solve( alpha, tu, delta, u0);
+        rhs( alpha, tu, delta, u0);
         dg::blas1::axpby( 1./alpha, delta, -1./alpha, u0, m_kI[0]);
     }
     else
@@ -761,7 +761,7 @@ void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType
         if( m_rkI.a(i,i) !=0 )
         {
             alpha = dt*m_rkI.a(i,i);
-            rhs.solve( alpha, tu, delta, m_kI[i]);
+            rhs( alpha, tu, delta, m_kI[i]);
             dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
         }
         else

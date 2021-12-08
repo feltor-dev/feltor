@@ -223,7 +223,7 @@ void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, value_type& t,
         std::rotate( m_im.rbegin(), m_im.rbegin() + 1, m_im.rend());
     //compute implicit part
     value_type alpha = m_dt*m_t.im(0);
-    diff.solve( alpha, t, u, m_tmp);
+    diff( alpha, t, u, m_tmp);
 
     blas1::copy( u, m_u[0]); //store result
     if( 0 < m_im.size())
@@ -375,7 +375,7 @@ void ImplicitMultistep<ContainerType>::step(RHS& rhs, value_type& t, container_t
     if( !m_f.empty())
         std::rotate(m_f.rbegin(), m_f.rbegin() + 1, m_f.rend());
     value_type alpha = m_dt*m_t.im(0);
-    rhs.solve( alpha, t, u, m_tmp);
+    rhs( alpha, t, u, m_tmp);
 
     dg::blas1::copy( u, m_u[0]);
     if( 0 < m_f.size())
