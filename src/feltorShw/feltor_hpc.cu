@@ -146,7 +146,7 @@ int main( int argc, char* argv[])
         errIN = nc_close(ncidIN);
     }
 
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep_s< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////

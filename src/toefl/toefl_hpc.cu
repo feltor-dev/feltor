@@ -58,7 +58,7 @@ int main( int argc, char* argv[])
     }
     //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
-    dg::Karniadakis< std::vector<dg::x::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep_s< std::vector<dg::x::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
     karniadakis.init( exp, imp, time, y0, p.dt);
     y1 = y0;
     /////////////////////////////set up netcdf/////////////////////////////////////

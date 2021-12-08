@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
     //make solver and stepper
     polar::Explicit<aMPIGeometry2d, MDMatrix, MDVec> shu( grid, p.eps);
     polar::Diffusion<aMPIGeometry2d, MDMatrix, MDVec> diffusion( grid, p.nu);
-    Karniadakis< MDVec > karniadakis( y0, y0.size(), p.eps_time);
+    dg::ImExMultistep_s< MDVec > karniadakis( "ImEx-BDF-3-3", y0, y0.size(), p.eps_time);
 
     t.tic();
     shu( 0, y0, y1);

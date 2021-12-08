@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
 
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep_s< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     std::cout << "Done!\n";

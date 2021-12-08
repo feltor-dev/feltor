@@ -79,12 +79,12 @@ int main( int argc, char* argv[])
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
     dg::IdentityFilter identity;
     bool apply_filter = false;
-    dg::ImExMultistep<dg::DVec, dg::AndersonSolver<dg::DVec>> imex;
+    dg::ImExMultistep_s<dg::DVec, dg::AndersonSolver<dg::DVec>> imex;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
-    dg::FilteredImplicitMultistep<dg::DVec, dg::AndersonSolver<dg::DVec>> multistep_implicit;
+    dg::ImplicitMultistep<dg::DVec> multistep_implicit;
     dg::Adaptive<dg::ERKStep<dg::DVec> > adaptive;
-    dg::Adaptive<dg::ARKStep<dg::DVec> > adaptive_imex;
+    dg::Adaptive<dg::ARKStep_s<dg::DVec> > adaptive_imex;
     dg::Adaptive<dg::DIRKStep<dg::DVec, dg::AndersonSolver<dg::DVec> >> adaptive_implicit;
     if( regularization == "modal")
     {

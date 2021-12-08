@@ -53,7 +53,7 @@ int main( int argc, char* argv[])
     }
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     //dg::TVB< std::vector<dg::DVec> > ab( y0);
-    dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep_s<std::vector<dg::DVec> > ab( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
     hw::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);

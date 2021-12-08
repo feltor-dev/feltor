@@ -53,7 +53,7 @@ int main( int argc, char* argv[])
         std::cout << "Mean Mass is "<<meanMass<<"\n";
         dg::blas1::axpby( -meanMass, one, 1., y0);
     }
-    dg::Karniadakis<dg::DVec > ab( y0, y0.size(), p.eps_time);
+    dg::ImExMultistep_s<dg::DVec > ab( "ImEx-BDF-3-3", y0, y0.size(), p.eps_time);
     mima::Diffusion<dg::CartesianGrid2d,dg::DMatrix,dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);

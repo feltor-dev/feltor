@@ -106,11 +106,9 @@ int main( int argc, char* argv[])
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
     dg::DVec y0 = dg::evaluate( init0, grid);
     ///////////////////TIME STEPPER
-    dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
+    dg::Adaptive<dg::ARKStep_s<dg::DVec>> adaptive(
         "ARK-4-2-3", y0, grid.size(), p.eps_time);
     double dt = p.dt, dt_new = dt;
-    // dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(),1e-13);
-     //karniadakis.init( ex, diffusion, 0, y0, p.dt);
 
     ex.energies( y0);//now energies and potential are at time 0
     dg::DVec T0 = y0, T1(T0);

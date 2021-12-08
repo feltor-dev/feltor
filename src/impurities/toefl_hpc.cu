@@ -87,7 +87,7 @@ int main( int argc, char* argv[])
     //////////////////initialisation of timestepper and first step///////////////////
     std::cout << "init timestepper...\n";
     double time = 0.0;
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep_s< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, time, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;

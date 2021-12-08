@@ -198,7 +198,7 @@ int main( int argc, char* argv[])
         errIN = nc_close(ncidIN);
     }
    
-    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep_s< std::vector<dg::MDVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
     if(rank==0) std::cout << "intialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     if(rank==0) std::cout << "Done!\n";

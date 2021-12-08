@@ -77,7 +77,7 @@ int main( int argc, char* argv[])
     dg::blas2::symv( gamma, gauss, y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
-    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), 1e-9);
+    dg::ImExMultistep_s< std::vector<dg::MDVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), 1e-9);
     karniadakis.init( test, diffusion, 0., y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
