@@ -66,11 +66,11 @@ int main()
     const double damping = 0.2, omega_0 = 1.0, omega_drive = 0.9;
     std::array<double,2> u_start = solution(t_start, damping, omega_0,
             omega_drive), u_end(u_start);
-    //construct a functor with the right interface
-    RHS functor( damping, omega_0, omega_drive);
+    //construct a rhs with the right interface
+    RHS rhs( damping, omega_0, omega_drive);
     double dt= 0;
     //integration
-    int counter = dg::integrateERK( "Dormand-Prince-7-4-5", functor, t_start,
+    int counter = dg::integrateERK( "Dormand-Prince-7-4-5", rhs, t_start,
             u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6);
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1.,
@@ -106,7 +106,7 @@ int main()
     {
         dt = 0;
         u_start = solution(t_start, damping, omega_0, omega_drive);
-        counter = dg::integrateERK( name, functor, t_start, u_start, t_end,
+        counter = dg::integrateERK( name, rhs, t_start, u_start, t_end,
                 u_end, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
@@ -137,8 +137,12 @@ int main()
         u_start = solution(t_start, damping, omega_0, omega_drive);
         dg::Adaptive< dg::DIRKStep< std::array<double,2> > >
                 pd( name, u_start);
-        counter = integrateAdaptive( pd, functor, t_start, u_start, t_end,
-            u_end, dt, dg::im_control, dg::l2norm, 1e-6, 1e-10);
+        auto stepper = [&](double& t, std::array<double,2>& u, double& dt)
+        {
+            pd.step( rhs, rhs, t, u, t, u, dt, dg::im_control, dg::l2norm, 1e-6, 1e-10);
+        };
+        counter = dg::integrate( stepper, t_start, u_start, t_end,
+            u_end, dt);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1.,sol  , -1., u_end);
@@ -156,9 +160,13 @@ int main()
         auto rhs = [](double t, double y, double& yp){
                 yp = y;
         };
-        unsigned counter = dg::integrateERK( name, rhs , t_start, u_start, t_end,
-                u_end, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10,
-                 dg::Grid1d( 0., 100., 1,1)  );
+        dg::Adaptive<dg::ERKStep<double>> pd( name,u_start);
+        auto adapt = [&](double& t, double& u, double& dt)
+        {
+            pd.step( rhs, t, u, t, u, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
+        };
+        unsigned counter = dg::integrate_in_domain( adapt , t_start, u_start, t_end,
+                u_end, dt, dg::Grid1d( 0., 100., 1,1), 1e-4  );
         double analytic = log( 100.);
         std::cout << "With "<<std::setw(6)<<counter<<" steps norm of error in "
                   <<std::setw(24)<<name<<"\t"<<fabs( t_end - analytic)<<"\n";

@@ -10,33 +10,6 @@
 #include "runge_kutta.h"
 
 
-//![function]
-struct RHS
-{
-    RHS( double damping, double omega_0, double omega_drive) :
-        m_d( damping), m_w0( omega_0), m_wd( omega_drive){}
-    void operator()( double t, const std::array<double,2>& y,
-            std::array<double,2>& yp)
-    {
-        //damped driven harmonic oscillator
-        // x -> y[0] , v -> y[1]
-        yp[0] = y[1];
-        yp[1] = -2.*m_d*m_w0*y[1] - m_w0*m_w0*y[0] + sin(m_wd*t);
-    }
-    void operator()( double alpha, double t, std::array<double,2>& y,
-            const std::array<double,2>& yp)
-    {
-        // y - alpha RHS( t, y) = rho
-        // can be solved analytically
-        y[1] = ( yp[1] + alpha*sin(m_wd*t) - alpha* m_w0*m_w0*yp[0])/
-               (1.+2.*alpha*m_d*m_w0+alpha*alpha*m_w0*m_w0);
-        y[0] = yp[0] + alpha*y[1];
-    }
-    private:
-    double m_d, m_w0, m_wd;
-};
-//![function]
-
 std::array<double, 2> solution( double t, double damping, double omega_0, double omega_drive)
 {
     double tmp1 = (2.*omega_0*damping);
@@ -65,11 +38,30 @@ int main()
     //construct Runge Kutta class
     dg::RungeKutta<std::array<double,2> >  rk( "Runge-Kutta-4-4", u);
     //construct a functor with the right interface
-    RHS functor( damping, omega_0, omega_drive);
+    //![function]
+    auto rhs = [=]( double t, const std::array<double,2>& y,
+            std::array<double,2>& yp)
+    {
+        //damped driven harmonic oscillator
+        // x -> y[0] , v -> y[1]
+        yp[0] = y[1];
+        yp[1] = -2.*damping*omega_0*y[1] - omega_0*omega_0*y[0]
+                + sin(omega_drive*t);
+    };
+    auto solve = [=]( double alpha, double t, std::array<double,2>& y,
+            const std::array<double,2>& yp)
+    {
+        // y - alpha RHS( t, y) = rho
+        // can be solved analytically
+        y[1] = ( yp[1] + alpha*sin(omega_drive*t) - alpha*omega_0*omega_0*yp[0])/
+               (1.+2.*alpha*damping*omega_0+alpha*alpha*omega_0*omega_0);
+        y[0] = yp[0] + alpha*y[1];
+    };
+    //![function]
     //integration loop
     double t=t_start;
     for( unsigned i=0; i<N; i++)
-        rk.step( functor, t, u, t, u, dt); //step inplace
+        rk.step( rhs, t, u, t, u, dt); //step inplace
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u);
     std::cout << "Norm of error is "<<sqrt(dg::blas1::dot( u, u))<<"\n";
@@ -112,7 +104,7 @@ int main()
     {
         u = solution(t_start, damping, omega_0, omega_drive);
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
-        dg::stepperRK(name, functor, t_start, u, t_end, u1, N);
+        dg::stepperRK(name, rhs, t_start, u, t_end, u1, N);
         dg::blas1::axpby( 1., sol , -1., u1);
         auto b = dg::create::tableau<double>(name);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<(b.isFsal()?" (fsal)" : "") <<"\n";
@@ -135,7 +127,7 @@ int main()
         dg::blas1::copy( u, u1);
         double t0 = t_start;
         for( unsigned i=0; i<N; i++)
-            rk.step( functor, id, t0, u1, t0, u1, dt);
+            rk.step( rhs, id, t0, u1, t0, u1, dt);
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
@@ -168,7 +160,7 @@ int main()
         dg::ImplicitRungeKutta<std::array<double,2>> irk( name, u);
         double t=t_start;
         for( unsigned i=0; i<N_im; i++)
-            irk.step( functor, t, u1, t, u1, dt_im); //step inplace
+            irk.step( rhs, solve, t, u1, t, u1, dt_im); //step inplace
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }

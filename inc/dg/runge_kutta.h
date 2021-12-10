@@ -72,8 +72,18 @@ void gemm(
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
-        If RHS is used in an implicit stepper the second member is of signature
-        <tt> void solve( value_type alpha, value_type t, ContainerType& y, const ContainerType& yp); </tt>
+  */
+ /** @class hide_rhs_solve
+  * @tparam RHS The right hand side
+        is a functor type with no return value (subroutine)
+        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
+        i.e. y' = f(t, y) translates to f(t, y, y').
+        The two ContainerType arguments never alias each other in calls to the functor.
+ * @tparam Solver A solver for the implicit right hand side
+ * must solve the equation \f$ y - \alpha I(y,t) = y^*\f$
+        is a functor type with no return value (subroutine) of signature
+        <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
         Here, alpha is always positive and non-zero.
   */
  /** @class hide_limiter
@@ -323,8 +333,8 @@ struct ARKStep
     * @note After a \c solve we immediately
     * call \c ex on the solution
     */
-    template< class Explicit, class Implicit>
-    void step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    template< class Explicit, class Implicit, class Solver>
+    void step( Explicit& ex, Implicit& im, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///@copydoc ERKStep::order()
     unsigned order() const {
         return m_rkE.order();
@@ -365,8 +375,8 @@ struct ARKStep
 
 ///@cond
 template<class ContainerType>
-template< class Explicit, class Implicit>
-void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+template< class Explicit, class Implicit, class Solver>
+void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rkE.num_stages();
     value_type tu = t0;
@@ -396,7 +406,7 @@ void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, value_type t0, co
         dg::blas1::copy( u0, m_kI[i]);
         dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, 2*i), rka, 1., m_kI[i]);
         value_type alpha = dt*m_rkI.a(i,i);
-        im( alpha, tu, delta, m_kI[i]);
+        solve( alpha, tu, delta, m_kI[i]);
         dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
         ex(tu, delta, m_kE[i]);
     }
@@ -477,8 +487,9 @@ struct DIRKStep
     /**
     * @brief Advance one step
     *
-    * @copydoc hide_rhs
+    * @copydoc hide_rhs_solve
     * @param rhs right hand side subroutine
+    * @param solve the solve method
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return
@@ -487,8 +498,8 @@ struct DIRKStep
     * @param dt timestep
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     */
-    template< class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    template< class RHS, class Solver>
+    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///@copydoc ERKStep::order()
     unsigned order() const {
         return m_rkI.order();
@@ -510,8 +521,8 @@ struct DIRKStep
 
 ///@cond
 template<class ContainerType>
-template< class RHS>
-void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+template< class RHS, class Solver>
+void DIRKStep<ContainerType>::step( RHS& rhs, Solver& solve,  value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rkI.num_stages();
     value_type tu = t0;
@@ -522,7 +533,7 @@ void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType
     if( m_rkI.a(0,0) !=0 )
     {
         alpha = dt*m_rkI.a(0,0);
-        rhs( alpha, tu, delta, u0);
+        solve( alpha, tu, delta, u0);
         dg::blas1::axpby( 1./alpha, delta, -1./alpha, u0, m_kI[0]);
     }
     else
@@ -540,7 +551,7 @@ void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType
         if( m_rkI.a(i,i) !=0 )
         {
             alpha = dt*m_rkI.a(i,i);
-            rhs( alpha, tu, delta, m_kI[i]);
+            solve( alpha, tu, delta, m_kI[i]);
             dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
         }
         else
@@ -887,8 +898,9 @@ struct ImplicitRungeKutta
     /**
     * @brief Advance one step
     *
-    * @copydoc hide_rhs
+    * @copydoc hide_rhs_solve
     * @param rhs right hand side subroutine
+    * @param solve solver for the right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return
@@ -896,9 +908,9 @@ struct ImplicitRungeKutta
     * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
     */
-    template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
-        m_dirk.step( rhs, t0, u0, t1, u1, dt, m_delta);
+    template<class RHS, class Solver>
+    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
+        m_dirk.step( rhs, solve, t0, u0, t1, u1, dt, m_delta);
     }
     ///@copydoc ERKStep::order
     unsigned order() const {

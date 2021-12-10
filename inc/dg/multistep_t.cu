@@ -114,10 +114,10 @@ int main()
     {
         time = 0., y0 = init;
         dg::ImplicitMultistep< std::array<double,2>> bdf( name, y0);
-        bdf.init( full, time, y0, dt);
+        bdf.init( full, full, time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)
-            bdf.step( full, time, y0);
+            bdf.step( full, full, time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
@@ -133,10 +133,10 @@ int main()
         dg::ImExMultistep< std::array<double,2> > imex( name, y0);
         time = 0., y0 = init; //y0 and init are of type std::array<double,2> and contain the initial condition
         //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
-        imex.init( ex, im, time, y0, dt);
+        imex.init( ex, im, im, time, y0, dt);
         //main time loop (NT = 20)
         for( unsigned k=0; k<NT; k++)
-            imex.step( ex, im, time, y0); //inplace step
+            imex.step( ex, im, im, time, y0); //inplace step
         //![karniadakis]
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
@@ -151,7 +151,7 @@ int main()
         time = 0., y0 = init;
         //main time loop (NT = 20)
         for( unsigned k=0; k<NT; k++)
-            imex.step( ex, im, time, y0, time, y0, dt, delta ); //inplace step
+            imex.step( ex, im, im, time, y0, time, y0, dt, delta ); //inplace step
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
@@ -172,7 +172,7 @@ int main()
         {
             if( time + dt > T)
                 dt = T-time;
-            adapt.step( ex, im, time, y0, time, y0, dt, dg::imex_control,
+            adapt.step( ex, im, im, time, y0, time, y0, dt, dg::imex_control,
                     dg::l2norm, rtol, atol);
             counter ++;
         }
@@ -211,10 +211,10 @@ int main()
             if( time + dt > T)
                 dt = T-time;
             double dt_old = dt;
-            dirk.step( im, time, y0, time, y0, dt_old/2.);
+            dirk.step( im, im, time, y0, time, y0, dt_old/2.);
             adapt.step( ex, time-dt_old/2., y0, time, y0, dt, dg::pid_control,
                 dg::l2norm, rtol, atol);
-            dirk.step( im, time-dt_old/2., y0, time, y0, dt_old/2.);
+            dirk.step( im, im, time-dt_old/2., y0, time, y0, dt_old/2.);
             counter ++;
         }
         dg::blas1::axpby( -1., sol, 1., y0);

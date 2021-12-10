@@ -23,15 +23,14 @@ namespace dg{
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
-        The second member is of signature
-        <tt> void solve( value_type alpha, value_type t, ContainerType& y, const ContainerType& yp); </tt>
+ * @tparam Solver A solver for the implicit part of the right hand side
+ * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$
+        is a functor type with no return value (subroutine) of signature
+        <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
         Here, alpha is always positive and non-zero.
-   @note If Explicit is a class then the suggested way of implementing Implicit is as a **friend** to the
-   Explicit class. This is because the only reason to write the implicit part separate from the
-   explicit part is the interface to the timestepper. The friend construct helps to reduce
-   duplicate code and memory consumption by making Implicit essentially an extension of Explicit.
  * @param ex explic part
- * @param im implicit part ( if the \c DefaultSolver is used, must be linear in its second argument and symmetric up to weights)
+ * @param im implicit part
+ * @param solve solver for implicit part
  */
 /*!@class hide_note_multistep
 * @note Uses only \c blas1::axpby routines to integrate one step.
@@ -226,8 +225,8 @@ struct ImExMultistep
      * the state of \c ex through the friend construct.
      * This might be interesting if the call to \c ex changes its state.
      */
-    template< class Explicit, class Implicit>
-    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType& u0, value_type dt);
+    template< class Explicit, class Implicit, class Solver>
+    void init( Explicit& ex, Implicit& im, Solver& solve, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
@@ -245,8 +244,8 @@ struct ImExMultistep
     * performed with a semi-implicit Runge-Kutta method to initialize the
     * multistepper
     */
-    template< class Explicit, class Implicit>
-    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u);
+    template< class Explicit, class Implicit, class Solver>
+    void step( Explicit& ex, Implicit& im, Solver& solve, value_type& t, ContainerType& u);
 
   private:
     dg::MultistepTableau<value_type> m_t;
@@ -258,8 +257,8 @@ struct ImExMultistep
 
 ///@cond
 template< class ContainerType>
-template< class RHS, class Diffusion>
-void ImExMultistep<ContainerType>::init( RHS& f, Diffusion& diff, value_type t0, const ContainerType& u0, value_type dt)
+template< class RHS, class Diffusion, class Solver>
+void ImExMultistep<ContainerType>::init( RHS& f, Diffusion& diff, Solver& solve, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
     unsigned s = m_t.steps();
@@ -271,8 +270,8 @@ void ImExMultistep<ContainerType>::init( RHS& f, Diffusion& diff, value_type t0,
 }
 
 template<class ContainerType>
-template< class RHS, class Diffusion>
-void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, value_type& t, ContainerType& u)
+template< class RHS, class Diffusion, class Solver>
+void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, Solver& solve, value_type& t, ContainerType& u)
 {
     unsigned s = m_t.steps();
     if( m_counter < s - 1)
@@ -288,7 +287,7 @@ void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, value_type& t,
         };
         ARKStep<ContainerType> ark( order2method.at( m_t.order()), u);
         ContainerType tmp ( u);
-        ark.step( f, diff, t, u, t, u, m_dt, tmp);
+        ark.step( f, diff, solve, t, u, t, u, m_dt, tmp);
         m_counter++;
         m_tu = t;
         dg::blas1::copy( u, m_u[s-1-m_counter]);
@@ -312,7 +311,7 @@ void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, value_type& t,
         std::rotate( m_im.rbegin(), m_im.rbegin() + 1, m_im.rend());
     //compute implicit part
     value_type alpha = m_dt*m_t.im(0);
-    diff( alpha, t, u, m_tmp);
+    solve( alpha, t, u, m_tmp);
 
     blas1::copy( u, m_u[0]); //store result
     if( 0 < m_im.size())
@@ -349,14 +348,14 @@ struct ImExMultistep_s
             u0, value_type dt)
     {
         dg::detail::Adaptor<Implicit,SolverType> adapt(im,m_solver);
-        m_multi.init( ex, adapt, t0, u0, dt);
+        m_multi.init( ex, adapt, adapt, t0, u0, dt);
     }
 
     template< class Explicit, class Implicit>
     void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u)
     {
         dg::detail::Adaptor<Implicit,SolverType> adapt(im,m_solver);
-        m_multi.step( ex, adapt, t, u);
+        m_multi.step( ex, adapt, adapt, t, u);
     }
 
   private:
@@ -437,13 +436,36 @@ struct ImplicitMultistep
     ///@copydoc hide_copyable
     const ContainerType& copyable()const{ return m_tmp;}
 
-    ///@copydoc ExplicitMultistep::init()
-    template<class RHS>
-    void init(RHS& rhs, value_type t0, const ContainerType& u0, value_type dt);
+    /**
+     * @brief Initialize timestepper. Call before using the step function.
+     *
+     * This routine has to be called before the first timestep is made.
+     * @copydoc hide_rhs_solve
+     * @param rhs The rhs functor
+     * @param solve The rhs solver
+     * @param t0 The intital time corresponding to u0
+     * @param u0 The initial value of the integration
+     * @param dt The timestep saved for later use
+     * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
+     * This might be interesting if the call to \c ex changes its state.
+     */
+    template<class RHS, class Solver>
+    void init(RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type dt);
 
-    ///@copydoc ExplicitMultistep::step()
-    template<class RHS>
-    void step(RHS& rhs, value_type& t, container_type& u);
+    /**
+    * @brief Advance one timestep
+    *
+    * @copydoc hide_rhs_solve
+    * @param rhs The rhs functor
+    * @param solve The rhs solver
+    * @param t (write-only), contains timestep corresponding to \c u on return
+    * @param u (write-only), contains next step of time-integration on return
+    * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
+    * This might be interesting if the call to \c ex changes its state.
+    * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
+    */
+    template<class RHS, class Solver>
+    void step(RHS& rhs, Solver& solve, value_type& t, container_type& u);
     private:
     dg::MultistepTableau<value_type> m_t;
     value_type m_tu, m_dt;
@@ -454,8 +476,8 @@ struct ImplicitMultistep
 };
 ///@cond
 template< class ContainerType>
-template<class RHS>
-void ImplicitMultistep<ContainerType>::init(RHS& rhs, value_type t0,
+template<class RHS, class Solver>
+void ImplicitMultistep<ContainerType>::init(RHS& rhs, Solver& solve, value_type t0,
     const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
@@ -468,8 +490,8 @@ void ImplicitMultistep<ContainerType>::init(RHS& rhs, value_type t0,
 }
 
 template< class ContainerType>
-template<class RHS>
-void ImplicitMultistep<ContainerType>::step(RHS& rhs, value_type& t, container_type& u)
+template<class RHS, class Solver>
+void ImplicitMultistep<ContainerType>::step(RHS& rhs, Solver& solve, value_type& t, container_type& u)
 {
     unsigned s = m_t.steps();
     if( m_counter < s - 1)
@@ -485,7 +507,7 @@ void ImplicitMultistep<ContainerType>::step(RHS& rhs, value_type& t, container_t
         };
         ImplicitRungeKutta<ContainerType> dirk(
                 order2method.at(m_t.order()), u);
-        dirk.step( rhs, t, u, t, u, m_dt);
+        dirk.step( rhs, solve, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
         dg::blas1::copy( u, m_u[s-1-m_counter]);
@@ -507,7 +529,7 @@ void ImplicitMultistep<ContainerType>::step(RHS& rhs, value_type& t, container_t
     if( !m_f.empty())
         std::rotate(m_f.rbegin(), m_f.rbegin() + 1, m_f.rend());
     value_type alpha = m_dt*m_t.im(0);
-    rhs( alpha, t, u, m_tmp);
+    solve( alpha, t, u, m_tmp);
 
     dg::blas1::copy( u, m_u[0]);
     if( 0 < m_f.size())

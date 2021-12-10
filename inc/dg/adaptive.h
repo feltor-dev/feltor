@@ -278,7 +278,7 @@ struct Adaptive
     ///@brief Read access to internal stepper
     const stepper_type& stepper() const { return m_stepper;}
 
-    /*!@brief Explicit or Implicit adaptive step
+    /*!@brief Explicit adaptive step
      *
      * @param rhs The right hand side of the equation to integrate
      * @copydoc hide_adaptive_params
@@ -313,12 +313,14 @@ struct Adaptive
      */
     template< class Explicit,
               class Implicit,
+              class Solver,
               class ControlFunction = value_type (value_type, value_type,
                       value_type, value_type, value_type, value_type,
                       unsigned, unsigned),
               class ErrorNorm = value_type( const container_type&)>
     void step( Explicit& ex,
               Implicit& im,
+              Solver& solve,
               value_type t0,
               const container_type& u0,
               value_type& t1,
@@ -329,7 +331,34 @@ struct Adaptive
               value_type rtol,
               value_type atol)
     {
-        m_stepper.step( ex, im, t0, u0, m_t_next, m_next, dt, m_delta);
+        m_stepper.step( ex, im, solve, t0, u0, m_t_next, m_next, dt, m_delta);
+        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
+    }
+    /*!@brief implicit adaptive step
+     *
+     * @copydoc hide_adaptive_params
+     * @copydoc hide_rhs_solve
+     * @copydoc hide_control_error
+     */
+    template< class Implicit,
+              class Solver,
+              class ControlFunction = value_type (value_type, value_type,
+                      value_type, value_type, value_type, value_type,
+                      unsigned, unsigned),
+              class ErrorNorm = value_type( const container_type&)>
+    void step( RHS& rhs,
+              Solver& solve,
+              value_type t0,
+              const container_type& u0,
+              value_type& t1,
+              container_type& u1,
+              value_type& dt,
+              ControlFunction& control,
+              ErrorNorm& norm,
+              value_type rtol,
+              value_type atol)
+    {
+        m_stepper.step( ex, solve, t0, u0, m_t_next, m_next, dt, m_delta);
         return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
     }
     ///Return true if the last stepsize in step was rejected
@@ -542,14 +571,175 @@ struct EntireDomain
 ///@addtogroup time
 ///@{
 
-/*!@class hide_integrateAdaptive
+
+/**
+ * @brief Integrates a differential equation
+ *  monitoring the sanity of integration
  *
- * @param rhs The right-hand-side
+ * @param stepper can be called like \c stepper( t0, u0, dt)
+ * @param t0 initial time
+ * @param u0 initial value at \c t0
+ * @param t1 end time
+ * @param u1 (write only) contains the result corresponding to t1 on output
+ * @param dt The initial timestep guess (if 0 the function chooses something
+ * for you). The exact value is not really
+ * important, the stepper does not even have to succeed. Usually the
+ * control function will very(!) quickly adapt the stepsize in just one or
+ * two steps (even if it's several orders of magnitude off in the beginning).
+ * @attention The integrator may throw if it detects too small timesteps, too
+ * many failures, NaN, Inf, or other non-sanitary behaviour
+ * @copydoc hide_ContainerType
+ */
+template< class Stepper, class ContainerType>
+int integrate( Stepper& stepper,
+              get_value_type<ContainerType> t0,
+              const ContainerType& u0,
+              get_value_type<ContainerType> t1,
+              ContainerType& u1,
+              get_value_type<ContainerType> dt = 1e-6
+              )
+{
+    using  value_type = get_value_type<ContainerType>;
+    value_type t_current = t0, dt_current = dt;
+    blas1::copy( u0, u1 );
+    ContainerType& current(u1);
+    if( t1 == t0)
+        return 0;
+    bool forward = (t1 - t0 > 0);
+    if( dt == 0)
+        dt_current = 1e-6; // a good a guess as any
+
+    int counter =0;
+    while( (forward && t_current < t1) || (!forward && t_current > t1))
+    {
+        //remember last step
+        t0 = t_current;
+        if( (forward && t_current+dt_current > t1) || (!forward && t_current +
+                    dt_current < t1) )
+            dt_current = t1-t_current;
+        // Compute a step and error
+        stepper( t_current, current, dt_current);
+        if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
+            throw dg::Error(dg::Message(_ping_)<<"integrate failed to converge! dt = "<<std::scientific<<dt_current);
+        counter++;
+    }
+    return counter;
+}
+
+/**
+ * @brief Integrates a differential equation
+ *  monitoring the sanity of integration and the integration domain
+ *
+ * @param stepper can be called like \c stepper( t0, u0, dt) Cannot be
+ * a multistep stepper
  * @param t0 initial time
  * @param u0 initial value at \c t0
  * @param t1 (read / write) end time; if the solution leaves the domain
  * contains the last time where the solution still lies within the domain
  * on output
+ * @param u1 (write only) contains the result corresponding to t1 on output
+ * @param dt The initial timestep guess (if 0 the function chooses something
+ * for you). The exact value is not really
+ * important, the stepper does not even have to succeed. Usually the
+ * control function will very(!) quickly adapt the stepsize in just one or
+ * two steps (even if it's several orders of magnitude off in the beginning).
+ * @param domain (optional) a restriction of the solution space. The integrator
+ * checks after every step if the solution is still within the given domain
+ * \c domain.contains(u1). If not, the integrator will bisect the exact domain
+ * boundary (up to the given tolerances) and return (t1, u1) that lies closest
+ * (but within) the domain boundary.
+ * @param eps_root Relative error of root finding algorithm \c dt < eps( t1 + 1)
+ * @tparam Domain Must have the \c contains(const ContainerType&) const member
+ * function returning true if the given solution is part of the domain,
+ * false else (can for example be \c dg::aRealTopology2d)
+ * @copydoc hide_ContainerType
+ */
+template< class Stepper, class ContainerType, class Domain>
+int integrate_in_domain( Stepper& stepper,
+              get_value_type<ContainerType> t0,
+              const ContainerType& u0,
+              get_value_type<ContainerType>& t1,
+              ContainerType& u1,
+              get_value_type<ContainerType> dt,
+              Domain&& domain,
+              get_value_type<ContainerType> eps_root
+              )
+{
+    using  value_type = get_value_type<ContainerType>;
+    value_type t_current = t0, dt_current = dt;
+    blas1::copy( u0, u1 );
+    ContainerType& current(u1);
+    if( t1 == t0)
+        return 0;
+    bool forward = (t1 - t0 > 0);
+    if( dt == 0)
+        dt_current = 1e-6; // a good a guess as any
+
+    int counter =0;
+    ContainerType last( u0);
+    while( (forward && t_current < t1) || (!forward && t_current > t1))
+    {
+        //remember last step
+        t0 = t_current;
+        dg::blas1::copy( current, last);
+        if( (forward && t_current+dt_current > t1) || (!forward && t_current +
+                    dt_current < t1) )
+            dt_current = t1-t_current;
+        // Compute a step and error
+        adapt( t_current, current, dt_current);
+        if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
+            throw dg::Error(dg::Message(_ping_)<<"integrate_in_domain failed to converge! dt = "<<std::scientific<<dt_current);
+        counter++;
+        if( !domain.contains( current) )
+        {
+            //start bisection between t0 and t1
+            t1 = t_current;
+
+            // t0 and last are inside
+            dg::blas1::copy( last, current);
+            int j_max = 50;
+            for(int j=0; j<j_max; j++)
+            {
+                if( fabs(t1-t0) < eps_root*fabs(t1) + eps_root)
+                {
+                    return counter;
+                }
+                dt_current = (t1-t0)/2.;
+                t_current = t0;
+                // Here we can assume that the timestepper always succeeds
+                // because dt_current is always smaller than the previous timestep
+                // t_current = t0, current = last (inside)
+                adapt( t_current, current, dt_current);
+                //stepper( t0, last, t_middle, u1, (t1-t0)/2.);
+                counter++;
+                if( domain.contains( current) )
+                {
+                    t0 = t_current;
+                    dg::blas1::copy( current, last);
+                }
+                else
+                {
+                    t1 = t_current;
+                    dg::blas1::copy( last, current);
+                }
+            }
+            throw dg::Error( dg::Message(_ping_)<<"Too many steps in root finding!");
+        }
+    }
+    return counter;
+}
+
+
+/*!
+ * @brief Shortcut for \c dg::integrate with an embedded ERK class as timestepper
+ *
+ * @snippet adaptive_t.cu function
+ * @snippet adaptive_t.cu doxygen
+ * @param name name of an embedded method that \c ConvertsToButcherTableau
+ * @param rhs The right-hand-side
+ * @param t0 initial time
+ * @param u0 initial value at \c t0
+ * @param t1 end time
  * @param u1 (write only) contains the result corresponding to t1 on output
  * @param dt The initial timestep guess (if 0 the function chooses something
  * for you). The exact value is not really
@@ -571,130 +761,11 @@ struct EntireDomain
  * implementation.
  * @param rtol the desired relative accuracy. Usually 1e-5 is a good choice.
  * @param atol the desired absolute accuracy. Usually 1e-7 is a good choice.
- * @param domain (optional) a restriction of the solution space. The integrator
- * checks after every step if the solution is still within the given domain
- * \c domain.contains(u1). If not, the integrator will bisect the exact domain
- * boundary (up to the given tolerances) and return (t1, u1) that lies closest
- * (but within) the domain boundary.
  * @return number of steps
  * @attention The integrator may throw if it detects too small timesteps, too many failures, NaN, Inf, or other non-sanitary behaviour
  * @copydoc hide_rhs
  * @copydoc hide_control_error
- * @tparam Domain Must have the \c contains(const ContainerType&) const member
- * function returning true if the given solution is part of the domain,
- * false else (can for example be \c dg::aRealTopology2d)
  * @copydoc hide_ContainerType
- */
-
-/**
- * @brief Integrates a differential equation using a one-step explicit
- * Timestepper, with adaptive stepsize-control and monitoring the sanity of
- * integration
- *
- * @param adaptive An instance of the Adaptive class
- * @copydoc hide_integrateAdaptive
- */
-template< class Adaptive,
-          class RHS,
-          class ContainerType,
-          class ErrorNorm = get_value_type<ContainerType>( const ContainerType&),
-          class ControlFunction = get_value_type<ContainerType>
-    (get_value_type<ContainerType>, get_value_type<ContainerType>,
-     get_value_type<ContainerType>, get_value_type<ContainerType>,
-     get_value_type<ContainerType>, get_value_type<ContainerType>,
-     unsigned, unsigned),
-          class Domain = EntireDomain>
-int integrateAdaptive(
-                      Adaptive& adaptive,
-                      RHS& rhs,
-                      get_value_type<ContainerType> t0,
-                      const ContainerType& u0,
-                      get_value_type<ContainerType>& t1,
-                      ContainerType& u1,
-                      get_value_type<ContainerType> dt,
-                      ControlFunction control,
-                      ErrorNorm norm,
-                      get_value_type<ContainerType> rtol,
-                      get_value_type<ContainerType> atol=1e-10,
-                      const Domain& domain = EntireDomain()
-                      )
-{
-    using  value_type = get_value_type<ContainerType>;
-    value_type t_current = t0, dt_current = dt;
-    blas1::copy( u0, u1 );
-    ContainerType& current(u1);
-    if( t1 == t0)
-        return 0;
-    bool forward = (t1 - t0 > 0);
-    if( dt == 0)
-        dt_current = adaptive.guess_stepsize( rhs, t0, u0, forward ?
-                dg::forward:dg::backward, norm, rtol, atol);
-
-    int counter =0;
-    ContainerType last( u0), delta(u0);
-    while( (forward && t_current < t1) || (!forward && t_current > t1))
-    {
-        //remember last step
-        t0 = t_current;
-        dg::blas1::copy( current, last);
-        if( (forward && t_current+dt_current > t1) || (!forward && t_current +
-                    dt_current < t1) )
-            dt_current = t1-t_current;
-        // Compute a step and error
-        adaptive.step( rhs, t_current, current, t_current, current, dt_current,
-                control, norm, rtol, atol);
-        if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
-            throw dg::Error(dg::Message(_ping_)<<"integrateERK failed to converge! dt = "<<std::scientific<<dt_current);
-        counter++;
-        if( !domain.contains( current) )
-        {
-            t1 = t_current; // u1 is uninteresting because outside
-            value_type t_middle = (t1+t0)/2.;
-            //start bisection between t0 and t1
-            dg::blas1::copy( 1., delta);
-            unsigned size = norm( delta); //norm gives sqrt
-            size*=size;
-            int j_max = 50;
-            for(int j=0; j<j_max; j++)
-            {
-                adaptive.stepper().step( rhs, t0, last, t_middle, u1,
-                        (t1-t0)/2., delta);
-
-                counter++;
-                dg::blas1::axpby(  1., last, -1., u1, delta);
-                dg::blas1::subroutine( detail::Tolerance<value_type>( rtol,
-                            atol, size), last, delta);
-                value_type eps0 = norm(delta);
-                if( domain.contains( u1) )
-                {
-                    t0 = t_middle;
-                    dg::blas1::copy( u1, last);
-                    if( eps0 < 1.0)
-                    {
-                        t1 = t0;
-                        return counter;
-                    }
-                }
-                else
-                {
-                    t1 = t_middle;
-                    if( eps0 < 1.0)
-                        return counter;
-                }
-            }
-            return counter;
-        }
-    }
-    return counter;
-}
-
-
-/**
- * @brief Shortcut for \c dg::integrateAdaptive with an embedded ERK class as timestepper
- * @snippet adaptive_t.cu function
- * @snippet adaptive_t.cu doxygen
- * @param name name of an embedded method that \c ConvertsToButcherTableau
- * @copydoc hide_integrateAdaptive
  */
 template<class RHS,
          class ContainerType,
@@ -704,25 +775,26 @@ template<class RHS,
     (get_value_type<ContainerType>, get_value_type<ContainerType>,
      get_value_type<ContainerType>, get_value_type<ContainerType>,
      get_value_type<ContainerType>, get_value_type<ContainerType>,
-     unsigned, unsigned),
-         class Domain = EntireDomain>
+     unsigned, unsigned)>
 int integrateERK( std::string name,
                   RHS& rhs,
                   get_value_type<ContainerType> t0,
                   const ContainerType& u0,
-                  get_value_type<ContainerType>& t1,
+                  get_value_type<ContainerType> t1,
                   ContainerType& u1,
                   get_value_type<ContainerType> dt,
                   ControlFunction control,
                   ErrorNorm norm,
                   get_value_type<ContainerType> rtol,
-                  get_value_type<ContainerType> atol=1e-10,
-                  const Domain& domain = EntireDomain()
+                  get_value_type<ContainerType> atol=1e-10
               )
 {
     dg::Adaptive<dg::ERKStep<ContainerType>> pd( name,u0);
-    return integrateAdaptive( pd, rhs, t0, u0, t1, u1, dt, control, norm, rtol,
-            atol, domain);
+    auto adapt = [&](double& t, ContainerType& u, double& dt)
+    {
+        pd.step( rhs, t, u, t, u, dt, control, norm, rtol, atol);
+    };
+    return integrate( adapt, t0, u0, t1, u1, dt);
 }
 ///@}
 }//namespace dg
