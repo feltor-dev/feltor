@@ -43,6 +43,95 @@ namespace dg{
 * generally win.
 * @note a disadvantage of multistep is that timestep adaption is not easily done.
 */
+///@cond
+template<class ContainerType>
+struct FilteredExplicitMultistep;
+///@endcond
+
+/**
+* @brief General explicit linear multistep time-integration
+* \f[
+* \begin{align}
+    v^{n+1} = \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
+    \end{align}
+    \f]
+
+    which discretizes
+    \f[
+    \frac{\partial v}{\partial t} = \hat f(t,v)
+    \f]
+    where \f$ f \f$ contains the equations.
+    The coefficients for an order 3 "eBDF" scheme are given as an example:
+    \f[
+    a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\ a_2 = \frac{2}{11} \\
+    b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11}
+\f]
+    You can use your own coefficients defined as a \c dg::MultistepTableau
+    or use one of the predefined coefficients in
+    @copydoc hide_explicit_multistep_tableaus
+*
+* @copydoc hide_note_multistep
+* @copydoc hide_ContainerType
+ @ingroup time
+*/
+template<class ContainerType>
+struct ExplicitMultistep
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
+    ExplicitMultistep(){}
+    ///@copydoc FilteredExplicitMultistep::FilteredExplicitMultistep(ConvertsToMultistepTableau<value_type>,const ContainerType&)
+    ExplicitMultistep( ConvertsToMultistepTableau<value_type> tableau, const ContainerType& copyable): m_fem( tableau, copyable){ }
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct(Params&& ...ps)
+    {
+        //construct and swap
+        *this = ExplicitMultistep(  std::forward<Params>(ps)...);
+    }
+    ///@copydoc hide_copyable
+    const ContainerType& copyable()const{ return m_fem.copyable();}
+
+    /**
+     * @brief Initialize timestepper. Call before using the step function.
+     *
+     * This routine has to be called before the first timestep is made.
+     * @copydoc hide_rhs
+     * @param rhs The rhs functor
+     * @param t0 The intital time corresponding to u0
+     * @param u0 The initial value of the integration
+     * @param dt The timestep saved for later use
+     * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
+     * This might be interesting if the call to \c ex changes its state.
+     */
+    template< class RHS>
+    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
+        dg::IdentityFilter id;
+        m_fem.init( rhs, id, t0, u0, dt);
+    }
+
+    /**
+    * @brief Advance one timestep
+    *
+    * @copydoc hide_rhs
+    * @param rhs The rhs functor
+    * @param t (write-only), contains timestep corresponding to \c u on return
+    * @param u (write-only), contains next step of time-integration on return
+    * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
+    * This might be interesting if the call to \c ex changes its state.
+    * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
+    */
+    template< class RHS>
+    void step( RHS& rhs, value_type& t, ContainerType& u){
+        dg::IdentityFilter id;
+        m_fem.step( rhs, id, t, u);
+    }
+
+  private:
+    FilteredExplicitMultistep<ContainerType> m_fem;
+};
+
 
 /**
  * @brief Semi-implicit multistep time-integration
@@ -584,89 +673,5 @@ void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_ty
     f(m_tu, m_u[0], m_f[0]); //call f on new point
 }
 ///@endcond
-
-/**
-* @brief General explicit linear multistep time-integration
-* \f[
-* \begin{align}
-    v^{n+1} = \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
-    \end{align}
-    \f]
-
-    which discretizes
-    \f[
-    \frac{\partial v}{\partial t} = \hat f(t,v)
-    \f]
-    where \f$ f \f$ contains the equations.
-    The coefficients for an order 3 "eBDF" scheme are given as an example:
-    \f[
-    a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\ a_2 = \frac{2}{11} \\
-    b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11}
-\f]
-    You can use your own coefficients defined as a \c dg::MultistepTableau
-    or use one of the predefined coefficients in
-    @copydoc hide_explicit_multistep_tableaus
-*
-* @copydoc hide_note_multistep
-* @copydoc hide_ContainerType
- @ingroup time
-*/
-template<class ContainerType>
-struct ExplicitMultistep
-{
-    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    ExplicitMultistep(){}
-    ///@copydoc FilteredExplicitMultistep::FilteredExplicitMultistep(ConvertsToMultistepTableau<value_type>,const ContainerType&)
-    ExplicitMultistep( ConvertsToMultistepTableau<value_type> tableau, const ContainerType& copyable): m_fem( tableau, copyable){ }
-    ///@copydoc hide_construct
-    template<class ...Params>
-    void construct(Params&& ...ps)
-    {
-        //construct and swap
-        *this = ExplicitMultistep(  std::forward<Params>(ps)...);
-    }
-    ///@copydoc hide_copyable
-    const ContainerType& copyable()const{ return m_fem.copyable();}
-
-    /**
-     * @brief Initialize timestepper. Call before using the step function.
-     *
-     * This routine has to be called before the first timestep is made.
-     * @copydoc hide_rhs
-     * @param rhs The rhs functor
-     * @param t0 The intital time corresponding to u0
-     * @param u0 The initial value of the integration
-     * @param dt The timestep saved for later use
-     * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
-     * This might be interesting if the call to \c ex changes its state.
-     */
-    template< class RHS>
-    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
-        dg::IdentityFilter id;
-        m_fem.init( rhs, id, t0, u0, dt);
-    }
-
-    /**
-    * @brief Advance one timestep
-    *
-    * @copydoc hide_rhs
-    * @param rhs The rhs functor
-    * @param t (write-only), contains timestep corresponding to \c u on return
-    * @param u (write-only), contains next step of time-integration on return
-    * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
-    * This might be interesting if the call to \c ex changes its state.
-    * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
-    */
-    template< class RHS>
-    void step( RHS& rhs, value_type& t, ContainerType& u){
-        dg::IdentityFilter id;
-        m_fem.step( rhs, id, t, u);
-    }
-
-  private:
-    FilteredExplicitMultistep<ContainerType> m_fem;
-};
 
 } //namespace dg

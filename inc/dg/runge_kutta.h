@@ -118,7 +118,14 @@ struct ERKStep
     {
         m_k.resize(1); //this makes the copyable function work
     }
-    ///@copydoc RungeKutta::construct()
+    /**
+    * @brief Reserve internal workspace for the integration
+    *
+    * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
+    * @param copyable vector of the size that is later used in \c step (
+     it does not matter what values \c copyable contains, but its size is important;
+     the \c step method can only be called with vectors of the same size)
+    */
     ERKStep( ConvertsToButcherTableau<value_type> tableau, const ContainerType&
         copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
     {
@@ -404,6 +411,149 @@ void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, value_type t0, co
 }
 ///@endcond
 
+/*!
+ * @brief Embedded diagonally implicit Runge Kutta time-step with error estimate
+* \f[
+ \begin{align}
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
+    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
+ \end{align}
+\f]
+ *
+ * A mass matrix \c M has to be manually included in the evaluation of the
+ * implicit part.
+ * @note A mass matrix in the implicit solve should be multiplied, else it entails a
+ * nested implicit equation where in every outer iteration the mass matrix has
+ * to be solved: Mu + a I = Mr instead of u + aM^{-1} I = r
+ * You can provide your own coefficients or use one of the methods
+ * in the following table:
+ * @copydoc hide_implicit_butcher_tableaus
+ *
+ * @copydoc hide_ContainerType
+ * @ingroup time
+ */
+template<class ContainerType>
+struct DIRKStep
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
+    DIRKStep(){ m_kI.resize(1); } // make copyable work
+
+    /*!@brief Construct with a diagonally implicit Butcher Tableau
+     *
+     * The tableau may be one of the implict methods listed in
+     * \c ConvertsToButcherTableau, or you provide your own tableau.
+     *
+     * @param im_tableau diagonally implicit tableau, name or identifier that \c ConvertsToButcherTableau
+     * @param copyable vector of the size that is later used in \c step (
+      it does not matter what values \c copyable contains, but its size is important;
+      the \c step method can only be called with vectors of the same size)
+     */
+    DIRKStep( ConvertsToButcherTableau<value_type> im_tableau,
+               const ContainerType& copyable):
+         m_rkI(im_tableau),
+         m_kI(m_rkI.num_stages(), copyable)
+    {
+        m_rkIb.resize(m_kI.size()), m_rkId.resize(m_kI.size());
+        for( unsigned i=0; i<m_kI.size(); i++)
+        {
+            m_rkIb[i] = m_rkI.b(i);
+            m_rkId[i] = m_rkI.d(i);
+        }
+    }
+
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = DIRKStep( std::forward<Params>( ps)...);
+    }
+    ///@copydoc hide_copyable
+    const ContainerType& copyable()const{ return m_kI[0];}
+
+    /**
+    * @brief Advance one step
+    *
+    * @copydoc hide_rhs
+    * @param rhs right hand side subroutine
+    * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 (write only) end time ( equals \c t0+dt on return
+    *   may alias \c t0)
+    * @param u1 (write only) contains result on return (may alias u0)
+    * @param dt timestep
+    * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
+    */
+    template< class RHS>
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    ///@copydoc ERKStep::order()
+    unsigned order() const {
+        return m_rkI.order();
+    }
+    ///@copydoc ERKStep::embedded_order()
+    unsigned embedded_order() const {
+        return m_rkI.order();
+    }
+    ///@copydoc ERKStep::num_stages()
+    unsigned num_stages() const{
+        return m_rkI.num_stages();
+    }
+
+    private:
+    ButcherTableau<value_type> m_rkI;
+    std::vector<ContainerType> m_kI;
+    std::vector<value_type> m_rkIb, m_rkId;
+};
+
+///@cond
+template<class ContainerType>
+template< class RHS>
+void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+{
+    unsigned s = m_rkI.num_stages();
+    value_type tu = t0;
+    //0 stage
+    //rhs = u0
+    tu = DG_FMA( m_rkI.c(0),dt, t0);
+    value_type alpha;
+    if( m_rkI.a(0,0) !=0 )
+    {
+        alpha = dt*m_rkI.a(0,0);
+        rhs( alpha, tu, delta, u0);
+        dg::blas1::axpby( 1./alpha, delta, -1./alpha, u0, m_kI[0]);
+    }
+    else
+        rhs(tu, u0, m_kI[0]);
+    std::vector<const ContainerType*> kIptr = dg::asPointers( m_kI);
+
+    for( unsigned i=1; i<s; i++)
+    {
+        tu = DG_FMA( m_rkI.c(i),dt, t0);
+        dg::blas1::copy( u0, m_kI[i]);
+        std::vector<value_type> rkIa( i);
+        for( unsigned l=0; l<i; l++)
+            rkIa[l] = m_rkI.a(i,l);
+        dg::blas2::gemv( dt, dg::asDenseMatrix(kIptr,i), rkIa, 1., m_kI[i]);
+        if( m_rkI.a(i,i) !=0 )
+        {
+            alpha = dt*m_rkI.a(i,i);
+            rhs( alpha, tu, delta, m_kI[i]);
+            dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
+        }
+        else
+            rhs(tu, delta, m_kI[i]);
+    }
+    t1 = t0 + dt;
+    //Now compute result and error estimate
+    dg::blas1::copy( u0, u1);
+    detail::gemm( {dt,dt}, dg::asDenseMatrix(kIptr), {&m_rkIb, &m_rkId},
+            {1.,0.}, {&u1, &delta});
+}
+///@endcond
+
 //
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
 struct ARKStep_s
@@ -608,7 +758,14 @@ struct ShuOsher
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
     ShuOsher(){}
-    ///@copydoc RungeKutta::construct()
+    /**
+    * @brief Reserve internal workspace for the integration
+    *
+    * @param tableau Tableau, name or identifier that \c ConvertsToShuOsherTableau
+    * @param copyable vector of the size that is later used in \c step (
+     it does not matter what values \c copyable contains, but its size is important;
+     the \c step method can only be called with vectors of the same size)
+    */
     ShuOsher( dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable): m_t( tableau), m_u(  m_t.num_stages(), copyable), m_k(m_u), m_temp(copyable)
         { }
     ///@copydoc hide_construct
@@ -686,149 +843,6 @@ struct ShuOsher
     ContainerType m_temp;
     value_type m_t1 = 1e300;
 };
-
-/*!
- * @brief diagonally implicit Runge Kutta time-step with error estimate
-* \f[
- \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
-    u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
-    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
- \end{align}
-\f]
- *
- * A mass matrix \c M has to be manually included in the evaluation of the
- * implicit part.
- * @note A mass matrix in the implicit solve should be multiplied, else it entails a
- * nested implicit equation where in every outer iteration the mass matrix has
- * to be solved: Mu + a I = Mr instead of u + aM^{-1} I = r
- * You can provide your own coefficients or use one of the methods
- * in the following table:
- * @copydoc hide_implicit_butcher_tableaus
- *
- * @copydoc hide_ContainerType
- * @ingroup time
- */
-template<class ContainerType>
-struct DIRKStep
-{
-    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    DIRKStep(){ m_kI.resize(1); } // make copyable work
-
-    /*!@brief Construct with a diagonally implicit Butcher Tableau
-     *
-     * The tableau may be one of the implict methods listed in
-     * \c ConvertsToButcherTableau, or you provide your own tableau.
-     *
-     * @param im_tableau diagonally implicit tableau, name or identifier that \c ConvertsToButcherTableau
-     * @param copyable vector of the size that is later used in \c step (
-      it does not matter what values \c copyable contains, but its size is important;
-      the \c step method can only be called with vectors of the same size)
-     */
-    DIRKStep( ConvertsToButcherTableau<value_type> im_tableau,
-               const ContainerType& copyable):
-         m_rkI(im_tableau),
-         m_kI(m_rkI.num_stages(), copyable)
-    {
-        m_rkIb.resize(m_kI.size()), m_rkId.resize(m_kI.size());
-        for( unsigned i=0; i<m_kI.size(); i++)
-        {
-            m_rkIb[i] = m_rkI.b(i);
-            m_rkId[i] = m_rkI.d(i);
-        }
-    }
-
-    ///@copydoc hide_construct
-    template<class ...Params>
-    void construct( Params&& ...ps)
-    {
-        //construct and swap
-        *this = DIRKStep( std::forward<Params>( ps)...);
-    }
-    ///@copydoc hide_copyable
-    const ContainerType& copyable()const{ return m_kI[0];}
-
-    /**
-    * @brief Advance one step
-    *
-    * @copydoc hide_rhs
-    * @param rhs right hand side subroutine
-    * @param t0 start time
-    * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on return
-    *   may alias \c t0)
-    * @param u1 (write only) contains result on return (may alias u0)
-    * @param dt timestep
-    * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
-    */
-    template< class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
-    ///@copydoc ERKStep::order()
-    unsigned order() const {
-        return m_rkI.order();
-    }
-    ///@copydoc ERKStep::embedded_order()
-    unsigned embedded_order() const {
-        return m_rkI.order();
-    }
-    ///@copydoc ERKStep::num_stages()
-    unsigned num_stages() const{
-        return m_rkI.num_stages();
-    }
-
-    private:
-    ButcherTableau<value_type> m_rkI;
-    std::vector<ContainerType> m_kI;
-    std::vector<value_type> m_rkIb, m_rkId;
-};
-
-///@cond
-template<class ContainerType>
-template< class RHS>
-void DIRKStep<ContainerType>::step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
-{
-    unsigned s = m_rkI.num_stages();
-    value_type tu = t0;
-    //0 stage
-    //rhs = u0
-    tu = DG_FMA( m_rkI.c(0),dt, t0);
-    value_type alpha;
-    if( m_rkI.a(0,0) !=0 )
-    {
-        alpha = dt*m_rkI.a(0,0);
-        rhs( alpha, tu, delta, u0);
-        dg::blas1::axpby( 1./alpha, delta, -1./alpha, u0, m_kI[0]);
-    }
-    else
-        rhs(tu, u0, m_kI[0]);
-    std::vector<const ContainerType*> kIptr = dg::asPointers( m_kI);
-
-    for( unsigned i=1; i<s; i++)
-    {
-        tu = DG_FMA( m_rkI.c(i),dt, t0);
-        dg::blas1::copy( u0, m_kI[i]);
-        std::vector<value_type> rkIa( i);
-        for( unsigned l=0; l<i; l++)
-            rkIa[l] = m_rkI.a(i,l);
-        dg::blas2::gemv( dt, dg::asDenseMatrix(kIptr,i), rkIa, 1., m_kI[i]);
-        if( m_rkI.a(i,i) !=0 )
-        {
-            alpha = dt*m_rkI.a(i,i);
-            rhs( alpha, tu, delta, m_kI[i]);
-            dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
-        }
-        else
-            rhs(tu, delta, m_kI[i]);
-    }
-    t1 = t0 + dt;
-    //Now compute result and error estimate
-    dg::blas1::copy( u0, u1);
-    detail::gemm( {dt,dt}, dg::asDenseMatrix(kIptr), {&m_rkIb, &m_rkId},
-            {1.,0.}, {&u1, &delta});
-}
-///@endcond
 /**
 * @brief Runge-Kutta fixed-step implicit time-integration
 * \f[

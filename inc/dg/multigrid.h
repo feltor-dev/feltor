@@ -23,6 +23,7 @@ struct NestedGrids
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = get_value_type<Container>;
+    ///@brief Allocate nothing, Call \c construct method before usage
     NestedGrids(): m_stages(0), m_grids(0), m_inter(0), m_project(0){}
     /**
      * @brief Construct the grids and the interpolation/projection operators
@@ -178,7 +179,6 @@ struct NestedGrids
  * @param b The right hand side
  * @param inverse_op a vector of inverse operators (usually lambda functions combining operators and solvers)
  * @param nested provides projection and interapolation operations and workspace
- * @param benchmark If true, additional benchmark and timing information for each stage will be written to std::cout
  */
 template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
 void nested_iterations(
@@ -250,8 +250,7 @@ void nested_iterations(
  * @param op a container (usually \c std::vector of operators)
      Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the quarter grid, ...
  * @param inverse_op_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
- * @param coarse_solver an inverse operator that computes the solution on the coarsest grid
- * @param inverse_op_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
+ * @param inverse_op_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages
  * @param nested provides projection and interapolation operations and workspace
  * @param gamma The shape of the multigrid cycle:
     typically 1 (V-cycle) or 2 (W-cycle)
@@ -325,28 +324,29 @@ void multigrid_cycle(
     }
 }
 
-    /**
-     * @brief EXPERIMENTAL Full multigrid cycles (use at own risk)
-     *
-     * - Compute residual with given initial guess.
-     * - If error larger than tolerance, do a full multigrid cycle with Chebeyshev iterations as smoother
-     * - repeat
-     * @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c SymmetricOp class
-     * @copydoc hide_symmetric_op
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
-     * @param x (read/write) contains initial guess on input and the solution on output
-     * @param b The right hand side
-     * @param ev The estimate of the largest Eivenvalue for each stage
-     * @param nu_pre number of pre-smoothing steps (make it >10)
-     * @param nu_post number of post-smoothing steps (make it >10)
-     * @param gamma The shape of the multigrid ( 1 is usually ok)
-     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$
-     * @attention This method is rather unreliable, it only converges if the
-     * parameters are chosen correctly ( there need to be enough smooting steps
-     * for instance, and a large jump  factor in the Elliptic class also seems
-     * to help) and otherwise just iterates to infinity. This behaviour is probably related to the use of the Chebyshev solver as a smoother
-    */
+/**
+ * @brief EXPERIMENTAL Full multigrid cycles (use at own risk)
+ *
+ * - Compute residual with given initial guess.
+ * - If error larger than tolerance, do a full multigrid cycle with Chebeyshev iterations as smoother
+ * - repeat
+ * @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c SymmetricOp class
+ * @copydoc hide_symmetric_op
+ * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+ * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param x (read/write) contains initial guess on input and the solution on output
+ * @param b The right hand side
+ * @param inverse_op_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
+ * @param inverse_op_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages
+ * @param nested provides projection and interapolation operations and workspace
+ * @param gamma The shape of the multigrid cycle:
+    typically 1 (V-cycle) or 2 (W-cycle)
+ * @param mu The repetition of the multigrid cycle (1 is typically ok)
+ * @attention This method is rather unreliable, it only converges if the
+ * parameters are chosen correctly ( there need to be enough smooting steps
+ * for instance, and a large jump  factor in the Elliptic class also seems
+ * to help) and otherwise just iterates to infinity. This behaviour is probably related to the use of the Chebyshev solver as a smoother
+*/
 template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
 void full_multigrid(
     NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
@@ -473,7 +473,14 @@ struct MultigridCG2d
     using value_type = get_value_type<Container>;
     ///@brief Allocate nothing, Call \c construct method before usage
     MultigridCG2d(){}
-    ///@copydoc NestedGrids(const Geometry& grid,const unsigned stages,ContainerParams&&)
+    /**
+     * @brief Construct the grids and the interpolation/projection operators
+     *
+     * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
+     * @param stages number of grids in total (The second grid contains half the points of the original grids,
+     *   The third grid contains half of the second grid ...). Must be >= 1
+     * @param ps parameters necessary for \c dg::construct to construct a \c Container from a \c dg::HVec
+    */
     template<class ...ContainerParams>
     MultigridCG2d( const Geometry& grid, const unsigned stages,
             ContainerParams&& ... ps):
@@ -497,14 +504,14 @@ struct MultigridCG2d
         *this = MultigridCG2d( std::forward<Params>( ps)...);
     }
 
-    ///@copydoc dg::NestedGrids::project(const ContainerType0&,std::vector<ContainerType0>&)
+    ///@copydoc dg::NestedGrids::project(const ContainerType0&,std::vector<ContainerType0>&)const
     template<class ContainerType0>
     void project( const ContainerType0& src, std::vector<ContainerType0>& out) const
     {
         m_nested.project( src, out);
     }
 
-    ///@copydoc dg::NestedGrids::project(const ContainerType0&)
+    ///@copydoc dg::NestedGrids::project(const ContainerType0&)const
     template<class ContainerType0>
     std::vector<ContainerType0> project( const ContainerType0& src) const
     {
