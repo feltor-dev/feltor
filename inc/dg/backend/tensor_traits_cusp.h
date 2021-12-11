@@ -26,6 +26,8 @@ struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
     using tensor_category   = CuspVectorTag;
     using execution_policy  = SerialTag;
 };
+// if cpp cusp::device_memory is the same as cusp::host_memory
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CPP
 template<class T>
 struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
     std::enable_if_t< std::is_arithmetic<T>::value>>
@@ -33,12 +35,12 @@ struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
     using value_type        = T;
     using tensor_category   = CuspVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    using execution_policy  = CudaTag ; //!< if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-#else
-    using execution_policy  = OmpTag ; //!< if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-
+    using execution_policy  = CudaTag ;
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
+    using execution_policy  = OmpTag ;
 #endif
 };
+#endif
 ///@}
 ///@endcond
 ///@addtogroup dispatch

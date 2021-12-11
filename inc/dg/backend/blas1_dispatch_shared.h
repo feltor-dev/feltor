@@ -12,7 +12,7 @@
 #include "blas1_serial.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "blas1_cuda.cuh"
-#else
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
 #include "blas1_omp.h"
 #endif
 

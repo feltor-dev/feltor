@@ -34,9 +34,11 @@ struct TensorTraits<thrust::device_vector<T> >//, std::enable_if_t<std::is_arith
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    using execution_policy  = CudaTag ;  //!< enable if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    using execution_policy  = CudaTag ;
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
+    using execution_policy  = OmpTag ;
 #else
-    using execution_policy  = OmpTag ;  //!< enable if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    using execution_policy  = SerialTag ;
 #endif
 };
 ///@}
@@ -57,7 +59,7 @@ struct ThrustTag<CudaTag>
 {
     using thrust_tag = thrust::cuda::tag;
 };
-#else
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
 template <>
 struct ThrustTag<OmpTag>
 {
