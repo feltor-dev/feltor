@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"Expand right hand side\n";
     const Vector solution = dg::evaluate ( fct, grid);
     const Vector deriv = dg::evaluate( fctX, grid);
-    const Vector b = dg::evaluate ( laplace3d_fct, grid);
+    Vector b = dg::evaluate ( laplace3d_fct, grid);
 
     if(rank==0)std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     t.tic();
@@ -127,7 +127,7 @@ int main( int argc, char* argv[])
     {
         laplace_split[i].set_chi( chi_split[i]);
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
-        number[i] = pcg( laplace_split[i], x_split[i], b_split[i], 1., w2d, eps);
+        number[i] = pcg.solve( laplace_split[i], x_split[i], b_split[i], 1., w2d, eps);
     }
     t.toc();
     if(rank==0)std::cout << "Number of iterations in split     "<< number[0]<<"\n";

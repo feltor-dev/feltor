@@ -340,7 +340,7 @@ struct Adaptive
      * @copydoc hide_rhs_solve
      * @copydoc hide_control_error
      */
-    template< class Implicit,
+    template< class RHS,
               class Solver,
               class ControlFunction = value_type (value_type, value_type,
                       value_type, value_type, value_type, value_type,
@@ -358,7 +358,7 @@ struct Adaptive
               value_type rtol,
               value_type atol)
     {
-        m_stepper.step( ex, solve, t0, u0, m_t_next, m_next, dt, m_delta);
+        m_stepper.step( rhs, solve, t0, u0, m_t_next, m_next, dt, m_delta);
         return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
     }
     ///Return true if the last stepsize in step was rejected

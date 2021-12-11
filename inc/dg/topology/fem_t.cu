@@ -52,7 +52,7 @@ int main ()
     // test now should contain Sf
     Vector test( barfunc);
     dg::blas1::pointwiseDot( barfunc, v2d, test);
-    dg::CG<Vector> cg( test, 1000);
+    dg::PCG<Vector> cg( test, 1000);
     Matrix fem_mass = dg::create::fem_mass( gDIR);
     //std::cout << "S matrix\n";
     //cusp::print( fem_mass);

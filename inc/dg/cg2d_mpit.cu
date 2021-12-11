@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
 
     if( rank == 0) std::cout << "Create Laplacian\n";
     dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> A ( grid);
-    dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny);
+    dg::PCG< dg::MDVec > pcg( x, n*n*Nx*Ny);
     if( rank == 0) std::cout<<"Evaluate right hand side\n";
     dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     const dg::MDVec solution = dg::evaluate ( fct, grid);

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "cg.h"
+#include "pcg.h"
 #include "elliptic.h"
 #include "backend/timer.h"
 
@@ -37,7 +37,7 @@ int main()
     dg::DVec b3 = dg::evaluate ( laplace_fct, g3d);
 
     dg::Elliptic<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> lap(g3d, dg::forward );
-    dg::CG<dg::DVec > pcg( x3, g3d.size());
+    dg::PCG<dg::DVec > pcg( x3, g3d.size());
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg.solve( lap, x3, b3, 1., w3d, eps, sqrt(lz))<<std::endl;
     t.toc();

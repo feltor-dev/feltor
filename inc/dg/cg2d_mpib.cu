@@ -59,7 +59,7 @@ int main( int argc, char* argv[])
     dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     //////////////////////////////////////////////////////////////////////
     t.tic(comm);
-    int number = pcg( lap, x, b, 1., w2d, eps);
+    int number = pcg.solve( lap, x, b, 1., w2d, eps);
     t.toc(comm);
     if( rank == 0)
     {

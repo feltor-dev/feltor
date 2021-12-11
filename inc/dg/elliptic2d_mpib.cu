@@ -4,7 +4,7 @@
 
 
 #include "elliptic.h"
-#include "cg.h"
+#include "pcg.h"
 #include "multigrid.h"
 
 #include "backend/timer.h"

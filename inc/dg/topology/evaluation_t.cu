@@ -154,11 +154,11 @@ int main()
     std::cout << "Test accuracy Dense Matrix\n";
     // massage a scalar product into dg::blas2::symv
     const dg::HVec func_h = dg::evaluate( function<double>, g2d);
-    const dg::DVec w_h = dg::create::weights( g2d);
+    const dg::HVec w_h = dg::create::weights( g2d);
     std::vector<dg::DVec> matrix( func_h.size());
     for( unsigned i=0; i<func_h.size(); i++)
-        matrix[i] = dg::DVec( 1, func_h[i]);
-    dg::DVec integral_d( 1);
+        matrix[i] = dg::DVec( 2, func_h[i]);
+    dg::DVec integral_d( 2);
     dg::blas2::symv( 1., dg::asDenseMatrix( dg::asPointers( matrix)), w_h,
             0., integral_d);
     res.d = integral_d[0];
