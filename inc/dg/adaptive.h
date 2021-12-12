@@ -21,21 +21,20 @@ get_value_type<ContainerType> l2norm( const ContainerType& x)
 }
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
 template<class value_type>
-value_type i_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type i_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
 {
-    return dt_0*pow( eps_0, -1./(value_type)embedded_order);
+    return dt[0]*pow( eps[0], -1./(value_type)embedded_order);
 }
 ///\f$ h_{n+1}= h_n \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f$
 template<class value_type>
-value_type pi_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type pi_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
 {
-    if( dt_1 == 0)
-        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
-                embedded_order, order);
+    if( dt[1] == 0)
+        return i_control( dt, eps, embedded_order, order);
     value_type m_k1 = -0.8, m_k2 = 0.31;
-    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
-                     * pow( eps_1, m_k2/(value_type)embedded_order);
-    return dt_0*factor;
+    value_type factor = pow( eps[0], m_k1/(value_type)embedded_order)
+                     * pow( eps[1], m_k2/(value_type)embedded_order);
+    return dt[0]*factor;
 }
 /**
  * @brief \f$ h_{n+1}= h_n \epsilon_n^{-0.58/p}\epsilon_{n-1}^{0.21/p}\epsilon_{n-2}^{-0.1/p}\f$
@@ -48,66 +47,56 @@ value_type pi_control( value_type dt_0, value_type dt_1, value_type dt_2, value_
  * converges very quickly to the desired timestep. In fact Kennedy and Carpenter, Appl. num. Math., (2003) report
  * that it outperformed other controllers in practical problems
  * @tparam value_type
- * @param dt_0 the present (old) timestep h_n
- * @param dt_1 the previous timestep
- * @param dt_2 the second previous timestep
- * @param eps_0 the error relative to the tolerance of the present timestep
- * @param eps_1 the error relative to the tolerance of the previous timestep
- * @param eps_2 the error relative to the tolerance of the second previous timestep
+ * @param dt the present (old, 0), previous [1] and second previous [2] timestep h_n
+ * @param eps the error relative to the tolerance of the present [0], previous [1] and second previous [2] timestep
  * @param embedded_order order \c q of the embedded timestep
  * @param order order \c p  of the timestep
  *
  * @return the new timestep
  */
 template<class value_type>
-value_type pid_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type pid_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
 {
-    if( dt_1 == 0)
-        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
-                embedded_order, order);
-    if( dt_2 == 0)
-        return pi_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
-                embedded_order, order);
+    if( dt[1] == 0)
+        return i_control( dt, eps, embedded_order, order);
+    if( dt[2] == 0)
+        return pi_control( dt, eps, embedded_order, order);
     value_type m_k1 = -0.58, m_k2 = 0.21, m_k3 = -0.1;
     //value_type m_k1 = -0.37, m_k2 = 0.27, m_k3 = -0.1;
-    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
-                     * pow( eps_1, m_k2/(value_type)embedded_order)
-                     * pow( eps_2, m_k3/(value_type)embedded_order);
-    return dt_0*factor;
+    value_type factor = pow( eps[0], m_k1/(value_type)embedded_order)
+                     * pow( eps[1], m_k2/(value_type)embedded_order)
+                     * pow( eps[2], m_k3/(value_type)embedded_order);
+    return dt[0]*factor;
 }
 
 /// \f$ h_{n+1} = h_n \epsilon_n^{-0.367/p}(\epsilon_n/\epsilon_{n-1})^{0.268/p} \f$
 template<class value_type>
-value_type ex_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type ex_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
 {
-    if( dt_1 == 0)
-        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
-                embedded_order, order);
+    if( dt[1] == 0)
+        return i_control( dt, eps, embedded_order, order);
     value_type m_k1 = -0.367, m_k2 = 0.268;
-    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
-                      * pow( eps_0/eps_1, m_k2/(value_type)embedded_order);
-    return dt_0*factor;
+    value_type factor = pow( eps[0], m_k1/(value_type)embedded_order)
+                      * pow( eps[0]/eps[1], m_k2/(value_type)embedded_order);
+    return dt[0]*factor;
 }
 /// \f$ h_{n+1} = h_n (h_n/h_{n-1}) \epsilon_n^{-0.98/p}(\epsilon_n/\epsilon_{n-1})^{-0.95/p} \f$
 template<class value_type>
-value_type im_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type im_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
 {
-    if( dt_1 == 0)
-        return i_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
-                embedded_order, order);
+    if( dt[1] == 0)
+        return i_control( dt, eps, embedded_order, order);
     value_type m_k1 = -0.98, m_k2 = -0.95;
-    value_type factor = pow( eps_0, m_k1/(value_type)embedded_order)
-                     *  pow( eps_0/eps_1, m_k2/(value_type)embedded_order);
-    return dt_0*dt_0/dt_1*factor;
+    value_type factor = pow( eps[0], m_k1/(value_type)embedded_order)
+                     *  pow( eps[0]/eps[1], m_k2/(value_type)embedded_order);
+    return dt[0]*dt[0]/dt[1]*factor;
 }
 /// h_{n+1} = |ex_control| < |im_control| ? ex_control : im_control
 template<class value_type>
-value_type imex_control( value_type dt_0, value_type dt_1, value_type dt_2, value_type eps_0, value_type eps_1, value_type eps_2, unsigned embedded_order, unsigned order)
+value_type imex_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
 {
-    value_type h1 = ex_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
-            embedded_order, order);
-    value_type h2 = im_control( dt_0, dt_1, dt_2, eps_0, eps_1, eps_2,
-            embedded_order, order);
+    value_type h1 = ex_control( dt, eps, embedded_order, order);
+    value_type h2 = im_control( dt, eps, embedded_order, order);
     // find value closest to zero
     return fabs( h1) < fabs( h2) ? h1 : h2;
 }
@@ -286,9 +275,8 @@ struct Adaptive
      * @copydoc hide_control_error
      */
     template< class RHS,
-              class ControlFunction = value_type (value_type, value_type,
-                      value_type, value_type, value_type, value_type,
-                      unsigned, unsigned),
+              class ControlFunction = value_type (std::array<value_type,3>,
+                      std::array<value_type,3>, unsigned, unsigned),
               class ErrorNorm = value_type( const container_type&)>
     void step( RHS& rhs,
               value_type t0,
@@ -296,14 +284,14 @@ struct Adaptive
               value_type& t1,
               container_type& u1,
               value_type& dt,
-              ControlFunction& control,
-              ErrorNorm& norm,
+              ControlFunction control,
+              ErrorNorm norm,
               value_type rtol,
-              value_type atol
-              )
+              value_type atol,
+              value_type reject_limit = 2)
     {
         m_stepper.step( rhs, t0, u0, m_t_next, m_next, dt, m_delta);
-        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
+        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol, reject_limit);
     }
     /*!@brief Semi-implicit adaptive step
      *
@@ -314,9 +302,8 @@ struct Adaptive
     template< class Explicit,
               class Implicit,
               class Solver,
-              class ControlFunction = value_type (value_type, value_type,
-                      value_type, value_type, value_type, value_type,
-                      unsigned, unsigned),
+              class ControlFunction = value_type (std::array<value_type,3>,
+                      std::array< value_type,3>, unsigned , unsigned),
               class ErrorNorm = value_type( const container_type&)>
     void step( Explicit& ex,
               Implicit& im,
@@ -326,13 +313,15 @@ struct Adaptive
               value_type& t1,
               container_type& u1,
               value_type& dt,
-              ControlFunction& control,
-              ErrorNorm& norm,
+              ControlFunction control,
+              ErrorNorm norm,
               value_type rtol,
-              value_type atol)
+              value_type atol,
+              value_type reject_limit = 2
+              )
     {
         m_stepper.step( ex, im, solve, t0, u0, m_t_next, m_next, dt, m_delta);
-        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
+        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol, reject_limit);
     }
     /*!@brief implicit adaptive step
      *
@@ -342,9 +331,8 @@ struct Adaptive
      */
     template< class RHS,
               class Solver,
-              class ControlFunction = value_type (value_type, value_type,
-                      value_type, value_type, value_type, value_type,
-                      unsigned, unsigned),
+              class ControlFunction = value_type (std::array<value_type,3>,
+                      std::array<value_type,3>, unsigned, unsigned),
               class ErrorNorm = value_type( const container_type&)>
     void step( RHS& rhs,
               Solver& solve,
@@ -356,37 +344,16 @@ struct Adaptive
               ControlFunction& control,
               ErrorNorm& norm,
               value_type rtol,
-              value_type atol)
+              value_type atol,
+              value_type reject_limit = 2
+              )
     {
         m_stepper.step( rhs, solve, t0, u0, m_t_next, m_next, dt, m_delta);
-        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol);
+        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol, reject_limit);
     }
     ///Return true if the last stepsize in step was rejected
     bool failed() const {
         return m_failed;
-    }
-
-    /*!@brief Set the limit above which a step is rejected
-     *
-     * "It is indeed necessary to reject steps every once in a while, but I
-     * usually try to avoid it to the greatest possible extent. In my
-     * opinion, the fear of having a too large error on some steps is vastly
-     * exaggerated. You see, in some steps the error is too large, and in
-     * others it is too small, and all controllers I constructed are designed
-     * to be “expectation value correct” in the sense that if the errors are
-     * random, the too large and too small errors basically cancel in the
-     * long run. Even so, there are times when the error is way
-     * out of proportion. But I usually accept an error that is up to, say
-     * 2*TOL, which typically won’t cause any problems." (G. Söderlind)
-     *
-     * Sometimes even 2 is not enough, for example
-     * when the stepsize fluctuates very much and the stepper fails often
-     * then it may help to increase the reject_limit further (to 10 say).
-     *
-     * @param new_reject_limit the default value is 2, so increase it
-    */
-    void set_reject_limit( value_type new_reject_limit) {
-        m_reject_limit = new_reject_limit;
     }
 
     /**
@@ -399,9 +366,8 @@ struct Adaptive
         return m_eps0;
     }
     private:
-    template< class ControlFunction = value_type (value_type, value_type,
-                      value_type, value_type, value_type, value_type,
-                      unsigned, unsigned),
+    template< class ControlFunction = value_type (std::array<value_type,3>,
+                      std::array<value_type,3>, unsigned, unsigned),
                 class ErrorNorm = value_type( const container_type&)>
     void update( value_type t0,
                 const container_type& u0,
@@ -411,17 +377,18 @@ struct Adaptive
                 ControlFunction& control,
                 ErrorNorm& norm,
                 value_type rtol,
-                value_type atol
+                value_type atol,
+                value_type reject_limit
               )
     {
         dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol,
                     m_size), u0, m_delta);
         m_eps0 = norm(m_delta);
         value_type dt0 = dt;
-        if( m_eps0 > m_reject_limit || std::isnan( m_eps0) )
+        if( m_eps0 > reject_limit || std::isnan( m_eps0) )
         {
             // if stepper fails, restart controller
-            dt = control( dt0, 0., m_dt2, m_eps0, m_eps1, m_eps2,
+            dt = control( {dt0, 0., m_dt2}, {m_eps0, m_eps1, m_eps2},
                     m_stepper.embedded_order(),
                     m_stepper.order());
             if( fabs( dt) > 0.9*fabs(dt0))
@@ -441,7 +408,7 @@ struct Adaptive
             }
             else
             {
-                dt = control( dt0, m_dt1, m_dt2, m_eps0, m_eps1, m_eps2,
+                dt = control( {dt0, m_dt1, m_dt2}, {m_eps0, m_eps1, m_eps2},
                         m_stepper.embedded_order(),
                         m_stepper.order());
             }
@@ -457,7 +424,6 @@ struct Adaptive
     bool m_failed = false;
     Stepper m_stepper;
     container_type m_next, m_delta;
-    value_type m_reject_limit = 2;
     value_type m_size, m_eps0 = 1, m_eps1=1, m_eps2=1;
     value_type m_t_next = 0;
     value_type m_dt1 = 0., m_dt2 = 0.;
@@ -550,11 +516,16 @@ substantial stiffness might best be avoided".
 
 /*!@class hide_control_error
  *
- * @tparam ControlFunction function or Functor called as dt' = \c control( dt0, dt1, dt2,
- * eps0, eps1, eps2, embedded_order, order), where all parameters are of type
+ * @tparam ControlFunction function or Functor called as dt' = \c control( {dt0, dt1, dt2},
+ * {eps0, eps1, eps2}, embedded_order, order), where all parameters are of type
  * value_type except the last two, which are unsigned.
  * @tparam ErrorNorm function or Functor of type value_type( const
  * ContainerType&)
+ * @param reject_limit the default value is 2.
+ * Sometimes even 2 is not enough, for example
+ * when the stepsize fluctuates very much and the stepper fails often
+ * then it may help to increase the reject_limit further (to 10 say).
+ *
  */
 
 /**
@@ -570,7 +541,82 @@ struct EntireDomain
 
 ///@addtogroup time
 ///@{
+// On the problem of capturing perfect forwarding in a lambda
+//https://stackoverflow.com/questions/26831382/capturing-perfectly-forwarded-variable-in-lambda
+//https://vittorioromeo.info/index/blog/capturing_perfectly_forwarded_objects_in_lambdas.html
 
+template<template<class> class Stepper, class ContainerType, class RHS, class
+value_type, class ErrorNorm = value_type( const ContainerType&), class
+ControlFunction = value_type(std::array<value_type,3>,
+        std::array<value_type,3>, unsigned, unsigned)>
+std::function<void( value_type&, ContainerType&, value_type&)>
+    bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
+          RHS&& rhs,
+          ControlFunction control,
+          ErrorNorm norm,
+          value_type rtol,
+          value_type atol)
+{
+    using Adapt = dg::Adaptive<Stepper<ContainerType>>;
+    return [=, cap = std::tuple<Adapt, RHS>(std::forward<Adapt>(adapt),
+            std::forward<RHS>(rhs))  ]( value_type& t,
+            ContainerType& y, value_type& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), t, y, t, y, dt, control, norm,
+                rtol, atol);
+    };
+}
+
+template<template<class> class Stepper, class ContainerType, class RHS, class Solver,
+class value_type, class ErrorNorm = value_type( const ContainerType&), class
+ControlFunction = value_type(std::array<value_type,3>,
+        std::array<value_type,3>, unsigned, unsigned)>
+std::function<void( value_type&, ContainerType&, value_type&)>
+    bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
+          RHS&& rhs,
+          Solver&& solve,
+          ControlFunction control,
+          ErrorNorm norm,
+          value_type rtol,
+          value_type atol,
+          value_type reject_limit = 2)
+{
+    using Adapt = dg::Adaptive<Stepper<ContainerType>>;
+    adapt.set_reject_limit( reject_limit);
+    return [=, cap = std::tuple<Adapt, RHS, Solver>(std::forward<Adapt>(adapt),
+            std::forward<RHS>(rhs), std::forward<Solver>(solve)) ](
+            value_type& t, ContainerType& y, value_type& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap), t, y, t, y,
+                dt, control, norm, rtol, atol);
+    };
+}
+template<template<class> class Stepper, class ContainerType, class Explicit, class Implicit, class Solver,
+class value_type, class ErrorNorm = value_type( const ContainerType&), class
+ControlFunction = value_type(std::array<value_type,3>,
+        std::array<value_type,3>, unsigned, unsigned)>
+std::function<void( value_type&, ContainerType&, value_type&)>
+    bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
+                  Explicit&& ex,
+                  Implicit&& im,
+                  Solver&& solve,
+                  ControlFunction control,
+                  ErrorNorm norm,
+                  value_type rtol,
+                  value_type atol,
+                  value_type reject_limit = 2)
+{
+    using Adapt = dg::Adaptive<Stepper<ContainerType>>;
+    adapt.set_reject_limit( reject_limit);
+    return [=, cap = std::tuple<Adapt, Explicit, Implicit,
+           Solver>(std::forward<Adapt>(adapt), std::forward<Explicit>(ex),
+                   std::forward<Implicit>(im), std::forward<Solver>(solve))  ](
+                   value_type& t, ContainerType& y, value_type& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap),
+                std::get<3>(cap), t, y, t, y, dt, control, norm, rtol, atol);
+    };
+}
 
 /**
  * @brief Integrates a differential equation
@@ -686,7 +732,7 @@ int integrate_in_domain( Stepper& stepper,
                     dt_current < t1) )
             dt_current = t1-t_current;
         // Compute a step and error
-        adapt( t_current, current, dt_current);
+        stepper( t_current, current, dt_current);
         if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
             throw dg::Error(dg::Message(_ping_)<<"integrate_in_domain failed to converge! dt = "<<std::scientific<<dt_current);
         counter++;
@@ -709,7 +755,7 @@ int integrate_in_domain( Stepper& stepper,
                 // Here we can assume that the timestepper always succeeds
                 // because dt_current is always smaller than the previous timestep
                 // t_current = t0, current = last (inside)
-                adapt( t_current, current, dt_current);
+                stepper( t_current, current, dt_current);
                 //stepper( t0, last, t_middle, u1, (t1-t0)/2.);
                 counter++;
                 if( domain.contains( current) )
@@ -767,32 +813,27 @@ int integrate_in_domain( Stepper& stepper,
  * @copydoc hide_control_error
  * @copydoc hide_ContainerType
  */
-template<class RHS,
-         class ContainerType,
-         class ErrorNorm = get_value_type<ContainerType>( const
-                 ContainerType&),
-         class ControlFunction = get_value_type<ContainerType>
-    (get_value_type<ContainerType>, get_value_type<ContainerType>,
-     get_value_type<ContainerType>, get_value_type<ContainerType>,
-     get_value_type<ContainerType>, get_value_type<ContainerType>,
-     unsigned, unsigned)>
+template<class RHS, class ContainerType, class value_type, class ErrorNorm =
+    value_type( const ContainerType&), class ControlFunction = value_type
+    (std::array<value_type,3>, std::array<value_type,3>, unsigned, unsigned)>
 int integrateERK( std::string name,
                   RHS& rhs,
-                  get_value_type<ContainerType> t0,
+                  value_type t0,
                   const ContainerType& u0,
-                  get_value_type<ContainerType> t1,
+                  value_type t1,
                   ContainerType& u1,
-                  get_value_type<ContainerType> dt,
+                  value_type dt,
                   ControlFunction control,
                   ErrorNorm norm,
-                  get_value_type<ContainerType> rtol,
-                  get_value_type<ContainerType> atol=1e-10
+                  value_type rtol,
+                  value_type atol=1e-10,
+                  value_type reject_limit = 2
               )
 {
     dg::Adaptive<dg::ERKStep<ContainerType>> pd( name,u0);
     auto adapt = [&](double& t, ContainerType& u, double& dt)
     {
-        pd.step( rhs, t, u, t, u, dt, control, norm, rtol, atol);
+        pd.step( rhs, t, u, t, u, dt, control, norm, rtol, atol, reject_limit);
     };
     return integrate( adapt, t0, u0, t1, u1, dt);
 }

@@ -5,6 +5,7 @@
  *
  * @note include <mpi.h> before this header to activate mpi support
  */
+#include "backend/config.h"
 #include "backend/timer.h"
 #include "backend/transpose.h"
 #include "topology/split_and_join.h"
