@@ -19,6 +19,24 @@ get_value_type<ContainerType> l2norm( const ContainerType& x)
 {
     return sqrt( dg::blas1::dot( x,x));
 }
+/*! @brief Compute \f$ \sqrt{\sum_i x_i^2}\f$ using naive summation
+ *
+ * This overload is intended for small arrays where the \c dg::blas1::dot function
+ * has its worst performance and takes overly long time to compute
+ * The intention of this function is to used in the \c Adaptive timestepping class.
+ * @param x Vector to take the norm of
+ * @return \c sqrt(sum_i x_i^2)
+ */
+template <class value_type, int N,
+    typename = std::enable_if_t<std::is_arithmetic<value_type>::value>>
+value_type l2norm( const std::array<value_type,N>& x)
+{
+    value_type sum;
+    for( unsigned i=0; i<N; i++)
+        sum += x[i]*x[i];
+    return sqrt( sum);
+}
+k
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
 template<class value_type>
 value_type i_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
