@@ -101,6 +101,18 @@ struct DefaultSolver
     bool m_benchmark = true;
 };
 
+template<class Implicit, class ContainerType>
+auto make_default_solver( Implicit& im, const ContainerType& copyable, unsigned max_iter, get_value_type<ContainerType> eps, bool benchmark = true)
+{
+
+    DefaultSolver<ContainerType> solver( copyable, max_iter, eps);
+    solver.set_benchmark( benchmark);
+    return [=, &im = im, solver = std::move( solver)]( auto alpha, auto time, auto& y, const auto& rhs) mutable
+    {
+        solver.solve( alpha, im, time, y, rhs);
+    };
+}
+
 /*!@brief Fixed point iterator for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
  *
  * for given t, alpha and rho.
