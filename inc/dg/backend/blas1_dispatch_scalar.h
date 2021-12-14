@@ -10,6 +10,19 @@
 ///@cond
 namespace dg
 {
+namespace detail
+{
+template< class To, class From, class ...Params>
+To doConstruct( const From& from, AnyScalarTag, AnyScalarTag, Params&& ...ps)
+{
+    return To( from);
+}
+template< class From, class To, class ...Params>
+void doAssign( const From& from, To& to, AnyScalarTag, AnyScalarTag, Params&& ...ps)
+{
+    to = from;
+}
+}//namespace detail
 namespace blas1
 {
 namespace detail
