@@ -36,7 +36,7 @@ value_type l2norm( const std::array<value_type,N>& x)
         sum += x[i]*x[i];
     return sqrt( sum);
 }
-k
+
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
 template<class value_type>
 value_type i_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
@@ -373,6 +373,12 @@ struct Adaptive
     bool failed() const {
         return m_failed;
     }
+    const unsigned& nfailed() const {
+        return m_nfailed;
+    }
+    unsigned& nfailed() {
+        return m_nfailed;
+    }
 
     /**
      * @brief Get the latest error norm relative to solution vector
@@ -380,7 +386,7 @@ struct Adaptive
      * The error of the latest call to \c step
      * @return eps_{n+1}
      */
-    value_type get_error( ) const{
+    const value_type& get_error( ) const{
         return m_eps0;
     }
     private:
@@ -413,7 +419,7 @@ struct Adaptive
                 dt = 0.9*dt0;
             //0.9*dt0 is a safety limit
             //that prevents an increase of the timestep in case the stepper fails
-            m_failed = true;
+            m_failed = true; m_nfailed++;
             dg::blas1::copy( u0, u1);
             t1 = t0;
         }
@@ -440,6 +446,7 @@ struct Adaptive
         }
     }
     bool m_failed = false;
+    unsigned m_nfailed = 0;
     Stepper m_stepper;
     container_type m_next, m_delta;
     value_type m_size, m_eps0 = 1, m_eps1=1, m_eps2=1;
