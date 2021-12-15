@@ -124,10 +124,7 @@ struct ERKStep
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    ERKStep()
-    {
-        m_k.resize(1); //this makes the copyable function work
-    }
+    ERKStep() { m_k.resize(1); }
     /**
     * @brief Reserve internal workspace for the integration
     *
@@ -162,10 +159,44 @@ struct ERKStep
     ///All subsequent calls to \c step method will enable the check for the first same as last property
     void enable_fsal(){ m_ignore_fsal = false;}
 
-    ///@copydoc RungeKutta::step()
+    /// @brief Advance one step with error estimate
+    ///@copydetails step()
     ///@param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+    {
+        step ( rhs, t0, u0, t1, u1, dt, delta, true);
+    }
+    /**
+    * @brief Advance one step ignoring error estimate
+    *
+    * @copydoc hide_rhs
+    * @param rhs right hand side subroutine
+    * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
+    * @param u1 (write only) contains result on return (may alias u0)
+    * @param dt timestep
+    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
+    * @note About the first same as last property (fsal): Some Butcher tableaus
+    * (e.g. Dormand-Prince or Bogacki-Shampine) have the property that the last value k_s of a
+    * timestep is the same as the first value k_0 of the next timestep. This
+    * means that we can save one call to the right hand side. This property is
+    * automatically activated if \c tableau.isFsal() returns \c true and \c t0
+    * equals \c t1 of the last call to \c step. You can deactivate it by
+    * calling the \c ignore_fsal() method, which is useful for splitting methods
+    * but increases the number of rhs calls by 1.
+    */
+    template<class RHS>
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt)
+    {
+        if( !m_allocated)
+        {
+            dg::assign( m_k[0], m_tmp);
+            m_allocated = true;
+        }
+        step ( rhs, t0, u0, t1, u1, dt, m_tmp, false);
+    }
     ///global order of the method given by the current Butcher Tableau
     unsigned order() const {
         return m_rk.order();
@@ -179,17 +210,21 @@ struct ERKStep
         return m_rk.num_stages();
     }
   private:
+    template<class RHS>
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool);
     ButcherTableau<value_type> m_rk;
     std::vector<value_type> m_rkb, m_rkd;
     std::vector<ContainerType> m_k;
     value_type m_t1 = 1e300;//remember the last timestep at which ERK is called
     bool m_ignore_fsal = false;
+    ContainerType m_tmp; //  only conditionally allocated
+    bool m_allocated = false;
 };
 
 ///@cond
 template< class ContainerType>
 template< class RHS>
-void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
 {
     unsigned s = m_rk.num_stages();
     std::vector<const ContainerType*> k_ptrs = dg::asPointers( m_k);
@@ -205,16 +240,18 @@ void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u
             rka[l] = m_rk.a(i,l);
 
         tu = DG_FMA( dt,m_rk.c(i),t0); //l=0
-        dg::blas1::copy( u0, delta);
-        dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, i), rka, 1.,
-            delta);
+        dg::blas1::copy( u0, delta); // can't use u1 here cause u0 can alias
+        dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, i), rka, 1., delta);
 
         f( tu, delta, m_k[i]);
     }
     //Now add everything up to get solution and error estimate
     dg::blas1::copy( u0, u1);
-    detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkd},
+    if( compute_delta)
+        detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkd},
             {1.,0.}, {&u1, &delta});
+    else
+        blas2::gemv( dt, dg::asDenseMatrix(k_ptrs), m_rkb, 1., u1);
     //make sure (t1,u1) is the last call to f
     m_t1 = t1 = t0 + dt;
     if(!m_rk.isFsal() )
@@ -449,7 +486,7 @@ struct DIRKStep
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
-    DIRKStep(){ m_kI.resize(1); } // make copyable work
+    DIRKStep(){ m_kI.resize(1); }
 
     /*!@brief Construct with a diagonally implicit Butcher Tableau
      *
@@ -487,19 +524,37 @@ struct DIRKStep
     /**
     * @brief Advance one step
     *
+    * @copydetails step()
+    * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
+    */
+    template< class RHS, class Solver>
+    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+    {
+        step( rhs, solve, t0, u1, t1, u1, dt, delta, true);
+    }
+    /**
+    * @brief Advance one step
+    *
     * @copydoc hide_rhs_solve
     * @param rhs right hand side subroutine
-    * @param solve the solve method
+    * @param solve solver for the right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return
     *   may alias \c t0)
     * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
-    * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     */
     template< class RHS, class Solver>
-    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt)
+    {
+        if( !m_allocated)
+        {
+            dg::assign( m_kI[0], m_tmp);
+            m_allocated = true;
+        }
+        step( rhs, solve, t0, u1, t1, u1, dt, m_tmp, false);
+    }
     ///@copydoc ERKStep::order()
     unsigned order() const {
         return m_rkI.order();
@@ -514,15 +569,19 @@ struct DIRKStep
     }
 
     private:
+    template< class RHS, class Solver>
+    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta);
     ButcherTableau<value_type> m_rkI;
     std::vector<ContainerType> m_kI;
+    ContainerType m_tmp;
     std::vector<value_type> m_rkIb, m_rkId;
+    bool m_allocated = false;
 };
 
 ///@cond
 template<class ContainerType>
 template< class RHS, class Solver>
-void DIRKStep<ContainerType>::step( RHS& rhs, Solver& solve,  value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+void DIRKStep<ContainerType>::step( RHS& rhs, Solver& solve,  value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
 {
     unsigned s = m_rkI.num_stages();
     value_type tu = t0;
@@ -560,8 +619,11 @@ void DIRKStep<ContainerType>::step( RHS& rhs, Solver& solve,  value_type t0, con
     t1 = t0 + dt;
     //Now compute result and error estimate
     dg::blas1::copy( u0, u1);
-    detail::gemm( {dt,dt}, dg::asDenseMatrix(kIptr), {&m_rkIb, &m_rkId},
+    if( compute_delta)
+        detail::gemm( {dt,dt}, dg::asDenseMatrix(kIptr), {&m_rkIb, &m_rkId},
             {1.,0.}, {&u1, &delta});
+    else
+        blas2::gemv( dt, dg::asDenseMatrix(kIptr), m_rkIb, 1., u1);
 }
 ///@endcond
 
@@ -645,71 +707,7 @@ the harmonic oscillator:
 * @copydoc hide_ContainerType
 */
 template<class ContainerType>
-struct RungeKutta
-{
-    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container_type = ContainerType; //!< the type of the vector class in use
-    ///@brief No memory allocation, Call \c construct before using the object
-    RungeKutta(){}
-    /**
-    * @brief Reserve internal workspace for the integration
-    *
-    * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
-    * @param copyable vector of the size that is later used in \c step (
-     it does not matter what values \c copyable contains, but its size is important;
-     the \c step method can only be called with vectors of the same size)
-    */
-    RungeKutta( ConvertsToButcherTableau<value_type> tableau, const ContainerType& copyable): m_erk( tableau, copyable), m_delta( copyable)
-        { }
-    ///@copydoc hide_construct
-    template<class ...Params>
-    void construct( Params&& ...ps)
-    {
-        //construct and swap
-        *this = RungeKutta( std::forward<Params>( ps)...);
-    }
-    ///@copydoc hide_copyable
-    const ContainerType& copyable()const{ return m_delta;}
-    /**
-    * @brief Advance one step
-    *
-    * @copydoc hide_rhs
-    * @param rhs right hand side subroutine
-    * @param t0 start time
-    * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
-    * @param u1 (write only) contains result on return (may alias u0)
-    * @param dt timestep
-    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
-    * @note About the first same as last property (fsal): Some Butcher tableaus
-    * (e.g. Dormand-Prince or Bogacki-Shampine) have the property that the last value k_s of a
-    * timestep is the same as the first value k_0 of the next timestep. This
-    * means that we can save one call to the right hand side. This property is
-    * automatically activated if \c tableau.isFsal() returns \c true and \c t0
-    * equals \c t1 of the last call to \c step. You can deactivate it by
-    * calling the \c ignore_fsal() method, which is useful for splitting methods
-    * but increases the number of rhs calls by 1.
-    */
-    template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
-        m_erk.step( rhs, t0, u0, t1, u1, dt, m_delta);
-    }
-    ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
-    void ignore_fsal(){ m_erk.ignore_fsal();}
-    ///All subsequent calls to \c step method will enable the check for the first same as last property
-    void enable_fsal(){ m_erk.enable_fsal();}
-    ///@copydoc ERKStep::order
-    unsigned order() const {
-        return m_erk.order();
-    }
-    ///@copydoc ERKStep::num_stages()
-    unsigned num_stages() const{
-        return m_erk.num_stages();
-    }
-  private:
-    ERKStep<ContainerType> m_erk;
-    ContainerType m_delta;
-};
+using RungeKutta = ERKStep<ContainerType>;
 
 /**
  * @brief A filter that does nothing
@@ -875,55 +873,7 @@ You can provide your own coefficients or use one of our predefined methods:
 * @copydoc hide_ContainerType
 */
 template<class ContainerType>
-struct ImplicitRungeKutta
-{
-    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
-    using container_type = ContainerType; //!< the type of the vector class in use
-    ///@brief No memory allocation, Call \c construct before using the object
-    ImplicitRungeKutta(){}
-
-    ///@copydoc DIRKStep::DIRKStep()
-    ImplicitRungeKutta( ConvertsToButcherTableau<value_type> im_tableau,
-               const ContainerType& copyable
-             ): m_dirk( im_tableau, copyable), m_delta(copyable)
-             {}
-    ///@copydoc hide_construct
-    template<class ...Params>
-    void construct(Params&& ...ps)
-    {
-        *this = ImplicitRungeKutta( std::forward<Params>(ps)...);
-    }
-    ///@copydoc hide_copyable
-    const ContainerType& copyable()const{ return m_delta;}
-    /**
-    * @brief Advance one step
-    *
-    * @copydoc hide_rhs_solve
-    * @param rhs right hand side subroutine
-    * @param solve solver for the right hand side subroutine
-    * @param t0 start time
-    * @param u0 value at \c t0
-    * @param t1 (write only) end time ( equals \c t0+dt on return
-    *   may alias \c t0)
-    * @param u1 (write only) contains result on return (may alias u0)
-    * @param dt timestep
-    */
-    template<class RHS, class Solver>
-    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
-        m_dirk.step( rhs, solve, t0, u0, t1, u1, dt, m_delta);
-    }
-    ///@copydoc ERKStep::order
-    unsigned order() const {
-        return m_dirk.order();
-    }
-    ///@copydoc ERKStep::num_stages()
-    unsigned num_stages() const{
-        return m_dirk.num_stages();
-    }
-  private:
-    DIRKStep<ContainerType> m_dirk;
-    ContainerType m_delta;
-};
+using ImplicitRungeKutta = DIRKStep<ContainerType>;
 
 ///@addtogroup time
 ///@{
@@ -955,6 +905,39 @@ void stepperRK(ConvertsToButcherTableau<get_value_type<ContainerType>> tableau,
     value_type t0 = t_begin;
     for( unsigned i=0; i<N; i++)
         rk.step( rhs, t0, end, t0, end, dt);
+}
+
+template<class Stepper, class RHS>
+auto bind_step( Stepper&& stepper, RHS&& rhs)
+{
+    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
+            std::forward<RHS>(rhs))  ]( auto& t, auto& y, auto& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), t, y, t, y, dt);
+    };
+}
+template<class Stepper, class RHS, class Solver>
+auto bind_step( Stepper&& stepper, RHS&& rhs, Solver&& solve)
+{
+    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
+            std::forward<RHS>(rhs),
+            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap), t, y, t, y, dt);
+    };
+}
+template<class Stepper, class Explicit, class Implicit, class Solver>
+auto bind_step( Stepper&& stepper, Explicit&& ex, Implicit&& im, Solver&& solve)
+{
+    return [=, cap = std::tuple<Stepper, Explicit, Implicit>(
+            std::forward<Stepper>(stepper),
+            std::forward<Explicit>(ex),
+            std::forward<Implicit>(im),
+            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap),
+                std::get<3>(cap), t, y, t, y, dt);
+    };
 }
 
 

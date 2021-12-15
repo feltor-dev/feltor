@@ -695,5 +695,44 @@ void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_ty
     f(m_tu, m_u[0], m_f[0]); //call f on new point
 }
 ///@endcond
+//
+template<class Stepper, class RHS, class ContainerType, class value_type>
+auto bind_step( Stepper&& stepper, RHS&& rhs, value_type t0, const
+        ContainerType& u0, value_type dt )
+{
+    stepper.init( rhs, t0, dt);
+    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
+            std::forward<RHS>(rhs))  ]( auto& t, auto& y, auto& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), t, y);
+    };
+}
+template<class Stepper, class RHS, class Solver, class ContainerType, class value_type>
+auto bind_step( Stepper&& stepper, RHS&& rhs, Solver&& solve, value_type t0,
+        const ContainerType& u0, value_type dt )
+{
+    stepper.init( rhs, solve, u0, dt);
+    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
+            std::forward<RHS>(rhs),
+            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap), t, y);
+    };
+}
+template<class Stepper, class Explicit, class Implicit, class Solver, class ContainerType, class value_type>
+auto bind_step( Stepper&& stepper, Explicit&& ex, Implicit&& im, Solver&&
+        solve, value_type t0, const ContainerType& u0, value_type dt)
+{
+    stepper.init( ex, im, solve, t0, u0, dt);
+    return [=, cap = std::tuple<Stepper, Explicit, Implicit>(
+            std::forward<Stepper>(stepper),
+            std::forward<Explicit>(ex),
+            std::forward<Implicit>(im),
+            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap),
+                std::get<3>(cap), t, y);
+    };
+}
 
 } //namespace dg

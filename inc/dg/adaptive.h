@@ -574,21 +574,21 @@ template<template<class> class Stepper, class ContainerType, class RHS, class
 value_type, class ErrorNorm = value_type( const ContainerType&), class
 ControlFunction = value_type(std::array<value_type,3>,
         std::array<value_type,3>, unsigned, unsigned)>
-std::function<void( value_type&, ContainerType&, value_type&)>
-    bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
+auto bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
           RHS&& rhs,
           ControlFunction control,
           ErrorNorm norm,
           value_type rtol,
-          value_type atol)
+          value_type atol,
+          value_type reject_limit = 2)
 {
     using Adapt = dg::Adaptive<Stepper<ContainerType>>;
     return [=, cap = std::tuple<Adapt, RHS>(std::forward<Adapt>(adapt),
-            std::forward<RHS>(rhs))  ]( value_type& t,
-            ContainerType& y, value_type& dt) mutable
+            std::forward<RHS>(rhs))  ]( auto& t,
+            auto& y, auto& dt) mutable
     {
         std::get<0>(cap).step( std::get<1>(cap), t, y, t, y, dt, control, norm,
-                rtol, atol);
+                rtol, atol, reject_limit);
     };
 }
 
@@ -596,8 +596,7 @@ template<template<class> class Stepper, class ContainerType, class RHS, class So
 class value_type, class ErrorNorm = value_type( const ContainerType&), class
 ControlFunction = value_type(std::array<value_type,3>,
         std::array<value_type,3>, unsigned, unsigned)>
-std::function<void( value_type&, ContainerType&, value_type&)>
-    bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
+auto bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
           RHS&& rhs,
           Solver&& solve,
           ControlFunction control,
@@ -607,21 +606,19 @@ std::function<void( value_type&, ContainerType&, value_type&)>
           value_type reject_limit = 2)
 {
     using Adapt = dg::Adaptive<Stepper<ContainerType>>;
-    adapt.set_reject_limit( reject_limit);
     return [=, cap = std::tuple<Adapt, RHS, Solver>(std::forward<Adapt>(adapt),
             std::forward<RHS>(rhs), std::forward<Solver>(solve)) ](
-            value_type& t, ContainerType& y, value_type& dt) mutable
+            auto& t, auto& y, auto& dt) mutable
     {
         std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap), t, y, t, y,
-                dt, control, norm, rtol, atol);
+                dt, control, norm, rtol, atol, reject_limit);
     };
 }
 template<template<class> class Stepper, class ContainerType, class Explicit, class Implicit, class Solver,
 class value_type, class ErrorNorm = value_type( const ContainerType&), class
 ControlFunction = value_type(std::array<value_type,3>,
         std::array<value_type,3>, unsigned, unsigned)>
-std::function<void( value_type&, ContainerType&, value_type&)>
-    bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
+auto bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
                   Explicit&& ex,
                   Implicit&& im,
                   Solver&& solve,
@@ -632,14 +629,14 @@ std::function<void( value_type&, ContainerType&, value_type&)>
                   value_type reject_limit = 2)
 {
     using Adapt = dg::Adaptive<Stepper<ContainerType>>;
-    adapt.set_reject_limit( reject_limit);
     return [=, cap = std::tuple<Adapt, Explicit, Implicit,
            Solver>(std::forward<Adapt>(adapt), std::forward<Explicit>(ex),
-                   std::forward<Implicit>(im), std::forward<Solver>(solve))  ](
-                   value_type& t, ContainerType& y, value_type& dt) mutable
+                   std::forward<Implicit>(im), std::forward<Solver>(solve))](
+                   auto& t, auto& y, auto& dt) mutable
     {
         std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap),
-                std::get<3>(cap), t, y, t, y, dt, control, norm, rtol, atol);
+                std::get<3>(cap), t, y, t, y, dt, control, norm, rtol, atol,
+                reject_limit);
     };
 }
 
