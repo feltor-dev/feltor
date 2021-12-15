@@ -52,6 +52,9 @@ using get_pointer_type = std::conditional_t< std::is_const< std::remove_referenc
 template<class T> //T = RecursiveVector
 using get_element_type = std::conditional_t< std::is_const< std::remove_reference_t<T> >::value,
     const typename std::decay_t<T>::value_type&, typename std::decay_t<T>::value_type& >;
+template<class T> //T = std::map
+using get_mapped_type = std::conditional_t< std::is_const< std::remove_reference_t<T> >::value,
+    const typename std::decay_t<T>::mapped_type&, typename std::decay_t<T>::mapped_type& >;
 
 template<class T>//T = MPIVector
 using get_data_type = std::conditional_t< std::is_const< std::remove_reference_t<T> >::value,
@@ -62,8 +65,13 @@ inline get_element_type<T> do_get_vector_element( T&& v, unsigned i, RecursiveVe
 {
     return v[i];
 }
-template<class T>
-inline T&& do_get_vector_element( T&& v, unsigned i, AnyScalarTag){
+template<class T, class Key>
+inline get_mapped_type<T> do_get_vector_element( T&& v, const Key& key, StdMapTag)//-> decltype(v[i]){
+{
+    return v.at(key);
+}
+template<class T, class Key>
+inline T&& do_get_vector_element( T&& v, const Key& i, AnyScalarTag){
     return std::forward<T>(v);
 }
 

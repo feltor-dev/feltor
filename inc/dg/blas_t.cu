@@ -48,8 +48,8 @@ int main()
     std::cout << "Recursive DVec reduction          " << (dg::blas1::reduce( dvec1, 0, thrust::maximum<double>()) == 30) <<std::endl;
     dg::blas1::copy( 2., arrdvec1);
     std::cout << "Recursive DVec Copy Scalar to     "<< (arrdvec1[0][0] == 2 && arrdvec1[1][0]==2)<<std::endl;
-    dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
-    std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
+    //dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
+    //std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
     // test the examples in the documentation
     // dg::blas1::subroutine( []__host__ __device__(double& v){ v+=1.;}, dvec1);
     dg::blas1::plus( dvec1, 1);
@@ -58,8 +58,8 @@ int main()
     std::cout << dvec1[0]<< " "<<array_w[2][0]<<"\n";
     dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);
     std::cout << "Example in documentation          "<< (dvec1[0] ==374)<<std::endl;
-    dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
-    std::cout << "Example in documentation          "<< (array_v[0][0] == 132 && array_v[1][1] == 903)<<std::endl;
+    //dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
+    //std::cout << "Example in documentation          "<< (array_v[0][0] == 132 && array_v[1][1] == 903)<<std::endl;
     std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);
     std::cout << "blas1 dot recursive Scalar          "<< (result == 6) <<"\n";
@@ -85,6 +85,12 @@ int main()
     //Check compiler error:
     //NoFunctor nof;
     //dg::blas2::symv( nof, arrdvec1[0], dvec1);
+    std::cout << "Test std::map\n";
+    std::map< std::string, dg::DVec> testmap{ { "a", dvec1}, {"b", dvec1}};
+    std::map< std::string, dg::DVec> testmap2( testmap);
+    std::map< std::string, dg::DVec> testmap3{ { "c", dvec1}, {"b", dvec1}};
+    dg::blas1::axpby( 2., testmap, 3., testmap3);
+    std::cout << "axpby "<< testmap2["a"][0] << " "<<testmap2["b"][0] << std::endl;
 
     return 0;
 }

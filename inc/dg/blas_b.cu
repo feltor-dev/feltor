@@ -115,12 +115,12 @@ int main()
     t.toc();
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
     //Test new evaluate
-    std::array<value_type, 3> array_p{ 1,2,3};
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas1::subroutine( Expression(), u, v, x, array_p);
-    t.toc();
-    std::cout<<"Subroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    //std::array<value_type, 3> array_p{ 1,2,3};
+    //t.tic();
+    //for( int i=0; i<multi; i++)
+    //    dg::blas1::subroutine( Expression(), u, v, x, array_p);
+    //t.toc();
+    //std::cout<<"Subroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::subroutine( test_routine(2.,4.), x, y, z, u, v, w, h);
@@ -242,7 +242,7 @@ int main()
     t.toc();
     std::cout<<"recursive dot took               " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     thrust::host_vector<value_type> test_serial((int)size_rec, (value_type)0.1);
-    norm += dg::blas1::dot( 1., test_serial);//warm up
+    norm += dg::blas1::dot( test_serial, test_serial);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( test_serial, test_serial);//warm up

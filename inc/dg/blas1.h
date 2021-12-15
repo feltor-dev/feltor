@@ -14,6 +14,7 @@
 #include "backend/blas1_dispatch_mpi.h"
 #endif
 #include "backend/blas1_dispatch_vector.h"
+#include "backend/blas1_dispatch_map.h"
 #include "subroutines.h"
 
 /*!@file
