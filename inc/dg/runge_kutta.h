@@ -4,6 +4,7 @@
 #include <cassert>
 #include <array>
 
+#include "ode.h"
 #include "backend/exceptions.h"
 #include "tableau.h"
 #include "blas1.h"
@@ -371,7 +372,7 @@ struct ARKStep
     * call \c ex on the solution
     */
     template< class Explicit, class Implicit, class Solver>
-    void step( Explicit& ex, Implicit& im, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    void step( const std::tuple<Explicit, Implicit, Solver>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///@copydoc ERKStep::order()
     unsigned order() const {
         return m_rkE.order();
@@ -413,16 +414,16 @@ struct ARKStep
 ///@cond
 template<class ContainerType>
 template< class Explicit, class Implicit, class Solver>
-void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+void ARKStep<ContainerType>::step( const std::tuple<Explicit,Implicit,Solver>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
 {
     unsigned s = m_rkE.num_stages();
     value_type tu = t0;
     //0 stage
     //!! Assume: a^E_00 = a^I_00 = 0
     if( t0 != m_t1)
-        ex(t0, u0, m_kE[0]); //freshly compute k_0
+        std::get<0>(ode)(t0, u0, m_kE[0]); //freshly compute k_0
     if( !m_implicit_fsal) // all a(i,0) == 0
-        im(t0, u0, m_kI[0]);
+        std::get<1>(ode)(t0, u0, m_kI[0]);
     // DO NOT HOLD POINTERS AS PRVIATE MEMBERS
     std::vector<const ContainerType*> k_ptrs( 2*m_rkI.num_stages());
     for( unsigned i=0; i<m_rkI.num_stages(); i++)
@@ -443,9 +444,9 @@ void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, Solver& solve, va
         dg::blas1::copy( u0, m_kI[i]);
         dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, 2*i), rka, 1., m_kI[i]);
         value_type alpha = dt*m_rkI.a(i,i);
-        solve( alpha, tu, delta, m_kI[i]);
+        std::get<2>(ode)( alpha, tu, delta, m_kI[i]);
         dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
-        ex(tu, delta, m_kE[i]);
+        std::get<0>(ode)(tu, delta, m_kE[i]);
     }
     m_t1 = t1 = tu;
     //Now compute result and error estimate
@@ -454,7 +455,7 @@ void ARKStep<ContainerType>::step( Explicit& ex, Implicit& im, Solver& solve, va
     detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkd},
             {1.,0.}, {&u1, &delta});
     //make sure (t1,u1) is the last call to ex
-    ex(t1,u1,m_kE[0]);
+    std::get<0>(ode)(t1,u1,m_kE[0]);
 }
 ///@endcond
 
@@ -528,9 +529,11 @@ struct DIRKStep
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     */
     template< class RHS, class Solver>
-    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+    void step( const std::tuple<RHS,Solver>& ode, value_type t0, const
+        ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt,
+        ContainerType& delta)
     {
-        step( rhs, solve, t0, u1, t1, u1, dt, delta, true);
+        step( ode, t0, u0, t1, u1, dt, delta, true);
     }
     /**
     * @brief Advance one step
@@ -546,14 +549,15 @@ struct DIRKStep
     * @param dt timestep
     */
     template< class RHS, class Solver>
-    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt)
+    void step( const std::tuple<RHS, Solver>& ode, value_type t0, const
+        ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt)
     {
         if( !m_allocated)
         {
             dg::assign( m_kI[0], m_tmp);
             m_allocated = true;
         }
-        step( rhs, solve, t0, u1, t1, u1, dt, m_tmp, false);
+        step( ode, t0, u0, t1, u1, dt, m_tmp, false);
     }
     ///@copydoc ERKStep::order()
     unsigned order() const {
@@ -570,7 +574,9 @@ struct DIRKStep
 
     private:
     template< class RHS, class Solver>
-    void step( RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta);
+    void step( const std::tuple<RHS, Solver>& ode, value_type t0, const
+            ContainerType& u0, value_type& t1, ContainerType& u1, value_type
+            dt, ContainerType& delta, bool compute_delta);
     ButcherTableau<value_type> m_rkI;
     std::vector<ContainerType> m_kI;
     ContainerType m_tmp;
@@ -581,7 +587,7 @@ struct DIRKStep
 ///@cond
 template<class ContainerType>
 template< class RHS, class Solver>
-void DIRKStep<ContainerType>::step( RHS& rhs, Solver& solve,  value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
+void DIRKStep<ContainerType>::step( const std::tuple<RHS,Solver>& ode,  value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
 {
     unsigned s = m_rkI.num_stages();
     value_type tu = t0;
@@ -592,11 +598,11 @@ void DIRKStep<ContainerType>::step( RHS& rhs, Solver& solve,  value_type t0, con
     if( m_rkI.a(0,0) !=0 )
     {
         alpha = dt*m_rkI.a(0,0);
-        solve( alpha, tu, delta, u0);
+        std::get<1>(ode)( alpha, tu, delta, u0);
         dg::blas1::axpby( 1./alpha, delta, -1./alpha, u0, m_kI[0]);
     }
     else
-        rhs(tu, u0, m_kI[0]);
+        std::get<0>(ode)(tu, u0, m_kI[0]);
     std::vector<const ContainerType*> kIptr = dg::asPointers( m_kI);
 
     for( unsigned i=1; i<s; i++)
@@ -610,11 +616,11 @@ void DIRKStep<ContainerType>::step( RHS& rhs, Solver& solve,  value_type t0, con
         if( m_rkI.a(i,i) !=0 )
         {
             alpha = dt*m_rkI.a(i,i);
-            solve( alpha, tu, delta, m_kI[i]);
+            std::get<1>(ode)( alpha, tu, delta, m_kI[i]);
             dg::blas1::axpby( 1./alpha, delta, -1./alpha, m_kI[i]);
         }
         else
-            rhs(tu, delta, m_kI[i]);
+            std::get<0>(ode)(tu, delta, m_kI[i]);
     }
     t1 = t0 + dt;
     //Now compute result and error estimate
@@ -792,8 +798,7 @@ struct ShuOsher
     *
     * @copydoc hide_rhs
     * @copydoc hide_limiter
-    * @param limiter the filter or limiter to use
-    * @param rhs right hand side subroutine
+    * @param ode right hand side subroutine and limiter to use
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
@@ -802,14 +807,14 @@ struct ShuOsher
     * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
     */
     template<class RHS, class Limiter>
-    void step( RHS& rhs, Limiter& limiter, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
+    void step( const std::tuple<RHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         unsigned s = m_t.num_stages();
         std::vector<value_type> ts( m_t.num_stages()+1);
         ts[0] = t0;
         if( t0 != m_t1 ) //this is the first time we call step
         {
-            limiter.apply( u0, m_u[0]);
-            rhs(ts[0], m_u[0], m_k[0]); //freshly compute k_0
+            std::get<1>(ode).apply( u0, m_u[0]);
+            std::get<0>(ode)(ts[0], m_u[0], m_k[0]); //freshly compute k_0
         }
         else
             dg::blas1::copy(u0, m_u[0]);
@@ -827,13 +832,13 @@ struct ShuOsher
             }
             if(i!=s)
             {
-                limiter.apply( m_temp, m_u[i]);
-                rhs(ts[i], m_u[i], m_k[i]);
+                std::get<1>(ode).apply( m_temp, m_u[i]);
+                std::get<0>(ode)(ts[i], m_u[i], m_k[i]);
             }
             else{
-                limiter.apply( m_temp, u1);
+                std::get<1>(ode).apply( m_temp, u1);
                 //make sure (t1,u1) is the last call to f
-                rhs(ts[i], u1, m_k[0]);
+                std::get<0>(ode)(ts[i], u1, m_k[0]);
             }
         }
         m_t1 = t1 = ts[s];
@@ -878,6 +883,47 @@ using ImplicitRungeKutta = DIRKStep<ContainerType>;
 ///@addtogroup time
 ///@{
 
+///@cond
+namespace detail
+{
+inline bool is_same( double x, double y, double eps = 1e-15)
+{
+    return fabs(x - y) < std::max(1.0, std::max( fabs(x), fabs(y)));
+}
+inline bool is_same( float x, float y, float eps = 1e-6)
+{
+    return fabsf(x - y) < eps * std::max(1.0f, std::max( fabsf(x), fabsf(y)));
+}
+inline bool is_divisable( double a, double b, double eps = 1e-15)
+{
+    return is_same( round(a/b)*b, a);
+}
+inline bool is_divisable( float a, float b, float eps = 1e-6)
+{
+    return is_same( (float)round(a/b)*b, (float)a);
+}
+}
+///@endcond
+
+template<class ContainerType>
+struct FixedStepIntegrator : public aOdeIntegrator<ContainerType>
+{
+    using container_type = ContainerType;
+    using value_type = dg::get_value_type<ContainerType>;
+    FixedStepIntegrator( ){}
+    FixedStepIntegrator( std::function<void ( value_type, const ContainerType&,
+                value_type&, ContainerType&, value_type)> step, value_type dt )
+        : m_step(step), m_dt(dt){}
+    void set_dt( value_type dt){ m_dt = dt;}
+    virtual FixedStepIntegrator* clone() const{return new
+        FixedStepIntegrator(*this);}
+    private:
+    virtual void do_integrate(value_type t0, const container_type& u0, value_type& t1, container_type& u1, bool check) const;
+    std::function<void ( value_type, ContainerType, value_type&,
+            ContainerType&, value_type)> m_step;
+    value_type m_dt;
+};
+
 /**
  * @brief Integrate differential equation with an explicit Runge-Kutta scheme and a fixed number of steps
  *
@@ -891,53 +937,67 @@ using ImplicitRungeKutta = DIRKStep<ContainerType>;
  * @param end (write-only) contains solution at \c t_end on return (may alias begin)
  * @param N number of steps
  */
-template< class RHS, class ContainerType>
-void stepperRK(ConvertsToButcherTableau<get_value_type<ContainerType>> tableau,
-        RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType&
-        begin, get_value_type<ContainerType> t_end, ContainerType& end,
-        unsigned N )
+template< class ContainerType>
+void FixedStepIntegrator<ContainerType>::do_integrate(
+        value_type  t_begin, const ContainerType&
+        begin, value_type& t_end, ContainerType& end,
+        bool check ) const
 {
-    using value_type = get_value_type<ContainerType>;
-    RungeKutta<ContainerType > rk( tableau, begin);
-    if( t_end == t_begin){ end = begin; return;}
-    const value_type dt = (t_end-t_begin)/(value_type)N;
     dg::blas1::copy( begin, end);
     value_type t0 = t_begin;
-    for( unsigned i=0; i<N; i++)
-        rk.step( rhs, t0, end, t0, end, dt);
+    if( detail::is_divisable( t_end-t_begin, m_dt))
+    {
+        unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
+        for( unsigned i=0; i<N; i++)
+            m_step( t0, end, t0, end, m_dt);
+        return;
+    }
+    else
+    {
+        unsigned N = (unsigned)floor( (t_end-t_begin)/m_dt);
+        for( unsigned i=0; i<N; i++)
+            m_step( t0, end, t0, end, m_dt);
+        if( check)
+        {
+            value_type dt_final = t_end - t0;
+            m_step( t0, end, t0, end, dt_final);
+        }
+        else
+            m_step( t0, end, t_end, end, m_dt);
+    }
+}
+template<class Stepper, class ODE, class value_type>
+auto make_odeint( Stepper&& stepper, ODE&& ode, value_type dt)
+{
+    auto lambda = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
+            std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t1, auto& y1,
+            auto dtt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), t0, y0, t1, y1, dtt);
+    };
+    return std::make_unique<FixedStepIntegrator<typename
+            std::decay_t<Stepper>::container_type>>( lambda, dt);
 }
 
-template<class Stepper, class RHS>
-auto bind_step( Stepper&& stepper, RHS&& rhs)
+template<class Stepper, class ODE, class ContainerType, class value_type>
+void stepper( Stepper&& step, std::string tableau, ODE&& ode, value_type t0,
+        const ContainerType& u0, value_type t1, ContainerType& u1, unsigned N)
 {
-    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
-            std::forward<RHS>(rhs))  ]( auto& t, auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), t, y, t, y, dt);
-    };
+    value_type dt = (t1-t0)/(value_type)N;
+    make_odeint( Stepper( tableau,u0),
+            ode, dt)->integrate(t0, u0, t1, u1);
 }
-template<class Stepper, class RHS, class Solver>
-auto bind_step( Stepper&& stepper, RHS&& rhs, Solver&& solve)
+
+template<class RHS, class ContainerType >
+void stepperRK(	ConvertsToButcherTableau< get_value_type< ContainerType >>
+        tableau, RHS& rhs, get_value_type< ContainerType > t_begin,
+        const ContainerType& begin, get_value_type< ContainerType>
+        t_end, ContainerType& end, unsigned N )
 {
-    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
-            std::forward<RHS>(rhs),
-            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap), t, y, t, y, dt);
-    };
-}
-template<class Stepper, class Explicit, class Implicit, class Solver>
-auto bind_step( Stepper&& stepper, Explicit&& ex, Implicit&& im, Solver&& solve)
-{
-    return [=, cap = std::tuple<Stepper, Explicit, Implicit>(
-            std::forward<Stepper>(stepper),
-            std::forward<Explicit>(ex),
-            std::forward<Implicit>(im),
-            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap),
-                std::get<3>(cap), t, y, t, y, dt);
-    };
+    using value_type = get_value_type<ContainerType>;
+    value_type dt = (t_end - t_begin)/(value_type)N;
+    make_odeint( RungeKutta<ContainerType>( tableau,begin),
+            rhs, dt)->integrate(t_begin, begin, t_end, end);
 }
 
 

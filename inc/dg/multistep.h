@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include "ode.h"
 #include "runge_kutta.h"
 #include "multistep_tableau.h"
 
@@ -107,7 +108,7 @@ struct ExplicitMultistep
     template< class RHS>
     void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
         dg::IdentityFilter id;
-        m_fem.init( rhs, id, t0, u0, dt);
+        m_fem.init( std::tie(rhs, id), t0, u0, dt);
     }
 
     /**
@@ -124,7 +125,7 @@ struct ExplicitMultistep
     template< class RHS>
     void step( RHS& rhs, value_type& t, ContainerType& u){
         dg::IdentityFilter id;
-        m_fem.step( rhs, id, t, u);
+        m_fem.step( std::tie(rhs, id), t, u);
     }
 
   private:
@@ -226,7 +227,7 @@ struct ImExMultistep
      * This might be interesting if the call to \c ex changes its state.
      */
     template< class Explicit, class Implicit, class Solver>
-    void init( Explicit& ex, Implicit& im, Solver& solve, value_type t0, const ContainerType& u0, value_type dt);
+    void init( const std::tuple<Explicit, Implicit, Solver>& ode, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
@@ -245,7 +246,7 @@ struct ImExMultistep
     * multistepper
     */
     template< class Explicit, class Implicit, class Solver>
-    void step( Explicit& ex, Implicit& im, Solver& solve, value_type& t, ContainerType& u);
+    void step( const std::tuple<Explicit, Implicit, Solver>& ode, value_type& t, ContainerType& u);
 
   private:
     dg::MultistepTableau<value_type> m_t;
@@ -258,20 +259,20 @@ struct ImExMultistep
 ///@cond
 template< class ContainerType>
 template< class RHS, class Diffusion, class Solver>
-void ImExMultistep<ContainerType>::init( RHS& f, Diffusion& diff, Solver& solve, value_type t0, const ContainerType& u0, value_type dt)
+void ImExMultistep<ContainerType>::init( const std::tuple<RHS, Diffusion, Solver>& ode, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
     unsigned s = m_t.steps();
     blas1::copy(  u0, m_u[s-1]);
     m_counter = 0;
     if( s-1-m_counter < m_im.size())
-        diff( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
-    f( t0, u0, m_ex[s-1]); //f may not destroy u0
+        std::get<1>(ode)( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
+    std::get<0>(ode)( t0, u0, m_ex[s-1]); //f may not destroy u0
 }
 
 template<class ContainerType>
 template< class RHS, class Diffusion, class Solver>
-void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, Solver& solve, value_type& t, ContainerType& u)
+void ImExMultistep<ContainerType>::step( const std::tuple<RHS, Diffusion, Solver>& ode, value_type& t, ContainerType& u)
 {
     unsigned s = m_t.steps();
     if( m_counter < s - 1)
@@ -287,13 +288,13 @@ void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, Solver& solve,
         };
         ARKStep<ContainerType> ark( order2method.at( m_t.order()), u);
         ContainerType tmp ( u);
-        ark.step( f, diff, solve, t, u, t, u, m_dt, tmp);
+        ark.step( ode, t, u, t, u, m_dt, tmp);
         m_counter++;
         m_tu = t;
         dg::blas1::copy( u, m_u[s-1-m_counter]);
         if( s-1-m_counter < m_im.size())
-            diff( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
-        f( m_tu, m_u[s-1-m_counter], m_ex[s-1-m_counter]);
+            std::get<1>(ode)( m_tu, m_u[s-1-m_counter], m_im[s-1-m_counter]);
+        std::get<0>(ode)( m_tu, m_u[s-1-m_counter], m_ex[s-1-m_counter]);
         return;
     }
     //compute right hand side of inversion equation
@@ -311,13 +312,12 @@ void ImExMultistep<ContainerType>::step( RHS& f, Diffusion& diff, Solver& solve,
         std::rotate( m_im.rbegin(), m_im.rbegin() + 1, m_im.rend());
     //compute implicit part
     value_type alpha = m_dt*m_t.im(0);
-    solve( alpha, t, u, m_tmp);
+    std::get<2>(ode)( alpha, t, u, m_tmp);
 
     blas1::copy( u, m_u[0]); //store result
     if( 0 < m_im.size())
         dg::blas1::axpby( 1./alpha, u, -1./alpha, m_tmp, m_im[0]);
-    f(m_tu, m_u[0], m_ex[0]); //call f on new point (AFTER diff!)
-
+    std::get<0>(ode)(m_tu, m_u[0], m_ex[0]); //call f on new point (AFTER diff!)
 }
 ///@endcond
 template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
@@ -441,8 +441,7 @@ struct ImplicitMultistep
      *
      * This routine has to be called before the first timestep is made.
      * @copydoc hide_rhs_solve
-     * @param rhs The rhs functor
-     * @param solve The rhs solver
+     * @param ode The rhs functor and solver
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
@@ -450,14 +449,13 @@ struct ImplicitMultistep
      * This might be interesting if the call to \c ex changes its state.
      */
     template<class RHS, class Solver>
-    void init(RHS& rhs, Solver& solve, value_type t0, const ContainerType& u0, value_type dt);
+    void init(const std::tuple<RHS, Solver>& ode, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
     *
     * @copydoc hide_rhs_solve
-    * @param rhs The rhs functor
-    * @param solve The rhs solver
+    * @param ode The rhs functor and solver
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
     * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
@@ -465,7 +463,7 @@ struct ImplicitMultistep
     * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
     */
     template<class RHS, class Solver>
-    void step(RHS& rhs, Solver& solve, value_type& t, container_type& u);
+    void step(const std::tuple<RHS, Solver>& ode, value_type& t, container_type& u);
     private:
     dg::MultistepTableau<value_type> m_t;
     value_type m_tu, m_dt;
@@ -477,8 +475,8 @@ struct ImplicitMultistep
 ///@cond
 template< class ContainerType>
 template<class RHS, class Solver>
-void ImplicitMultistep<ContainerType>::init(RHS& rhs, Solver& solve, value_type t0,
-    const ContainerType& u0, value_type dt)
+void ImplicitMultistep<ContainerType>::init(const std::tuple<RHS, Solver>& ode,
+        value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
     dg::blas1::copy( u0, m_u[m_u.size()-1]);
@@ -486,12 +484,13 @@ void ImplicitMultistep<ContainerType>::init(RHS& rhs, Solver& solve, value_type 
     //only assign to f if we actually need to store it
     unsigned s = m_t.steps();
     if( s-1-m_counter < m_f.size())
-        rhs( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
+        std::get<0>(ode)( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
 }
 
 template< class ContainerType>
 template<class RHS, class Solver>
-void ImplicitMultistep<ContainerType>::step(RHS& rhs, Solver& solve, value_type& t, container_type& u)
+void ImplicitMultistep<ContainerType>::step(const std::tuple<RHS, Solver>& ode,
+        value_type& t, container_type& u)
 {
     unsigned s = m_t.steps();
     if( m_counter < s - 1)
@@ -507,13 +506,13 @@ void ImplicitMultistep<ContainerType>::step(RHS& rhs, Solver& solve, value_type&
         };
         ImplicitRungeKutta<ContainerType> dirk(
                 order2method.at(m_t.order()), u);
-        dirk.step( rhs, solve, t, u, t, u, m_dt);
+        dirk.step( ode, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
         dg::blas1::copy( u, m_u[s-1-m_counter]);
         //only assign to f if we actually need to store it
         if( s-1-m_counter < m_f.size())
-            rhs( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
+            std::get<0>(ode)( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
         return;
     }
     //compute right hand side of inversion equation
@@ -529,11 +528,11 @@ void ImplicitMultistep<ContainerType>::step(RHS& rhs, Solver& solve, value_type&
     if( !m_f.empty())
         std::rotate(m_f.rbegin(), m_f.rbegin() + 1, m_f.rend());
     value_type alpha = m_dt*m_t.im(0);
-    solve( alpha, t, u, m_tmp);
+    std::get<1>(ode)( alpha, t, u, m_tmp);
 
     dg::blas1::copy( u, m_u[0]);
     if( 0 < m_f.size())
-        dg::blas1::axpby( 1./alpha, u, -1./alpha, m_f[0]);
+        dg::blas1::axpby( 1./alpha, u, -1./alpha, m_tmp, m_f[0]);
 }
 ///@endcond
 
@@ -620,7 +619,7 @@ struct FilteredExplicitMultistep
      * This might be interesting if the call to \c ex changes its state.
      */
     template< class RHS, class Limiter>
-    void init( RHS& rhs, Limiter& limiter, value_type t0, const ContainerType& u0, value_type dt);
+    void init( const std::tuple<RHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
@@ -636,7 +635,7 @@ struct FilteredExplicitMultistep
     * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method
     */
     template< class RHS, class Limiter>
-    void step( RHS& rhs, Limiter& limiter, value_type& t, ContainerType& u);
+    void step( const std::tuple<RHS, Limiter>& ode, value_type& t, ContainerType& u);
 
   private:
     dg::MultistepTableau<value_type> m_t;
@@ -647,18 +646,18 @@ struct FilteredExplicitMultistep
 ///@cond
 template< class ContainerType>
 template< class RHS, class Limiter>
-void FilteredExplicitMultistep<ContainerType>::init( RHS& f, Limiter& l, value_type t0, const ContainerType& u0, value_type dt)
+void FilteredExplicitMultistep<ContainerType>::init( const std::tuple<RHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
     unsigned s = m_t.steps();
-    l.apply( u0, m_u[s-1]);
-    f(m_tu, m_u[s-1], m_f[s-1]); //call f on new point
+    std::get<1>(ode).apply( u0, m_u[s-1]);
+    std::get<0>(ode)(m_tu, m_u[s-1], m_f[s-1]); //call f on new point
     m_counter = 0;
 }
 
 template<class ContainerType>
 template<class RHS, class Limiter>
-void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_type& t, ContainerType& u)
+void FilteredExplicitMultistep<ContainerType>::step(const std::tuple<RHS, Limiter>& ode, value_type& t, ContainerType& u)
 {
     unsigned s = m_t.steps();
     if( m_counter < s-1)
@@ -673,11 +672,11 @@ void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_ty
             {7, SSPRK_5_4}
         };
         ShuOsher<ContainerType> rk( order2method.at(m_t.order()), u);
-        rk.step( f, l, t, u, t, u, m_dt);
+        rk.step( ode, t, u, t, u, m_dt);
         m_counter++;
         m_tu = t;
         blas1::copy(  u, m_u[s-1-m_counter]);
-        f( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
+        std::get<0>(ode)( m_tu, m_u[s-1-m_counter], m_f[s-1-m_counter]);
         return;
     }
     //compute new t,u
@@ -690,49 +689,82 @@ void FilteredExplicitMultistep<ContainerType>::step(RHS& f, Limiter& l, value_ty
     std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
     std::rotate( m_u.rbegin(), m_u.rbegin()+1, m_u.rend());
     //apply limiter
-    l.apply( u, m_u[0]);
+    std::get<1>(ode).apply( u, m_u[0]);
     blas1::copy( m_u[0], u); //store result
-    f(m_tu, m_u[0], m_f[0]); //call f on new point
+    std::get<0>(ode)(m_tu, m_u[0], m_f[0]); //call f on new point
 }
 ///@endcond
 //
-template<class Stepper, class RHS, class ContainerType, class value_type>
-auto bind_step( Stepper&& stepper, RHS&& rhs, value_type t0, const
+
+template<class ContainerType>
+struct MultistepIntegrator : public aOdeIntegrator<ContainerType>
+{
+    using container_type = ContainerType;
+    using value_type = dg::get_value_type<ContainerType>;
+    MultistepIntegrator( ){}
+    MultistepIntegrator( std::function<void ( value_type&, ContainerType&,
+                value_type)> step, value_type dt ) : m_step(step), m_dt(dt){}
+    virtual MultistepIntegrator* clone() const{return new
+        MultistepIntegrator(*this);}
+    private:
+    virtual void do_integrate(value_type t0, const container_type& u0,
+            value_type& t1, container_type& u1, bool check) const;
+    std::function<void ( value_type&, ContainerType&, value_type)> m_step;
+    value_type m_dt;
+};
+
+/**
+ * @brief Integrate differential equation with an explicit Runge-Kutta scheme and a fixed number of steps
+ *
+ * @copydoc hide_rhs
+ * @copydoc hide_ContainerType
+ * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
+ * @param rhs The right-hand-side
+ * @param t_begin initial time
+ * @param begin initial condition
+ * @param t_end final time
+ * @param end (write-only) contains solution at \c t_end on return (may alias begin)
+ * @param N number of steps
+ */
+template< class ContainerType>
+void MultistepIntegrator<ContainerType>::do_integrate(
+        value_type  t_begin, const ContainerType&
+        begin, value_type& t_end, ContainerType& end,
+        bool check ) const
+{
+    dg::blas1::copy( begin, end);
+    value_type t0 = t_begin;
+    if( detail::is_divisable( t_end-t_begin, m_dt))
+    {
+        unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
+        for( unsigned i=0; i<N; i++)
+            m_step( t0, end, t0, end, m_dt);
+        return;
+    }
+    else
+    {
+        if( check)
+            throw dg::Error( dg::Message(_ping_) << "In a multistep integrator dt "
+                    <<m_dt<<" has to integer divide the interval "<<t_end-t_begin);
+        unsigned N = (unsigned)floor( (t_end-t_begin)/m_dt);
+        for( unsigned i=0; i<N; i++)
+            m_step( t0, end, t0, end, m_dt);
+        m_step( t0, end, t_end, end, m_dt);
+    }
+}
+
+template<class Stepper, class ODE, class ContainerType, class value_type>
+std::unique_ptr<MultistepIntegrator<ContainerType>> make_odeint(
+        Stepper&& stepper, ODE&& ode, value_type t0, const
         ContainerType& u0, value_type dt )
 {
-    stepper.init( rhs, t0, dt);
-    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
-            std::forward<RHS>(rhs))  ]( auto& t, auto& y, auto& dt) mutable
+    stepper.init( ode, t0, u0, dt);
+    auto lambda = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
+            std::forward<ODE>(ode))  ]( auto& t, auto& y) mutable
     {
         std::get<0>(cap).step( std::get<1>(cap), t, y);
     };
-}
-template<class Stepper, class RHS, class Solver, class ContainerType, class value_type>
-auto bind_step( Stepper&& stepper, RHS&& rhs, Solver&& solve, value_type t0,
-        const ContainerType& u0, value_type dt )
-{
-    stepper.init( rhs, solve, u0, dt);
-    return [=, cap = std::tuple<Stepper, RHS>(std::forward<Stepper>(stepper),
-            std::forward<RHS>(rhs),
-            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap), t, y);
-    };
-}
-template<class Stepper, class Explicit, class Implicit, class Solver, class ContainerType, class value_type>
-auto bind_step( Stepper&& stepper, Explicit&& ex, Implicit&& im, Solver&&
-        solve, value_type t0, const ContainerType& u0, value_type dt)
-{
-    stepper.init( ex, im, solve, t0, u0, dt);
-    return [=, cap = std::tuple<Stepper, Explicit, Implicit>(
-            std::forward<Stepper>(stepper),
-            std::forward<Explicit>(ex),
-            std::forward<Implicit>(im),
-            std::forward<Solver>(solve))  ]( auto& t, auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap),
-                std::get<3>(cap), t, y);
-    };
+    return std::make_unique< MultistepIntegrator<ContainerType>>( lambda, dt);
 }
 
 } //namespace dg

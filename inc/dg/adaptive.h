@@ -1,5 +1,7 @@
 #pragma once
 
+#include "backend/memory.h"
+#include "ode.h"
 #include "runge_kutta.h"
 
 namespace dg
@@ -146,12 +148,9 @@ struct Tolerance
  * \c dg::ERKStep or the additive method \c dg::ARKStep. But really,
  * you can also choose to use your own timestepper class. The requirement
  * is that there is a \c step member function that is called as
- * \b stepper.step( rhs, t0, u0, t1, u1, dt, delta)
- * or \b stepper.step( ex, im, t0, u0, t1, u1, dt, delta)
- * depending on whether a purely explicit/implicit or a semi-implicit stepper
- * is used.
+ * \b stepper.step( ode, t0, u0, t1, u1, dt, delta)
  * Here, t0, t1 and dt are of type \b Stepper::value_type, u0,u1 and delta
- * are vector types of type \b Stepper::container_type& and rhs, ex and im are
+ * are vector types of type \b Stepper::container_type& and ode, ex and im are
  * functors implementing the equations that are forwarded from the caller.
  * The parameters t1, u1 and delta are output parameters and must be updated by
  * the stepper.
@@ -262,70 +261,25 @@ struct Adaptive
         //construct and swap
         *this = Adaptive(  std::forward<Params>(ps)...);
     }
-    /*!@brief Guess an initial stepsize
-     *
-     * If you have wondered what stepsize you should choose in the beginning,
-     * don't freak out about it. Really, the initial stepsize is not that
-     * important, the stepper does not even have to succeed. Usually the
-     * control function will very(!) quickly adapt the stepsize in just one or
-     * two steps (even if it's several orders of magnitude off in the beginning).
-     *
-     * Currently, this function won't do much better than if you just choose a
-     * smallish number yourself, but it's there for future improvements.
-     */
-    template<class Explicit, class ErrorNorm = value_type(const container_type&)>
-    value_type guess_stepsize( Explicit& ex, value_type t0, const
-            container_type& u0, enum direction dir, ErrorNorm& norm, value_type
-            rtol, value_type atol);
 
     ///@brief Allow write access to internal stepper
     ///
-    ///Maybe useful to set options in the stepper
+    ///Useful to set options in the stepper
     stepper_type& stepper() { return m_stepper;}
     ///@brief Read access to internal stepper
     const stepper_type& stepper() const { return m_stepper;}
 
-    /*!@brief Explicit adaptive step
-     *
-     * @param rhs The right hand side of the equation to integrate
-     * @copydoc hide_adaptive_params
-     * @copydoc hide_rhs
-     * @copydoc hide_control_error
-     */
-    template< class RHS,
-              class ControlFunction = value_type (std::array<value_type,3>,
-                      std::array<value_type,3>, unsigned, unsigned),
-              class ErrorNorm = value_type( const container_type&)>
-    void step( RHS& rhs,
-              value_type t0,
-              const container_type& u0,
-              value_type& t1,
-              container_type& u1,
-              value_type& dt,
-              ControlFunction control,
-              ErrorNorm norm,
-              value_type rtol,
-              value_type atol,
-              value_type reject_limit = 2)
-    {
-        m_stepper.step( rhs, t0, u0, m_t_next, m_next, dt, m_delta);
-        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol, reject_limit);
-    }
     /*!@brief Semi-implicit adaptive step
      *
      * @copydoc hide_adaptive_params
-     * @copydoc hide_explicit_implicit
+     * @copydoc hide_ode
      * @copydoc hide_control_error
      */
-    template< class Explicit,
-              class Implicit,
-              class Solver,
+    template< class ODE,
               class ControlFunction = value_type (std::array<value_type,3>,
                       std::array< value_type,3>, unsigned , unsigned),
               class ErrorNorm = value_type( const container_type&)>
-    void step( Explicit& ex,
-              Implicit& im,
-              Solver& solve,
+    void step( ODE&& ode,
               value_type t0,
               const container_type& u0,
               value_type& t1,
@@ -338,37 +292,49 @@ struct Adaptive
               value_type reject_limit = 2
               )
     {
-        m_stepper.step( ex, im, solve, t0, u0, m_t_next, m_next, dt, m_delta);
-        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol, reject_limit);
+        // prevent overwriting u0 in case stepper fails
+        m_stepper.step( std::forward<ODE>(ode), t0, u0, m_t_next, m_next, dt,
+                m_delta);
+        m_nsteps++;
+        dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol,
+                    m_size), u0, m_delta);
+        m_eps0 = norm(m_delta);
+        m_dt0 = dt;
+        if( m_eps0 > reject_limit || std::isnan( m_eps0) )
+        {
+            // if stepper fails, restart controller
+            dt = control( {m_dt0, 0, m_dt2}, {m_eps0, m_eps1, m_eps2},
+                    m_stepper.embedded_order(),
+                    m_stepper.order());
+            if( fabs( dt) > 0.9*fabs(m_dt0))
+                dt = 0.9*m_dt0;
+            //0.9*m_dt0 is a safety limit
+            //that prevents an increase of the timestep in case the stepper fails
+            m_failed = true; m_nfailed++;
+            dg::blas1::copy( u0, u1);
+            t1 = t0;
+            return;
+        }
+        if( m_eps0 < 1e-20) // small or zero
+        {
+            dt = 1e14*m_dt0; // a very large number
+            m_eps0 = 1e-20; // prevent storing zero
+        }
+        else
+        {
+            dt = control( {m_dt0, m_dt1, m_dt2}, {m_eps0, m_eps1, m_eps2},
+                    m_stepper.embedded_order(),
+                    m_stepper.order());
+        }
+        m_eps2 = m_eps1;
+        m_eps1 = m_eps0;
+        m_dt2 = m_dt1;
+        m_dt1 = m_dt0;
+        dg::blas1::copy( m_next, u1);
+        t1 = m_t_next;
+        m_failed = false;
     }
-    /*!@brief implicit adaptive step
-     *
-     * @copydoc hide_adaptive_params
-     * @copydoc hide_rhs_solve
-     * @copydoc hide_control_error
-     */
-    template< class RHS,
-              class Solver,
-              class ControlFunction = value_type (std::array<value_type,3>,
-                      std::array<value_type,3>, unsigned, unsigned),
-              class ErrorNorm = value_type( const container_type&)>
-    void step( RHS& rhs,
-              Solver& solve,
-              value_type t0,
-              const container_type& u0,
-              value_type& t1,
-              container_type& u1,
-              value_type& dt,
-              ControlFunction& control,
-              ErrorNorm& norm,
-              value_type rtol,
-              value_type atol,
-              value_type reject_limit = 2
-              )
-    {
-        m_stepper.step( rhs, solve, t0, u0, m_t_next, m_next, dt, m_delta);
-        return update( t0, u0, t1, u1, dt, control, norm , rtol, atol, reject_limit);
-    }
+
     ///Return true if the last stepsize in step was rejected
     bool failed() const {
         return m_failed;
@@ -378,6 +344,12 @@ struct Adaptive
     }
     unsigned& nfailed() {
         return m_nfailed;
+    }
+    const unsigned& nsteps() const {
+        return m_nsteps;
+    }
+    unsigned& nsteps() {
+        return m_nsteps;
     }
 
     /**
@@ -390,83 +362,19 @@ struct Adaptive
         return m_eps0;
     }
     private:
-    template< class ControlFunction = value_type (std::array<value_type,3>,
-                      std::array<value_type,3>, unsigned, unsigned),
-                class ErrorNorm = value_type( const container_type&)>
-    void update( value_type t0,
-                const container_type& u0,
-                value_type& t1,
-                container_type& u1,
-                value_type& dt,
-                ControlFunction& control,
-                ErrorNorm& norm,
-                value_type rtol,
-                value_type atol,
-                value_type reject_limit
-              )
-    {
-        dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol,
-                    m_size), u0, m_delta);
-        m_eps0 = norm(m_delta);
-        value_type dt0 = dt;
-        if( m_eps0 > reject_limit || std::isnan( m_eps0) )
-        {
-            // if stepper fails, restart controller
-            dt = control( {dt0, 0., m_dt2}, {m_eps0, m_eps1, m_eps2},
-                    m_stepper.embedded_order(),
-                    m_stepper.order());
-            if( fabs( dt) > 0.9*fabs(dt0))
-                dt = 0.9*dt0;
-            //0.9*dt0 is a safety limit
-            //that prevents an increase of the timestep in case the stepper fails
-            m_failed = true; m_nfailed++;
-            dg::blas1::copy( u0, u1);
-            t1 = t0;
-        }
-        else
-        {
-            if( m_eps0 < 1e-20) // small or zero
-            {
-                dt = 1e14*dt0; // a very large number
-                m_eps0 = 1e-20; // prevent storing zero
-            }
-            else
-            {
-                dt = control( {dt0, m_dt1, m_dt2}, {m_eps0, m_eps1, m_eps2},
-                        m_stepper.embedded_order(),
-                        m_stepper.order());
-            }
-            m_eps2 = m_eps1;
-            m_eps1 = m_eps0;
-            m_dt2 = m_dt1;
-            m_dt1 = dt0;
-            dg::blas1::copy( m_next, u1);
-            t1 = m_t_next;
-            m_failed = false;
-        }
+    void reset_history(){
+        m_eps1 = m_eps2 = 1.;
+        m_dt1 = m_dt2 = 0.;
     }
     bool m_failed = false;
     unsigned m_nfailed = 0;
+    unsigned m_nsteps = 0;
     Stepper m_stepper;
     container_type m_next, m_delta;
     value_type m_size, m_eps0 = 1, m_eps1=1, m_eps2=1;
     value_type m_t_next = 0;
-    value_type m_dt1 = 0., m_dt2 = 0.;
+    value_type m_dt0 = 0., m_dt1 = 0., m_dt2 = 0.;
 };
-template<class Stepper>
-template<class Explicit, class ErrorNorm>
-typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize(
-        Explicit& ex, value_type t0, const container_type& u0, enum direction
-        dir, ErrorNorm& tol, value_type rtol, value_type atol)
-{
-    value_type desired_accuracy = rtol*tol(u0) + atol;
-    ex( t0, u0, m_next);
-    value_type dt = pow(desired_accuracy,
-            1./(value_type)m_stepper.order())/tol(m_next);
-    if( dir != forward)
-        dt*=-1.;
-    return dt;
-}
 /*!@class hide_adaptive_params
  * @param t0 initial time
  * @param u0 initial value at \c t0
@@ -474,8 +382,7 @@ typename Adaptive<Stepper>::value_type Adaptive<Stepper>::guess_stepsize(
  * accepted, otherwise equals \c t0, may alias \c t0)
  * @param u1 (write only) contains the updated result on output if the step was
  * accepted, otherwise a copy of \c u0 (may alias \c u0)
- * @param dt on input: timestep (see dg::Adaptive::guess_stepsize() for an
- * initial stepsize).
+ * @param dt on input: timestep
  * On output: stepsize proposed by the controller that can be used to continue
  * the integration in the next step.
  * @param control The control function.
@@ -566,184 +473,121 @@ struct EntireDomain
 
 ///@addtogroup time
 ///@{
-// On the problem of capturing perfect forwarding in a lambda
-//https://stackoverflow.com/questions/26831382/capturing-perfectly-forwarded-variable-in-lambda
-//https://vittorioromeo.info/index/blog/capturing_perfectly_forwarded_objects_in_lambdas.html
-
-template<template<class> class Stepper, class ContainerType, class RHS, class
-value_type, class ErrorNorm = value_type( const ContainerType&), class
-ControlFunction = value_type(std::array<value_type,3>,
-        std::array<value_type,3>, unsigned, unsigned)>
-auto bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
-          RHS&& rhs,
-          ControlFunction control,
-          ErrorNorm norm,
-          value_type rtol,
-          value_type atol,
-          value_type reject_limit = 2)
+//
+template<class ContainerType>
+struct AdaptiveIntegrator : public aOdeIntegrator<ContainerType>
 {
-    using Adapt = dg::Adaptive<Stepper<ContainerType>>;
-    return [=, cap = std::tuple<Adapt, RHS>(std::forward<Adapt>(adapt),
-            std::forward<RHS>(rhs))  ]( auto& t,
-            auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), t, y, t, y, dt, control, norm,
-                rtol, atol, reject_limit);
-    };
-}
+    using value_type = dg::get_value_type<ContainerType>;
+    using container_type = ContainerType;
+    AdaptiveIntegrator( ) {}
+    AdaptiveIntegrator( std::function<void (value_type, const ContainerType&,
+                value_type&, ContainerType&, value_type&)> step)  :
+        m_step(step){
+            m_dt_current = dg::Buffer<value_type>( 0.);
+        }
+    void set_dt( value_type dt){ m_dt_current = dg::Buffer<value_type>(dt);}
 
-template<template<class> class Stepper, class ContainerType, class RHS, class Solver,
-class value_type, class ErrorNorm = value_type( const ContainerType&), class
-ControlFunction = value_type(std::array<value_type,3>,
-        std::array<value_type,3>, unsigned, unsigned)>
-auto bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
-          RHS&& rhs,
-          Solver&& solve,
-          ControlFunction control,
-          ErrorNorm norm,
-          value_type rtol,
-          value_type atol,
-          value_type reject_limit = 2)
-{
-    using Adapt = dg::Adaptive<Stepper<ContainerType>>;
-    return [=, cap = std::tuple<Adapt, RHS, Solver>(std::forward<Adapt>(adapt),
-            std::forward<RHS>(rhs), std::forward<Solver>(solve)) ](
-            auto& t, auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap), t, y, t, y,
-                dt, control, norm, rtol, atol, reject_limit);
-    };
-}
-template<template<class> class Stepper, class ContainerType, class Explicit, class Implicit, class Solver,
-class value_type, class ErrorNorm = value_type( const ContainerType&), class
-ControlFunction = value_type(std::array<value_type,3>,
-        std::array<value_type,3>, unsigned, unsigned)>
-auto bind_step( dg::Adaptive<Stepper<ContainerType>>&& adapt,
-                  Explicit&& ex,
-                  Implicit&& im,
-                  Solver&& solve,
-                  ControlFunction control,
-                  ErrorNorm norm,
-                  value_type rtol,
-                  value_type atol,
-                  value_type reject_limit = 2)
-{
-    using Adapt = dg::Adaptive<Stepper<ContainerType>>;
-    return [=, cap = std::tuple<Adapt, Explicit, Implicit,
-           Solver>(std::forward<Adapt>(adapt), std::forward<Explicit>(ex),
-                   std::forward<Implicit>(im), std::forward<Solver>(solve))](
-                   auto& t, auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), std::get<2>(cap),
-                std::get<3>(cap), t, y, t, y, dt, control, norm, rtol, atol,
-                reject_limit);
-    };
-}
+    /**
+     * @brief Integrates a differential equation
+     *  monitoring the sanity of integration and the integration domain
+     *
+     * @param stepper can be called like \c stepper( t0, u0, dt) Cannot be
+     * a multistep stepper
+     * @param t0 initial time
+     * @param u0 initial value at \c t0
+     * @param t1 (read / write) end time; if the solution leaves the domain
+     * contains the last time where the solution still lies within the domain
+     * on output
+     * @param u1 (write only) contains the result corresponding to t1 on output
+     * @param dt The initial timestep guess (if 0 the function chooses something
+     * for you). The exact value is not really
+     * important, the stepper does not even have to succeed. Usually the
+     * control function will very(!) quickly adapt the stepsize in just one or
+     * two steps (even if it's several orders of magnitude off in the beginning).
+     * @param domain (optional) a restriction of the solution space. The integrator
+     * checks after every step if the solution is still within the given domain
+     * \c domain.contains(u1). If not, the integrator will bisect the exact domain
+     * boundary (up to the given tolerances) and return (t1, u1) that lies closest
+     * (but within) the domain boundary.
+     * @param eps_root Relative error of root finding algorithm \c dt < eps( t1 + 1)
+     * @tparam Domain Must have the \c contains(const ContainerType&) const member
+     * function returning true if the given solution is part of the domain,
+     * false else (can for example be \c dg::aRealTopology2d)
+     * @copydoc hide_ContainerType
+     */
+    template< class Domain>
+    void integrate_in_domain(
+                  value_type t0,
+                  const ContainerType& u0,
+                  value_type& t1,
+                  ContainerType& u1,
+                  value_type dt,
+                  Domain&& domain,
+                  value_type eps_root
+                  );
+    virtual AdaptiveIntegrator* clone() const{return new
+        AdaptiveIntegrator(*this);}
+    private:
+    virtual void do_integrate(value_type t0, const container_type& u0,
+            value_type& t1, container_type& u1, bool check) const;
+    std::function<void( value_type, const ContainerType&, value_type&,
+            ContainerType&, value_type&)> m_step;
+    dg::Buffer<value_type> m_dt_current ;
+};
 
-/**
- * @brief Integrates a differential equation
- *  monitoring the sanity of integration
- *
- * @param stepper can be called like \c stepper( t0, u0, dt)
- * @param t0 initial time
- * @param u0 initial value at \c t0
- * @param t1 end time
- * @param u1 (write only) contains the result corresponding to t1 on output
- * @param dt The initial timestep guess (if 0 the function chooses something
- * for you). The exact value is not really
- * important, the stepper does not even have to succeed. Usually the
- * control function will very(!) quickly adapt the stepsize in just one or
- * two steps (even if it's several orders of magnitude off in the beginning).
- * @attention The integrator may throw if it detects too small timesteps, too
- * many failures, NaN, Inf, or other non-sanitary behaviour
- * @copydoc hide_ContainerType
- */
-template< class Stepper, class ContainerType>
-int integrate( Stepper& stepper,
-              get_value_type<ContainerType> t0,
+template< class ContainerType>
+void AdaptiveIntegrator<ContainerType>::do_integrate(
+              value_type t0,
               const ContainerType& u0,
-              get_value_type<ContainerType> t1,
+              value_type& t1,
               ContainerType& u1,
-              get_value_type<ContainerType> dt = 1e-6
-              )
+              bool check
+              )const
 {
-    using  value_type = get_value_type<ContainerType>;
-    value_type t_current = t0, dt_current = dt;
+    value_type t_current = t0;
     blas1::copy( u0, u1 );
-    ContainerType& current(u1);
-    if( t1 == t0)
-        return 0;
     bool forward = (t1 - t0 > 0);
-    if( dt == 0)
+    value_type& dt_current = m_dt_current.data();
+    if( dt_current == 0)
         dt_current = 1e-6; // a good a guess as any
 
-    int counter =0;
     while( (forward && t_current < t1) || (!forward && t_current > t1))
     {
-        //remember last step
-        t0 = t_current;
-        if( (forward && t_current+dt_current > t1) || (!forward && t_current +
-                    dt_current < t1) )
+        if( check &&( (forward && t_current+dt_current > t1) || (!forward &&
+                        t_current + dt_current < t1) ) )
             dt_current = t1-t_current;
         // Compute a step and error
-        stepper( t_current, current, dt_current);
+        m_step( t_current, u1, t_current, u1, dt_current);
         if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
-            throw dg::Error(dg::Message(_ping_)<<"integrate failed to converge! dt = "<<std::scientific<<dt_current);
-        counter++;
+        {
+            value_type dt_current0 = dt_current;
+            dt_current = 0.;
+            throw dg::Error(dg::Message(_ping_)<<"Adaptive integrate failed to converge! dt = "<<std::scientific<<dt_current0);
+        }
     }
-    return counter;
 }
 
-/**
- * @brief Integrates a differential equation
- *  monitoring the sanity of integration and the integration domain
- *
- * @param stepper can be called like \c stepper( t0, u0, dt) Cannot be
- * a multistep stepper
- * @param t0 initial time
- * @param u0 initial value at \c t0
- * @param t1 (read / write) end time; if the solution leaves the domain
- * contains the last time where the solution still lies within the domain
- * on output
- * @param u1 (write only) contains the result corresponding to t1 on output
- * @param dt The initial timestep guess (if 0 the function chooses something
- * for you). The exact value is not really
- * important, the stepper does not even have to succeed. Usually the
- * control function will very(!) quickly adapt the stepsize in just one or
- * two steps (even if it's several orders of magnitude off in the beginning).
- * @param domain (optional) a restriction of the solution space. The integrator
- * checks after every step if the solution is still within the given domain
- * \c domain.contains(u1). If not, the integrator will bisect the exact domain
- * boundary (up to the given tolerances) and return (t1, u1) that lies closest
- * (but within) the domain boundary.
- * @param eps_root Relative error of root finding algorithm \c dt < eps( t1 + 1)
- * @tparam Domain Must have the \c contains(const ContainerType&) const member
- * function returning true if the given solution is part of the domain,
- * false else (can for example be \c dg::aRealTopology2d)
- * @copydoc hide_ContainerType
- */
-template< class Stepper, class ContainerType, class Domain>
-int integrate_in_domain( Stepper& stepper,
-              get_value_type<ContainerType> t0,
+template< class ContainerType>
+template< class Domain>
+void AdaptiveIntegrator<ContainerType>::integrate_in_domain(
+              value_type t0,
               const ContainerType& u0,
-              get_value_type<ContainerType>& t1,
+              value_type& t1,
               ContainerType& u1,
-              get_value_type<ContainerType> dt,
+              value_type dt,
               Domain&& domain,
-              get_value_type<ContainerType> eps_root
+              value_type eps_root
               )
 {
-    using  value_type = get_value_type<ContainerType>;
     value_type t_current = t0, dt_current = dt;
     blas1::copy( u0, u1 );
     ContainerType& current(u1);
     if( t1 == t0)
-        return 0;
+        return;
     bool forward = (t1 - t0 > 0);
     if( dt == 0)
         dt_current = 1e-6; // a good a guess as any
 
-    int counter =0;
     ContainerType last( u0);
     while( (forward && t_current < t1) || (!forward && t_current > t1))
     {
@@ -754,10 +598,9 @@ int integrate_in_domain( Stepper& stepper,
                     dt_current < t1) )
             dt_current = t1-t_current;
         // Compute a step and error
-        stepper( t_current, current, dt_current);
+        m_step( t_current, current, t_current, current, dt_current);
         if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
             throw dg::Error(dg::Message(_ping_)<<"integrate_in_domain failed to converge! dt = "<<std::scientific<<dt_current);
-        counter++;
         if( !domain.contains( current) )
         {
             //start bisection between t0 and t1
@@ -770,16 +613,15 @@ int integrate_in_domain( Stepper& stepper,
             {
                 if( fabs(t1-t0) < eps_root*fabs(t1) + eps_root)
                 {
-                    return counter;
+                    return;
                 }
                 dt_current = (t1-t0)/2.;
                 t_current = t0;
                 // Here we can assume that the timestepper always succeeds
                 // because dt_current is always smaller than the previous timestep
                 // t_current = t0, current = last (inside)
-                stepper( t_current, current, dt_current);
+                m_step( t_current, current, t_current, current, dt_current);
                 //stepper( t0, last, t_middle, u1, (t1-t0)/2.);
-                counter++;
                 if( domain.contains( current) )
                 {
                     t0 = t_current;
@@ -791,29 +633,18 @@ int integrate_in_domain( Stepper& stepper,
                     dg::blas1::copy( last, current);
                 }
             }
-            throw dg::Error( dg::Message(_ping_)<<"Too many steps in root finding!");
+            throw dg::Error( dg::Message(_ping_)<<"integrate_in_domain: too many steps in root finding!");
         }
     }
-    return counter;
 }
 
 
 /*!
- * @brief Shortcut for \c dg::integrate with an embedded ERK class as timestepper
+ * @brief Create a new Integrator instance in a unique_ptr
  *
  * @snippet adaptive_t.cu function
  * @snippet adaptive_t.cu doxygen
- * @param name name of an embedded method that \c ConvertsToButcherTableau
- * @param rhs The right-hand-side
- * @param t0 initial time
- * @param u0 initial value at \c t0
- * @param t1 end time
- * @param u1 (write only) contains the result corresponding to t1 on output
- * @param dt The initial timestep guess (if 0 the function chooses something
- * for you). The exact value is not really
- * important, the stepper does not even have to succeed. Usually the
- * control function will very(!) quickly adapt the stepsize in just one or
- * two steps (even if it's several orders of magnitude off in the beginning).
+ * @param ode The right-hand-side
  * @param control The control function.
  * For explicit and imex methods, \c dg::pid_control
  * is a good choice with \c dg::ex_control or \c dg::imex_control
@@ -830,34 +661,67 @@ int integrate_in_domain( Stepper& stepper,
  * @param rtol the desired relative accuracy. Usually 1e-5 is a good choice.
  * @param atol the desired absolute accuracy. Usually 1e-7 is a good choice.
  * @return number of steps
- * @attention The integrator may throw if it detects too small timesteps, too many failures, NaN, Inf, or other non-sanitary behaviour
- * @copydoc hide_rhs
+ * @copydoc hide_ode
  * @copydoc hide_control_error
  * @copydoc hide_ContainerType
  */
-template<class RHS, class ContainerType, class value_type, class ErrorNorm =
+template<class Adaptive, class ODE, class
+value_type, class ErrorNorm = value_type( const typename std::decay_t<Adaptive>::container_type&), class
+ControlFunction = value_type(std::array<value_type,3>,
+        std::array<value_type,3>, unsigned, unsigned)>
+auto make_odeint(
+          Adaptive&& adapt,
+          ODE&& ode,
+          ControlFunction control,
+          ErrorNorm norm,
+          value_type rtol,
+          value_type atol,
+          value_type reject_limit = 2)
+{
+    // On the problem of capturing perfect forwarding in a lambda
+    //https://stackoverflow.com/questions/26831382/capturing-perfectly-forwarded-variable-in-lambda
+    //https://vittorioromeo.info/index/blog/capturing_perfectly_forwarded_objects_in_lambdas.html
+
+    //std::unique_ptr<dg::aOdeIntegrator> ptr = dg::make_odeint( stepper, ode, args...);
+    auto stepper = [=, cap = std::tuple<Adaptive, ODE>(std::forward<Adaptive>(adapt),
+            std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t,
+            auto& y, auto& dt) mutable
+    {
+        std::get<0>(cap).step( std::get<1>(cap), t0, y0, t, y, dt, control, norm,
+                rtol, atol, reject_limit);
+    };
+    return std::make_unique< AdaptiveIntegrator<typename std::decay_t<Adaptive>::container_type>>( stepper);
+}
+
+
+template<class Stepper, class ODE, class ContainerType, class value_type, class
+ErrorNorm =
     value_type( const ContainerType&), class ControlFunction = value_type
     (std::array<value_type,3>, std::array<value_type,3>, unsigned, unsigned)>
-int integrateERK( std::string name,
-                  RHS& rhs,
-                  value_type t0,
-                  const ContainerType& u0,
-                  value_type t1,
-                  ContainerType& u1,
-                  value_type dt,
-                  ControlFunction control,
-                  ErrorNorm norm,
-                  value_type rtol,
-                  value_type atol=1e-10,
-                  value_type reject_limit = 2
-              )
+int integrate( std::string name, ODE&& ode, value_type t0, const ContainerType& u0,
+        value_type t1, ContainerType& u1, value_type dt, ControlFunction
+        control, ErrorNorm norm, value_type rtol, value_type atol=1e-10,
+        value_type reject_limit = 2)
 {
-    dg::Adaptive<dg::ERKStep<ContainerType>> pd( name,u0);
-    auto adapt = [&](double& t, ContainerType& u, double& dt)
-    {
-        pd.step( rhs, t, u, t, u, dt, control, norm, rtol, atol, reject_limit);
-    };
-    return integrate( adapt, t0, u0, t1, u1, dt);
+    dg::Adaptive<Stepper> adapt( name, u0);
+    auto odeint = dg::make_odeint( adapt, std::forward<ODE>(ode), control,
+            norm, rtol, atol, reject_limit);
+    odeint -> set_dt( dt);
+    odeint->integrate(t0, u0, t1, u1);
+    return adapt.nsteps();
 }
+
+template<class ODE, class ContainerType, class value_type, class ErrorNorm =
+    value_type( const ContainerType&), class ControlFunction = value_type
+    (std::array<value_type,3>, std::array<value_type,3>, unsigned, unsigned)>
+int integrateERK( std::string name, ODE& ode, value_type t0, const
+        ContainerType& u0, value_type t1, ContainerType& u1, value_type dt,
+        ControlFunction control, ErrorNorm norm, value_type rtol, value_type
+        atol=1e-10, value_type reject_limit = 2)
+{
+    return integrate<dg::ERKStep<ContainerType>>( name, ode, t0, u0, t1, u1,
+            dt, control, norm, rtol, atol, reject_limit);
+}
+
 ///@}
 }//namespace dg

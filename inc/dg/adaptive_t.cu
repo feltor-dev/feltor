@@ -133,20 +133,17 @@ int main()
     };
     for( auto name : implicit_names)
     {
-        dt = 0;
         u_start = solution(t_start, damping, omega_0, omega_drive);
         dg::Adaptive< dg::DIRKStep< std::array<double,2> > >
-                pd( name, u_start);
-        auto stepper = [&](double& t, std::array<double,2>& u, double& dt)
-        {
-            pd.step( rhs, rhs, t, u, t, u, dt, dg::im_control, dg::l2norm, 1e-6, 1e-10);
-        };
-        counter = dg::integrate( stepper, t_start, u_start, t_end,
-            u_end, dt);
+                adapt( name, u_start);
+        auto odeint = dg::make_odeint( adapt, std::tie(rhs,rhs), dg::pid_control,
+                dg::l2norm, 1e-6, 1e-10);
+        odeint->integrate( t_start, u_start, t_end, u_end);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
-        dg::blas1::axpby( 1.,sol  , -1., u_end);
-        std::cout << "With "<<std::setw(6)<<counter<<" steps norm of error in "
+        dg::blas1::axpby( 1., sol, -1., u_end);
+        std::cout << "With "<<std::setw(6)<<adapt.nsteps()
+                  <<" steps norm of error in "
                   <<std::setw(24)<<name<<"\t"<<dg::l2norm( u_end)<<"\n";
     }
     ///---------------------------Test domain restriction-------------------//
@@ -160,15 +157,13 @@ int main()
         auto rhs = [](double t, double y, double& yp){
                 yp = y;
         };
-        dg::Adaptive<dg::ERKStep<double>> pd( name,u_start);
-        auto adapt = [&](double& t, double& u, double& dt)
-        {
-            pd.step( rhs, t, u, t, u, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
-        };
-        unsigned counter = dg::integrate_in_domain( adapt , t_start, u_start, t_end,
-                u_end, dt, dg::Grid1d( 0., 100., 1,1), 1e-4  );
+        dg::Adaptive<dg::ERKStep<double>> adapt( name,u_start);
+        dg::make_odeint( adapt, rhs, dg::pid_control, dg::l2norm,
+                1e-6, 1e-10)->integrate_in_domain( t_start,
+                u_start, t_end, u_end, dt, dg::Grid1d( 0., 100., 1,1), 1e-4  );
         double analytic = log( 100.);
-        std::cout << "With "<<std::setw(6)<<counter<<" steps norm of error in "
+        std::cout << "With "<<std::setw(6)<<adapt.nsteps()
+                  <<" steps norm of error in "
                   <<std::setw(24)<<name<<"\t"<<fabs( t_end - analytic)<<"\n";
     }
     return 0;

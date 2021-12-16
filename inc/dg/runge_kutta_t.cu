@@ -103,7 +103,8 @@ int main()
     for( auto name : names)
     {
         u = solution(t_start, damping, omega_0, omega_drive);
-        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0,
+                omega_drive);
         dg::stepperRK(name, rhs, t_start, u, t_end, u1, N);
         dg::blas1::axpby( 1., sol , -1., u1);
         auto b = dg::create::tableau<double>(name);
@@ -124,10 +125,8 @@ int main()
         dg::ShuOsher<std::array<double,2>> rk( name, u);
         dg::IdentityFilter id;
         const double dt = (t_end-t_start)/(double)N;
-        dg::blas1::copy( u, u1);
-        double t0 = t_start;
-        for( unsigned i=0; i<N; i++)
-            rk.step( rhs, id, t0, u1, t0, u1, dt);
+        auto ode = dg::make_odeint( rk, std::tie(rhs,id), dt);
+        ode->integrate( t_start, u, t_end, u1);
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
@@ -156,11 +155,12 @@ int main()
     for( auto name : implicit_names)
     {
         u = solution(t_start, damping, omega_0, omega_drive);
-        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0,
+                omega_drive);
         dg::ImplicitRungeKutta<std::array<double,2>> irk( name, u);
         double t=t_start;
         for( unsigned i=0; i<N_im; i++)
-            irk.step( rhs, solve, t, u1, t, u1, dt_im); //step inplace
+            irk.step( std::tie(rhs, solve), t, u1, t, u1, dt_im); //step inplace
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }

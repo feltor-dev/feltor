@@ -114,10 +114,10 @@ int main()
     {
         time = 0., y0 = init;
         dg::ImplicitMultistep< std::array<double,2>> bdf( name, y0);
-        bdf.init( full, full, time, y0, dt);
+        bdf.init( std::tie(full, full), time, y0, dt);
         //main time loop
         for( unsigned k=0; k<NT; k++)
-            bdf.step( full, full, time, y0);
+            bdf.step( std::tie(full, full), time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
@@ -133,10 +133,10 @@ int main()
         dg::ImExMultistep< std::array<double,2> > imex( name, y0);
         time = 0., y0 = init; //y0 and init are of type std::array<double,2> and contain the initial condition
         //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
-        imex.init( ex, im, im, time, y0, dt);
+        imex.init( std::tie(ex, im, im), time, y0, dt);
         //main time loop (NT = 20)
         for( unsigned k=0; k<NT; k++)
-            imex.step( ex, im, im, time, y0); //inplace step
+            imex.step( std::tie(ex, im, im), time, y0); //inplace step
         //![karniadakis]
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
@@ -151,7 +151,7 @@ int main()
         time = 0., y0 = init;
         //main time loop (NT = 20)
         for( unsigned k=0; k<NT; k++)
-            imex.step( ex, im, im, time, y0, time, y0, dt, delta ); //inplace step
+            imex.step( std::tie(ex, im, im), time, y0, time, y0, dt, delta ); //inplace step
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
@@ -165,15 +165,14 @@ int main()
         time = 0., y0 = init;
         dg::Adaptive<dg::ARKStep<std::array<double,2>>> adapt( name, y0);
         double time = 0;
-        double dt = adapt.guess_stepsize( ex, time, y0, dg::forward,
-                dg::l2norm, rtol, atol);
+        double dt = 1e-6;
         int counter=0;
         while( time < T )
         {
             if( time + dt > T)
                 dt = T-time;
-            adapt.step( ex, im, im, time, y0, time, y0, dt, dg::imex_control,
-                    dg::l2norm, rtol, atol);
+            adapt.step( std::tie(ex, im, im), time, y0, time, y0, dt,
+                    dg::imex_control, dg::l2norm, rtol, atol);
             counter ++;
         }
         //![adaptive]
@@ -182,8 +181,8 @@ int main()
         std::cout << counter <<" steps! ";
         std::cout << "Relative error "<<name<<" is "<< res.d<<"\t"<<res.i<<std::endl;
     }
-    std::cout << "### Test Strang operator splitting\n";
 
+    std::cout << "### Test Strang operator splitting\n";
     std::vector<std::string> rk_names{
         "Heun-Euler-2-1-2",
         "Bogacki-Shampine-4-2-3",
@@ -202,8 +201,7 @@ int main()
         dg::Adaptive<dg::ERKStep<std::array<double,2>>> adapt( name, y0);
         dg::ImplicitRungeKutta<std::array<double,2>> dirk( "Trapezoidal-2-2", y0 );
         double time = 0;
-        double dt = adapt.guess_stepsize( ex, time, y0, dg::forward,
-                dg::l2norm, rtol, atol);
+        double dt = 1e-6;
         int counter=0;
         adapt.stepper().ignore_fsal();
         while( time < T )
@@ -211,10 +209,10 @@ int main()
             if( time + dt > T)
                 dt = T-time;
             double dt_old = dt;
-            dirk.step( im, im, time, y0, time, y0, dt_old/2.);
+            dirk.step( std::tie(im, im), time, y0, time, y0, dt_old/2.);
             adapt.step( ex, time-dt_old/2., y0, time, y0, dt, dg::pid_control,
                 dg::l2norm, rtol, atol);
-            dirk.step( im, im, time-dt_old/2., y0, time, y0, dt_old/2.);
+            dirk.step( std::tie(im, im), time-dt_old/2., y0, time, y0, dt_old/2.);
             counter ++;
         }
         dg::blas1::axpby( -1., sol, 1., y0);

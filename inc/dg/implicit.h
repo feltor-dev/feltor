@@ -29,7 +29,7 @@ struct Adaptor
 /*! @class hide_SolverType
  *
  * @tparam SolverType
-    The task of this class is to solve the equation \f$ (y+\alpha\hat I(t,y)) = \rho\f$
+    The task of this class is to solve the equation \f$ (y-\alpha\hat I(t,y)) = \rho\f$
     for the given implicit part I, parameter alpha, time t and
     right hand side rho. For example \c dg::DefaultSolver or \c dg::FixedPointSolver
     If you write your own class:
@@ -40,7 +40,7 @@ struct Adaptor
   the \c solve method will be called with vectors of this size)
  */
 
-/*!@brief Default Solver class for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
+/*!@brief Default Solver class for solving \f[ (y-\alpha\hat I(t,y)) = \rho\f]
  *
  * for given t, alpha and rho.
  * works only for linear positive definite operators as it uses a conjugate
@@ -83,7 +83,7 @@ struct DefaultSolver
         auto wrapper = [a = alpha, t = time, &i = im]( const auto& x, auto& y){
             if( a != 0)
                 i( t, x, y);
-            dg::blas1::axpby( 1., x, a, y);
+            dg::blas1::axpby( 1., x, -a, y);
         };
         Timer ti;
         if(m_benchmark) ti.tic();
@@ -244,7 +244,7 @@ struct AndersonSolver
         auto implicit = [a = alpha, t = t, &i = im]( const auto& x, auto& y){
             if( a != 0)
                 i( t, x, y);
-            dg::blas1::axpby( 1., x, a, y);
+            dg::blas1::axpby( 1., x, -a, y);
         };
         Timer ti;
         if( m_benchmark) ti.tic();
