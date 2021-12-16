@@ -320,50 +320,6 @@ void ImExMultistep<ContainerType>::step( const std::tuple<RHS, Diffusion, Solver
     std::get<0>(ode)(m_tu, m_u[0], m_ex[0]); //call f on new point (AFTER diff!)
 }
 ///@endcond
-template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
-struct ImExMultistep_s
-{
-    using value_type = get_value_type<ContainerType>;
-    using container_type = ContainerType;
-    ImExMultistep_s(){}
-    template<class ...SolverParams>
-    ImExMultistep_s(
-            ConvertsToMultistepTableau<value_type> tableau,
-            SolverParams&& ...ps):
-         m_solver( std::forward<SolverParams>(ps)...),
-         m_multi(tableau, m_solver.copyable())
-    {
-    }
-    ///@copydoc hide_construct
-    template<class ...Params>
-    void construct( Params&& ...ps)
-    {
-        //construct and swap
-        *this = ImExMultistep_s( std::forward<Params>( ps)...);
-    }
-    const ContainerType& copyable()const{ return m_multi.copyable();}
-
-    template< class Explicit, class Implicit>
-    void init( Explicit& ex, Implicit& im, value_type t0, const ContainerType&
-            u0, value_type dt)
-    {
-        dg::detail::Adaptor<Implicit,SolverType> adapt(im,m_solver);
-        m_multi.init( ex, adapt, adapt, t0, u0, dt);
-    }
-
-    template< class Explicit, class Implicit>
-    void step( Explicit& ex, Implicit& im, value_type& t, ContainerType& u)
-    {
-        dg::detail::Adaptor<Implicit,SolverType> adapt(im,m_solver);
-        m_multi.step( ex, adapt, adapt, t, u);
-    }
-
-  private:
-    SolverType m_solver;
-    ImExMultistep<ContainerType> m_multi;
-
-};
-
 
 /**
 * @brief Implicit multistep time-integration

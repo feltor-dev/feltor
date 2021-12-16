@@ -633,60 +633,6 @@ void DIRKStep<ContainerType>::step( const std::tuple<RHS,Solver>& ode,  value_ty
 }
 ///@endcond
 
-//
-template<class ContainerType, class SolverType = dg::DefaultSolver<ContainerType>>
-struct ARKStep_s
-{
-    using value_type = get_value_type<ContainerType>;
-    using container_type = ContainerType;
-    ARKStep_s(){ }
-    template<class ...SolverParams>
-    ARKStep_s( std::string name, SolverParams&& ...ps) :
-         m_solver( std::forward<SolverParams>(ps)...),
-         m_ark( name, m_solver.copyable())
-    {
-    }
-    template<class ...SolverParams>
-    ARKStep_s( ConvertsToButcherTableau<value_type> ex_tableau,
-             ConvertsToButcherTableau<value_type> im_tableau,
-             SolverParams&& ...ps
-             ):
-         m_solver( std::forward<SolverParams>(ps)...),
-         m_ark( ex_tableau, im_tableau, m_solver.copyable())
-    {
-    }
-    template<class ...Params>
-    void construct( Params&& ...ps)
-    {
-        *this = ARKStep_s( std::forward<Params>(ps)...);
-    }
-    const ContainerType& copyable()const{ return m_ark.copyable();}
-
-    SolverType& solver() { return m_solver;}
-    const SolverType& solver() const { return m_solver;}
-
-    template< class Explicit, class Implicit>
-    void step( Explicit& ex, Implicit& im, value_type t0, const ContainerType&
-            u0, value_type& t1, ContainerType& u1, value_type dt,
-            ContainerType& delta)
-    {
-        dg::detail::Adaptor<Implicit,SolverType> adapt(im,m_solver);
-        m_ark.step( ex, adapt, t0, u0, t1, u1, dt, delta);
-    }
-    unsigned order() const {
-        return m_ark.order();
-    }
-    unsigned embedded_order() const {
-        return m_ark.order();
-    }
-    unsigned num_stages() const{
-        return m_ark.num_stages();
-    }
-    private:
-    SolverType m_solver;
-    ARKStep<ContainerType> m_ark;
-};
-
 /**
 * @brief Runge-Kutta fixed-step explicit time-integration
 * \f[
