@@ -6,7 +6,7 @@
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "Extension: ExBLAS"
 PROJECT_NUMBER         =
-PROJECT_BRIEF          = "Adaption of the ExBLAS library (included in \"dg/algorithm.h\" by default or available as a standalone library as \"dg/exblas/exblas.h\")"
+PROJECT_BRIEF          = "#include \"dg/algorithm.h\" (or as a standalone library as \"dg/exblas/exblas.h\")"
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./doc
 CREATE_SUBDIRS         = NO
