@@ -1,41 +1,95 @@
+/* Maybe share here https://github.com/jothepro/doxygen-awesome-css/discussions/13  at some point*/
+html{
+    /* font sizes */
+    --page-font-size: 15.6px;
+    --navigation-font-size: 14.4px;
+    --code-font-size: 14.4px; /* affects code, fragment */
+    --title-font-size: 26px;
+
+    /* Download Source Code Pro from https://askubuntu.com/questions/193072/how-to-use-the-adobe-source-code-pro-font */
+    --font-family-monospace: Source Code Pro,Menlo,Monaco,Consolas,Monosapce Rregular,Courier New;
+    /* fragment colors (= code blocks) light-mode */
+    --fragment-foreground: black;
+    --fragment-background: #f5f5f5;
+    --fragment-keyword: #008000;
+    --fragment-keywordtype: #604020;
+    --fragment-keywordflow: #e08000;
+    --fragment-comment: #586e75;
+    --fragment-token: #800000;
+    --fragment-link: var(--primary-color);
+    --fragment-preprocessor: #806020;
+    --fragment-linenumber-border: #f5f5f5;
+    --fragment-linenumber-color: #586e75;
+    --fragment-linenumber-background: #f5f5f5;
+    /*--fragment-token: #7ec699; (string literals)
+    --fragment-background: #fbfcfd;*/
+
+    --fragment-lineheight: 20px;
+    --top-height: 200px;
+
+}
+/* Make code blocks in light mode when color scheme is in light-mode*/
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) {
+        --fragment-background: #282c34;
+        --fragment-foreground: #ffffff;
+        --fragment-keyword: #cc99cd;
+        --fragment-keywordtype: #ab99cd;
+        --fragment-keywordflow: #e08000;
+        --fragment-token: #7ec699;
+        --fragment-comment: #999999;
+        --fragment-link: #98c0e3;
+        --fragment-preprocessor: #65cabe;
+        --fragment-linenumber-color: #cccccc;
+        --fragment-linenumber-background: #35393c;
+        --fragment-linenumber-border: #1f1f1f;
+        --fragment-lineheight: 20px;
+    }
+}
+html.dark-mode{
+    /* fragment colors dark-mode */
+    --fragment-background: #282c34;
+    --fragment-foreground: #ffffff;
+    --fragment-keyword: #cc99cd;
+    --fragment-keywordtype: #ab99cd;
+    --fragment-keywordflow: #e08000;
+    --fragment-token: #7ec699;
+    --fragment-comment: #999999;
+    --fragment-link: #98c0e3;
+    --fragment-preprocessor: #65cabe;
+    --fragment-linenumber-color: #cccccc;
+    --fragment-linenumber-background: #35393c;
+    --fragment-linenumber-border: #1f1f1f;
+    --fragment-lineheight: 20px;
+}
+
 .menubar {
-    margin: 0;
-    padding: 0;
+    margin: 0px;
+    padding: 0px;
     display: table;
 }
 
 .menubar li {
     float: left;
     display: table-cell;
-    background-image: url('tab_b.png');
     line-height: 36px;
     list-style: none;
 }
 
 .menubar a {
     display: block;
-    padding: 0 20px;
-    font-weight: bold;
-    background-image:url('tab_s.png');
-    background-repeat:no-repeat;
-    background-position:right;
-    color: #283A5D;
-    text-shadow: 0px 1px 1px rgba(255, 255, 255, 0.9);
+    padding: 0 10px;
+    font-size: 18px;
+    color: var(--primary-color) !important;
     text-decoration: none;
-    outline: none;
+    text-shadow: none;
 }
 
 .menubar a:hover {
-    background-image: url('tab_h.png');
-    background-repeat:repeat-x;
-    color: #fff;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 1.0);
     text-decoration: none;
-}
-
-.menubar li.current a {
-    background-image: url('tab_a.png');
-    background-repeat:repeat-x;
-    color: #fff;
-    text-shadow: 0px 1px 1px rgba(0, 0, 0, 1.0);
+    text-shadow: none;
+    font-size: 18px !important;
+    color: var(--menu-focus-foreground) !important;
+    background-color: var(--menu-focus-background);
+    border-radius: var(--border-radius-small) !important;
 }
