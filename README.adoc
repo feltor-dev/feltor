@@ -99,7 +99,7 @@ directory
 cd ~
 mkdir include
 cd include
-ln -s path/to/thrust/thrust
+ln -s path/to/thrust/thrust # Yes, thrust is there twice!
 ln -s path/to/cusplibrary/cusp
 ln -s path/to/vcl
 ----
@@ -271,19 +271,9 @@ __container free numerical algorithm__.
 Now, we want to compile and run a simulation program. To this end, we have to
 download and install some additional libraries for I/O-operations.
 
-First, we need to install jsoncpp (distributed under the MIT License).
-On Linux `libjsoncpp-dev` is available through the package managment system.
-For a manual build clone https://www.github.com/open-source-parsers/jsoncpp[JsonCpp] and follow the build instructions in the README. After this, link the
-include path
-[source,sh]
-----
-cd ~/include
-ln -s /usr/include/jsoncpp/json # if installed as a system library
-# or
-ln -s path/to/jsoncpp/include/json # if installed manually
-----
-or append the respective path as well as the path to the object library to the `INCLUDE` and `JSONLIB` variables as
-described under link:config/README.md[config].
+First, we need to install jsoncpp (distributed under the MIT License),
+which on linux is available as `libjsoncpp-dev` through the package managment system.
+For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
 
 For data output we use the
 http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
@@ -302,6 +292,11 @@ https://github.com/mwiesenberger/draw[draw library] (developed by us
 also under MIT), which depends on
 http://www.glfw.org[glfw3], an OpenGL development library under a
 BSD-like license. There is a `libglfw3-dev` package for convenient installation. Again, link `path/to/draw` in the `include` folder.
+
+____
+If you are on a HPC cluster, you may need to set INCLUDE and LIB variables manually.
+For details on how FELTOR's Makefiles are configured please see the link:config/README.md[config] file. There are also examples of some existing Makefiles in the same folder.
+____
 
 We are now ready to compile and run a simulation program
 
@@ -328,6 +323,7 @@ three programs solve the same equations. The technical documentation on
 what equations are discretized, input/output parameters, etc. can be
 generated as a pdf with `make doc` in the `path/to/feltor/src/toefl`
 directory.
+
 
 === Using FELTOR on Windows [[sec_windows]]
 FELTOR has been developed mostly on Linux machines.
@@ -437,6 +433,27 @@ LaTeX::
 Install https://miktex.org/[MikTex] and https://texstudio.org[TeXstudio] (in that order) in order to be able to
 compile the tex file(s) of the documentation.
 
+=== Troubleshooting
+===== I get a compile error: identifier "__thrust_compiler_fence" is undefined
+
+This is an error of the unmaintained cusp that does not like the newly
+updated thrust version on github. Currently, you can either go back to
+version 1.9.3 in thrust:
+
+```sh
+cd path/to/thrust
+git checkout 1.9.3
+```
+or alternatively there is a fix in cusp that can be accessed via
+```sh
+cd path/to/cusplibrary
+git checkout cuda10
+```
+
+===== The hdf5 library does not link after installing the libhdf5-dev package
+You may need to update the linker path. Use `locate libhdf5` to find the library path
+and then update your system library search path. On ubuntu you would add a file `hdf5.conf` to `/etc/ld.so.conf.d/` with the path `/path/to/libs` to the directory that contains the hdf5 libraries. Save and run `sudo ldconfig` to update the system.
+
 == 2. Documentation
 
 The
@@ -454,8 +471,6 @@ and https://cusplibrary.github.io/[cusp].
 We maintain tex files in every src folder for
 technical documentation, which can be compiled using pdflatex with
 `make doc` in the respective src folder.
-
-For details on how FELTOR's internal Makefiles are configured please see the link:config/README.md[config] folder.
 
 
 == 3. Authors, Acknowledgements, Contributions

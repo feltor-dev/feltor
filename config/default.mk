@@ -12,8 +12,8 @@ OPT=-O2 # optimization flags for host code (it is O2 and not O3 because g++-7 up
 OMPFLAG=-fopenmp #openmp flag for CC and MPICC
 
 #external libraries
-INCLUDE = -I$(HOME)/include# cusp, thrust, jsoncpp and the draw libraries
+INCLUDE = -I$(HOME)/include# cusp, thrust and the draw libraries
 LIBS=-lnetcdf -lhdf5 -lhdf5_hl # netcdf library for file output
-JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
+JSONLIB= -ljsoncpp # json library for input parameters
 GLFLAGS =$$(pkg-config --static --libs glfw3) -lGL #glfw3 installation
 endif # INCLUDED

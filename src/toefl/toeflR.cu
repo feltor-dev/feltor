@@ -54,8 +54,8 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////
 
 
-    dg::Adaptive<dg::ARKStep_s<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
-    //dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
+    //dg::Adaptive<dg::ARKStep_s<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
+    dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -120,11 +120,11 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             }
-            //try{ stepper.step( ex, im, time, y0);}
+            //try{ stepper.step( std::tie(ex, im), time, y0);}
             try{
-                stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                //stepper.step( std::tie(ex, im), time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
                 if ( stepper.failed() ) failed_counter ++;
-                //stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
                 std::cout << "Time "<<time<<" dt "<<dt<<" failed counter "<<failed_counter<<"\n";
             }
             catch( dg::Fail& fail) {
