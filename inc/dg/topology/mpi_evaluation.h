@@ -30,7 +30,7 @@ namespace dg
  *
  * @return The output vector \c v as an MPI host Vector
  * @note Use the elementary function \f$ f(x,y) = x \f$ (\c dg::cooX2d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY2d)
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  */
 template< class BinaryOp,class real_type>
 MPI_Vector<thrust::host_vector<real_type> > evaluate( const BinaryOp& f, const aRealMPITopology2d<real_type>& g)
@@ -94,7 +94,7 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, re
  *
  * @return The output vector \c v as an MPI host Vector
  * @note Use the elementary function \f$ f(x,y,z) = x \f$ (\c dg::cooX3d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY3d or \c z, \c dg::cooZ3d) 
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  */
 template< class TernaryOp,class real_type>
 MPI_Vector<thrust::host_vector<real_type> > evaluate( const TernaryOp& f, const aRealMPITopology3d<real_type>& g)

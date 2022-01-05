@@ -262,7 +262,7 @@ std::vector<real_type> choose_1d_abscissas( real_type X,
  * When applied to a vector the result contains the interpolated values at the
  * given interpolation points.  The given boundary conditions determine how
  * interpolation points outside the grid domain are treated.
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
  * @copydoc hide_bcx_doc
@@ -367,7 +367,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  * given interpolation points.  The given boundary conditions determine how
  * interpolation points outside the grid domain are treated.
  * @snippet topology/interpolation_t.cu doxygen
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
  * @param g The Grid on which to operate
@@ -573,7 +573,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  * When applied to a vector the result contains the interpolated values at the
  * given interpolation points.
  * @snippet topology/interpolation_t.cu doxygen3d
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
  * @param z Z-coordinates of interpolation points (\c z.size() must equal \c x.size())
@@ -790,7 +790,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  * @brief Create interpolation between two grids
  *
  * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa for integer multiples between old and new %grid you may want to consider the dg::create::fast_interpolation %functions
  *
  * @param g_new The new grid

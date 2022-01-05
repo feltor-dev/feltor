@@ -252,7 +252,7 @@
  *
  * @section pdf Introduction to discontinuous Galerkin methods
  * Here is a pdf document explaining the fundamentals of discontinuous Galerkin methods
- *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ *  - <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  *
 
  * @section dispatch The Level 1 dispatch system

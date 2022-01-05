@@ -111,7 +111,7 @@ namespace create
  * the general purpose interpolation function, especially since it requires
  * no communication from neighboring cells
  * @sa dg::create::interpolation
- * @sa For a derivation of the coefficients consult the %dg manual <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa For a derivation of the coefficients consult the %dg manual <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @tparam real_type a floating point type
  * @return a matrix that when applied to vectors on the old grid produces a vector on the new grid
  * @param t The existing (old/coarse) grid
@@ -150,7 +150,7 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolatio
  * the general purpose projection function, especially since it requires
  * no communication from neighboring cells
  * @sa dg::create::projection dg::create::interpolationT
- * @sa For a derivation of the coefficients consult the %dg manual <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa For a derivation of the coefficients consult the %dg manual <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @tparam real_type a floating point type
  * @return a matrix that when applied to vectors on the old grid produces a vector on the new grid
  * @param t The existing (old/fine) grid

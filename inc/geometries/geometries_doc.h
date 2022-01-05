@@ -47,8 +47,8 @@
  * and one used to integrate the field lines for parallel derivatives all in the dg::geo namespace.
  *
  * We have a collection of writeups:
- *  - The <a href="./parallel.pdf" target="_blank">parallel derivative</a>
- *  - The <a href="./hector.pdf" target="_blank">HECTOR algorithm</a>
+ *  - The <a href="https://www.overleaf.com/read/jjvstccqzcjv" target="_blank">parallel derivative</a>
+ *  - The <a href="https://www.overleaf.com/read/vvqwffbjvrxm" target="_blank">HECTOR algorithm</a>
  */
  /** @class hide_container
   * @tparam container

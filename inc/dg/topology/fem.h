@@ -17,7 +17,7 @@ namespace create{
 * @tparam real_type The value type
 * @param g The grid
 * @return Host Matrix
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 
 ///@copydoc hide_fem_mass_doc

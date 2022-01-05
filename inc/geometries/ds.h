@@ -150,7 +150,7 @@ struct DSSDCentered
  * constructed by fitting a polynomial through the
  * boundary point, the plus or minus point and the center point.
  * For the exact resulting formula consult the
- * <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup.
+ * <a href="https://www.overleaf.com/read/jjvstccqzcjv" target="_blank">parallel derivative</a> writeup.
  * This is achieved using masks that mark the points where fieldlines intersect
  * the domain boundary and replace the interpolated boundary values.
  * @tparam FieldAligned
@@ -342,7 +342,7 @@ in arbitrary coordinates
     - \c dg::HMatrix, or \c dg::DMatrix, \c dg::MHMatrix, or \c dg::MDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
     - \c dg::HVec, or \c dg::DVec, \c dg::MHVec, or \c dg::MDVec
-* @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
+* @sa The pdf <a href="https://www.overleaf.com/read/jjvstccqzcjv" target="_blank">parallel derivative</a> writeup
 */
 template< class ProductGeometry, class IMatrix, class Matrix, class container >
 struct DS
@@ -468,7 +468,7 @@ struct DS
     * The centered derivative is constructed by fitting a polynomial through
     * the plus point the minus point and the center point and evaluating its
     * derivative at the center point. For the exact resulting formula consult
-    * the <a href="./parallel.pdf" target="_blank">parallel derivative</a>
+    * the <a href="https://www.overleaf.com/read/jjvstccqzcjv" target="_blank">parallel derivative</a>
     * writeup
     * @copydoc hide_ds_parameters4
     */

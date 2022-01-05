@@ -39,13 +39,13 @@ std::vector<real_type> fem_weights( const DLT<real_type>& dlt)
  * These will emulate the trapezoidal rule for integration
 * @param g The grid
 * @return Host Vector
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_fem_inv_weights_doc
 * @brief inverse finite element weight coefficients
 * @param g The grid
 * @return Host Vector
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 
 ///@copydoc hide_fem_weights_doc

@@ -370,7 +370,7 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
     - \c dg::IHMatrix, or \c dg::IDMatrix, \c dg::MIHMatrix, or \c dg::MIDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
     - \c dg::HVec, or \c dg::DVec, \c dg::MHVec, or \c dg::MDVec
-* @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
+* @sa The pdf <a href="https://www.overleaf.com/read/jjvstccqzcjv" target="_blank">parallel derivative</a> writeup
 */
 template<class ProductGeometry, class IMatrix, class container >
 struct Fieldaligned

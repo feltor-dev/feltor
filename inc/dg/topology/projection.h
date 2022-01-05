@@ -62,7 +62,7 @@ namespace create{
    Matrix A = dg::create::interpolation( g_old, g_new);
    return A.transpose();
    @endcode
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @param g_new The new grid
  * @param g_old The old grid
  *
@@ -124,7 +124,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
  of the projected vector will be conserved and the difference in the L2 norm
  between old and new vector small.
  * The projection matrix is the adjoint of the interpolation matrix
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa for integer multiples between old and new grid you may want to consider the dg::create::fast_projection functions
  *
  * @param g_new The new (coarse) grid
@@ -203,7 +203,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
  \f]
  where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
  old grid is already the lcm grid this function reduces to the interpolation/projection function.
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  *
  * @param g_new The new grid
  * @param g_old The old grid

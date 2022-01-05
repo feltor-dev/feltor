@@ -60,7 +60,7 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
  *
  * @return The output vector \c v as a host vector
  * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d() ) to generate the list of grid coordinates
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa \c dg::pullback if you want to evaluate a function in physical space
  */
 template< class UnaryOp,class real_type>
@@ -97,7 +97,7 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
  *
  * @return The output vector \c v as a host vector
  * @note Use the elementary function \f$ f(x,y) = x \f$ (\c dg::cooX2d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY2d)
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa \c dg::pullback if you want to evaluate a function in physical space
  */
 template< class BinaryOp, class real_type>
@@ -141,7 +141,7 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
  *
  * @return The output vector \c v as a host vector
  * @note Use the elementary function \f$ f(x,y,z) = x \f$ (\c dg::cooX3d) to generate the list of grid coordinates in \c x direction (or analogous in \c y, \c dg::cooY3d or \c z, \c dg::cooZ3d)
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa \c dg::pullback if you want to evaluate a function in physical space
  */
 template< class TernaryOp,class real_type>
@@ -182,7 +182,7 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real
  * @param dir If dg::backward then the integral starts at the right boundary (i.e. goes in the reverse direction)
  * \f[ F_h(x) = \int_b^x f_h(x') dx' = \int_a^x f_h(x') dx' - \int_a^b f_h(x') dx' \f]
  * @return integral of \c in on the grid \c g
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  */
 template<class real_type>
 thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& in, const RealGrid1d<real_type>& g, dg::direction dir = dg::forward)
@@ -237,7 +237,7 @@ thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& 
  * @param dir If dg::backward then the integral starts at the right boundary (i.e. goes in the reverse direction)
  * \f[ F_h(x) = \int_b^x f_h(x') dx' = \int_a^x f_h(x') dx' - \int_a^b f_h(x') dx' \f]
  * @return integral of \c f on the grid \c g
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  */
 template< class UnaryOp,class real_type>
 thrust::host_vector<real_type> integrate( UnaryOp f, const RealGrid1d<real_type>& g, dg::direction dir = dg::forward)

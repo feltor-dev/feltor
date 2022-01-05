@@ -19,20 +19,20 @@ namespace create{
 * @brief Nodal weight coefficients
 * @param g The grid
 * @return Host Vector
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_inv_weights_doc
 * @brief inverse nodal weight coefficients
 * @param g The grid
 * @return Host Vector
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_weights_coo_doc
 * @brief nodal weight coefficients
 * @param g The grid
 * @param coo The coordinate for which to generate the weights (in 2d only \c dg::x and \c dg::y are allowed)
 * @return Host Vector with full grid size
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 
 ///@copydoc hide_weights_doc
