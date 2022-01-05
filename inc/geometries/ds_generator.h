@@ -67,10 +67,10 @@ inline real_type ds_metric_norm( const std::array<real_type,6>& x0){
 ///@endcond
 
 /**
- * @brief A transfomred field grid generator
+ * @brief A transformed field grid generator
  *
  * This generator transforms a given cylindrical grid by following the streamlines of a vector field
- * \f$\hat \vec b\f$ for a set distance \f$\Delta\varphi\f$ in the perpendicular direction.
+ * \f$ \hat{ \vec b}\f$ for a set distance \f$\Delta\varphi\f$ in the perpendicular direction.
  * This only works by starting from a cylindrical grid
  * @ingroup generators_geo
  * @sa The pdf <a href="https://www.overleaf.com/read/jjvstccqzcjv" target="_blank">parallel derivative</a> writeup
