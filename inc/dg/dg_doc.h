@@ -8,26 +8,26 @@
  * @{
  *     @defgroup blas Basic container independent subroutines
  *
- *         These routines form the heart of our container free numerical algorithms.
- *         They are called by all our numerical algorithms like conjugate gradient or
- *         time integrators.
+ * These routines form the heart of our container free numerical algorithms.
+ * They are called by all our numerical algorithms like conjugate gradient or
+ * time integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
- *              \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
+ *         @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
- *              \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
+ *         @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
- *              \f$ v^i = T^{ij} w_j\f$
+ *         @brief \f$ v^i = T^{ij} w_j\f$
  *
  *              Although a tensor needs a topology to be well-defined mathematically,
  *              we do not need a grid to perform basic operations computationally.
@@ -40,38 +40,36 @@
  *     @defgroup view Vector view
  *     @defgroup mpi_structures MPI backend
  *
- *             In this section the blas functions are implemented for the MPI+X
- *             hardware architectures, where X is e.g. CPU, GPU, accelerator
- *             cards...
- *             The general idea to achieve this is to separate global
- *             communication from local computations and thus readily reuse the
- *             existing, optimized library for the local part. Please consult
- *             the chapter \ref mpi_backend in the introduction for more
- *             details.
+ * In this section the blas functions are implemented for the MPI+X
+ * hardware architectures, where X is e.g. CPU, GPU, accelerator
+ * cards...
+ * The general idea to achieve this is to separate global
+ * communication from local computations and thus readily reuse the
+ * existing, optimized library for the local part.
  *     @defgroup dispatch The tag dispatch system
  *           Implementation details of \ref dispatch
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * @{
  *     @defgroup time Time integration
- *      \f$ \dot y = f(y,t) \f$
+ *     @brief \f$ \dot y = f(y,t) \f$
  *     @defgroup time_utils Utilities for ODE solvers
  *     @defgroup integration Quadrature
- *      \f$ \int_{t_0}^T u(t) dt \f$
+ *     @brief \f$ \int_{t_0}^T u(t) dt \f$
  *     @defgroup extrapolation Extrapolation
  *     @defgroup invert Linear and nonlinear solvers
- *     Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
+ *     @brief Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
  * @}
  * @defgroup geo Level 3: Topology and Geometry
  * @{
  *     @defgroup grid Topological grids and operations
  *
- *          Objects that store topological information (which point is neighbour of
- *          which other point) about the grid.
+ * Objects that store topological information (which point is neighbour of
+ * which other point) about the grid.
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
- *          \f$ f_i = f(x_i) \f$
+ *         @brief \f$ f_i = f(x_i) \f$
  *
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
@@ -86,24 +84,24 @@
  *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
  *              available topologies
  *         @defgroup creation create derivatives
- *           \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
+ *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  *             High level matrix creation functions
  *         @defgroup interpolation Interpolation and projection
- *          \f$ I \f$ and \f$ P = I^\dagger\f$
+ *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and tensor operations
  *
- *         These routines form the heart of our geometry free numerical algorithms.
- *         They are called by our geometric operators like the Poisson bracket.
+ * These routines form the heart of our geometry free numerical algorithms.
+ * They are called by our geometric operators like the Poisson bracket.
  *     @{
  *         @defgroup basicgeometry Geometry base classes
  *         @defgroup pullback pullback and pushforward
- *          \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
+ *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
  *         @defgroup metric create volume
- *           \f$ \sqrt{g} \f$
+ *         @brief \f$ \sqrt{g} \f$
  *         @defgroup generators Grid Generator classes
  *     @}
  *     @defgroup fem Finite Element Method
@@ -111,42 +109,41 @@
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
  *
- *      These routines make use of both the basic operations as well as the
- *      interfaces defined in the Geometry section.
+ * These routines make use of both the basic operations as well as the
+ * interfaces defined in the Geometry section.
  * @{
  *     @defgroup arakawa Advection terms
- *          \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
+ *     @brief \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
  *     @defgroup matrixoperators Matrix operators
- *     Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
+ *     @brief Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
  *     @defgroup multigrid Multigrid matrix inversion
- *     \f$ A x = b\f$
+ *     @brief \f$ A x = b\f$
  * @}
  * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
- *          t.tic() and T.toc()
+ *     @brief  t.tic(); t.toc(); t.diff();
  *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
  *     @{
  *          @defgroup basics Simple
- *              For the dg::evaluate and dg::blas1::evaluate functions
+ *          @brief   For the dg::evaluate and dg::blas1::evaluate functions
  *
  *          @defgroup functions A large collection
- *              For the dg::evaluate and dg::blas1::evaluate functions
+ *          @brief   For the dg::evaluate and dg::blas1::evaluate functions
  *
  *          @defgroup composition Composition of two or more functors
  *
  *          @defgroup binary_operators blas1::evaluate binary operators
- *              Binary subroutines for the dg::blas1::evaluate function
+ *          @brief   Binary subroutines for the dg::blas1::evaluate function
  *
  *          @defgroup variadic_evaluates blas1::evaluate variadic functors
- *              Functors to use in the dg::blas1::evaluate function
+ *          @brief   Functors to use in the dg::blas1::evaluate function
  *
  *          @defgroup variadic_subroutines blas1::subroutine subroutines
- *              Functors to use in the dg::blas1::subroutine functions
+ *          @brief   Functors to use in the dg::blas1::subroutine functions
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *
- *         Low level helper routines.
  * @}
  *
  */
@@ -248,14 +245,13 @@
  * and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
  */
 
-/*! @mainpage Introduction
- *
- * @section pdf Introduction to discontinuous Galerkin methods
- * Here is a pdf document explaining the fundamentals of discontinuous Galerkin methods
- *  - <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
- *
+/*! @mainpage
+ * Welcome to the dg library
+ */
 
- * @section dispatch The Level 1 dispatch system
+/*!
+ * @addtogroup blas
+ * @section dispatch The dg dispatch system
  *
  * Let us first define some nomenclature to ease the following discussion
  *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyScalarTag
@@ -272,7 +268,7 @@
  * functions: trivially parallel (\c dg::blas1::subroutine and related \c dg::blas1 functions), global communication
  * (\c dg::blas1::dot and \c dg::blas2::dot) and local communication (\c dg::blas2::symv).
  *
- * @subsection dispatch_evaluate The evaluate function
+ * @subsection dispatch_evaluate The subroutine function
  *
  * The execution of \c dg::blas1::subroutine with a Functor called \c routine
  * (and all related \c dg::blas1 functions) is equivalent to the following:
@@ -335,18 +331,23 @@
  *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is
  *   recursively called with the Matrix on all elements of the Vectors.
  *
+ */
+
+ /*!
+ * @addtogroup mpi_structures
  * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
 @subsection mpi_vector MPI Vectors and the blas functions
 
-In Feltor each mpi process gets an equally sized chunk of a vector.
-The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is
+In Feltor each mpi process usualy gets an equally sized chunk of a vector.
+In particular the \c dg::aRealMPITopology2d and \c dg::aRealMPITopology3d classes
+represent the standard Cartesian process and point distribution (meaning every process gets an equally sized 2d / 3d box out of the global domain ).
+The corresponding mpi vector structure in FELTOR is the \c dg::MPI_Vector, which is
 nothing but a wrapper around a container type object and a \c MPI_Comm.
 With this the \c dg::blas1 functions can readily be implemented by just redirecting to the
 implementation for the container type. The only functions that need
 additional
 communication are the \c dg::blas1::dot and \c dg::blas2::dot functions (\c MPI_Allreduce).
-
 @subsection mpi_matrix MPI Matrices and the symv function
 
 Contrary to a vector
@@ -417,3 +418,39 @@ Analogously, the transpose of a column distributed matrix is a row-distributed m
 \subsubsection mpi_create Creation
 You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
 */
+
+namespace dg{
+/*! @brief Simple tool for performance measuring
+ *
+ * The implementation of this class is chosen with compile-time MACROS \c THRUST_DEVICE_SYSTEM and \c MPI_VERSION.
+ * @code
+   dg::Timer t;
+   t.tic();
+   some_function_to_benchmark();
+   t.toc();
+   std::cout << "Function took "<<t.diff()<<"s\n";
+ * @endcode
+ * @ingroup timer
+ */
+struct Timer
+{
+    /*! @brief Start timer
+    *
+    * uses \c omp_get_wtime() if available, else \c gettimeofday.
+    * If compiled with nvcc we place \c cudaEvent_t in the gpu stream.
+    * The mpi version places an \c MPI_Barrier(MPI_COMM_WORLD)
+    * and then uses \c MPI_Wtime.
+    * MPI + Cuda adds an additional \c cudaDeviceSynchronize
+    */
+    void tic();
+    /*!
+    * @brief Stop timer
+    * @copydetails tic
+    */
+    void toc();
+    /*!
+     * \brief Return time in seconds elapsed between tic and toc
+     * \return Time in seconds between calls of tic and toc*/
+    double diff()const;
+};
+}
