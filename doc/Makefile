@@ -1,5 +1,5 @@
 ###
-##Packages needed on linux for compilation of both doxygen and latex doc
+##Packages needed on linux for compilation of doxygen doc
 ##sudo apt install
 #doxygen
 #libjs-mathjax (for nice mathematical formulas)
@@ -45,10 +45,11 @@ dg: exblas.tag geometries.tag
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
 		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html") | doxygen - ;
-	# MW don't know what these are good for
-		#echo "HTML_COLORSTYLE_HUE = 209";\
-		echo "HTML_COLORSTYLE_SAT = 255";\
-		echo "HTML_COLORSTYLE_GAMMA = 113";\
+
+# MW don't know what these are good for (recommended by doxygen-awesome)
+#echo "HTML_COLORSTYLE_GAMMA = 113";\
+#echo "HTML_COLORSTYLE_HUE = 209";\
+#echo "HTML_COLORSTYLE_SAT = 255";\
 
 geometries: dg.tag
 	cd ../inc/geometries; \
@@ -63,9 +64,6 @@ geometries: dg.tag
     	echo "EXTERNAL_PAGES=NO" ;\
 		echo "GENERATE_XML = YES"; \
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
-		#echo "HTML_COLORSTYLE_HUE = 209";\
-		echo "HTML_COLORSTYLE_SAT = 255";\
-		echo "HTML_COLORSTYLE_GAMMA = 113";\
 
 file:
 	cd ../inc/file; \

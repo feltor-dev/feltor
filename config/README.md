@@ -23,7 +23,7 @@ Your machine specific config file (e.g. feltor/config/your-machine.mk) should ha
 | NVCCARCH  | -arch sm_61                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
 |                                          |                                          |     |
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
-|   LIBS    | -lnetcdf -lhdf5 -ldhf5_hl                | netcdf library                           |
+|   LIBS    | -lnetcdf -lhdf5_serial -ldhf5_serial_hl                | netcdf and hdf5 library. Normally, we would use -lhdf5 and -lhdf5_hl but the libhdf5-dev package installs them with "_serial". |
 |  JSONLIB  | -ljsoncpp          | the JSONCPP library                      |
 |  GLFLAGS  | $$(pkg-config --static --libs glfw3)     | glfw3 installation (if glfw3 was installed correctly the default should work) |
 

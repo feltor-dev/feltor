@@ -13,7 +13,8 @@ OMPFLAG=-fopenmp #openmp flag for CC and MPICC
 
 #external libraries
 INCLUDE = -I$(HOME)/include# cusp, thrust and the draw libraries
-LIBS=-lnetcdf -lhdf5 -lhdf5_hl # netcdf library for file output
+# the libhdf5-dev package installs *_serial.so libs in order to distinguish from *_openmpi.so
+LIBS=-lnetcdf -lhdf5_serial -lhdf5_serial_hl # netcdf library for file output
 JSONLIB= -ljsoncpp # json library for input parameters
 GLFLAGS =$$(pkg-config --static --libs glfw3) -lGL #glfw3 installation
 endif # INCLUDED

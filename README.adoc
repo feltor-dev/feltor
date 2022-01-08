@@ -2,8 +2,8 @@
 :source-highlighter: pygments
 :toc: macro
 
-(Please visit our project https://feltor-dev.github.io[Homepage] and
-http://feltor-dev.github.io/doc/dg/html/modules.html[Documentation])
+(Visit our project https://feltor-dev.github.io[Homepage] for
+documentations, user-guides, examples and more)
 
 image::3dpic.jpg[3dsimulation]
 
@@ -29,7 +29,7 @@ installation. Please read it before you proceed to the https://feltor-dev.github
 We also present how to use the FELTOR software package,
 which requires additional external libraries to be installed on the system.
 ____
-If you run into trouble during the setup, there is a chance that we already know of the problem and have an entry in our https://feltor-dev.github.io/troubleshooting/[troubleshooting] page.
+If you run into trouble during the setup, there is a chance that we already know of the problem and have an entry in <<sec_troubleshooting,troubleshooting>> page.
 If you cannot find a solution there, please inform us of the issue.
 ____
 ____
@@ -280,12 +280,10 @@ http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
 MIT - like license (we use the netcdf-4 file format).
 The underlying https://www.hdfgroup.org/HDF5/[HDF5]
 library also uses a very permissive license.
-Both can be installed easily on Linux through the `libnetcdf-dev` package.
+Both can be installed easily on Linux through the `libnetcdf-dev` and `libhdf5-dev` packages.
 For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
-Note that for the mpi
-versions of applications you need to build hdf5 and netcdf with the
-`--enable-parallel` flag. Do NOT use the pnetcdf library, which uses the
-classic netcdf file format.
+Note that by default we also use the serial netcdf and hdf5 libraries in the mpi
+versions of applications.
 
 Some desktop applications in FELTOR use the
 https://github.com/mwiesenberger/draw[draw library] (developed by us
@@ -433,7 +431,7 @@ LaTeX::
 Install https://miktex.org/[MikTex] and https://texstudio.org[TeXstudio] (in that order) in order to be able to
 compile the tex file(s) of the documentation.
 
-=== Troubleshooting
+=== Troubleshooting [[sec_troubleshooting]]
 ===== I get a compile error: identifier "__thrust_compiler_fence" is undefined
 
 This is an error of the unmaintained cusp that does not like the newly
@@ -460,9 +458,8 @@ The
 http://feltor-dev.github.io/doc/dg/html/modules.html[documentation]
 of the dg library was generated with
 http://www.doxygen.org[Doxygen] and LateX. You can generate a local
-version including informative pdf writeups on implemented numerical
-methods directly from source code. This depends on the `doxygen`,
-`libjs-mathjax` and `graphviz` packages and LateX. Type `make doc` in
+version directly from source code. This depends on the `doxygen`,
+`libjs-mathjax` and `graphviz` packages and LateX (for equations). Type `make doc` in
 the folder `path/to/feltor/doc` and open `index.html` (a symbolic link
 to `dg/html/modules.html`) with your favorite browser.
 Finally, also note the documentations of https://thrust.github.io/doc/modules.html[thrust]
@@ -476,10 +473,8 @@ technical documentation, which can be compiled using pdflatex with
 == 3. Authors, Acknowledgements, Contributions
 
 FELTOR has been developed by Matthias Wiesenberger and Markus Held. Please see the https://feltor-dev.github.io/about/[Acknowledgements] section on our homepage
-for a list of contributors and funding.
-Also check out our https://feltor-dev.github.io[homepage]
-for general information, wiki pages,
-troubleshooting and guides on how to contribute.
+for a full list of contributors and funding.
+Contribution guidelines can be found in the link:CONTRIBUTING.md[CONTRIBUTING] file.
 
 == License
 
