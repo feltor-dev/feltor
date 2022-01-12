@@ -125,10 +125,11 @@ int main()
         dg::ShuOsher<std::array<double,2>> rk( name, u);
         dg::IdentityFilter id;
         const double dt = (t_end-t_start)/(double)N;
-        auto ode = dg::make_odeint( rk, std::tie(rhs,id), dt);
-        ode->integrate( t_start, u, t_end, u1);
+        dg::SinglestepTimeloop<std::array<double,2>>( rk, std::tie(rhs,id),
+                dt).integrate( t_start, u, t_end, u1);
         dg::blas1::axpby( 1., sol , -1., u1);
-        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
+        std::cout << "Norm of error in "<<std::setw(24)
+            <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
     ///-------------------------------Implicit Methods----------------------//
     const unsigned N_im = 20; //we can take fewer steps

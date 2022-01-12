@@ -8,13 +8,21 @@
   */
 namespace dg
 {
+///@addtogroup time
+///@{
 
-/*!@brief A generic interface class to Feltor's numerical integrators
+/*!@brief Abstract timeloop independent of stepper and ODE
  *
+ * This class enables to write abstract time-loops that are independent of
+ * the used stepper (e.g. dg::RungeKutta, dg::ExplicitMultistep, ...) and
+ * the differential equation in use. The recommended way to implement it
+ * is using a std::function that erases the latter tpyes and emulates the
+ * step function of the stepper type.
  * @copydoc hide_ContainerType
+ * @ingroup time_utils
  */
 template<class ContainerType>
-struct aOdeIntegrator
+struct aTimeloop
 {
     using value_type = dg::get_value_type<ContainerType>;
     using container_type = ContainerType;
@@ -22,20 +30,19 @@ struct aOdeIntegrator
     /**
      * @brief Integrate a differential equation between given bounds
      *
-     * @note This function is re-entrant
-     * @param stepper can be called like \c stepper( t0, u0, dt)
+     * Integrate an ode from <tt> t = t0 </tt> until <tt> t == t1 </tt>
+     * using a set of discrete steps and
+     * forcing the last timestep to land on t1 exactly.
+     * @note This function is re-entrant, i.e. if you integrate from t0 to t1
+     * and then from t1 to t2 the timestepper does not need to re-initialize on
+     * the second call
      * @param t0 initial time
      * @param u0 initial value at \c t0
      * @param t1 end time
-     * @param u1 (write only) contains the result corresponding to t1 on output
-     * @param dt The initial timestep guess (if 0 the function chooses something
-     * for you). The exact value is not really
-     * important, the stepper does not even have to succeed. Usually the
-     * control function will very(!) quickly adapt the stepsize in just one or
-     * two steps (even if it's several orders of magnitude off in the beginning).
-     * @attention The integrator may throw if it detects too small timesteps, too
-     * many failures, NaN, Inf, or other non-sanitary behaviour
-     * @copydoc hide_ContainerType
+     * @param u1 (write only) contains the result corresponding to t1 on output.
+     * May alias \c u0.
+     * @note May not work for a multistep integrator if the interval does not
+     * evenly multiply the (fixed) timestep
      */
     void integrate( value_type t0, const ContainerType& u0,
                    value_type t1, ContainerType& u1)
@@ -50,11 +57,32 @@ struct aOdeIntegrator
         }
         catch ( dg::Error& err)
         {
-            err.append_line( dg::Message(_ping_) << "Error in ODE integrate");
+            err.append_line( dg::Message(_ping_) << "Error in aTimeloop::integrate with t0 "<<t0<<" and t1 "<<t1);
             throw;
         }
     }
-    void integrate_min( value_type t0, const ContainerType& u0,
+
+    /**
+     * @brief Integrate a differential equation at least between given bounds
+     *
+     * Integrate an ode from <tt> t = t0 </tt> until <tt> t >= t1 </tt>
+     * using a set of discrete steps
+     * **without** forcing a certain timestep to match t1 exactly.
+     * For example, if \c t0=0 and \c t1=1 and the timestep is \c dt=0.6 then
+     * the timestepper without forcing stops at \c t1=1.2
+     * This behaviour is useful especially for adaptive timesteppers because
+     * it allows to implement timeloops with minimal interference with the
+     * controller
+     * @note This function is re-entrant, i.e. if you integrate from t0 to t1
+     * and then from t1 to t2 the timestepper does not need to re-initialize on
+     * the second call
+     * @param t0 initial time
+     * @param u0 initial value at \c t0
+     * @param t1 (read-write) on entry this is the value to which to integrate
+     * the ode on exit it is the value to where the ode is actually integrated
+     * @param u1 (write only) contains the result corresponding to t1 on output
+     */
+    void integrate_at_least( value_type t0, const ContainerType& u0,
                    value_type& t1, ContainerType& u1)
     {
         if( t0 == t1)
@@ -63,31 +91,36 @@ struct aOdeIntegrator
             return;
         }
         try{
-            do_integrate_min( t0, u0, t1, u1, false);
+            do_integrate( t0, u0, t1, u1, false);
         }
         catch ( dg::Error& err)
         {
-            err.append_line( dg::Message(_ping_) << "Error in ODE integrate_min");
+            err.append_line( dg::Message(_ping_) << "Error in aTimeloop::integrate_at_least with t0 "<<t0<<" and t1 "<<t1);
             throw;
         }
     }
+
     /**
-    * @brief Abstract clone method that returns a copy on the heap
+    * @brief Abstract copy method that returns a copy of *this on the heap
     *
     * @return a copy of *this on the heap
+    * @sa dg::ClonePtr
     */
-    virtual aOdeIntegrator* clone() const=0;
-    virtual ~aOdeIntegrator(){}
+    virtual aTimeloop* clone() const=0;
+
+    virtual ~aTimeloop(){}
     protected:
     ///empty
-    aOdeIntegrator(){}
+    aTimeloop(){}
     ///empty
-    aOdeIntegrator(const aOdeIntegrator& ){}
+    aTimeloop(const aTimeloop& ){}
     ///return *this
-    aOdeIntegrator& operator=(const aOdeIntegrator& ){ return *this; }
+    aTimeloop& operator=(const aTimeloop& ){ return *this; }
     private:
     // the bool indicates whether or not to check the end time condition
     virtual void do_integrate(value_type t0, const container_type& u0, value_type& t1, container_type& u1, bool check) const = 0;
 };
+
+///@}
 
 }//namespace dg

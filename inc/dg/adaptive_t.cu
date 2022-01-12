@@ -12,7 +12,6 @@
 #include "runge_kutta.h"
 #include "adaptive.h"
 
-
 //![function]
 struct RHS
 {
@@ -71,12 +70,12 @@ int main()
     double dt= 0;
     //integration
     int counter = dg::integrateERK( "Dormand-Prince-7-4-5", rhs, t_start,
-            u_start, t_end, u_end, dt, dg::pid_control, dg::l2norm, 1e-6);
+            u_start, t_end, u_end, dt, dg::pid_control, dg::fast_l2norm, 1e-6);
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1.,
             u_end);
     std::cout << "With "<<counter<<"\t Dormand Prince steps norm of error is "
-              << dg::l2norm( u_end)<<"\n";
+              << dg::fast_l2norm( u_end)<<"\n";
     //![doxygen]
     std::cout << "Explicit Methods \n";
     std::vector<std::string> names{
@@ -107,12 +106,12 @@ int main()
         dt = 0;
         u_start = solution(t_start, damping, omega_0, omega_drive);
         counter = dg::integrateERK( name, rhs, t_start, u_start, t_end,
-                u_end, dt, dg::pid_control, dg::l2norm, 1e-6, 1e-10);
+                u_end, dt, dg::pid_control, dg::fast_l2norm, 1e-6, 1e-10);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1.,sol  , -1., u_end);
         std::cout << "With "<<std::setw(6)<<counter<<" steps norm of error in "
-                  <<std::setw(24)<<name<<"\t"<<dg::l2norm( u_end)<<"\n";
+                  <<std::setw(24)<<name<<"\t"<<dg::fast_l2norm( u_end)<<"\n";
     }
     ///-------------------------------Implicit Methods----------------------//
     std::cout << "Implicit Methods \n";
@@ -136,15 +135,17 @@ int main()
         u_start = solution(t_start, damping, omega_0, omega_drive);
         dg::Adaptive< dg::DIRKStep< std::array<double,2> > >
                 adapt( name, u_start);
-        auto odeint = dg::make_odeint( adapt, std::tie(rhs,rhs), dg::pid_control,
-                dg::l2norm, 1e-6, 1e-10);
-        odeint->integrate( t_start, u_start, t_end, u_end);
+
+        dg::AdaptiveTimeloop<std::array<double,2>> odeint(
+                    adapt, std::tie(rhs,rhs), dg::pid_control, dg::fast_l2norm,
+                    1e-6, 1e-10);
+        odeint.integrate( t_start, u_start, t_end, u_end);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1., sol, -1., u_end);
         std::cout << "With "<<std::setw(6)<<adapt.nsteps()
                   <<" steps norm of error in "
-                  <<std::setw(24)<<name<<"\t"<<dg::l2norm( u_end)<<"\n";
+                  <<std::setw(24)<<name<<"\t"<<dg::fast_l2norm( u_end)<<"\n";
     }
     ///---------------------------Test domain restriction-------------------//
     std::cout << "Test domain restriction \n";
@@ -158,9 +159,10 @@ int main()
                 yp = y;
         };
         dg::Adaptive<dg::ERKStep<double>> adapt( name,u_start);
-        dg::make_odeint( adapt, rhs, dg::pid_control, dg::l2norm,
-                1e-6, 1e-10)->integrate_in_domain( t_start,
-                u_start, t_end, u_end, dt, dg::Grid1d( 0., 100., 1,1), 1e-4  );
+        dg::AdaptiveTimeloop<double> odeint( adapt,
+                rhs, dg::pid_control, dg::fast_l2norm, 1e-6, 1e-10);
+        odeint.integrate_in_domain( t_start, u_start, t_end, u_end, dt,
+                dg::Grid1d( 0., 100., 1,1), 1e-4  );
         double analytic = log( 100.);
         std::cout << "With "<<std::setw(6)<<adapt.nsteps()
                   <<" steps norm of error in "

@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <array>
+#include <tuple>
 
 #include "ode.h"
 #include "backend/exceptions.h"
@@ -87,6 +88,30 @@ void gemm(
         <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
         Here, alpha is always positive and non-zero.
   */
+/*! @class hide_explicit_implicit
+* @tparam Explicit The explicit part of the right hand side
+    is a functor type with no return value (subroutine)
+    of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+    The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
+    i.e. y' = f(t, y) translates to f(t, y, y').
+        The two ContainerType arguments never alias each other in calls to the functor.
+ * @tparam Implicit The implicit part of the right hand side
+        is a functor type with no return value (subroutine)
+        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
+        i.e. y' = f(t, y) translates to f(t, y, y').
+        The two ContainerType arguments never alias each other in calls to the functor.
+ * @tparam Solver A solver for the implicit part of the right hand side
+ * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$
+        is a functor type with no return value (subroutine) of signature
+        <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
+        Here, alpha is always positive and non-zero.
+ * @param ode <explic, implicit, solver> part. Typically \c std::tie(ex,im,solver)
+ */
+/*! @class hide_ode
+ * @tparam ODE The RHS or tuple type that corresponds to what is inserted into the step member of the Stepper
+ * @param ode rhs or tuple
+ */
  /** @class hide_limiter
   * @tparam Limiter The filter or limiter class to use in connection with the time-stepper
         has a member function \c apply
@@ -95,6 +120,29 @@ void gemm(
         i.e. y' = L( y) translates to L.apply( y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
   */
+
+/**
+ * @brief A filter that does nothing
+ * @ingroup time_utils
+ */
+struct IdentityFilter
+{
+    /**
+     * @brief copy in to out
+     *
+     * @copydoc hide_ContainerType
+     * @param in (input)
+     * @param out (copied version of in)
+     */
+    template<class ContainerType0, class ContainerType1>
+    void apply( const ContainerType0& in, ContainerType1& out) const{
+        dg::blas1::copy( in, out);
+    }
+
+};
+
+///@addtogroup time
+///@{
 
 
 /**
@@ -117,7 +165,6 @@ in the following table:
 
 * @note The name of this class is in reminiscence of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/index.html
 * @copydoc hide_ContainerType
-* @ingroup time
 */
 template< class ContainerType>
 struct ERKStep
@@ -161,7 +208,7 @@ struct ERKStep
     void enable_fsal(){ m_ignore_fsal = false;}
 
     /// @brief Advance one step with error estimate
-    ///@copydetails step()
+    ///@copydetails step(RHS&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
     ///@param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     template<class RHS>
     void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
@@ -187,9 +234,14 @@ struct ERKStep
     * equals \c t1 of the last call to \c step. You can deactivate it by
     * calling the \c ignore_fsal() method, which is useful for splitting methods
     * but increases the number of rhs calls by 1.
+    * @attention On the rare occasion where you want to change the \c RHS from
+    * one step to the next the fsal property is interpreted wrongly and will
+    * lead to wrong results. You will need to either re-construct the object or
+    * set the ignore_fsal property before the next step.
     */
     template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt)
+    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type&
+            t1, ContainerType& u1, value_type dt)
     {
         if( !m_allocated)
         {
@@ -292,7 +344,6 @@ terms. A more expensive fully implicit approach might then be required, and henc
 substantial stiffness might best be avoided".
  *
  * @copydoc hide_ContainerType
- * @ingroup time
  */
 template<class ContainerType>
 struct ARKStep
@@ -479,7 +530,6 @@ void ARKStep<ContainerType>::step( const std::tuple<Explicit,Implicit,Solver>& o
  * @copydoc hide_implicit_butcher_tableaus
  *
  * @copydoc hide_ContainerType
- * @ingroup time
  */
 template<class ContainerType>
 struct DIRKStep
@@ -525,7 +575,7 @@ struct DIRKStep
     /**
     * @brief Advance one step
     *
-    * @copydetails step()
+    * @copydetails step(const std::tuple<RHS,Solver>&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     */
     template< class RHS, class Solver>
@@ -539,8 +589,7 @@ struct DIRKStep
     * @brief Advance one step
     *
     * @copydoc hide_rhs_solve
-    * @param rhs right hand side subroutine
-    * @param solve solver for the right hand side subroutine
+    * @param ode the <right hand side, solver for the rhs> functor. Typically \c std::tie(rhs,solver)
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return
@@ -653,7 +702,6 @@ the harmonic oscillator:
 
 @snippet runge_kutta_t.cu function
 @snippet runge_kutta_t.cu doxygen
-* @ingroup time
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
@@ -661,24 +709,6 @@ the harmonic oscillator:
 template<class ContainerType>
 using RungeKutta = ERKStep<ContainerType>;
 
-/**
- * @brief A filter that does nothing
- */
-struct IdentityFilter
-{
-    /**
-     * @brief copy in to out
-     *
-     * @copydoc hide_ContainerType
-     * @param in (input)
-     * @param out (copied version of in)
-     */
-    template<class ContainerType0, class ContainerType1>
-    void apply( const ContainerType0& in, ContainerType1& out) const{
-        dg::blas1::copy( in, out);
-    }
-
-};
 /**
 * @brief Shu-Osher fixed-step explicit time-integration with Slope Limiter / Filter
 * \f[
@@ -707,7 +737,6 @@ Pages 439-471</a>
 
 You can use one of our predefined methods (only the ones that are marked with "Shu-Osher-Form"):
 @copydoc hide_explicit_butcher_tableaus
-* @ingroup time
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
@@ -744,7 +773,7 @@ struct ShuOsher
     *
     * @copydoc hide_rhs
     * @copydoc hide_limiter
-    * @param ode right hand side subroutine and limiter to use
+    * @param ode right hand side subroutine and limiter to use. Typically \c std::tie( rhs,limiter)
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
@@ -818,7 +847,6 @@ of stages.
 
 You can provide your own coefficients or use one of our predefined methods:
 @copydoc hide_implicit_butcher_tableaus
-* @ingroup time
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
@@ -826,8 +854,6 @@ You can provide your own coefficients or use one of our predefined methods:
 template<class ContainerType>
 using ImplicitRungeKutta = DIRKStep<ContainerType>;
 
-///@addtogroup time
-///@{
 
 ///@cond
 namespace detail
@@ -840,6 +866,7 @@ inline bool is_same( float x, float y, float eps = 1e-6)
 {
     return fabsf(x - y) < eps * std::max(1.0f, std::max( fabsf(x), fabsf(y)));
 }
+//Does not check for equal sign!
 inline bool is_divisable( double a, double b, double eps = 1e-15)
 {
     return is_same( round(a/b)*b, a);
@@ -851,18 +878,96 @@ inline bool is_divisable( float a, float b, float eps = 1e-6)
 }
 ///@endcond
 
+/*! @brief Integrate using a for loop and a fixed time-step
+ *
+ * The implementation (of integrate) is equivalent to
+ * @code
+  dg::blas1::copy( u0, u1);
+  unsigned N = round((t1 - t0)/dt);
+  for( unsigned i=0; i<N; i++)
+      step( t0, u1, t0, u1, dt);
+ * @endcode
+ * where \c dt is a given constant. If \c t1 needs to be matched exactly, the last
+ * timestep is shortened accordingly.
+ * @ingroup time_utils
+ * @sa AdaptiveTimeloop, MultistepTimeloop
+ * @copydoc hide_ContainerType
+ */
 template<class ContainerType>
-struct FixedStepIntegrator : public aOdeIntegrator<ContainerType>
+struct SinglestepTimeloop : public aTimeloop<ContainerType>
 {
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>;
-    FixedStepIntegrator( ){}
-    FixedStepIntegrator( std::function<void ( value_type, const ContainerType&,
-                value_type&, ContainerType&, value_type)> step, value_type dt )
+    /// no allocation
+    SinglestepTimeloop( ){}
+
+    /**
+     * @brief Construct using a \c std::function
+     *
+     * @param step Called in the timeloop as <tt> step( t0, u1, t0, u1, dt) </tt>. Has to advance the ode in-place by \c dt
+     * @param dt The constant timestep. Can be set later with \c set_dt. Can be negative.
+     */
+    SinglestepTimeloop( std::function<void ( value_type, const ContainerType&,
+                value_type&, ContainerType&, value_type)> step, value_type dt = 0 )
         : m_step(step), m_dt(dt){}
+
+    /**
+     * @brief Bind the step function of a single step stepper
+     *
+     * Construct a lambda function that calls the step function of \c stepper
+     * with given parameters and stores it internally in a \c std::function
+     * @tparam Stepper possible steppers are for example dg::RungeKutta,
+     * dg::ShuOsher and dg::ImplicitRungeKutta
+     * @param stepper If constructed in-place (rvalue), will be copied into the
+     * lambda. If an lvalue, then the lambda stores a reference
+     * @attention If stepper is an lvalue then you need to make sure
+     * that stepper remains valid to avoid a "dangling reference"
+     * @copydoc hide_ode
+     * @param dt The constant timestep. Can be set later with \c set_dt. Can be negative.
+     */
+    template<class Stepper, class ODE>
+    SinglestepTimeloop( Stepper&& stepper, ODE&& ode, value_type dt = 0)
+    {
+        // Open/Close Principle (OCP) Software entities should be open for extension but closed for modification
+        m_step = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
+                std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t1, auto& y1,
+                auto dtt) mutable
+        {
+            std::get<0>(cap).step( std::get<1>(cap), t0, y0, t1, y1, dtt);
+        };
+        m_dt = dt;
+    }
+
+    /**
+     * @brief Set the constant timestep to be used in the integrate functions
+     *
+     * @param dt new timestep to use in integrate functions. Can be negative.
+     */
     void set_dt( value_type dt){ m_dt = dt;}
-    virtual FixedStepIntegrator* clone() const{return new
-        FixedStepIntegrator(*this);}
+
+    /*! @brief Integrate differential equation with a fixed number of steps
+     *
+     * Equivalent to
+ * @code
+  set_dt( (t1-t0)/(value_type)steps );
+  integrate( t0, u0, t1, u1);
+ * @endcode
+     * @param t0 initial time
+     * @param u0 initial condition
+     * @param t1 final time
+     * @param u1 (write-only) contains solution at \c t1 on return (may
+     *      alias \c u0)
+     * @param steps number of steps
+     */
+    void integrate_steps( value_type t0, const container_type& u0, value_type t1,
+            container_type& u1, unsigned steps)
+    {
+        set_dt( (t1-t0)/(value_type)steps );
+        this->integrate( t0, u0, t1, u1);
+    }
+
+    virtual SinglestepTimeloop* clone() const{ return new
+        SinglestepTimeloop(*this);}
     private:
     virtual void do_integrate(value_type t0, const container_type& u0, value_type& t1, container_type& u1, bool check) const;
     std::function<void ( value_type, ContainerType, value_type&,
@@ -870,27 +975,20 @@ struct FixedStepIntegrator : public aOdeIntegrator<ContainerType>
     value_type m_dt;
 };
 
-/**
- * @brief Integrate differential equation with an explicit Runge-Kutta scheme and a fixed number of steps
- *
- * @copydoc hide_rhs
- * @copydoc hide_ContainerType
- * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
- * @param rhs The right-hand-side
- * @param t_begin initial time
- * @param begin initial condition
- * @param t_end final time
- * @param end (write-only) contains solution at \c t_end on return (may alias begin)
- * @param N number of steps
- */
+///@cond
 template< class ContainerType>
-void FixedStepIntegrator<ContainerType>::do_integrate(
+void SinglestepTimeloop<ContainerType>::do_integrate(
         value_type  t_begin, const ContainerType&
         begin, value_type& t_end, ContainerType& end,
         bool check ) const
 {
+    bool forward = (t_end - t_begin > 0);
+    if( (m_dt < 0 && forward) || ( m_dt > 0 && !forward) )
+        throw dg::Error( dg::Message(_ping_)<<"Timestep has wrong sign! dt "<<m_dt);
     dg::blas1::copy( begin, end);
     value_type t0 = t_begin;
+    if( m_dt == 0)
+        throw dg::Error( dg::Message(_ping_)<<"Timestep may not be zero in SinglestepTimeloop!");
     if( detail::is_divisable( t_end-t_begin, m_dt))
     {
         unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
@@ -912,38 +1010,25 @@ void FixedStepIntegrator<ContainerType>::do_integrate(
             m_step( t0, end, t_end, end, m_dt);
     }
 }
-template<class Stepper, class ODE, class value_type>
-auto make_odeint( Stepper&& stepper, ODE&& ode, value_type dt)
-{
-    auto lambda = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
-            std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t1, auto& y1,
-            auto dtt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), t0, y0, t1, y1, dtt);
-    };
-    return std::make_unique<FixedStepIntegrator<typename
-            std::decay_t<Stepper>::container_type>>( lambda, dt);
-}
+///@endcond
 
-template<class Stepper, class ODE, class ContainerType, class value_type>
-void stepper( Stepper&& step, std::string tableau, ODE&& ode, value_type t0,
-        const ContainerType& u0, value_type t1, ContainerType& u1, unsigned N)
-{
-    value_type dt = (t1-t0)/(value_type)N;
-    make_odeint( Stepper( tableau,u0),
-            ode, dt)->integrate(t0, u0, t1, u1);
-}
-
+/*! @brief DEPRECATED
+ *
+ * Same as
+ * @code
+ * using Vec = ContainerType; // if ContainerType is really long to type
+ * dg::SinglestepTimeloop<Vec>( dg::RungeKutta<Vec>(
+ *      tableau, u0), rhs).integrate_steps( t_begin, begin, t_end, end, N);
+ * @endcode
+ */
 template<class RHS, class ContainerType >
 void stepperRK(	ConvertsToButcherTableau< get_value_type< ContainerType >>
         tableau, RHS& rhs, get_value_type< ContainerType > t_begin,
         const ContainerType& begin, get_value_type< ContainerType>
         t_end, ContainerType& end, unsigned N )
 {
-    using value_type = get_value_type<ContainerType>;
-    value_type dt = (t_end - t_begin)/(value_type)N;
-    make_odeint( RungeKutta<ContainerType>( tableau,begin),
-            rhs, dt)->integrate(t_begin, begin, t_end, end);
+    SinglestepTimeloop<ContainerType>( RungeKutta<ContainerType>( tableau,
+                begin), rhs).integrate_steps(t_begin, begin, t_end, end,N);
 }
 
 

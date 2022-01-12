@@ -9,53 +9,50 @@ namespace dg
 
 ///@addtogroup time_utils
 ///@{
+//MW: The reason these are global lambdas instead of functions is so that make_unique
+//can deduce the correct types when used on dg::AdaptiveTimeloop:
+//std::make_unique<dg::AdaptiveTimeloop<Vec>>( adapt, ode, dg::pid_control, dg::fast_l2norm, 1e-6, 1e-6);
 /*! @brief Compute \f$ \sqrt{\sum_i x_i^2}\f$ using \c dg::blas1::dot
  *
- * The intention of this function is to used in the \c Adaptive timestepping class.
+ * The intention of this function is to be used in the \c Adaptive timestepping class.
  * @param x Vector to take the norm of
  * @return \c sqrt(dg::blas1::dot(x,x))
 * @copydoc hide_ContainerType
  */
-template <class ContainerType>
-get_value_type<ContainerType> l2norm( const ContainerType& x)
-{
-    return sqrt( dg::blas1::dot( x,x));
-}
+auto l2norm = [] ( const auto& x){ return sqrt( dg::blas1::dot(x,x));};
 /*! @brief Compute \f$ \sqrt{\sum_i x_i^2}\f$ using naive summation
  *
- * This overload is intended for small arrays where the \c dg::blas1::dot function
- * has its worst performance and takes overly long time to compute
- * The intention of this function is to used in the \c Adaptive timestepping class.
+ * The intention of this function is to be used in the \c Adaptive timestepping class.
+ * This function is intended for small arrays (less than 100 elements say)
+ * where the \c dg::blas1::dot function has its worst performance and takes
+ * overly long time to compute.
  * @param x Vector to take the norm of
- * @return \c sqrt(sum_i x_i^2)
+ * @return \c sqrt(sum_i x_i^2) using \c dg::blas1::reduce
  */
-template <class value_type, int N,
-    typename = std::enable_if_t<std::is_arithmetic<value_type>::value>>
-value_type l2norm( const std::array<value_type,N>& x)
-{
-    value_type sum;
-    for( unsigned i=0; i<N; i++)
-        sum += x[i]*x[i];
-    return sqrt( sum);
-}
+auto fast_l2norm = [] (const auto& x) {
+    auto y(x);
+    dg::blas1::pointwiseDot( x, x, y);
+    return sqrt( dg::blas1::reduce( y, 0.,
+            []DG_DEVICE( double a, double b ){ return a+b;}));
+};
 
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
-template<class value_type>
-value_type i_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
+auto i_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
+    using value_type = std::decay_t<decltype(dt[0])>;
     return dt[0]*pow( eps[0], -1./(value_type)embedded_order);
-}
+};
 ///\f$ h_{n+1}= h_n \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f$
-template<class value_type>
-value_type pi_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
+auto pi_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
+    using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
         return i_control( dt, eps, embedded_order, order);
     value_type m_k1 = -0.8, m_k2 = 0.31;
     value_type factor = pow( eps[0], m_k1/(value_type)embedded_order)
                      * pow( eps[1], m_k2/(value_type)embedded_order);
     return dt[0]*factor;
-}
+};
 /**
  * @brief \f$ h_{n+1}= h_n \epsilon_n^{-0.58/p}\epsilon_{n-1}^{0.21/p}\epsilon_{n-2}^{-0.1/p}\f$
  *
@@ -67,16 +64,16 @@ value_type pi_control( std::array<value_type,3> dt, std::array<value_type,3> eps
  * converges very quickly to the desired timestep. In fact Kennedy and Carpenter, Appl. num. Math., (2003) report
  * that it outperformed other controllers in practical problems
  * @tparam value_type
- * @param dt the present (old, 0), previous [1] and second previous [2] timestep h_n
+ * @param dt the present (old), [0], previous [1] and second previous [2] timestep h_n
  * @param eps the error relative to the tolerance of the present [0], previous [1] and second previous [2] timestep
  * @param embedded_order order \c q of the embedded timestep
  * @param order order \c p  of the timestep
  *
  * @return the new timestep
  */
-template<class value_type>
-value_type pid_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
+auto pid_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
+    using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
         return i_control( dt, eps, embedded_order, order);
     if( dt[2] == 0)
@@ -87,39 +84,39 @@ value_type pid_control( std::array<value_type,3> dt, std::array<value_type,3> ep
                      * pow( eps[1], m_k2/(value_type)embedded_order)
                      * pow( eps[2], m_k3/(value_type)embedded_order);
     return dt[0]*factor;
-}
+};
 
 /// \f$ h_{n+1} = h_n \epsilon_n^{-0.367/p}(\epsilon_n/\epsilon_{n-1})^{0.268/p} \f$
-template<class value_type>
-value_type ex_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
+auto ex_control = [](auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
+    using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
         return i_control( dt, eps, embedded_order, order);
     value_type m_k1 = -0.367, m_k2 = 0.268;
     value_type factor = pow( eps[0], m_k1/(value_type)embedded_order)
                       * pow( eps[0]/eps[1], m_k2/(value_type)embedded_order);
     return dt[0]*factor;
-}
+};
 /// \f$ h_{n+1} = h_n (h_n/h_{n-1}) \epsilon_n^{-0.98/p}(\epsilon_n/\epsilon_{n-1})^{-0.95/p} \f$
-template<class value_type>
-value_type im_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
+auto im_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
+    using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
         return i_control( dt, eps, embedded_order, order);
     value_type m_k1 = -0.98, m_k2 = -0.95;
     value_type factor = pow( eps[0], m_k1/(value_type)embedded_order)
                      *  pow( eps[0]/eps[1], m_k2/(value_type)embedded_order);
     return dt[0]*dt[0]/dt[1]*factor;
-}
+};
 /// h_{n+1} = |ex_control| < |im_control| ? ex_control : im_control
-template<class value_type>
-value_type imex_control( std::array<value_type,3> dt, std::array<value_type,3> eps, unsigned embedded_order, unsigned order)
+auto imex_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
+    using value_type = std::decay_t<decltype(dt[0])>;
     value_type h1 = ex_control( dt, eps, embedded_order, order);
     value_type h2 = im_control( dt, eps, embedded_order, order);
     // find value closest to zero
     return fabs( h1) < fabs( h2) ? h1 : h2;
-}
+};
 
 ///@}
 
@@ -298,12 +295,13 @@ struct Adaptive
         m_nsteps++;
         dg::blas1::subroutine( detail::Tolerance<value_type>( rtol, atol,
                     m_size), u0, m_delta);
-        m_eps0 = norm(m_delta);
+        m_eps0 = norm( m_delta);
         m_dt0 = dt;
         if( m_eps0 > reject_limit || std::isnan( m_eps0) )
         {
             // if stepper fails, restart controller
-            dt = control( {m_dt0, 0, m_dt2}, {m_eps0, m_eps1, m_eps2},
+            dt = control( std::array<value_type,3>{m_dt0, 0, m_dt2},
+                    std::array<value_type,3>{m_eps0, m_eps1, m_eps2},
                     m_stepper.embedded_order(),
                     m_stepper.order());
             if( fabs( dt) > 0.9*fabs(m_dt0))
@@ -322,7 +320,8 @@ struct Adaptive
         }
         else
         {
-            dt = control( {m_dt0, m_dt1, m_dt2}, {m_eps0, m_eps1, m_eps2},
+            dt = control( std::array<value_type,3>{m_dt0, m_dt1, m_dt2},
+                    std::array<value_type,3>{m_eps0, m_eps1, m_eps2},
                     m_stepper.embedded_order(),
                     m_stepper.order());
         }
@@ -385,6 +384,11 @@ struct Adaptive
  * @param dt on input: timestep
  * On output: stepsize proposed by the controller that can be used to continue
  * the integration in the next step.
+ */
+/*!@class hide_control_error
+ * @tparam ControlFunction function or Functor called as dt' = \c control( {dt0, dt1, dt2},
+ * {eps0, eps1, eps2}, embedded_order, order), where all parameters are of type
+ * value_type except the last two, which are unsigned.
  * @param control The control function.
  * For explicit and imex methods, \c dg::pid_control
  * is a good choice with \c dg::ex_control or \c dg::imex_control
@@ -394,12 +398,17 @@ struct Adaptive
  * based on the old timestep size, the order of the method and the past
  * error(s). The behaviour of the controller is also changed by the
  * \c set_reject_limit function
+ * @tparam ErrorNorm function or Functor of type value_type( const
+ * ContainerType&)
  * @param norm The error norm. Usually \c dg::l2norm is a good choice, but for
  * very small vector sizes the time for the binary reproducible dot product
- * might become a performance bottleneck. Then it's time for your own
- * implementation.
+ * might become a performance bottleneck. Then \c dg::fast_l2norm is a better choice.
  * @param rtol the desired relative accuracy. Usually 1e-5 is a good choice.
  * @param atol the desired absolute accuracy. Usually 1e-7 is a good choice.
+ * @param reject_limit the default value is 2.
+ * Sometimes even 2 is not enough, for example
+ * when the stepsize fluctuates very much and the stepper fails often
+ * then it may help to increase the reject_limit further (to 10 say).
  * @note The error tolerance is computed such that on average every point in
  * the solution vector fulfills \f$ |\delta_i| \approx r|u_i| + a\f$
  * @note Try not to mess with dt. The controller is best left alone and it does
@@ -446,20 +455,6 @@ substantial stiffness might best be avoided".
  * stepsize method.
  */
 
-/*!@class hide_control_error
- *
- * @tparam ControlFunction function or Functor called as dt' = \c control( {dt0, dt1, dt2},
- * {eps0, eps1, eps2}, embedded_order, order), where all parameters are of type
- * value_type except the last two, which are unsigned.
- * @tparam ErrorNorm function or Functor of type value_type( const
- * ContainerType&)
- * @param reject_limit the default value is 2.
- * Sometimes even 2 is not enough, for example
- * when the stepsize fluctuates very much and the stepper fails often
- * then it may help to increase the reject_limit further (to 10 say).
- *
- */
-
 /**
  * @brief The domain that contains all points
  * @ingroup time_utils
@@ -474,37 +469,116 @@ struct EntireDomain
 ///@addtogroup time
 ///@{
 //
+/**
+ * @brief Integrate using a while loop
+ *
+ * well suited for dg::Adaptive. The timeloop (for positive dt) corresponds to
+ * @code
+  t = t0; u1 = u0;
+  double dt = 1e-6; // some initial guess
+  while( t < t1)
+  {
+      if( t + dt > t1)
+          dt = t1 - t;
+      step( t, u1, t, u1, dt);
+  }
+ * @endcode
+ * In the \c integrate_at_least function the inner if statement is removed.
+ * @note the current timestep \c dt is saved by the class and re-used in the next call to integrate unless overwritten by \c set_dt.
+ * @attention The integrator may throw if it detects too small timesteps, too
+ * many failures, NaN, Inf, or other non-sanitary behaviour
+ * @ingroup time_utils
+ * @sa SinglestepTimeloop, MultistepTimeloop
+ * @copydoc hide_ContainerType
+ */
 template<class ContainerType>
-struct AdaptiveIntegrator : public aOdeIntegrator<ContainerType>
+struct AdaptiveTimeloop : public aTimeloop<ContainerType>
 {
     using value_type = dg::get_value_type<ContainerType>;
     using container_type = ContainerType;
-    AdaptiveIntegrator( ) {}
-    AdaptiveIntegrator( std::function<void (value_type, const ContainerType&,
+    /// no allocation
+    AdaptiveTimeloop( ) {}
+
+
+    /**
+     * @brief Construct using a \c std::function
+     *
+     * @param step Called in the timeloop as <tt> step( t0, u1, t0, u1, dt) </tt>. Has to advance the ode in-place by \c dt and suggest a new \c dt for the next step.
+     */
+    AdaptiveTimeloop( std::function<void (value_type, const ContainerType&,
                 value_type&, ContainerType&, value_type&)> step)  :
         m_step(step){
             m_dt_current = dg::Buffer<value_type>( 0.);
-        }
-    void set_dt( value_type dt){ m_dt_current = dg::Buffer<value_type>(dt);}
+    }
+    /*!
+     * @brief Bind the step function of a \c dg::Adaptive object
+     *
+     * Construct a lambda function that calls the step function of \c adapt
+     * with given parameters and stores it internally in a \c std::function
+     * @tparam Adaptive a type with a step function as in dg::Adaptive
+     * @param adapt If constructed in-place (rvalue), will be copied into the
+     * lambda. If an lvalue, then the lambda stores a reference
+     * @attention If adapt is an lvalue then you need to make sure
+     * that adapt remains valid to avoid a "dangling reference"
+     * @copydoc hide_ode
+     * @copydoc hide_control_error
+     */
+    template<class Adaptive, class ODE, class ErrorNorm =
+        value_type( const container_type&), class
+        ControlFunction = value_type(std::array<value_type,3>,
+                std::array<value_type,3>, unsigned, unsigned)>
+    AdaptiveTimeloop(
+          Adaptive&& adapt,
+          ODE&& ode,
+          ControlFunction control,
+          ErrorNorm norm,
+          value_type rtol,
+          value_type atol,
+          value_type reject_limit = 2)
+    {
+        // On the problem of capturing perfect forwarding in a lambda
+        //https://stackoverflow.com/questions/26831382/capturing-perfectly-forwarded-variable-in-lambda
+        //https://vittorioromeo.info/index/blog/capturing_perfectly_forwarded_objects_in_lambdas.html
+
+        m_step = [=, cap = std::tuple<Adaptive, ODE>(std::forward<Adaptive>(adapt),
+                std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t,
+                auto& y, auto& dt) mutable
+        {
+            std::get<0>(cap).step( std::get<1>(cap), t0, y0, t, y, dt, control, norm,
+                    rtol, atol, reject_limit);
+        };
+        m_dt_current = dg::Buffer<value_type>( 0.);
+    }
 
     /**
-     * @brief Integrates a differential equation
-     *  monitoring the sanity of integration and the integration domain
+     * @brief Set initial time-guess in integrate function
      *
-     * @param stepper can be called like \c stepper( t0, u0, dt) Cannot be
-     * a multistep stepper
+     * Use only if you know a good step-size.
+     * @param dt The initial timestep guess (if 0 the function chooses something
+     * for you). The exact value is not really
+     * important, the stepper does not even have to succeed. Usually the
+     * control function will very(!) quickly adapt the stepsize in just one or
+     * two steps (even if it's several orders of magnitude off in the beginning).
+     */
+    void set_dt( value_type dt){
+        m_dt_current = dg::Buffer<value_type>(dt);
+    }
+
+    /**
+     * @brief Integrate a differential equation
+     *  within an integration domain
+     *
+     * If the integration does not leave the domain then it is equivalent
+     * to a call to %integrate, else a bisection algorithm is used to
+     * find the exact point of exit
      * @param t0 initial time
      * @param u0 initial value at \c t0
      * @param t1 (read / write) end time; if the solution leaves the domain
      * contains the last time where the solution still lies within the domain
      * on output
      * @param u1 (write only) contains the result corresponding to t1 on output
-     * @param dt The initial timestep guess (if 0 the function chooses something
-     * for you). The exact value is not really
-     * important, the stepper does not even have to succeed. Usually the
-     * control function will very(!) quickly adapt the stepsize in just one or
-     * two steps (even if it's several orders of magnitude off in the beginning).
-     * @param domain (optional) a restriction of the solution space. The integrator
+     * @copydetails set_dt(value_type)
+     * @param domain a restriction of the solution space. The integrator
      * checks after every step if the solution is still within the given domain
      * \c domain.contains(u1). If not, the integrator will bisect the exact domain
      * boundary (up to the given tolerances) and return (t1, u1) that lies closest
@@ -513,7 +587,6 @@ struct AdaptiveIntegrator : public aOdeIntegrator<ContainerType>
      * @tparam Domain Must have the \c contains(const ContainerType&) const member
      * function returning true if the given solution is part of the domain,
      * false else (can for example be \c dg::aRealTopology2d)
-     * @copydoc hide_ContainerType
      */
     template< class Domain>
     void integrate_in_domain(
@@ -525,8 +598,9 @@ struct AdaptiveIntegrator : public aOdeIntegrator<ContainerType>
                   Domain&& domain,
                   value_type eps_root
                   );
-    virtual AdaptiveIntegrator* clone() const{return new
-        AdaptiveIntegrator(*this);}
+
+    virtual AdaptiveTimeloop* clone() const{return new
+        AdaptiveTimeloop(*this);}
     private:
     virtual void do_integrate(value_type t0, const container_type& u0,
             value_type& t1, container_type& u1, bool check) const;
@@ -535,8 +609,9 @@ struct AdaptiveIntegrator : public aOdeIntegrator<ContainerType>
     dg::Buffer<value_type> m_dt_current ;
 };
 
+///@cond
 template< class ContainerType>
-void AdaptiveIntegrator<ContainerType>::do_integrate(
+void AdaptiveTimeloop<ContainerType>::do_integrate(
               value_type t0,
               const ContainerType& u0,
               value_type& t1,
@@ -549,7 +624,7 @@ void AdaptiveIntegrator<ContainerType>::do_integrate(
     bool forward = (t1 - t0 > 0);
     value_type& dt_current = m_dt_current.data();
     if( dt_current == 0)
-        dt_current = 1e-6; // a good a guess as any
+        dt_current = forward ? 1e-6 : -1e-6; // a good a guess as any
 
     while( (forward && t_current < t1) || (!forward && t_current > t1))
     {
@@ -557,7 +632,13 @@ void AdaptiveIntegrator<ContainerType>::do_integrate(
                         t_current + dt_current < t1) ) )
             dt_current = t1-t_current;
         // Compute a step and error
-        m_step( t_current, u1, t_current, u1, dt_current);
+        try{
+            m_step( t_current, u1, t_current, u1, dt_current);
+        }catch ( dg::Error& e)
+        {
+            e.append( dg::Message(_ping_) << "Error in AdaptiveTimeloop::integrate");
+            throw;
+        }
         if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
         {
             value_type dt_current0 = dt_current;
@@ -569,7 +650,7 @@ void AdaptiveIntegrator<ContainerType>::do_integrate(
 
 template< class ContainerType>
 template< class Domain>
-void AdaptiveIntegrator<ContainerType>::integrate_in_domain(
+void AdaptiveTimeloop<ContainerType>::integrate_in_domain(
               value_type t0,
               const ContainerType& u0,
               value_type& t1,
@@ -586,7 +667,7 @@ void AdaptiveIntegrator<ContainerType>::integrate_in_domain(
         return;
     bool forward = (t1 - t0 > 0);
     if( dt == 0)
-        dt_current = 1e-6; // a good a guess as any
+        dt_current = forward ? 1e-6 : -1e-6; // a good a guess as any
 
     ContainerType last( u0);
     while( (forward && t_current < t1) || (!forward && t_current > t1))
@@ -598,7 +679,13 @@ void AdaptiveIntegrator<ContainerType>::integrate_in_domain(
                     dt_current < t1) )
             dt_current = t1-t_current;
         // Compute a step and error
-        m_step( t_current, current, t_current, current, dt_current);
+        try{
+            m_step( t_current, current, t_current, current, dt_current);
+        }catch ( dg::Error& e)
+        {
+            e.append( dg::Message(_ping_) << "Error in AdaptiveTimeloop::integrate");
+            throw;
+        }
         if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
             throw dg::Error(dg::Message(_ping_)<<"integrate_in_domain failed to converge! dt = "<<std::scientific<<dt_current);
         if( !domain.contains( current) )
@@ -637,80 +724,52 @@ void AdaptiveIntegrator<ContainerType>::integrate_in_domain(
         }
     }
 }
+///@endcond
 
 
-/*!
- * @brief Create a new Integrator instance in a unique_ptr
+/*! @brief DEPRECATED
  *
- * @snippet adaptive_t.cu function
- * @snippet adaptive_t.cu doxygen
- * @param ode The right-hand-side
- * @param control The control function.
- * For explicit and imex methods, \c dg::pid_control
- * is a good choice with \c dg::ex_control or \c dg::imex_control
- * as an alternative if too many steps fail.
- * For implicit methods use the \c dg::im_control.
- * The task of the control function is to compute a new timestep size
- * based on the old timestep size, the order of the method and the past
- * error(s). The behaviour of the controller is also changed by the
- * \c set_reject_limit function
- * @param norm The error norm. Usually \c dg::l2norm is a good choice, but for
- * very small vector sizes the time for the binary reproducible dot product
- * might become a performance bottleneck. Then it's time for your own
- * implementation.
- * @param rtol the desired relative accuracy. Usually 1e-5 is a good choice.
- * @param atol the desired absolute accuracy. Usually 1e-7 is a good choice.
- * @return number of steps
- * @copydoc hide_ode
- * @copydoc hide_control_error
- * @copydoc hide_ContainerType
+ * Same as
+ * @code
+ * using Vec = ContainerType; // if ContainerType is really long to type
+ * dg::Adaptive<Stepper> adapt( name, u0);
+ * dg::AdaptiveTimeloop<Vec> loop( adapt, ode, control, norm, rtol,
+ *      atol, reject_limit);
+ * loop.set_dt( dt); // if dt=0 can be left away
+ * loop.integrate( t0, u0, t1, u1);
+ * int nsteps = adapt.nsteps(); // if needed
+ * @endcode
  */
-template<class Adaptive, class ODE, class
-value_type, class ErrorNorm = value_type( const typename std::decay_t<Adaptive>::container_type&), class
-ControlFunction = value_type(std::array<value_type,3>,
-        std::array<value_type,3>, unsigned, unsigned)>
-auto make_odeint(
-          Adaptive&& adapt,
-          ODE&& ode,
-          ControlFunction control,
-          ErrorNorm norm,
-          value_type rtol,
-          value_type atol,
-          value_type reject_limit = 2)
-{
-    // On the problem of capturing perfect forwarding in a lambda
-    //https://stackoverflow.com/questions/26831382/capturing-perfectly-forwarded-variable-in-lambda
-    //https://vittorioromeo.info/index/blog/capturing_perfectly_forwarded_objects_in_lambdas.html
-
-    //std::unique_ptr<dg::aOdeIntegrator> ptr = dg::make_odeint( stepper, ode, args...);
-    auto stepper = [=, cap = std::tuple<Adaptive, ODE>(std::forward<Adaptive>(adapt),
-            std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t,
-            auto& y, auto& dt) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), t0, y0, t, y, dt, control, norm,
-                rtol, atol, reject_limit);
-    };
-    return std::make_unique< AdaptiveIntegrator<typename std::decay_t<Adaptive>::container_type>>( stepper);
-}
-
-
 template<class Stepper, class ODE, class ContainerType, class value_type, class
-ErrorNorm =
-    value_type( const ContainerType&), class ControlFunction = value_type
-    (std::array<value_type,3>, std::array<value_type,3>, unsigned, unsigned)>
+ErrorNorm = value_type( const ContainerType&), class ControlFunction =
+value_type (std::array<value_type,3>, std::array<value_type,3>, unsigned,
+        unsigned)>
 int integrate( std::string name, ODE&& ode, value_type t0, const ContainerType& u0,
         value_type t1, ContainerType& u1, value_type dt, ControlFunction
         control, ErrorNorm norm, value_type rtol, value_type atol=1e-10,
         value_type reject_limit = 2)
 {
     dg::Adaptive<Stepper> adapt( name, u0);
-    auto odeint = dg::make_odeint( adapt, std::forward<ODE>(ode), control,
-            norm, rtol, atol, reject_limit);
-    odeint -> set_dt( dt);
-    odeint->integrate(t0, u0, t1, u1);
+    dg::AdaptiveTimeloop<ContainerType> odeint( adapt, std::forward<ODE>(ode),
+            control, norm, rtol, atol, reject_limit);
+    odeint.set_dt( dt);
+    odeint.integrate( t0, u0, t1, u1);
     return adapt.nsteps();
 }
 
+/*! @brief DEPRECATED
+ *
+ * Same as
+ * @code
+ * using Vec = ContainerType; // if ContainerType is really long to type
+ * dg::Adaptive<ERKStep<Vec>> adapt( name, u0);
+ * dg::AdaptiveTimeloop<Vec> loop( adapt, ode, control, norm, rtol,
+ *      atol, reject_limit);
+ * loop.set_dt( dt); // if dt=0 can be left away
+ * loop.integrate( t0, u0, t1, u1);
+ * int nsteps = adapt.nsteps(); // if needed
+ * @endcode
+ */
 template<class ODE, class ContainerType, class value_type, class ErrorNorm =
     value_type( const ContainerType&), class ControlFunction = value_type
     (std::array<value_type,3>, std::array<value_type,3>, unsigned, unsigned)>

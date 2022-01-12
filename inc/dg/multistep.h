@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <tuple>
 #include "ode.h"
 #include "runge_kutta.h"
 #include "multistep_tableau.h"
@@ -11,28 +12,6 @@
 namespace dg{
 
 
-/*! @class hide_explicit_implicit
-* @tparam Explicit The explicit part of the right hand side
-    is a functor type with no return value (subroutine)
-    of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
-    The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
-    i.e. y' = f(t, y) translates to f(t, y, y').
-        The two ContainerType arguments never alias each other in calls to the functor.
- * @tparam Implicit The implicit part of the right hand side
-        is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
-        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
-        i.e. y' = f(t, y) translates to f(t, y, y').
-        The two ContainerType arguments never alias each other in calls to the functor.
- * @tparam Solver A solver for the implicit part of the right hand side
- * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$
-        is a functor type with no return value (subroutine) of signature
-        <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
-        Here, alpha is always positive and non-zero.
- * @param ex explic part
- * @param im implicit part
- * @param solve solver for implicit part
- */
 /*!@class hide_note_multistep
 * @note Uses only \c blas1::axpby routines to integrate one step.
 * @note The difference between a multistep and a single step method like RungeKutta
@@ -47,6 +26,9 @@ namespace dg{
 template<class ContainerType>
 struct FilteredExplicitMultistep;
 ///@endcond
+//
+///@addtogroup time
+///@{
 
 /**
 * @brief General explicit linear multistep time-integration
@@ -72,7 +54,6 @@ struct FilteredExplicitMultistep;
 *
 * @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
- @ingroup time
 */
 template<class ContainerType>
 struct ExplicitMultistep
@@ -168,7 +149,6 @@ However, each PDE is different and general statements like this one should be
 treated with care.
 * @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
-* @ingroup time
 */
 template<class ContainerType>
 struct ImExMultistep
@@ -349,7 +329,6 @@ outweighs the increased computational cost of the additional inversions.
 However, each PDE is different and general statements like this one should be
 treated with care.
 * @copydoc hide_note_multistep
-* @ingroup time
 */
 template<class ContainerType>
 struct ImplicitMultistep
@@ -397,7 +376,7 @@ struct ImplicitMultistep
      *
      * This routine has to be called before the first timestep is made.
      * @copydoc hide_rhs_solve
-     * @param ode The rhs functor and solver
+     * @param ode The rhs functor and solver. Typically \c std::tie(rhs,solver)
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
@@ -411,7 +390,7 @@ struct ImplicitMultistep
     * @brief Advance one timestep
     *
     * @copydoc hide_rhs_solve
-    * @param ode The rhs functor and solver
+    * @param ode The rhs functor and solver. Typically \c std::tie(rhs,solver)
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
     * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
@@ -521,7 +500,6 @@ void ImplicitMultistep<ContainerType>::step(const std::tuple<RHS, Solver>& ode,
 *
 * @copydoc hide_note_multistep
 * @copydoc hide_ContainerType
-* @ingroup time
 * @attention The filter function inside the Explicit Multistep method is a
 * somewhat experimental feature, so use this class over
 * \c dg::ExplicitMultistep at your own risk
@@ -566,12 +544,12 @@ struct FilteredExplicitMultistep
      * This routine has to be called before the first timestep is made.
      * @copydoc hide_rhs
      * @copydoc hide_limiter
-     * @param rhs The rhs functor
-     * @param limiter The limiter or filter to use
+     * @param ode The <rhs, limiter or filter> functor. Typically \c std::tie( rhs,limiter)
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
+     * @note the implementation is such that on return the last call to the
+     * explicit part is at \c (t0,u0).
      * This might be interesting if the call to \c ex changes its state.
      */
     template< class RHS, class Limiter>
@@ -582,13 +560,14 @@ struct FilteredExplicitMultistep
     *
     * @copydoc hide_rhs
     * @copydoc hide_limiter
-    * @param rhs The rhs functor
-    * @param limiter The limiter or filter to use
+    * @param ode The <rhs, limiter or filter> functor. Typically \c std::tie( rhs,limiter)
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
-    * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
+    * @note the implementation is such that on return the last call to the
+    * explicit part is at the new \c (t,u).
     * This might be interesting if the call to \c ex changes its state.
-    * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method
+    * @attention The first few steps after the call to the init function are
+    * performed with a Runge-Kutta method
     */
     template< class RHS, class Limiter>
     void step( const std::tuple<RHS, Limiter>& ode, value_type& t, ContainerType& u);
@@ -652,49 +631,99 @@ void FilteredExplicitMultistep<ContainerType>::step(const std::tuple<RHS, Limite
 ///@endcond
 //
 
+
+/*! @brief Integrate using a for loop and a fixed non-changeable time-step
+ *
+ * The implementation (of integrate) is equivalent to
+ * @code
+  dg::blas1::copy( u0, u1);
+  unsigned N = round((t1 - t0)/dt);
+  for( unsigned i=0; i<N; i++)
+      step( t0, u1);
+ * @endcode
+ * where \c dt is a given constant. \c t1 can only be matched exactly if the timestep
+ * evenly divides the given interval.
+ * @note the difference to dg::SinglestepTimeloop is the way the step function
+ * is called and the fact that \c dt cannot be changed
+ * @ingroup time_utils
+ * @sa AdaptiveTimeloop, SinglestepTimeloop
+ * @copydoc hide_ContainerType
+ */
 template<class ContainerType>
-struct MultistepIntegrator : public aOdeIntegrator<ContainerType>
+struct MultistepTimeloop : public aTimeloop<ContainerType>
 {
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>;
-    MultistepIntegrator( ){}
-    MultistepIntegrator( std::function<void ( value_type&, ContainerType&,
-                value_type)> step, value_type dt ) : m_step(step), m_dt(dt){}
-    virtual MultistepIntegrator* clone() const{return new
-        MultistepIntegrator(*this);}
+    /// no allocation
+    MultistepTimeloop( ){}
+    // We cannot reset dt because that would require access to the Stepper to re-init
+    /**
+     * @brief Construct using a \c std::function
+     *
+     * @param step Called in the timeloop as <tt> step( t0, u1) </tt>. Has to advance the ode in-place by \c dt
+     * @param dt The constant timestep. Can be set later with \c set_dt. Can be negative.
+     */
+    MultistepTimeloop( std::function<void ( value_type&, ContainerType&)>
+            step, value_type dt ) : m_step(step), m_dt(dt){}
+    /**
+     * @brief Bind the step function of a Multistep stepper
+     *
+     * First calls the init function of \c stepper.
+     * Then construct a lambda function that calls the step function of \c stepper
+     * with given parameters and stores it internally in a \c std::function
+     * @tparam Stepper possible steppers are for example dg::ExplicitMultistep,
+     * dg::ImplicitMultistep or dg::ImExMultistep
+     * @param stepper If constructed in-place (rvalue), will be copied into the
+     * lambda. If an lvalue, then the lambda stores a reference
+     * @attention If stepper is an lvalue then you need to make sure
+     * that stepper remains valid to avoid a "dangling reference"
+     * @copydoc hide_ode
+     * @param t0 The initial time (forwarded to <tt> stepper.init( ode, t0, u0, dt) </tt>)
+     * @param u0 The initial condition (forwarded to <tt> stepper.init( ode, t0, u0, dt) </tt>)
+     * @param dt The constant timestep. Can be negative. Cannot be changed as
+     * changing it would require to re-init the multistep stepper (which is
+     * hidden in the lambda). (forwarded to <tt> stepper.init( ode, t0, u0, dt) </tt>)
+     */
+    template<class Stepper, class ODE>
+    MultistepTimeloop(
+            Stepper&& stepper, ODE&& ode, value_type t0, const
+            ContainerType& u0, value_type dt )
+    {
+        stepper.init( ode, t0, u0, dt);
+        m_step = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
+                std::forward<ODE>(ode))  ]( auto& t, auto& y) mutable
+        {
+            std::get<0>(cap).step( std::get<1>(cap), t, y);
+        };
+        m_dt = dt;
+    }
+
+    virtual MultistepTimeloop* clone() const{return new
+        MultistepTimeloop(*this);}
     private:
     virtual void do_integrate(value_type t0, const container_type& u0,
             value_type& t1, container_type& u1, bool check) const;
-    std::function<void ( value_type&, ContainerType&, value_type)> m_step;
+    std::function<void ( value_type&, ContainerType&)> m_step;
     value_type m_dt;
 };
 
-/**
- * @brief Integrate differential equation with an explicit Runge-Kutta scheme and a fixed number of steps
- *
- * @copydoc hide_rhs
- * @copydoc hide_ContainerType
- * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
- * @param rhs The right-hand-side
- * @param t_begin initial time
- * @param begin initial condition
- * @param t_end final time
- * @param end (write-only) contains solution at \c t_end on return (may alias begin)
- * @param N number of steps
- */
+///@cond
 template< class ContainerType>
-void MultistepIntegrator<ContainerType>::do_integrate(
+void MultistepTimeloop<ContainerType>::do_integrate(
         value_type  t_begin, const ContainerType&
         begin, value_type& t_end, ContainerType& end,
         bool check ) const
 {
+    bool forward = (t_end - t_begin > 0);
+    if( (m_dt < 0 && forward) || ( m_dt > 0 && !forward) )
+        throw dg::Error( dg::Message(_ping_)<<"Timestep has wrong sign! dt "<<m_dt);
     dg::blas1::copy( begin, end);
     value_type t0 = t_begin;
     if( detail::is_divisable( t_end-t_begin, m_dt))
     {
         unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
         for( unsigned i=0; i<N; i++)
-            m_step( t0, end, t0, end, m_dt);
+            m_step( t0, end);
         return;
     }
     else
@@ -704,23 +733,12 @@ void MultistepIntegrator<ContainerType>::do_integrate(
                     <<m_dt<<" has to integer divide the interval "<<t_end-t_begin);
         unsigned N = (unsigned)floor( (t_end-t_begin)/m_dt);
         for( unsigned i=0; i<N; i++)
-            m_step( t0, end, t0, end, m_dt);
-        m_step( t0, end, t_end, end, m_dt);
+            m_step( t0, end);
+        m_step( t_end, end);
     }
 }
+///@endcond
 
-template<class Stepper, class ODE, class ContainerType, class value_type>
-std::unique_ptr<MultistepIntegrator<ContainerType>> make_odeint(
-        Stepper&& stepper, ODE&& ode, value_type t0, const
-        ContainerType& u0, value_type dt )
-{
-    stepper.init( ode, t0, u0, dt);
-    auto lambda = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
-            std::forward<ODE>(ode))  ]( auto& t, auto& y) mutable
-    {
-        std::get<0>(cap).step( std::get<1>(cap), t, y);
-    };
-    return std::make_unique< MultistepIntegrator<ContainerType>>( lambda, dt);
-}
+///@}
 
 } //namespace dg

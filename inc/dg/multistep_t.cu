@@ -114,10 +114,12 @@ int main()
     {
         time = 0., y0 = init;
         dg::ImplicitMultistep< std::array<double,2>> bdf( name, y0);
-        bdf.init( std::tie(full, full), time, y0, dt);
-        //main time loop
-        for( unsigned k=0; k<NT; k++)
-            bdf.step( std::tie(full, full), time, y0);
+        dg::MultistepTimeloop<std::array<double,2>>( bdf, std::tie( full,
+                    full), time, y0, dt).integrate( 0., y0, T, y0);
+        //bdf.init( std::tie(full, full), time, y0, dt);
+        ////main time loop
+        //for( unsigned k=0; k<NT; k++)
+        //    bdf.step( std::tie(full, full), time, y0);
         dg::blas1::axpby( -1., sol, 1., y0);
         res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
