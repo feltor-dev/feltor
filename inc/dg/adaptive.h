@@ -32,8 +32,7 @@ auto l2norm = [] ( const auto& x){ return sqrt( dg::blas1::dot(x,x));};
 auto fast_l2norm = [] (const auto& x) {
     auto y(x);
     dg::blas1::pointwiseDot( x, x, y);
-    return sqrt( dg::blas1::reduce( y, 0.,
-            []DG_DEVICE( double a, double b ){ return a+b;}));
+    return sqrt( dg::blas1::reduce( y, 0., dg::Sum()));
 };
 
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
