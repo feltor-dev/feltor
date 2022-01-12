@@ -42,8 +42,14 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
-            eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
+            N*=2;
+            double psi0 = psip_.f()(X_init, Y_init);
+            using Vec = std::array<double,2>;
+            dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>(
+                        "Feagin-17-8-10", {0,0}), fieldRZtau_);
+            odeint.integrate_steps( psi0, begin2d, psi, end2d, N);
+            eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) +
+                    (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
     }
@@ -59,10 +65,16 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             eps_old = eps; N*=2;
+            using Vec = std::array<double,3>;
+            dg::RungeKutta<Vec> rk( "Feagin-17-8-10", begin);
+            dg::SinglestepTimeloop<Vec> odeint;
             if( m_firstline == 0)
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
+                odeint = dg::SinglestepTimeloop<Vec>( rk,
+                        fieldRZYTconf_);
             if( m_firstline == 1)
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
+                odeint = dg::SinglestepTimeloop<Vec>( rk,
+                        fieldRZYTequl_);
+            odeint.integrate_steps( 0., begin, 2.*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
@@ -113,14 +125,19 @@ void compute_rzy( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTenso
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z;
-        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[0], end, steps);
-        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[0], end, steps);
+        using Vec = std::array<real_type,2>;
+        dg::RungeKutta<Vec> rk ( "Feagin-17-8-10", {0,0});
+        dg::SinglestepTimeloop<Vec> odeint;
+        if( mode == 0)
+            odeint = dg::SinglestepTimeloop<Vec>( rk, fieldRZYconf);
+        if( mode == 1)
+            odeint = dg::SinglestepTimeloop<Vec>( rk, fieldRZYequi);
+        odeint.integrate_steps( 0., begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1];
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only
@@ -239,8 +256,10 @@ void construct_rz( Nemov nemov,
             //////////////////////////////////////////////////
             x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
-            dg::stepperRK( "Feagin-17-8-10",  nemov, x0, temp, x1, end, N);
-            //dg::stepperRK( "Dormand-Prince-7-4-5",  nemov, x0, temp, x1, end, N);
+            using Vec = std::array<thrust::host_vector<double>,3>;
+            dg::RungeKutta<Vec> rk( "Feagin-17-8-10", temp);
+            dg::SinglestepTimeloop<Vec>( rk, nemov).integrate_steps( x0, temp,
+                    x1, end, N);
             for( unsigned j=0; j<sizeY; j++)
             {
                 r_new[j] = end[0][j],  z_new[j] = end[1][j];

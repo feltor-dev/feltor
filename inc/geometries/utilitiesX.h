@@ -156,9 +156,12 @@ struct XCross
         {
             eps_old = eps; end_old = end;
             N*=2;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psi0, begin, 0, end, N);
+            using Vec = std::array<double,2>;
+            dg::SinglestepTimeloop<Vec>( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                begin), fieldRZtau_).integrate_steps( psi0, begin, 0, end, N);
 
-            eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
+            eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) +
+                    (end[1]-end_old[1])*(end[1]-end_old[1]));
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
         }
         if( quad_ == 0 || quad_ == 2){ return end_old[1] - Z_X_;}
@@ -212,6 +215,9 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
     f_psi = fpsi.construct_f(psi, R_0, Z_0);
     fieldRZYRYZY.set_f(f_psi);
     fieldRZYRYZY.set_fp(fprime);
+    using Vec = std::array<double,4>;
+    dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                begin), fieldRZYRYZY); // stores reference to fieldRZYRZYZ
     unsigned steps = 1; double eps = 1e10, eps_old=2e10;
     while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
     {
@@ -223,14 +229,14 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
             else     begin[0] = R_0[0], begin[1] = Z_0[0];
             fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
             unsigned i=nodeX0-1;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 0, begin, y_vec[i], end, steps);
+            odeint.integrate_steps( 0, begin, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
         for( int i=nodeX0-2; i>=0; i--)
         {
             temp = end;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i+1],temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i+1],temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
@@ -238,18 +244,18 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
         begin[0] = R_0[0], begin[1] = Z_0[0];
         fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
         unsigned i=nodeX0;
-        dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 0, begin, y_vec[i], end, steps);
+        odeint.integrate_steps( 0, begin, y_vec[i], end, steps);
         r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
         fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         for( unsigned i=nodeX0+1; i<nodeX1; i++)
         {
             temp = end;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i-1], temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
         temp = end;
-        dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        odeint.integrate_steps( y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
         if( psi <0)
             eps = sqrt( (end[0]-R_0[0])*(end[0]-R_0[0]) + (end[1]-Z_0[0])*(end[1]-Z_0[0]));
         else
@@ -261,14 +267,14 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
             begin[0] = R_0[1], begin[1] = Z_0[1];
             fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
             unsigned i=nodeX1;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 2.*M_PI, begin, y_vec[i], end, steps);
+            odeint.integrate_steps( 2.*M_PI, begin, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
         for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i-1], temp, y_vec[i] ,end, steps);
+            odeint.integrate_steps( y_vec[i-1], temp, y_vec[i] ,end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive(r[i], z[i], xr[i], xz[i]);
         }
@@ -304,37 +310,39 @@ double construct_psi_values( XFieldFinv fpsiMinv,
     const double psi_const = fpsiMinv.find_psi( x_vec[idxX]);
     double psi_1_numerical=0;
     double eps = 1e10, eps_old=2e10;
+    dg::SinglestepTimeloop<double> odeint(
+            dg::RungeKutta<double>("Feagin-17-8-10", 0.), fpsiMinv);
     while( (eps <  eps_old || eps > 1e-8) && eps > 1e-11) //1e-8 < eps < 1e-14
     {
         eps_old = eps;
         psi_old = psi_x;
         x0 = x_0, x1 = x_vec[0];
 
-        thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
-        dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, begin, x1, end, N);
-        psi_x[0] = end[0]; fpsiMinv(0.,end,temp);
+        double begin(psi_0), end(begin), temp(begin);
+        odeint.integrate_steps( x0, begin, x1, end, N);
+        psi_x[0] = end; fpsiMinv(0.,end,temp);
         for( unsigned i=1; i<idxX; i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
-            dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, temp, x1, end, N);
-            psi_x[i] = end[0]; fpsiMinv(0.,end,temp);
+            odeint.integrate_steps( x0, temp, x1, end, N);
+            psi_x[i] = end; fpsiMinv(0.,end,temp);
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
-        end[0] = psi_const;
+        end = psi_const;
         //std::cout << "FOUND PSI "<<end[0]<<"\n";
-        psi_x[idxX] = end[0]; fpsiMinv(0.,end,temp);
+        psi_x[idxX] = end; fpsiMinv(0.,end,temp);
         for( unsigned i=idxX+1; i<x_vec.size(); i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
-            dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, temp, x1, end, N);
-            psi_x[i] = end[0]; fpsiMinv(0.,end,temp);
+            odeint.integrate_steps( x0, temp, x1, end, N);
+            psi_x[i] = end; fpsiMinv(0.,end,temp);
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
         temp = end;
-        dg::stepperRK( "Feagin-17-8-10", fpsiMinv, x1, temp, x_1, end,N);
-        psi_1_numerical = end[0];
+        odeint.integrate_steps(x1, temp, x_1, end,N);
+        psi_1_numerical = end;
         dg::blas1::axpby( 1., psi_x, -1., psi_old, psi_diff);
         //eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
         eps = sqrt( dg::blas1::dot( psi_diff, psi_diff)/ dg::blas1::dot( psi_x, psi_x));
@@ -399,8 +407,16 @@ struct SeparatriX
             while( (eps < eps_old || eps > 5e-5))
             {
                 eps_old = eps; N*=2;// y_old=y;
-                if(mode_==0)dg::stepperRK( "Fehlberg-6-4-5",  fieldRZYZconf_, Z_i[i], begin2d, Z_X, end2d, N);
-                if(mode_==1)dg::stepperRK( "Fehlberg-6-4-5",  fieldRZYZequi_, Z_i[i], begin2d, Z_X, end2d, N);
+                using Vec = std::array<double,3>;
+                dg::SinglestepTimeloop<Vec> odeint;
+                if( mode_ == 0)
+                    odeint.construct( dg::RungeKutta<Vec>( "Fehlberg-6-4-5",
+                                begin2d), fieldRZYZconf_);
+                if(mode_==1)
+                    odeint.construct( dg::RungeKutta<Vec>( "Fehlberg-6-4-5",
+                                begin2d), fieldRZYZequi_);
+                odeint.integrate_steps( Z_i[i], begin2d,
+                                Z_X, end2d, N);
                 //y=end2d[2];
                 //eps = fabs((y-y_old)/y_old);
                 eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X))/R_X;
@@ -434,6 +450,14 @@ struct SeparatriX
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
         r.resize( y_vec.size()), z.resize(y_vec.size());
         unsigned steps = 1; double eps = 1e10, eps_old=2e10;
+        using Vec = std::array<double,2>;
+        dg::SinglestepTimeloop<Vec> odeint;
+        if( mode_ == 0)
+            odeint.construct( dg::RungeKutta<Vec>("Feagin-17-8-10", begin),
+                    fieldRZYconf_);
+        if( mode_ == 1)
+            odeint.construct( dg::RungeKutta<Vec>("Feagin-17-8-10", begin),
+                    fieldRZYequi_);
         while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
         {
             eps_old = eps, r_old = r, z_old = z;
@@ -441,48 +465,45 @@ struct SeparatriX
             if( nodeX0 != 0) //integrate to start point
             {
                 begin[0] = R_i[3], begin[1] = Z_i[3];
-                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, -y_i[3], begin, y_vec[nodeX0-1], end, N_steps_);
-                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, -y_i[3], begin, y_vec[nodeX0-1], end, N_steps_);
+                odeint.integrate_steps( -y_i[3], begin, y_vec[nodeX0-1], end,
+                        N_steps_);
                 r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
             }
             for( int i=nodeX0-2; i>=0; i--)
             {
                 temp = end;
-                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[i+1], temp, y_vec[i], end,steps);
-                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[i+1], temp, y_vec[i], end, steps);
+                odeint.integrate_steps( y_vec[i+1], temp, y_vec[i], end,steps);
                 r[i] = end[0], z[i] = end[1];
             }
             ////////////////middle region///////////////////////////
             begin[0] = R_i[0], begin[1] = Z_i[0];
-            if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_i[0], begin, y_vec[nodeX0], end, N_steps_);
-            if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_i[0], begin, y_vec[nodeX0], end, N_steps_);
+            odeint.integrate_steps( y_i[0], begin, y_vec[nodeX0], end, N_steps_);
             r[nodeX0] = end[0], z[nodeX0] = end[1];
             for( unsigned i=nodeX0+1; i<nodeX1; i++)
             {
                 temp = end;
-                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[i-1], temp, y_vec[i], end, steps);
-                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[i-1], temp, y_vec[i], end, steps);
+                odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
                 r[i] = end[0], z[i] = end[1];
             }
             temp = end;
-            if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end, N_steps_);
-            if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end, N_steps_);
-            eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
+            odeint.integrate_steps( y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end,
+                    N_steps_);
+            eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) +
+                    (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
             ////////////////////bottom left region
 
             if( nodeX0!= 0)
             {
                 begin[0] = R_i[2], begin[1] = Z_i[2];
-                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, 2.*M_PI+y_i[2], begin, y_vec[nodeX1], end, N_steps_);
-                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, 2.*M_PI+y_i[2], begin, y_vec[nodeX1], end, N_steps_);
+                odeint.integrate_steps( 2.*M_PI+y_i[2], begin, y_vec[nodeX1],
+                        end, N_steps_);
                 r[nodeX1] = end[0], z[nodeX1] = end[1];
             }
             for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
             {
                 temp = end;
-                if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf_, y_vec[i-1], temp, y_vec[i], end, steps);
-                if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi_, y_vec[i-1], temp, y_vec[i], end, steps);
+                odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
                 r[i] = end[0], z[i] = end[1];
             }
             //compute error in R,Z only
@@ -508,26 +529,23 @@ struct SeparatriX
         begin[0] = R_i[0], begin[1] = Z_i[0];
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 32;
+        using Vec = std::array<double,3>;
+        dg::SinglestepTimeloop<Vec> odeint;
+        if( mode_ == 0)
+            odeint.construct( dg::RungeKutta<Vec>(
+                        "Feagin-17-8-10", begin), fieldRZYZconf_);
+        if( mode_ == 1)
+            odeint.construct( dg::RungeKutta<Vec>(
+                        "Feagin-17-8-10", begin), fieldRZYZequi_);
         while( (eps < eps_old || eps > 1e-7) && N < 1e6)
         {
             eps_old = eps, end_old = end;
             N*=2;
-            if(mode_==0)
-            {
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZconf_, begin[1], begin,  0., end, N);
-                std::array<double,3> temp(end);
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., temp, M_PI, end, N);
-                temp = end;
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZconf_, temp[1], temp, Z_i[1], end, N);
-            }
-            if(mode_==1)
-            {
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZequi_, begin[1], begin, 0., end, N);
-                std::array<double,3> temp(end);
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequi_, 0., temp, M_PI, end, N);
-                temp = end;
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZequi_, temp[1], temp, Z_i[1], end, N);
-            }
+            odeint.integrate_steps( begin[1], begin,  0., end, N);
+            std::array<double,3> temp(end);
+            odeint.integrate_steps( 0., temp, M_PI, end, N);
+            temp = end;
+            odeint.integrate_steps( temp[1], temp, Z_i[1], end, N);
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             //std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -566,6 +584,9 @@ struct InitialX
     {
         //constructor finds four points around X-point and integrates them a bit away from it
         dg::geo::FieldRZtau fieldRZtau_(psi);
+        using Vec = std::array<double,2>;
+        dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>(
+                    "Fehlberg-6-4-5", Vec{0.,0.}), fieldRZtau_);
         double eps[] = {1e-11, 1e-12, 1e-11, 1e-12};
         for( unsigned i=0; i<4; i++)
         {
@@ -582,7 +603,8 @@ struct InitialX
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
-                N*=2; dg::stepperRK( "Fehlberg-6-4-5",  fieldRZtau_, psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
+                N*=2;
+                odeint.integrate_steps( psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -596,7 +618,8 @@ struct InitialX
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
-                N*=2; dg::stepperRK( "Fehlberg-6-4-5",  fieldRZtau_, psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
+                N*=2;
+                odeint.integrate_steps( psi0, begin, psi1, end, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -629,11 +652,16 @@ struct InitialX
             }
             unsigned steps = 1;
             double eps = 1e10, eps_old=2e10;
+            using Vec = std::array<double,2>;
+            dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>(
+                    "Fehlberg-6-4-5", Vec{0.,0.}), fieldRZtau_);
             while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
             {
                 eps_old = eps; end_old = end;
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(begin[0], begin[1]), begin, psi, end, steps);
-                eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
+                odeint.integrate_steps( psip_.f()(begin[0], begin[1]), begin,
+                        psi, end, steps);
+                eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) +
+                        (end[1]-end_old[1])*(end[1]-end_old[1]));
                 //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
                 if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
                 steps*=2;
@@ -641,11 +669,13 @@ struct InitialX
             //std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
             if( psi<0)
             {
-                R_0[i] = R_i_[2*i+1] = begin[0] = end_old[0], Z_i_[2*i+1] = Z_0[i] = begin[1] = end_old[1];
+                R_0[i] = R_i_[2*i+1] = begin[0] = end_old[0], Z_i_[2*i+1] =
+                    Z_0[i] = begin[1] = end_old[1];
             }
             else
             {
-                R_0[i] = R_i_[2*i] = begin[0] = end_old[0], Z_i_[2*i] = Z_0[i] = begin[1] = end_old[1];
+                R_0[i] = R_i_[2*i] = begin[0] = end_old[0], Z_i_[2*i] = Z_0[i]
+                    = begin[1] = end_old[1];
             }
 
         }

@@ -43,25 +43,31 @@ struct FpsiX
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 32;
         //double y_eps;
+        using Vec = std::array<double,3>;
+        dg::SinglestepTimeloop<Vec> odeintT( dg::RungeKutta<Vec>(
+                    "Feagin-17-8-10", begin), fieldRZYT_);;
         while( (eps < eps_old || eps > 1e-7) && N < 1e6)
         {
             //remember old values
             eps_old = eps, end_old = end; //y_old = end[2];
             //compute new values
             N*=2;
+
             if( psi < 0)
             {
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2.*M_PI, end, N);
+                odeintT.integrate_steps( 0., begin, 2.*M_PI, end, N);
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
                 eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
             }
             else
             {
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, begin[1], begin, 0., end, N);
+                dg::SinglestepTimeloop<Vec> odeintZ( dg::RungeKutta<Vec>(
+                    "Feagin-17-8-10", begin), fieldRZYZ_);;
+                odeintZ.integrate_steps( begin[1], begin, 0., end, N);
                 std::array<double,3> temp(end);
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, M_PI, end, N);
+                odeintT.integrate_steps( 0., begin, M_PI, end, N);
                 temp = end; //temp[1] should be 0 now
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
+                odeintZ.integrate_steps( temp[1], temp, Z_i[1], end, N);
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old;
@@ -170,53 +176,60 @@ struct XFieldFinv
     XFieldFinv( const CylindricalFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500):
         fpsi_(psi, xX, yX, x0, y0), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi) , N_steps(N_steps)
             { xAtOne_ = fpsi_.find_x(0.1); }
-    void operator()(double ttt, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
+    void operator()(double ttt, double psi, double& fpsiM)
     {
         std::array<double, 3> begin{ {0,0,0} }, end(begin);
         double R_i[2], Z_i[2];
         dg::Timer t;
         t.tic();
-        fpsi_.find_initial( psi[0], R_i, Z_i);
+        fpsi_.find_initial( psi, R_i, Z_i);
         t.toc();
         //std::cout << "find_initial took "<<t.diff()<< "s\n";
         t.tic();
         begin[0] = R_i[0], begin[1] = Z_i[0];
         unsigned N = N_steps;
-        if( psi[0] < -1. && psi[0] > -2.) N*=2;
-        if( psi[0] < 0 && psi[0] > -1.) N*=10;
-        if( psi[0] <0  )
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2.*M_PI, end, N);
+        using Vec = std::array<double,3>;
+        dg::SinglestepTimeloop<Vec> odeintT( dg::RungeKutta<Vec>(
+                    "Feagin-17-8-10", begin), fieldRZYT_);;
+        if( psi < -1. && psi > -2.) N*=2;
+        if( psi < 0 && psi > -1.) N*=10;
+        if( psi <0  )
+            odeintT.integrate_steps( 0., begin, 2.*M_PI, end, N);
         else
         {
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, begin[1], begin, 0., end, N);
+            dg::SinglestepTimeloop<Vec> odeintZ( dg::RungeKutta<Vec>(
+                "Feagin-17-8-10", begin), fieldRZYZ_);;
+            odeintZ.integrate_steps( begin[1], begin, 0., end, N);
             std::array<double,3> temp(end);
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., temp,  M_PI, end, N/2);
+            odeintT.integrate_steps( 0., temp,  M_PI, end, N/2);
             temp = end; //temp[1] should be 0 now
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
+            odeintZ.integrate_steps( temp[1], temp, Z_i[1], end, N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        fpsiM[0] = end[2]/2./M_PI;
-        //fpsiM[0] = - 2.*M_PI/end[2];
+        fpsiM = end[2]/2./M_PI;
+        //fpsiM = - 2.*M_PI/end[2];
         t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";
-        //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
+        //std::cout <<"fpsiMinverse is "<<fpsiM<<" "<<-1./fpsi_(psi)<<" "<<eps<<"\n";
     }
     double find_psi( double x)
     {
         assert( x > 0);
         //integrate from x0 to x, with psi(x0) = 0.1;
         double x0 = xAtOne_;
-        thrust::host_vector<double> begin( 1, 0.1), end(begin), end_old(begin);
+        double begin( 0.1), end(begin), end_old(begin);
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 1;
         while( eps < eps_old && N < 1e6 &&  eps > 1e-9)
         {
             eps_old = eps, end_old = end;
-            N*=2; dg::stepperRK( "Feagin-17-8-10",  *this, x0, begin, x, end, N);
-            eps = fabs( end[0]- end_old[0]);
+            dg::SinglestepTimeloop<double> odeint( dg::RungeKutta<double>(
+                    "Feagin-17-8-10", begin), *this);
+            N*=2; odeint.integrate_steps( x0, begin, x, end, N);
+            eps = fabs( end- end_old);
             //std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
         }
-        return end_old[0];
+        return end_old;
     }
 
     private:
