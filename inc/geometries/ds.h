@@ -365,9 +365,10 @@ struct DS
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi=-1, std::string interpolation_method = "dg"):
+        double deltaPhi=-1, std::string interpolation_method = "dg",
+        bool benchmark=true):
         DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi,
-                    interpolation_method) )
+                    interpolation_method, benchmark) )
     {
     }
     /**
@@ -384,9 +385,10 @@ struct DS
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
         unsigned mx=10, unsigned my=10,
-        double deltaPhi=-1, std::string interpolation_method = "dg"):
+        double deltaPhi=-1, std::string interpolation_method = "dg",
+        bool benchmark=true):
         DS( FA( vec, grid, bcx, bcy, limit, eps, mx, my, deltaPhi,
-                    interpolation_method))
+                    interpolation_method, benchmark))
     {
     }
     /**
