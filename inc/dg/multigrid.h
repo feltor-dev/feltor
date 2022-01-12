@@ -16,6 +16,14 @@
 namespace dg
 {
 
+///@addtogroup multigrid
+///@{
+
+/**
+ * @brief Hold nested grids and provide dg fast interpolation and projection matrices
+ *
+ * @copydoc hide_geometry_matrix_container
+ */
 template<class Geometry, class Matrix, class Container>
 struct NestedGrids
 {
@@ -170,7 +178,6 @@ struct NestedGrids
  * .
  * This algorithm is equivalent to a multigrid V-cycle with zero down-grid smoothing
  * and infinite (i.e. solving) upgrid smoothing.
- * @ingroup multigrid
  * @param op a container (usually \c std::vector of operators)
      Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the quarter grid, ...
  * @param x (read/write) contains initial guess on input and the solution on
@@ -205,7 +212,7 @@ void nested_iterations(
     for( unsigned u=nested.stages()-1; u>0; u--)
     {
         try{
-    auto test = inverse_op[u];
+            auto test = inverse_op[u];
             test(  nested.b(u), nested.x(u));
         }catch( dg::Fail& err){
             err.append_line( dg::Message(_ping_)<<"ERROR on stage "<<u<<" of nested iterations");
@@ -227,7 +234,7 @@ void nested_iterations(
     }
 }
 
-/*!@brief Full approximation multigrid cycle
+/*!@brief EXPERIMENTAL Full approximation multigrid cycle
  *
  * @sa https://www.osti.gov/servlets/purl/15002749
  *
@@ -246,7 +253,6 @@ void nested_iterations(
  * - Smooth \f$ f(x^h) = b^h\f$ with initial guess \f$ x_0^h\f$, overwrite \f$ x_0^h\f$
  * .
  * This algorithm forms the core of multigrid algorithms.
- * @ingroup multigrid
  * @param op a container (usually \c std::vector of operators)
      Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the quarter grid, ...
  * @param inverse_op_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
@@ -446,21 +452,20 @@ void fmg_solve(
 
 
 /**
-* @brief DEPRECATED Solves the Equation \f[ \frac{1}{W} \hat O \phi = \rho \f]
+* @brief Solve the Equation \f[ \hat O \phi = \rho \f]
 *
- * using a multigrid algorithm for any operator \f$\hat O\f$ that is symmetric
- * and appropriate weights \f$W\f$ (s. comment below).
+ * using a multigrid algorithm for any operator \f$\hat O\f$ that is self-adjoing
+ * in appropriate weights \f$W\f$ (s. comment below).
+ * @note Implements dg::nested_iterations and dg::full_multigrid using PCG solvers on every grid
 *
 * @snippet elliptic2d_b.cu multigrid
 * We use conjugate gradient (\c dg::PCG) at each stage and refine the grids in the first two dimensions (2d / x and y)
- * @note A note on weights and preconditioning.
- * A normalized DG-discretized derivative or operator is normally
+ * @note A normalized DG-discretized derivative or operator is normally
  * self-adjoint with respect to the weights \c W,
  * A self-adjoint preconditioner should be used to solve the
  * self-adjoint matrix equation.
 * @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c SymmetricOp class
 * @copydoc hide_geometry_matrix_container
-* @ingroup multigrid
 * @sa \c Extrapolation  to generate an initial guess
 *
 */
@@ -620,5 +625,6 @@ struct MultigridCG2d
     bool m_benchmark = true;
 
 };
+///@}
 
 }//namespace dg

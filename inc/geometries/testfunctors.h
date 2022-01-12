@@ -253,20 +253,6 @@ struct Variation
     Function f_;
 };
 
-template<class DS, class container>
-struct TestInvertDS{
-    TestInvertDS( DS& ds, double alpha = -1.):
-        m_ds(ds), m_alpha(alpha){}
-    void symv( const container& x, container& y)
-    {
-        dg::blas2::symv( 1., m_ds, x, 0., y);
-        dg::blas1::axpby( 1., x, m_alpha, y, y);
-    }
-    private:
-    DS& m_ds;
-    double m_alpha;
-};
-
 //////////////function to call DS////////////////////
 template<class DS, class container>
 void callDS( DS& ds, std::string name, const container& in, container& out,
@@ -296,11 +282,14 @@ unsigned max_iter = 1e4, double eps = 1e-6)
     else if( name == "invCenteredLap"){
         //dg::LGMRES<container> invert( in, 30,3,10000);
         dg::BICGSTABl<container> invert( in, 30000,3);
-        dg::geo::TestInvertDS< DS, container> rhs(ds);
         dg::Timer t;
         t.tic();
         double precond = 1.;
-        unsigned number = invert.solve( rhs, out, in, precond, ds.weights(), eps);
+        unsigned number = invert.solve( [&](const auto& x, auto& y){
+                //  y = ( 1 - D) x
+                dg::blas2::symv( ds, x, y);
+                dg::blas1::axpby( 1., x, -1., y, y);
+            }, out, in, precond, ds.weights(), eps);
         t.toc();
 #ifdef MPI_VERSION
     int rank;
@@ -316,14 +305,6 @@ unsigned max_iter = 1e4, double eps = 1e-6)
     }
 
 }
-}//namespace geo
-template<class DS, class container>
-struct TensorTraits<dg::geo::TestInvertDS<DS,container>>{
-    using value_type = double;
-    using tensor_category = SelfMadeMatrixTag;
-};
-namespace geo{
-
 ///////////////////////////////Functions for 2d grids//////////////////
 
 //psi * cos(theta)
