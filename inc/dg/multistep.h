@@ -635,7 +635,7 @@ void FilteredExplicitMultistep<ContainerType>::step(const std::tuple<RHS, Limite
 /*! @brief Integrate using a for loop and a fixed non-changeable time-step
  *
  * The implementation (of integrate) is equivalent to
- * @code
+ * @code{.cpp}
   dg::blas1::copy( u0, u1);
   unsigned N = round((t1 - t0)/dt);
   for( unsigned i=0; i<N; i++)
@@ -696,6 +696,14 @@ struct MultistepTimeloop : public aTimeloop<ContainerType>
             std::get<0>(cap).step( std::get<1>(cap), t, y);
         };
         m_dt = dt;
+    }
+
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = MultistepTimeloop( std::forward<Params>( ps)...);
     }
 
     virtual MultistepTimeloop* clone() const{return new

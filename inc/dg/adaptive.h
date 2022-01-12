@@ -473,7 +473,7 @@ struct EntireDomain
  * @brief Integrate using a while loop
  *
  * well suited for dg::Adaptive. The timeloop (for positive dt) corresponds to
- * @code
+ * @code{.cpp}
   t = t0; u1 = u0;
   double dt = 1e-6; // some initial guess
   while( t < t1)
@@ -548,6 +548,14 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
                     rtol, atol, reject_limit);
         };
         m_dt_current = dg::Buffer<value_type>( 0.);
+    }
+
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = AdaptiveTimeloop( std::forward<Params>( ps)...);
     }
 
     /**
@@ -730,7 +738,7 @@ void AdaptiveTimeloop<ContainerType>::integrate_in_domain(
 /*! @brief DEPRECATED
  *
  * Same as
- * @code
+ * @code{.cpp}
  * using Vec = ContainerType; // if ContainerType is really long to type
  * dg::Adaptive<Stepper> adapt( name, u0);
  * dg::AdaptiveTimeloop<Vec> loop( adapt, ode, control, norm, rtol,
@@ -760,7 +768,7 @@ int integrate( std::string name, ODE&& ode, value_type t0, const ContainerType& 
 /*! @brief DEPRECATED
  *
  * Same as
- * @code
+ * @code{.cpp}
  * using Vec = ContainerType; // if ContainerType is really long to type
  * dg::Adaptive<ERKStep<Vec>> adapt( name, u0);
  * dg::AdaptiveTimeloop<Vec> loop( adapt, ode, control, norm, rtol,

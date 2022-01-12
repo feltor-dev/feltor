@@ -881,7 +881,7 @@ inline bool is_divisable( float a, float b, float eps = 1e-6)
 /*! @brief Integrate using a for loop and a fixed time-step
  *
  * The implementation (of integrate) is equivalent to
- * @code
+ * @code{.cpp}
   dg::blas1::copy( u0, u1);
   unsigned N = round((t1 - t0)/dt);
   for( unsigned i=0; i<N; i++)
@@ -938,6 +938,14 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
         m_dt = dt;
     }
 
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = SinglestepTimeloop( std::forward<Params>( ps)...);
+    }
+
     /**
      * @brief Set the constant timestep to be used in the integrate functions
      *
@@ -948,7 +956,7 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
     /*! @brief Integrate differential equation with a fixed number of steps
      *
      * Equivalent to
- * @code
+ * @code{.cpp}
   set_dt( (t1-t0)/(value_type)steps );
   integrate( t0, u0, t1, u1);
  * @endcode
@@ -1015,7 +1023,7 @@ void SinglestepTimeloop<ContainerType>::do_integrate(
 /*! @brief DEPRECATED
  *
  * Same as
- * @code
+ * @code{.cpp}
  * using Vec = ContainerType; // if ContainerType is really long to type
  * dg::SinglestepTimeloop<Vec>( dg::RungeKutta<Vec>(
  *      tableau, u0), rhs).integrate_steps( t_begin, begin, t_end, end, N);
