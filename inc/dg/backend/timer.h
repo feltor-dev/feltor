@@ -18,7 +18,6 @@ class Timer //CPU/ OMP + MPI
     double start = 0., stop = 0.;
 };
 }//namespace dg
-///@endcond
 #elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION not defined and THRUST ==  OMP
 #include "omp.h"
 namespace dg

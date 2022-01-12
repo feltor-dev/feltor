@@ -254,8 +254,8 @@ struct TensorTraits<CooSparseBlockMatDevice<T> >
     using value_type  = T;
     using tensor_category = SparseBlockMatrixTag;
 };
-#endif // THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP
 ///@}
+#endif // THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP
 } //namespace dg
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "sparseblockmat_gpu_kernels.cuh"

@@ -352,7 +352,7 @@ struct Compose
  * @attention only works for host functions. The rationale is that this function is
  * intended to work with lambda functions and is to be used in the \c dg::evaluate function.
  * If a version for device functions is ever needed
- * it can be easily provided but the lambda support for CUDA is rather poor.
+ * it can be easily provided.
  *
  * @return a function object that forwards all parameters to g and returns the
  * return value of f, which is \f$ f(g(x_0,x_1,...)) \f$

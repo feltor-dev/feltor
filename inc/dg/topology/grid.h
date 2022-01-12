@@ -147,11 +147,6 @@ struct RealGrid1d
      * @return
      */
     bc bcx() const {return bcx_;}
-    /**
-     * @brief The total number of points
-     *
-     * @return n*Nx
-     */
     //////////////////////////////////////////set/////////////////////////////
     /**
      * @brief reset the boundaries of the grid
@@ -778,7 +773,13 @@ struct RealGrid2d : public aRealTopology2d<real_type>
     ///@copydoc hide_bc_parameters2d
     RealGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         aRealTopology2d<real_type>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
-    ///@copydoc aRealTopology2d::aRealTopology2d(const RealGrid1d&,const RealGrid1d&)
+    /**
+     * @brief Construct a 2d grid as the product of two 1d grids
+     *
+     * @param gx a Grid in x - direction
+     * @param gy a Grid in y - direction
+     * @note gx and gy must have the same n
+     */
     RealGrid2d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy): aRealTopology2d<real_type>(gx,gy){ }
 
     ///allow explicit type conversion from any other topology

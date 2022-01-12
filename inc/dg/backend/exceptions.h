@@ -36,9 +36,9 @@ class Message
     Message(){}
     /*!@brief Initiate message with the file and line it comes from
 
-     * @param file The file in which the exception is thrown (contained in the predefined Macro \c \__FILE__)
-     * @param line The line in which the exception is thrown (contained in the predefined Macro \c \__LINE__)
-     * \note The Macro \c \_ping_ expands to \c \__FILE__, \c \__LINE__
+     * @param file The file in which the exception is thrown (contained in the predefined Macro <tt> \__FILE__ </tt>)
+     * @param line The line in which the exception is thrown (contained in the predefined Macro <tt> \__LINE__ </tt>)
+     * \note The Macro <tt> \_ping_ </tt> expands to <tt> \__FILE__, \__LINE__ </tt>_
      */
     Message(const char* file, const int line){
         sstream_ << "\n    Message from file **"<<file<<"** in line **" <<line<<"**:\n    ";

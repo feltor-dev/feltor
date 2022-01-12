@@ -90,7 +90,7 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
     return exblas::cpu::Round(acc.data());
 }
 
-/*! @brief \f$ x_0 \otimes x_1 \otimes \dots \otimes x_{N-1} \f$ Custom reduction
+/*! @brief \f$ s_0 \otimes x_0 \otimes x_1 \otimes \dots \otimes x_{N-1} \f$ Custom reduction
  *
  * This routine computes \f[ s = s_0 \otimes x_0 \otimes x_1 \otimes \dots \otimes x_i \otimes \dots \otimes x_{N-1} \f]
  * where \f$ \otimes \f$ is an arbitrary **commutative** and **associative** binary operator, \f$ s_0\f$ is the initial value and
@@ -109,8 +109,8 @@ dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
 bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
 std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
- * @param x Left Container
- * @param init initial value of the reduction
+ * @param x Container
+ * @param init initial value of the reduction \c s_0
  * @param op an associative and commutative binary operator
  * @return Custom reduction as defined above
  * @note This routine is always executed synchronously due to the
@@ -122,6 +122,7 @@ template< class ContainerType, class BinaryOp>
 inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_type<ContainerType> init, BinaryOp op )
 {
     //init must indeed have the same type as the values of Container since op must be associative
+    // The generalization would be a transform_reduce combining subroutine and reduce
     return dg::blas1::detail::doReduce( dg::get_tensor_category<ContainerType>(), x, init, op);
 }
 
