@@ -135,20 +135,23 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     //field in case of cartesian grid
     dg::geo::detail::DSFieldCylindrical4 cyl_field(vec);
     const unsigned size = grid_evaluate.size();
+    dg::Adaptive<dg::ERKStep<std::array<real_type,3>>> adapt(
+            "Dormand-Prince-7-4-5", std::array<real_type,3>{0,0,0});
+    dg::AdaptiveTimeloop< std::array<real_type,3>> odeint;
+    if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
+        odeint = dg::AdaptiveTimeloop<std::array<real_type,3>>( adapt,
+                cyl_field, dg::pid_control, dg::fast_l2norm, eps, 1e-10);
+    else
+        odeint = dg::AdaptiveTimeloop<std::array<real_type,3>>( adapt,
+                field, dg::pid_control, dg::fast_l2norm, eps, 1e-10);
+
     for( unsigned i=0; i<size; i++)
     {
         std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP;
         //x,y,s
         real_type phi1 = deltaPhi;
-        if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0., coords,
-                    phi1, coordsP, deltaPhi/2., dg::pid_control, ds_norm,
-                    eps,1e-10);
-        //integration
-        else
-            dg::integrateERK( "Dormand-Prince-7-4-5", field, 0., coords,
-                    phi1, coordsP, deltaPhi/2., dg::pid_control, ds_norm,
-                    eps,1e-10);
+        odeint.set_dt( deltaPhi/2.);
+        odeint.integrate( 0, coords, phi1, coordsP);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
     }
     yp2b.assign( grid_evaluate.size(), deltaPhi); //allocate memory for output
@@ -162,16 +165,8 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
         {
             //x,y,s
             real_type phi1 = deltaPhi;
-            if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
-                dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, 0.,
-                        coords, phi1, coordsP, 0., dg::pid_control, ds_norm,
-                        eps,1e-10,(const dg::aRealTopology2d<real_type>&
-                            )grid_field); //integration
-            else
-                dg::integrateERK( "Dormand-Prince-7-4-5", field, 0.,
-                        coords, phi1, coordsP, 0., dg::pid_control, ds_norm,
-                        eps,1e-10,(const dg::aRealTopology2d<real_type>&
-                            )grid_field); //integration
+            odeint.integrate_in_domain( 0., coords, phi1, coordsP, 0., (const
+                        dg::aRealTopology2d<real_type>&)grid_field, eps);
             yp2b[i] = phi1;
         }
     }
@@ -231,9 +226,13 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
         double sign = coordsP[2] > 0 ? +1. : -1.;
         double phi1 = sign*m_deltaPhi; // we integrate negative ...
         try{
-            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0., coords,
-                    phi1, coordsP, 0., dg::pid_control,
-                    dg::geo::detail::ds_norm, m_eps,1e-10, m_domain);
+            dg::Adaptive<dg::ERKStep<std::array<double,3>>> adapt(
+                    "Dormand-Prince-7-4-5", coords);
+            dg::AdaptiveTimeloop<std::array<double,3>> odeint( adapt,
+                    m_cyl_field, dg::pid_control, dg::fast_l2norm, m_eps,
+                    1e-10);
+            odeint.integrate_in_domain( 0., coords, phi1, coordsP, 0.,
+                    m_domain, m_eps);
             //integration
         }catch (std::exception& e)
         {
@@ -287,12 +286,12 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
         m_cyl_field( 0., coords, coordsP);
         double sign = coordsP[2] > 0 ? +1. : -1.;
         try{
-            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
-                coords, phiP, coordsP, 0., dg::pid_control, dg::geo::detail::ds_norm,
-                m_eps,1e-10, m_domain); //integration
-            dg::integrateERK( "Dormand-Prince-7-4-5", m_cyl_field, 0.,
-                coords, phiM, coordsM, 0., dg::pid_control, dg::geo::detail::ds_norm,
-                m_eps,1e-10, m_domain); //integration
+            dg::AdaptiveTimeloop<std::array<double,3>> odeint(
+                    dg::Adaptive<dg::ERKStep<std::array<double,3>>>(
+                        "Dormand-Prince-7-4-5", coords), m_cyl_field,
+                    dg::pid_control, dg::fast_l2norm, m_eps, 1e-10);
+            odeint.integrate( 0., coords, phiP, coordsP);
+            odeint.integrate( 0., coords, phiM, coordsM);
         }catch (std::exception& e)
         {
             // if not possible the distance is large
@@ -1094,15 +1093,19 @@ thrust::host_vector<double> fieldaligned_evaluate(
                 tempM = tempP = init2d;
             else
             {
+                dg::Adaptive<dg::ERKStep<std::array<double,3>>> adapt(
+                        "Dormand-Prince-7-4-5", std::array<double,3>{0,0,0});
+                dg::AdaptiveTimeloop<std::array<double,3>> odeint( adapt,
+                        cyl_field, dg::pid_control, dg::fast_l2norm, eps,
+                        1e-10);
                 for( unsigned i=0; i<g2d->size(); i++)
                 {
                     // minus direction needs positive integration!
                     double phiM1 = phiM0 + deltaPhi;
                     std::array<double,3>
                         coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
-                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiM0,
-                            coords0, phiM1, coords1, deltaPhi, dg::pid_control,
-                            dg::geo::detail::ds_norm, eps, 1e-10, *g2d );
+                    odeint.integrate_in_domain( phiM0, coords0, phiM1, coords1,
+                            deltaPhi, *g2d, eps);
                     yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] =
                         coords1[2];
                     tempM[i] = binary( yy1[0][i], yy1[1][i]);
@@ -1110,9 +1113,8 @@ thrust::host_vector<double> fieldaligned_evaluate(
                     // plus direction needs negative integration!
                     double phiP1 = phiP0 - deltaPhi;
                     coords0 = std::array<double,3>{xx0[0][i],xx0[1][i],xx0[2][i]};
-                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiP0,
-                            coords0, phiP1, coords1, -deltaPhi, dg::pid_control,
-                            dg::geo::detail::ds_norm, eps, 1e-10, *g2d );
+                    odeint.integrate_in_domain( phiP0, coords0, phiP1, coords1,
+                            -deltaPhi, *g2d, eps);
                     xx1[0][i] = coords1[0], xx1[1][i] = coords1[1], xx1[2][i] =
                         coords1[2];
                     tempP[i] = binary( xx1[0][i], xx1[1][i]);

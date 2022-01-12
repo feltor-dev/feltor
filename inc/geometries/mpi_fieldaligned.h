@@ -611,15 +611,18 @@ MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
                 tempM = tempP = init2d;
             else
             {
+                dg::Adaptive<dg::ERKStep<std::array<double,3>>> adapt(
+                        "Dormand-Prince-7-4-5", std::array<double,3>{0,0,0});
+                dg::AdaptiveTimeloop<std::array<double,3>> odeint( adapt,
+                    cyl_field, dg::pid_control, dg::fast_l2norm, eps, 1e-10);
                 for( unsigned i=0; i<g2d->local().size(); i++)
                 {
                     // minus direction needs positive integration!
                     double phiM1 = phiM0 + deltaPhi;
                     std::array<double,3>
                         coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
-                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiM0,
-                            coords0, phiM1, coords1, deltaPhi, dg::pid_control,
-                            dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
+                    odeint.integrate_in_domain( phiM0, coords0, phiM1,
+                            coords1, deltaPhi, g2d-global(), eps);
                     yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] =
                         coords1[2];
                     tempM.data()[i] = binary( yy1[0][i], yy1[1][i]);
@@ -627,9 +630,8 @@ MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
                     // plus direction needs negative integration!
                     double phiP1 = phiP0 - deltaPhi;
                     coords0 = std::array<double,3>{xx0[0][i],xx0[1][i],xx0[2][i]};
-                    dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phiP0,
-                            coords0, phiP1, coords1, -deltaPhi, dg::pid_control,
-                            dg::geo::detail::ds_norm, eps, 1e-10, g2d->global() );
+                    odeint.integrate_in_domain( phiP0, coords0, phiP1,
+                            coords1, -deltaPhi, g2d-global(), eps);
                     xx1[0][i] = coords1[0], xx1[1][i] = coords1[1], xx1[2][i] =
                         coords1[2];
                     tempP.data()[i] = binary( xx1[0][i], xx1[1][i]);
