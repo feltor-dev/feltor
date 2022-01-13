@@ -530,22 +530,30 @@ struct SeparatriX
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 32;
         using Vec = std::array<double,3>;
-        dg::SinglestepTimeloop<Vec> odeint;
+        dg::SinglestepTimeloop<Vec> odeintT, odeintZ;
         if( mode_ == 0)
-            odeint.construct( dg::RungeKutta<Vec>(
+        {
+            odeintT.construct( dg::RungeKutta<Vec>(
+                        "Feagin-17-8-10", begin), fieldRZYTconf_);
+            odeintZ.construct( dg::RungeKutta<Vec>(
                         "Feagin-17-8-10", begin), fieldRZYZconf_);
+        }
         if( mode_ == 1)
-            odeint.construct( dg::RungeKutta<Vec>(
+        {
+            odeintT.construct( dg::RungeKutta<Vec>(
+                        "Feagin-17-8-10", begin), fieldRZYTequi_);
+            odeintZ.construct( dg::RungeKutta<Vec>(
                         "Feagin-17-8-10", begin), fieldRZYZequi_);
+        }
         while( (eps < eps_old || eps > 1e-7) && N < 1e6)
         {
             eps_old = eps, end_old = end;
             N*=2;
-            odeint.integrate_steps( begin[1], begin,  0., end, N);
+            odeintZ.integrate_steps( begin[1], begin,  0., end, N);
             std::array<double,3> temp(end);
-            odeint.integrate_steps( 0., temp, M_PI, end, N);
+            odeintT.integrate_steps( 0., temp, M_PI, end, N);
             temp = end;
-            odeint.integrate_steps( temp[1], temp, Z_i[1], end, N);
+            odeintZ.integrate_steps( temp[1], temp, Z_i[1], end, N);
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             //std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }

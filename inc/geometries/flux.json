@@ -3,7 +3,7 @@
     {
         "type": "curvilinear",
         "generator":{
-            "type": "flux",
+            "type": "orthogonal",
             "mode": 0,
             "firstline" : -4.0
         },
