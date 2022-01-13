@@ -1,9 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <functional>
-
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
+#include <array>
 
 #include "backend/typedefs.h"
 #include "topology/evaluation.h"
@@ -162,7 +160,7 @@ int main()
         dg::AdaptiveTimeloop<double> odeint( adapt,
                 rhs, dg::pid_control, dg::fast_l2norm, 1e-6, 1e-10);
         odeint.integrate_in_domain( t_start, u_start, t_end, u_end, dt,
-                dg::Grid1d( 0., 100., 1,1), 1e-4  );
+                dg::Grid1d( 0., 100., 1,1), 1e-6  );
         double analytic = log( 100.);
         std::cout << "With "<<std::setw(6)<<adapt.nsteps()
                   <<" steps norm of error in "

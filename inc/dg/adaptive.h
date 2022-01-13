@@ -19,7 +19,21 @@ namespace dg
  * @return \c sqrt(dg::blas1::dot(x,x))
 * @copydoc hide_ContainerType
  */
-auto l2norm = [] ( const auto& x){ return sqrt( dg::blas1::dot(x,x));};
+static auto l2norm = [] ( const auto& x){ return sqrt( dg::blas1::dot(x,x));};
+
+//MW nvcc has problems having this as a lambda so this is a workaround
+///@cond
+struct fast_l2norm_t
+{
+    template<class ContainerType>
+    get_value_type<ContainerType> operator()( const ContainerType& x){
+        ContainerType y(x);
+        dg::blas1::pointwiseDot( x, x, y);
+        return sqrt( dg::blas1::reduce( y, 0., dg::Sum()));
+    }
+};
+///@endcond
+
 /*! @brief Compute \f$ \sqrt{\sum_i x_i^2}\f$ using naive summation
  *
  * The intention of this function is to be used in the \c Adaptive timestepping class.
@@ -29,20 +43,16 @@ auto l2norm = [] ( const auto& x){ return sqrt( dg::blas1::dot(x,x));};
  * @param x Vector to take the norm of
  * @return \c sqrt(sum_i x_i^2) using \c dg::blas1::reduce
  */
-auto fast_l2norm = [] (const auto& x) {
-    auto y(x);
-    dg::blas1::pointwiseDot( x, x, y);
-    return sqrt( dg::blas1::reduce( y, 0., dg::Sum()));
-};
+static fast_l2norm_t fast_l2norm;
 
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
-auto i_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
+static auto i_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
     using value_type = std::decay_t<decltype(dt[0])>;
     return dt[0]*pow( eps[0], -1./(value_type)embedded_order);
 };
 ///\f$ h_{n+1}= h_n \epsilon_n^{-0.8/p}\epsilon_{n-1}^{0.31/p}\f$
-auto pi_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
+static auto pi_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
     using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
@@ -70,7 +80,7 @@ auto pi_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order
  *
  * @return the new timestep
  */
-auto pid_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
+static auto pid_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
     using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
@@ -86,7 +96,7 @@ auto pid_control = []( auto dt, auto eps, unsigned embedded_order, unsigned orde
 };
 
 /// \f$ h_{n+1} = h_n \epsilon_n^{-0.367/p}(\epsilon_n/\epsilon_{n-1})^{0.268/p} \f$
-auto ex_control = [](auto dt, auto eps, unsigned embedded_order, unsigned order)
+static auto ex_control = [](auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
     using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
@@ -97,7 +107,7 @@ auto ex_control = [](auto dt, auto eps, unsigned embedded_order, unsigned order)
     return dt[0]*factor;
 };
 /// \f$ h_{n+1} = h_n (h_n/h_{n-1}) \epsilon_n^{-0.98/p}(\epsilon_n/\epsilon_{n-1})^{-0.95/p} \f$
-auto im_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
+static auto im_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
     using value_type = std::decay_t<decltype(dt[0])>;
     if( dt[1] == 0)
@@ -108,7 +118,7 @@ auto im_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order
     return dt[0]*dt[0]/dt[1]*factor;
 };
 /// h_{n+1} = |ex_control| < |im_control| ? ex_control : im_control
-auto imex_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
+static auto imex_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
 {
     using value_type = std::decay_t<decltype(dt[0])>;
     value_type h1 = ex_control( dt, eps, embedded_order, order);

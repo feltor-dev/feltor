@@ -132,7 +132,7 @@ int main()
             <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
     ///-------------------------------Implicit Methods----------------------//
-    const unsigned N_im = 20; //we can take fewer steps
+    const unsigned N_im = 10; //we can take fewer steps
     const double dt_im = (t_end - t_start)/(double)N_im;
     std::cout << "Implicit Methods with "<<N_im<<" steps:\n";
     std::vector<std::string> implicit_names{
