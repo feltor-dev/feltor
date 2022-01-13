@@ -45,7 +45,9 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Recursive DVec reduction          " << (max == 30) <<std::endl;
     dg::blas1::copy( 2., arrdvec1);
     if(rank==0)std::cout << "Recursive DVec Copy Scalar to     "<< (arrdvec1[0].data()[0] == 2 && arrdvec1[1].data()[0]==2)<<std::endl;
-    dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
+    //dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
+    for( unsigned i=0; i<3; i++)
+        dg::blas1::axpby( 2., vec1[i], 3, arrdvec1[i]);
     if(rank==0)std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0].data()[0] == 26 && arrdvec1[1].data()[0]==46.)<<std::endl;
     // test the examples in the documentation
     dg::blas1::plus( dvec1, 1);
@@ -54,8 +56,8 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << dvec1.data()[0]<< " "<<array_w[2].data()[0]<<"\n";
     dg::blas1::subroutine( Expression(), dvec1, array_w[2], 3);
     if(rank==0)std::cout << "Example in documentation          "<< (dvec1.data()[0] ==374)<<std::endl;
-    dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
-    if(rank==0)std::cout << "Example in documentation      	  "<< (array_v[0].data()[0] == 132 && array_v[1].data()[1] == 903)<<std::endl;
+    //dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
+    //if(rank==0)std::cout << "Example in documentation      	  "<< (array_v[0].data()[0] == 132 && array_v[1].data()[1] == 903)<<std::endl;
     if(rank==0)std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);
     if(rank==0)std::cout << "blas1 dot recursive Scalar          "<< (result == 6) <<"\n";

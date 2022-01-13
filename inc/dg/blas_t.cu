@@ -49,7 +49,9 @@ int main()
     dg::blas1::copy( 2., arrdvec1);
     std::cout << "Recursive DVec Copy Scalar to     "<< (arrdvec1[0][0] == 2 && arrdvec1[1][0]==2)<<std::endl;
     //dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
-    //std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
+    for( unsigned i=0; i<3; i++)
+        dg::blas1::axpby( 2., vec1[i], 3, arrdvec1[i]);
+    std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
     // test the examples in the documentation
     // dg::blas1::subroutine( []__host__ __device__(double& v){ v+=1.;}, dvec1);
     dg::blas1::plus( dvec1, 1);
@@ -88,8 +90,14 @@ int main()
     std::cout << "Test std::map\n";
     std::map< std::string, dg::DVec> testmap{ { "a", dvec1}, {"b", dvec1}};
     std::map< std::string, dg::DVec> testmap2( testmap);
-    std::map< std::string, dg::DVec> testmap3{ { "c", dvec1}, {"b", dvec1}};
-    dg::blas1::axpby( 2., testmap, 3., testmap3);
+    try{
+        std::map< std::string, dg::DVec> testmap3{ { "c", dvec1}, {"b", dvec1}};
+        dg::blas1::axpby( 2., testmap, 3., testmap3);
+    }
+    catch ( dg::Error& e)
+    {
+        std::cout << "Map threw error as expected!\n";
+    }
     std::cout << "axpby "<< testmap2["a"][0] << " "<<testmap2["b"][0] << std::endl;
 
     return 0;

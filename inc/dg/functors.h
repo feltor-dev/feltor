@@ -139,6 +139,14 @@ struct SQRT
         return sqrt(x);
     }
 };
+
+///@brief \f$ f(x) = x^2\f$
+struct Square
+{
+    template<class T>
+    DG_DEVICE T operator()( T x) const{ return x*x;}
+};
+
 ///@brief \f$ f(x) = \frac{1}{\sqrt{x}}\f$
 template < class T = double>
 struct InvSqrt
@@ -275,9 +283,8 @@ struct MOD
 @code
 //Check if a vector contains Inf or NaN
 thrust::device_vector<double> x( 100);
-thrust::device_vector<bool> boolvec ( 100, false);
-dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+bool hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
+    dg::ISNFINITE<double>());
 std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
  */
@@ -301,9 +308,8 @@ struct ISNFINITE
 @code
 //Check if a vector contains is sane
 thrust::device_vector<double> x( 100);
-thrust::device_vector<bool> boolvec ( 100, false);
-dg::blas1::transform( x, boolvec, dg::ISNSANE<double>());
-bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+bool hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
+    dg::ISNSANE<double>());
 std::cout << "x contains insane numbers "<<std::boolalpha<<hasnan<<"\n";
 @endcode
  */

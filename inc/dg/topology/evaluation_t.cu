@@ -11,20 +11,6 @@
 #include "evaluation.h"
 #include "weights.h"
 
-struct exp_function{
-DG_DEVICE
-double operator()( double x)
-{
-    return exp(x);
-}
-};
-struct sin_function{
-DG_DEVICE
-double operator()( double x)
-{
-    return sin(x);
-}
-};
 template<class T>
 T function(T x, T y)
 {
@@ -36,7 +22,7 @@ T function(T x, T y)
 }
 double function3d( double x, double y, double z)
 {
-        return exp(x)*exp(y)*exp(z);
+    return exp(x)*exp(y)*exp(z);
 }
 
 
@@ -106,13 +92,13 @@ int main()
     std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n\n";
 
     std::cout << "TEST result of a sin and exp function to compare compiler specific math libraries:\n";
-    dg::DVec x(1, 6.12610567450009658);
-    dg::blas1::transform( x, x, sin_function() );
+    dg::DVec x(100, 6.12610567450009658);
+    dg::blas1::transform( x, x, []DG_DEVICE(double x){ return sin(x);} );
     res.d = x[0];
     std::cout << "Result of sin:    "<<res.i<<"\n"
               << "          GCC:    -4628567870976535683 (correct)"<<std::endl;
     dg::DVec y(1, 5.9126151457310376);
-    dg::blas1::transform( y, y, exp_function() );
+    dg::blas1::transform( y, y, []DG_DEVICE(double x){return exp(x);} );
     res.d = y[0];
     std::cout << "Result of exp:     "<<res.i<<"\n"
               << "          GCC:     4645210948416067678 (correct)"<<std::endl;
@@ -133,9 +119,8 @@ int main()
     // TEST if dot throws on NaN
     std::cout << "TEST if dot throws on Inf or Nan:\n";
     dg::blas1::transform( x,x, dg::LN<double>());
-    thrust::device_vector<bool> boolvec ( 100, false);
-    dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-    bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+    bool hasnan = dg::blas1::reduce( x, false,
+            thrust::logical_or<bool>(), dg::ISNFINITE<double>());
     std::cout << "x contains Inf or Nan numbers "<<std::boolalpha<<hasnan<<"\n";
     try{
         dg::blas1::dot( x,x);

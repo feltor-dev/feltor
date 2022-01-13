@@ -21,19 +21,6 @@ namespace dg
  */
 static auto l2norm = [] ( const auto& x){ return sqrt( dg::blas1::dot(x,x));};
 
-//MW nvcc has problems having this as a lambda so this is a workaround
-///@cond
-struct fast_l2norm_t
-{
-    template<class ContainerType>
-    get_value_type<ContainerType> operator()( const ContainerType& x){
-        ContainerType y(x);
-        dg::blas1::pointwiseDot( x, x, y);
-        return sqrt( dg::blas1::reduce( y, 0., dg::Sum()));
-    }
-};
-///@endcond
-
 /*! @brief Compute \f$ \sqrt{\sum_i x_i^2}\f$ using naive summation
  *
  * The intention of this function is to be used in the \c Adaptive timestepping class.
@@ -43,7 +30,8 @@ struct fast_l2norm_t
  * @param x Vector to take the norm of
  * @return \c sqrt(sum_i x_i^2) using \c dg::blas1::reduce
  */
-static fast_l2norm_t fast_l2norm;
+static auto fast_l2norm  = []( const auto& x){ return sqrt( dg::blas1::reduce(
+            x, (double)0, dg::Sum(), dg::Square()));};
 
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
 static auto i_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)

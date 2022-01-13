@@ -174,7 +174,7 @@
   * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag and \c AnyPolicyTag.
   * Among others
   *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda / omp) </tt>
-  *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles)</tt>
+  *  - <tt> std::vector<dg::DVec> </tt> (vector of shared device vectors), <tt> std::array<double, 4> </tt> (array of 4 doubles) or <tt> std::map < std::string, dg::DVec> </tt>  ( a map of named vectors)
   *  - <tt> double (scalar)</tt> and other primitive types ...
   *  .
   * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them

@@ -3,16 +3,13 @@
 #include <cmath>
 
 #include <mpi.h>
+#include "dg/functors.h"
 #include "dg/backend/mpi_init.h"
 #include "dg/blas.h"
 #include "mpi_evaluation.h"
 #include "mpi_weights.h"
 
 
-double function( double x)
-{
-    return exp(x);
-}
 template<class T>
 T function(T x, T y)
 {
@@ -24,7 +21,7 @@ T function(T x, T y)
 }
 double function( double x, double y, double z)
 {
-        return exp(x)*exp(y)*exp(z);
+    return exp(x)*exp(y)*exp(z);
 }
 
 int main(int argc, char** argv)
@@ -81,6 +78,20 @@ int main(int argc, char** argv)
     double solution3d = (exp(4.)-exp(2))/2.*(exp(8.)-exp(6.))/2.*(exp(12.)-exp(10))/2.;
     if(rank==0)std::cout << "Correct square norm is    "<<std::setw(6)<<solution3d<<std::endl;
     if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
+    if(rank==0)std::cout << "TEST if dot throws on Inf or Nan:\n";
+    dg::MDVec x = dg::evaluate( dg::CONSTANT( 6.12610567450009658), g2d);
+    dg::blas1::transform( x, x, []DG_DEVICE(double x){ return sin(x);} );
+    dg::blas1::transform( x,x, dg::LN<double>());
+    bool hasnan = dg::blas1::reduce( x, false,
+            thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+    if(rank==0)std::cout << "x contains Inf or Nan numbers "<<std::boolalpha<<hasnan<<"\n";
+    try{
+        dg::blas1::dot( x,x);
+    }catch ( std::exception& e)
+    {
+        if(rank==0)std::cerr << "Error thrown as expected\n";
+        //std::cerr << e.what() << std::endl;
+    }
     if(rank==0)std::cout << "\nFINISHED! Continue with topology/derivatives_mpit.cu !\n\n";
 
     MPI_Finalize();
