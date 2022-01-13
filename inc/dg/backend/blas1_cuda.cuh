@@ -1,6 +1,6 @@
 #ifndef _DG_BLAS_CUDA_
 #define _DG_BLAS_CUDA_
-#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 #include <thrust/system/cuda/execution_policy.h>
 #include "exceptions.h"
 #include "exblas/exdot_cuda.cuh"
@@ -82,10 +82,12 @@ inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, PointerOrVal
     subroutine_kernel<Subroutine, PointerOrValue, PointerOrValues...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
 }
 
-template<class T, class Pointer, class BinaryOp>
-inline T doReduce_dispatch( CudaTag, int size, Pointer x, T init, BinaryOp op)
+template<class T, class Pointer, class BinaryOp, class UnaryOp>
+inline T doReduce_dispatch( CudaTag, int size, Pointer x, T init, BinaryOp op,
+        UnaryOp unary_op)
 {
-    return thrust::reduce(thrust::cuda::par, x, x+size, init, op);
+    return thrust::transform_reduce(thrust::cuda::par, x, x+size, unary_op,
+            init, op);
 }
 
 

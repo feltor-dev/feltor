@@ -199,14 +199,14 @@ inline void doSubroutine( RecursiveVectorTag, Subroutine f, container&& x, Conta
     doSubroutine_dispatch( RecursiveVectorTag(), get_execution_policy<vector_type>(), size, f, std::forward<container>( x), std::forward<Containers>( xs)...);
 }
 
-template<class T, class ContainerType, class BinaryOp>
-inline T doReduce( RecursiveVectorTag, const ContainerType& x, T init, BinaryOp op)
+template<class T, class ContainerType, class BinaryOp, class UnaryOp>
+inline T doReduce( RecursiveVectorTag, const ContainerType& x, T init, BinaryOp
+        op, UnaryOp unary_op)
 {
     //reduce sequentially recursively
     for ( unsigned u=0; u<x.size(); u++)
-    {
-        init = op( init, dg::blas1::reduce( x[u], init, op));
-    }
+        init = doReduce( get_tensor_category<decltype( x[u])>(), x[u], init, op,
+                unary_op);
     return init;
 }
 

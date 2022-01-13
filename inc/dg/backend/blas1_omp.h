@@ -1,7 +1,7 @@
 #ifndef _DG_BLAS_OMP_
 #define _DG_BLAS_OMP_
 #include <omp.h>
-#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 #include <thrust/system/omp/execution_policy.h>
 #include "config.h"
 #include "blas1_serial.h"
@@ -68,10 +68,11 @@ inline void doSubroutine_dispatch( OmpTag, int size, Subroutine f, PointerOrValu
         doSubroutine_dispatch( SerialTag(), size, f, x, xs...);
 }
 
-template<class T, class Pointer, class BinaryOp>
-inline T doReduce_dispatch( OmpTag, int size, Pointer x, T init, BinaryOp op)
+template<class T, class Pointer, class BinaryOp, class UnaryOp>
+inline T doReduce_dispatch( OmpTag, int size, Pointer x, T init, BinaryOp op,
+        UnaryOp unary_op)
 {
-    return thrust::reduce(thrust::omp::par, x, x+size, init, op);
+    return thrust::transform_reduce(thrust::omp::par, x, x+size, unary_op, init, op);
 }
 
 }//namespace detail

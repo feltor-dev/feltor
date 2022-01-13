@@ -90,10 +90,10 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
     return exblas::cpu::Round(acc.data());
 }
 
-/*! @brief \f$ s_0 \otimes x_0 \otimes x_1 \otimes \dots \otimes x_{N-1} \f$ Custom reduction
+/*! @brief \f$ f(x_0) \otimes f(x_1) \otimes \dots \otimes f(x_{N-1}) \f$ Custom (transform) reduction
  *
- * This routine computes \f[ s = s_0 \otimes x_0 \otimes x_1 \otimes \dots \otimes x_i \otimes \dots \otimes x_{N-1} \f]
- * where \f$ \otimes \f$ is an arbitrary **commutative** and **associative** binary operator, \f$ s_0\f$ is the initial value and
+ * This routine computes \f[ s = f(x_0) \otimes f(x_1) \otimes \dots \otimes f(x_i) \otimes \dots \otimes f(x_{N-1}) \f]
+ * where \f$ \otimes \f$ is an arbitrary **commutative** and **associative** binary operator, \f$ f\f$ is an optional unary operator and
  * @copydoc hide_iterations
  *
  * @note numerical addition/multiplication is **not** exactly associative
@@ -104,26 +104,44 @@ For example
 @code{.cpp}
 //Check if a vector contains Inf or NaN
 thrust::device_vector<double> x( 100);
-thrust::device_vector<bool> boolvec ( x.size(), false);
-dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+bool hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(), dg::ISNFINITE<double>());
 std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
- * @param x Container
- * @param init initial value of the reduction \c s_0
- * @param op an associative and commutative binary operator
+ * @param x Container to reduce
+ * @param zero The neutral element with respect to binary_op that is
+ * <tt> x == binary_op( zero, x) </tt>. Determines the \c OutputType so make
+ * sure to make the type clear to the compiler (e.g. write <tt> (double)0 </tt> instead
+ * of \c 0 if you want \c double output)
+ * @attention In the current implementation \c zero is used to initialize
+ * partial sums e.g. when reducing MPI Vectors so it is important that \c zero
+ * is actually the neutral element. The reduction will yield wrong results
+ * if it is not.
+ * @param binary_op an associative and commutative binary operator
+ * @param unary_op a unary operator applies to each element of \c x
  * @return Custom reduction as defined above
  * @note This routine is always executed synchronously due to the
-        implicit memcpy of the result. With mpi the result is broadcasted to all processes
- * @tparam BinaryOp Functor with signature: \c value_type \c operator()( value_type, value_type), must be associative and commutative
+        implicit memcpy of the result. With mpi the result is broadcasted to
+        all processes
+ * @tparam BinaryOp Functor with signature: <tt> value_type  operator()(
+ * value_type, value_type) </tt>, must be associative and commutative.
+ * \c value_tpye must be compatible with \c OutputType
+ * @tparam UnaryOp a unary operator. The argument type must be compatible with
+ * \c get_value_type<ContainerType>. The return type must be convertible to
+ * \c OutputType
+ * @tparam OutputType The type of the result. Infered from \c zero so make sure
+ * \c zero's type is clear to the compiler.
  * @copydoc hide_ContainerType
  */
-template< class ContainerType, class BinaryOp>
-inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_type<ContainerType> init, BinaryOp op )
+template< class ContainerType, class OutputType, class BinaryOp, class UnaryOp
+    = IDENTITY>
+inline OutputType reduce( const ContainerType& x, OutputType zero, BinaryOp
+        binary_op, UnaryOp unary_op = UnaryOp())
 {
     //init must indeed have the same type as the values of Container since op must be associative
     // The generalization would be a transform_reduce combining subroutine and reduce
-    return dg::blas1::detail::doReduce( dg::get_tensor_category<ContainerType>(), x, init, op);
+    return dg::blas1::detail::doReduce(
+            dg::get_tensor_category<ContainerType>(), x, zero, binary_op,
+            unary_op);
 }
 
 /**

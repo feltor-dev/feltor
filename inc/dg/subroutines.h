@@ -3,6 +3,16 @@
 #include "dg/backend/config.h"
 
 namespace dg{
+/**
+ * @brief \f$ f(x) = x\f$
+ * @ingroup basics
+ */
+struct IDENTITY
+{
+    template<class T>
+    DG_DEVICE T operator()(T x)const{return x;}
+};
+
 
 ///@addtogroup binary_operators
 ///@{

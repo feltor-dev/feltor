@@ -52,10 +52,11 @@ inline void doSubroutine( AnyScalarTag, Subroutine f, ContainerType&& x, Contain
     f(x,xs...);
 }
 
-template<class T, class ContainerType, class BinaryOp>
-inline T doReduce( AnyScalarTag, ContainerType x, T init, BinaryOp op)
+template<class T, class ContainerType, class BinaryOp, class UnaryOp>
+inline T doReduce( AnyScalarTag, ContainerType x, T init, BinaryOp op, UnaryOp
+        unary_op)
 {
-    init = op( init, x);
+    init = op( init, unary_op(x));
     return init;
 }
 
