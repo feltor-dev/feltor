@@ -75,37 +75,42 @@ void gemm(
         i.e. y' = f(t, y) translates to f(t, y, y').
         The two ContainerType arguments never alias each other in calls to the functor.
   */
- /** @class hide_rhs_solve
-  * @tparam RHS The right hand side
-        is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
-        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
-        i.e. y' = f(t, y) translates to f(t, y, y').
-        The two ContainerType arguments never alias each other in calls to the functor.
- * @tparam Solver A solver for the implicit right hand side
- * must solve the equation \f$ y - \alpha I(y,t) = y^*\f$
-        is a functor type with no return value (subroutine) of signature
-        <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
-        Here, alpha is always positive and non-zero.
+/** @class hide_rhs_solve
+ * @tparam RHS The right hand side
+ * is a functor type with no return value (subroutine)
+ * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+ * The first argument is the time, the second is the input vector, which the
+ * functor may \b not override, and the third is the output,
+ * i.e. y' = f(t, y) translates to f(t, y, y').
+ * The two ContainerType arguments never alias each other in calls to the functor.
+ * @tparam Solver A functor type for the implicit right hand side.
+ * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$ for \c y for  given
+ * \c alpha, \c t and \c ys.
+ * Alpha is always positive and non-zero.
+ * Signature
+ * <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
   */
 /*! @class hide_explicit_implicit
-* @tparam Explicit The explicit part of the right hand side
-    is a functor type with no return value (subroutine)
-    of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
-    The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
-    i.e. y' = f(t, y) translates to f(t, y, y').
-        The two ContainerType arguments never alias each other in calls to the functor.
+ * @tparam Explicit The explicit part of the right hand side
+ * is a functor type with no return value (subroutine)
+ * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+ * The first argument is the time, the second is the input vector, which the
+ * functor may \b not override, and the third is the output, i.e. y' = f(t, y)
+ * translates to f(t, y, y'). The two ContainerType arguments never alias each
+ * other in calls to the functor.
  * @tparam Implicit The implicit part of the right hand side
-        is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
-        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
-        i.e. y' = f(t, y) translates to f(t, y, y').
-        The two ContainerType arguments never alias each other in calls to the functor.
- * @tparam Solver A solver for the implicit part of the right hand side
- * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$
-        is a functor type with no return value (subroutine) of signature
-        <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
-        Here, alpha is always positive and non-zero.
+ * is a functor type with no return value (subroutine)
+ * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+ * The first argument is the time, the second is the input vector, which the
+ * functor may \b not override, and the third is the output, i.e. y' = f(t, y)
+ * translates to f(t, y, y').  The two ContainerType arguments never alias each
+ * other in calls to the functor.
+ * @tparam Solver A functor type for the implicit right hand side.
+ * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$ for \c y for  given
+ * \c alpha, \c t and \c ys.
+ * Alpha is always positive and non-zero.
+ * Signature
+ * <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
  * @param ode <explic, implicit, solver> part. Typically \c std::tie(ex,im,solver)
  */
 /*! @class hide_ode

@@ -87,37 +87,11 @@ int main()
     dg::exblas::udouble res;
     std::cout << "###########################################\n";
     std::cout << "Default Solver\n";
-    dg::DefaultSolver<dg::DVec> solver( x, max_iter, eps);
+    dg::DefaultSolver<dg::DVec> solver( diff, x, max_iter, eps);
     x  =    dg::evaluate( initial, grid);
-    solver.solve( alpha, diff, 1., x, b);
+    solver( alpha, 1., x, b);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
-    err = sqrt( err/norm); res.d = err;
-    std::cout << " Error "<<err << "\t"<<res.i<<"\n";
-    //
-    std::cout << "###########################################\n";
-    std::cout << "Fixed Point Solver (does not converge in this example)\n";
-    dg::FixedPointSolver<dg::DVec> fixed_solver( x, 100, eps);
-    x  =    dg::evaluate( initial, grid);
-    fixed_solver.solve( alpha, diff, 1., x, b);
-    dg::blas1::axpby( 1.,x,-1., solution, error);
-    err = dg::blas2::dot( w2d, error);
-    err = sqrt( err/norm); res.d = err;
-    std::cout << " Error "<<err << "\t"<<res.i<<"\n";
-    //
-    std::cout << "###########################################\n";
-    std::cout << "Anderson Solver\n";
-    unsigned mMax = 8;
-    double damping = 1e-5;
-    double restart = 8;
-    //std::cout << "Type mMAx (8), damping ( 1e-5), restart (8)\n";
-    //std::cin >> mMax >> damping >> restart;
-    dg::AndersonSolver<dg::DVec> anderson( x, mMax, eps, max_iter, damping,
-            restart);
-    x  =    dg::evaluate( initial, grid);
-    anderson.solve( alpha, diff, 1., x, b);
-    dg::blas1::axpby( 1.,x,-1., solution, error);
-    err = dg::blas2::dot( w2d, error);
     err = sqrt( err/norm); res.d = err;
     std::cout << " Error "<<err << "\t"<<res.i<<"\n";
 

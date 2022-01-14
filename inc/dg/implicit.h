@@ -26,25 +26,28 @@ struct Adaptor
 }
 ///@endcond
 
-/*! @class hide_SolverType
- *
- * @tparam SolverType
-    The task of this class is to solve the equation \f$ (y-\alpha\hat I(t,y)) = \rho\f$
-    for the given implicit part I, parameter alpha, time t and
-    right hand side rho. For example \c dg::DefaultSolver or \c dg::FixedPointSolver
-    If you write your own class:
- * it must have a solve method of type:
-    \c void \c solve( value_type alpha, Implicit im, value_type t, ContainerType& y, const ContainerType& rhs);
-  The <tt> const ContainerType& copyable() const; </tt> member must return a container of the size that is later used in \c solve
-  (it does not matter what values \c copyable contains, but its size is important;
-  the \c solve method will be called with vectors of this size)
- */
-
-/*!@brief Default Solver class for solving \f[ (y-\alpha\hat I(t,y)) = \rho\f]
+/*!@brief PCG Solver class for solving \f$ (y-\alpha\hat I(t,y)) = \rho\f$
  *
  * for given t, alpha and rho.
- * works only for linear positive definite operators as it uses a conjugate
- * gradient solver to invert the equation
+ * \f$ \hat I\f$ must be linear self-adjoint positive definite as it uses a conjugate
+ * gradient solver to invert the equation.
+ * @note This struct is a simple wrapper. It exists because self-adjoint
+ * operators appear quite often in practice. The solve method is basically equivalent
+ * to
+ * @code{.cpp}
+ *  void operator()( value_type alpha, value_type time, ContainerType& y, const
+ *      ContainerType& ys)
+ *  {
+ *     auto wrapper = [a = alpha, t = time, &i = im]( const auto& x, auto& y){
+ *         i( t, x, y);
+ *         dg::blas1::axpby( 1., x, -a, y);
+ *     };
+ *     dg::blas1::copy( ys, y); // take rhs as initial guess
+ *     pcg.solve( wrapper, y, ys, im.precond(), im.weights(), m_eps);
+ *  }
+ * @endcode
+ * Starting from there customizations can easily be implemented.
+ *
  * @copydoc hide_ContainerType
  * @sa ImExMultistep ImplicitMultistep ARKStep DIRKStep
  * @ingroup invert
@@ -57,209 +60,78 @@ struct DefaultSolver
     ///No memory allocation
     DefaultSolver(){}
     /*!
-    * @param copyable vector of the size that is later used in \c solve (
-     it does not matter what values \c copyable contains, but its size is important;
-     the \c solve method can only be called with vectors of the same size)
-    * @param max_iter maimum iteration number in cg
-    * @param eps accuracy parameter for cg
+    * it does not matter what values \c copyable contains, but its size is important;
+    * the \c solve method can only be called with vectors of the same size)
+    * @tparam Implicit The implicit part of the right hand side
+    * is a functor type with no return value (subroutine)
+    * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+    * The first argument is the time, the second is the input vector, which the
+    * functor may \b not override, and the third is the output,
+    * i.e. y' = f(t, y) translates to f(t, y, y').  The two ContainerType
+    * arguments never alias each other in calls to the functor.
+    * Also needs the \c WeightType weights() and \c PreconditionerType precond() member functions.
+    * @param im The implicit part of the differential equation.
+    * Stored as a \c std::function.
+    * @attention make sure that im lives throughout the lifetime of this
+    * object, else we'll get a dangling reference
+    * @param copyable forwarded to constructor of \c dg::PCG
+    * @param max_iter maximum iteration number in cg, forwarded to constructor of \c dg::PCG
+    * @param eps relative and absolute accuracy parameter, used in the solve method of \c dg::PCG
     */
-    DefaultSolver( const ContainerType& copyable, unsigned max_iter, value_type eps):
-        m_pcg(copyable, max_iter), m_eps(eps)
-        {}
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_pcg.copyable();}
+    template<class Implicit>
+    DefaultSolver( Implicit& im, const ContainerType& copyable,
+            unsigned max_iter, value_type eps): m_max_iter(max_iter)
+    {
+        m_im = [&im = im]( value_type t, const ContainerType& y, ContainerType&
+                yp) mutable
+        {
+            im( t, y, yp);
+        };
+        // We'll have to do some gymnastics to store precond and weights
+        // We do so by wrapping pcg's solve method
+        // This should not be an example of how to write custom Solvers!
+        m_solve = [ &weights = im.weights(), &precond = im.precond(), pcg =
+            dg::PCG<ContainerType>( copyable, max_iter), eps = eps ]
+            ( const std::function<void( const ContainerType&,ContainerType&)>&
+              wrapper, ContainerType& y, const ContainerType& ys) mutable
+        {
+            return pcg.solve( wrapper, y, ys, precond, weights, eps);
+        };
+    }
     ///@brief Set or unset performance timings during iterations
     ///@param benchmark If true, additional output will be written to \c std::cout during solution
     void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
 
-    template< class Implicit>
-    void solve( value_type alpha, Implicit& im, value_type time, ContainerType& y, const ContainerType& rhs)
+    void operator()( value_type alpha, value_type time, ContainerType& y, const
+            ContainerType& ys)
     {
 #ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
-        auto wrapper = [a = alpha, t = time, &i = im]( const auto& x, auto& y){
-            if( a != 0)
-                i( t, x, y);
+        auto wrapper = [a = alpha, t = time, &i = m_im]( const auto& x, auto& y){
+            i( t, x, y);
             dg::blas1::axpby( 1., x, -a, y);
         };
         Timer ti;
         if(m_benchmark) ti.tic();
-        dg::blas1::copy( rhs, y); // take rhs as initial guess
-        unsigned number = m_pcg.solve( wrapper, y, rhs, im.precond(), im.weights(), m_eps);
+        dg::blas1::copy( ys, y); // take rhs as initial guess
+        unsigned number = m_solve( wrapper, y, ys);
         if( m_benchmark)
         {
             ti.toc();
-            DG_RANK0 std::cout << "# of pcg iterations time solver: "<<number<<"/"<<m_pcg.get_max()<<" took "<<ti.diff()<<"s\n";
+            DG_RANK0 std::cout << "# of pcg iterations time solver: "
+                <<number<<"/"<<m_max_iter<<" took "<<ti.diff()<<"s\n";
         }
     }
     private:
-    PCG< ContainerType> m_pcg;
-    value_type m_eps;
-    bool m_benchmark = true;
-};
-
-template<class Implicit, class ContainerType>
-auto make_default_solver( Implicit& im, const ContainerType& copyable, unsigned max_iter, get_value_type<ContainerType> eps, bool benchmark = true)
-{
-
-    DefaultSolver<ContainerType> solver( copyable, max_iter, eps);
-    solver.set_benchmark( benchmark);
-    return [=, &im = im, solver = std::move( solver)]( auto alpha, auto time, auto& y, const auto& rhs) mutable
-    {
-        solver.solve( alpha, im, time, y, rhs);
-    };
-}
-
-/*!@brief Fixed point iterator for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
- *
- * for given t, alpha and rho.
- * The fixed point iteration is given by
- * \f[
- *  y_{k+1}  = \rho - \alpha\hat I(t,y_k)
- *  \f]
- * @copydoc hide_ContainerType
- * @sa ImExMultistep ImplicitMultistep ARKStep DIRKStep
- * @ingroup invert
- */
-template<class ContainerType>
-struct FixedPointSolver
-{
-    using container_type = ContainerType;
-    using value_type = get_value_type<ContainerType>;//!< value type of vectors
-    ///No memory allocation
-    FixedPointSolver(){}
-    /*!
-    * @param copyable vector of the size that is later used in \c solve (
-     it does not matter what values \c copyable contains, but its size is important;
-     the \c solve method can only be called with vectors of the same size)
-    * @param max_iter maimum iteration number
-    * @param eps accuracy parameter. Convergence is in the l2 norm
-    */
-    FixedPointSolver( const ContainerType& copyable, unsigned max_iter, value_type eps):
-        m_current( copyable), m_eps(eps), m_max_iter(max_iter)
-        {}
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_current;}
-
-    ///@brief Set or unset performance timings during iterations
-    ///@param benchmark If true, additional output will be written to \c std::cout during solution
-    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
-
-    template< class Implicit>
-    void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
-    {
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif//MPI
-        Timer ti;
-        if( m_benchmark)
-            ti.tic();
-        unsigned number = 0;
-        value_type error = 0;
-        do
-        {
-            dg::blas1::copy( y, m_current);
-            im( t, m_current, y);
-            dg::blas1::axpby( 1., rhs, -alpha, y);
-            dg::blas1::axpby( 1., y, -1., m_current); //the difference
-            number++;
-            error = sqrt( dg::blas1::dot( m_current, m_current));
-        }while ( error > m_eps && number < m_max_iter);
-        if( m_benchmark)
-        {
-            ti.toc();
-            DG_RANK0 std::cout << "# of iterations Fixed Point time solver: "<<number<<"/"<<m_max_iter<<" took "<<ti.diff()<<"s\n";
-        }
-    }
-    private:
-    ContainerType m_current;
-    value_type m_eps;
+    std::function<void( value_type, const ContainerType&, ContainerType&)>
+        m_im;
+    std::function< unsigned ( const std::function<void( const
+                ContainerType&,ContainerType&)>&, ContainerType&,
+            const ContainerType&)> m_solve;
     unsigned m_max_iter;
     bool m_benchmark = true;
 };
 
-/*!@brief Fixed Point iterator with Anderson Acceleration for solving \f[ (y+\alpha\hat I(t,y)) = \rho\f]
- *
- * for given t, alpha and rho.
- * @copydoc hide_ContainerType
- * @sa AndersonAcceleration ImExMultistep ImplicitMultistep ARKStep DIRKStep
- * @ingroup invert
- */
-template<class ContainerType>
-struct AndersonSolver
-{
-    using container_type = ContainerType;
-    using value_type = get_value_type<ContainerType>;//!< value type of vectors
-    ///No memory allocation
-    AndersonSolver(){}
-    /*!
-     * @param copyable vector of the size that is later used in \c solve (
-      it does not matter what values \c copyable contains, but its size is important;
-      the \c solve method can only be called with vectors of the same size)
-     * @param mMax The maximum number of vectors to include in the optimization
-     * procedure. \c mMax+1 is the number of solutions involved in computing
-     * the new solution.  Something between 3 and 10 are good values but higher
-     * values mean more storage space that needs to be reserved.  If \c mMax==0
-     * then the algorithm is equivalent to Fixed Point (or Richardson if the
-     * damping parameter is used in the \c solve() method) iteration i.e. no
-     * optimization and only 1 solution needed to compute a new solution.
-     * @param eps accuracy parameter for (rtol=atol=eps)
-     * @param max_iter Maxmimum number of iterations
-     * @param damping Paramter to prevent too large jumps around the actual
-     * solution. Hard to determine in general but values between 1e-2 and 1e-4
-     * are good values to begin with. This is the parameter that appears in
-     * Richardson iteration. It is beter to have it too small than too large
-     * (where it can lead to divergence of the solver)
-     * @param restart Number >= mMax that indicates after how many iterations
-     * to restart the acceleration. Periodic restarts are important for this
-     * method.  Per default it should be the same value as \c mMax but \c mMax+1
-     * or higher could be valuable to consider (but usually are worse
-     * than \c mMax). Lower values \c restart<mMax are equivalent to setting
-     * \c mMax=restart.
-     */
-    AndersonSolver( const ContainerType& copyable, unsigned mMax, value_type
-            eps, unsigned max_iter, value_type damping, unsigned restart):
-        m_acc(copyable, mMax), m_eps(eps), m_damp(damping), m_max(max_iter),
-        m_restart(restart)
-        {}
-    ///@brief Return an object of same size as the object used for construction
-    ///@return A copyable object; what it contains is undefined, its size is important
-    const ContainerType& copyable()const{ return m_acc.copyable();}
-    ///@brief Set or unset performance timings during iterations
-    ///@param benchmark If true, additional output will be written to \c std::cout during solution
-    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
-
-    template< class Implicit>
-    void solve( value_type alpha, Implicit& im, value_type t, ContainerType& y, const ContainerType& rhs)
-    {
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif//MPI
-        auto implicit = [a = alpha, t = t, &i = im]( const auto& x, auto& y){
-            if( a != 0)
-                i( t, x, y);
-            dg::blas1::axpby( 1., x, -a, y);
-        };
-        Timer ti;
-        if( m_benchmark) ti.tic();
-        unsigned number = m_acc.solve( implicit, y, rhs, im.weights(), m_eps,
-                m_eps, m_max, m_damp, m_restart, false);
-        if( m_benchmark)
-        {
-            ti.toc();
-            DG_RANK0 std::cout << "# of Anderson iterations time solver: "<<number<<"/"<<m_max<<" took "<<ti.diff()<<"s\n";
-        }
-    }
-    private:
-    AndersonAcceleration< ContainerType> m_acc;
-    value_type m_eps, m_damp;
-    unsigned m_max, m_restart;
-    bool m_benchmark = true;
-};
 }//namespace dg
