@@ -62,7 +62,6 @@ geometries: dg.tag
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
-		echo "GENERATE_XML = YES"; \
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
 
 file:
@@ -74,7 +73,6 @@ file:
 		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
-		echo "GENERATE_XML = YES"; \
 		echo ) | doxygen - ;
 
 exblas:
@@ -87,7 +85,6 @@ exblas:
 		echo "HTML_EXTRA_STYLESHEET = ../../../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/menubar.css";\
-		echo "GENERATE_XML = YES"; \
 		echo ) | doxygen - ;
 
 
