@@ -12,25 +12,26 @@ namespace dg
 
 ///@brief prototypical Shared Vector with Serial Tag
 template<class T>
-struct TensorTraits<thrust::host_vector<T>,
-    std::enable_if_t< std::is_arithmetic<T>::value>>
+struct TensorTraits<thrust::host_vector<T>> //, std::enable_if_t< std::is_arithmetic<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;
     using execution_policy  = SerialTag;
 };
-template<class T>
-struct TensorTraits<thrust::host_vector<T>,
-    std::enable_if_t< !std::is_arithmetic<T>::value>>
-{
-    using value_type        = get_value_type<T>;
-    using tensor_category   = RecursiveVectorTag;
-    using execution_policy  = get_execution_policy<T>;
-};
+//// MW Thrust should not be Recursive because of user-provided value_types
+//// or std::complex or similar
+//template<class T>
+//struct TensorTraits<thrust::host_vector<T>,
+//    std::enable_if_t< !std::is_arithmetic<T>::value>>
+//{
+//    using value_type        = get_value_type<T>;
+//    using tensor_category   = RecursiveVectorTag;
+//    using execution_policy  = get_execution_policy<T>;
+//};
 
 ///@brief prototypical Shared Vector with Cuda or Omp Tag
 template<class T>
-struct TensorTraits<thrust::device_vector<T> >//, std::enable_if_t<std::is_arithmetic<T>::value>>
+struct TensorTraits<thrust::device_vector<T> >
 {
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;

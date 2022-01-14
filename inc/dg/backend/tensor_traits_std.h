@@ -47,6 +47,7 @@ struct TensorTraits<std::array<T, N>,
     using execution_policy  = SerialTag;
 };
 
+/// Behaves like a RecursiveVector
 template<class Key, class T>
 struct TensorTraits<std::map<Key,T>>
 {

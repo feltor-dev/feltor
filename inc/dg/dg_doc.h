@@ -339,7 +339,7 @@
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
 @subsection mpi_vector MPI Vectors and the blas functions
 
-In Feltor each mpi process usualy gets an equally sized chunk of a vector.
+In Feltor each mpi process usually gets an equally sized chunk of a vector.
 In particular the \c dg::aRealMPITopology2d and \c dg::aRealMPITopology3d classes
 represent the standard Cartesian process and point distribution (meaning every process gets an equally sized 2d / 3d box out of the global domain ).
 The corresponding mpi vector structure in FELTOR is the \c dg::MPI_Vector, which is
