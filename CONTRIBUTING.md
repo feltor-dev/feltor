@@ -39,7 +39,7 @@ with LateX and upload it if you decide to make your project available in
 the official repository. Please find the workflow associated with the
 documentation in the following graph:
 
-![contributions](https://feltor-dev.github.io/_includes/FELTOR_contribute_workflow.jpg)
+![contributions](contribute.jpg)
 
 
 
