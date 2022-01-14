@@ -32,8 +32,8 @@ struct Adaptor
  * \f$ \hat I\f$ must be linear self-adjoint positive definite as it uses a conjugate
  * gradient solver to invert the equation.
  * @note This struct is a simple wrapper. It exists because self-adjoint
- * operators appear quite often in practice. The solve method is basically equivalent
- * to
+ * operators appear quite often in practice. The solve method is basically
+ * equivalent to
  * @code{.cpp}
  *  void operator()( value_type alpha, value_type time, ContainerType& y, const
  *      ContainerType& ys)
@@ -46,7 +46,9 @@ struct Adaptor
  *     pcg.solve( wrapper, y, ys, im.precond(), im.weights(), m_eps);
  *  }
  * @endcode
- * Starting from there customizations can easily be implemented.
+ * @sa In general it is recommended to write your own solver using a wrapper
+ * lambda like the above and one of the existing solvers like \c dg::PCG,
+ * \c dg::LGMRES or \c dg::AndersonAcceleration
  *
  * @copydoc hide_ContainerType
  * @sa ImExMultistep ImplicitMultistep ARKStep DIRKStep
@@ -62,14 +64,15 @@ struct DefaultSolver
     /*!
     * it does not matter what values \c copyable contains, but its size is important;
     * the \c solve method can only be called with vectors of the same size)
-    * @tparam Implicit The implicit part of the right hand side
-    * is a functor type with no return value (subroutine)
-    * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+    * @tparam Implicit The self-adjoint, positive definite
+    * implicit part of the right hand side.
+    * Has signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
     * The first argument is the time, the second is the input vector, which the
     * functor may \b not override, and the third is the output,
-    * i.e. y' = f(t, y) translates to f(t, y, y').  The two ContainerType
+    * i.e. y' = I(t, y) translates to I(t, y, y').  The two ContainerType
     * arguments never alias each other in calls to the functor.
-    * Also needs the \c WeightType weights() and \c PreconditionerType precond() member functions.
+    * Also needs the \c WeightType weights() and
+    * \c PreconditionerType precond() member functions.
     * @param im The implicit part of the differential equation.
     * Stored as a \c std::function.
     * @attention make sure that im lives throughout the lifetime of this

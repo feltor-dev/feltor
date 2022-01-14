@@ -58,9 +58,9 @@ int main( int argc, char* argv[])
     }
     //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
-    //dg::ImExMultistep_s< std::vector<dg::x::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
-    //karniadakis.init( exp, imp, time, y0, p.dt);
-    dg::Adaptive<dg::ERKStep<std::vector<dg::x::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
+    dg::DefaultSolver<std::vector<dg::x::DVec>> solver( imp, y0, 1000, p.eps_time);
+    dg::Adaptive<dg::ARKStep<std::vector<dg::x::DVec>>> stepper( "ARK-4-2-3", y0);
+    //dg::Adaptive<dg::ERKStep<std::vector<dg::x::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
     int ncid;
@@ -125,8 +125,8 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            //karniadakis.step( exp, imp, time, y0);
-            stepper.step( exp, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+            stepper.step( std::tie(exp, imp, solver), time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+            //stepper.step( exp, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
             if ( stepper.failed() ) failed_counter ++;
             DG_RANK0 std::cout << "Time "<<time<<" dt "<<dt<<" failed counter "<<failed_counter<<"\n";
             //store accuracy details
