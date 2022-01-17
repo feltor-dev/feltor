@@ -1,6 +1,5 @@
 #pragma once
 #include "pcg.h"
-#include "andersonacc.h"
 
 namespace dg{
 ///@cond
@@ -32,18 +31,20 @@ struct Adaptor
  * \f$ \hat I\f$ must be linear self-adjoint positive definite as it uses a conjugate
  * gradient solver to invert the equation.
  * @note This struct is a simple wrapper. It exists because self-adjoint
- * operators appear quite often in practice. The solve method is basically
- * equivalent to
+ * operators appear quite often in practice and is not actually the recommended
+ * default way of writing a solver for the implicit time part. It is better to
+ * start with the following code and adapt from there
  * @code{.cpp}
- *  void operator()( value_type alpha, value_type time, ContainerType& y, const
- *      ContainerType& ys)
+ *  auto solver = [&eps = eps, &im = im, pcg = dg::PCG<ContainerType>( y0, 1000)]
+ *      ( value_type alpha, value_type time, ContainerType& y, const
+ *          ContainerType& ys)
  *  {
  *     auto wrapper = [a = alpha, t = time, &i = im]( const auto& x, auto& y){
  *         i( t, x, y);
  *         dg::blas1::axpby( 1., x, -a, y);
  *     };
  *     dg::blas1::copy( ys, y); // take rhs as initial guess
- *     pcg.solve( wrapper, y, ys, im.precond(), im.weights(), m_eps);
+ *     pcg.solve( wrapper, y, ys, im.precond(), im.weights(), eps);
  *  }
  * @endcode
  * @sa In general it is recommended to write your own solver using a wrapper

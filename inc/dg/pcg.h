@@ -23,7 +23,7 @@ namespace dg{
 * \f[ Ax=b\f]
 *
 * where \f$ A\f$ is positive definite and self-adjoint in the weighted scalar product (defined by the diagonal weights matrix \f$W\f$)
-* \f[ A^\dagger := \frac{1}{W} A^T W \equiv A\f].
+* \f[ A^\dagger := \frac{1}{W} A^T W = A\f].
 * Note that if \f$ A\f$ is self-adjoint then both \f$ (WA)^T = WA \f$ and \f$ \left(A \frac{1}{W}\right)^T = A\frac{1}{W}\f$ are symmetric.
 * The positive definite, self-adjoint preconditioner \f$ P \approx A^{-1}\f$ that approximates the inverse
 * of \f$ A\f$ and is fast to apply, is

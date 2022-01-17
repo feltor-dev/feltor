@@ -622,7 +622,7 @@ MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
                     std::array<double,3>
                         coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
                     odeint.integrate_in_domain( phiM0, coords0, phiM1,
-                            coords1, deltaPhi, g2d-global(), eps);
+                            coords1, deltaPhi, g2d->global(), eps);
                     yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] =
                         coords1[2];
                     tempM.data()[i] = binary( yy1[0][i], yy1[1][i]);
@@ -631,7 +631,7 @@ MPI_Vector<thrust::host_vector<double>> fieldaligned_evaluate(
                     double phiP1 = phiP0 - deltaPhi;
                     coords0 = std::array<double,3>{xx0[0][i],xx0[1][i],xx0[2][i]};
                     odeint.integrate_in_domain( phiP0, coords0, phiP1,
-                            coords1, -deltaPhi, g2d-global(), eps);
+                            coords1, -deltaPhi, g2d->global(), eps);
                     xx1[0][i] = coords1[0], xx1[1][i] = coords1[1], xx1[2][i] =
                         coords1[2];
                     tempP.data()[i] = binary( xx1[0][i], xx1[1][i]);

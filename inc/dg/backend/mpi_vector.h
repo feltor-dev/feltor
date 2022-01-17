@@ -100,7 +100,7 @@ struct MPI_Vector
     }
 
     ///@brief Return the size of the data object
-    ///@return local size
+    ///@return \c data.size()
     unsigned size() const{return m_data.size();}
 
     ///@brief Swap data  and communicator
