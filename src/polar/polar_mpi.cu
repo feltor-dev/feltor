@@ -91,7 +91,8 @@ int main(int argc, char* argv[])
     //make solver and stepper
     polar::Explicit<aMPIGeometry2d, MDMatrix, MDVec> shu( grid, p.eps);
     polar::Diffusion<aMPIGeometry2d, MDMatrix, MDVec> diffusion( grid, p.nu);
-    dg::ImExMultistep_s< MDVec > karniadakis( "ImEx-BDF-3-3", y0, y0.size(), p.eps_time);
+    dg::DefaultSolver< MDVec > solver( diffusion, y0, y0.size(), p.eps_time);
+    dg::ImExMultistep< MDVec > karniadakis( "ImEx-BDF-3-3", y0);
 
     t.tic();
     shu( 0, y0, y1);
@@ -111,7 +112,7 @@ int main(int argc, char* argv[])
     }
 
     double time = 0;
-    karniadakis.init( shu, diffusion, time, y0, p.dt);
+    karniadakis.init( std::tie(shu, diffusion, solver), time, y0, p.dt);
 
     t.tic();
     while (time < p.maxout*p.itstp*p.dt)
@@ -119,7 +120,7 @@ int main(int argc, char* argv[])
         //step 
         for( unsigned i=0; i<p.itstp; i++)
         {
-            karniadakis.step( shu, diffusion, time, y0 );
+            karniadakis.step( std::tie(shu, diffusion, solver), time, y0 );
         }
 
     }

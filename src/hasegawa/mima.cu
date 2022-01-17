@@ -53,7 +53,8 @@ int main( int argc, char* argv[])
         std::cout << "Mean Mass is "<<meanMass<<"\n";
         dg::blas1::axpby( -meanMass, one, 1., y0);
     }
-    dg::ImExMultistep_s<dg::DVec > ab( "ImEx-BDF-3-3", y0, y0.size(), p.eps_time);
+    dg::DefaultSolver<dg::DVec> solver( y0, y0.size(), p.eps_time);
+    dg::ImExMultistep<dg::DVec > ab( "ImEx-BDF-3-3", y0);
     mima::Diffusion<dg::CartesianGrid2d,dg::DMatrix,dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -63,7 +64,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( mima, diffusion, time, y0, p.dt);
+    ab.init( std::tie(mima, diffusion, solver), time, y0, p.dt);
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
@@ -117,7 +118,7 @@ int main( int argc, char* argv[])
                 dg::blas1::axpby( -meanMass, one, 1., y0);
             }
 
-            try{ ab.step( mima, diffusion, time, y0);}
+            try{ ab.step( std::tie(mima, diffusion, solver), time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

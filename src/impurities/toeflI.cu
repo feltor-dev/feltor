@@ -101,8 +101,9 @@ int main( int argc, char* argv[])
     }
 
     //////////////////initialisation of timestepper and first step///////////////////
-    dg::ImExMultistep_s< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
-    karniadakis.init( toeflI, diffusion, 0, y0, p.dt);
+    dg::DefaultSolver<std::vector<dg::DVec> > solver( diffusion, y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0);
+    karniadakis.init( std::tie( toeflI, diffusion, solver), 0, y0, p.dt);
 
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -166,8 +167,8 @@ int main( int argc, char* argv[])
             std::cout << diff << " "<<diss<<"\t";
             std::cout << "Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<"\n";
 
-            try{ karniadakis.step( toeflI, diffusion, time, y0);}
-            catch( dg::Fail& fail) { 
+            try{ karniadakis.step( std::tie( toeflI, diffusion, solver), time, y0);}
+            catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);

@@ -26,7 +26,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const eule::Parameters p(  js);    
+    const eule::Parameters p(  js);
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
@@ -36,8 +36,8 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid
-     dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
-    //create RHS 
+     dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    //create RHS
     std::cout << "Constructing Explicit...\n";
     eule::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
     std::cout << "Constructing Implicit...\n";
@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
 //     dg::BathRZ init0(8, 8, 1, 0.0, 0.0, 30., 2., p.amp);
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
-//      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);   
+//      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);
     //background profile
 //     solovev::Nprofile prof(p, gp); //initial background profile
 //     dg::CONSTANT prof(p.bgprofamp );
@@ -61,18 +61,18 @@ int main( int argc, char* argv[])
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-    std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
-    
+    std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0);
+
 
     //no field aligning
     y1[1] = dg::evaluate( init0, grid);
     dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
-    
+
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
+    feltor.initializene( y0[1], y0[0]);
     std::cout << "Done!\n";
 
 
@@ -92,13 +92,13 @@ int main( int argc, char* argv[])
     dg::Timer t;
     double time = 0;
     unsigned step = 0;
-    
+
     const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = feltor.energy(), energy0 = E0, E1 = 0., diff = 0.;
-    
+
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    
+
     dg::DVec xprobecoords(7,1.);
     for (unsigned i=0;i<7; i++) {
         xprobecoords[i] = p.lx/8.*(1+i) ;
@@ -111,7 +111,7 @@ int main( int argc, char* argv[])
         dg::assign( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
-//         colors.scalemin() = -colors.scalemax();        
+//         colors.scalemin() = -colors.scalemax();
         //colors.scalemin() = 1.0;
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
 
@@ -126,8 +126,8 @@ int main( int argc, char* argv[])
         dg::assign( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
-        //colors.scalemin() = 1.0;        
-//         colors.scalemin() = -colors.scalemax();        
+        //colors.scalemin() = 1.0;
+//         colors.scalemin() = -colors.scalemax();
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
 
         title << std::setprecision(2) << std::scientific;
@@ -136,7 +136,7 @@ int main( int argc, char* argv[])
 
         render.renderQuad(visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-        
+
         //draw potential
         //transform to Vor
 //        dvisual=feltor.potential()[0];
@@ -148,9 +148,9 @@ int main( int argc, char* argv[])
 
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
 
-//         //colors.scalemin() = 1.0;        
-//          colors.scalemin() = -colors.scalemax();        
-//          colors.scalemin() = -colors.scalemax();        
+//         //colors.scalemin() = 1.0;
+//          colors.scalemin() = -colors.scalemax();
+//          colors.scalemin() = -colors.scalemax();
         //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title <<"Potential / "<< colors.scalemax() << " " << colors.scalemin()<<"\t";
 
@@ -163,16 +163,14 @@ int main( int argc, char* argv[])
          //hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
-        //colors.scalemin() = 1.0;        
-//          colors.scalemin() = -colors.scalemax();        
+        //colors.scalemin() = 1.0;
+//          colors.scalemin() = -colors.scalemax();
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title <<"Omega / "<< colors.scalemax()<< " "<< colors.scalemin()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
-     
-           
         title << std::fixed; 
         title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());

@@ -11,9 +11,6 @@ int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -87,8 +84,9 @@ int main( int argc, char* argv[])
     //////////////////initialisation of timestepper and first step///////////////////
     std::cout << "init timestepper...\n";
     double time = 0.0;
-    dg::ImExMultistep_s< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
-    karniadakis.init( toeflI, diffusion, time, y0, p.dt);
+    dg::DefaultSolver<std::vector<dg::DVec> > solver( diffusion, y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0);
+    karniadakis.init( std::tie( toeflI, diffusion, solver), time, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
     int ncid;
@@ -164,7 +162,7 @@ int main( int argc, char* argv[])
             ti.tic();
 #endif//DG_BENCHMARK
             for( unsigned j=0; j<p.itstp; j++)
-            {   karniadakis.step( toeflI, diffusion, time, y0);
+            {   karniadakis.step( std::tie( toeflI, diffusion, solver), time, y0);
                 y0.swap( y1);
                 step++;
                 Estart[0] = step;

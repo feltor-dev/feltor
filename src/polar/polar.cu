@@ -132,7 +132,8 @@ int main(int argc, char* argv[])
     //make solver and stepper
     polar::Explicit<dg::geo::CurvilinearGrid2d, DMatrix, DVec> shu( grid, p.eps);
     polar::Diffusion<dg::geo::CurvilinearGrid2d, DMatrix, DVec> diffusion( grid, p.nu);
-    dg::ImExMultistep_s< DVec > karniadakis( "ImEx-BDF-3-3", y0, y0.size(), p.eps_time);
+    dg::DefaultSolver< DVec > solver( diffusion, y0, y0.size(), p.eps_time);
+    dg::ImExMultistep< DVec > karniadakis( "ImEx-BDF-3-3", y0);
 
 
     // Some simple tests to see if everything is in order
@@ -188,7 +189,7 @@ int main(int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
 #endif
 
-    karniadakis.init( shu, diffusion, time, y0, p.dt);
+    karniadakis.init( std::tie(shu, diffusion, solver), time, y0, p.dt);
 
     t.tic();
     int step = 0;
@@ -217,7 +218,7 @@ int main(int argc, char* argv[])
         //step 
         for( unsigned i=0; i<p.itstp; i++)
         {
-            karniadakis.step( shu, diffusion, time, y0 );
+            karniadakis.step( std::tie(shu, diffusion, solver), time, y0 );
         }
         cout << "t=" << time << endl;
     }

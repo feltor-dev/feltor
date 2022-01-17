@@ -104,9 +104,11 @@ int main( int argc, char* argv[])
 
 
 
-    dg::ImExMultistep_s< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
-    std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
+    dg::DefaultSolver< std::vector<dg::DVec> > solver( rolkar, y0,
+            y0[0].size(), p.eps_time);
+    dg::ImExMultistep< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0);
+    std::cout << "initialize karniadakis" << std::endl;
+    karniadakis.init( std::tie(feltor, rolkar, solver), 0., y0, p.dt);
     std::cout << "Done!\n";
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -214,7 +216,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis.step( feltor, rolkar, time, y0);}
+            try{ karniadakis.step( std::tie(feltor, rolkar, solver), time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

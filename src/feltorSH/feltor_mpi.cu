@@ -114,10 +114,11 @@ int main( int argc, char* argv[])
     }
     if(rank==0) std::cout << "Done!\n";
 
-    
-    dg::ImExMultistep_s< std::vector<dg::MDVec> > karniadakis( "ImEx-BDF-3-3", y0, y0[0].size(), p.eps_time);
+    dg::DefaultSolver< std::vector<dg::MDVec> > solver( rolkar, y0,
+            y0[0].size(), p.eps_time);
+    dg::ImExMultistep< std::vector<dg::MDVec> > karniadakis( "ImEx-BDF-3-3", y0);
     if(rank==0) std::cout << "intiialize Timestepper" << std::endl;
-    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
+    karniadakis.init( std::tie(feltor, rolkar, solver), 0., y0, p.dt);
     if(rank==0) std::cout << "Done!\n";    
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
@@ -232,7 +233,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis.step( feltor, rolkar, time, y0);}
+            try{ karniadakis.step( std::tie(feltor, rolkar, solver), time, y0);}
             catch( dg::Fail& fail) { 
                 if(rank==0) std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 if(rank==0) std::cerr << "Does Simulation respect CFL condition?\n";
