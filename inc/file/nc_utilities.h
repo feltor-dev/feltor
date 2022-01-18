@@ -146,6 +146,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
  * @brief Define an unlimited time and a dimension together with their coordinate variables
  *
  * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ *
  * Semantically equivalent to the following:
  * @code
  * define_time( ncid, name_dims[0], &dimsIDs[0], tvarID);
@@ -174,6 +175,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Rea
  * @brief Define 2 dimensions and associated coordiante variables
  *
  * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ *
  * Dimensions have attributes of (Y, X)
  * @param ncid file ID
  * @param dimsIDs (write - only) 2D array of dimension IDs (Y,X)
@@ -199,6 +201,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology2d<
  * @brief Define an unlimited time and 2 dimensions and associated coordinate variables
  *
  * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ *
  * Semantically equivalent to the following:
  * @code
  * define_time( ncid, name_dims[0], &dimsIDs[0], tvarID);
@@ -229,6 +232,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
  * @brief Define a limited time and 2 dimensions and associated coordinate variables
  *
  * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ *
  * Semantically equivalent to the following:
  * @code
  * define_limited_time( ncid, name_dims[0], size, &dimsIDs[0], tvarID);
@@ -259,6 +263,7 @@ inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, con
  * @brief Define 3 dimensions and associated coordinate variables
  *
  * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ *
  * Dimensions have attributes ( Z, Y, X)
  * @param ncid file ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (Z,Y,X)
@@ -289,6 +294,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology3d<
  * @brief Define an unlimited time and 3 dimensions together with their coordinate varariables
  *
  * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ *
  * Semantically equivalent to the following:
  * @code
  * define_time( ncid, name_dims[0], &dimsIDs[0], tvarID);
