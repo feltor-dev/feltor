@@ -88,8 +88,9 @@ try{
  */
 struct WrappedJsonValue
 {
-    ///Default constructor
-    WrappedJsonValue() : m_js(0), m_mode( error::is_silent){}
+    ///@brief Default constructor
+    ///By default the error mode is \c error::is_throw
+    WrappedJsonValue() : m_js(0), m_mode( error::is_throw){}
     ///@brief Construct with error mode
     ///@param mode The error mode
     WrappedJsonValue( error mode): m_js(0), m_mode( mode) {}
