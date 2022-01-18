@@ -218,15 +218,16 @@ int main( int argc, char* argv[])
         att["Conventions"] = "CF-1.7";
         ///Get local time and begin file history
         auto ttt = std::time(nullptr);
-        auto tm = *std::localtime(&ttt);
-
         std::ostringstream oss;
         ///time string  + program-name + args
-        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
         for( int i=0; i<argc; i++) oss << " "<<argv[i];
         att["history"] = oss.str();
         att["comment"] = "Find more info in feltor/src/reco2D/reconnection.tex";
         att["source"] = "FELTOR";
+        att["git-hash"] = GIT_HASH;
+        att["git-branch"] = GIT_BRANCH;
+        att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = inputfile;
         for( auto pair : att)

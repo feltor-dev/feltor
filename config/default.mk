@@ -1,5 +1,5 @@
-ifndef INCLUDED #include guard
-INCLUDED=1
+ifndef DEFAULT_MK #include guard
+DEFAULT_MK=1
 
 #compiler and compiler options
 CC=g++ #C++ compiler
@@ -17,4 +17,4 @@ INCLUDE = -I$(HOME)/include# cusp, thrust and the draw libraries
 LIBS=-lnetcdf -lhdf5_serial -lhdf5_serial_hl # netcdf library for file output
 JSONLIB= -ljsoncpp # json library for input parameters
 GLFLAGS =$$(pkg-config --static --libs glfw3) -lGL #glfw3 installation
-endif # INCLUDED
+endif # DEFAULT_MK
