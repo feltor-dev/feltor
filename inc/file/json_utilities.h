@@ -101,7 +101,7 @@ struct WrappedJsonValue
     ///@param mode The error mode
     WrappedJsonValue(Json::Value js, error mode): m_js(js), m_mode( mode) {}
     ///@brief Change the error mode
-    ///@param mode The new error mode
+    ///@param new_mode The new error mode
     void set_mode( error new_mode){
         m_mode = new_mode;
     }
