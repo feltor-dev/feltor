@@ -423,7 +423,7 @@ struct ARKStep
     * explicit part \c ex at the new \c (t1,u1).
     * This is useful if \c ex holds
     * state, which is then updated to the new timestep and/or if \c im changes
-    * the state of \c ex through the friend construct.
+    * the state of \c ex
     * @note After a \c solve we immediately
     * call \c ex on the solution
     */

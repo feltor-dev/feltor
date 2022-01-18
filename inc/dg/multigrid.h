@@ -178,23 +178,25 @@ struct NestedGrids
  * .
  * This algorithm is equivalent to a multigrid V-cycle with zero down-grid smoothing
  * and infinite (i.e. solving) upgrid smoothing.
- * @param op a container (usually \c std::vector of operators)
-     Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param nested_op a container (usually \c std::vector of operators)
+     Index 0 is the Operator \c f on the original grid, 1 on the half grid, 2 on the quarter grid, ...
  * @param x (read/write) contains initial guess on input and the solution on
  * output (if the initial guess is good enough the solve may return
  * immediately)
  * @param b The right hand side
- * @param inverse_op a vector of inverse operators (usually lambda functions combining operators and solvers)
- * @param nested provides projection and interapolation operations and workspace
+ * @param inverse_op a vector of inverse operators, which do the solves (usually lambda functions combining operators and solvers)
+ * @param nested_grids provides projection and interapolation operations and workspace
+ * @copydoc hide_ContainerType
  */
-template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
+template<class NestedOperators, class ContainerType0, class ContainerType1, class NestedGrids>
 void nested_iterations(
-    NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
+    NestedOperators&& nested_op, ContainerType0& x, const ContainerType1& b,
     const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op, Nested& nested)
+        inverse_op, NestedGrids& nested_grids)
 {
+    NestedGrids& nested = nested_grids;
     // compute residual r = b - A x
-    dg::blas2::symv(op[0], x, nested.r(0));
+    dg::blas2::symv(nested_op[0], x, nested.r(0));
     dg::blas1::axpby(1., b, -1., nested.r(0));
     // project residual down to coarse grid
     dg::blas1::copy( x, nested.x(0));
@@ -203,7 +205,7 @@ void nested_iterations(
         dg::blas2::gemv( nested.projection(u), nested.r(u), nested.r(u+1));
         dg::blas2::gemv( nested.projection(u), nested.x(u), nested.x(u+1));
         // compute FAS right hand side
-        dg::blas2::symv( op[u+1], nested.x(u+1), nested.b(u+1));
+        dg::blas2::symv( nested_op[u+1], nested.x(u+1), nested.b(u+1));
         dg::blas1::axpby( 1., nested.b(u+1), 1., nested.r(u+1), nested.b(u+1));
         dg::blas1::copy( nested.x(u+1), nested.w(u+1)); // remember x0
     }

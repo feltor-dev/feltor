@@ -457,11 +457,6 @@ or alternatively there is a fix in cusp that can be accessed via
 cd path/to/cusplibrary
 git checkout cuda10
 ```
-
-===== The hdf5 library does not link after installing the libhdf5-dev package
-You may need to update the linker path. Use `locate libhdf5` to find the library path
-and then update your system library search path. On ubuntu you would add a file `hdf5.conf` to `/etc/ld.so.conf.d/` with the path `/path/to/libs` to the directory that contains the hdf5 libraries. Save and run `sudo ldconfig` to update the system.
-
 == 2. Documentation
 
 The

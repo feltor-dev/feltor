@@ -480,7 +480,7 @@ struct EntireDomain
       step( t, u1, t, u1, dt);
   }
  * @endcode
- * In the \c integrate_at_least function the inner if statement is removed.
+ * In the \c integrate_at_least function the if statement is removed.
  * @note the current timestep \c dt is saved by the class and re-used in the next call to integrate unless overwritten by \c set_dt.
  * @attention The integrator may throw if it detects too small timesteps, too
  * many failures, NaN, Inf, or other non-sanitary behaviour

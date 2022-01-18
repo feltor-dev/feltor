@@ -203,7 +203,7 @@ struct ImExMultistep
      * @note the implementation is such that on return the last call is the
      * explicit part \c ex at \c (t0,u0).  This is useful if \c ex holds
      * state, which is then updated to that timestep and/or if \c im changes
-     * the state of \c ex through the friend construct.
+     * the state of \c ex
      * This might be interesting if the call to \c ex changes its state.
      */
     template< class Explicit, class Implicit, class Solver>
@@ -218,7 +218,7 @@ struct ImExMultistep
     * @note the implementation is such that on return the last call is the
     * explicit part \c ex at the new \c (t,u).  This is useful if \c ex holds
     * state, which is then updated to the new timestep and/or if \c im changes
-    * the state of \c ex through the friend construct.
+    * the state of \c ex
     * @note after a \c solve, we call both \c im (if the tableau necessitates it)
     * and \c ex on the solution
     * @attention The first few steps after the call to the init function are
