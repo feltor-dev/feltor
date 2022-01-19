@@ -4,7 +4,7 @@
 #include "thrust/device_vector.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "exdot_cuda.cuh" // accumulate.cuh , config.h, mylibm.cuh
-#else
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
 #include "exdot_omp.h" //accumulate.h, mylibm.hpp
 #endif
 
