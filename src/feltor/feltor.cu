@@ -32,13 +32,6 @@ void sigterm_handler(int signal)
 }
 #endif //WITH_MPI
 
-void abort_program(int code = -1){
-#ifdef WITH_MPI
-    MPI_Abort(MPI_COMM_WORLD, code);
-#endif //WITH_MPI
-    exit( code);
-}
-
 int main( int argc, char* argv[])
 {
 #ifdef WITH_MPI
@@ -60,7 +53,7 @@ int main( int argc, char* argv[])
                 << argv[0]<<" [input.json] \n OR \n"
                 << argv[0]<<" [input.json] [output.nc]\n OR \n"
                 << argv[0]<<" [input.json] [output.nc] [initial.nc] "<<std::endl;
-        abort_program();
+        dg::abort_program();
     }
     try{
         dg::file::file2Json( argv[1], js.asJson(),
@@ -69,7 +62,7 @@ int main( int argc, char* argv[])
     } catch( std::exception& e) {
         DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
         DG_RANK0 std::cerr << e.what()<<std::endl;
-        abort_program();
+        dg::abort_program();
     }
     std::string geometry_params = js["magnetic_field"]["input"].asString();
     if( geometry_params == "file")
@@ -82,14 +75,14 @@ int main( int argc, char* argv[])
         {
             DG_RANK0 std::cerr << "ERROR in geometry file "<<path<<std::endl;
             DG_RANK0 std::cerr << e.what()<<std::endl;
-            abort_program();
+            dg::abort_program();
         }
     }
     else if( geometry_params != "params")
     {
         DG_RANK0 std::cerr << "Error: Unknown magnetic field input '"
                            << geometry_params<<"'. Exit now!\n";
-        abort_program();
+        dg::abort_program();
     }
     const feltor::Parameters p( js);
     DG_RANK0 std::cout << js.asJson() <<  std::endl;
@@ -105,7 +98,7 @@ int main( int argc, char* argv[])
     {
         DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
         DG_RANK0 std::cerr <<e.what()<<std::endl;
-        abort_program();
+        dg::abort_program();
     }
 
     ////////////////////////////////set up computations///////////////////////////
@@ -116,7 +109,7 @@ int main( int argc, char* argv[])
     {
         DG_RANK0 std::cerr << "ERROR: Number of processes in z "<<dims[2]
                     <<" may not be larger or equal Nz "<<p.Nz<<std::endl;
-        abort_program();
+        dg::abort_program();
     }
 #endif //WITH_MPI
     //Make grids
@@ -168,7 +161,7 @@ int main( int argc, char* argv[])
         {
             DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
             DG_RANK0 std::cerr <<e.what()<<std::endl;
-            abort_program();
+            dg::abort_program();
         }
         dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *grid.perp_grid());
         dg::x::DVec coord3d;
@@ -196,7 +189,7 @@ int main( int argc, char* argv[])
     }catch ( std::out_of_range& error){
         DG_RANK0 std::cerr << "ERROR: in source: "<<error.what();
         DG_RANK0 std::cerr <<"Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;
-        abort_program();
+        dg::abort_program();
     }
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
@@ -220,7 +213,7 @@ int main( int argc, char* argv[])
         }catch (std::exception& e){
             DG_RANK0 std::cerr << "ERROR occured initializing from file "<<argv[3]<<std::endl;
             DG_RANK0 std::cerr << e.what()<<std::endl;
-            abort_program();
+            dg::abort_program();
         }
     }
     else
@@ -242,7 +235,7 @@ int main( int argc, char* argv[])
         }catch ( dg::Error& error){
             DG_RANK0 std::cerr << error.what();
             DG_RANK0 std::cerr << "Is there a spelling error? I assume you do not want to continue with the wrong parameter so I exit! Bye Bye :)\n";
-            abort_program();
+            dg::abort_program();
         }
     }
     t.toc();
@@ -295,7 +288,7 @@ int main( int argc, char* argv[])
     {
         DG_RANK0 std::cerr << "Error: Unrecognized timestepper: '"
                            << p.timestepper << "'! Exit now!";
-        abort_program();
+        dg::abort_program();
     }
     DG_RANK0 std::cout << "Done!\n";
 
@@ -338,7 +331,7 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cerr << "ERROR: Wrong number of arguments for netcdf output!\nUsage: "
                     << argv[0]<<" [input.json] [output.nc]\n OR \n"
                     << argv[0]<<" [input.json] [output.nc] [initial.nc] "<<std::endl;
-            abort_program();
+            dg::abort_program();
         }
         dg::file::NC_Error_Handle err;
         std::string file_name = argv[2];
@@ -349,23 +342,24 @@ int main( int argc, char* argv[])
         {
             DG_RANK0 std::cerr << "ERROR creating file "<<file_name<<std::endl;
             DG_RANK0 std::cerr << e.what()<<std::endl;
-            abort_program();
+            dg::abort_program();
         }
         /// Set global attributes
         std::map<std::string, std::string> att;
         att["title"] = "Output file of feltor/src/feltor/feltor.cu";
-        att["Conventions"] = "CF-1.7";
+        att["Conventions"] = "CF-1.8";
         ///Get local time and begin file history
         auto ttt = std::time(nullptr);
-        auto tm = *std::localtime(&ttt);
-
         std::ostringstream oss;
         ///time string  + program-name + args
-        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
         for( int i=0; i<argc; i++) oss << " "<<argv[i];
         att["history"] = oss.str();
         att["comment"] = "Find more info in feltor/src/feltor/feltor.tex";
         att["source"] = "FELTOR";
+        att["git-hash"] = GIT_HASH;
+        att["git-branch"] = GIT_BRANCH;
+        att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = inputfile;
         for( auto pair : att)
@@ -507,7 +501,7 @@ int main( int argc, char* argv[])
                 DG_RANK0 std::cerr << "CG failed to converge in first step to "
                                   <<fail.epsilon()<<std::endl;
                 DG_RANK0 err = nc_close(ncid);
-                abort_program();
+                dg::abort_program();
             }
         }
 

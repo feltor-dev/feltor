@@ -60,10 +60,7 @@ int main( int argc, char* argv[])
     }catch ( std::exception& error){
         DG_RANK0 std::cerr << "Error in input file\n ";
         DG_RANK0 std::cerr << error.what();
-#ifdef WITH_MPI
-        MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //WITH_MPI
-        return -1;
+        dg::abort_program();
     }
     DG_RANK0 std::cout << "Initialize time stepper..." << std::endl;
     dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
@@ -89,10 +86,7 @@ int main( int argc, char* argv[])
     else
     {
         DG_RANK0 std::cerr<<"Error: Unrecognized timestepper: '"<<p.timestepper<<"'! Exit now!";
-#ifdef WITH_MPI
-        MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //WITH_MPI
-        return -1;
+        dg::abort_program();
     }
 
 
@@ -195,7 +189,6 @@ int main( int argc, char* argv[])
 #endif //WITHOUT_GLFW
     if( "netcdf" == output)
     {
-        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc == 1 || argc == 2)
             outputfile = "reconnection.nc";
@@ -205,12 +198,12 @@ int main( int argc, char* argv[])
         dg::file::NC_Error_Handle err;
         int ncid=-1;
         try{
-            err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+            DG_RANK0 err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
         }catch( std::exception& e)
         {
             std::cerr << "ERROR creating file "<<outputfile<<std::endl;
             std::cerr << e.what()<<std::endl;
-           return -1;
+            dg::abort_program();
         }
         /// Set global attributes
         std::map<std::string, std::string> att;
@@ -229,6 +222,7 @@ int main( int argc, char* argv[])
         att["git-branch"] = GIT_BRANCH;
         att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
+        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         att["inputfile"] = inputfile;
         for( auto pair : att)
             DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
@@ -337,10 +331,7 @@ int main( int argc, char* argv[])
                 catch( dg::Fail& fail) {
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
                     DG_RANK0 std::cerr << "Does simulation respect CFL condition?"<<std::endl;
-#ifdef WITH_MPI
-                    MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //WITH_MPI
-                    return -1;
+                    dg::abort_program();
                 }
             }
             ti.toc();
@@ -375,10 +366,7 @@ int main( int argc, char* argv[])
     if( !("netcdf" == output) && !("glfw" == output))
     {
         DG_RANK0 std::cerr <<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!";
-#ifdef WITH_MPI
-        MPI_Abort(MPI_COMM_WORLD, -1);
-#endif //WITH_MPI
-        return -1;
+        dg::abort_program();
     }
     ////////////////////////////////////////////////////////////////////
     t.toc();

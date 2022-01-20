@@ -152,4 +152,24 @@ struct Fail : public Error
     double eps;
 };
 
+/**
+ * @brief Abort program (both MPI and non-MPI)
+ *
+ * @code
+#ifdef MPI_VERSION
+    MPI_Abort(MPI_COMM_WORLD, code);
+#endif //WITH_MPI
+    exit( code);
+ * @endcode
+ * @param code The abortion code that will be signalled to the caller (of the program)
+ * @ingroup misc
+ */
+static inline void abort_program(int code = -1){
+#ifdef MPI_VERSION
+    MPI_Abort(MPI_COMM_WORLD, code);
+#endif //WITH_MPI
+    exit( code);
+}
+
+
 }//namespace dg
