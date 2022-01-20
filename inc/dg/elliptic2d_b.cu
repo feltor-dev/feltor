@@ -238,11 +238,7 @@ int main()
         dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_f( grid);
         // We expect it not to converge
         dg::LGMRES<dg::DVec> lgmres( x, 10, 3, 1);
-        unsigned number = lgmres.solve( pol_f, x, b, 1., w2d, eps);
-        if( !lgmres.converged())
-            throw dg::Fail( eps, dg::Message( _ping_)<<
-                    "LGMRES failed to converge in "<<number<<" iterations!"
-                );
+        lgmres.solve( pol_f, x, b, 1., w2d, eps);
     }catch( dg::Fail& fail)
     {
         std::cerr << "TEST failure message";

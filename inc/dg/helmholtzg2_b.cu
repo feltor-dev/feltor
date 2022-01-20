@@ -52,8 +52,6 @@ int main()
     dg::Timer t;
     t.tic();
     unsigned number = pcg2.solve( gamma2barinv, x, rholap, 1., w2d, eps);
-    if(  number == pcg2.get_max())
-        throw dg::Fail( eps);
     t.toc();
 
     //Evaluation

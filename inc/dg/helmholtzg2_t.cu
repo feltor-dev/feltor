@@ -57,8 +57,6 @@ int main()
 
     //test gamma2
     unsigned number = pcg.solve( gamma2inv, x_, rholap, 1., w2d, eps);
-    if(  number == pcg.get_max())
-        throw dg::Fail( eps);
 
     dg::blas1::axpby( 1., sol, -1., x_);
     dg::exblas::udouble res;
@@ -69,8 +67,6 @@ int main()
     std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, x_)/ dg::blas2::dot( w2d, sol))<<std::endl;
 
     number = pcg.solve( gamma1inv, x_, rho1, 1., w2d, eps);
-    if(  number == pcg.get_max())
-        throw dg::Fail( eps);
     //test gamma 1
     dg::blas1::axpby( 1., sol1, -1., x_);
     res.d = sqrt( dg::blas2::dot( w2d, x_));
