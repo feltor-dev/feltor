@@ -405,10 +405,8 @@ int main( int argc, char* argv[])
         long_name="Cartesian y-coordinate";
         err = nc_put_att_text( ncid, yccID, "long_name",
             long_name.size(), long_name.data());
-        err = nc_enddef( ncid);
         err = nc_put_var_double( ncid, xccID, gX2d->map()[0].data());
         err = nc_put_var_double( ncid, yccID, gX2d->map()[1].data());
-        err = nc_redef(ncid);
         dim1d_ids[0] = dim_idsX[1];
     }
     else
@@ -433,9 +431,7 @@ int main( int argc, char* argv[])
             &dim1d_ids[0], &vid);
         err = nc_put_att_text( ncid, vid, "long_name",
             std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef( ncid);
         err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid);
     }
     //write 2d vectors
     //allocate mem for visual
@@ -456,7 +452,6 @@ int main( int argc, char* argv[])
             std::get<1>(tp).size(), std::get<1>(tp).data());
         std::string coordinates = "zc yc xc";
         err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
-        err = nc_enddef( ncid);
         dg::Timer t;
         t.tic();
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
@@ -469,7 +464,6 @@ int main( int argc, char* argv[])
         dg::assign( hvisual3d, fvisual3d);
         err = nc_put_var_float( ncid, vectorID, fvisual.data());
         err = nc_put_var_float( ncid, vectorID3d, fvisual3d.data());
-        err = nc_redef(ncid);
     }
     std::cout << "WRTING 3D FIELDS ... \n";
     //compute & write 3d vectors
@@ -496,11 +490,9 @@ int main( int argc, char* argv[])
             std::string coordinates = "zc yc xc";
             err = nc_put_att_text( ncid, vectorID, "coordinates", coordinates.size(), coordinates.data());
         }
-        err = nc_enddef( ncid);
         hvisual3d = dg::evaluate( std::get<2>(tp), grid3d);
         dg::assign( hvisual3d, fvisual3d);
         err = nc_put_var_float( ncid, vectorID, fvisual3d.data());
-        err = nc_redef(ncid);
     }
     //////////////////////////////Finalize////////////////////////////////////
     err = nc_close(ncid);

@@ -317,13 +317,10 @@ int main( int argc, char* argv[])
                 &staticID);
             err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
                 long_name.data());
-            err = nc_enddef(ncid);
             record.function( resultD, var);
             dg::assign( resultD, resultH);
             dg::file::put_var_double( ncid, staticID, grid, resultH);
-            err = nc_redef(ncid);
         }
-        err = nc_enddef(ncid);
         size_t start[3] = {0, 0, 0};
         size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
         ///////////////////////////////////first output/////////////////////////

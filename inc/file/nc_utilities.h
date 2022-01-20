@@ -134,9 +134,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
     if( (retval = nc_def_dim( ncid, name_dim.data(), points.size(), dimID)) ) { return retval;}
     int varID;
     if( (retval = nc_def_var( ncid, name_dim.data(), getNCDataType<T>(), 1, dimID, &varID))){return retval;}
-    if( (retval = nc_enddef(ncid)) ) {return retval;} //not necessary for NetCDF4 files
     if( (retval = put_var_T<T>( ncid, varID, points.data())) ){ return retval;}
-    if( (retval = nc_redef(ncid))) {return retval;} //not necessary for NetCDF4 files
     retval = nc_put_att_text( ncid, *dimID, "axis", axis.size(), axis.data());
     retval = nc_put_att_text( ncid, *dimID, "long_name", long_name.size(), long_name.data());
     return retval;

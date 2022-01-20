@@ -229,10 +229,8 @@ int main( int argc, char* argv[])
             dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
             dg::assign( transferH, transferH_out_float);
 
-            err = nc_enddef( ncid_out);
             err = nc_put_var_float( ncid_out, vID, append(transferH_out_float,
                         g3d_out_equidistant).data());
-            err = nc_redef(ncid_out);
         }
     }
     for( auto record : feltor::generate_cyl2cart( g3d_out_equidistant) )
@@ -243,10 +241,8 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, vID, "long_name", std::get<1>(record).size(),
             std::get<1>(record).data());
         dg::assign( std::get<2>(record), transferH_out_float);
-        err = nc_enddef( ncid_out);
         err = nc_put_var_float( ncid_out, vID, append(transferH_out_float,
                     g3d_out_equidistant).data());
-        err = nc_redef(ncid_out);
 
     }
     // for fieldaligned output (transform to Cartesian coords)
@@ -269,9 +265,7 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, vID, "long_name",
                 std::get<1>(record).size(), std::get<1>(record).data());
         dg::assign( std::get<2>(record), transferH_aligned_out);
-        err = nc_enddef( ncid_out);
         err = nc_put_var_double( ncid_out, vID, transferH_aligned_out.data());
-        err = nc_redef(ncid_out);
     }
     }
 
@@ -290,7 +284,6 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, id4d[name], "long_name", long_name.size(),
             long_name.data());
     }
-    err = nc_enddef( ncid_out);
 
 
 
