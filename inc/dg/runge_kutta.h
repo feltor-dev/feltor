@@ -67,63 +67,50 @@ void gemm(
 } // namespace detail
 ///@endcond
 
- /** @class hide_rhs
-  * @tparam RHS The right hand side
-        is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
-        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
-        i.e. y' = f(t, y) translates to f(t, y, y').
-        The two ContainerType arguments never alias each other in calls to the functor.
-  */
-/** @class hide_rhs_solve
- * @tparam RHS The right hand side
+/** @class hide_explicit_rhs
+ * @tparam ExplicitRHS The explicit (part of the) right hand side
  * is a functor type with no return value (subroutine)
  * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
  * The first argument is the time, the second is the input vector, which the
- * functor may \b not override, and the third is the output,
- * i.e. y' = f(t, y) translates to f(t, y, y').
+ * functor may \b not override, and the third is the output, i.e. y' = E(t, y)
+ * translates to E(t, y, y').
  * The two ContainerType arguments never alias each other in calls to the functor.
- * @tparam Solver A functor type for the implicit right hand side.
- * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$ for \c y for  given
- * \c alpha, \c t and \c ys.
- * Alpha is always positive and non-zero.
- * Signature
- * <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
-  */
-/*! @class hide_explicit_implicit
- * @tparam Explicit The explicit part of the right hand side
- * is a functor type with no return value (subroutine)
- * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
- * The first argument is the time, the second is the input vector, which the
- * functor may \b not override, and the third is the output, i.e. y' = f(t, y)
- * translates to f(t, y, y'). The two ContainerType arguments never alias each
- * other in calls to the functor.
- * @tparam Implicit The implicit part of the right hand side
- * is a functor type with no return value (subroutine)
- * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
- * The first argument is the time, the second is the input vector, which the
- * functor may \b not override, and the third is the output, i.e. y' = f(t, y)
- * translates to f(t, y, y').  The two ContainerType arguments never alias each
- * other in calls to the functor.
- * @tparam Solver A functor type for the implicit right hand side.
- * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$ for \c y for  given
- * \c alpha, \c t and \c ys.
- * Alpha is always positive and non-zero.
- * Signature
- * <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
- * @param ode <explic, implicit, solver> part. Typically \c std::tie(ex,im,solver)
+ * The operator can throw to indicate failure. Exceptions should derive from
+ * \c std::exception.
  */
+/** @class hide_implicit_rhs
+ * @tparam ImplicitRHS The implicit (part of the) right hand side
+ * is a functor type with no return value (subroutine)
+ * of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
+ * The first argument is the time, the second is the input vector, which the
+ * functor may \b not override, and the third is the output, i.e. y' = I(t, y)
+ * translates to I(t, y, y').
+ * The two ContainerType arguments never alias each other in calls to the functor.
+ * The operator can throw to indicate failure. Exceptions should derive from
+ * \c std::exception.
+ */
+/** @class hide_solver
+ * @tparam Solver A functor type for the implicit right hand side.
+ * Must solve the equation \f$ y - \alpha I(y,t) = y^*\f$ for \c y for  given
+ * \c alpha, \c t and \c ys.
+ * Alpha is always positive and non-zero.
+ * Signature
+ * <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
+ * The operator can throw. Any Exception should derive from \c std::exception.
+  */
 /*! @class hide_ode
- * @tparam ODE The RHS or tuple type that corresponds to what is inserted into the step member of the Stepper
+ * @tparam ODE The ExplicitRHS or tuple type that corresponds to what is
+ * inserted into the step member of the Stepper
  * @param ode rhs or tuple
  */
  /** @class hide_limiter
-  * @tparam Limiter The filter or limiter class to use in connection with the time-stepper
-        has a member function \c apply
-        of signature <tt> void apply( const ContainerType&, ContainerType&)</tt>
-        The first argument is the input vector, which the functor may \b not override, and the second is the output,
-        i.e. y' = L( y) translates to L.apply( y, y').
-        The two ContainerType arguments never alias each other in calls to the functor.
+  * @tparam Limiter The filter or limiter class to use in connection with the
+  * time-stepper has a member function \c apply
+  * of signature <tt> void apply( const ContainerType&, ContainerType&)</tt>
+  * The first argument is the input vector, which the functor may \b not
+  * override, and the second is the output,
+  * i.e. y' = L( y) translates to L.apply( y, y').
+  * The two ContainerType arguments never alias each other in calls to the functor.
   */
 
 /**
@@ -213,39 +200,41 @@ struct ERKStep
     void enable_fsal(){ m_ignore_fsal = false;}
 
     /// @brief Advance one step with error estimate
-    ///@copydetails step(RHS&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
+    ///@copydetails step(ExplicitRHS&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
     ///@param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
-    template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+    template<class ExplicitRHS>
+    void step( ExplicitRHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
     {
         step ( rhs, t0, u0, t1, u1, dt, delta, true);
     }
     /**
     * @brief Advance one step ignoring error estimate
     *
-    * @copydoc hide_rhs
+    * @copydoc hide_explicit_rhs
     * @param rhs right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
     * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
-    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
+    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is
+    * useful if \c ExplicitRHS holds state, which is then updated to the current
+    * timestep)
     * @note About the first same as last property (fsal): Some Butcher tableaus
-    * (e.g. Dormand-Prince or Bogacki-Shampine) have the property that the last value k_s of a
-    * timestep is the same as the first value k_0 of the next timestep. This
-    * means that we can save one call to the right hand side. This property is
-    * automatically activated if \c tableau.isFsal() returns \c true and \c t0
-    * equals \c t1 of the last call to \c step. You can deactivate it by
-    * calling the \c ignore_fsal() method, which is useful for splitting methods
-    * but increases the number of rhs calls by 1.
-    * @attention On the rare occasion where you want to change the \c RHS from
-    * one step to the next the fsal property is interpreted wrongly and will
+    * (e.g. Dormand-Prince or Bogacki-Shampine) have the property that the last
+    * value k_s of a timestep is the same as the first value k_0 of the next
+    * timestep. This means that we can save one call to the right hand side.
+    * This property is automatically activated if \c tableau.isFsal() returns
+    * \c true and \c t0 equals \c t1 of the last call to \c step. You can
+    * deactivate it by calling the \c ignore_fsal() method, which is useful for
+    * splitting methods but increases the number of rhs calls by 1.
+    * @attention On the rare occasion where you want to change the type of \c ExplicitRHS
+    * from one step to the next the fsal property is interpreted wrongly and will
     * lead to wrong results. You will need to either re-construct the object or
     * set the ignore_fsal property before the next step.
     */
-    template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type&
+    template<class ExplicitRHS>
+    void step( ExplicitRHS& rhs, value_type t0, const ContainerType& u0, value_type&
             t1, ContainerType& u1, value_type dt)
     {
         if( !m_allocated)
@@ -268,8 +257,8 @@ struct ERKStep
         return m_rk.num_stages();
     }
   private:
-    template<class RHS>
-    void step( RHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool);
+    template<class ExplicitRHS>
+    void step( ExplicitRHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool);
     ButcherTableau<value_type> m_rk;
     std::vector<value_type> m_rkb, m_rkd;
     std::vector<ContainerType> m_k;
@@ -281,8 +270,8 @@ struct ERKStep
 
 ///@cond
 template< class ContainerType>
-template< class RHS>
-void ERKStep<ContainerType>::step( RHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
+template< class ExplicitRHS>
+void ERKStep<ContainerType>::step( ExplicitRHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
 {
     unsigned s = m_rk.num_stages();
     std::vector<const ContainerType*> k_ptrs = dg::asPointers( m_k);
@@ -412,7 +401,11 @@ struct ARKStep
     /**
     * @brief Advance one step
     *
-    * @copydoc hide_explicit_implicit
+    * @copydoc hide_explicit_rhs
+    * @copydoc hide_implicit_rhs
+    * @copydoc hide_solver
+    * @param ode the <explicit rhs, implicit rhs, solver for the rhs> functor.
+    * Typically \c std::tie(explicit_rhs, implicit_rhs, solver)
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
@@ -420,15 +413,15 @@ struct ARKStep
     * @param dt timestep
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     * @note the implementation is such that on return the last call is the
-    * explicit part \c ex at the new \c (t1,u1).
+    * explicit part \c ex at the new (t1,u1).
     * This is useful if \c ex holds
     * state, which is then updated to the new timestep and/or if \c im changes
     * the state of \c ex
     * @note After a \c solve we immediately
     * call \c ex on the solution
     */
-    template< class Explicit, class Implicit, class Solver>
-    void step( const std::tuple<Explicit, Implicit, Solver>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
+    template< class ExplicitRHS, class ImplicitRHS, class Solver>
+    void step( const std::tuple<ExplicitRHS, ImplicitRHS, Solver>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta);
     ///@copydoc ERKStep::order()
     unsigned order() const {
         return m_rkE.order();
@@ -580,11 +573,11 @@ struct DIRKStep
     /**
     * @brief Advance one step
     *
-    * @copydetails step(const std::tuple<RHS,Solver>&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
+    * @copydetails step(const std::tuple<ImplicitRHS,Solver>&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
     */
-    template< class RHS, class Solver>
-    void step( const std::tuple<RHS,Solver>& ode, value_type t0, const
+    template< class ImplicitRHS, class Solver>
+    void step( const std::tuple<ImplicitRHS,Solver>& ode, value_type t0, const
         ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt,
         ContainerType& delta)
     {
@@ -593,8 +586,10 @@ struct DIRKStep
     /**
     * @brief Advance one step
     *
-    * @copydoc hide_rhs_solve
-    * @param ode the <right hand side, solver for the rhs> functor. Typically \c std::tie(rhs,solver)
+    * @copydoc hide_implicit_rhs
+    * @copydoc hide_solver
+    * @param ode the <right hand side, solver for the rhs> functor.
+    * Typically \c std::tie(rhs,solver)
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return
@@ -602,8 +597,8 @@ struct DIRKStep
     * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
     */
-    template< class RHS, class Solver>
-    void step( const std::tuple<RHS, Solver>& ode, value_type t0, const
+    template< class ImplicitRHS, class Solver>
+    void step( const std::tuple<ImplicitRHS, Solver>& ode, value_type t0, const
         ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt)
     {
         if( !m_allocated)
@@ -627,8 +622,8 @@ struct DIRKStep
     }
 
     private:
-    template< class RHS, class Solver>
-    void step( const std::tuple<RHS, Solver>& ode, value_type t0, const
+    template< class ImplicitRHS, class Solver>
+    void step( const std::tuple<ImplicitRHS, Solver>& ode, value_type t0, const
             ContainerType& u0, value_type& t1, ContainerType& u1, value_type
             dt, ContainerType& delta, bool compute_delta);
     ButcherTableau<value_type> m_rkI;
@@ -640,8 +635,8 @@ struct DIRKStep
 
 ///@cond
 template<class ContainerType>
-template< class RHS, class Solver>
-void DIRKStep<ContainerType>::step( const std::tuple<RHS,Solver>& ode,  value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
+template< class ImplicitRHS, class Solver>
+void DIRKStep<ContainerType>::step( const std::tuple<ImplicitRHS,Solver>& ode,  value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
 {
     unsigned s = m_rkI.num_stages();
     value_type tu = t0;
@@ -776,18 +771,19 @@ struct ShuOsher
     /**
     * @brief Advance one step
     *
-    * @copydoc hide_rhs
+    * @copydoc hide_explicit_rhs
     * @copydoc hide_limiter
-    * @param ode right hand side subroutine and limiter to use. Typically \c std::tie( rhs,limiter)
+    * @param ode right hand side subroutine and limiter to use.
+    * Typically \c std::tie( rhs,limiter)
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
     * @param u1 (write only) contains result on return (may alias u0)
     * @param dt timestep
-    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c RHS holds state, which is then updated to the current timestep)
+    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is useful if \c ExplicitRHS holds state, which is then updated to the current timestep)
     */
-    template<class RHS, class Limiter>
-    void step( const std::tuple<RHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
+    template<class ExplicitRHS, class Limiter>
+    void step( const std::tuple<ExplicitRHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt){
         unsigned s = m_t.num_stages();
         std::vector<value_type> ts( m_t.num_stages()+1);
         ts[0] = t0;
@@ -1034,9 +1030,9 @@ void SinglestepTimeloop<ContainerType>::do_integrate(
  *      tableau, u0), rhs).integrate_steps( t_begin, begin, t_end, end, N);
  * @endcode
  */
-template<class RHS, class ContainerType >
+template<class ExplicitRHS, class ContainerType >
 void stepperRK(	ConvertsToButcherTableau< get_value_type< ContainerType >>
-        tableau, RHS& rhs, get_value_type< ContainerType > t_begin,
+        tableau, ExplicitRHS& rhs, get_value_type< ContainerType > t_begin,
         const ContainerType& begin, get_value_type< ContainerType>
         t_end, ContainerType& end, unsigned N )
 {

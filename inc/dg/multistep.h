@@ -78,7 +78,7 @@ struct ExplicitMultistep
      * @brief Initialize timestepper. Call before using the step function.
      *
      * This routine has to be called before the first timestep is made.
-     * @copydoc hide_rhs
+     * @copydoc hide_explicit_rhs
      * @param rhs The rhs functor
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
@@ -86,8 +86,8 @@ struct ExplicitMultistep
      * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
      * This might be interesting if the call to \c ex changes its state.
      */
-    template< class RHS>
-    void init( RHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
+    template< class ExplicitRHS>
+    void init( ExplicitRHS& rhs, value_type t0, const ContainerType& u0, value_type dt){
         dg::IdentityFilter id;
         m_fem.init( std::tie(rhs, id), t0, u0, dt);
     }
@@ -95,7 +95,7 @@ struct ExplicitMultistep
     /**
     * @brief Advance one timestep
     *
-    * @copydoc hide_rhs
+    * @copydoc hide_explicit_rhs
     * @param rhs The rhs functor
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
@@ -103,8 +103,8 @@ struct ExplicitMultistep
     * This might be interesting if the call to \c ex changes its state.
     * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
     */
-    template< class RHS>
-    void step( RHS& rhs, value_type& t, ContainerType& u){
+    template< class ExplicitRHS>
+    void step( ExplicitRHS& rhs, value_type& t, ContainerType& u){
         dg::IdentityFilter id;
         m_fem.step( std::tie(rhs, id), t, u);
     }
@@ -196,7 +196,11 @@ struct ImExMultistep
      * @brief Initialize timestepper. Call before using the step function.
      *
      * This routine has to be called before the first timestep is made.
-     * @copydoc hide_explicit_implicit
+     * @copydoc hide_explicit_rhs
+     * @copydoc hide_implicit_rhs
+     * @copydoc hide_solver
+     * @param ode the <explicit rhs, implicit rhs, solver for the rhs> functor.
+     * Typically \c std::tie(explicit_rhs, implicit_rhs, solver)
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
@@ -206,17 +210,22 @@ struct ImExMultistep
      * the state of \c ex
      * This might be interesting if the call to \c ex changes its state.
      */
-    template< class Explicit, class Implicit, class Solver>
-    void init( const std::tuple<Explicit, Implicit, Solver>& ode, value_type t0, const ContainerType& u0, value_type dt);
+    template< class ExplicitRHS, class ImplicitRHS, class Solver>
+    void init( const std::tuple<ExplicitRHS, ImplicitRHS, Solver>& ode,
+            value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
     *
-    * @copydoc hide_explicit_implicit
+    * @copydoc hide_explicit_rhs
+    * @copydoc hide_implicit_rhs
+    * @copydoc hide_solver
+    * @param ode the <explicit rhs, implicit rhs, solver for the rhs> functor.
+    * Typically \c std::tie(explicit_rhs, implicit_rhs, solver)
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
     * @note the implementation is such that on return the last call is the
-    * explicit part \c ex at the new \c (t,u).  This is useful if \c ex holds
+    * explicit part \c ex at the new (t,u).  This is useful if \c ex holds
     * state, which is then updated to the new timestep and/or if \c im changes
     * the state of \c ex
     * @note after a \c solve, we call both \c im (if the tableau necessitates it)
@@ -225,8 +234,9 @@ struct ImExMultistep
     * performed with a semi-implicit Runge-Kutta method to initialize the
     * multistepper
     */
-    template< class Explicit, class Implicit, class Solver>
-    void step( const std::tuple<Explicit, Implicit, Solver>& ode, value_type& t, ContainerType& u);
+    template< class ExplicitRHS, class ImplicitRHS, class Solver>
+    void step( const std::tuple<ExplicitRHS, ImplicitRHS, Solver>& ode,
+            value_type& t, ContainerType& u);
 
   private:
     dg::MultistepTableau<value_type> m_t;
@@ -375,30 +385,34 @@ struct ImplicitMultistep
      * @brief Initialize timestepper. Call before using the step function.
      *
      * This routine has to be called before the first timestep is made.
-     * @copydoc hide_rhs_solve
-     * @param ode The rhs functor and solver. Typically \c std::tie(rhs,solver)
+     * @copydoc hide_explicit_rhs
+     * @copydoc hide_solver
+     * @param ode The rhs functor and solver. Typically
+     * \c std::tie(implicit_rhs,solver)
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
      * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
      * This might be interesting if the call to \c ex changes its state.
      */
-    template<class RHS, class Solver>
-    void init(const std::tuple<RHS, Solver>& ode, value_type t0, const ContainerType& u0, value_type dt);
+    template<class ImplicitRHS, class Solver>
+    void init(const std::tuple<ImplicitRHS, Solver>& ode, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
     *
-    * @copydoc hide_rhs_solve
-    * @param ode The rhs functor and solver. Typically \c std::tie(rhs,solver)
+    * @copydoc hide_explicit_rhs
+    * @copydoc hide_solver
+    * @param ode The rhs functor and solver. Typically
+    * \c std::tie(implicit_rhs,solver)
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
     * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
     * This might be interesting if the call to \c ex changes its state.
     * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
     */
-    template<class RHS, class Solver>
-    void step(const std::tuple<RHS, Solver>& ode, value_type& t, container_type& u);
+    template<class ImplicitRHS, class Solver>
+    void step(const std::tuple<ImplicitRHS, Solver>& ode, value_type& t, container_type& u);
     private:
     dg::MultistepTableau<value_type> m_t;
     value_type m_tu, m_dt;
@@ -409,8 +423,8 @@ struct ImplicitMultistep
 };
 ///@cond
 template< class ContainerType>
-template<class RHS, class Solver>
-void ImplicitMultistep<ContainerType>::init(const std::tuple<RHS, Solver>& ode,
+template<class ImplicitRHS, class Solver>
+void ImplicitMultistep<ContainerType>::init(const std::tuple<ImplicitRHS, Solver>& ode,
         value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
@@ -423,8 +437,8 @@ void ImplicitMultistep<ContainerType>::init(const std::tuple<RHS, Solver>& ode,
 }
 
 template< class ContainerType>
-template<class RHS, class Solver>
-void ImplicitMultistep<ContainerType>::step(const std::tuple<RHS, Solver>& ode,
+template<class ImplicitRHS, class Solver>
+void ImplicitMultistep<ContainerType>::step(const std::tuple<ImplicitRHS, Solver>& ode,
         value_type& t, container_type& u)
 {
     unsigned s = m_t.steps();
@@ -542,9 +556,10 @@ struct FilteredExplicitMultistep
      * @brief Initialize timestepper. Call before using the step function.
      *
      * This routine has to be called before the first timestep is made.
-     * @copydoc hide_rhs
+     * @copydoc hide_explicit_rhs
      * @copydoc hide_limiter
-     * @param ode The <rhs, limiter or filter> functor. Typically \c std::tie( rhs,limiter)
+     * @param ode The <rhs, limiter or filter> functor.
+     * Typically \c std::tie( explicit_rhs, limiter)
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
@@ -552,15 +567,16 @@ struct FilteredExplicitMultistep
      * explicit part is at \c (t0,u0).
      * This might be interesting if the call to \c ex changes its state.
      */
-    template< class RHS, class Limiter>
-    void init( const std::tuple<RHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type dt);
+    template< class ExplicitRHS, class Limiter>
+    void init( const std::tuple<ExplicitRHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type dt);
 
     /**
     * @brief Advance one timestep
     *
-    * @copydoc hide_rhs
+    * @copydoc hide_explicit_rhs
     * @copydoc hide_limiter
-    * @param ode The <rhs, limiter or filter> functor. Typically \c std::tie( rhs,limiter)
+    * @param ode The <rhs, limiter or filter> functor.
+    * Typically \c std::tie( explicit_rhs, limiter)
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
     * @note the implementation is such that on return the last call to the
@@ -569,8 +585,8 @@ struct FilteredExplicitMultistep
     * @attention The first few steps after the call to the init function are
     * performed with a Runge-Kutta method
     */
-    template< class RHS, class Limiter>
-    void step( const std::tuple<RHS, Limiter>& ode, value_type& t, ContainerType& u);
+    template< class ExplicitRHS, class Limiter>
+    void step( const std::tuple<ExplicitRHS, Limiter>& ode, value_type& t, ContainerType& u);
 
   private:
     dg::MultistepTableau<value_type> m_t;
@@ -580,8 +596,8 @@ struct FilteredExplicitMultistep
 };
 ///@cond
 template< class ContainerType>
-template< class RHS, class Limiter>
-void FilteredExplicitMultistep<ContainerType>::init( const std::tuple<RHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type dt)
+template< class ExplicitRHS, class Limiter>
+void FilteredExplicitMultistep<ContainerType>::init( const std::tuple<ExplicitRHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type dt)
 {
     m_tu = t0, m_dt = dt;
     unsigned s = m_t.steps();
@@ -591,8 +607,8 @@ void FilteredExplicitMultistep<ContainerType>::init( const std::tuple<RHS, Limit
 }
 
 template<class ContainerType>
-template<class RHS, class Limiter>
-void FilteredExplicitMultistep<ContainerType>::step(const std::tuple<RHS, Limiter>& ode, value_type& t, ContainerType& u)
+template<class ExplicitRHS, class Limiter>
+void FilteredExplicitMultistep<ContainerType>::step(const std::tuple<ExplicitRHS, Limiter>& ode, value_type& t, ContainerType& u)
 {
     unsigned s = m_t.steps();
     if( m_counter < s-1)
