@@ -389,13 +389,11 @@ int main( int argc, char* argv[])
                 &dim_ids[1], &vecID);
             DG_RANK0 err = nc_put_att_text( ncid, vecID,
                 "long_name", record.long_name.size(), record.long_name.data());
-            DG_RANK0 err = nc_enddef( ncid);
             DG_RANK0 std::cout << "Computing "<<record.name<<"\n";
             record.function( transferH, var, g3d_out);
             //record.function( resultH, var, grid);
             //dg::blas2::symv( projectH, resultH, transferH);
             dg::file::put_var_double( ncid, vecID, g3d_out, transferH);
-            DG_RANK0 err = nc_redef(ncid);
         }
         //create & output static 2d variables into file
         for ( auto& record : feltor::diagnostics2d_static_list)
@@ -405,13 +403,11 @@ int main( int argc, char* argv[])
                 &dim_ids[2], &vecID);
             DG_RANK0 err = nc_put_att_text( ncid, vecID,
                 "long_name", record.long_name.size(), record.long_name.data());
-            DG_RANK0 err = nc_enddef( ncid);
             DG_RANK0 std::cout << "Computing2d "<<record.name<<"\n";
             //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal variables return full grid functions
             record.function( resultH, var, grid);
             dg::blas2::symv( projectH, resultH, transferH);
             if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
-            DG_RANK0 err = nc_redef(ncid);
         }
         {
             // transition has to be done by hand
@@ -421,12 +417,10 @@ int main( int argc, char* argv[])
             std::string long_name = "The region where the magnetic field is modified";
             DG_RANK0 err = nc_put_att_text( ncid, vecID,
                 "long_name", long_name.size(), long_name.data());
-            DG_RANK0 err = nc_enddef( ncid);
             DG_RANK0 std::cout << "Computing2d MagneticTransition\n";
             resultH = dg::pullback( transition, grid);
             dg::blas2::symv( projectH, resultH, transferH);
             if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
-            DG_RANK0 err = nc_redef(ncid);
         }
 
         if( p.calibrate)
@@ -489,7 +483,6 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        DG_RANK0 err = nc_enddef(ncid);
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "First output ... \n";
         //first, update feltor (to get potential etc.)

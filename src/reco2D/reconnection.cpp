@@ -252,9 +252,7 @@ int main( int argc, char* argv[])
                     &id3d.at(name));
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
-        }
-        for( auto& record : asela::diagnostics2d_list)
-        {
+            // and the 1d fields
             std::string name = record.name + "_1d";
             std::string long_name = record.long_name + " (Volume integrated)";
             id1d[name] = 0;
@@ -286,14 +284,11 @@ int main( int argc, char* argv[])
                 &staticID);
             DG_RANK0 err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
                 long_name.data());
-            DG_RANK0 err = nc_enddef(ncid);
             record.function( resultD, var);
             dg::assign( resultD, resultH);
             dg::blas2::gemv( projection, resultH, transferH);
             dg::file::put_var_double( ncid, staticID, grid_out, transferH);
-            DG_RANK0 err = nc_redef(ncid);
         }
-        DG_RANK0 err = nc_enddef(ncid);
         size_t start = {0};
         size_t count = {1};
         ///////////////////////////////////first output/////////////////////////
