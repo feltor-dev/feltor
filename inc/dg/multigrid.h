@@ -216,7 +216,7 @@ void nested_iterations(
         try{
             auto test = inverse_op[u];
             test(  nested.b(u), nested.x(u));
-        }catch( dg::Fail& err){
+        }catch( dg::Error& err){
             err.append_line( dg::Message(_ping_)<<"ERROR on stage "<<u<<" of nested iterations");
             throw;
         }
@@ -230,7 +230,7 @@ void nested_iterations(
     dg::blas1::copy( nested.x(0), x);
     try{
         inverse_op[0]( b, x);
-    }catch( dg::Fail& err){
+    }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on stage 0 of nested iterations");
         throw;
     }
@@ -287,7 +287,7 @@ void multigrid_cycle(
     // 1. Pre-Smooth times
     try{
         inverse_op_down[p]( nested.b(p), nested.x(p));
-    }catch( dg::Fail& err){
+    }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on pre-smoothing stage "<<p<<" of multigrid cycle");
         throw;
     }
@@ -305,7 +305,7 @@ void multigrid_cycle(
     {
         try{
             inverse_op_up[p+1]( nested.b(p+1), nested.x(p+1));
-        }catch( dg::Fail& err){
+        }catch( dg::Error& err){
             err.append_line( dg::Message(_ping_)<<"ERROR on stage "<<p+1<<" of multigrid cycle");
             throw;
         }
@@ -326,7 +326,7 @@ void multigrid_cycle(
     // 6. Post-Smooth nu2 times
     try{
         inverse_op_up[p]( nested.b(p), nested.x(p));
-    }catch( dg::Fail& err){
+    }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on post-smoothing stage "<<p<<" of multigrid cycle");
         throw;
     }
@@ -384,7 +384,7 @@ void full_multigrid(
     unsigned s = nested.stages()-1;
     try{
         inverse_op_up[s]( nested.b(s), nested.x(s));
-    }catch( dg::Fail& err){
+    }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on stage "<<s<<" of full multigrid");
         throw;
     }
@@ -423,7 +423,7 @@ void fmg_solve(
 
     try{
         full_multigrid( op, x, b, inverse_op_down, inverse_op_up, nested, gamma, 1);
-    }catch( dg::Fail& err){
+    }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR in fmg_solve");
         throw;
     }
@@ -439,7 +439,7 @@ void fmg_solve(
         //FMG cycles
         try{
             full_multigrid( op, x, b, inverse_op_down, inverse_op_up, nested, gamma, 1);
-        }catch( dg::Fail& err){
+        }catch( dg::Error& err){
             err.append_line( dg::Message(_ping_)<<"ERROR in fmg_solve");
             throw;
         }
