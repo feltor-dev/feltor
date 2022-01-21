@@ -725,40 +725,41 @@ struct MultistepTimeloop : public aTimeloop<ContainerType>
     virtual MultistepTimeloop* clone() const{return new
         MultistepTimeloop(*this);}
     private:
-    virtual void do_integrate(value_type t0, const container_type& u0,
-            value_type& t1, container_type& u1, bool check) const;
+    virtual void do_integrate(value_type& t0, const container_type& u0,
+            value_type t1, container_type& u1, enum to mode) const;
     std::function<void ( value_type&, ContainerType&)> m_step;
+    virtual value_type do_dt( ) const { return m_dt;}
     value_type m_dt;
 };
 
 ///@cond
 template< class ContainerType>
 void MultistepTimeloop<ContainerType>::do_integrate(
-        value_type  t_begin, const ContainerType&
-        begin, value_type& t_end, ContainerType& end,
-        bool check ) const
+        value_type&  t_begin, const ContainerType&
+        begin, value_type t_end, ContainerType& end,
+        enum to mode ) const
 {
     bool forward = (t_end - t_begin > 0);
     if( (m_dt < 0 && forward) || ( m_dt > 0 && !forward) )
         throw dg::Error( dg::Message(_ping_)<<"Timestep has wrong sign! dt "<<m_dt);
+    if( m_dt == 0)
+        throw dg::Error( dg::Message(_ping_)<<"Timestep may not be zero in MultistepTimeloop!");
     dg::blas1::copy( begin, end);
-    value_type t0 = t_begin;
     if( detail::is_divisable( t_end-t_begin, m_dt))
     {
         unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
         for( unsigned i=0; i<N; i++)
-            m_step( t0, end);
+            m_step( t_begin, end);
         return;
     }
     else
     {
-        if( check)
+        if( dg::to::exact == mode)
             throw dg::Error( dg::Message(_ping_) << "In a multistep integrator dt "
                     <<m_dt<<" has to integer divide the interval "<<t_end-t_begin);
         unsigned N = (unsigned)floor( (t_end-t_begin)/m_dt);
-        for( unsigned i=0; i<N; i++)
-            m_step( t0, end);
-        m_step( t_end, end);
+        for( unsigned i=0; i<N+1; i++)
+            m_step( t_begin, end);
     }
 }
 ///@endcond

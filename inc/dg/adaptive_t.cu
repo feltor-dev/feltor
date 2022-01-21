@@ -65,14 +65,15 @@ int main()
             omega_drive), u_end(u_start);
     //construct a rhs with the right interface
     RHS rhs( damping, omega_0, omega_drive);
-    double dt= 0;
     //integration
-    int counter = dg::integrateERK( "Dormand-Prince-7-4-5", rhs, t_start,
-            u_start, t_end, u_end, dt, dg::pid_control, dg::fast_l2norm, 1e-6);
+    using Vec = std::array<double,2>;
+    dg::Adaptive<dg::ERKStep<Vec>> adapt( "Dormand-Prince-7-4-5", u_start);
+    dg::AdaptiveTimeloop<Vec>( adapt, rhs, dg::pid_control, dg::fast_l2norm,
+            1e-6, 1e-10).integrate( t_start, u_start, t_end, u_end);
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1.,
             u_end);
-    std::cout << "With "<<counter<<"\t Dormand Prince steps norm of error is "
+    std::cout << "With "<<adapt.nsteps()<<"\t Dormand Prince steps norm of error is "
               << dg::fast_l2norm( u_end)<<"\n";
     //![doxygen]
     std::cout << "Explicit Methods \n";
@@ -101,14 +102,15 @@ int main()
     };
     for( auto name : names)
     {
-        dt = 0;
         u_start = solution(t_start, damping, omega_0, omega_drive);
-        counter = dg::integrateERK( name, rhs, t_start, u_start, t_end,
-                u_end, dt, dg::pid_control, dg::fast_l2norm, 1e-6, 1e-10);
+        dg::Adaptive<dg::ERKStep<Vec>> adapt( name, u_start);
+        dg::AdaptiveTimeloop<Vec>( adapt, rhs, dg::pid_control, dg::fast_l2norm,
+                1e-6, 1e-10).integrate( t_start, u_start, t_end, u_end);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1.,sol  , -1., u_end);
-        std::cout << "With "<<std::setw(6)<<counter<<" steps norm of error in "
+        std::cout << "With "<<std::setw(6)<<adapt.nsteps()
+                  <<" steps norm of error in "
                   <<std::setw(24)<<name<<"\t"<<dg::fast_l2norm( u_end)<<"\n";
     }
     ///-------------------------------Implicit Methods----------------------//
@@ -137,7 +139,17 @@ int main()
         dg::AdaptiveTimeloop<std::array<double,2>> odeint(
                     adapt, std::tie(rhs,rhs), dg::pid_control, dg::fast_l2norm,
                     1e-6, 1e-10);
-        odeint.integrate( t_start, u_start, t_end, u_end);
+        // Test integrate at least
+        dg::blas1::copy( u_start, u_end);
+        unsigned maxout = 3;
+        double deltaT = (t_end-t_start)/(double)maxout;
+        double time = t_start;
+        for( unsigned u=1; u<=maxout; u++)
+        {
+            odeint.integrate( time, u_end, t_start + u*deltaT, u_end,
+                u<maxout ? dg::to::at_least :  dg::to::exact);
+        }
+        //odeint.integrate( t_start, u_start, t_end, u_end);
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1., sol, -1., u_end);

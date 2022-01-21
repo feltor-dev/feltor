@@ -607,34 +607,39 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
     virtual AdaptiveTimeloop* clone() const{return new
         AdaptiveTimeloop(*this);}
     private:
-    virtual void do_integrate(value_type t0, const container_type& u0,
-            value_type& t1, container_type& u1, bool check) const;
+    virtual void do_integrate(value_type& t0, const container_type& u0,
+            value_type t1, container_type& u1, enum to mode) const;
     std::function<void( value_type, const ContainerType&, value_type&,
             ContainerType&, value_type&)> m_step;
+    virtual value_type do_dt( ) const { return m_dt_current.data();}
     dg::Buffer<value_type> m_dt_current ;
 };
 
 ///@cond
 template< class ContainerType>
 void AdaptiveTimeloop<ContainerType>::do_integrate(
-              value_type t0,
+              value_type& t_current,
               const ContainerType& u0,
-              value_type& t1,
+              value_type t1,
               ContainerType& u1,
-              bool check
+              enum to mode
               )const
 {
-    value_type t_current = t0;
-    blas1::copy( u0, u1 );
-    bool forward = (t1 - t0 > 0);
+    value_type deltaT = t1-t_current;
+    bool forward = (deltaT > 0);
+
     value_type& dt_current = m_dt_current.data();
     if( dt_current == 0)
         dt_current = forward ? 1e-6 : -1e-6; // a good a guess as any
+    if( (dt_current < 0 && forward) || ( dt_current > 0 && !forward) )
+        throw dg::Error( dg::Message(_ping_)<<"Error in AdaptiveTimeloop: Timestep has wrong sign! You cannot change direction mid-step: dt "<<dt_current);
 
+    blas1::copy( u0, u1 );
     while( (forward && t_current < t1) || (!forward && t_current > t1))
     {
-        if( check &&( (forward && t_current+dt_current > t1) || (!forward &&
-                        t_current + dt_current < t1) ) )
+        if( dg::to::exact == mode
+                &&( (forward && t_current + dt_current > t1)
+                || (!forward && t_current + dt_current < t1) ) )
             dt_current = t1-t_current;
         // Compute a step and error
         try{
@@ -644,7 +649,7 @@ void AdaptiveTimeloop<ContainerType>::do_integrate(
             e.append( dg::Message(_ping_) << "Error in AdaptiveTimeloop::integrate");
             throw;
         }
-        if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(t1-t0))
+        if( !std::isfinite(dt_current) || fabs(dt_current) < 1e-9*fabs(deltaT))
         {
             value_type dt_current0 = dt_current;
             dt_current = 0.;
@@ -767,7 +772,7 @@ int integrate( std::string name, ODE&& ode, value_type t0, const ContainerType& 
  * Same as
  * @code{.cpp}
  * using Vec = ContainerType; // if ContainerType is really long to type
- * dg::Adaptive<ERKStep<Vec>> adapt( name, u0);
+ * dg::Adaptive<dg::ERKStep<Vec>> adapt( name, u0);
  * dg::AdaptiveTimeloop<Vec> loop( adapt, ode, control, norm, rtol,
  *      atol, reject_limit);
  * loop.set_dt( dt); // if dt=0 can be left away

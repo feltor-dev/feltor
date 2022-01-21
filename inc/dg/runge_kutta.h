@@ -978,46 +978,46 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
     virtual SinglestepTimeloop* clone() const{ return new
         SinglestepTimeloop(*this);}
     private:
-    virtual void do_integrate(value_type t0, const container_type& u0, value_type& t1, container_type& u1, bool check) const;
+    virtual void do_integrate(value_type& t0, const container_type& u0, value_type t1, container_type& u1, enum to mode) const;
     std::function<void ( value_type, ContainerType, value_type&,
             ContainerType&, value_type)> m_step;
+    virtual value_type do_dt( ) const { return m_dt;}
     value_type m_dt;
 };
 
 ///@cond
 template< class ContainerType>
 void SinglestepTimeloop<ContainerType>::do_integrate(
-        value_type  t_begin, const ContainerType&
-        begin, value_type& t_end, ContainerType& end,
-        bool check ) const
+        value_type&  t_begin, const ContainerType&
+        begin, value_type t_end, ContainerType& end,
+        enum to mode ) const
 {
     bool forward = (t_end - t_begin > 0);
     if( (m_dt < 0 && forward) || ( m_dt > 0 && !forward) )
         throw dg::Error( dg::Message(_ping_)<<"Timestep has wrong sign! dt "<<m_dt);
     dg::blas1::copy( begin, end);
-    value_type t0 = t_begin;
     if( m_dt == 0)
         throw dg::Error( dg::Message(_ping_)<<"Timestep may not be zero in SinglestepTimeloop!");
     if( detail::is_divisable( t_end-t_begin, m_dt))
     {
         unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
         for( unsigned i=0; i<N; i++)
-            m_step( t0, end, t0, end, m_dt);
-        return;
+            m_step( t_begin, end, t_begin, end, m_dt);
     }
     else
     {
         unsigned N = (unsigned)floor( (t_end-t_begin)/m_dt);
         for( unsigned i=0; i<N; i++)
-            m_step( t0, end, t0, end, m_dt);
-        if( check)
+            m_step( t_begin, end, t_begin, end, m_dt);
+        if( dg::to::exact == mode)
         {
-            value_type dt_final = t_end - t0;
-            m_step( t0, end, t0, end, dt_final);
+            value_type dt_final = t_end - t_begin;
+            m_step( t_begin, end, t_begin, end, dt_final);
         }
         else
-            m_step( t0, end, t_end, end, m_dt);
+            m_step( t_begin, end, t_begin, end, m_dt);
     }
+    return;
 }
 ///@endcond
 
