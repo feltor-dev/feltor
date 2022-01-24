@@ -208,7 +208,7 @@ int main( int argc, char* argv[])
         /// Set global attributes
         std::map<std::string, std::string> att;
         att["title"] = "Output file of feltor/src/reco2D/reconnection.cu";
-        att["Conventions"] = "CF-1.7";
+        att["Conventions"] = "CF-1.8";
         ///Get local time and begin file history
         auto ttt = std::time(nullptr);
         std::ostringstream oss;
@@ -253,8 +253,8 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
             // and the 1d fields
-            std::string name = record.name + "_1d";
-            std::string long_name = record.long_name + " (Volume integrated)";
+            name = record.name + "_1d";
+            long_name = record.long_name + " (Volume integrated)";
             id1d[name] = 0;
             DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
                 &id1d.at(name));
