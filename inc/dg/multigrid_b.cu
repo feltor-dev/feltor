@@ -177,7 +177,7 @@ int main()
     std::cout << "MULTIGRID NESTED ITERATIONS WITH CHEBYSHEV SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();
-    nested_iterations( multi_pol, x, b, multi_inv_cheby, nested);
+    dg::nested_iterations( multi_pol, x, b, multi_inv_cheby, nested);
     t.toc();
     norm = dg::blas2::dot( w2d, solution);
     error= solution;
@@ -211,7 +211,8 @@ int main()
         x = dg::evaluate( initial, grid);
         t.tic();
         //multigrid.fmg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
-        fmg_solve( multi_pol, x, b, multi_inv_fmg, multi_inv_fmg, nested, w2d, eps, gamma);
+        dg::fmg_solve( multi_pol, x, b, multi_inv_fmg, multi_inv_fmg, nested,
+                w2d, eps, gamma);
         t.toc();
         std::cout << "Took "<<t.diff()<<"s\n";
         const double norm = dg::blas2::dot( w2d, solution);

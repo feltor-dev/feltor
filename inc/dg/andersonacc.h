@@ -137,10 +137,12 @@ struct AndersonAcceleration
      * @return Number of iterations used to achieve desired precision
      * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_iterations
      * You can unset this behaviour with the \c set_throw_on_fail member
-     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
+     * @copydoc hide_matrix
+     * @copydoc hide_ContainerType
      */
-    template<class BinarySubroutine, class ContainerType0, class ContainerType1, class ContainerType2>
-    unsigned solve( BinarySubroutine&& f, ContainerType0& x, const ContainerType1& b, const ContainerType2& weights,
+    template<class MatrixType, class ContainerType0, class ContainerType1, class ContainerType2>
+    unsigned solve( MatrixType&& f, ContainerType0& x, const ContainerType1& b,
+            const ContainerType2& weights,
         value_type rtol, value_type atol, unsigned max_iter,
         value_type damping, unsigned restart, bool verbose);
 
@@ -156,9 +158,9 @@ struct AndersonAcceleration
 ///@cond
 
 template<class ContainerType>
-template<class BinarySubroutine, class ContainerType0, class ContainerType1, class ContainerType2>
+template<class MatrixType, class ContainerType0, class ContainerType1, class ContainerType2>
 unsigned AndersonAcceleration<ContainerType>::solve(
-    BinarySubroutine&& func, ContainerType0& x, const ContainerType1& b, const ContainerType2& weights,
+    MatrixType&& func, ContainerType0& x, const ContainerType1& b, const ContainerType2& weights,
     value_type rtol, value_type atol, unsigned max_iter,
     value_type damping, unsigned restart,  bool verbose )
 {
@@ -186,7 +188,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
             if(verbose)DG_RANK0 std::cout << "Iter = " << iter << std::endl;
         }
 
-        dg::apply( std::forward<BinarySubroutine>(func), x, m_fval);
+        dg::apply( std::forward<MatrixType>(func), x, m_fval);
         dg::blas1::axpby( -1., b, 1., m_fval); //f(x) = func - b (residual)
         value_type res_norm = sqrt(dg::blas2::dot(m_fval,weights,m_fval));  //l2norm(m_fval)
 
@@ -276,6 +278,7 @@ unsigned AndersonAcceleration<ContainerType>::solve(
 //
 /*!
  * @brief If you are looking for fixed point iteration: it is a special case of Anderson Acceleration
+ * @ingroup invert
  */
 template<class ContainerType>
 using FixedPointIteration = AndersonAcceleration<ContainerType>;

@@ -178,25 +178,26 @@ struct NestedGrids
  * .
  * This algorithm is equivalent to a multigrid V-cycle with zero down-grid smoothing
  * and infinite (i.e. solving) upgrid smoothing.
- * @param nested_op a container (usually \c std::vector of operators)
-     Index 0 is the Operator \c f on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param ops Index 0 is the Operator \c f on the original grid,
+ *  1 on the half grid, 2 on the quarter grid, ...
  * @param x (read/write) contains initial guess on input and the solution on
- * output (if the initial guess is good enough the solve may return
- * immediately)
+ *  output (if the initial guess is good enough the solve may return
+ *  immediately)
  * @param b The right hand side
- * @param inverse_op a vector of inverse operators, which do the solves (usually lambda functions combining operators and solvers)
+ * @param inverse_ops a vector of inverse operators, which do the solves
+ *  (usually lambda functions combining operators and solvers)
  * @param nested_grids provides projection and interapolation operations and workspace
+ * @copydoc hide_matrix
  * @copydoc hide_ContainerType
  */
-template<class NestedOperators, class ContainerType0, class ContainerType1, class NestedGrids>
+template<class MatrixType0, class ContainerType0, class ContainerType1, class MatrixType1, class NestedGrids>
 void nested_iterations(
-    NestedOperators&& nested_op, ContainerType0& x, const ContainerType1& b,
-    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op, NestedGrids& nested_grids)
+    std::vector<MatrixType0>& ops, ContainerType0& x, const ContainerType1& b,
+    std::vector<MatrixType1>& inverse_ops, NestedGrids& nested_grids)
 {
     NestedGrids& nested = nested_grids;
     // compute residual r = b - A x
-    dg::blas2::symv(nested_op[0], x, nested.r(0));
+    dg::apply(ops[0], x, nested.r(0));
     dg::blas1::axpby(1., b, -1., nested.r(0));
     // project residual down to coarse grid
     dg::blas1::copy( x, nested.x(0));
@@ -205,7 +206,7 @@ void nested_iterations(
         dg::blas2::gemv( nested.projection(u), nested.r(u), nested.r(u+1));
         dg::blas2::gemv( nested.projection(u), nested.x(u), nested.x(u+1));
         // compute FAS right hand side
-        dg::blas2::symv( nested_op[u+1], nested.x(u+1), nested.b(u+1));
+        dg::blas2::symv( ops[u+1], nested.x(u+1), nested.b(u+1));
         dg::blas1::axpby( 1., nested.b(u+1), 1., nested.r(u+1), nested.b(u+1));
         dg::blas1::copy( nested.x(u+1), nested.w(u+1)); // remember x0
     }
@@ -214,8 +215,7 @@ void nested_iterations(
     for( unsigned u=nested.stages()-1; u>0; u--)
     {
         try{
-            auto test = inverse_op[u];
-            test(  nested.b(u), nested.x(u));
+            dg::apply( inverse_ops[u],  nested.b(u), nested.x(u));
         }catch( dg::Error& err){
             err.append_line( dg::Message(_ping_)<<"ERROR on stage "<<u<<" of nested iterations");
             throw;
@@ -229,7 +229,7 @@ void nested_iterations(
     //update initial guess
     dg::blas1::copy( nested.x(0), x);
     try{
-        inverse_op[0]( b, x);
+        dg::apply(inverse_ops[0], b, x);
     }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on stage 0 of nested iterations");
         throw;
@@ -255,24 +255,28 @@ void nested_iterations(
  * - Smooth \f$ f(x^h) = b^h\f$ with initial guess \f$ x_0^h\f$, overwrite \f$ x_0^h\f$
  * .
  * This algorithm forms the core of multigrid algorithms.
- * @param op a container (usually \c std::vector of operators)
-     Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the quarter grid, ...
- * @param inverse_op_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
- * @param inverse_op_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages
- * @param nested provides projection and interapolation operations and workspace
+ * @param ops a container (usually \c std::vector of operators)
+     Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the
+     quarter grid, ...
+ * @param inverse_ops_down a vector of inverse, smoothing operators (usually
+ *  lambda functions combining operators and solvers) of size \c stages-1
+ * @param inverse_ops_up a vector of inverse, smoothing operators (usually
+ *  lambda functions combining operators and solvers) of size \c stages
+ * @param nested_grids provides projection and interapolation operations and workspace
  * @param gamma The shape of the multigrid cycle:
     typically 1 (V-cycle) or 2 (W-cycle)
  * @param p The current stage \c h
+ * @copydoc hide_matrix
+ * @copydoc hide_ContainerType
  */
-template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
+template<class NestedGrids, class MatrixType0, class MatrixType1, class MatrixType2>
 void multigrid_cycle(
-    NestedOperator&& op,
-    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op_down, //stages-1
-    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op_up, // stages
-    Nested& nested, unsigned gamma, unsigned p)
+    std::vector<MatrixType0>& ops,
+    std::vector<MatrixType1>& inverse_ops_down, //stages -1
+    std::vector<MatrixType2>& inverse_ops_up, //stages
+    NestedGrids& nested_grids, unsigned gamma, unsigned p)
 {
+    NestedGrids& nested = nested_grids;
     // 1 multigrid cycle beginning on grid p
     // p < m_stages-1
     // x[p]    READ-write, initial guess on input, solution on output
@@ -286,25 +290,25 @@ void multigrid_cycle(
 
     // 1. Pre-Smooth times
     try{
-        inverse_op_down[p]( nested.b(p), nested.x(p));
+        dg::apply( inverse_ops_down[p], nested.b(p), nested.x(p));
     }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on pre-smoothing stage "<<p<<" of multigrid cycle");
         throw;
     }
     // 2. Residuum
-    dg::blas2::symv( op[p], nested.x(p), nested.r(p));
+    dg::apply( ops[p], nested.x(p), nested.r(p));
     dg::blas1::axpby( 1., nested.b(p), -1., nested.r(p));
     // 3. Coarsen
     dg::blas2::symv( nested.projection(p), nested.r(p), nested.r(p+1));
     dg::blas2::symv( nested.projection(p), nested.x(p), nested.x(p+1));
-    dg::blas2::symv( op[p+1], nested.x(p+1), nested.b(p+1));
+    dg::blas2::symv( ops[p+1], nested.x(p+1), nested.b(p+1));
     dg::blas1::axpby( 1., nested.r(p+1), 1., nested.b(p+1));
     // 4. Solve or recursive call to get x[p+1] with initial guess 0
     dg::blas1::copy( nested.x(p+1), nested.w(p+1));
     if( p+1 == nested.stages()-1)
     {
         try{
-            inverse_op_up[p+1]( nested.b(p+1), nested.x(p+1));
+            dg::apply( inverse_ops_up[p+1], nested.b(p+1), nested.x(p+1));
         }catch( dg::Error& err){
             err.append_line( dg::Message(_ping_)<<"ERROR on stage "<<p+1<<" of multigrid cycle");
             throw;
@@ -315,7 +319,7 @@ void multigrid_cycle(
         //update x[p+1] gamma times
         for( unsigned u=0; u<gamma; u++)
         {
-            multigrid_cycle( op, inverse_op_down, inverse_op_up,
+            multigrid_cycle( ops, inverse_ops_down, inverse_ops_up,
                 nested, gamma, p+1);
         }
     }
@@ -325,7 +329,7 @@ void multigrid_cycle(
     dg::blas2::symv( 1., nested.interpolation(p), nested.w(p+1), 1., nested.x(p));
     // 6. Post-Smooth nu2 times
     try{
-        inverse_op_up[p]( nested.b(p), nested.x(p));
+        dg::apply(inverse_ops_up[p], nested.b(p), nested.x(p));
     }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on post-smoothing stage "<<p<<" of multigrid cycle");
         throw;
@@ -333,20 +337,14 @@ void multigrid_cycle(
 }
 
 /**
- * @brief EXPERIMENTAL Full multigrid cycles (use at own risk)
+ * @brief EXPERIMENTAL One Full multigrid cycle
  *
- * - Compute residual with given initial guess.
- * - If error larger than tolerance, do a full multigrid cycle with Chebeyshev iterations as smoother
- * - repeat
- * @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c SymmetricOp class
- * @copydoc hide_symmetric_op
- * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
- * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param ops Index 0 is the \c MatrixType on the original grid, 1 on the half grid, 2 on the quarter grid, ...
  * @param x (read/write) contains initial guess on input and the solution on output
  * @param b The right hand side
- * @param inverse_op_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
- * @param inverse_op_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages
- * @param nested provides projection and interapolation operations and workspace
+ * @param inverse_ops_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
+ * @param inverse_ops_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages
+ * @param nested_grids provides projection and interapolation operations and workspace
  * @param gamma The shape of the multigrid cycle:
     typically 1 (V-cycle) or 2 (W-cycle)
  * @param mu The repetition of the multigrid cycle (1 is typically ok)
@@ -354,19 +352,20 @@ void multigrid_cycle(
  * parameters are chosen correctly ( there need to be enough smooting steps
  * for instance, and a large jump  factor in the Elliptic class also seems
  * to help) and otherwise just iterates to infinity. This behaviour is probably related to the use of the Chebyshev solver as a smoother
+ * @copydoc hide_matrix
+ * @copydoc hide_ContainerType
 */
-template<class Nested, class NestedOperator, class ContainerType0, class ContainerType1>
+template<class MatrixType0, class MatrixType1, class MatrixType2, class NestedGrids, class ContainerType0, class ContainerType1>
 void full_multigrid(
-    NestedOperator&& op, ContainerType0& x, const ContainerType1& b,
-    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op_down, //stages-1
-    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op_up, // stages
-    Nested& nested, unsigned gamma, unsigned mu)
+    std::vector<MatrixType0>& ops, ContainerType0& x, const ContainerType1& b,
+    std::vector<MatrixType1>& inverse_ops_down, //stages -1
+    std::vector<MatrixType2>& inverse_ops_up, //stages
+    NestedGrids& nested_grids, unsigned gamma, unsigned mu)
 {
+    NestedGrids& nested = nested_grids;
     // Like nested iterations, just uses multigrid-cycles instead of solves
     // compute residual r = b - A x
-    dg::blas2::symv(op[0], x, nested.r(0));
+    dg::apply(ops[0], x, nested.r(0));
     dg::blas1::axpby(1., b, -1., nested.r(0));
     // project residual down to coarse grid
     dg::blas1::copy( x, nested.x(0));
@@ -375,7 +374,7 @@ void full_multigrid(
         dg::blas2::gemv( nested.projection(u), nested.r(u), nested.r(u+1));
         dg::blas2::gemv( nested.projection(u), nested.x(u), nested.x(u+1));
         // compute FAS right hand side
-        dg::blas2::symv( op[u+1], nested.x(u+1), nested.b(u+1));
+        dg::blas2::symv( ops[u+1], nested.x(u+1), nested.b(u+1));
         dg::blas1::axpby( 1., nested.b(u+1), 1., nested.r(u+1), nested.b(u+1));
         dg::blas1::copy( nested.x(u+1), nested.w(u+1)); // remember x0
     }
@@ -383,7 +382,7 @@ void full_multigrid(
     //begin on coarsest level and cycle through to highest
     unsigned s = nested.stages()-1;
     try{
-        inverse_op_up[s]( nested.b(s), nested.x(s));
+        dg::apply( inverse_ops_up[s], nested.b(s), nested.x(s));
     }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR on stage "<<s<<" of full multigrid");
         throw;
@@ -395,58 +394,81 @@ void full_multigrid(
     for( int p=nested.stages()-2; p>=1; p--)
     {
         for( unsigned u=0; u<mu; u++)
-            multigrid_cycle( op, inverse_op_down, inverse_op_up, nested, gamma, p);
+            multigrid_cycle( ops, inverse_ops_down, inverse_ops_up, nested, gamma, p);
         dg::blas1::axpby( 1., nested.x(p), -1., nested.w(p), nested.x(p) );
         dg::blas2::symv( 1., nested.interpolation(p-1), nested.x(p), 1.,
                 nested.x(p-1));
     }
     dg::blas1::copy( b, nested.b(0));
     for( unsigned u=0; u<mu; u++)
-        multigrid_cycle( op, inverse_op_down, inverse_op_up, nested, gamma, 0);
+        multigrid_cycle( ops, inverse_ops_down, inverse_ops_up, nested, gamma, 0);
     dg::blas1::copy( nested.x(0), x);
 }
 
-template<class Nested, class NestedOperator,
+/**
+ * @brief EXPERIMENTAL Full multigrid cycles
+ *
+ * - Compute residual with given initial guess.
+ * - If error larger than tolerance, do a full multigrid cycle with Chebeyshev iterations as smoother
+ * - repeat
+ * @param ops Index 0 is the \c MatrixType on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param x (read/write) contains initial guess on input and the solution on output
+ * @param b The right hand side
+ * @param inverse_ops_down a vector of inverse, smoothing operators (usually
+ *  lambda functions combining operators and solvers) of size \c stages-1
+ * @param inverse_ops_up a vector of inverse, smoothing operators (usually
+ *  lambda functions combining operators and solvers) of size \c stages
+ * @param nested_grids provides projection and interapolation operations and workspace
+ * @param weights Defines the error norm
+ * @param eps relative and absolute error tolerance
+ * @param gamma The shape of the multigrid cycle:
+    typically 1 (V-cycle) or 2 (W-cycle)
+ * @attention This method is rather unreliable, it only converges if the
+ * parameters are chosen correctly ( there need to be enough smooting steps
+ * for instance, and a large jump  factor in the Elliptic class also seems
+ * to help) and otherwise just iterates to infinity. This behaviour is probably
+ * related to the use of the Chebyshev solver as a smoother
+*/
+template<class NestedGrids, class MatrixType0, class MatrixType1, class MatrixType2,
     class ContainerType0, class ContainerType1, class ContainerType2>
 void fmg_solve(
-    NestedOperator&& op,
+    std::vector<MatrixType0>& ops,
     ContainerType0& x, const ContainerType1& b,
-    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op_down,
-    const std::vector<std::function<void( const ContainerType1&, ContainerType0&)>>&
-        inverse_op_up, Nested& nested,
-        const ContainerType2& weights, double eps, unsigned gamma)
+    std::vector<MatrixType1>& inverse_ops_down, //stages -1
+    std::vector<MatrixType2>& inverse_ops_up, //stages
+    NestedGrids& nested_grids,
+    const ContainerType2& weights, double eps, unsigned gamma)
 {
     //FULL MULTIGRID
     //full approximation scheme
     double nrmb = sqrt( blas2::dot( weights, b));
 
     try{
-        full_multigrid( op, x, b, inverse_op_down, inverse_op_up, nested, gamma, 1);
+        full_multigrid( ops, x, b, inverse_ops_down, inverse_ops_up, nested_grids, gamma, 1);
     }catch( dg::Error& err){
         err.append_line( dg::Message(_ping_)<<"ERROR in fmg_solve");
         throw;
     }
 
-    blas2::symv( op[0], x, nested.r(0));
-    dg::blas1::axpby( 1., b, -1., nested.r(0));
-    double error = sqrt( blas2::dot(weights,nested.r(0)) );
+    dg::apply( ops[0], x, nested_grids.r(0));
+    dg::blas1::axpby( 1., b, -1., nested_grids.r(0));
+    double error = sqrt( blas2::dot(weights,nested_grids.r(0)) );
 
     while ( error >  eps*(nrmb + 1))
     {
         //MULTIGRID CYCLES
-        //multigrid_cycle( op, inverse_op_down, inverse_op_up, nested, gamma, 0);
+        //multigrid_cycle( ops, inverse_ops_down, inverse_ops_up, nested_grids, gamma, 0);
         //FMG cycles
         try{
-            full_multigrid( op, x, b, inverse_op_down, inverse_op_up, nested, gamma, 1);
+            full_multigrid( ops, x, b, inverse_ops_down, inverse_ops_up, nested_grids, gamma, 1);
         }catch( dg::Error& err){
             err.append_line( dg::Message(_ping_)<<"ERROR in fmg_solve");
             throw;
         }
 
-        blas2::symv( op[0], x, nested.r(0));
-        dg::blas1::axpby( 1., b, -1., nested.r(0));
-        error = sqrt( blas2::dot(weights,nested.r(0)) );
+        blas2::symv( ops[0], x, nested_grids.r(0));
+        dg::blas1::axpby( 1., b, -1., nested_grids.r(0));
+        error = sqrt( blas2::dot(weights,nested_grids.r(0)) );
         //DG_RANK0 std::cout<< "# Relative Residual error is  "<<error/(nrmb+1)<<"\n";
     }
 }
@@ -458,7 +480,7 @@ void fmg_solve(
 *
  * using a multigrid algorithm for any operator \f$\hat O\f$ that is self-adjoing
  * in appropriate weights \f$W\f$ (s. comment below).
- * @note Implements dg::nested_iterations and dg::full_multigrid using PCG solvers on every grid
+ * @note Implements \c dg::nested_iterations and \c dg::full_multigrid using \c dg::PCG solvers on every grid
 *
 * @snippet elliptic2d_b.cu multigrid
 * We use conjugate gradient (\c dg::PCG) at each stage and refine the grids in the first two dimensions (2d / x and y)
@@ -466,7 +488,7 @@ void fmg_solve(
  * self-adjoint with respect to the weights \c W,
  * A self-adjoint preconditioner should be used to solve the
  * self-adjoint matrix equation.
-* @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c SymmetricOp class
+* @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c MatrixType class
 * @copydoc hide_geometry_matrix_container
 * @sa \c Extrapolation  to generate an initial guess
 *
@@ -563,10 +585,8 @@ struct MultigridCG2d
      * -# Project residual down to the coarsest grid.
      * -# Solve equation on the coarse grid.
      * -# interpolate solution up to next finer grid and repeat 3 and 4 until the original grid is reached.
-     * @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c SymmetricOp class
-     * @copydoc hide_symmetric_op
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+     * @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c MatrixType class
+     * @param ops Index 0 is the \c MatrixType on the original grid, 1 on the half grid, 2 on the quarter grid, ...
      * @param x (read/write) contains initial guess on input and the solution on output (if the initial guess is good enough the solve may return immediately)
      * @param b The right hand side
      * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon(
@@ -577,18 +597,20 @@ struct MultigridCG2d
      * @note the convergence test on the coarse grids is only evaluated every
      * 10th iteration. This effectively saves one dot product per iteration.
      * The dot product is the main performance bottleneck on the coarse grids.
+     * @copydoc hide_matrix
+     * @copydoc hide_ContainerType
     */
-	template<class SymmetricOp, class ContainerType0, class ContainerType1>
-    std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, value_type eps)
+	template<class MatrixType, class ContainerType0, class ContainerType1>
+    std::vector<unsigned> direct_solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, value_type eps)
     {
         std::vector<value_type> v_eps( m_stages, eps);
 		for( unsigned u=m_stages-1; u>0; u--)
             v_eps[u] = eps;
-        return direct_solve( op, x, b, v_eps);
+        return direct_solve( ops, x, b, v_eps);
     }
     ///@copydoc direct_solve()
-	template<class SymmetricOp, class ContainerType0, class ContainerType1>
-    std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
+	template<class MatrixType, class ContainerType0, class ContainerType1>
+    std::vector<unsigned> direct_solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
     {
 #ifdef MPI_VERSION
         int rank;
@@ -599,7 +621,7 @@ struct MultigridCG2d
             multi_inv_pol(m_stages);
         for(unsigned u=0; u<m_stages; u++)
         {
-            multi_inv_pol[u] = [&, u, &pcg = m_pcg[u], &pol = op[u]](
+            multi_inv_pol[u] = [&, u, &pcg = m_pcg[u], &pol = ops[u]](
             const auto& y, auto& x)
             {
                 dg::Timer t;
@@ -615,7 +637,7 @@ struct MultigridCG2d
                     DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
             };
         }
-        nested_iterations( op, x, b, multi_inv_pol, m_nested);
+        nested_iterations( ops, x, b, multi_inv_pol, m_nested);
 
         return number;
     }

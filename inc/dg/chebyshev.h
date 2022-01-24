@@ -95,7 +95,7 @@ class ChebyshevIteration
      * the right hand side \f$ x = C_{k-1}(A)b\f$
      *
      * @copydoc hide_matrix
-     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
+     * @copydoc hide_ContainerType
      */
     template< class MatrixType, class ContainerType0, class ContainerType1>
     void solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b,
@@ -153,11 +153,11 @@ class ChebyshevIteration
      * {E^{-1}}^\mathrm{T} A E^{-1}){E^{-1}}^\mathrm{T}\f$
      *
      * @copydoc hide_matrix
-     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
+     * @copydoc hide_ContainerType
      */
-    template< class MatrixType, class Preconditioner, class ContainerType0, class ContainerType1>
-    void solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b,
-            Preconditioner&& P, value_type min_ev, value_type max_ev, unsigned num_iter,
+    template< class MatrixType0, class MatrixType1, class ContainerType0, class ContainerType1>
+    void solve( MatrixType0&& A, ContainerType0& x, const ContainerType1& b,
+            MatrixType1&& P, value_type min_ev, value_type max_ev, unsigned num_iter,
             bool x_is_zero = false)
     {
         if( num_iter == 0)
@@ -168,14 +168,14 @@ class ChebyshevIteration
         if( !x_is_zero)
         {
             dg::blas1::copy( x, m_xm1); //x_{k-1}
-            dg::blas2::symv( std::forward<MatrixType>(A), x, m_ax);
+            dg::blas2::symv( std::forward<MatrixType0>(A), x, m_ax);
             dg::blas1::axpby( 1., b, -1., m_ax); //r_0
-            dg::blas2::symv( std::forward<Preconditioner>(P), m_ax, m_z);
+            dg::blas2::symv( std::forward<MatrixType1>(P), m_ax, m_z);
             dg::blas1::axpby( 1./theta, m_z, 1., x); //x_{k-1}
         }
         else
         {
-            dg::blas2::symv( std::forward<Preconditioner>(P), b, x);
+            dg::blas2::symv( std::forward<MatrixType1>(P), b, x);
             if( num_iter == 1) return;
             dg::blas1::scal( m_xm1, 0.);
             dg::blas1::scal( x, 1./theta);
@@ -183,7 +183,7 @@ class ChebyshevIteration
         for ( unsigned k=1; k<num_iter; k++)
         {
             rhok = 1./(2.*theta/delta - rhokm1);
-            dg::blas2::symv( std::forward<MatrixType>(A), x, m_ax);
+            dg::blas2::symv( std::forward<MatrixType0>(A), x, m_ax);
             dg::blas1::axpby( 1., b, -1., m_ax); //r_k
             dg::blas2::symv( P, m_ax, m_z);
             dg::blas1::axpbypgz(
@@ -333,7 +333,7 @@ struct ModifiedChebyshevPreconditioner
  * <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
  * @tparam Matrix Preferably a reference type
  * @tparam InnerPreconditioner Preferably a reference type
- * @tparam ContainerType
+ * @copydoc hide_ContainerType
  * @ingroup invert
  */
 template<class Matrix, class InnerPreconditioner, class ContainerType>

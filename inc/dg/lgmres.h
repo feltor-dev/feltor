@@ -134,11 +134,10 @@ class LGMRES
      * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_restarts
      * You can unset this behaviour with the \c set_throw_on_fail member
      * @copydoc hide_matrix
-     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
-     * @tparam Preconditioner A type for which the blas2::gemv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
+     * @copydoc hide_ContainerType
      */
-    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2 >
-    unsigned solve( MatrixType&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType0, class ContainerType0, class ContainerType1, class MatrixType1, class ContainerType2 >
+    unsigned solve( MatrixType0&& A, ContainerType0& x, const ContainerType1& b, MatrixType1&& P, const ContainerType2& W, value_type eps = 1e-12, value_type nrmb_correction = 1);
 
     /**
      * @brief If last call to solve converged or not

@@ -182,22 +182,24 @@
   */
  /** @class hide_matrix
   * @tparam MatrixType
-  * Any class for which a specialization of \c TensorTraits exists and which fullfills
-  * the requirements of the there defined Matrix tags derived from \c AnyMatrixTag.
-  * Missing a specialization of \c TensorTraits the class is assumed a Functor.
-  * The \c MatrixType can for example be one of:
+  * Any class for which a specialization of \c TensorTraits exists and defines
+  * a tensor_category derived from \c AnyMatrixTag.
+  * Furthermore, any functor/lambda type with signature
+  *  <tt> void operator()( const ContainerType0&, ContainerType1&) </tt>.
+  * For example
   *  - \c scalar or \c Container: Scalars and containers act as diagonal matrices.
+  *  - <tt> std::function<void( const ContainerType0&, ContainerType1&)> </tt>
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>
   *  - \c dg::MDMatrix with \c dg::MDVec or \c std::vector<dg::MDVec>
-  *  - If a specialization of \c TensorTraits does not exist then the compiler assumes a **functor**
-  *  type, (e.g. will try to call <tt> operator()( const ContainerType0&, ContainerType1&) </tt>)
-  *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
-  *  that have a corresponding member function in the Matrix class (e.g. <tt> symv( const ContainerType0&, ContainerType1&); </tt> ) can be called.
   *  .
-  * If a \c Container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements unless
-  * the type has the \c SelfMadeMatrixTag or is a Functor.
+  * In case of \c SelfMadeMatrixTag only those \c blas2 functions that have a
+  * corresponding member function in the Matrix class (e.g.
+  * <tt> symv( const ContainerType0&, ContainerType1&); </tt> )
+  * can be called.  If a \c Container has the \c RecursiveVectorTag, then the
+  * matrix is applied to each of the elements unless the type has the
+  * \c SelfMadeMatrixTag or is a Functor type.
   */
   /** @class hide_geometry
   * @tparam Geometry
@@ -234,16 +236,6 @@
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry
   *  - \c dg::MHVec or \c dg::MDVec when \c Geometry is one of the MPI geometries
   */
-
-/** @class hide_symmetric_op
- * @tparam SymmetricOp
- * A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
- * with the \c Container type as argument. Also, The functions \c %inv_weights() and \c %precond()
- * need to be callable and return inverse weights and the preconditioner for the conjugate
- * gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
- * @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const Container&, Container&);
- * and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
- */
 
 /*! @mainpage
  * Welcome to the dg library

@@ -41,6 +41,8 @@ namespace dg
  you like (in order for the operator to be invertible \f$\chi\f$ should be
  symmetric and positive definite though).
 
+ * @sa Our theory guide <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a> on overleaf holds a detailed derivation
+
  Note that the local discontinuous Galerkin discretization adds so-called jump terms
  \f[ D^\dagger \chi D + \alpha \chi_{on/off} J \f]
  where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
@@ -367,6 +369,8 @@ using Elliptic2d = Elliptic<Geometry, Matrix, Container>;
  Per default, \f$ \chi = \sqrt{g} g^{-1}\f$ but you can set it to any tensor
  you like (in order for the operator to be invertible \f$\chi\f$ should be
  symmetric and positive definite though).
+
+ * @sa Our theory guide <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a> on overleaf holds a detailed derivation
 
  Note that the local discontinuous Galerkin discretization adds so-called jump terms
  \f[ D^\dagger \chi D + \alpha\chi_{on/off} J \f]
