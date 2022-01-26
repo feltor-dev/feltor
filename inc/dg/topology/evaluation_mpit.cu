@@ -36,9 +36,11 @@ int main(int argc, char** argv)
     MPI_Comm comm2d, comm3d;
     mpi_init2d( dg::PER, dg::PER, comm2d);
     dg::MPIGrid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
+    //dg::MPIGrid2d g2d( {0.0, 6.2831853071795862, 3, 48}, {0.0, 6.2831853071795862, 5, 28}, comm2d);
     dg::RealMPIGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
     mpi_init3d( dg::PER, dg::PER, dg::PER, comm3d);
     dg::MPIGrid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
+    //dg::MPIGrid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx}, comm3d);
 
     //test evaluation and expand functions
     dg::MDVec func2d = dg::construct<dg::MDVec>(dg::evaluate( function<double>, g2d));

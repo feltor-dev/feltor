@@ -438,6 +438,7 @@ class Elliptic3d
      */
     Elliptic3d( const Geometry& g, bc bcx, bc bcy, bc bcz, direction dir = forward, value_type jfactor = 1., bool chi_weight_jump = false)
     {
+        // MW we should create an if guard for nx, ny, or nz = 1 and periodic boundaries
         m_jfactor=jfactor;
         m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);

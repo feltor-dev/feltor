@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
     const dg::MDVec vec = dg::evaluate( function, g3);
     const dg::MDVec weights = dg::create::weights( g3);
     dg::MDVec filtered_vec(vec), projected_vec(dg::evaluate( dg::zero, g2)), inter_vec( vec);
-    dg::ModalFilter<dg::MDMatrix, dg::MDVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.n()), g3);
+    dg::ModalFilter<dg::MDMatrix, dg::MDVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.nx()), g3);
     dg::MIDMatrix project = dg::create::projection( g2,g3);
     dg::MIDMatrix interpo = dg::create::interpolation( g3,g2);
 
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
     const dg::MDVec vec = dg::evaluate( function, g3);
     const dg::MDVec weights = dg::create::weights( g3);
     dg::MDVec filtered_vec(vec), projected_vec(dg::evaluate( dg::zero, g2)), inter_vec( vec);
-    dg::ModalFilter<dg::MDMatrix, dg::MDVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.n()), g3);
+    dg::ModalFilter<dg::MDMatrix, dg::MDVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.nx()), g3);
     dg::MIDMatrix project = dg::create::projection( g2,g3);
     dg::MIDMatrix interpo = dg::create::interpolation( g3,g2);
 

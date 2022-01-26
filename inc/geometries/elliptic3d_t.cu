@@ -34,7 +34,11 @@ int main()
     dg::SparseTensor<dg::DVec> bb = dg::geo::createAlignmentTensor( bhat, g3d);
     elliptic.set_chi( bb);
 
-    dg::geo::TestInvertDS<dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec>, dg::DVec> test( elliptic, 1.);
+    auto test = [&](const auto& x, auto& y){
+                //  y = ( 1 - D) x
+                dg::blas2::symv( elliptic, x, y);
+                dg::blas1::axpby( 1., x, -1., y, y);
+            };
     dg::PCG< dg::DVec > pcg( w3d, n*n*Nx*Ny);
 
     const dg::DVec sol = dg::evaluate( dg::geo::TestFunctionDirNeu(mag), g3d);

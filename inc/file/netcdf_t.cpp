@@ -40,7 +40,7 @@ int main()
     err = nc_def_var( ncid, "vectorX", NC_DOUBLE, 4, dim_ids, &vectorID[0]);
     err = nc_def_var( ncid, "vectorY", NC_DOUBLE, 4, dim_ids, &vectorID[1]);
     err = nc_def_var( ncid, "vectorZ", NC_DOUBLE, 4, dim_ids, &vectorID[2]);
-    size_t count[4] = {1, g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    size_t count[4] = {g.nz(), g.Nz(), g.ny()*g.Ny(), g.nx()*g.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     for(unsigned i=0; i<=NT; i++)
     {

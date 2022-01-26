@@ -339,11 +339,14 @@ void multigrid_cycle(
 /**
  * @brief EXPERIMENTAL One Full multigrid cycle
  *
- * @param ops Index 0 is the \c MatrixType on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+ * @param ops Index 0 is the \c MatrixType on the original grid, 1 on the half
+ *  grid, 2 on the quarter grid, ...
  * @param x (read/write) contains initial guess on input and the solution on output
  * @param b The right hand side
- * @param inverse_ops_down a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages-1
- * @param inverse_ops_up a vector of inverse, smoothing operators (usually lambda functions combining operators and solvers) of size \c stages
+ * @param inverse_ops_down a vector of inverse, smoothing operators (usually
+ *  lambda functions combining operators and solvers) of size \c stages-1
+ * @param inverse_ops_up a vector of inverse, smoothing operators (usually
+ *  lambda functions combining operators and solvers) of size \c stages
  * @param nested_grids provides projection and interapolation operations and workspace
  * @param gamma The shape of the multigrid cycle:
     typically 1 (V-cycle) or 2 (W-cycle)

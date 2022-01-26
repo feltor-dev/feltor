@@ -187,8 +187,8 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Rea
 template<class T>
 inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology2d<T>& g, std::array<std::string,2> name_dims = {"y", "x"})
 {
-    dg::RealGrid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::RealGrid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::RealGrid1d<T> gx( g.x0(), g.x1(), g.nx(), g.Nx());
+    dg::RealGrid1d<T> gy( g.y0(), g.y1(), g.ny(), g.Ny());
     int retval;
     retval = define_dimension( ncid, &dimsIDs[0], gy, name_dims[0], "Y");
     if(retval)
@@ -275,9 +275,9 @@ inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, con
 template<class T>
 inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology3d<T>& g, std::array<std::string, 3> name_dims = {"z", "y", "x"})
 {
-    dg::RealGrid1d<T> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::RealGrid1d<T> gy( g.y0(), g.y1(), g.n(), g.Ny());
-    dg::RealGrid1d<T> gz( g.z0(), g.z1(), 1, g.Nz());
+    dg::RealGrid1d<T> gx( g.x0(), g.x1(), g.nx(), g.Nx());
+    dg::RealGrid1d<T> gy( g.y0(), g.y1(), g.ny(), g.Ny());
+    dg::RealGrid1d<T> gz( g.z0(), g.z1(), g.nz(), g.Nz());
     int retval;
     retval = define_dimension( ncid, &dimsIDs[0], gz, name_dims[0], "Z");
     if(retval)

@@ -38,7 +38,7 @@ void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const Geome
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
-    std::cout << eps<<"\t"<<g2d.n()<<"\t"<<g2d.Nx()<<"\t"<<g2d.Ny()<<"\t";
+    std::cout << eps<<"\t"<<g2d.nx()<<"\t"<<g2d.Nx()<<"\t"<<g2d.Ny()<<"\t";
     dg::Timer t;
     t.tic();
     dg::PCG<dg::DVec > pcg( x, g2d.size());

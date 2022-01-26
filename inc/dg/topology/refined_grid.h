@@ -418,19 +418,19 @@ template<class real_type>
 struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
 {
     RealCartesianRefinedGrid2d( const aRealRefinement1d<real_type>& refX, const aRealRefinement1d<real_type>& refY, real_type x0, real_type x1, real_type y0, real_type y1,
-            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::aGeometry2d( x0, x1, y0, y1, n, refX.N_new(Nx, bcx), refY.N_new(Ny,bcy), bcx, bcy), refX_(refX), refY_(refY), w_(2), a_(2)
+            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::aGeometry2d( {x0, x1, n, refX.N_new(Nx,bcx), bcx}, {y0, y1, n, refY.N_new(Ny,bcy),bcy}), refX_(refX), refY_(refY), w_(2), a_(2)
     {
-        construct_weights_and_abscissas(n,Nx,Ny);
+        construct_weights_and_abscissas(n,Nx,n,Ny);
     }
 
     virtual RealCartesianRefinedGrid2d* clone()const{return new RealCartesianRefinedGrid2d(*this);}
     private:
     ClonePtr<aRealRefinement1d<real_type>> refX_, refY_;
     std::vector<thrust::host_vector<real_type> > w_, a_;
-    void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny)
+    void construct_weights_and_abscissas(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny)
     {
-        RealGrid1d<real_type> gx( this->x0(), this->x1(), n, Nx, this->bcx());
-        RealGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
+        RealGrid1d<real_type> gx( this->x0(), this->x1(), nx, Nx, this->bcx());
+        RealGrid1d<real_type> gy( this->y0(), this->y1(), ny, Ny, this->bcy());
         thrust::host_vector<real_type> wx, ax, wy, ay;
         refX_->generate( gx, wx, ax);
         refY_->generate( gy, wy, ay);
@@ -446,9 +446,9 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
                 a_[1][i*wx.size()+j] = ay[i];
             }
     }
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)override final{
-        aRealTopology2d<real_type>::do_set(new_n,refX_->N_new(new_Nx,this->bcx()),refY_->N_new(new_Ny, this->bcy()));
-        construct_weights_and_abscissas(new_n,new_Nx,new_Ny);
+    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny)override final{
+        aRealTopology2d<real_type>::do_set(nx,refX_->N_new(Nx,this->bcx()),ny,refY_->N_new(Ny, this->bcy()));
+        construct_weights_and_abscissas(nx,Nx,ny,Ny);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
         SparseTensor<thrust::host_vector<real_type> > t(*this);
@@ -479,20 +479,21 @@ template< class real_type>
 struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
 {
     RealCartesianRefinedGrid3d( const aRealRefinement1d<real_type>& refX, const aRealRefinement1d<real_type>& refY, aRealRefinement1d<real_type>& refZ, real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1,
-            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz=dg::PER) : dg::aGeometry3d( x0, x1, y0, y1,z0,z1, n, refX.N_new(Nx, bcx), refY.N_new(Ny,bcy), refZ.N_new(Nz,bcz), bcx, bcy, bcz), refX_(refX), refY_(refY), refZ_(refZ), w_(3), a_(3)
+            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz=dg::PER) :
+        dg::aGeometry3d( {x0, x1, n, refX.N_new(Nx,bcx), bcx}, { y0, y1, refY.N_new(Ny,bcy), bcy}, {z0,z1, 1, refZ.N_new(Nz,bcz), bcz}), refX_(refX), refY_(refY), refZ_(refZ), w_(3), a_(3)
     {
-        construct_weights_and_abscissas(n, Nx, Ny,Nz);
+        construct_weights_and_abscissas(n, Nx, n, Ny,1, Nz);
     }
 
     virtual RealCartesianRefinedGrid3d* clone()const{return new RealCartesianRefinedGrid3d(*this);}
     private:
     ClonePtr<aRealRefinement1d<real_type>> refX_, refY_, refZ_;
     std::vector<thrust::host_vector<real_type> > w_, a_;
-    void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny,unsigned Nz)
+    void construct_weights_and_abscissas(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny, unsigned nz, unsigned Nz)
     {
-        RealGrid1d<real_type> gx( this->x0(), this->x1(), n, Nx, this->bcx());
-        RealGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
-        RealGrid1d<real_type> gz( this->y0(), this->y1(), 1, Nz, this->bcz());
+        RealGrid1d<real_type> gx( this->x0(), this->x1(), nx, Nx, this->bcx());
+        RealGrid1d<real_type> gy( this->y0(), this->y1(), ny, Ny, this->bcy());
+        RealGrid1d<real_type> gz( this->y0(), this->y1(), nz, Nz, this->bcz());
         thrust::host_vector<real_type> w[3], a[3];
         refX_->generate( gx, w[0], a[0]);
         refY_->generate( gy, w[1], a[1]);
@@ -512,9 +513,9 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
                 a_[2][(s*w[1].size()+i)*w[0].size()+j] = a[1][s];
             }
     }
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final{
-        aRealTopology3d<real_type>::do_set(new_n,refX_->N_new(new_Nx, this->bcx()),refY_->N_new(new_Ny,this->bcy()), refZ_->N_new(new_Nz,this->bcz()));
-        construct_weights_and_abscissas(new_n, new_Nx, new_Ny, new_Nz);
+    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny, unsigned nz, unsigned Nz) override final{
+        aRealTopology3d<real_type>::do_set(nx,refX_->N_new(Nx, this->bcx()),ny,refY_->N_new(Ny,this->bcy()), nz, refZ_->N_new(Nz,this->bcz()));
+        construct_weights_and_abscissas(nx, Nx, ny, Ny, nz, Nz);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
         SparseTensor<thrust::host_vector<real_type> > t(*this);

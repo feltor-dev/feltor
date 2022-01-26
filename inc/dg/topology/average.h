@@ -65,7 +65,7 @@ struct Average
      */
     Average( const aTopology2d& g, enum coo2d direction, std::string mode = "exact") : m_mode(mode)
     {
-        m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
+        m_nx = g.Nx()*g.nx(), m_ny = g.Ny()*g.ny();
         m_w=dg::construct<ContainerType>(dg::create::weights(g, direction));
         m_temp = m_w;
         m_transpose = false;
@@ -100,7 +100,7 @@ struct Average
         m_w = dg::construct<ContainerType>(dg::create::weights(g, direction));
         m_temp = m_w;
         m_transpose = false;
-        unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();
+        unsigned nx = g.nx()*g.Nx(), ny = g.ny()*g.Ny(), nz = g.nz()*g.Nz();
         if( direction == coo3d::x) {
             dg::blas1::scal( m_temp, 1./g.lx());
             dg::blas1::scal( m_w, 1./g.lx());

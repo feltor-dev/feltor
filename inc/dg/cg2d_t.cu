@@ -19,8 +19,7 @@ double initial( double x, double y) {return sin(0);}
 template<class Matrix, class Container>
 void solve( std::string solver, Matrix& A, Container& x, const Container& b, const dg::Grid2d& grid)
 {
-    unsigned n = grid.n(), Nx = grid.Nx(), Ny = grid.Ny();
-    double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
+    double lmin = 1+1, lmax = 2*grid.size(); //Eigenvalues of Laplace
     if( "eve cg" == solver)
     {
         std::cout <<" EVE SOLVER:\n";
@@ -43,7 +42,6 @@ void solve( std::string solver, Matrix& A, Container& x, const Container& b, con
     {
         std::cout <<" CHEBYSHEV SOLVER:\n";
         dg::ChebyshevIteration<Container> cheby( x);
-        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
         unsigned num_iter =200;
         cheby.solve( A, x, b, lmin, lmax/2., num_iter);
         std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";
@@ -52,7 +50,6 @@ void solve( std::string solver, Matrix& A, Container& x, const Container& b, con
     {
         std::cout <<" PRECONDITIONED CHEBYSHEV SOLVER:\n";
         dg::ChebyshevIteration<Container> cheby( x);
-        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
         unsigned num_iter =200;
         cheby.solve( A, x, b, A.precond(), lmin, lmax/2., num_iter);
         std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";

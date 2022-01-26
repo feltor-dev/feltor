@@ -195,13 +195,13 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( 
 template<class real_type>
 MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolation( const aRealTopology2d<real_type>& t, unsigned multiplyn, unsigned multiplyNx, unsigned multiplyNy)
 {
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
+    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.nx(), t.Nx());
+    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.ny(), t.Ny());
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyn,multiplyNx);
-    interX.get_matrices()[0].left_size = t.n()*t.Ny();
+    interX.get_matrices()[0].left_size = t.ny()*t.Ny();
     interX.get_matrices()[0].set_default_range();
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_interpolation( gy, multiplyn,multiplyNy);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()*multiplyNx*multiplyn;
+    interY.get_matrices()[0].right_size = t.nx()*t.Nx()*multiplyNx*multiplyn;
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);
@@ -217,13 +217,11 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolatio
 template<class real_type>
 MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( const aRealTopology2d<real_type>& t, unsigned dividen, unsigned divideNx, unsigned divideNy)
 {
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, dividen, divideNx);
-    interX.get_matrices()[0].left_size = t.n()*t.Ny();
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( t.gx(), dividen, divideNx);
+    interX.get_matrices()[0].left_size = t.ny()*t.Ny();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( gy, dividen, divideNy);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideNx/dividen;
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( t.gy(), dividen, divideNy);
+    interY.get_matrices()[0].right_size = t.nx()*t.Nx()/divideNx/dividen;
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);
@@ -239,14 +237,12 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( 
 template<class real_type>
 MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolation( const aRealTopology3d<real_type>& t, unsigned multiplyn, unsigned multiplyNx, unsigned multiplyNy)
 {
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyn, multiplyNx);
-    interX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( t.gx(), multiplyn, multiplyNx);
+    interX.get_matrices()[0].left_size = t.ny()*t.Ny()*t.nz()*t.Nz();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_interpolation( gy, multiplyn, multiplyNy);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()*multiplyNx*multiplyn;
-    interY.get_matrices()[0].left_size = t.Nz();
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_interpolation( t.gy(), multiplyn, multiplyNy);
+    interY.get_matrices()[0].right_size = t.nx()*t.Nx()*multiplyNx*multiplyn;
+    interY.get_matrices()[0].left_size = t.nz()*t.Nz();
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);
@@ -262,14 +258,12 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_interpolatio
 template<class real_type>
 MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( const aRealTopology3d<real_type>& t, unsigned dividen, unsigned divideNx, unsigned divideNy)
 {
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, dividen,divideNx);
-    interX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( t.gx(), dividen,divideNx);
+    interX.get_matrices()[0].left_size = t.ny()*t.Ny()*t.nz()*t.Nz();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( gy, dividen, divideNy);
-    interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideNx/dividen;
-    interY.get_matrices()[0].left_size = t.Nz();
+    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interY = dg::create::fast_projection( t.gy(), dividen, divideNy);
+    interY.get_matrices()[0].right_size = t.nx()*t.Nx()/divideNx/dividen;
+    interY.get_matrices()[0].left_size = t.nz()*t.Nz();
     interY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > inter(2);

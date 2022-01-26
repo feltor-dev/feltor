@@ -33,8 +33,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> dx( const aRealTopology2d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dx;
-    dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left_size = g.n()*g.Ny();
+    dx = dx_normed( g.nx(), g.Nx(), g.hx(), bcx, dir);
+    dx.left_size = g.ny()*g.Ny();
     dx.set_default_range();
     return dx;
 }
@@ -66,8 +66,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> dy( const aRealTopology2d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dy;
-    dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right_size = g.n()*g.Nx();
+    dy = dx_normed( g.ny(), g.Ny(), g.hy(), bcy, dir);
+    dy.right_size = g.nx()*g.Nx();
     dy.set_default_range();
     return dy;
 }
@@ -97,8 +97,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> jumpX( const aRealTopology2d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type> jx;
-    jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left_size = g.n()*g.Ny();
+    jx = jump( g.nx(), g.Nx(), g.hx(), bcx);
+    jx.left_size = g.ny()*g.Ny();
     jx.set_default_range();
     return jx;
 }
@@ -115,8 +115,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> jumpY( const aRealTopology2d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type> jy;
-    jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right_size = g.n()*g.Nx();
+    jy = jump( g.ny(), g.Ny(), g.hy(), bcy);
+    jy.right_size = g.nx()*g.Nx();
     jy.set_default_range();
     return jy;
 }
@@ -159,8 +159,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> jumpX( const aRealTopology3d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type> jx;
-    jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left_size = g.n()*g.Ny()*g.Nz();
+    jx = jump( g.nx(), g.Nx(), g.hx(), bcx);
+    jx.left_size = g.ny()*g.Ny()*g.nz()*g.Nz();
     jx.set_default_range();
     return jx;
 }
@@ -177,9 +177,9 @@ template<class real_type>
 EllSparseBlockMat<real_type> jumpY( const aRealTopology3d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type> jy;
-    jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right_size = g.n()*g.Nx();
-    jy.left_size = g.Nz();
+    jy = jump( g.ny(), g.Ny(), g.hy(), bcy);
+    jy.right_size = g.nx()*g.Nx();
+    jy.left_size = g.nz()*g.Nz();
     jy.set_default_range();
     return jy;
 }
@@ -196,8 +196,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> jumpZ( const aRealTopology3d<real_type>& g, bc bcz)
 {
     EllSparseBlockMat<real_type> jz;
-    jz = jump( 1, g.Nz(), g.hz(), bcz);
-    jz.right_size = g.n()*g.Nx()*g.n()*g.Ny();
+    jz = jump( g.nz(), g.Nz(), g.hz(), bcz);
+    jz.right_size = g.nx()*g.Nx()*g.ny()*g.Ny();
     jz.set_default_range();
     return jz;
 }
@@ -252,8 +252,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> dx( const aRealTopology3d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dx;
-    dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left_size = g.n()*g.Ny()*g.Nz();
+    dx = dx_normed( g.nx(), g.Nx(), g.hx(), bcx, dir);
+    dx.left_size = g.ny()*g.Ny()*g.nz()*g.Nz();
     dx.set_default_range();
     return dx;
 }
@@ -284,9 +284,9 @@ template<class real_type>
 EllSparseBlockMat<real_type> dy( const aRealTopology3d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dy;
-    dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right_size = g.n()*g.Nx();
-    dy.left_size = g.Nz();
+    dy = dx_normed( g.ny(), g.Ny(), g.hy(), bcy, dir);
+    dy.right_size = g.nx()*g.Nx();
+    dy.left_size = g.nz()*g.Nz();
     dy.set_default_range();
     return dy;
 }
@@ -317,8 +317,8 @@ template<class real_type>
 EllSparseBlockMat<real_type> dz( const aRealTopology3d<real_type>& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dz;
-    dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
-    dz.right_size = g.n()*g.n()*g.Nx()*g.Ny();
+    dz = dx_normed( g.nz(), g.Nz(), g.hz(), bcz, dir);
+    dz.right_size = g.nx()*g.ny()*g.Nx()*g.Ny();
     dz.set_default_range();
     return dz;
 

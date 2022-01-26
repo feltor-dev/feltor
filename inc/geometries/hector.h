@@ -56,7 +56,7 @@ real_type construct_c0( const thrust::host_vector<real_type>& etaVinv, const dg:
 {
     //this is a normal integration:
     thrust::host_vector<real_type> etaVinvL( dg::forward_transform(  etaVinv, g2d) );
-    dg::Grid1d g1d( 0., 2.*M_PI, g2d.n(), g2d.Ny());
+    dg::Grid1d g1d( 0., 2.*M_PI, g2d.ny(), g2d.Ny());
     dg::HVec eta = dg::evaluate(dg::cooX1d, g1d);
     dg::HVec w1d = dg::create::weights( g1d);
     dg::HVec int_etaVinv(eta);

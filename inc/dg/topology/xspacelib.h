@@ -140,12 +140,15 @@ dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
 {
     typedef cusp::coo_matrix<int, real_type, cusp::host_memory> Matrix;
     //create equidistant backward transformation
-    dg::Operator<real_type> backwardeq( g.dlt().backwardEQ());
-    dg::Operator<real_type> forward( g.dlt().forward());
-    dg::Operator<real_type> backward1d = backwardeq*forward;
+    dg::Operator<real_type> backwardeqX( g.dltx().backwardEQ());
+    dg::Operator<real_type> backwardeqY( g.dlty().backwardEQ());
+    dg::Operator<real_type> forwardX( g.dltx().forward());
+    dg::Operator<real_type> forwardY( g.dlty().forward());
+    dg::Operator<real_type> backward1dX = backwardeqX*forwardX;
+    dg::Operator<real_type> backward1dY = backwardeqY*forwardY;
 
-    Matrix transformX = dg::tensorproduct( g.Nx(), backward1d);
-    Matrix transformY = dg::tensorproduct( g.Ny(), backward1d);
+    Matrix transformX = dg::tensorproduct( g.Nx(), backward1dX);
+    Matrix transformY = dg::tensorproduct( g.Ny(), backward1dY);
     Matrix backward = dg::tensorproduct( transformY, transformX);
 
     return (dg::IHMatrix)backward;

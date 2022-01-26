@@ -74,11 +74,12 @@ template<class real_type>
 thrust::host_vector<real_type> fem_weights( const aRealTopology2d<real_type>& g)
 {
     thrust::host_vector<real_type> v( g.size());
-    std::vector<real_type> w = detail::fem_weights(g.dlt());
+    std::vector<real_type> wx = detail::fem_weights(g.dltx());
+    std::vector<real_type> wy = detail::fem_weights(g.dlty());
     for( unsigned i=0; i<g.size(); i++)
         v[i] = g.hx()*g.hy()/4.*
-                w[detail::get_i(g.n(),g.Nx(), i)]*
-                w[detail::get_j(g.n(),g.Nx(), i)];
+                wx[i%g.nx()]*
+                wy[(i/(g.nx()*g.Nx()))%g.ny()];
     return v;
 }
 ///@copydoc hide_fem_inv_weights_doc
@@ -96,11 +97,14 @@ template<class real_type>
 thrust::host_vector<real_type> fem_weights( const aRealTopology3d<real_type>& g)
 {
     thrust::host_vector<real_type> v( g.size());
-    std::vector<real_type> w = detail::fem_weights(g.dlt());
+    std::vector<real_type> wx = detail::fem_weights(g.dltx());
+    std::vector<real_type> wy = detail::fem_weights(g.dlty());
+    std::vector<real_type> wz = detail::fem_weights(g.dltz());
     for( unsigned i=0; i<g.size(); i++)
-        v[i] = g.hx()*g.hy()*g.hz()/4.*
-               w[detail::get_i(g.n(), g.Nx(), i)]*
-               w[detail::get_j(g.n(), g.Nx(), i)];
+        v[i] = g.hx()*g.hy()*g.hz()/8.*
+               wx[i%g.nx()]*
+               wy[(i/(g.nx()*g.Nx()))%g.ny()]*
+               wz[(i/(g.nx()*g.ny()*g.Nx()*g.Ny()))%g.nz()];
     return v;
 }
 

@@ -129,8 +129,8 @@ void put_var_double(int ncid, int varid, const dg::aTopology2d& grid,
 {
     file::NC_Error_Handle err;
     size_t start[2] = {0,0}, count[2];
-    count[0] = grid.n()*grid.Ny();
-    count[1] = grid.n()*grid.Nx();
+    count[0] = grid.ny()*grid.Ny();
+    count[1] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -168,8 +168,8 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[3] = {slice,0,0}, count[3];
     count[0] = 1;
-    count[1] = grid.n()*grid.Ny();
-    count[2] = grid.n()*grid.Nx();
+    count[1] = grid.ny()*grid.Ny();
+    count[2] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -180,9 +180,9 @@ void put_var_double(int ncid, int varid, const dg::aTopology3d& grid,
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0,0}, count[3];
-    count[0] = grid.Nz();
-    count[1] = grid.n()*grid.Ny();
-    count[2] = grid.n()*grid.Nx();
+    count[0] = grid.nz()*grid.Nz();
+    count[1] = grid.ny()*grid.Ny();
+    count[2] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -194,9 +194,9 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[4] = {slice, 0,0,0}, count[4];
     count[0] = 1;
-    count[1] = grid.Nz();
-    count[2] = grid.n()*grid.Ny();
-    count[3] = grid.n()*grid.Nx();
+    count[1] = grid.nz()*grid.Nz();
+    count[2] = grid.ny()*grid.Ny();
+    count[3] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -208,8 +208,8 @@ void put_var_double(int ncid, int varid, const dg::aMPITopology2d& grid,
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0}, count[2];
-    count[0] = grid.n()*grid.local().Ny();
-    count[1] = grid.n()*grid.local().Nx();
+    count[0] = grid.ny()*grid.local().Ny();
+    count[1] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);
@@ -260,8 +260,8 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[3] = {slice, 0,0}, count[3];
     count[0] = 1;
-    count[1] = grid.n()*grid.local().Ny();
-    count[2] = grid.n()*grid.local().Nx();
+    count[1] = grid.ny()*grid.local().Ny();
+    count[2] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);
@@ -311,9 +311,9 @@ void put_var_double(int ncid, int varid,
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0,0}, count[3];
-    count[0] = grid.local().Nz();
-    count[1] = grid.n()*grid.local().Ny();
-    count[2] = grid.n()*grid.local().Nx();
+    count[0] = grid.nz()*grid.local().Nz();
+    count[1] = grid.ny()*grid.local().Ny();
+    count[2] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);
@@ -366,9 +366,9 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[4] = {slice, 0,0,0}, count[4];
     count[0] = 1;
-    count[1] = grid.local().Nz();
-    count[2] = grid.n()*grid.local().Ny();
-    count[3] = grid.n()*grid.local().Nx();
+    count[1] = grid.nz()*grid.local().Nz();
+    count[2] = grid.ny()*grid.local().Ny();
+    count[3] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);

@@ -95,10 +95,8 @@ int main(int argc, char* argv[])
         error.data()[0] = NAN;
         dg::blas2::symv(  m3[i], f3d, error);
         dg::MPI_Vector<thrust::host_vector<double>> x( error);
-        thrust::host_vector<bool> h_boolvec ( x.size(), false);
-        dg::MPI_Vector<thrust::host_vector<bool> > boolvec( h_boolvec, MPI_COMM_WORLD);
-        dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-        bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+        bool hasnan = dg::blas1::reduce( x, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
         if(rank==0)std::cout << "Symv contains NaN: "<<std::boolalpha<<hasnan<<" (false)\n";
     }
     if(rank==0)std::cout << "\nFINISHED! Continue with arakawa_mpit.cu !\n\n";

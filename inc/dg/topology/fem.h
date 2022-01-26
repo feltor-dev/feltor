@@ -88,10 +88,8 @@ template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> fem_mass(
     const aRealTopology2d<real_type>& g)
 {
-    dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
-    cusp::coo_matrix<int,real_type,cusp::host_memory> mx = fem_mass(gx);
-    cusp::coo_matrix<int,real_type,cusp::host_memory> my = fem_mass(gy);
+    cusp::coo_matrix<int,real_type,cusp::host_memory> mx = fem_mass(g.gx());
+    cusp::coo_matrix<int,real_type,cusp::host_memory> my = fem_mass(g.gy());
     return dg::tensorproduct( my, mx);
 }
 

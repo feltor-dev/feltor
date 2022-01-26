@@ -102,14 +102,14 @@ int main()
     //![doxygen]
     //create equidistant values
     thrust::host_vector<double> x( g.size()), y(x);
-    for( unsigned i=0; i<g.Ny()*g.n(); i++)
-        for( unsigned j=0; j<g.Nx()*g.n(); j++)
+    for( unsigned i=0; i<g.Ny()*g.ny(); i++)
+        for( unsigned j=0; j<g.Nx()*g.nx(); j++)
         {
             //intentionally set values outside the grid domain
-            x[i*g.Nx()*g.n() + j] =
-                    g.x0() + g.lx() + (j+0.5)*g.hx()/(double)(g.n());
-            y[i*g.Nx()*g.n() + j] =
-                    g.y0() + 2*g.ly() + (i+0.5)*g.hy()/(double)(g.n());
+            x[i*g.Nx()*g.nx() + j] =
+                    g.x0() + g.lx() + (j+0.5)*g.hx()/(double)(g.nx());
+            y[i*g.Nx()*g.ny() + j] =
+                    g.y0() + 2*g.ly() + (i+0.5)*g.hy()/(double)(g.ny());
         }
     //use DIR because the coo.2d is zero on the right boundary
     Matrix B = dg::create::interpolation( x, y, g, dg::DIR, dg::DIR, "dg");
@@ -205,21 +205,23 @@ int main()
     {
     dg::Grid3d g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
     g.set( 2,2,2,3);
-    g.set( n, Nx,Ny,2*Nz);
+    g.set( n, Nx,n, Ny,1,Nz);
+    //g.set( n, 3*Nx,n, 4*Ny,n,4*Nz);
+    //g.display();
 
     //![doxygen3d]
     //create equidistant values
     thrust::host_vector<double> x( g.size()), y(x), z(x);
-    for( unsigned k=0; k<g.Nz(); k++)
-        for( unsigned i=0; i<g.Ny()*g.n(); i++)
-            for( unsigned j=0; j<g.Nx()*g.n(); j++)
+    for( unsigned k=0; k<g.nz()*g.Nz(); k++)
+        for( unsigned i=0; i<g.Ny()*g.ny(); i++)
+            for( unsigned j=0; j<g.Nx()*g.nx(); j++)
             {
-                x[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
-                        g.x0() + (j+0.5)*g.hx()/(double)(g.n());
-                y[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
-                        g.y0() + (i+0.5)*g.hy()/(double)(g.n());
-                z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
-                        g.z0() + (k+0.5)*g.hz();
+                x[(k*g.Ny()*g.ny() + i)*g.Nx()*g.nx() + j] =
+                        g.x0() + (j+0.5)*g.hx()/(double)(g.nx());
+                y[(k*g.Ny()*g.ny() + i)*g.Nx()*g.nx() + j] =
+                        g.y0() + (i+0.5)*g.hy()/(double)(g.ny());
+                z[(k*g.Ny()*g.ny() + i)*g.Nx()*g.nx() + j] =
+                        g.z0() + (k+0.5)*g.hz()/(double)(g.nz());
             }
     std::vector<std::string> methods = {"nearest", "linear", "dg", "cubic"};
     for ( auto method : methods)
@@ -230,8 +232,8 @@ int main()
         thrust::host_vector<double> inter(vec);
         dg::blas2::symv( B, vec, inter);
         //![doxygen3d]
-        dg::Grid3d gequi( -10, 10, -5, 5, -7, -3, 1, g.n()*g.Nx(),
-                g.n()*g.Ny(), g.Nz());
+        dg::Grid3d gequi( -10, 10, -5, 5, -7, -3, 1, g.nx()*g.Nx(),
+                g.ny()*g.Ny(), g.nz()*g.Nz());
         thrust::host_vector<double> inter1 = dg::evaluate( function, gequi);
         dg::blas1::axpby( 1., inter1, -1., inter, inter1);
         double error = dg::blas1::dot( inter1, inter1)/ dg::blas1::dot( inter,inter);

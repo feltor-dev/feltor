@@ -20,7 +20,7 @@ namespace dg
 /** @brief Split a vector into planes along the last dimension (fast version)
 *
 * @param in contiguous 3d vector (must be of size \c grid.size())
-* @param out contains \c grid.Nz() 2d vector views of 2d size on output
+* @param out contains \c grid.nz()*grid.Nz() 2d vector views of 2d size on output
 * @param grid provide dimensions in 3rd and first two dimensions
 * @attention out will NOT be resized
 * @tparam SharedContainer \c TensorTraits exists for this class and the
@@ -30,8 +30,8 @@ template<class SharedContainer, class real_type>
 void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const aRealTopology3d<real_type>& grid)
 {
     assert( out.size() == grid.Nz());
-    unsigned size2d=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-    for(unsigned i=0; i<grid.Nz(); i++)
+    unsigned size2d=grid.nx()*grid.ny()*grid.Nx()*grid.Ny();
+    for(unsigned i=0; i<grid.nz()*grid.Nz(); i++)
         out[i].construct( thrust::raw_pointer_cast(in.data()) + i*size2d, size2d);
 }
 
@@ -39,7 +39,7 @@ void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const 
 *
 * @param in contiguous 3d vector (must be of size \c grid.size())
 * @param grid provide dimensions in 3rd and first two dimensions
-* @return \c out contains \c grid.Nz() 2d vector views of 2d size on output
+* @return \c out contains \c grid.nz()*grid.Nz() 2d vector views of 2d size on output
 * @tparam SharedContainer \c TensorTraits exists for this class and the
 *   \c tensor_category derives from \c SharedVectorTag
 */
@@ -48,9 +48,9 @@ std::vector<View<SharedContainer>> split( SharedContainer& in, const aRealTopolo
 {
     std::vector<View<SharedContainer>> out;
     RealGrid3d<real_type> l( grid);
-    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
-    out.resize( l.Nz());
-    for(unsigned i=0; i<l.Nz(); i++)
+    unsigned size2d=l.nx()*l.ny()*l.Nx()*l.Ny();
+    out.resize( l.nz()*l.Nz());
+    for(unsigned i=0; i<l.nz()*l.Nz(); i++)
         out[i].construct( thrust::raw_pointer_cast(in.data()) + i*size2d, size2d);
     return out;
 }
@@ -71,7 +71,7 @@ void assign3dfrom2d( const thrust::host_vector<real_type>& in2d, Container&
     thrust::host_vector<real_type> vector( grid.size());
     std::vector<dg::View< thrust::host_vector<real_type>>> view =
         dg::split( vector, grid); //3d vector
-    for( unsigned i=0; i<grid.Nz(); i++)
+    for( unsigned i=0; i<grid.nz()*grid.Nz(); i++)
         dg::blas1::copy( in2d, view[i]);
     dg::assign( vector, out);
 }
@@ -93,7 +93,7 @@ using get_mpi_view_type =
  * @attention This version will NOT adapt the communicators in \c out
  * @attention out will NOT be resized
  * @param in contiguous 3d vector (must be of size \c grid.size())
- * @param out contains \c grid.Nz() 2d vector views of 2d size on output
+ * @param out contains \c grid.nz()*grid.Nz() 2d vector views of 2d size on output
  * @param grid provide dimensions in 3rd and first two dimensions
  * @tparam MPIContainer An MPI_Vector of a \c SharedContainer
 */
@@ -103,8 +103,8 @@ void split( MPIContainer& in, std::vector<get_mpi_view_type<MPIContainer> >&
 {
     //local size2d
     RealGrid3d<real_type> l = grid.local();
-    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
-    for(unsigned i=0; i<l.Nz(); i++)
+    unsigned size2d=l.nx()*l.ny()*l.Nx()*l.Ny();
+    for(unsigned i=0; i<l.nz()*l.Nz(); i++)
     {
         out[i].data().construct( thrust::raw_pointer_cast(in.data().data()) +
             i*size2d, size2d);
@@ -131,9 +131,9 @@ std::vector<get_mpi_view_type<MPIContainer> > split(
     exblas::mpi_reduce_communicator( planeComm, &comm_mod, &comm_mod_reduce);
     //local size2d
     RealGrid3d<real_type> l = grid.local();
-    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
-    out.resize( l.Nz());
-    for(unsigned i=0; i<l.Nz(); i++)
+    unsigned size2d=l.nx()*l.ny()*l.Nx()*l.Ny();
+    out.resize( l.nz()*l.Nz());
+    for(unsigned i=0; i<l.nz()*l.Nz(); i++)
     {
         out[i].data().construct( thrust::raw_pointer_cast(in.data().data())
             + i*size2d, size2d);
@@ -159,7 +159,7 @@ void assign3dfrom2d( const MPI_Vector<thrust::host_vector<real_type>>& in2d,
     MPI_Vector<thrust::host_vector<real_type>> vector = dg::evaluate( dg::zero, grid);
     std::vector<MPI_Vector<dg::View<thrust::host_vector<real_type>>> > view =
         dg::split( vector, grid); //3d vector
-    for( unsigned i=0; i<grid.local().Nz(); i++)
+    for( unsigned i=0; i<grid.nz()*grid.local().Nz(); i++)
         dg::blas1::copy( in2d, view[i]);
     dg::assign( vector, out);
 }

@@ -96,8 +96,8 @@ int main( )
 
     dg::geo::DSPGenerator generator( mag, g3d.x0(), g3d.x1(), g3d.y0(),
             g3d.y1(), g3d.hz());
-    dg::geo::CurvilinearProductGrid3d g3dP( generator, g3d.n(), g3d.Nx(),
-        g3d.Ny(), g3d.Nz(), g3d.bcx(), g3d.bcy(), g3d.bcz());
+    dg::geo::CurvilinearProductGrid3d g3dP( generator, {g3d.nx(), g3d.Nx(),
+            g3d.bcx()}, {g3d.ny(), g3d.Ny(), g3d.bcy()}, g3d.gz());
     dg::DVec vol3dP = dg::create::volume( g3dP);
 
     dg::Elliptic<dg::aProductGeometry3d, dg::DMatrix, dg::DVec> elliptic(g3d);

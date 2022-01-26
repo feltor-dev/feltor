@@ -40,15 +40,15 @@ template<class UnaryOp, class real_type>
 MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
 modal_filter( UnaryOp op, const aRealTopology2d<real_type>& t)
 {
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
+    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.nx(), t.Nx());
+    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.ny(), t.Ny());
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
         filterX = dg::create::modal_filter( op, gx);
-    filterX.get_matrices()[0].left_size = t.n()*t.Ny();
+    filterX.get_matrices()[0].left_size = t.ny()*t.Ny();
     filterX.get_matrices()[0].set_default_range();
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
         filterY = dg::create::modal_filter( op, gy);
-    filterY.get_matrices()[0].right_size = t.n()*t.Nx();
+    filterY.get_matrices()[0].right_size = t.nx()*t.Nx();
     filterY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > filter(2);
@@ -62,16 +62,16 @@ template<class UnaryOp, class real_type>
 MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
 modal_filter( UnaryOp op, const aRealTopology3d<real_type>& t)
 {
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
+    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.nx(), t.Nx());
+    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.ny(), t.Ny());
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
         filterX = dg::create::modal_filter( op, gx);
-    filterX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
+    filterX.get_matrices()[0].left_size = t.ny()*t.Ny()*t.nz()*t.Nz();
     filterX.get_matrices()[0].set_default_range();
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
         filterY = dg::create::modal_filter( op, gy);
-    filterY.get_matrices()[0].right_size = t.n()*t.Nx();
-    filterY.get_matrices()[0].left_size = t.Nz();
+    filterY.get_matrices()[0].right_size = t.nx()*t.Nx();
+    filterY.get_matrices()[0].left_size = t.nz()*t.Nz();
     filterY.get_matrices()[0].set_default_range();
 
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > filter(2);

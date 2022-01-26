@@ -83,9 +83,8 @@ int main()
         error[0] = NAN;
         dg::blas2::symv(  m3[i], f3d, error);
         thrust::host_vector<double> x( error);
-        thrust::host_vector<bool> boolvec ( x.size(), false);
-        dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-        bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+        bool hasnan = dg::blas1::reduce( x, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
         std::cout << "Symv contains NaN: "<<std::boolalpha<<hasnan<<" (false)\n";
     }
     std::cout << "\nFINISHED! Continue with arakawa_t.cu !\n\n";

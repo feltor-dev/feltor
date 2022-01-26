@@ -35,8 +35,10 @@ int main()
 
     dg::Grid1d g1d( 1, 2, n, 12);
     dg::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48);
+    //dg::Grid2d g2d( {0.0, 6.2831853071795862, 3, 48}, {0.0, 6.2831853071795862, 5, 28});
     dg::RealGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48);
     dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
+    //dg::Grid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx});
 
     //test evaluation functions
     const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( exp, g1d));
