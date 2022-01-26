@@ -23,8 +23,10 @@
 namespace dg
 {
 /**
-* @brief Namespace for NetCDF output related classes and functions following the
+* @brief Namespace for netCDF output related classes and functions following the
  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html">CF-conventions</a>
+ and
+ <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
  @sa @ref json and @ref netcdf
 */
 namespace file
@@ -70,7 +72,8 @@ inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID
 /**
  * @brief Define an unlimited time dimension and coordinate variable
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
  * called a coordinate variable.  The CF conventions dictate that the units
  * attribute must be defined for a time variable: we give it the value "time
  * since start"
@@ -90,7 +93,8 @@ static inline int define_time( int ncid, const char* name, int* dimID, int* tvar
 /**
  * @brief Define a limited time dimension and coordinate variable
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
  * called a coordinate variable.  The CF conventions dictate that the units
  * attribute must be defined for a time variable: we give it the value "time
  * since start"
@@ -115,7 +119,9 @@ static inline int define_limited_time( int ncid, const char* name, int size, int
 /**
  * @brief Define a 1d dimension and associated coordinate variable
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
+ * called a coordinate variable.
  * @param ncid file ID
  * @param dimID dimension ID (output)
  * @param g The 1d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
@@ -143,7 +149,9 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
 /**
  * @brief Define an unlimited time and a dimension together with their coordinate variables
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
+ * called a coordinate variable.
  *
  * Semantically equivalent to the following:
  * @code
@@ -172,7 +180,9 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Rea
 /**
  * @brief Define 2 dimensions and associated coordiante variables
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
+ * called a coordinate variable.
  *
  * Dimensions have attributes of (Y, X)
  * @param ncid file ID
@@ -181,7 +191,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Rea
  * @param name_dims Names for the dimension variables
  * @tparam T determines the datatype of the dimension variables
  *
- * @return if anything goes wrong it returns the NetCDF code, else SUCCESS
+ * @return if anything goes wrong it returns the netCDF code, else SUCCESS
  * @note File stays in define mode
  */
 template<class T>
@@ -198,7 +208,9 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology2d<
 /**
  * @brief Define an unlimited time and 2 dimensions and associated coordinate variables
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
+ * called a coordinate variable.
  *
  * Semantically equivalent to the following:
  * @code
@@ -213,7 +225,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology2d<
  * @param name_dims Names for the dimension variables ( time, Y, X)
  * @tparam T determines the datatype of the dimension variables
  *
- * @return if anything goes wrong it returns the NetCDF code, else SUCCESS
+ * @return if anything goes wrong it returns the netCDF code, else SUCCESS
  * @note File stays in define mode
  */
 template<class T>
@@ -229,7 +241,9 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
 /**
  * @brief Define a limited time and 2 dimensions and associated coordinate variables
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
+ * called a coordinate variable.
  *
  * Semantically equivalent to the following:
  * @code
@@ -245,7 +259,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
  * @param name_dims Names for the dimension variables (time, Y, X)
  * @tparam T determines the datatype of the dimension variables
  *
- * @return if anything goes wrong it returns the NetCDF code, else SUCCESS
+ * @return if anything goes wrong it returns the netCDF code, else SUCCESS
  * @note File stays in define mode
  */
 template<class T>
@@ -260,7 +274,9 @@ inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, con
 /**
  * @brief Define 3 dimensions and associated coordinate variables
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
+ * called a coordinate variable.
  *
  * Dimensions have attributes ( Z, Y, X)
  * @param ncid file ID
@@ -269,7 +285,7 @@ inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, con
  * @param name_dims Names for the dimension variables ( Z, Y, X)
  * @tparam T determines the datatype of the dimension variables
  *
- * @return if anything goes wrong it returns the NetCDF code, else SUCCESS
+ * @return if anything goes wrong it returns the netCDF code, else SUCCESS
  * @note File stays in define mode
  */
 template<class T>
@@ -291,7 +307,9 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology3d<
 /**
  * @brief Define an unlimited time and 3 dimensions together with their coordinate varariables
  *
- * @note By NetCDF conventions a variable with the same name as a dimension is called a coordinate variable.
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * a variable with the same name as a dimension is
+ * called a coordinate variable.
  *
  * Semantically equivalent to the following:
  * @code
@@ -306,7 +324,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology3d<
  * @param name_dims Names for the dimension variables ( time, Z, Y, X)
  * @tparam T determines the datatype of the dimension variables
  *
- * @return if anything goes wrong it returns the NetCDF code, else SUCCESS
+ * @return if anything goes wrong it returns the netCDF code, else SUCCESS
  * @note File stays in define mode
  */
 template<class T>

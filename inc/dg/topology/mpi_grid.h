@@ -115,7 +115,6 @@ struct aRealMPITopology2d
     /**
      * @brief Return the global number of cells
      *
-     * Not the one given in the constructor
      * @return number of cells
      */
     unsigned Ny() const { return g.Ny();}
@@ -137,12 +136,6 @@ struct aRealMPITopology2d
      * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
-    /**
-     * @brief The Discrete Legendre Transformation
-     *
-     * @return DLT corresponding to n given in the constructor
-     */
-    //const DLT<real_type>& dlt() const{return g.dlt();}
     /// discrete legendre transformation in x
     const DLT<real_type>& dltx() const{return g.dltx();}
     /// discrete legendre transformation in y
@@ -190,12 +183,11 @@ struct aRealMPITopology2d
         if( fx != 1 || fy != 1)
             do_set(nx(), round(fx*(real_type)Nx()), ny(), round(fy*(real_type)Ny()));
     }
-    /**
-    * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
-    */
+    ///@copydoc Grid2d::set(unsigned,unsigned,unsigned)
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         set( new_n, new_Nx, new_n, new_Ny);
     }
+    ///@copydoc Grid2d::set(unsigned,unsigned,unsigned,unsigned)
     void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny) {
         check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
         if( new_nx == nx() && new_Nx == Nx() && new_ny == ny() && new_Ny == Ny())
@@ -418,27 +410,27 @@ struct aRealMPITopology3d
      * @return number of polynomial coefficients
      */
     unsigned n() const {return g.n();}
+    /// number of polynomial coefficients in x
     unsigned nx() const {return g.nx();}
+    /// number of polynomial coefficients in y
     unsigned ny() const {return g.ny();}
+    /// number of polynomial coefficients in z
     unsigned nz() const {return g.nz();}
     /**
      * @brief Return the global number of cells
      *
-     * Not the one given in the constructor
      * @return number of cells
      */
     unsigned Nx() const { return g.Nx();}
     /**
      * @brief Return the global number of cells
      *
-     * Not the one given in the constructor
      * @return number of cells
      */
     unsigned Ny() const { return g.Ny();}
     /**
      * @brief Return the global number of cells
      *
-     * Not the one given in the constructor
      * @return number of cells
      */
     unsigned Nz() const { return g.Nz();}
@@ -517,12 +509,11 @@ struct aRealMPITopology3d
             do_set(nx(), round(fx*(real_type)Nx()), ny(),
                     round(fy*(real_type)Ny()), nz(), Nz());
     }
-    /**
-     * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
-     */
+    ///@copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         set(new_n,new_Nx,new_n,new_Ny,1,new_Nz);
     }
+    ///@copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned,unsigned,unsigned)
     void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz) {
         check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
         if( new_nx == nx() && new_Nx == Nx() && new_ny == ny() && new_Ny == Ny() && new_nz == nz() && new_Nz == Nz())
@@ -716,7 +707,7 @@ struct RealMPIGrid2d: public aRealMPITopology2d<real_type>
         aRealMPITopology2d<real_type>( {x0,x1,n,Nx,bcx}, {y0,y1,n,Ny,bcy},comm)
     { }
     ///@copydoc aRealTopology2d::aRealTopology2d(RealGrid1d,RealGrid1d)
-    ///@copydoc hide_comm_parameters3d
+    ///@copydoc hide_comm_parameters2d
     RealMPIGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, MPI_Comm comm): aRealMPITopology2d<real_type>(gx,gy,comm){ }
     ///allow explicit type conversion from any other topology
     explicit RealMPIGrid2d( const aRealMPITopology2d<real_type>& src): aRealMPITopology2d<real_type>(src){}

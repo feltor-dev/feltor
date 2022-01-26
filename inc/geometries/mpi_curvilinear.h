@@ -30,6 +30,9 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
     RealCurvilinearMPIGrid2d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm):
         RealCurvilinearMPIGrid2d( generator, {n,Nx,bcx}, {n,Ny,bcy}, comm){}
 
+    /// @copydoc hide_grid_product2d
+    /// @param comm a two-dimensional Cartesian communicator
+    /// @note the paramateres given in the constructor are global parameters
     RealCurvilinearMPIGrid2d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, MPI_Comm comm):
         dg::aRealMPIGeometry2d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b}, comm), m_handle(generator)
     {
@@ -109,6 +112,9 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
         RealCurvilinearProductMPIGrid3d( generator, {n,Nx,bcx}, {n,Ny,bcy}, {0.,2.*M_PI,1,Nz,bcz}, comm){}
 
 
+    /// @copydoc hide_grid_product3d
+    /// @param comm a three-dimensional Cartesian communicator
+    /// @note the paramateres given in the constructor are global parameters
     RealCurvilinearProductMPIGrid3d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, RealGrid1d<real_type> gz, MPI_Comm comm):
         dg::aRealProductMPIGeometry3d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b}, gz, comm),
         m_handle( generator)

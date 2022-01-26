@@ -371,7 +371,9 @@ struct aRealTopology2d
     /// discrete legendre transformation in y
     const DLT<real_type>& dlty() const{return gy_.dlt();}
 
+    /// The x-axis grid
     const RealGrid1d<real_type>& gx() const {return gx_;}
+    /// The y-axis grid
     const RealGrid1d<real_type>& gy() const {return gy_;}
 
     /**
@@ -389,13 +391,22 @@ struct aRealTopology2d
     /**
     * @brief Set the number of polynomials and cells
     *
-    * @param new_n new number of %Gaussian nodes
+    * Same as \c set(new_n,new_Nx,new_n,new_Ny)
+    * @param new_n new number of %Gaussian nodes for both x and y
     * @param new_Nx new number of cells in x
     * @param new_Ny new number of cells in y
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         set( new_n, new_Nx, new_n, new_Ny);
     }
+    /**
+    * @brief Set the number of polynomials and cells
+    *
+    * @param new_nx new number of %Gaussian nodes in x
+    * @param new_Nx new number of cells in x
+    * @param new_ny new number of %Gaussian nodes in y
+    * @param new_Ny new number of cells in y
+    */
     void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny) {
         if( new_nx==nx() && new_Nx==Nx() && new_ny==ny() && new_Ny == Ny())
             return;
@@ -479,7 +490,7 @@ struct aRealTopology2d
      * @brief Construct a 2d grid as the product of two 1d grids
      *
      * @code
-     * dg::Grid2d g3d( {x0,x1,nx,Nx,bcx},{y0,y1,ny,Ny,bcy});
+     * dg::Grid2d g2d( {x0,x1,nx,Nx,bcx},{y0,y1,ny,Ny,bcy});
      * @endcode
      * @param gx a Grid in x - direction
      * @param gy a Grid in y - direction
@@ -637,20 +648,17 @@ struct aRealTopology3d
      * @return
      */
     bc bcz() const {return gz_.bcx();}
-    /**
-     * @brief discrete legendre transformation in x
-     *
-     * @return
-     */
-    //const DLT<real_type>& dlt() const{return gx_.dlt();}
     /// discrete legendre transformation in x
     const DLT<real_type>& dltx() const{return gx_.dlt();}
     /// discrete legendre transformation in y
     const DLT<real_type>& dlty() const{return gy_.dlt();}
     /// discrete legendre transformation in z
     const DLT<real_type>& dltz() const{return gz_.dlt();}
+    /// The x-axis grid
     const RealGrid1d<real_type>& gx() const {return gx_;}
+    /// The y-axis grid
     const RealGrid1d<real_type>& gy() const {return gy_;}
+    /// The z-axis grid
     const RealGrid1d<real_type>& gz() const {return gz_;}
     /**
      * @brief The total number of points
@@ -746,7 +754,9 @@ struct aRealTopology3d
     /**
     * @brief Set the number of polynomials and cells
     *
-    * @param new_n new number of %Gaussian nodes
+    * Set \c nz to 1
+    * Same as \c set(new_n,new_Nx,new_n,new_Ny,1,new_Nz)
+    * @param new_n new number of %Gaussian nodes in x and y
     * @param new_Nx new number of cells in x
     * @param new_Ny new number of cells in y
     * @param new_Nz new number of cells in z
@@ -754,6 +764,16 @@ struct aRealTopology3d
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         set(new_n,new_Nx,new_n,new_Ny,1,new_Nz);
     }
+    /**
+    * @brief Set the number of polynomials and cells
+    *
+    * @param new_nx new number of %Gaussian nodes in x
+    * @param new_Nx new number of cells in x
+    * @param new_ny new number of %Gaussian nodes in y
+    * @param new_Ny new number of cells in y
+    * @param new_nz new number of %Gaussian nodes in z
+    * @param new_Nz new number of cells in z
+    */
     void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz) {
         if( new_nx==nx() && new_Nx ==Nx() && new_ny == ny() && new_Ny == Ny() && new_nz == nz() && new_Nz==Nz())
             return;
@@ -799,10 +819,10 @@ struct RealGrid2d : public aRealTopology2d<real_type>
     RealGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         aRealTopology2d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy}) { }
 
-    ///@copydoc aRealTopology2d::aRealTopology2d(RealGrid1d,RealGrid1d)
+    ///@copydoc aRealTopology2d()
     RealGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy): aRealTopology2d<real_type>(gx,gy){ }
 
-    ///allow explicit type conversion from any other topology
+    ///@brief allow explicit type conversion from any other topology
     ///@param src source
     explicit RealGrid2d( const aRealTopology2d<real_type>& src): aRealTopology2d<real_type>(src){}
     private:
@@ -827,7 +847,7 @@ struct RealGrid3d : public aRealTopology3d<real_type>
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
     RealGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz): aRealTopology3d<real_type>(gx,gy,gz){ }
 
-    ///allow explicit type conversion from any other topology
+    ///@brief allow explicit type conversion from any other topology
     ///@param src source
     explicit RealGrid3d( const aRealTopology3d<real_type>& src): aRealTopology3d<real_type>(src){ }
     private:

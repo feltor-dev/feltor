@@ -13,14 +13,24 @@ namespace geo
  *
  * the coordinates of the computational space are called x,y,z
  * @param generator generate the perpendicular grid: the grid boundaries are [0, generator.width()] x [0, generator.height()] x [0, 2Pi]
- * @param n number of %Gaussian nodes in x and y
- *  (1<=n<=20 )
+ * @param n number of %Gaussian nodes in x and y (1<=n<=20 ), nz is set to 1
  * @param Nx number of cells in x
  * @param Ny number of cells in y
  * @param Nz  number of cells z
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
  * @param bcz boundary condition in z
+ *
+ * @class hide_grid_product3d
+ * @brief Construct the computational space as the product of three 1d grids
+ *
+ * @code
+ * dg::CurvilinearGrid2d g2d( generator, {nx,Nx,bcx},{ny,Ny,bcy}, {z0,z1,nz,Nz,bcz});
+ * @endcode
+ * @param generator generate the grid: the grid boundaries are [0, generator.width()] x [0, generator.height()]
+ * @param tx a Grid without boundaries in x - direction
+ * @param ty a Grid without boundaries in y - direction
+ * @param gz a Grid in z - direction
  */
 
 /*!@class hide_grid_parameters2d
@@ -34,12 +44,22 @@ namespace geo
  * @param Ny number of cells in y
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
+ *
+ * @class hide_grid_product2d
+ * @brief Construct the computational space as the product of two 1d grids
+ *
+ * @code
+ * dg::CurvilinearGrid2d g2d( generator, {nx,Nx,bcx},{ny,Ny,bcy});
+ * @endcode
+ * @param generator generate the grid: the grid boundaries are [0, generator.width()] x [0, generator.height()]
+ * @param tx a Grid without boundaries in x - direction
+ * @param ty a Grid without boundaries in y - direction
  */
 
 
 ///@addtogroup grids
 ///@{
-/** Helper class for construction
+/** @brief Helper class for construction
  */
 struct Topology1d
 {
@@ -94,7 +114,7 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
     ///@copydoc hide_grid_parameters2d
     RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
         RealCurvilinearGrid2d( generator, {n,Nx,bcx}, {n,Ny,bcy}){}
-
+    ///@copydoc hide_grid_product2d
     RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty) :
         dg::aRealGeometry2d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b}), m_handle(generator)
     {
@@ -144,6 +164,7 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
     RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         RealCurvilinearProductGrid3d( generator, {n,Nx,bcx}, {n,Ny,bcy}, {0., 2.*M_PI, 1,Nz,bcz}){}
 
+    ///@copydoc hide_grid_product3d
     RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, RealGrid1d<real_type> gz):
         dg::aRealProductGeometry3d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b},gz), m_handle(generator)
     {

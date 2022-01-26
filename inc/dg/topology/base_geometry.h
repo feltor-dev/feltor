@@ -215,7 +215,8 @@ struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
 {
     ///@copydoc RealGrid2d::RealGrid2d()
     RealCartesianGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometry2d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy}){}
-    ///@copydoc aRealTopology2d::aRealTopology3d(RealGrid1d,RealGrid1d)
+
+    ///@copydoc aRealTopology2d<real_type>::aRealTopology2d(RealGrid1d<real_type>,RealGrid1d<real_type>)
     RealCartesianGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy): dg::aRealGeometry2d<real_type>(gx,gy){}
     /**
      * @brief Construct from existing topology
