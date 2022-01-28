@@ -1000,6 +1000,7 @@ ButcherTableau<real_type> trbdf2_3_3_2()
 template<class real_type>
 ButcherTableau<real_type> kvaerno_4_2_3()
 {
+    //Anne Kvaernoe
     real_type data[] = {
           0 , 0 , 0 , 0 , 0 ,
   0.871733043 , 0.4358665215 , 0.4358665215 , 0 , 0 ,
@@ -1010,6 +1011,87 @@ ButcherTableau<real_type> kvaerno_4_2_3()
     };
     return ButcherTableau<real_type>( 4, data);
 }
+template<class real_type>
+ButcherTableau<real_type> sanchez_3_3()
+{
+    real_type a0 = 1.351207191959658;
+    real_type b[3] = {a0,a0,1.-2.*a0};
+    real_type a[3*3] = {
+        b[0]/2.,0,0,
+        b[0], b[1]/2., 0.,
+        b[0], b[1], b[2]/2.};
+    real_type c[3] = {b[0]/2.,b[0]+b[1]/2., b[0]+b[1]+b[2]/2.};
+    return ButcherTableau<real_type>(3,4,a,b,c);
+}
+template<class real_type>
+ButcherTableau<real_type> sanchez_3_4()
+{
+    real_type a0 = 1.351207191959658;
+    real_type b[3] = {a0,1-2.*a0,a0};
+    real_type a[3*3] = {
+        b[0]/2.,0,0,
+        b[0], b[1]/2., 0.,
+        b[0], b[1], b[2]/2.};
+    real_type c[3] = {b[0]/2.,b[0]+b[1]/2., b[0]+b[1]+b[2]/2.};
+    return ButcherTableau<real_type>(3,4,a,b,c);
+
+}
+template<class real_type>
+ButcherTableau<real_type> sanchez_6_5()
+{
+    real_type b[6] = {0.5080048194000274, 1.360107162294827,
+        2.0192933591817224, 0.5685658926458251, -1.4598520495864393,
+        -1.9961191839359627 };
+    real_type a[6*6];
+    real_type c[6] = {0,0,0,0,0,0};
+    for( unsigned i=0; i<6; i++)
+        for( unsigned k=0; k<6; k++)
+        {
+            if( k==i)
+                a[i*6+k] = b[k]/2.;
+            else if( k<i)
+                a[i*6+k] = b[k];
+            else
+                a[i*6+k] = 0.;
+            c[i]+=a[i*6+k];
+        }
+    return ButcherTableau<real_type>(6,5,a,b,c);
+}
+template<class real_type>
+ButcherTableau<real_type> sanchez_7_6()
+{
+    real_type b[7] = {7.8451361047755652e-01, 2.3557321335935860e-01,
+        -1.1776799841788705, 1.3151863206839107, -1.1776799841788705,
+        2.3557321335935860e-01, 7.8451361047755652e-01 };
+    real_type a[7*7];
+    real_type c[7] = {0,0,0,0,0,0,0};
+    for( unsigned i=0; i<7; i++)
+        for( unsigned k=0; k<7; k++)
+        {
+            if( k==i)
+                a[i*7+k] = b[k]/2.;
+            else if( k<i)
+                a[i*7+k] = b[k];
+            else
+                a[i*7+k] = 0.;
+            c[i]+=a[i*7+k];
+        }
+    return ButcherTableau<real_type>(7,6,a,b,c);
+}
+template<class real_type>
+ButcherTableau<real_type> sdirk_4_2_3()
+{
+    real_type data[] = {
+        1./4. , 1./4. , 0 , 0 , 0 ,
+  11./28. , 1./7. , 1./4. , 0 , 0 ,
+  1./3. , 61./144. , -49./144. , 1./4. , 0 ,
+  1. , 0. , 0. , 3./4. , 1./4. ,
+  3 , 0. , 0. , 3./4. , 1./4. ,
+  2 , -61./600., 49/600., 79./100. , 23./100.
+    };
+    return ButcherTableau<real_type>( 4, data);
+}
+
 template<class real_type>
 ButcherTableau<real_type> cavaglieri_imp_4_2_3()
 {
@@ -1095,6 +1177,7 @@ ButcherTableau<real_type> sdirk_5_3_4()
 template<class real_type>
 ButcherTableau<real_type> kvaerno_5_3_4()
 {
+    //Anne Kvaernoe
     real_type data[] = {
         0 , 0 , 0 , 0 , 0 , 0 ,
   0.871733043 , 0.4358665215  , 0.4358665215  , 0 , 0 , 0 ,
@@ -1124,6 +1207,7 @@ ButcherTableau<real_type> ark436l2sa_dirk_6_3_4()
 template<class real_type>
 ButcherTableau<real_type> kvaerno_7_4_5()
 {
+    //Anne Kvaernoe
     real_type data[] = {
         0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,
   0.52 , 0.26 , 0.26 , 0 , 0 , 0 , 0 , 0 ,
@@ -1232,7 +1316,7 @@ ShuOsherTableau<real_type> ssprk_5_4()
 * @brief Identifiers for Butcher Tableaus
 *
 * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
-* as NAME-S-P-Q or NAME-S-Q, where
+* as **NAME-S-P-Q** or **NAME-S-Q**, where
 *  - NAME is the author or name of the method
 *  - S is the number of stages in the method
 *  - P is the global order of the embedding
@@ -1276,16 +1360,21 @@ enum tableau_identifier{
     CAVAGLIERI_IMPLICIT_3_1_2, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a>
     BILLINGTON_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
     TRBDF2_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
+    SANCHEZ_3_3,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-3-3</a>
     KVAERNO_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
+    SDIRK_4_2_3,//!< <a href="https://doi.org/10.1016/S0168-9274(01)00142-8">Cameron2002</a>
     CAVAGLIERI_IMPLICIT_4_2_3, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (implicit part)
     ARK324L2SA_DIRK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
+    SANCHEZ_3_4,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-3-4</a>
     CASH_5_2_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
     CASH_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
     SDIRK_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a>
     KVAERNO_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
     ARK436L2SA_DIRK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
     KVAERNO_7_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
+    SANCHEZ_6_5,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-6-5</a>
     ARK548L2SA_DIRK_8_4_5,//!< <a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (implicit part)
+    SANCHEZ_7_6,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-7-6</a>
     // SSP RK tableaus
     SSPRK_2_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
     SSPRK_3_2, //!< <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK</a> "Shu-Osher-Form"
@@ -1333,7 +1422,12 @@ static std::unordered_map<std::string, enum tableau_identifier> str2id{
     {"Cavaglieri-3-1-2 (implicit)", CAVAGLIERI_IMPLICIT_3_1_2},
     {"Billington-3-3-2", BILLINGTON_3_3_2},
     {"TRBDF2-3-3-2", TRBDF2_3_3_2},
+    {"Sanchez-3-3", SANCHEZ_3_3},
+    {"Sanchez-3-4", SANCHEZ_3_4},
+    {"Sanchez-6-5", SANCHEZ_6_5},
+    {"Sanchez-7-6", SANCHEZ_7_6},
     {"Kvaerno-4-2-3", KVAERNO_4_2_3},
+    {"SDIRK-4-2-3", SDIRK_4_2_3},
     {"Cavaglieri-4-2-3 (implicit)", CAVAGLIERI_IMPLICIT_4_2_3},
     {"ARK-4-2-3 (implicit)", ARK324L2SA_DIRK_4_2_3},
     {"Cash-5-2-4", CASH_5_2_4},
@@ -1457,6 +1551,8 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::trbdf2_3_3_2<real_type>();
         case KVAERNO_4_2_3:
             return dg::tableau::kvaerno_4_2_3<real_type>();
+        case SDIRK_4_2_3:
+            return dg::tableau::sdirk_4_2_3<real_type>();
         case CAVAGLIERI_IMPLICIT_4_2_3:
             return dg::tableau::cavaglieri_imp_4_2_3<real_type>();
         case ARK324L2SA_DIRK_4_2_3:
@@ -1475,6 +1571,14 @@ ButcherTableau<real_type> tableau( enum tableau_identifier id)
             return dg::tableau::kvaerno_7_4_5<real_type>();
         case ARK548L2SA_DIRK_8_4_5:
             return dg::tableau::ark548l2sa_dirk_8_4_5<real_type>();
+        case SANCHEZ_3_3:
+            return dg::tableau::sanchez_3_3<real_type>();
+        case SANCHEZ_3_4:
+            return dg::tableau::sanchez_3_4<real_type>();
+        case SANCHEZ_6_5:
+            return dg::tableau::sanchez_6_5<real_type>();
+        case SANCHEZ_7_6:
+            return dg::tableau::sanchez_7_6<real_type>();
         default:
             return ButcherTableau<real_type>(shuosher_tableau<real_type>(id));
     }
@@ -1497,6 +1601,13 @@ ButcherTableau<real_type> tableau( std::string name)
 ///@endcond
 
 /*! @class hide_explicit_butcher_tableaus
+ *
+ * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+ * as **NAME-S-P-Q** or **NAME-S-Q**, where
+ *  - NAME is the author or name of the method
+ *  - S is the number of stages in the method
+ *  - P is the global order of the embedding
+ *  - Q is the global order of the method
  *
  *    Name  | Identifier | Description
  *   -------|------------| -----------
@@ -1535,26 +1646,44 @@ ButcherTableau<real_type> tableau( std::string name)
 
 /*! @class hide_implicit_butcher_tableaus
  *
+ * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+ * as **NAME-S-P-Q** or **NAME-S-Q**, where
+ *  - NAME is the author or name of the method
+ *  - S is the number of stages in the method
+ *  - P is the global order of the embedding
+ *  - Q is the global order of the method
+ *
  *    Name  | Identifier | Description
  *   -------|------------| -----------
- *   Euler (implicit)     | dg::IMPLICIT_EULER_1_1     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">backward Euler</a>
- *   Midpoint (implicit)     | dg::IMPLICIT_MIDPOINT_1_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">implicit Midpoint</a>
- *   Trapezoidal-2-2     | dg::TRAPEZOIDAL_2_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a>
- *   SDIRK-2-1-2          | dg::SDIRK_2_1_2            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a>
- *   Cavaglieri-3-1-2 (implicit) | dg::CAVAGLIERI_IMPLICIT_3_1_2 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> IMEXRKCB2 scheme
- *   Billington-3-3-2     | dg::BILLINGTON_3_3_2       |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
- *   TRBDF2-3-3-2         | dg::TRBDF2_3_3_2           |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
- *   Kvaerno-4-2-3        | dg::KVAERNO_4_2_3          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
- *   Cavaglieri-4-2-3 (implicit) | dg::CAVAGLIERI_IMPLICIT_4_2_3 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (implicit part)
- *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
- *   Cash-5-2-4           | dg::CASH_5_2_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
- *   Cash-5-3-4           | dg::CASH_5_3_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
- *   SDIRK-5-3-4          | dg::SDIRK_5_3_4            |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a>
- *   Kvaerno-5-3-4        | dg::KVAERNO_5_3_4          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
- *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
- *   Kvaerno-7-4-5        | dg::KVAERNO_7_4_5          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
- *   ARK-8-4-5 (implicit)   | dg::ARK548L2SA_DIRK_8_4_5   |<a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (implicit part)
+ *   Euler (implicit)     | dg::IMPLICIT_EULER_1_1     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">backward Euler</a> \f$a_{11} = 1\f$
+ *   Midpoint (implicit)     | dg::IMPLICIT_MIDPOINT_1_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">implicit Midpoint</a> \f$ a_{11} = 0.5 \f$
+ *   Trapezoidal-2-2     | dg::TRAPEZOIDAL_2_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a> \f$ a_{11} = 0\ a_{22} = 0.5 \f$
+ *   SDIRK-2-1-2          | dg::SDIRK_2_1_2            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a> \f$ a_{ii} = 0.29 \f$
+ *   Cavaglieri-3-1-2 (implicit) | dg::CAVAGLIERI_IMPLICIT_3_1_2 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> IMEXRKCB2 scheme \f$ a_{11} = 0 \f$
+ *   Billington-3-3-2     | dg::BILLINGTON_3_3_2       |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a> \f$ a_{ii} = 0.29\f$
+ *   TRBDF2-3-3-2         | dg::TRBDF2_3_3_2           |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>  \f$ a_{11} = 0\f$
+ *   Sanchez-3-3        | dg::SANCHEZ_3_3          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
+ *   Kvaerno-4-2-3        | dg::KVAERNO_4_2_3          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>  \f$ a_{11} = 0\ a_{ii} = 0.44 \f$
+ *   SDIRK-4-2-3        | dg::SDIRK_4_2_3          |  <a href="https://doi.org/10.1016/S0168-9274(01)00142-8">Cameron2002</a> \f$ a_{ii}=0.25\f$
+ *   Cavaglieri-4-2-3 (implicit) | dg::CAVAGLIERI_IMPLICIT_4_2_3 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (implicit part) \f$ a_{11} = 0 \f$
+ *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a> \f$ a_{11} = 0\ a_{ii} = 0.44 \f$
+ *   Sanchez-3-4        | dg::SANCHEZ_3_4          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
+ *   Cash-5-2-4           | dg::CASH_5_2_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a> \f$ a_{ii} = 0.44 \f$
+ *   Cash-5-3-4           | dg::CASH_5_3_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a> \f$ a_{ii} = 0.44 \f$
+ *   SDIRK-5-3-4          | dg::SDIRK_5_3_4            |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a> \f$ a_{ii} = 0.25\f$
+ *   Kvaerno-5-3-4        | dg::KVAERNO_5_3_4          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a> \f$ a_{11} = 0\ a_{ii} = 0.44\f$
+ *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a> \f$ a_{11} = 0\ a_{ii} = 0.25\f$
+ *   Sanchez-6-5        | dg::SANCHEZ_6_5          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
+ *   Kvaerno-7-4-5        | dg::KVAERNO_7_4_5          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a> \f$ a_{11} = 0 \ a_{ii} = 0.26\f$
+ *   ARK-8-4-5 (implicit)   | dg::ARK548L2SA_DIRK_8_4_5   |<a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (implicit part) \f$ a_{11} = 0\ a_{ii} = 0.22\f$
+ *   Sanchez-7-6        | dg::SANCHEZ_7_6          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
  *
+ * @note Schemes marked with \f$ a_{11} = 0\f$ call the \c implicit_rhs instead
+ * of a \c solve once per step (the first stage is explicit, typically named
+ * EDIRK), all others never call \c implicit_rhs. Schemes marked with
+ * \f$a_{ii} = ...\f$ (lower is better) have all diagonal elements equal
+ * (typically named SDIRK for "singly"). Schemes marked with both have equal
+ * elements only for i>1 (named ESDIRK).
 */
 
 /*! @brief Convert identifiers to their corresponding \c dg::ButcherTableau

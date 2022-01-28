@@ -352,7 +352,7 @@ MultistepTableau<real_type> ssp(unsigned steps)
 * @brief Identifiers for Multistep Tableaus
 *
 * We follow the naming convention
-* as NAME_S_Q
+* as **NAME-S-Q**
 *  - NAME is the author or name of the method
 *  - S is the number of steps in the method
 *  - Q is the global order of the method
@@ -576,6 +576,12 @@ MultistepTableau<real_type> lmstableau( std::string name)
 ///@endcond
 /*! @class hide_imex_multistep_tableaus
  *
+ * We follow the naming convention
+ * as **NAME-S-Q**
+ *  - NAME is the author or name of the method
+ *  - S is the number of steps in the method
+ *  - Q is the global order of the method
+ *
  *    Name  | Identifier | Description
  *   -------|------------| -----------
  *   ImEx-Euler-1-1         | dg::IMEX_EULER_1_1 | Explicit Euler combined with Implicit Euler
@@ -591,6 +597,12 @@ MultistepTableau<real_type> lmstableau( std::string name)
  */
 
 /*! @class hide_explicit_multistep_tableaus
+ *
+ * We follow the naming convention
+ * as **NAME-S-Q**
+ *  - NAME is the author or name of the method
+ *  - S is the number of steps in the method
+ *  - Q is the global order of the method
 
  *    Name  | Identifier | Description
  *   -------|------------| -----------
@@ -606,6 +618,12 @@ MultistepTableau<real_type> lmstableau( std::string name)
  */
 
 /*! @class hide_implicit_multistep_tableaus
+ *
+ * We follow the naming convention
+ * as **NAME-S-Q**
+ *  - NAME is the author or name of the method
+ *  - S is the number of steps in the method
+ *  - Q is the global order of the method
  *
  *    Name  | Identifier | Description
  *   -------|------------| -----------

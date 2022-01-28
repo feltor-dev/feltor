@@ -208,7 +208,7 @@ struct ERKStep
         step ( rhs, t0, u0, t1, u1, dt, delta, true);
     }
     /**
-    * @brief Advance one step ignoring error estimate
+    * @brief Advance one step ignoring error estimate and embedded method
     *
     * @copydoc hide_explicit_rhs
     * @param rhs right hand side subroutine
@@ -319,13 +319,10 @@ void ERKStep<ContainerType>::step( ExplicitRHS& f, value_type t0, const Containe
  *
  * Currently, the possible Butcher Tableaus for a fully implicit-explicit scheme
  * are the "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.
- * A mass matrix \c M has to be manually included in the evaluation of the
- * explicit and implicit parts.
- * @note A mass matrix in the implicit solve should be multiplied, else it entails a
- * nested implicit equation where in every outer iteration the mass matrix has
- * to be solved: Mu + a I = Mr instead of u + aM^{-1} I = r
- * @note All currently possible schemes enjoy the FSAL qualitiy in the sense that
- * only \c s-1 implicit solves are needed per step; some methods additionally do require only \c s-1 evaluations of the implicit part per step
+ * @note All currently possible schemes enjoy the FSAL qualitiy in the sense
+ * that only \c s-1 implicit solves and \c 1 evaluation of the implicit part
+ * are needed per step; the Cavaglieri methods do not require
+ * evaluations of the implicit part at all
  * @attention When you use the ARKStep in combination with the Adaptive time
  * step algorithm pay attention to solve the implicit part with sufficient
  * accuracy. Else, the error propagates into the time controller, which will
@@ -518,11 +515,6 @@ void ARKStep<ContainerType>::step( const std::tuple<Explicit,Implicit,Solver>& o
  \end{align}
 \f]
  *
- * A mass matrix \c M has to be manually included in the evaluation of the
- * implicit part.
- * @note A mass matrix in the implicit solve should be multiplied, else it entails a
- * nested implicit equation where in every outer iteration the mass matrix has
- * to be solved: Mu + a I = Mr instead of u + aM^{-1} I = r
  * You can provide your own coefficients or use one of the methods
  * in the following table:
  * @copydoc hide_implicit_butcher_tableaus
@@ -532,6 +524,7 @@ void ARKStep<ContainerType>::step( const std::tuple<Explicit,Implicit,Solver>& o
 template<class ContainerType>
 struct DIRKStep
 {
+    //MW Dirk methods cannot have stage order greater than 1
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@copydoc RungeKutta::RungeKutta()
@@ -571,7 +564,7 @@ struct DIRKStep
     const ContainerType& copyable()const{ return m_kI[0];}
 
     /**
-    * @brief Advance one step
+    * @brief Advance one step with error estimate
     *
     * @copydetails step(const std::tuple<ImplicitRHS,Solver>&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
     * @param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
@@ -584,12 +577,14 @@ struct DIRKStep
         step( ode, t0, u0, t1, u1, dt, delta, true);
     }
     /**
-    * @brief Advance one step
+    * @brief Advance one step ignoring error estimate and embedded method
     *
     * @copydoc hide_implicit_rhs
     * @copydoc hide_solver
-    * @param ode the <right hand side, solver for the rhs> functor.
-    * Typically \c std::tie(rhs,solver)
+    * @param ode the <right hand side, solver for the rhs> functors.
+    * Typically \c std::tie(implicit_rhs, solver)
+    * @attention Contrary to EDIRK methods DIRK and SDIRK methods (all diagonal
+    * elements non-zero) never call \c implicit_rhs
     * @param t0 start time
     * @param u0 value at \c t0
     * @param t1 (write only) end time ( equals \c t0+dt on return

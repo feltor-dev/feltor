@@ -120,6 +120,7 @@ int main()
         "Cavaglieri-3-1-2 (implicit)",
         "Billington-3-3-2",
         "TRBDF2-3-3-2",
+        "SDIRK-4-2-3",
         "Kvaerno-4-2-3",
         "Cavaglieri-4-2-3 (implicit)",
         "ARK-4-2-3 (implicit)",

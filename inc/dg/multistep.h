@@ -205,10 +205,9 @@ struct ImExMultistep
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
      * @note the implementation is such that on return the last call is the
-     * explicit part \c ex at \c (t0,u0).  This is useful if \c ex holds
-     * state, which is then updated to that timestep and/or if \c im changes
-     * the state of \c ex
-     * This might be interesting if the call to \c ex changes its state.
+     * explicit part \c explicit_part at \c (t0,u0).  This is useful if
+     * \c explicit_part holds state, which is then updated to that timestep
+     * and/or if \c implicit_rhs changes the state of \c explicit_rhs
      */
     template< class ExplicitRHS, class ImplicitRHS, class Solver>
     void init( const std::tuple<ExplicitRHS, ImplicitRHS, Solver>& ode,
@@ -224,15 +223,16 @@ struct ImExMultistep
     * Typically \c std::tie(explicit_rhs, implicit_rhs, solver)
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
-    * @note the implementation is such that on return the last call is the
-    * explicit part \c ex at the new (t,u).  This is useful if \c ex holds
-    * state, which is then updated to the new timestep and/or if \c im changes
-    * the state of \c ex
-    * @note after a \c solve, we call both \c im (if the tableau necessitates it)
-    * and \c ex on the solution
+    * @note After a \c solve, we call \c explicit_rhs at the new (t,u)
+    * which is the last call before return.
+    * This is useful if \c explicit_rhs holds state, which is then updated
+    * to the new timestep and/or if \c solver changes the state of \c explicit_rhs
     * @attention The first few steps after the call to the init function are
     * performed with a semi-implicit Runge-Kutta method to initialize the
     * multistepper
+    * @note The only time the \c implicit_rhs functor is called is during the
+    * initialization phase (the first few steps after the call to the init
+    * function)
     */
     template< class ExplicitRHS, class ImplicitRHS, class Solver>
     void step( const std::tuple<ExplicitRHS, ImplicitRHS, Solver>& ode,
@@ -307,7 +307,7 @@ void ImExMultistep<ContainerType>::step( const std::tuple<RHS, Diffusion, Solver
     blas1::copy( u, m_u[0]); //store result
     if( 0 < m_im.size())
         dg::blas1::axpby( 1./alpha, u, -1./alpha, m_tmp, m_im[0]);
-    std::get<0>(ode)(m_tu, m_u[0], m_ex[0]); //call f on new point (AFTER diff!)
+    std::get<0>(ode)(m_tu, m_u[0], m_ex[0]); //call f on new point
 }
 ///@endcond
 
@@ -387,12 +387,15 @@ struct ImplicitMultistep
      * This routine has to be called before the first timestep is made.
      * @copydoc hide_explicit_rhs
      * @copydoc hide_solver
-     * @param ode The rhs functor and solver. Typically
-     * \c std::tie(implicit_rhs,solver)
+     * @param ode the <right hand side, solver for the rhs> functors.
+     * Typically \c std::tie(implicit_rhs, solver)
+     * @attention \c solver is not actually called only \c implicit_rhs
+     * and only if the rhs actually needs to be stored
+     * (The \c dg::BDF_X_X tableaus in fact completely avoid calling
+     * \c implicit_rhs)
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note the implementation is such that on return the last call to the explicit part \c ex is at \c (t0,u0).
      * This might be interesting if the call to \c ex changes its state.
      */
     template<class ImplicitRHS, class Solver>
@@ -403,13 +406,19 @@ struct ImplicitMultistep
     *
     * @copydoc hide_explicit_rhs
     * @copydoc hide_solver
-    * @param ode The rhs functor and solver. Typically
-    * \c std::tie(implicit_rhs,solver)
+    * @param ode the <right hand side, solver for the rhs> functors.
+    * Typically \c std::tie(implicit_rhs, solver)
+    * @attention the \c implicit_rhs functor is only called during the
+    * initialization phase (the first few steps after the call to the init
+    * function) but only if the rhs actually needs to be stored
+    * (The \c dg::BDF_X_X tableaus in fact completely avoid calling
+    * \c implicit_rhs)
     * @param t (write-only), contains timestep corresponding to \c u on return
     * @param u (write-only), contains next step of time-integration on return
-    * @note the implementation is such that on return the last call to the explicit part \c ex is at the new \c (t,u).
     * This might be interesting if the call to \c ex changes its state.
-    * @attention The first few steps after the call to the init function are performed with a Runge-Kutta method (of the same order) to initialize the multistepper
+    * @note The first few steps after the call to the init function are
+    * performed with a DIRK method (of the same order) to initialize the
+    * multistepper
     */
     template<class ImplicitRHS, class Solver>
     void step(const std::tuple<ImplicitRHS, Solver>& ode, value_type& t, container_type& u);
@@ -446,12 +455,12 @@ void ImplicitMultistep<ContainerType>::step(const std::tuple<ImplicitRHS, Solver
     {
         std::map<unsigned, enum tableau_identifier> order2method{
             {1, IMPLICIT_EULER_1_1},
-            {2, TRAPEZOIDAL_2_2},
+            {2, SDIRK_2_1_2},
             {3, KVAERNO_4_2_3},
             {4, SDIRK_5_3_4},
-            {5, KVAERNO_7_4_5},
-            {6, KVAERNO_7_4_5},
-            {7, KVAERNO_7_4_5}
+            {5, SANCHEZ_6_5},
+            {6, SANCHEZ_7_6},
+            {7, SANCHEZ_7_6}
         };
         ImplicitRungeKutta<ContainerType> dirk(
                 order2method.at(m_t.order()), u);

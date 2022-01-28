@@ -143,15 +143,20 @@ int main()
         "Cavaglieri-3-1-2 (implicit)",
         "Billington-3-3-2",
         "TRBDF2-3-3-2",
+        "Sanchez-3-3",
         "Kvaerno-4-2-3",
+        "SDIRK-4-2-3",
         "Cavaglieri-4-2-3 (implicit)",
         "ARK-4-2-3 (implicit)",
+        "Sanchez-3-4",
         "Cash-5-2-4",
         "Cash-5-3-4",
         "SDIRK-5-3-4",
         "ARK-6-3-4 (implicit)",
+        "Sanchez-6-5",
         "Kvaerno-7-4-5",
         "ARK-8-4-5 (implicit)",
+        "Sanchez-7-6",
     };
     for( auto name : implicit_names)
     {

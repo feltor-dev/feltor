@@ -178,14 +178,17 @@ struct NestedGrids
  * .
  * This algorithm is equivalent to a multigrid V-cycle with zero down-grid smoothing
  * and infinite (i.e. solving) upgrid smoothing.
- * @param ops Index 0 is the Operator \c f on the original grid,
- *  1 on the half grid, 2 on the quarter grid, ...
+ * @param ops Operators \c f on the various grids, i.e. \c dg::apply( ops[0], x, b)
+ *  computes b = f(x). Index 0 is on the original grid, 1 on the half
+ *  grid, 2 on the quarter grid, ...
  * @param x (read/write) contains initial guess on input and the solution on
  *  output (if the initial guess is good enough the solve may return
  *  immediately)
  * @param b The right hand side
- * @param inverse_ops a vector of inverse operators, which do the solves
- *  (usually lambda functions combining operators and solvers)
+ * @param inverse_ops a vector of inverse operators \c f^{-1},
+ *  i.e. \c dg::apply( inverse_ops[0], b, x) computes \f$ x = f^{-1}(b)\f$
+ *  (usually lambda functions combining operators and solvers). On call \c x
+ *  contains the initial guess and should contain the solution on return.
  * @param nested_grids provides projection and interapolation operations and workspace
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
@@ -255,7 +258,7 @@ void nested_iterations(
  * - Smooth \f$ f(x^h) = b^h\f$ with initial guess \f$ x_0^h\f$, overwrite \f$ x_0^h\f$
  * .
  * This algorithm forms the core of multigrid algorithms.
- * @param ops a container (usually \c std::vector of operators)
+ * @param ops
      Index 0 is the Operator on the original grid, 1 on the half grid, 2 on the
      quarter grid, ...
  * @param inverse_ops_down a vector of inverse, smoothing operators (usually
@@ -339,7 +342,7 @@ void multigrid_cycle(
 /**
  * @brief EXPERIMENTAL One Full multigrid cycle
  *
- * @param ops Index 0 is the \c MatrixType on the original grid, 1 on the half
+ * @param ops Index 0 is the \c f on the original grid, 1 on the half
  *  grid, 2 on the quarter grid, ...
  * @param x (read/write) contains initial guess on input and the solution on output
  * @param b The right hand side
