@@ -341,7 +341,6 @@ unsigned LGMRES< ContainerType>::solve( Matrix&& A, ContainerType0& x, const Con
         restartCycle ++;
     // Go through the requisite number of restarts.
     } while( (restartCycle < m_maxRestarts) && (rho > tol));
-    std::cout << "rho "<<rho<< " tol "<<tol<<"\n";
     if( rho > tol)
     {
         if( m_throw_on_fail)
