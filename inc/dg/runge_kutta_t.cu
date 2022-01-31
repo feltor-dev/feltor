@@ -164,9 +164,17 @@ int main()
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0,
                 omega_drive);
         dg::ImplicitRungeKutta<std::array<double,2>> irk( name, u);
-        double t=t_start;
-        for( unsigned i=0; i<N_im; i++)
-            irk.step( std::tie(rhs, solve), t, u1, t, u1, dt_im); //step inplace
+        dg::SinglestepTimeloop<std::array<double,2>> odeint( irk,
+                std::tie(rhs,solve), dt_im);
+        // Test integrate at least
+        unsigned maxout = 3;
+        double deltaT = (t_end-t_start)/(double)maxout;
+        double time = t_start;
+        for( unsigned u=1; u<=maxout; u++)
+        {
+            odeint.integrate( time, u1, t_start + u*deltaT, u1,
+                u<maxout ? dg::to::at_least :  dg::to::exact);
+        }
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
