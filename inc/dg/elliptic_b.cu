@@ -107,7 +107,7 @@ int main()
     dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split(
-            grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(*grid_perp, dg::centered));
+            grid.Nz(), {*grid_perp, dg::centered});
     // create split  vectors and solve
     std::vector<dg::View<dg::DVec>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
@@ -120,7 +120,6 @@ int main()
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         laplace_split[i].set_chi( chi_split[i]);
-        dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
         number[i] = pcg.solve( laplace_split[i], x_split[i], b_split[i], 1., w2d, eps);
     }
     t.toc();

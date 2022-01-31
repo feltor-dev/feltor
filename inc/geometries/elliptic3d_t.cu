@@ -19,14 +19,14 @@ int main()
     dg::Timer t;
     unsigned n, Nx, Ny, Nz;
     std::cout << "# Test the 3d elliptic inversion with projection and alignment tensors!\n";
-    std::cout << "# Type n, Nx, Ny and Nz\n";
+    std::cout << "# Type n (nx=ny=nz=n), Nx, Ny and Nz\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     double eps;
     std::cout << "# Type epsilon! \n";
     std::cin >> eps;
-    const dg::CylindricalGrid3d g3d( R_0-a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
+    //const dg::CylindricalGrid3d g3d( R_0-a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
+    const dg::CylindricalGrid3d g3d( {R_0-a, R_0+a, n, Nx, dg::DIR}, {-a, a, n, Ny, dg::DIR}, {0, 2.*M_PI, n, Nz, dg::PER});
     dg::DVec w3d = dg::create::volume( g3d);
-    dg::DVec v3d = dg::create::inv_volume( g3d);
 
     dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> elliptic(g3d, dg::centered);
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField( R_0, I_0);
@@ -35,9 +35,9 @@ int main()
     elliptic.set_chi( bb);
 
     auto test = [&](const auto& x, auto& y){
-                //  y = ( 1 - D) x
+                //  y = ( 1 - Delta) x
                 dg::blas2::symv( elliptic, x, y);
-                dg::blas1::axpby( 1., x, -1., y, y);
+                dg::blas1::axpby( 1., x, +1., y, y);
             };
     dg::PCG< dg::DVec > pcg( w3d, n*n*Nx*Ny);
 

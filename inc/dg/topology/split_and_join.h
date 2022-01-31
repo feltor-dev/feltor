@@ -29,7 +29,7 @@ namespace dg
 template<class SharedContainer, class real_type>
 void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const aRealTopology3d<real_type>& grid)
 {
-    assert( out.size() == grid.Nz());
+    assert( out.size() == grid.nz()*grid.Nz());
     unsigned size2d=grid.nx()*grid.ny()*grid.Nx()*grid.Ny();
     for(unsigned i=0; i<grid.nz()*grid.Nz(); i++)
         out[i].construct( thrust::raw_pointer_cast(in.data()) + i*size2d, size2d);
@@ -115,7 +115,7 @@ void split( MPIContainer& in, std::vector<get_mpi_view_type<MPIContainer> >&
 * may take longer due to the many calls to MPI group creation functions
 * @param in contiguous 3d vector (must be of size \c grid.size())
 * @param grid provide dimensions in 3rd and first two dimensions
-* @return \c out contains \c grid.Nz() 2d vector views of 2d size on output
+* @return \c out contains \c grid.nz()*grid.Nz() 2d vector views of 2d size on output
 * @note two seperately split vectors have congruent (not identical) MPI_Communicators Note here the MPI concept of congruent (same process group, different contexts) vs. identical (same process group, same context) communicators.
 * @tparam MPIContainer An MPI_Vector of a \c SharedContainer
 */

@@ -413,7 +413,7 @@ class Elliptic3d
      * @param g The Grid; boundary conditions are taken from here
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
-     * the direction of the z derivative is always \c dg::centered
+     * the direction of the z derivative is \c dg::centered if \c nz = 1
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @note chi is assumed the metric per default
@@ -443,12 +443,23 @@ class Elliptic3d
         m_chi_weight_jump = chi_weight_jump;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), m_lefty);
-        dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dg::centered)), m_leftz);
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), m_righty);
-        dg::blas2::transfer( dg::create::dz( g, bcz, dg::centered), m_rightz);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   m_jumpY);
+        if( g.nz() == 1)
+        {
+            dg::blas2::transfer( dg::create::dz( g, bcz, dg::centered), m_rightz);
+            dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dg::centered)), m_leftz);
+            m_addJumpZ = false;
+        }
+        else
+        {
+            dg::blas2::transfer( dg::create::dz( g, bcz, dir), m_rightz);
+            dg::blas2::transfer( dg::create::dz( g, inverse( bcz), inverse(dir)), m_leftz);
+            dg::blas2::transfer( dg::create::jumpZ( g, bcz),   m_jumpZ);
+            m_addJumpZ = true;
+        }
 
         dg::assign( dg::create::volume(g),        m_weights);
         dg::assign( dg::evaluate( dg::one, g),    m_precond);
@@ -547,13 +558,26 @@ class Elliptic3d
             {
                 dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
                 dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
-                dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
-                dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
+                if( m_addJumpZ)
+                {
+                    dg::blas2::symv( m_jfactor, m_jumpZ, x, 0., m_tempz);
+                    dg::tensor::multiply3d(m_sigma, m_chi, m_tempx, m_tempy,
+                            m_tempz, 0., m_tempx, m_tempy, m_tempz);
+                }
+                else
+                    dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy,
+                            0., m_tempx, m_tempy);
+
+                dg::blas1::axpbypgz(1., m_tempx, 1., m_tempy, 1., m_temp);
+                if( m_addJumpZ)
+                    dg::blas1::axpby( 1., m_tempz, 1., m_temp);
             }
             else
             {
                 dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
                 dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+                if( m_addJumpZ)
+                    dg::blas2::symv( m_jfactor, m_jumpZ, x, 1., m_temp);
             }
         }
         dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
@@ -583,13 +607,13 @@ class Elliptic3d
     }
 
     private:
-    Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY;
+    Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY, m_jumpZ;
     Container m_weights, m_precond;
     Container m_tempx, m_tempy, m_tempz, m_temp;
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
-    bool m_multiplyZ = true;
+    bool m_multiplyZ = true, m_addJumpZ = false;
     bool m_chi_weight_jump;
 };
 ///@cond
