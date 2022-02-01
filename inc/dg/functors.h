@@ -1,5 +1,4 @@
 #pragma once
-#include <boost/math/special_functions.hpp>
 
 #include <cmath>
 //! M_PI is non-standard ... so MSVC complains
@@ -94,51 +93,6 @@ struct PLUS
     T operator()( T x)const{ return x + x_;}
     private:
     T x_;
-};
-/**
- * @brief \f$ f(x) = I_0 (x)\f$ with \f$I_0\f$ the zeroth order modified Bessel function
- *
- * @tparam T value type
- */
-template < class T = double>
-struct BESSELI0
-{
-    BESSELI0( ) {}
-    /**
-     * @brief return \f$ f(x) = I_0 (x)\f$ with \f$I_0\f$ the zeroth order modified Bessel function
-     *
-     * @param x x
-     *
-     * @return \f$ I_0 (x)\f$
-     */
-    DG_DEVICE T operator() ( T x) const
-    {
-        return boost::math::cyl_bessel_i(0, x);
-//         return exp(x)*std::cyl_bessel_i(0, x);
-
-    }
-};
-/**
- * @brief \f$ f(x) = \Gamma_0 (x) := I_0 (x) exp(x) \f$ with \f$I_0\f$ the zeroth order modified Bessel function
- *
- * @tparam T value type
- */
-template < class T = double>
-struct GAMMA0
-{
-    GAMMA0( ) {}
-    /**
-     * @brief return \f$ f(x) = I_0 (x) exp(x) \f$ with \f$I_0\f$ the zeroth order modified Bessel function
-     *
-     * @param x x
-     *
-     * @return \f$ \Gamma_0 (x)\f$
-     */
-    DG_DEVICE T operator() ( T x) const
-    {
-        return exp(x)*boost::math::cyl_bessel_i(0, x);
-//         return exp(x)*std::cyl_bessel_i(0, x);
-    }
 };
 ///@brief \f$ f(x) = \exp( x)\f$
 template< class T = double >
@@ -802,7 +756,7 @@ struct Cauchy
  * @brief
  * \f$
    f(x,y) = \begin{cases}
-   Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}} \text{ if } \frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} < 1\\
+   Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} - 1\right)^{-1}} \text{ if } \frac{(x-x_0)^2}{\sigma_x^2} < 1\\
    0 \text{ else}
    \end{cases}
    \f$
@@ -838,7 +792,6 @@ struct CauchyX
     private:
     double x0_, sigmaX_,  amp_;
 };
-
 
 /**
 * @brief
@@ -1479,6 +1432,10 @@ struct IPolynomialHeaviside {
         return 2*x0 - result;
 
     }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
     double x0, a;
     int m_s;
@@ -1517,6 +1474,10 @@ struct DPolynomialHeaviside {
         return (35.*(a+x-x0)*(a+x-x0)*(a+x-x0)*(a-x+x0)*(a-x+x0)*(a-x+x0))
             /(32.*a*a*a * a*a*a*a);
     }
+    DG_DEVICE
+    double operator()( double x, double y)const{ return this->operator()(x);}
+    DG_DEVICE
+    double operator()( double x, double y, double z)const{ return this->operator()(x);}
     private:
     double x0, a;
 };

@@ -17,7 +17,6 @@
 #include "topology/geometry.h"
 #include "blas.h"
 #include "helmholtz.h"
-#include "tensorelliptic.h"
 #include "cg.h"
 #include "bicgstabl.h"
 #include "lgmres.h"
