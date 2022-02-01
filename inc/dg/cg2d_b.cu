@@ -1,10 +1,10 @@
 #include <iostream>
 #include <iomanip>
-#include "backend/timer.h"
 
 #include "pcg.h"
 #include "elliptic.h"
 
+#include "backend/timer.h"
 
 const double lx = M_PI;
 const double ly = 2.*M_PI;

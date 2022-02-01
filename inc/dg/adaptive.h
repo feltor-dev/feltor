@@ -463,17 +463,6 @@ struct EntireDomain
     bool contains( T& t) const { return true;}
 };
 
-/**
- * @brief The domain that contains all points
- * @ingroup time_utils
- */
-struct EntireDomain
-{
-    ///@brief always true
-    template<class T>
-    bool contains( T& t) const { return true;}
-};
-
 ///@addtogroup time
 ///@{
 //

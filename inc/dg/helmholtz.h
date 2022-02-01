@@ -369,8 +369,6 @@ struct Helmholtz2
     value_type alpha_;
 };
 ///@cond
-
-
 template< class G, class M, class V>
 struct TensorTraits< Helmholtz3d<G, M, V> >
 {
