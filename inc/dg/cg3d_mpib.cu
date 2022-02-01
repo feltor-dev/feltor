@@ -5,7 +5,7 @@
 #include <mpi.h>
 
 #include "elliptic.h"
-#include "cg.h"
+#include "pcg.h"
 #include "backend/timer.h"
 #include "backend/mpi_init.h"
 
@@ -42,19 +42,17 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Create Laplacian\n";
     dg::Timer t;
     t.tic();
-    dg::Elliptic<dg::CartesianMPIGrid3d, dg::MDMatrix, dg::MDVec> A ( grid, dg::not_normed);
+    dg::Elliptic<dg::CartesianMPIGrid3d, dg::MDMatrix, dg::MDVec> A ( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny*Nz);
+    dg::PCG< dg::MDVec > pcg( x, n*n*Nx*Ny*Nz);
     if(rank==0)std::cout<<"Evaluate right hand side\n";
     const dg::MDVec solution = dg::evaluate ( fct, grid);
     dg::MDVec b = dg::evaluate ( laplace_fct, grid);
-    //compute W b
-    dg::blas2::symv( w3d, b, b);
 
     t.tic();
-    int number = pcg( A, x, b, v3d, eps);
+    int number = pcg.solve( A, x, b, 1., w3d, eps);
     t.toc();
     if( rank == 0)
     {

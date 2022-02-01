@@ -158,11 +158,6 @@ struct RealGridX1d
      */
     unsigned size() const { return n_*Nx_;}
     /**
-     * @brief the discrete legendre transformation
-     *
-     * @return
-     */
-    /**
      * @brief Display
      *
      * @param os output stream
@@ -181,6 +176,11 @@ struct RealGridX1d
             <<"Boundary conditions in x are: \n"
             <<"    "<<bc2str(bcx_)<<"\n";
     }
+    /**
+     * @brief the discrete legendre transformation
+     *
+     * @return
+     */
     const DLT<real_type>& dlt() const {return dlt_;}
     RealGrid1d<real_type> grid() const{return RealGrid1d<real_type>( x0_, x1_, n_, Nx_, bcx_);}
 

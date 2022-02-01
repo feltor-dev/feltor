@@ -1,11 +1,9 @@
 ###
-##Packages needed on linux for compilation of both doxygen and latex doc
+##Packages needed on linux for compilation of doxygen doc
 ##sudo apt install
 #doxygen
 #libjs-mathjax (for nice mathematical formulas)
 #graphviz (for nice graphical nodes)
-#texlive  (for pdflatex)
-#texlive-latex-extra (for the hitec.cls package)
 ###
 
 all: doc
@@ -34,25 +32,34 @@ geometries.tag:
 		echo "GENERATE_HTML = NO"; \
 		echo "GENERATE_TAGFILE = ../../doc/geometries.tag" ) | doxygen - ;
 
-dg: exblas.tag geometries.tag dg_introduction.pdf
+# needs doxygen >= 1.9.1 (for the sidebar only theme)
+dg: exblas.tag geometries.tag
 	cd ../inc/dg; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/dg"; \
-		echo "HTML_EXTRA_FILES  = ../../doc/related_pages/dg_introduction/dg_introduction.pdf"; \
 		echo "HTML_HEADER = ../../doc/header.html"; \
-		echo "HTML_EXTRA_STYLESHEET = ../../doc/menubar.css";\
+		echo "HTML_FOOTER = ../../doc/footer.html"; \
+		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
 		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html") | doxygen - ;
 
-geometries: dg.tag parallel.pdf hector.pdf
+# MW don't know what these are good for (recommended by doxygen-awesome)
+#echo "HTML_COLORSTYLE_GAMMA = 113";\
+#echo "HTML_COLORSTYLE_HUE = 209";\
+#echo "HTML_COLORSTYLE_SAT = 255";\
+
+geometries: dg.tag
 	cd ../inc/geometries; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/geometries"; \
-		echo "HTML_EXTRA_FILES  = ../../doc/related_pages/parallel/parallel.pdf"; \
-		echo "HTML_EXTRA_FILES += ../../doc/related_pages/hector/hector.pdf"; \
 		echo "HTML_HEADER = ../../doc/header.html"; \
-		echo "HTML_EXTRA_STYLESHEET = ../../doc/menubar.css";\
+		echo "HTML_FOOTER = ../../doc/footer.html"; \
+		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
@@ -62,7 +69,10 @@ file:
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/file"; \
 		echo "HTML_HEADER = ../../doc/header.html"; \
-		echo "HTML_EXTRA_STYLESHEET = ../../doc/menubar.css";\
+		echo "HTML_FOOTER = ../../doc/footer.html"; \
+		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
 		echo ) | doxygen - ;
 
 exblas:
@@ -70,16 +80,12 @@ exblas:
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../../../doc/exblas"; \
 		echo "HTML_HEADER = ../../../../doc/header.html"; \
-		echo "HTML_EXTRA_STYLESHEET = ../../../../doc/menubar.css";\
+		echo "HTML_FOOTER = ../../../../doc/footer.html"; \
+		echo "GENERATE_TREEVIEW = YES"; \
+		echo "HTML_EXTRA_STYLESHEET = ../../../../doc/doxygen-awesome.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/menubar.css";\
 		echo ) | doxygen - ;
-
-
-%.pdf:
-	cd related_pages/$*; \
-		pdflatex $*.tex; \
-		bibtex $*.aux; \
-		pdflatex $*.tex; \
-		pdflatex $*.tex;
 
 
 doc: dg geometries file exblas
@@ -89,7 +95,7 @@ doc: dg geometries file exblas
 	#or on Windows: firefox dg/html/modules.html                              #
 	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
-full_doc: pdf doc
+full_doc: doc
 
 clean:
 	rm -rf dg file geometries exblas dg.tag file.tag geometries.tag exblas.tag index.html

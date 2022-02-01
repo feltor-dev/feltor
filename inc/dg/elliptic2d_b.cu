@@ -8,6 +8,9 @@
 #include "blas.h"
 #include "elliptic.h"
 #include "multigrid.h"
+#include "lgmres.h"
+#include "bicgstabl.h"
+#include "andersonacc.h"
 
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
@@ -18,7 +21,8 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
 double initial( double x, double y) {return 0.;}
-double amp = 0.9999;
+//double amp = 0.9999; // LGMRES has problems here
+double amp = 0.9;
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
 //double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
@@ -43,13 +47,12 @@ int main()
 // 	eps = 1e-6;
 // 	jfactor = 1;
 
-	std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
-    std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
-    std::cin >> eps >> jfactor;
-    bool jump_weight;
-    std::cout << "Jump weighting on or off? Type 1 for true or 0 for false: \n";
-    std::cin >> jump_weight;
-
+    //std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
+    //std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
+    //std::cin >> eps >> jfactor;
+    bool jump_weight = false;
+    //std::cout << "Jump weighting on or off? Type 1 for true or 0 for false (default): \n";
+    //std::cin >> jump_weight;
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
 
@@ -62,7 +65,6 @@ int main()
     dg::DVec chi =  dg::evaluate( pol, grid);
     dg::DVec chi_inv(chi);
     dg::blas1::transform( chi, chi_inv, dg::INVERT<double>());
-    dg::blas1::pointwiseDot( chi_inv, v2d, chi_inv);
     dg::DVec temp = x;
     //compute error
     const dg::DVec solution = dg::evaluate( sol, grid);
@@ -93,7 +95,7 @@ int main()
 
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, jfactor);
+        multi_pol[u].construct( multigrid.grid(u), dg::centered, jfactor);
         //this tests if elliptic can recover from NaN in the preconditioner
         multi_pol[u].set_chi(0.);
         // here we test if we can set the tensor part in elliptic
@@ -109,7 +111,7 @@ int main()
     const dg::DVec b =    dg::evaluate( rhs,     grid);
     dg::DVec x       =    dg::evaluate( initial, grid);
     t.tic();
-    std::vector<unsigned> number = multigrid.direct_solve(multi_pol, x, b, eps);
+    std::vector<unsigned> number = multigrid.direct_solve(multi_pol, x, b, {eps, 1.5*eps, 1.5*eps});
     t.toc();
     std::cout << "Solution took "<< t.diff() <<"s\n";
     for( unsigned u=0; u<number.size(); u++)
@@ -136,24 +138,22 @@ int main()
     std::cout << "L2 Norm of relative error in derivative is\n "<<std::setprecision(16)<< sqrt( err/norm_der)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
 
-    
-
-    
+    }
     {
     std::cout << "Forward Elliptic\n";
     x = temp;
-    //![invert]
-    //create an Elliptic object without volume form (not normed)
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
+    //![pcg]
+    //create an Elliptic object
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::centered, jfactor);
 
     //Set the chi function (chi is a dg::DVec of size grid.size())
     pol_forward.set_chi( chi);
 
-    //construct an invert object
-    dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
+    //construct an pcg object
+    dg::PCG<dg::DVec > pcg( x, n*n*Nx*Ny);
 
     //invert the elliptic equation
-    invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
+    pcg.solve( pol_forward, x, b, chi_inv, w2d, eps);
 
     //compute the error (solution contains analytic solution
     dg::blas1::axpby( 1.,x,-1., solution, error);
@@ -163,24 +163,65 @@ int main()
 
     //output the relative error
     std::cout << " "<<sqrt( err/norm) << "\n";
-    //![invert]
+    //![pcg]
     std::cout << "Compute variation in forward Elliptic\n";
     pol_forward.variation( 1., chi, x, 0., error);
     dg::blas1::axpby( 1., variatio, -1., error);
     err = dg::blas2::dot( w2d, error);
     const double norm_var = dg::blas2::dot( w2d, variatio);
     std::cout << " "<<sqrt( err/norm_var) << "\n";
+    // NOW TEST LGMRES AND BICGSTABl
+    unsigned inner_m = 30, outer_k = 3;
+    //std::cout << " Type inner and outer iterations (30 3)!\n";
+    //std::cin >> inner_m >> outer_k;
+    dg::LGMRES<dg::DVec> lgmres( x, inner_m, outer_k, 10000/inner_m);
+    dg::blas1::copy( 0., x);
+    dg::Timer t;
+    t.tic();
+    //unsigned number = lgmres.solve( pol_forward, x, b, chi_inv, w2d, eps);
+    unsigned number = lgmres.solve( pol_forward, x, b, 1., w2d, eps);
+    t.toc();
+    std::cout << "# of lgmres iterations "<<number<<" took "<<t.diff()<<"s\n";
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << " "<<sqrt( err/norm) << "\n";
+    unsigned l_input = 2;
+    dg::BICGSTABl<dg::DVec> bicg( x, 100000, l_input);
+    dg::blas1::copy( 0., x);
+    t.tic();
+    number = bicg.solve( pol_forward, x, b, chi_inv, w2d, eps);
+    //number = bicg.solve( pol_forward, x, b, 1., w2d, eps);
+    t.toc();
+    std::cout << "# of bicgstabl iterations "<<number<<" took "<<t.diff()<<"s\n";
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << " "<<sqrt( err/norm) << "\n";
+    unsigned mMax = 8;
+    double damping = 1e-5;
+    double restart = 8;
+    //std::cout << "Type mMAx (8), damping ( 1e-5), restart (8)\n";
+    //std::cin >> mMax >> damping >> restart;
+    dg::AndersonAcceleration<dg::DVec> anderson( x, mMax);
+    dg::blas1::copy( 0., x);
+    t.tic();
+    number = anderson.solve( pol_forward, x, b, w2d, eps, eps, 3000, damping, restart, false );
+    t.toc();
+    std::cout << "# of anderson iterations "<<number<<" took "<<t.diff()<<"s\n";
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << " "<<sqrt( err/norm) << "\n";
     }
+
+    dg::PCG<dg::DVec > pcg( x, n*n*Nx*Ny);
 
     {
         std::cout << "Compute 2d handle of Elliptic3d\n";
 	    dg::CartesianGrid3d grid( 0, lx, 0, ly, 0,1,n, Nx, Ny, 1, bcx, bcy, dg::PER);
-		dg::Elliptic3d<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+		dg::Elliptic3d<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::backward, jfactor);
         pol_backward.set_compute_in_2d(true);
 		pol_backward.set_chi( chi);
 		x = temp;
-		dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-		invert_bw( pol_backward, x, b, w2d, v2d, chi_inv);
+		pcg.solve( pol_backward, x, b, chi_inv, w2d, eps);
 		dg::blas1::axpby( 1.,x,-1., solution, error);
 		double err = dg::blas2::dot( w2d, error);
         err = sqrt( err/norm); res.d = err;
@@ -190,17 +231,28 @@ int main()
         //try the Hyperelliptic operator
         std::cout << "HyperElliptic operator\n";
 	    dg::CartesianGrid2d grid( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);
-		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::backward, jfactor);
 		x = temp;
-		dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
         chi = temp;
 		x = temp;
-		invert( pol_backward, chi, solution);
-		invert( pol_backward, x, chi);
+		pcg.solve( pol_backward, chi, solution, 1., w2d, eps);
+		pcg.solve( pol_backward, x, chi, 1., w2d, eps);
 		dg::blas1::axpby( 1.,x,-0.25, solution, error);
 		double err = dg::blas2::dot( w2d, error);
         err = sqrt( err/norm); res.d = err;
         std::cout << " "<<err << "\t"<<res.i<<std::endl;
+    }
+    try{
+        dg::blas1::copy( 0., x);
+        dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_f( grid);
+        // We expect it not to converge
+        dg::LGMRES<dg::DVec> lgmres( x, 10, 3, 1);
+        lgmres.solve( pol_f, x, b, 1., w2d, eps);
+    }catch( dg::Fail& fail)
+    {
+        std::cerr << "TEST failure message";
+        std::cerr << fail.what()<<std::endl;
+        std::cerr << "END TEST failure message\n";
     }
 
 

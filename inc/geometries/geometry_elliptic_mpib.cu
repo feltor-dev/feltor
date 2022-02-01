@@ -61,7 +61,7 @@ int main(int argc, char**argv)
     dg::geo::FluxGenerator generator( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductMPIGrid3d g3d( generator, n, Nx, Ny,Nz, dg::DIR, dg::PER, dg::PER, comm);
     std::unique_ptr<dg::aMPIGeometry2d> g2d(g3d.perp_grid());
-    dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> pol( *g2d, dg::not_normed, dg::forward);
+    dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> pol( *g2d, dg::forward);
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -90,11 +90,11 @@ int main(int argc, char**argv)
     //compute error
     dg::MDVec error( solution);
     const double eps = 1e-10;
-    dg::Invert<dg::MDVec > invert( x, n*n*Nx*Ny*Nz, eps);
+    dg::PCG<dg::MDVec > pcg( x, n*n*Nx*Ny*Nz);
     if(rank==0)std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     if(rank==0)std::cout << eps<<"\t";
     t.tic();
-    unsigned number = invert(pol, x,b);// vol3d, v3d );
+    unsigned number = pcg.solve(pol, x,b, pol.precond(), pol.weights(), eps);
     if(rank==0)std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

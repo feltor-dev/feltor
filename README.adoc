@@ -2,8 +2,8 @@
 :source-highlighter: pygments
 :toc: macro
 
-(Please visit our project https://feltor-dev.github.io[Homepage] and
-http://feltor-dev.github.io/doc/dg/html/modules.html[Documentation])
+(Visit our project https://feltor-dev.github.io[Homepage] for
+documentations, user-guides, examples and more)
 
 image::3dpic.jpg[3dsimulation]
 
@@ -29,7 +29,7 @@ installation. Please read it before you proceed to the https://feltor-dev.github
 We also present how to use the FELTOR software package,
 which requires additional external libraries to be installed on the system.
 ____
-If you run into trouble during the setup, there is a chance that we already know of the problem and have an entry in our https://feltor-dev.github.io/troubleshooting/[troubleshooting] page.
+If you run into trouble during the setup, there is a chance that we already know of the problem and have an entry in <<sec_troubleshooting,troubleshooting>> page.
 If you cannot find a solution there, please inform us of the issue.
 ____
 ____
@@ -99,7 +99,7 @@ directory
 cd ~
 mkdir include
 cd include
-ln -s path/to/thrust/thrust
+ln -s path/to/thrust/thrust # Yes, thrust is there twice!
 ln -s path/to/cusplibrary/cusp
 ln -s path/to/vcl
 ----
@@ -115,9 +115,11 @@ Now let us compile the first benchmark program.
 ----
 cd path/to/feltor/inc/dg
 
+make blas_b device=cpu #(for a single thread CPU version)
+#or
 make blas_b device=omp #(for an OpenMP version)
 #or
-make blas_b device=gpu #(if you have a gpu and nvcc )
+make blas_b device=gpu #(if you have a GPU and nvcc )
 ----
 
 Run the code with
@@ -152,6 +154,8 @@ ____
 ----
 cd path/to/feltor/inc/dg
 
+make blas_mpib device=cpu  # (for MPI+CPU)
+# or
 make blas_mpib device=omp  # (for MPI+OpenMP)
 # or
 make blas_mpib device=gpu # (for MPI+GPU, requires CUDA-aware MPI installation)
@@ -217,6 +221,12 @@ g++ -std=c++14 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_
 export OMP_NUM_THREADS=4
 ./test
 ----
+If you do not want any parallelization, you can use a single thread version
+[source,sh]
+----
+g++ -std=c++14 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPU -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+./test
+----
 
 If you want to use mpi, just include the MPI header before any other
 FELTOR header and use our convenient typedefs like so:
@@ -271,31 +281,19 @@ __container free numerical algorithm__.
 Now, we want to compile and run a simulation program. To this end, we have to
 download and install some additional libraries for I/O-operations.
 
-First, we need to install jsoncpp (distributed under the MIT License).
-The easiest way to do this on Linux is to install `libjsoncpp-dev` through the package managment system. However, if you have
-a GPU or if you do not have sudo privileges you have to install the library manually. That means you have to clone https://www.github.com/open-source-parsers/jsoncpp[JsonCpp] and follow the build instructions in the README. After this, link the
-include path
-[source,sh]
-----
-cd ~/include
-ln -s /usr/include/jsoncpp/json # if installed as a system library
-# or
-ln -s path/to/jsoncpp/include/json # if installed manually
-----
-or append the respective path as well as the path to the object library to the `INCLUDE` and `JSONLIB` variables as
-described under link:config/README.md[config].
+First, we need to install jsoncpp (distributed under the MIT License),
+which on linux is available as `libjsoncpp-dev` through the package managment system.
+For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
 
 For data output we use the
 http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
 MIT - like license (we use the netcdf-4 file format).
 The underlying https://www.hdfgroup.org/HDF5/[HDF5]
 library also uses a very permissive license.
-Both can be installed easily on Linux through the `libnetcdf-dev` package.
+Both can be installed easily on Linux through the `libnetcdf-dev` and `libhdf5-dev` packages.
 For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
-Note that for the mpi
-versions of applications you need to build hdf5 and netcdf with the
-`--enable-parallel` flag. Do NOT use the pnetcdf library, which uses the
-classic netcdf file format.
+Note that by default we also use the serial netcdf and hdf5 libraries in the mpi
+versions of applications.
 
 Some desktop applications in FELTOR use the
 https://github.com/mwiesenberger/draw[draw library] (developed by us
@@ -303,19 +301,24 @@ also under MIT), which depends on
 http://www.glfw.org[glfw3], an OpenGL development library under a
 BSD-like license. There is a `libglfw3-dev` package for convenient installation. Again, link `path/to/draw` in the `include` folder.
 
+____
+If you are on a HPC cluster, you may need to set INCLUDE and LIB variables manually.
+For details on how FELTOR's Makefiles are configured please see the link:config/README.md[config] file. There are also examples of some existing Makefiles in the same folder.
+____
+
 We are now ready to compile and run a simulation program
 
 [source,sh]
 ----
 cd path/to/feltor/src/toefl # or any other project in the src folder
 
-make toeflR device=gpu     # (compile on gpu or omp)
+make toeflR device=gpu     # (compile for gpu, cpu or omp)
 ./toeflR <inputfile.json>  # (behold a live simulation with glfw output on screen)
 # or
-make toefl_hpc device=gpu  # (compile on gpu or omp)
+make toefl_hpc device=gpu  # (compile for gpu, cpu or omp)
 ./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
 # or
-make toefl_mpi device=omp  # (compile on gpu or omp)
+make toefl_mpi device=omp  # (compile for gpu, cpu or omp)
 export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI)
 echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
 # (a multi node simulation with now in total 8 threads with output stored in a file)
@@ -328,6 +331,7 @@ three programs solve the same equations. The technical documentation on
 what equations are discretized, input/output parameters, etc. can be
 generated as a pdf with `make doc` in the `path/to/feltor/src/toefl`
 directory.
+
 
 === Using FELTOR on Windows [[sec_windows]]
 FELTOR has been developed mostly on Linux machines.
@@ -437,15 +441,30 @@ LaTeX::
 Install https://miktex.org/[MikTex] and https://texstudio.org[TeXstudio] (in that order) in order to be able to
 compile the tex file(s) of the documentation.
 
+=== Troubleshooting [[sec_troubleshooting]]
+===== I get a compile error: identifier "__thrust_compiler_fence" is undefined
+
+This is an error of the unmaintained cusp that does not like the newly
+updated thrust version on github. Currently, you can either go back to
+version 1.9.3 in thrust:
+
+```sh
+cd path/to/thrust
+git checkout 1.9.3
+```
+or alternatively there is a fix in cusp that can be accessed via
+```sh
+cd path/to/cusplibrary
+git checkout cuda10
+```
 == 2. Documentation
 
 The
 http://feltor-dev.github.io/doc/dg/html/modules.html[documentation]
 of the dg library was generated with
 http://www.doxygen.org[Doxygen] and LateX. You can generate a local
-version including informative pdf writeups on implemented numerical
-methods directly from source code. This depends on the `doxygen`,
-`libjs-mathjax` and `graphviz` packages and LateX. Type `make doc` in
+version directly from source code. This depends on the `doxygen`,
+`libjs-mathjax` and `graphviz` packages and LateX (for equations). Type `make doc` in
 the folder `path/to/feltor/doc` and open `index.html` (a symbolic link
 to `dg/html/modules.html`) with your favorite browser.
 Finally, also note the documentations of https://thrust.github.io/doc/modules.html[thrust]
@@ -455,16 +474,12 @@ We maintain tex files in every src folder for
 technical documentation, which can be compiled using pdflatex with
 `make doc` in the respective src folder.
 
-For details on how FELTOR's internal Makefiles are configured please see the link:config/README.md[config] folder.
-
 
 == 3. Authors, Acknowledgements, Contributions
 
 FELTOR has been developed by Matthias Wiesenberger and Markus Held. Please see the https://feltor-dev.github.io/about/[Acknowledgements] section on our homepage
-for a list of contributors and funding.
-Also check out our https://feltor-dev.github.io[homepage]
-for general information, wiki pages,
-troubleshooting and guides on how to contribute.
+for a full list of contributors and funding.
+Contribution guidelines can be found in the link:CONTRIBUTING.md[CONTRIBUTING] file.
 
 == License
 

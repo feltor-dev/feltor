@@ -75,15 +75,11 @@ int main( int argc, char* argv[])
     dg::blas2::symv( gamma, gauss, y0[0]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     gamma.alpha() = -0.5*p.tau[1]*p.mu[1];
     dg::blas2::symv( gamma, gauss, y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    {
-        dg::MDVec v2d = dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[0], y0[0]);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-    }
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
-    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), 1e-9);
-    karniadakis.init( test, diffusion, 0., y0, p.dt);
+    dg::DefaultSolver<std::vector<dg::MDVec>> solver( diffusion, y0, 1000, 1e-9);
+    dg::ImExMultistep< std::vector<dg::MDVec> > karniadakis( "ImEx-BDF-3-3", y0);
+    karniadakis.init( std::tie(test, diffusion, solver), time, y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
@@ -157,7 +153,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            karniadakis.step( test, diffusion, time, y0);
+            karniadakis.step( std::tie( test, diffusion, solver), time, y0);
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
             {

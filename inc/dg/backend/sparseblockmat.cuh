@@ -6,13 +6,19 @@
 
 namespace dg
 {
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP
+template<class value_type>
+using EllSparseBlockMatDevice = EllSparseBlockMat<value_type>;
+template<class value_type>
+using CooSparseBlockMatDevice = CooSparseBlockMat<value_type>;
+#else
 
 /**
 * @brief Ell Sparse Block Matrix format device version
 *
 * @ingroup sparsematrix
 * This class holds a copy of a EllSparseBlockMat on the device, which may
-be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
+be gpu, cpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
 to device vectors and does the same thing as the host version
 
 @copydetails EllSparseBlockMat
@@ -249,9 +255,11 @@ struct TensorTraits<CooSparseBlockMatDevice<T> >
     using tensor_category = SparseBlockMatrixTag;
 };
 ///@}
+#endif // THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP
 } //namespace dg
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-#include "sparseblockmat_omp_kernels.h"
-#else
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "sparseblockmat_gpu_kernels.cuh"
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
+#include "sparseblockmat_omp_kernels.h"
 #endif
+

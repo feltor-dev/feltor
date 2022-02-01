@@ -12,14 +12,14 @@
   */
 
 /*!@class hide_grid_parameters2d
- * @brief Construct a 2D grid
+ * @brief Equal polynomial coefficients
  *
  * @param x0 left boundary in x
  * @param x1 right boundary in x
  * @param y0 lower boundary in y
  * @param y1 upper boundary in y
- * @param n  # of polynomial coefficients per dimension
- *  (1<=n<=20, note that the library is optimized for n=3 )
+ * @param n  # of polynomial coefficients for both x and y dimension
+ *  (1<=n<=20)
  * @param Nx # of points in x
  * @param Ny # of points in y
  */
@@ -27,9 +27,8 @@
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
  */
-
 /*!@class hide_grid_parameters3d
- * @brief Construct a 3D grid
+ * @brief Equal polynomial coefficients
  *
  * @param x0 left boundary in x
  * @param x1 right boundary in x
@@ -37,9 +36,8 @@
  * @param y1 upper boundary in y
  * @param z0 lower boundary in z
  * @param z1 upper boundary in z
- * @param n  # of polynomial coefficients per (x-,y-) dimension
- *   (1<=n<=20, note that the library is optimized for n=3 )
- * @attention # of polynomial coefficients in z direction is always 1
+ * @param n  # of polynomial coefficients for x and y dimension ( z-direction
+ *  is set to 1) (1<=n<=20)
  * @param Nx # of points in x
  * @param Ny # of points in y
  * @param Nz # of points in z
@@ -147,11 +145,6 @@ struct RealGrid1d
      * @return
      */
     bc bcx() const {return bcx_;}
-    /**
-     * @brief The total number of points
-     *
-     * @return n*Nx
-     */
     //////////////////////////////////////////set/////////////////////////////
     /**
      * @brief reset the boundaries of the grid
@@ -255,9 +248,11 @@ struct RealGrid1d
      * @param x point to check
      *
      * @return true if x0()<=x<=x1(), false else
+     * @attention returns false if x is NaN or INF
      */
     bool contains( real_type x)const
     {
+        if( !std::isfinite(x) ) return false;
         //should we catch the case x1_==x && dg::PER?
         if( (x>=x0_ && x <= x1_)) return true;
         return false;
@@ -332,11 +327,15 @@ struct aRealTopology2d
      */
     real_type hy() const {return gy_.h();}
     /**
-     * @brief number of polynomial coefficients in x and y
+     * @brief number of polynomial coefficients in x
      *
      * @return
      */
     unsigned n() const {return gx_.n();}
+    /// number of polynomial coefficients in x
+    unsigned nx() const {return gx_.n();}
+    /// number of polynomial coefficients in y
+    unsigned ny() const {return gy_.n();}
     /**
      * @brief number of cells in x
      *
@@ -366,7 +365,16 @@ struct aRealTopology2d
      *
      * @return
      */
-    const DLT<real_type>& dlt() const{return gx_.dlt();}
+    //const DLT<real_type>& dlt() const{return gx_.dlt();}
+    /// discrete legendre transformation in x
+    const DLT<real_type>& dltx() const{return gx_.dlt();}
+    /// discrete legendre transformation in y
+    const DLT<real_type>& dlty() const{return gy_.dlt();}
+
+    /// The x-axis grid
+    const RealGrid1d<real_type>& gx() const {return gx_;}
+    /// The y-axis grid
+    const RealGrid1d<real_type>& gy() const {return gy_;}
 
     /**
     * @brief Multiply the number of cells with a given factor
@@ -377,25 +385,39 @@ struct aRealTopology2d
     * @param fy new number of cells is the nearest integer to fy*Ny()
     */
     void multiplyCellNumbers( real_type fx, real_type fy){
-        do_set(n(), round(fx*(real_type)Nx()), round(fy*(real_type)Ny()));
+        if( fx != 1 || fy != 1)
+            do_set(nx(), round(fx*(real_type)Nx()), ny(), round(fy*(real_type)Ny()));
     }
     /**
     * @brief Set the number of polynomials and cells
     *
-    * @param new_n new number of %Gaussian nodes
+    * Same as \c set(new_n,new_Nx,new_n,new_Ny)
+    * @param new_n new number of %Gaussian nodes for both x and y
     * @param new_Nx new number of cells in x
     * @param new_Ny new number of cells in y
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        if( !( new_n==n() && new_Nx==Nx() && new_Ny == Ny() ) )
-            do_set(new_n,new_Nx,new_Ny);
+        set( new_n, new_Nx, new_n, new_Ny);
+    }
+    /**
+    * @brief Set the number of polynomials and cells
+    *
+    * @param new_nx new number of %Gaussian nodes in x
+    * @param new_Nx new number of cells in x
+    * @param new_ny new number of %Gaussian nodes in y
+    * @param new_Ny new number of cells in y
+    */
+    void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny) {
+        if( new_nx==nx() && new_Nx==Nx() && new_ny==ny() && new_Ny == Ny())
+            return;
+        do_set(new_nx,new_Nx,new_ny,new_Ny);
     }
 
 
     /**
      * @brief The total number of points
      *
-     * @return n*n*Nx*Ny
+     * @return nx*ny*Nx*Ny
      */
     unsigned size() const { return gx_.size()*gy_.size();}
     /**
@@ -406,7 +428,8 @@ struct aRealTopology2d
     void display( std::ostream& os = std::cout) const
     {
         os << "Topology parameters are: \n"
-            <<"    n  = "<<n()<<"\n"
+            <<"    nx = "<<nx()<<"\n"
+            <<"    ny = "<<ny()<<"\n"
             <<"    Nx = "<<Nx()<<"\n"
             <<"    Ny = "<<Ny()<<"\n"
             <<"    hx = "<<hx()<<"\n"
@@ -455,26 +478,24 @@ struct aRealTopology2d
         if( gx_.contains(x) && gy_.contains(y)) return true;
         return false;
     }
+    /// Shortcut for contains( x[0], x[1])
+    template<class Vector>
+    bool contains( const Vector& x) const{
+        return contains( x[0], x[1]);
+    }
     protected:
     ///disallow destruction through base class pointer
     ~aRealTopology2d() = default;
     /**
-     *@copydoc hide_grid_parameters2d
-     *@copydoc hide_bc_parameters2d
-     */
-    aRealTopology2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
-        gx_(x0,x1,n,Nx,bcx), gy_(y0,y1,n,Ny,bcy) { }
-    /**
      * @brief Construct a 2d grid as the product of two 1d grids
      *
+     * @code
+     * dg::Grid2d g2d( {x0,x1,nx,Nx,bcx},{y0,y1,ny,Ny,bcy});
+     * @endcode
      * @param gx a Grid in x - direction
      * @param gy a Grid in y - direction
-     * @note gx and gy must have the same n
      */
-    aRealTopology2d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy): gx_(gx),gy_(gy)
-    {
-        assert( gx.n() == gy.n() );
-    }
+    aRealTopology2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy): gx_(gx),gy_(gy) { }
 
     ///explicit copy constructor (default)
     ///@param src source
@@ -482,7 +503,8 @@ struct aRealTopology2d
     ///explicit assignment operator (default)
     ///@param src source
     aRealTopology2d& operator=(const aRealTopology2d& src) = default;
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
+    virtual void do_set( unsigned new_nx, unsigned new_Nx, unsigned new_ny,
+            unsigned new_Ny)=0;
     private:
     RealGrid1d<real_type> gx_, gy_;
 };
@@ -579,11 +601,17 @@ struct aRealTopology3d
      */
     real_type hz() const {return gz_.h();}
     /**
-     * @brief number of polynomial coefficients in x and y
+     * @brief number of polynomial coefficients in x
      *
      * @return
      */
     unsigned n() const {return gx_.n();}
+    /// number of polynomial coefficients in x
+    unsigned nx() const {return gx_.n();}
+    /// number of polynomial coefficients in y
+    unsigned ny() const {return gy_.n();}
+    /// number of polynomial coefficients in z
+    unsigned nz() const {return gz_.n();}
     /**
      * @brief number of points in x
      *
@@ -620,16 +648,22 @@ struct aRealTopology3d
      * @return
      */
     bc bcz() const {return gz_.bcx();}
-    /**
-     * @brief discrete legendre transformation
-     *
-     * @return
-     */
-    const DLT<real_type>& dlt() const{return gx_.dlt();}
+    /// discrete legendre transformation in x
+    const DLT<real_type>& dltx() const{return gx_.dlt();}
+    /// discrete legendre transformation in y
+    const DLT<real_type>& dlty() const{return gy_.dlt();}
+    /// discrete legendre transformation in z
+    const DLT<real_type>& dltz() const{return gz_.dlt();}
+    /// The x-axis grid
+    const RealGrid1d<real_type>& gx() const {return gx_;}
+    /// The y-axis grid
+    const RealGrid1d<real_type>& gy() const {return gy_;}
+    /// The z-axis grid
+    const RealGrid1d<real_type>& gz() const {return gz_;}
     /**
      * @brief The total number of points
      *
-     * @return n*n*Nx*Ny*Nz
+     * @return nx*ny*nz*Nx*Ny*Nz
      */
     unsigned size() const { return gx_.size()*gy_.size()*gz_.size();}
     /**
@@ -640,7 +674,9 @@ struct aRealTopology3d
     void display( std::ostream& os = std::cout) const
     {
         os << "Topology parameters are: \n"
-            <<"    n  = "<<n()<<"\n"
+            <<"    nx = "<<nx()<<"\n"
+            <<"    ny = "<<ny()<<"\n"
+            <<"    nz = "<<nz()<<"\n"
             <<"    Nx = "<<Nx()<<"\n"
             <<"    Ny = "<<Ny()<<"\n"
             <<"    Nz = "<<Nz()<<"\n"
@@ -704,44 +740,60 @@ struct aRealTopology3d
             return true;
         return false;
     }
+    /// Shortcut for contains( x[0], x[1], x[2])
+    template<class Vector>
+    bool contains( const Vector& x) const{
+        return contains( x[0], x[1], x[2]);
+    }
     ///@copydoc aRealTopology2d::multiplyCellNumbers()
     void multiplyCellNumbers( real_type fx, real_type fy){
-        set(n(), round(fx*(real_type)Nx()), round(fy*(real_type)Ny()), Nz());
+        if( fx != 1 || fy != 1)
+            do_set(nx(), round(fx*(real_type)Nx()), ny(),
+                    round(fy*(real_type)Ny()), nz(), Nz());
     }
     /**
     * @brief Set the number of polynomials and cells
     *
-    * @param new_n new number of %Gaussian nodes
+    * Set \c nz to 1
+    * Same as \c set(new_n,new_Nx,new_n,new_Ny,1,new_Nz)
+    * @param new_n new number of %Gaussian nodes in x and y
     * @param new_Nx new number of cells in x
     * @param new_Ny new number of cells in y
     * @param new_Nz new number of cells in z
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        if(!( new_n==n() && new_Nx ==Nx() && new_Ny == Ny() && new_Nz==Nz()))
-            do_set(new_n,new_Nx,new_Ny,new_Nz);
+        set(new_n,new_Nx,new_n,new_Ny,1,new_Nz);
+    }
+    /**
+    * @brief Set the number of polynomials and cells
+    *
+    * @param new_nx new number of %Gaussian nodes in x
+    * @param new_Nx new number of cells in x
+    * @param new_ny new number of %Gaussian nodes in y
+    * @param new_Ny new number of cells in y
+    * @param new_nz new number of %Gaussian nodes in z
+    * @param new_Nz new number of cells in z
+    */
+    void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz) {
+        if( new_nx==nx() && new_Nx ==Nx() && new_ny == ny() && new_Ny == Ny() && new_nz == nz() && new_Nz==Nz())
+            return;
+        do_set(new_nx,new_Nx,new_ny,new_Ny,new_nz,new_Nz);
     }
     protected:
     ///disallow deletion through base class pointer
     ~aRealTopology3d() = default;
     /**
-    @copydoc hide_grid_parameters3d
-    @copydoc hide_bc_parameters3d
-     */
-    aRealTopology3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
-        gx_(x0,x1,n,Nx,bcx),
-        gy_(y0,y1,n,Ny,bcy),
-        gz_(z0,z1,1,Nz,bcz){}
-    /**
      * @brief Construct a 3d topology as the product of three 1d grids
      *
+     * @code
+     * dg::Grid3d g3d( {x0,x1,nx,Nx,bcx},{y0,y1,ny,Ny,bcy},{z0,z1,nz,Nz,bcz});
+     * @endcode
      * @param gx a Grid1d in x - direction
      * @param gy a Grid1d in y - direction
      * @param gz a Grid1d in z - direction
-     * @note gx and gy must have the same n and gz.n() must return 1
      */
-    aRealTopology3d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy, const RealGrid1d<real_type>& gz): gx_(gx),gy_(gy),gz_(gz){
-        assert( gx.n() == gy.n());
-        assert( gz.n() == 1);
+    aRealTopology3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
+        gx_(gx),gy_(gy),gz_(gz){
     }
     ///explicit copy constructor (default)
     ///@param src source
@@ -749,7 +801,7 @@ struct aRealTopology3d
     ///explicit assignment operator (default)
     ///@param src source
     aRealTopology3d& operator=(const aRealTopology3d& src) = default;
-    virtual void do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)=0;
+    virtual void do_set(unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz)=0;
   private:
     RealGrid1d<real_type> gx_,gy_,gz_;
 };
@@ -765,16 +817,17 @@ struct RealGrid2d : public aRealTopology2d<real_type>
     ///@copydoc hide_grid_parameters2d
     ///@copydoc hide_bc_parameters2d
     RealGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        aRealTopology2d<real_type>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
-    ///@copydoc aRealTopology2d::aRealTopology2d(const RealGrid1d&,const RealGrid1d&)
-    RealGrid2d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy): aRealTopology2d<real_type>(gx,gy){ }
+        aRealTopology2d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy}) { }
 
-    ///allow explicit type conversion from any other topology
+    ///@copydoc aRealTopology2d()
+    RealGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy): aRealTopology2d<real_type>(gx,gy){ }
+
+    ///@brief allow explicit type conversion from any other topology
     ///@param src source
     explicit RealGrid2d( const aRealTopology2d<real_type>& src): aRealTopology2d<real_type>(src){}
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny) override final{
-        aRealTopology2d<real_type>::do_set(n,Nx,Ny);
+    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny) override final{
+        aRealTopology2d<real_type>::do_set(nx,Nx,ny,Ny);
     }
 
 };
@@ -790,32 +843,33 @@ struct RealGrid3d : public aRealTopology3d<real_type>
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     RealGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
-        aRealTopology3d<real_type>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
-    ///@copydoc aRealTopology3d::aRealTopology3d(const RealGrid1d&,const RealGrid1d&,const RealGrid1d&)
-    RealGrid3d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy, const RealGrid1d<real_type>& gz): aRealTopology3d<real_type>(gx,gy,gz){ }
+        aRealTopology3d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy},{z0,z1,1,Nz,bcz}) { }
+    ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
+    RealGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz): aRealTopology3d<real_type>(gx,gy,gz){ }
 
-    ///allow explicit type conversion from any other topology
+    ///@brief allow explicit type conversion from any other topology
     ///@param src source
     explicit RealGrid3d( const aRealTopology3d<real_type>& src): aRealTopology3d<real_type>(src){ }
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz) override final{
-        aRealTopology3d<real_type>::do_set(n,Nx,Ny,Nz);
+    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny,
+            unsigned nz, unsigned Nz) override final{
+        aRealTopology3d<real_type>::do_set(nx,Nx,ny,Ny,nz,Nz);
     }
 };
 
 ///@cond
 template<class real_type>
-void aRealTopology2d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+void aRealTopology2d<real_type>::do_set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny)
 {
-    gx_.set(new_n, new_Nx);
-    gy_.set(new_n, new_Ny);
+    gx_.set(new_nx, new_Nx);
+    gy_.set(new_ny, new_Ny);
 }
 template<class real_type>
-void aRealTopology3d<real_type>::do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)
+void aRealTopology3d<real_type>::do_set(unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz)
 {
-    gx_.set(new_n, new_Nx);
-    gy_.set(new_n, new_Ny);
-    gz_.set(1,new_Nz);
+    gx_.set(new_nx, new_Nx);
+    gy_.set(new_ny, new_Ny);
+    gz_.set(new_nz, new_Nz);
 }
 
 template<class Topology>

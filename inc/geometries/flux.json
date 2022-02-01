@@ -3,8 +3,9 @@
     {
         "type": "curvilinear",
         "generator":{
-            "type": "flux",
-            "mode": 0
+            "type": "orthogonal",
+            "mode": 0,
+            "firstline" : -4.0
         },
         "n" : 3,
         "Nx" : 8,

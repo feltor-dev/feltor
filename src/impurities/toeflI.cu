@@ -49,8 +49,6 @@ int main( int argc, char* argv[])
             gamma.alpha() = -0.5*p.tau[1];
             y0[0] = dg::evaluate( gaussian, grid);
             dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1 
-            dg::DVec v2d=dg::create::inv_weights(grid);
-            dg::blas2::symv( v2d, y0[1], y0[1]);
 
             dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
             y0[2] = dg::evaluate( dg::zero, grid);
@@ -69,8 +67,6 @@ int main( int argc, char* argv[])
         dg::DVec wallv = dg::evaluate( wall, grid);
         gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         dg::blas2::symv( gamma, wallv, y0[2]); 
-        dg::DVec v2d=dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] != 0.)
             dg::blas1::scal( y0[2], 1./p.a[2]); //n_z ~1./a_z
 
@@ -78,7 +74,6 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau[1];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]); 
-        dg::blas1::pointwiseDot( v2d, y0[1], y0[1]);
         if( p.a[2] == 1)
         {
             std::cerr << "No blob with trace ions possible!\n";
@@ -96,8 +91,6 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[2]); 
-        dg::DVec v2d=dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] == 0)
         {
             std::cerr << "No impurity blob with trace impurities possible!\n";
@@ -108,8 +101,9 @@ int main( int argc, char* argv[])
     }
 
     //////////////////initialisation of timestepper and first step///////////////////
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( toeflI, diffusion, 0, y0, p.dt);
+    dg::DefaultSolver<std::vector<dg::DVec> > solver( diffusion, y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0);
+    karniadakis.init( std::tie( toeflI, diffusion, solver), 0, y0, p.dt);
 
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -124,7 +118,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM( grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM( grid,  dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
@@ -173,8 +167,8 @@ int main( int argc, char* argv[])
             std::cout << diff << " "<<diss<<"\t";
             std::cout << "Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<"\n";
 
-            try{ karniadakis.step( toeflI, diffusion, time, y0);}
-            catch( dg::Fail& fail) { 
+            try{ karniadakis.step( std::tie( toeflI, diffusion, solver), time, y0);}
+            catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);

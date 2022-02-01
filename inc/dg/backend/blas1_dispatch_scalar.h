@@ -10,6 +10,19 @@
 ///@cond
 namespace dg
 {
+namespace detail
+{
+template< class To, class From, class ...Params>
+To doConstruct( const From& from, AnyScalarTag, AnyScalarTag, Params&& ...ps)
+{
+    return To( from);
+}
+template< class From, class To, class ...Params>
+void doAssign( const From& from, To& to, AnyScalarTag, AnyScalarTag, Params&& ...ps)
+{
+    to = from;
+}
+}//namespace detail
 namespace blas1
 {
 namespace detail
@@ -39,10 +52,11 @@ inline void doSubroutine( AnyScalarTag, Subroutine f, ContainerType&& x, Contain
     f(x,xs...);
 }
 
-template<class T, class ContainerType, class BinaryOp>
-inline T doReduce( AnyScalarTag, ContainerType x, T init, BinaryOp op)
+template<class T, class ContainerType, class BinaryOp, class UnaryOp>
+inline T doReduce( AnyScalarTag, ContainerType x, T init, BinaryOp op, UnaryOp
+        unary_op)
 {
-    init = op( init, x);
+    init = op( init, unary_op(x));
     return init;
 }
 

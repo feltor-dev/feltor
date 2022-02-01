@@ -8,26 +8,26 @@
  * @{
  *     @defgroup blas Basic container independent subroutines
  *
- *         These routines form the heart of our container free numerical algorithms.
- *         They are called by all our numerical algorithms like conjugate gradient or
- *         time integrators.
+ * These routines form the heart of our container free numerical algorithms.
+ * They are called by all our numerical algorithms like conjugate gradient or
+ * time integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
- *              \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
+ *         @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
- *              \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
+ *         @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed
  *             in an application using these functions. All functions returning
  *             a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
- *              \f$ v^i = T^{ij} w_j\f$
+ *         @brief \f$ v^i = T^{ij} w_j\f$
  *
  *              Although a tensor needs a topology to be well-defined mathematically,
  *              we do not need a grid to perform basic operations computationally.
@@ -36,44 +36,40 @@
  *     @}
  *     @defgroup typedefs Useful Typedefs
  *     @defgroup sparsematrix Sparse matrix formats
+ *     @defgroup densematrix Dense matrix formats
  *     @defgroup view Vector view
  *     @defgroup mpi_structures MPI backend
  *
- *             In this section the blas functions are implemented for the MPI+X
- *             hardware architectures, where X is e.g. CPU, GPU, accelerator
- *             cards...
- *             The general idea to achieve this is to separate global
- *             communication from local computations and thus readily reuse the
- *             existing, optimized library for the local part. Please consult
- *             the chapter \ref mpi_backend in the introduction for more
- *             details.
+ * In this section the blas functions are implemented for the MPI+X
+ * hardware architectures, where X is e.g. CPU, GPU, accelerator
+ * cards...
+ * The general idea to achieve this is to separate global
+ * communication from local computations and thus readily reuse the
+ * existing, optimized library for the local part.
  *     @defgroup dispatch The tag dispatch system
  *           Implementation details of \ref dispatch
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * @{
- *     @defgroup time Time integrators
- *     \f$ \dot y = f(y,t) \f$ 
- *     @{
- *          @defgroup time_utils Utilities for time integration
- *     @}
+ *     @defgroup time Time integration
+ *     @brief \f$ \dot y = f(y,t) \f$
+ *     @defgroup time_utils Utilities for ODE solvers
+ *     @defgroup integration Quadrature
+ *     @brief \f$ \int_{t_0}^T u(t) dt \f$
+ *     @defgroup extrapolation Extrapolation
  *     @defgroup invert Linear and nonlinear solvers
- *     Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$ 
- *     @defgroup matrixapproximation Matrix approximation
- *     Numerical methods for approximating a Matrix \f$ A\f$  or Matrix-Vector products \f$ Ax=b \f$ (or \f$ x=A^{-1} b \f$)
- *     @defgroup matrixfunctionapproximation Matrix-function approximation
- *     Numerical methods for approximating Matrix-function-Vector products \f$ f(A) x=b\f$
+ *     @brief Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
  * @}
  * @defgroup geo Level 3: Topology and Geometry
  * @{
  *     @defgroup grid Topological grids and operations
  *
- *          Objects that store topological information (which point is neighbour of
- *          which other point) about the grid.
+ * Objects that store topological information (which point is neighbour of
+ * which other point) about the grid.
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
- *          \f$ f_i = f(x_i) \f$
+ *         @brief \f$ f_i = f(x_i) \f$
  *
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
@@ -88,66 +84,66 @@
  *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
  *              available topologies
  *         @defgroup creation create derivatives
- *           \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
+ *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  *             High level matrix creation functions
  *         @defgroup interpolation Interpolation and projection
- *          \f$ I \f$ and \f$ P = I^\dagger\f$
+ *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and tensor operations
  *
- *         These routines form the heart of our geometry free numerical algorithms.
- *         They are called by our geometric operators like the Poisson bracket.
+ * These routines form the heart of our geometry free numerical algorithms.
+ * They are called by our geometric operators like the Poisson bracket.
  *     @{
  *         @defgroup basicgeometry Geometry base classes
  *         @defgroup pullback pullback and pushforward
- *          \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
+ *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
  *         @defgroup metric create volume
- *           \f$ \sqrt{g} \f$
+ *         @brief \f$ \sqrt{g} \f$
  *         @defgroup generators Grid Generator classes
  *     @}
+ *     @defgroup fem Finite Element Method
  *     @defgroup gridtypes Useful Typedefs
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
  *
- *      These routines make use of both the basic operations as well as the
- *      interfaces defined in the Geometry section.
+ * These routines make use of both the basic operations as well as the
+ * interfaces defined in the Geometry section.
  * @{
  *     @defgroup arakawa Advection terms
- *          \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
+ *     @brief \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
  *     @defgroup matrixoperators Matrix operators
- *     Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
+ *     @brief Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
  *     @defgroup multigrid Multigrid matrix inversion
- *     \f$ A x = b\f$
+ *     @brief \f$ A x = b\f$
  * @}
  * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
- *          t.tic() and T.toc()
+ *     @brief  t.tic(); t.toc(); t.diff();
  *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
  *     @{
  *          @defgroup basics Simple
- *              For the dg::evaluate and dg::blas1::evaluate functions
+ *          @brief   For the dg::evaluate and dg::blas1::evaluate functions
  *
  *          @defgroup functions A large collection
- *              For the dg::evaluate and dg::blas1::evaluate functions
+ *          @brief   For the dg::evaluate and dg::blas1::evaluate functions
  *
  *          @defgroup composition Composition of two or more functors
  *
  *          @defgroup binary_operators blas1::evaluate binary operators
- *              Binary subroutines for the dg::blas1::evaluate function
+ *          @brief   Binary subroutines for the dg::blas1::evaluate function
  *
  *          @defgroup variadic_evaluates blas1::evaluate variadic functors
- *              Functors to use in the dg::blas1::evaluate function
+ *          @brief   Functors to use in the dg::blas1::evaluate function
  *
  *          @defgroup variadic_subroutines blas1::subroutine subroutines
- *              Functors to use in the dg::blas1::subroutine functions
+ *          @brief   Functors to use in the dg::blas1::subroutine functions
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *
- *         Low level helper routines.
  * @}
  *
  */
@@ -161,13 +157,24 @@
   *  - real_type operator()(real_type, real_type, real_type) const
   */
 
+/** @class hide_construct
+* @brief Perfect forward parameters to one of the constructors
+*
+* @tparam Params deduced by the compiler
+* @param ps parameters forwarded to constructors
+*/
+/** @class hide_copyable
+* @brief Return an object of same size as the object used for construction
+* @return A copyable object; what it contains is undefined, its size is important
+*/
+
  /** @class hide_ContainerType
   * @tparam ContainerType
   * Any class for which a specialization of \c TensorTraits exists and which
   * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag and \c AnyPolicyTag.
   * Among others
   *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda / omp) </tt>
-  *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles)</tt>
+  *  - <tt> std::vector<dg::DVec> </tt> (vector of shared device vectors), <tt> std::array<double, 4> </tt> (array of 4 doubles) or <tt> std::map < std::string, dg::DVec> </tt>  ( a map of named vectors)
   *  - <tt> double (scalar)</tt> and other primitive types ...
   *  .
   * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them
@@ -175,18 +182,24 @@
   */
  /** @class hide_matrix
   * @tparam MatrixType
-  * Any class for which a specialization of \c TensorTraits exists and which fullfills
-  * the requirements of the there defined Matrix tags derived from \c AnyMatrixTag.
-  * The \c MatrixType can for example be one of:
+  * Any class for which a specialization of \c TensorTraits exists and defines
+  * a tensor_category derived from \c AnyMatrixTag.
+  * Furthermore, any functor/lambda type with signature
+  *  <tt> void operator()( const ContainerType0&, ContainerType1&) </tt>.
+  * For example
   *  - \c scalar or \c Container: Scalars and containers act as diagonal matrices.
+  *  - <tt> std::function<void( const ContainerType0&, ContainerType1&)> </tt>
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>
   *  - \c dg::MDMatrix with \c dg::MDVec or \c std::vector<dg::MDVec>
-  *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
-  *  that have a corresponding member function in the Matrix class (e.g. \c symv( const ContainerType0&, ContainerType1&); ) can be called.
   *  .
-  *  If a \c Container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
+  * In case of \c SelfMadeMatrixTag only those \c blas2 functions that have a
+  * corresponding member function in the Matrix class (e.g.
+  * <tt> symv( const ContainerType0&, ContainerType1&); </tt> )
+  * can be called.  If a \c Container has the \c RecursiveVectorTag, then the
+  * matrix is applied to each of the elements unless the type has the
+  * \c SelfMadeMatrixTag or is a Functor type.
   */
   /** @class hide_geometry
   * @tparam Geometry
@@ -208,7 +221,9 @@
   * @tparam Geometry
   * A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c Container types can be used:
   * @tparam Matrix
-  * A class for which the blas2 functions are callable in connection with the \c Container class and to which the return type of \c create::dx() can be converted using \c dg::blas2::transfer.
+  * A class for which the \c dg::blas2::symv functions are callable in connection with the
+  * \c Container class and to which the return type of \c dg::create::dx() can be
+  * converted using \c dg::blas2::transfer.
   * The \c Matrix type can be one of:
   *  - \c dg::HMatrix with \c dg::HVec and one of the shared memory geometries
   *  - \c dg::DMatrix with \c dg::DVec and one of the shared memory geometries
@@ -222,24 +237,13 @@
   *  - \c dg::MHVec or \c dg::MDVec when \c Geometry is one of the MPI geometries
   */
 
-/** @class hide_symmetric_op
- * @tparam SymmetricOp
- * A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
- * with the \c Container type as argument. Also, The functions \c %inv_weights() and \c %precond()
- * need to be callable and return inverse weights and the preconditioner for the conjugate
- * gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
- * @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const Container&, Container&);
- * and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
+/*! @mainpage
+ * Welcome to the dg library
  */
 
-/*! @mainpage Introduction
- *
- * @section pdf Introduction to discontinuous Galerkin methods
- * Here is a pdf document explaining the fundamentals of discontinuous Galerkin methods
- *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- *
-
- * @section dispatch The Level 1 dispatch system
+/*!
+ * @addtogroup blas
+ * @section dispatch The dg dispatch system
  *
  * Let us first define some nomenclature to ease the following discussion
  *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyScalarTag
@@ -256,7 +260,7 @@
  * functions: trivially parallel (\c dg::blas1::subroutine and related \c dg::blas1 functions), global communication
  * (\c dg::blas1::dot and \c dg::blas2::dot) and local communication (\c dg::blas2::symv).
  *
- * @subsection dispatch_evaluate The evaluate function
+ * @subsection dispatch_evaluate The subroutine function
  *
  * The execution of \c dg::blas1::subroutine with a Functor called \c routine
  * (and all related \c dg::blas1 functions) is equivalent to the following:
@@ -296,29 +300,46 @@
  *      and return.
  *
  * @subsection dispatch_symv The symv function
- * The execution of the \c dg::blas2::symv (and \c dg::blas2::gemv) functions is hard to discribe in general
- * since each matrix class has individual prerequisites and execution paths.
- * Still, we can identify some general rules:
- *   -# The Matrix type can be either a Scalar (promotes to Scalar times the Unit Matrix), a Vector (promotes to a diagonal Matrix) or a Matrix
- *   -# If the Matrix is either a Scalar or a Vector and the remaining types do not have the \c dg::RecursiveVectorTag tensor category, then \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
- *   -# If the Matrix has the \c dg::SelfMadeMatrixTag tensor category, then all parameters are immediately forwarded to the \c symv member function. No asserts are performed and none of the following applies.
+ * In the execution of the \c dg::blas2::symv (and its aliases \c dg::blas2::gemv and \c dg::apply)
+ * each matrix type has individual prerequisites and execution paths.
+ * We can identify some general rules:
+ *   -# The Matrix type can be either a Scalar (promotes to Scalar times the
+ *   Unit Matrix), a Vector (promotes to a diagonal Matrix), a Matrix or a
+ *   Functor
+ *   -# If the Matrix type is either a Scalar or a Vector and the remaining types do
+ *   not have the \c dg::RecursiveVectorTag tensor category, then
+ *   \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
+ *   -# If the Matrix type has the \c dg::SelfMadeMatrixTag tensor category,
+ *   then all parameters are immediately forwarded to the \c symv member
+ *   function.  No asserts are performed and none of the following applies.
+ *   -# If the tensor category is \c dg::NotATensorTag (any type has this tag
+ *   by default unless it is overwritten by a specialization of
+ *   \c dg::TensorTraits ) then the compiler assumes that the type is a functor
+ *   type and immediately forwards all parameters to the \c operator() member
+ *   and none of the following applies
  *   -# The container template parameters must be Vectors or Scalars and must
  *   have compatible execution policies. Vectors must be compatible.
  *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
- *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
+ *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is
+ *   recursively called with the Matrix on all elements of the Vectors.
  *
+ */
+
+ /*!
+ * @addtogroup mpi_structures
  * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
 @subsection mpi_vector MPI Vectors and the blas functions
 
-In Feltor each mpi process gets an equally sized chunk of a vector.
-The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is
+In Feltor each mpi process usually gets an equally sized chunk of a vector.
+In particular the \c dg::aRealMPITopology2d and \c dg::aRealMPITopology3d classes
+represent the standard Cartesian process and point distribution (meaning every process gets an equally sized 2d / 3d box out of the global domain ).
+The corresponding mpi vector structure in FELTOR is the \c dg::MPI_Vector, which is
 nothing but a wrapper around a container type object and a \c MPI_Comm.
 With this the \c dg::blas1 functions can readily be implemented by just redirecting to the
 implementation for the container type. The only functions that need
 additional
 communication are the \c dg::blas1::dot and \c dg::blas2::dot functions (\c MPI_Allreduce).
-
 @subsection mpi_matrix MPI Matrices and the symv function
 
 Contrary to a vector
@@ -389,3 +410,39 @@ Analogously, the transpose of a column distributed matrix is a row-distributed m
 \subsubsection mpi_create Creation
 You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
 */
+
+namespace dg{
+/*! @brief Simple tool for performance measuring
+ *
+ * The implementation of this class is chosen with compile-time MACROS \c THRUST_DEVICE_SYSTEM and \c MPI_VERSION.
+ * @code
+   dg::Timer t;
+   t.tic();
+   some_function_to_benchmark();
+   t.toc();
+   std::cout << "Function took "<<t.diff()<<"s\n";
+ * @endcode
+ * @ingroup timer
+ */
+struct Timer
+{
+    /*! @brief Start timer
+    *
+    * uses \c omp_get_wtime() if available, else \c gettimeofday.
+    * If compiled with nvcc we place \c cudaEvent_t in the gpu stream.
+    * The mpi version places an \c MPI_Barrier(MPI_COMM_WORLD)
+    * and then uses \c MPI_Wtime.
+    * MPI + Cuda adds an additional \c cudaDeviceSynchronize
+    */
+    void tic();
+    /*!
+    * @brief Stop timer
+    * @copydetails tic
+    */
+    void toc();
+    /*!
+     * \brief Return time in seconds elapsed between tic and toc
+     * \return Time in seconds between calls of tic and toc*/
+    double diff()const;
+};
+}

@@ -173,13 +173,18 @@ struct DssFunction
 {
     DssFunction( TokamakMagneticField c):f_(c), c_(c),
         bhatR_(c), bhatZ_(c), bhatP_(c),
-        gradbhatR_(c), gradbhatZ_(c), gradbhatP_(c){}
+        bhatRR_(c), bhatZR_(c), bhatPR_(c),
+        bhatRZ_(c), bhatZZ_(c), bhatPZ_(c){}
     double operator()(double R, double Z, double phi) const {
         double bhatR = bhatR_(R,Z), bhatZ = bhatZ_(R,Z), bhatP = bhatP_(R,Z);
+        double bhatRR = bhatRR_(R,Z), bhatZR = bhatZR_(R,Z), bhatPR = bhatPR_(R,Z);
+        double bhatRZ = bhatRZ_(R,Z), bhatZZ = bhatZZ_(R,Z), bhatPZ = bhatPZ_(R,Z);
         double fR = f_.dR(R,Z,phi), fZ = f_.dZ(R,Z,phi), fP = f_.dP(R,Z,phi);
         double fRR = f_.dRR(R,Z,phi), fRZ = f_.dRZ(R,Z,phi), fZZ = f_.dZZ(R,Z,phi);
         double fRP = f_.dRP(R,Z,phi), fZP = f_.dZP(R,Z,phi), fPP = f_.dPP(R,Z,phi);
-        double gradbhatR = gradbhatR_(R,Z), gradbhatZ = gradbhatZ_(R,Z), gradbhatP = gradbhatP_(R,Z);
+        double gradbhatR = bhatR*bhatRR+bhatZ*bhatRZ,
+               gradbhatZ = bhatR*bhatZR+bhatZ*bhatZZ,
+               gradbhatP = bhatR*bhatPR+bhatZ*bhatPZ;
         return bhatR*bhatR*fRR + bhatZ*bhatZ*fZZ + bhatP*bhatP*fPP
             +2.*(bhatR*bhatZ*fRZ + bhatR*bhatP*fRP + bhatZ*bhatP*fZP)
             + gradbhatR*fR + gradbhatZ*fZ + gradbhatP*fP;
@@ -190,9 +195,12 @@ struct DssFunction
     dg::geo::BHatR bhatR_;
     dg::geo::BHatZ bhatZ_;
     dg::geo::BHatP bhatP_;
-    dg::geo::GradBHatR gradbhatR_;
-    dg::geo::GradBHatZ gradbhatZ_;
-    dg::geo::GradBHatP gradbhatP_;
+    dg::geo::BHatRR bhatRR_;
+    dg::geo::BHatZR bhatZR_;
+    dg::geo::BHatPR bhatPR_;
+    dg::geo::BHatRZ bhatRZ_;
+    dg::geo::BHatZZ bhatZZ_;
+    dg::geo::BHatPZ bhatPZ_;
 };
 
 //positive Laplacian \Delta_\parallel
@@ -234,94 +242,69 @@ struct OMDsDivDsFunction
     DsDivDsFunction<Function> df_;
 };
 
-template<class DS, class container>
-struct TestInvertDS{
-    TestInvertDS( DS& ds, double alpha = -1.):
-        m_ds(ds), m_alpha(alpha){}
-    void symv( const container& x, container& y)
-    {
-        dg::blas2::symv( 1., m_ds, x, 0., y);
-        dg::blas1::axpby( 1., x, m_alpha, y, y);
-        dg::blas2::symv( m_ds.weights(), y,y);
+template<class Function>
+struct Variation
+{
+    Variation( const TokamakMagneticField& c): f_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return sqrt(f_.dR(R,Z,phi)*f_.dR(R,Z,phi) + f_.dZ(R,Z,phi)*f_.dZ(R,Z,phi));
     }
-    const container& weights(){return m_ds.weights();}
-    const container& inv_weights(){return m_ds.inv_weights();}
-    const container& precond(){return m_ds.precond();}
     private:
-    DS& m_ds;
-    double m_alpha;
+    Function f_;
 };
 
 //////////////function to call DS////////////////////
 template<class DS, class container>
 void callDS( DS& ds, std::string name, const container& in, container& out,
-const container& divb,
 unsigned max_iter = 1e4, double eps = 1e-6)
 {
     if( name == "forward") ds.ds( dg::forward, in, out);
     else if( name == "backward") ds.ds( dg::backward, in, out);
+    else if( name == "forward2") ds.forward2( 1., in, 0., out);
+    else if( name == "backward2") ds.backward2( 1., in, 0., out);
+    else if( name == "centered") ds.ds( dg::centered, in, out);
+    else if( name == "dss") ds.dss( in, out);
+    else if( name == "centered_bc_along")
+        ds.centered_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
+    else if( name == "dss_bc_along")
+        ds.dss_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
     else if( name == "centered") ds.ds( dg::centered, in, out);
     else if( name == "dss") ds.dss( in, out);
     else if( name == "divForward") ds.div( dg::forward, in, out);
     else if( name == "divBackward") ds.div( dg::backward, in, out);
     else if( name == "divCentered") ds.div( dg::centered, in, out);
-    else if( name == "divDirectForward"){
-        ds.ds( dg::forward, in, out);
-        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
-    }
-    else if( name == "divDirectBackward"){
-        ds.ds( dg::backward, in, out);
-        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
-    }
-    else if( name == "divDirectCentered"){
-        ds.ds( dg::centered, in, out);
-        dg::blas1::pointwiseDot( 1., divb, in, 1., out);
-    }
-    else if( name == "forwardLap") {
-        ds.set_direction( dg::forward);
-        ds.symv( in, out);
-    }
-    else if( name == "backwardLap"){
-        ds.set_direction( dg::backward);
-        ds.symv( in, out);
-    }
-    else if( name == "centeredLap"){
-        ds.set_direction( dg::centered);
-        ds.symv( in, out);
-    }
     else if( name == "directLap") {
-        ds.ds( dg::centered, in, out);
-        dg::blas1::pointwiseDot( divb, out, out);
-        ds.dss( 1., in, 1., out);
+        ds.dssd( 1., in, 0., out);
     }
-    else if( name == "invForwardLap"){
-        dg::Invert<container> invert( in, max_iter, eps, 1);
-        ds.set_direction( dg::forward);
-        dg::geo::TestInvertDS< DS, container> rhs(ds);
-        invert( rhs, out, in);
-    }
-    else if( name == "invBackwardLap"){
-        dg::Invert<container> invert( in, max_iter, eps, 1);
-        ds.set_direction( dg::backward);
-        dg::geo::TestInvertDS< DS, container> rhs(ds);
-        invert( rhs, out, in);
+    else if( name == "directLap_bc_along") {
+        ds.dssd_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
     }
     else if( name == "invCenteredLap"){
-        dg::Invert<container> invert( in, max_iter, eps, 1);
-        ds.set_direction( dg::centered);
-        dg::geo::TestInvertDS< DS, container> rhs(ds);
-        invert( rhs, out, in);
+        //dg::LGMRES<container> invert( in, 30,3,10000);
+        dg::BICGSTABl<container> invert( in, 30000,3);
+        dg::Timer t;
+        t.tic();
+        double precond = 1.;
+        unsigned number = invert.solve( [&](const auto& x, auto& y){
+                //  y = ( 1 - D) x
+                dg::blas2::symv( ds, x, y);
+                dg::blas1::axpby( 1., x, -1., y, y);
+            }, out, in, precond, ds.weights(), eps);
+        t.toc();
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank==0)
+    {
+#endif //MPI
+        std::cout << "#Number of BICGSTABl iterations: "<<number<<"\n";
+        std::cout << "#Took                          : "<<t.diff()<<"\n";
+#ifdef MPI_VERSION
+    }
+#endif //MPI
     }
 
 }
-}//namespace geo
-template<class DS, class container>
-struct TensorTraits<dg::geo::TestInvertDS<DS,container>>{
-    using value_type = double;
-    using tensor_category = SelfMadeMatrixTag;
-};
-namespace geo{
-
 ///////////////////////////////Functions for 2d grids//////////////////
 
 //psi * cos(theta)

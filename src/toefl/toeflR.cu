@@ -48,18 +48,14 @@ int main( int argc, char* argv[])
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( ex.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    {
-        dg::DVec v2d = dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-    }
     if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
     //////////////////////////////////////////////////////////////////////
 
 
-    //dg::Karniadakis< std::vector<dg::DVec> > stepper( y0, y0[0].size(), p.eps_time);
-    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0, y0[0].size(), p.eps_time);
+    dg::DefaultSolver<std::vector<dg::DVec>> solver( im, y0, 1000, p.eps_time);
+    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0);
     //dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -69,13 +65,13 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    //stepper.init( ex, im, time, y0, p.dt);
     double dt = 1e-5;
     const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = ex.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
+    unsigned failed_counter = 0;
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
@@ -124,11 +120,11 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             }
-            //try{ stepper.step( ex, im, time, y0);}
             try{
-                //std::cout << "Time "<<time<<" dt "<<dt<<" success "<<!stepper.failed()<<"\n";
-                stepper.step( ex, im, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                stepper.step( std::tie(ex, im, solver), time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
                 //stepper.step( ex, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+                if ( stepper.failed() ) failed_counter ++;
+                std::cout << "Time "<<time<<" dt "<<dt<<" failed counter "<<failed_counter<<"\n";
             }
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

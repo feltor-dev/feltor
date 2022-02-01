@@ -3,7 +3,7 @@
 
 #include <mpi.h>
 
-#include "cg.h"
+#include "pcg.h"
 #include "elliptic.h"
 
 #include "backend/timer.h"
@@ -49,7 +49,6 @@ int main( int argc, char* argv[])
 
     dg::RealCylindricalMPIGrid3d<value_type> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER, comm);
     const Vector w3d = dg::create::volume( grid);
-    const Vector v3d = dg::create::inv_volume( grid);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     value_type eps=1e-6;
@@ -63,23 +62,21 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic3d<dg::aRealMPIGeometry3d<value_type>, Matrix, Vector> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic3d<dg::aRealMPIGeometry3d<value_type>, Matrix, Vector> laplace(grid, dg::centered);
     Matrix DX = dg::create::dx( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::CG< Vector > pcg( x, n*n*Nx*Ny);
+    dg::PCG< Vector > pcg( x, n*n*Nx*Ny);
 
     if(rank==0)std::cout<<"Expand right hand side\n";
     const Vector solution = dg::evaluate ( fct, grid);
     const Vector deriv = dg::evaluate( fctX, grid);
     Vector b = dg::evaluate ( laplace3d_fct, grid);
-    //compute W b
-    dg::blas2::symv( w3d, b, b);
 
     if(rank==0)std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     t.tic();
-    unsigned num = pcg( laplace, x, b, v3d, eps);
+    unsigned num = pcg.solve( laplace, x, b, 1., w3d, eps);
     t.toc();
     if(rank==0)std::cout << "Number of pcg iterations "<< num<<std::endl;
     if(rank==0)std::cout << "... took                 "<< t.diff()<<"s\n";
@@ -109,15 +106,14 @@ int main( int argc, char* argv[])
     b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
     dg::ClonePtr<dg::aRealMPIGeometry2d<value_type>> grid_perp = grid.perp_grid();
-    Vector v2d = dg::create::inv_volume( *grid_perp);
-    Vector w2d = dg::create::volume( *grid_perp);
+    const Vector w2d = dg::create::volume( *grid_perp);
     Vector g_parallel = grid.metric().value(2,2);
     dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
     Vector chi = dg::evaluate( dg::one, grid);
     dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector> > laplace_split(
-            grid.local().Nz(), dg::Elliptic<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector>(*grid_perp, dg::not_normed, dg::centered));
+            grid.local().Nz(), dg::Elliptic<dg::aRealMPIGeometry2d<value_type>, Matrix, Vector>(*grid_perp, dg::centered));
     // create split  vectors and solve
     std::vector<dg::MPI_Vector<dg::View<LVector>>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
@@ -131,7 +127,7 @@ int main( int argc, char* argv[])
     {
         laplace_split[i].set_chi( chi_split[i]);
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
-        number[i] = pcg( laplace_split[i], x_split[i], b_split[i], v2d, eps);
+        number[i] = pcg.solve( laplace_split[i], x_split[i], b_split[i], 1., w2d, eps);
     }
     t.toc();
     if(rank==0)std::cout << "Number of iterations in split     "<< number[0]<<"\n";

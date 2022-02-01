@@ -4,6 +4,7 @@
 #include "guenther.h"
 #include "polynomial.h"
 #include "toroidal.h"
+#include "fieldaligned.h"
 #include <dg/file/json_utilities.h>
 
 /*!@file
@@ -29,16 +30,37 @@ namespace geo{
     "equilibrium" : "toroidal",
     "R_0" : 10
 }
-// description "none" is chosen by default
+// Automatically chosen:
+// description : "none",
+// a : 1.0,
+// elongation : 1.0,
+// triangularity : 0.0
  * @endcode
  * @code
 // Circular flux surfaces
 {
     "equilibrium" : "circular",
-    "I_0" : 20
+    "I_0" : 20,
     "R_0" : 10
 }
-// description "standardO" is chosen by default
+// Automatically chosen:
+// description : "standardO",
+// a : 1.0,
+// elongation : 1.0,
+// triangularity : 0.0
+ * @endcode
+ * @code
+// The guenther magnetic field
+{
+    "equilibrium" : "guenther",
+    "I_0" : 20,
+    "R_0" : 10
+}
+// Automatically chosen:
+// description : "square",
+// a : 1.0,
+// elongation : 1.0,
+// triangularity : 0.0
  * @endcode
  * @sa \c dg::geo::description to see valid values for the %description field
  *
@@ -47,6 +69,7 @@ namespace geo{
  * for example if "solovev", then the dg::geo::solovev::Parameters( gs) is called and forwarded to dg::geo::createSolovevField(gp); similar for the rest
  * @return A magnetic field object
  * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
+ * @ingroup geom
  */
 static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
 {
@@ -147,22 +170,21 @@ static inline TokamakMagneticField createModifiedField(
         dg::file::WrappedJsonValue gs, dg::file::WrappedJsonValue jsmod,
         CylindricalFunctor& wall, CylindricalFunctor& transition)
 {
-    std::string e = gs.get( "equilibrium", "solovev" ).asString();
-    equilibrium equi = str2equilibrium.at( e);
-    std::string m = jsmod.get( "type", "heaviside" ).asString();
-    modifier mod = str2modifier.at( m);
-    std::string d = gs.get( "description", "standardX" ).asString();
-    description desc = str2description.at( d);
     TokamakMagneticField mag = createMagneticField( gs);
     const MagneticFieldParameters& inp = mag.params();
+    description desc = inp.getDescription();
+    equilibrium equi = inp.getEquilibrium();
+    std::string m = jsmod.get( "type", "heaviside" ).asString();
+    modifier mod = str2modifier.at( m);
     MagneticFieldParameters mod_params{ inp.a(), inp.elongation(),
-        inp.triangularity(), inp.getEquilibrium(), mod, inp.getDescription()};
+        inp.triangularity(), equi, mod, desc};
     CylindricalFunctorsLvl2 mod_psip;
     switch (mod) {
         default: //none
         {
-            wall = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 0, 0);
-            transition = mod::MagneticTransition( mod::nowhere, mag.psip(), 0, 0, 0);
+            wall = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 1, -1);
+            transition = mod::MagneticTransition( mod::nowhere, mag.psip(),
+                    0,  1, -1);
             return mag;
         }
         case modifier::heaviside:
@@ -286,34 +308,39 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
 /**
  * @brief Create the sheath region where fieldlines intersect the boundary
  *
- * Check if any fieldlines that are not in the wall region intersect the boundary
- * and determine whether the poloidal field points towards or away from the wall
+ * The sheath functor that comes out of this does
+ * (i) on each of the four lines defined by the two vertical (R0, R1) and two
+ * horizontal (Z0, Z1) boundaries check if the "wall" functor is zero
+ * anywhere on the line: if not then move this boundary far away
+ * (ii) Measure the angular distance along the fieldline (both in positive and
+ * negative direction) to the remaining walls
+ * (iii) Modify the angular distances with a dg::PolynomialHeaviside functor
+ * with parameters given in jsmod:
 @code
 {
-    "boundary": 0.1, //value where sheath region begins in uits of minor radius a
-    "alpha": 0.01 // radius of the transition region where the modification acts in units of minor radius a
+    "boundary" : 0.0625, // value where sheath region begins in units of 2Pi
+    "alpha" : 0.015625 // diameter of the transition region in units of 2Pi
 }
 @endcode
+ * (iv) The sheath region is the SetUnion of positive and negative functor,
+ * together with the SetIntersection with the SetNot(wall) region.
  * @param jsmod must contain fields as described above
- * @param mag (in) the magnetic field, used to find the direction of the field
- * towards or away from the sheath
+ * @param mag (in) the (unmodified) magnetic field, used to integrate
+ * the field towards or away from the sheath
  * @param wall (in) the penalization region that represents the actual
  * (perpendicular) wall without the divertor (if 0 on the boundary the boundary will be considered to be a sheath, else the boundary will be ignored)
- * @param R0 left boundary
- * @param R1 right boundary
- * @param Z0 bottom boundary
- * @param Z1 top boundary
- * @param sheath (out) contains the region recognized as sheath
- * @param direction (out) contains (+/-) indicating direction of magnetic field
- * to closest sheath boundary (defined on entire box)
- *
- * @return sheath region
+ * @param sheath_walls (inout) on input contains the box boundaries, on output
+ * the non-sheath boundaries are moved far away
+ * @param sheath (out) contains the region recognized as sheath (returning +1 within
+ * the sheath and 0 outside of it and something in-between in the transition region)
  */
 static inline void createSheathRegion(
-        dg::file::WrappedJsonValue jsmod, TokamakMagneticField mag,
-        CylindricalFunctor wall, double R0, double R1, double Z0, double Z1,
-        CylindricalFunctor& sheath, CylindricalFunctor& direction )
+    dg::file::WrappedJsonValue jsmod, TokamakMagneticField mag,
+    CylindricalFunctor wall, dg::Grid2d& sheath_walls,
+    CylindricalFunctor& sheath)
 {
+    double R0 = sheath_walls.x0(), R1 = sheath_walls.x1();
+    double Z0 = sheath_walls.y0(), Z1 = sheath_walls.y1();
     Grid1d gR1d ( R0, R1, 1, 100);
     Grid1d gZ1d ( Z0, Z1, 1, 100);
     std::array<bool,2> sheathR = {false,false}, sheathZ = {false,false};
@@ -328,24 +355,24 @@ static inline void createSheathRegion(
         if( wall( R1, Z0 + i*gZ1d.h()) == 0)
             sheathZ[1] = true;
     }
-    std::vector<double> horizontal_sheath, vertical_sheath;
-    if( true == sheathR[0])
-        horizontal_sheath.push_back( Z0);
-    if( true == sheathR[1])
-        horizontal_sheath.push_back( Z1);
-    if( true == sheathZ[0])
-        vertical_sheath.push_back( R0);
-    if( true == sheathZ[1])
-        vertical_sheath.push_back( R1);
-    //direction
-    direction = dg::geo::WallDirection( mag, vertical_sheath, horizontal_sheath);
-    //sheath
-    CylindricalFunctor dist = dg::WallDistance( vertical_sheath, horizontal_sheath);
-    double boundary = jsmod.get( "boundary", 0.1 ).asDouble();
-    double alpha    = jsmod.get( "alpha", 0.01 ).asDouble();
-    double a = mag.params().a();
-    dg::PolynomialHeaviside poly( boundary*a - alpha*a/2., alpha*a/2., -1);
-    sheath = dg::compose( poly, dist);
+    if( false == sheathR[0]) Z0 = -1e10;
+    if( false == sheathR[1]) Z1 = 1e10;
+    if( false == sheathZ[0]) R0 = -1e10;
+    if( false == sheathZ[1]) R1 = 1e10;
+    sheath_walls = dg::Grid2d( R0, R1, Z0, Z1, 1,1,1);
+    double boundary = jsmod.get( "boundary", 0.0625 ).asDouble(); // 1/16
+    double alpha    = jsmod.get( "alpha", 0.015625 ).asDouble(); // 1/64
+    CylindricalFunctor distM = dg::geo::WallFieldlineDistance( dg::geo::createBHat(
+            mag), sheath_walls, (-boundary-1e-3)*2.0*M_PI,
+            1e-6, "phi");
+    CylindricalFunctor distP = dg::geo::WallFieldlineDistance( dg::geo::createBHat(
+            mag), sheath_walls, (+boundary+1e-3)*2.0*M_PI,
+            1e-6, "phi");
+    dg::PolynomialHeaviside polyM( -boundary*2.*M_PI + alpha*M_PI, alpha*M_PI, +1);
+    dg::PolynomialHeaviside polyP(  boundary*2.*M_PI - alpha*M_PI, alpha*M_PI, -1);
+    auto sheathM = dg::compose( polyM, distM); //positive (because distance)
+    auto sheathP = dg::compose( polyP, distP);
+    sheath = mod::SetUnion( sheathM, sheathP);
     sheath = mod::SetIntersection( mod::SetNot( wall), sheath);
 }
 ///@}

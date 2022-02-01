@@ -51,20 +51,16 @@ int main( int argc, char* argv[])
     toefl::Implicit< dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec > imp( grid, p.nu);
     /////////////////////create initial vector////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-    std::vector<dg::x::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
+    std::vector<dg::x::DVec> y0(2, dg::evaluate( g, grid)); // n_e' = gaussian
     dg::blas2::symv( exp.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    {
-        dg::x::DVec v2d = dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-    }
     if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
     //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
-    dg::Karniadakis< std::vector<dg::x::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( exp, imp, time, y0, p.dt);
-    y1 = y0;
+    dg::DefaultSolver<std::vector<dg::x::DVec>> solver( imp, y0, 1000, p.eps_time);
+    dg::Adaptive<dg::ARKStep<std::vector<dg::x::DVec>>> stepper( "ARK-4-2-3", y0);
+    //dg::Adaptive<dg::ERKStep<std::vector<dg::x::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
     int ncid;
@@ -96,8 +92,8 @@ int main( int argc, char* argv[])
     std::vector<dg::x::DVec> transferD(4, dg::evaluate(dg::zero, grid_out));
     dg::x::HVec transferH(dg::evaluate(dg::zero, grid_out));
     dg::x::IDMatrix interpolate = dg::create::interpolation( grid_out, grid);
-    dg::blas2::symv( interpolate, y1[0], transferD[0]);
-    dg::blas2::symv( interpolate, y1[1], transferD[1]);
+    dg::blas2::symv( interpolate, y0[0], transferD[0]);
+    dg::blas2::symv( interpolate, y0[1], transferD[1]);
     dg::blas2::symv( interpolate, exp.potential()[0], transferD[2]);
     dg::blas2::symv( imp.laplacianM(), exp.potential()[0], transfer);
     dg::blas2::symv( interpolate, transfer, transferD[3]);
@@ -111,6 +107,8 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////Timeloop/////////////////////////////////
     const double mass0 = exp.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = exp.energy(), E1 = 0, diff = 0;
+    unsigned failed_counter = 0;
+    double dt = 1e-6;
     dg::Timer t;
     t.tic();
     try
@@ -127,7 +125,10 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            karniadakis.step( exp, imp, time, y1);
+            stepper.step( std::tie(exp, imp, solver), time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+            //stepper.step( exp, time, y0, time, y0, dt, dg::pid_control, dg::l2norm, 1e-5, 1e-10);
+            if ( stepper.failed() ) failed_counter ++;
+            DG_RANK0 std::cout << "Time "<<time<<" dt "<<dt<<" failed counter "<<failed_counter<<"\n";
             //store accuracy details
             {
                 DG_RANK0 std::cout << "(m_tot-m_0)/m_0: "<< (exp.mass()-mass0)/mass_blob0<<"\t";
@@ -152,8 +153,8 @@ int main( int argc, char* argv[])
         }
         //////////////////////////write fields////////////////////////
         start = i;
-        dg::blas2::symv( interpolate, y1[0], transferD[0]);
-        dg::blas2::symv( interpolate, y1[1], transferD[1]);
+        dg::blas2::symv( interpolate, y0[0], transferD[0]);
+        dg::blas2::symv( interpolate, y0[1], transferD[1]);
         dg::blas2::symv( interpolate, exp.potential()[0], transferD[2]);
         dg::blas2::symv( imp.laplacianM(), exp.potential()[0], transfer);
         dg::blas2::symv( interpolate, transfer, transferD[3]);

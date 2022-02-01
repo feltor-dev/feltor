@@ -42,8 +42,6 @@ int main(int argc, char* argv[])
     if(rank==0)err = nc_def_var( ncid, "data", NC_DOUBLE, 4, dimids, &dataID);
 
     /* Write metadata to file. */
-    if(rank==0)err = nc_enddef(ncid);
-
     size_t Tcount=1, Tstart=0;
     double time = 0;
     //err = nc_close(ncid);

@@ -17,8 +17,6 @@ conservative discontinuous Galerkin scheme for the 2D incompressible
 Navier-Stokes equations" Comput. Phys. Commun. 185, 2865-2873 (2014) (The
 very first paper resulting from this library)
 
-polar:: A version of lamb_dipole in Polar coordinates (unmaintained)
-
 toefl:: 2d local and global blobs.  This code
 reproduces results for, among others, the paper M. Wiesenberger, J. Madsen,
 and A. Kendl, "Radial convection of finite ion temperature, high amplitude

@@ -12,7 +12,7 @@
 
 #include "init.h"
 #include "diag.h"
-#include "shu.cuh"
+#include "shu.h"
 
 
 int main( int argc, char* argv[])
@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
     //make solver and stepper
     shu::Shu<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>
         shu( grid, ws);
-    shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, ws);
+    shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( shu);
     if( "mms" == ws["init"]["type"].asString())
     {
         double sigma = ws["init"].get( "sigma", 0.2).asDouble();
@@ -75,51 +75,99 @@ int main( int argc, char* argv[])
     /// ////////////// Initialize timestepper ///////////////////////
     std::string stepper = ws[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
     std::string tableau = ws[ "timestepper"].get( "tableau", "ImEx-BDF-3-3").asString();
-    std::string regularization = ws[ "regularization"].get( "type", "moddal").asString();
+    std::string regularization = ws[ "regularization"].get( "type", "modal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
     dg::IdentityFilter identity;
-    bool apply_filter = true;
-    dg::ImExMultistep<dg::DVec> imex;
+    bool apply_filter = false;
+    dg::ImExMultistep_s<dg::DVec, dg::AndersonSolver<dg::DVec>> imex;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
+    dg::ImplicitMultistep<dg::DVec> multistep_implicit;
+    dg::Adaptive<dg::ERKStep<dg::DVec> > adaptive;
+    dg::Adaptive<dg::ARKStep_s<dg::DVec> > adaptive_imex;
+    dg::Adaptive<dg::DIRKStep<dg::DVec, dg::AndersonSolver<dg::DVec> >> adaptive_implicit;
     if( regularization == "modal")
     {
         double alpha = ws[ "regularization"].get( "alpha", 36).asDouble();
         double order = ws[ "regularization"].get( "order", 8).asDouble();
         double eta_c = ws[ "regularization"].get( "eta_c", 0.5).asDouble();
         filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
-    }
-    else
-        apply_filter = false;
-
-    double dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
-    if( "ImExMultistep" == stepper)
-    {
-        if( regularization != "viscosity")
+        apply_filter = true;
+        if( stepper != "FilteredExplicitMultistep" && stepper != "Shu-Osher" && stepper != "FilteredImplicitMultistep" )
         {
-            throw dg::Error(dg::Message(_ping_)<<"Error: ImExMultistep only works with viscosity regularization! Exit now!");
-
+            throw std::runtime_error( "Error: modal regularization only works with either FilteredExplicit- or -ImplicitMultistep or Shu-Osher!");
             return -1;
         }
+    }
+    else if( regularization != "viscosity")
+        throw std::runtime_error( "ERROR: Unkown regularization type "+regularization);
+
+    double dt = 0.;
+    double rtol = 1., atol = 1.;
+    if( "ImExMultistep" == stepper)
+    {
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
+        unsigned mMax = ws["timestepper"].get( "mMax", 8).asUInt();
+        unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
+        double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
         double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
-        imex.construct( tableau, y0, y0.size(), eps_time);
+        //imex.construct( tableau, y0, y0.size(), eps_time);
+        imex.construct( tableau, y0, mMax, eps_time, max_iter, damping, mMax );
         imex.init( shu, diffusion, time, y0, dt);
     }
     else if( "Shu-Osher" == stepper)
     {
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
         shu_osher.construct( tableau, y0);
     }
     else if( "FilteredExplicitMultistep" == stepper)
     {
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
         multistep.construct( tableau, y0);
         if( apply_filter)
             multistep.init( shu, filter, time, y0, dt);
         else
             multistep.init( shu, identity, time, y0, dt);
     }
+    else if( "FilteredImplicitMultistep" == stepper)
+    {
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
+        unsigned mMax = ws["timestepper"].get( "mMax", 8).asUInt();
+        unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
+        double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
+        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
+        multistep_implicit.construct( tableau, y0, mMax, eps_time, max_iter, damping, mMax );
+        if( apply_filter)
+            multistep_implicit.init( shu, filter, time, y0, dt);
+        else
+            multistep_implicit.init( shu, identity, time, y0, dt);
+    }
+    else if( "ERK" == stepper)
+    {
+        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
+        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
+        adaptive.construct( tableau, y0);
+    }
+    else if( "ARK" == stepper)
+    {
+        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
+        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
+        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
+        adaptive_imex.construct( tableau, y0, y0.size(), eps_time);
+    }
+    else if ( "DIRK" == stepper)
+    {
+        unsigned mMax = ws["timestepper"].get( "mMax", 8).asUInt();
+        unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
+        double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
+        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
+        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
+        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
+        adaptive_implicit.construct( tableau, y0, mMax, eps_time, max_iter, damping, mMax);
+    }
     else
     {
-        throw dg::Error(dg::Message(_ping_)<<"Error! Timestepper not recognized!\n");
+        throw std::runtime_error( "Error! Timestepper "+stepper+" not recognized!\n");
 
         return -1;
     }
@@ -171,6 +219,13 @@ int main( int argc, char* argv[])
                             shu_osher.step( shu, filter, time, y0, time, y0, dt);
                         else
                             shu_osher.step( shu, identity, time, y0, time, y0, dt);
+                    }
+                    else if ( "FilteredImplicitMultistep" == stepper)
+                    {
+                        if( apply_filter)
+                            multistep_implicit.step( shu, filter, time, y0);
+                        else
+                            multistep_implicit.step( shu, identity, time, y0);
                     }
                 }
             } catch( dg::Fail& fail) {
@@ -262,13 +317,10 @@ int main( int argc, char* argv[])
                 &staticID);
             err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
                 long_name.data());
-            err = nc_enddef(ncid);
             record.function( resultD, var);
             dg::assign( resultD, resultH);
             dg::file::put_var_double( ncid, staticID, grid, resultH);
-            err = nc_redef(ncid);
         }
-        err = nc_enddef(ncid);
         size_t start[3] = {0, 0, 0};
         size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
         ///////////////////////////////////first output/////////////////////////
@@ -309,6 +361,13 @@ int main( int argc, char* argv[])
                         shu_osher.step( shu, filter, time, y0, time, y0, dt);
                     else
                         shu_osher.step( shu, identity, time, y0, time, y0, dt);
+                }
+                else if ( "FilteredImplicitMultistep" == stepper)
+                {
+                    if( apply_filter)
+                        multistep_implicit.step( shu, filter, time, y0);
+                    else
+                        multistep_implicit.step( shu, identity, time, y0);
                 }
             }
             step+=itstp;

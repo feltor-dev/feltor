@@ -9,7 +9,7 @@
 #include "topology/base_geometryX.h"
 #include "blas.h"
 #include "elliptic.h"
-#include "cg.h"
+#include "pcg.h"
 
 const dg::bc bcx = dg::DIR;
 const dg::bc bcy = dg::NEU;
@@ -74,22 +74,20 @@ int main()
     dg::DVec b =    dg::evaluate( rhs, grid);
     dg::DVec chi =  dg::evaluate( pol, grid);
     dg::DVec temp = x;
+    dg::PCG<dg::DVec > pcg( x, n*n*Nx*Ny);
 
 
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
-    dg::Elliptic<dg::CartesianGridX2d, Matrix, dg::DVec> pol( grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CartesianGridX2d, Matrix, dg::DVec> pol( grid, dg::centered);
     pol.set_chi( chi);
     t.toc();
     std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
-    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
-
-
     std::cout << eps<<" ";
     t.tic();
-    std::cout << " "<< invert( pol, x, b);
+    std::cout << " "<< pcg.solve( pol, x, b, pol.precond(), pol.weights(), eps);
     t.toc();
     //std::cout << "Took "<<t.diff()<<"s\n";
     }
@@ -105,22 +103,20 @@ int main()
     const double norm = dg::blas2::dot( w2d, solution);
     std::cout << " "<<sqrt( err/norm);
     {
-    dg::Elliptic<dg::CartesianGridX2d, Matrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward);
+    dg::Elliptic<dg::CartesianGridX2d, Matrix, dg::DVec> pol_forward( grid, dg::forward);
     pol_forward.set_chi( chi);
     x = temp;
-    dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_fw( pol_forward, x, b);
+    std::cout << " "<< pcg.solve( pol_forward, x, b, pol_forward.precond(), pol_forward.weights());
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm);
     }
 
     {
-    dg::Elliptic<dg::CartesianGridX2d, Matrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward);
+    dg::Elliptic<dg::CartesianGridX2d, Matrix, dg::DVec> pol_backward( grid, dg::backward);
     pol_backward.set_chi( chi);
     x = temp;
-    dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_bw( pol_backward, x, b);
+    std::cout << " "<< pcg.solve( pol_backward, x, b, pol_backward.precond(), pol_backward.weights());
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm)<<std::endl;

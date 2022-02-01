@@ -50,7 +50,6 @@ int main()
 
     dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
-    dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
@@ -58,49 +57,114 @@ int main()
     const dg::DVec solution = dg::evaluate( sol, grid);
 
     unsigned stages = 3;
-    std::cout<< "Type number of stages (3) and jfactor (10) !\n";
-    std::cin >> stages >> jfactor;
-    std::cout << stages << " "<<jfactor<<std::endl;
-    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid(
-        grid, stages);
-    const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
-
-    std::vector<dg::DVec> multi_x = multigrid.project( x);
-    std::vector<dg::DVec> multi_b = multigrid.project( b);
-    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
-    std::vector<dg::EVE<dg::DVec> > multi_eve(stages);
-    std::vector<double> multi_ev(stages);
-    double eps_ev = 1e-10;
-    double hxhy = lx*ly/(n*n*Nx*Ny);
-    unsigned counter;
-    std::cout << "\nPrecision EVE is "<<eps_ev<<"\n";
-    for(unsigned u=0; u<stages; u++)
-    {
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed,
-            dg::centered, jfactor);
-        multi_pol[u].set_chi( multi_chi[u]);
-        //estimate EVs
-        multi_eve[u].construct( multi_chi[u]);
-        dg::blas2::symv(multi_pol[u].weights(), multi_b[u], multi_b[u]);
-        counter = multi_eve[u]( multi_pol[u], multi_x[u], multi_b[u],
-                multi_pol[u].precond(),
-            multi_ev[u], eps_ev);
-        //multi_ev[u]/=hxhy;
-        std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
-        std::cout << " with "<<counter<<" iterations\n";
-        hxhy*=4;
-    }
-    std::cout << "\n\n";
-    ////////////////////////////////////////////////////
+    //std::cout<< "Type number of stages (3) and jfactor (1) !\n";
+    //std::cin >> stages >> jfactor;
+    //std::cout << stages << " "<<jfactor<<std::endl;
     std::cout << "Type nu1 (20), nu2 (20) gamma (1) \n";
     unsigned nu1, nu2, gamma;
     std::cin >> nu1 >> nu2 >> gamma;
     std::cout << nu1 << " "<<nu2<<" "<<gamma<<std::endl;
+    dg::NestedGrids<dg::aGeometry2d, dg::DMatrix, dg::DVec> nested( grid, stages);
+    const std::vector<dg::DVec> multi_chi = nested.project( chi);
+
+    std::vector<dg::DVec> multi_x = nested.project( x);
+    std::vector<dg::DVec> multi_b = nested.project( b);
+    std::vector<dg::EVE<dg::DVec> > multi_eve(stages);
+    std::vector<dg::PCG<dg::DVec> > multi_pcg( stages);
+    std::vector<dg::ChebyshevIteration<dg::DVec> > multi_cheby( stages);
+    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> >
+        multi_pol( stages);
+    std::vector<std::function<void( const dg::DVec&, dg::DVec&)> >
+        multi_inv_pol(stages), multi_inv_cheby(stages), multi_inv_fmg(stages);
+    std::vector<double> multi_ev(stages);
+    double eps_ev = 1e-10;
+    unsigned counter;
+    std::cout << "\nPrecision EVE is "<<eps_ev<<"\n";
+    for(unsigned u=0; u<stages; u++)
+    {
+        multi_pol[u].construct( nested.grid(u),
+            dg::centered, jfactor);
+        multi_pol[u].set_chi( multi_chi[u]);
+        multi_pcg[u].construct( multi_x[u], 1000);
+        multi_cheby[u].construct( multi_x[u]);
+
+        //estimate EVs
+        multi_eve[u].construct( multi_chi[u]);
+        counter = multi_eve[u].solve( multi_pol[u], multi_x[u], multi_b[u],
+            //multi_pol[u].precond(), multi_pol[u].weights(), multi_ev[u], eps_ev);
+            1., multi_pol[u].weights(), multi_ev[u], eps_ev);
+
+        std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
+        std::cout << " with "<<counter<<" iterations\n";
+        multi_inv_pol[u] = [&, u, &pcg = multi_pcg[u], &pol = multi_pol[u]](
+            const auto& y, auto& x)
+            {
+                // Watch Back To Basics: Lambdas from Scratch by Arthur O'Dwyer on YT
+                // generic lambda (auto makes it a template)
+                // init capture (C++14 move objects could be interesting)
+                dg::Timer t;
+                t.tic();
+                int number;
+                if ( u == 0)
+                    number = pcg.solve( pol, x, y, pol.precond(), pol.weights(), eps,
+                        1, 1);
+                else
+                    number = pcg.solve( pol, x, y, pol.precond(), pol.weights(), eps,
+                    1, 10);
+                t.toc();
+                std::cout << "# Nested iterations stage: " << u << ", iter: " << number << ", took "<<t.diff()<<"s\n";
+            };
+        auto precond = [nu2, ev = multi_ev[u], &pol = multi_pol[u], &cheby = multi_cheby[u]](
+            const auto& y, auto& x)
+            {
+                //multi_cheby[u].solve( multi_pol[u], x, y, multi_pol[u].precond(),
+                cheby.solve( pol, x, y, 1., ev/100., ev*1.1, nu2+1, true);
+            };
+        multi_inv_cheby[u] = [eps, u, &pcg = multi_pcg[u], &pol = multi_pol[u], p =
+            std::move(precond) ]( const auto& y, auto& x)
+            {
+                dg::Timer t;
+                t.tic();
+                int number;
+                if ( u == 0)
+                    number = pcg.solve( pol, x, y, pol.precond(), pol.weights(), eps,
+                        1, 1);
+                else
+                    number = pcg.solve( pol, x, y, p, pol.weights(), eps,
+                    1, 10);
+                t.toc();
+                std::cout << "# Nested iterations stage: " << u << ", iter: " << number << ", took "<<t.diff()<<"s\n";
+            };
+        if( u == stages-1)
+            multi_inv_fmg[u] = [u, eps, &pcg = multi_pcg[u], &pol =
+                multi_pol[u] ]( const auto& y, auto& x)
+                {
+                    dg::Timer t;
+                    t.tic();
+                    int number = pcg.solve( pol, x, y, pol.precond(), pol.weights(), eps,
+                            1, 1);
+                    t.toc();
+                    std::cout << "# Nested iterations stage: " << u << ", iter: " << number << ", took "<<t.diff()<<"s\n";
+                };
+        else
+            multi_inv_fmg[u] = [nu2, ev = multi_ev[u], u, &cheby =
+                multi_cheby[u], &pol = multi_pol[u] ]( const auto& y, auto& x)
+                {
+                    cheby.solve( pol, x, y, 1., ev/100., ev*1.1, nu2, false);
+                };
+    }
+
+    std::cout << "\n\n";
+    ////////////////////////////////////////////////////
+    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid(
+        grid, stages);
     dg::Timer t;
     std::cout << "MULTIGRID NESTED ITERATIONS SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();
-    multigrid.direct_solve(multi_pol, x, b, eps);
+    //nested_iterations( multi_pol, x, b, multi_inv_pol, nested);
+    // same as
+    multigrid.direct_solve( multi_pol, x, b, {eps,eps,eps} );
     t.toc();
     double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);
@@ -113,7 +177,7 @@ int main()
     std::cout << "MULTIGRID NESTED ITERATIONS WITH CHEBYSHEV SOLVE:\n";
     x = dg::evaluate( initial, grid);
     t.tic();
-    multigrid.direct_solve_with_chebyshev(multi_pol, x, b, eps, nu1);
+    dg::nested_iterations( multi_pol, x, b, multi_inv_cheby, nested);
     t.toc();
     norm = dg::blas2::dot( w2d, solution);
     error= solution;
@@ -124,9 +188,14 @@ int main()
     std::cout << "Took "<<t.diff()<<"s\n\n";
     {
         std::cout << "MULTIGRID PCG SOLVE:\n";
+        auto fmg_precond = [&] ( const auto& x, auto& y)
+            {
+                dg::blas1::copy( 0., y);
+                full_multigrid( multi_pol, y,x, multi_inv_fmg, multi_inv_fmg, nested, gamma, 1);
+            };
         x = dg::evaluate( initial, grid);
         t.tic();
-        multigrid.pcg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
+        multi_pcg[0].solve(multi_pol[0], x, b, fmg_precond, multi_pol[0].weights(), eps);
         t.toc();
         std::cout << "Took "<<t.diff()<<"s\n";
         const double norm = dg::blas2::dot( w2d, solution);
@@ -141,7 +210,9 @@ int main()
         std::cout << "MULTIGRID FMG SOLVE:\n";
         x = dg::evaluate( initial, grid);
         t.tic();
-        multigrid.fmg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
+        //multigrid.fmg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
+        dg::fmg_solve( multi_pol, x, b, multi_inv_fmg, multi_inv_fmg, nested,
+                w2d, eps, gamma);
         t.toc();
         std::cout << "Took "<<t.diff()<<"s\n";
         const double norm = dg::blas2::dot( w2d, solution);

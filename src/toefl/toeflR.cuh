@@ -11,7 +11,7 @@ template<class Geometry, class Matrix, class container>
 struct Implicit
 {
     Implicit( const Geometry& g, double nu):
-        nu_(nu), LaplacianM_perp( g, dg::normed, dg::centered){ }
+        nu_(nu), LaplacianM_perp( g,  dg::centered){ }
     void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
@@ -27,7 +27,6 @@ struct Implicit
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return LaplacianM_perp.weights();}
-    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
 
   private:
@@ -148,8 +147,8 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
-    pol(     grid, dg::not_normed, dg::centered, p.jfactor),
-    laplaceM( grid, dg::normed, dg::centered),
+    pol(     grid,  dg::centered, p.jfactor),
+    laplaceM( grid,  dg::centered),
     arakawa( grid),
     multigrid( grid, 3),
     old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
@@ -161,7 +160,7 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     multi_gamma1.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
+        multi_pol[u].construct( multigrid.grid(u),  dg::centered, p.jfactor);
         multi_gamma1[u].construct( multigrid.grid(u), -0.5*p.tau, dg::centered);
     }
 }

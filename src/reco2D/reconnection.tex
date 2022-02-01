@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\input{../../doc/related_pages/header.tex}
-\input{../../doc/related_pages/newcommands.tex}
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
 \usepackage{minted}
 
 \renewcommand{\ne}{\ensuremath{n }}
@@ -53,28 +53,29 @@ Our reduced model is based on a recent formulation of a full-F gyro-fluid model~
 It consists of the first two moment equations for electrons and ions
 \begin{align}
 %%%
-\frac{\partial}{\partial t} \ne =&
- - \left[\phi, \ne\right]
-+ \left[\Apar,\ne \ue  \right]
+\frac{\partial}{\partial t} \ne
++ \nc\left( \ne (\vec u_E + \ue \vec b_\perp) \right)=& 0
 \\
 %%%
 \label{firstgyromom}
-\frac{\partial}{\partial t} \Ni =&
- - \left[\psi, \Ni\right]
-+ \left[\Gamma_1 \Apar ,\Ni \Ui  \right]
+\frac{\partial}{\partial t} \Ni 
++ \nc\left( \Ni (\vec u_E^i + \Ui \vec b_\perp^i) \right)=& 0
  \\
  %%%
-\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
-      -  \left[ \psi, \ue+ \frac{1}{\mu_e} \Apar  \right]% \nonumber \\
-    +   \left[\Apar,\ue^2/2   \right]% \nonumber \\
-      - \frac{1}{\mu_e}  \left[\Apar,\ln{\ne}   \right]
+    \mu_e \frac{\partial}{\partial t} \left( \ne\ue \right)
++  \mu_e \nc\left( \left(\vec u_E+ \ue\vec b_\perp\right) \ne\ue \right) =&
+- \tau_e \vec b_\perp\cn\ne - \ne\left(\vec b_\perp\cn\phi +\frac{\partial}{\partial t}\Apar\right)
       \\
-      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
-      -  \left[ \psi, \Ui+ \Gamma_1 \Apar  \right]% \nonumber \\
-     +   \left[\Gamma_1 \Apar,\Ui^2/2   \right]% \nonumber \\
-      + \tau_i  \left[\Gamma_1 \Apar,\ln{\Ni}   \right]
+%%%
+  \mu_i\frac{\partial}{\partial t} \left( \Ni\Ui \right)
+      +  \mu_i\nc\left( \left(\vec u_E^i + \Ui \vec b_\perp^i\right) \Ni\Ui \right) =&
+      - \tau_i  \vec b_\perp^i \cn \Ni - \Ni \left(\vec b_\perp \cn \psi + \frac{\partial}{\partial t} \Gamma_1\Apar\right)
 \end{align}
-which are coupled by polarisation and induction
+where
+$\vec u_E := \zhat \times \nabla\phi = [-\partial_y \phi,\ \partial_x \phi]$ and
+$\bperp := \nabla \Apar \times \zhat = [\partial_y \Apar,\ -\partial_x \Apar]$.
+
+The equations are coupled by polarisation and induction
 \begin{align}
  -\ne + \Gamma_1 \Ni &= -\vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
  -\frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  -\ne \ue + \Gamma_1 (\Ni \Ui)
@@ -248,6 +249,7 @@ tableau to use
     "dt"      : 20.0, // Fixed timestep
 }
 \end{minted}
+*See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_explicit_multistep.html}{dg documentation} for what tableaus are available.
 The second option is an adaptive explicit embedded Runge-Kutta scheme
 \begin{minted}[texcomments]{js}
 "timestepper":
@@ -258,17 +260,44 @@ The second option is an adaptive explicit embedded Runge-Kutta scheme
     "atol"    : 1e-10 // The absolute tolerance in the timestep
 }
 \end{minted}
-*See the dg documentation for what tableaus are available.
+*See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_e_r_k_step.html}{dg documentation} for what tableaus are available.
 
 \subsection{Advection scheme}
-We implemented the advection in terms of Arakawa brackets
-(note that this should only be used in connection with artificial diffusion)
-or in terms of an upwind scheme.
-This can be selected in the input file via
 \begin{minted}[texcomments]{js}
 "advection":
 {
     "type" : "arakawa" // The Arakawa bracket scheme
+    //note that this should only be used in connection with artificial diffusion
+}
+\end{minted}
+We implemented the advection in terms of Arakawa brackets
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne =&
+ - \left[\phi, \ne\right]
++ \left[\Apar,\ne \ue  \right]
+\\
+%%%
+\label{firstgyromom}
+\frac{\partial}{\partial t} \Ni =&
+ - \left[\psi, \Ni\right]
++ \left[\Gamma_1 \Apar ,\Ni \Ui  \right]
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+      -  \left[ \phi, \ue+ \frac{1}{\mu_e} \Apar  \right]% \nonumber \\
+    +   \left[\Apar,\ue^2/2   \right]% \nonumber \\
+      - \frac{1}{\mu_e}  \left[\Apar,\ln{\ne}   \right]
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
+      -  \left[ \psi, \Ui+ \Gamma_1 \Apar  \right]% \nonumber \\
+     +   \left[\Gamma_1 \Apar,\Ui^2/2   \right]% \nonumber \\
+      + \tau_i  \left[\Gamma_1 \Apar,\ln{\Ni}   \right]
+\end{align}
+
+\begin{minted}[texcomments]{js}
+"advection":
+{
     "type" : "upwind"  // The upwind scheme
 }
 \end{minted}
@@ -328,16 +357,18 @@ we can also apply it to the canonical velocity:
       \\
       \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =& \ldots -\nu_\perp \Delta_\perp^2 \left( \Ui+ \Gamma_1 \Apar  \right)
 \end{align}
-\begin{longtable}{llll}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-regularization & dict & & \\
-\qquad type & string & velocity-viscosity & Apply viscosity on density and parallel velocity \\
-\qquad type & string & canonical-viscosity & Apply viscosity on density and parallel canonical velocity \\
-\qquad direction & string & centered & The direction of the Laplacian \\
-\qquad nu\_perp & float & 1e-6  &  The strength of the diffusion \\
-\bottomrule
-\end{longtable}
+
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type" : "velocity-viscosity",  // Apply viscosity on density and
+    // parel velocity
+    "type" : "canonical-viscosity",  // Apply viscosity on density and
+    // parallel canonical velocity
+    "direction" : "centered",  // The direction of the Laplacian
+    "nu_perp" : 1e-6 // The strength of the diffusion
+}
+\end{minted}
 Simply set the diffusion to 0 if you do not want any regularization.
 \begin{tcolorbox}[title=Note]
     If you set nu\_perp too large the timestep in the explicit timestepper will
@@ -378,15 +409,16 @@ This can be controlled via
     // Use glfw to display results in a window while computing (requires to
     // compile with the glfw3 library)
     "type"  : "glfw"
-    "itstp"  : 4, // The number of steps between outputs of 2d fields \\
+    "itstp"  : 4, // The number of steps between outputs of 2d fields
+
     // Use netcdf to write results into a file (filename given on command line)
     // (see next section for information about what is written in there)
     "type"  : "netcdf"
-    "itstp"  : 4,    // The number of steps between outputs of 2d fields \\
+    "itstp"  : 4,    // The number of steps between outputs of 2d fields
     "maxout"  : 500, // The total number of field outputs. The endtime is
     // T=itstp*maxout*dt
-    "n"  : 3 , // The number of polynomial coefficients in the output file\\
-    "Nx" : 48, // Number of cells in x in the output file \\
+    "n"  : 3 , // The number of polynomial coefficients in the output file
+    "Nx" : 48, // Number of cells in x in the output file
     "Ny" : 48  // Number of cells in y in the output file
 }
 \end{minted}
@@ -413,6 +445,6 @@ time\_per\_step  & Dataset & 1 (time) & Average computation time for one step \\
 The output fields X are determined in the file \texttt{feltor/src/reco2D/diag.h}.
 
 %..................................................................
-\bibliography{../../doc/related_pages/references, references}
+\bibliography{../common/references, references}
 %..................................................................
 \end{document}

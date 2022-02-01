@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     bool mhw = ( p.equations == "fullF");
-    mima::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.tau, p.eps_pol, mhw); 
+    mima::Mima< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.tau, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
@@ -42,7 +42,7 @@ int main( int argc, char* argv[])
 
 //     dg::DVec phi = dg::evaluate( vortex, grid), omega( phi), y0(phi), y1(phi);
     dg::DVec phi = dg::evaluate( gaussian, grid), omega( phi), y0(phi), y1(phi);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM( grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM( grid,  dg::centered);
     dg::blas2::gemv( laplaceM, phi, omega);
     dg::blas1::axpby( 1., phi, 1., omega, y0);
 
@@ -53,8 +53,9 @@ int main( int argc, char* argv[])
         std::cout << "Mean Mass is "<<meanMass<<"\n";
         dg::blas1::axpby( -meanMass, one, 1., y0);
     }
-    dg::Karniadakis<dg::DVec > ab( y0, y0.size(), p.eps_time);
-    mima::Diffusion<dg::DMatrix,dg::DVec> diffusion( grid, p.nu);
+    dg::DefaultSolver<dg::DVec> solver( y0, y0.size(), p.eps_time);
+    dg::ImExMultistep<dg::DVec > ab( "ImEx-BDF-3-3", y0);
+    mima::Diffusion<dg::CartesianGrid2d,dg::DMatrix,dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -63,7 +64,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( mima, diffusion, time, y0, p.dt);
+    ab.init( std::tie(mima, diffusion, solver), time, y0, p.dt);
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
@@ -117,7 +118,7 @@ int main( int argc, char* argv[])
                 dg::blas1::axpby( -meanMass, one, 1., y0);
             }
 
-            try{ ab.step( mima, diffusion, time, y0);}
+            try{ ab.step( std::tie(mima, diffusion, solver), time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

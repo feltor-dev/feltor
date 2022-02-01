@@ -1,16 +1,13 @@
 #ifndef _DG_BLAS_CUSP_H
 #define _DG_BLAS_CUSP_H
 
-#ifdef DG_DEBUG
-#include <cassert>
-#endif //DG_DEBUG
-
 #include <typeinfo>
 #include <limits.h>
 #include <cusp/multiply.h>
 #include <cusp/convert.h>
 #include <cusp/array1d.h>
 
+#include "exceptions.h"
 #include "config.h"
 #include "tensor_traits.h"
 
@@ -89,10 +86,12 @@ inline void doSymv( Matrix&& m,
         "Value types must be equal"
     );
 
-#ifdef DG_DEBUG
-    assert( m.num_rows == y.size() );
-    assert( m.num_cols == x.size() );
-#endif //DG_DEBUG
+    if( x.size() != m.num_cols) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols);
+    }
+    if( y.size() != m.num_rows) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows);
+    }
     doSymv_cusp_dispatch( std::forward<Matrix>(m),x,y,
             typename std::decay_t<Matrix>::format(),
             get_execution_policy<Vector1>());
@@ -106,10 +105,12 @@ inline void doSymv( Matrix&& m,
 {
     static_assert( std::is_base_of<RecursiveVectorTag, get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
-#ifdef DG_DEBUG
-    assert( m.num_rows == y.size() );
-    assert( m.num_cols == x.size() );
-#endif //DG_DEBUG
+    if( x.size() != m.num_cols) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols);
+    }
+    if( y.size() != m.num_rows) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows);
+    }
     using inner_container = typename std::decay_t<Vector1>::value_type;
     for ( unsigned i=0; i<x.size(); i++)
         doSymv( std::forward<Matrix>(m), x[i], y[i], CuspMatrixTag(), get_tensor_category<inner_container>());

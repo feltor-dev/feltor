@@ -1,7 +1,6 @@
 #pragma once
 #include <functional>
-#include "dg/backend/memory.h"
-#include "dg/topology/geometry.h"
+#include "dg/algorithm.h"
 
 namespace dg
 {
@@ -109,8 +108,7 @@ struct aCylindricalFunctor
 };
 
 /**
- * @brief The constant functor
- * \f[ f(x,y) = c\f]
+ * @brief \f$ f(x,y) = c\f$
  */
 struct Constant: public aCylindricalFunctor<Constant>
 {
@@ -120,23 +118,22 @@ struct Constant: public aCylindricalFunctor<Constant>
     double c_;
 };
 /**
- * @brief <tt> (double Z_X)</tt>
- \f[ f(R,Z)= \begin{cases}
- 1 \text{ if } Z > Z_X \\
- 0 \text{ else }
+ * @brief
+ * \f$ f(R,Z)= \begin{cases}
+ 0 \text{ if } Z < Z_X \\
+ 1 \text{ else }
  \end{cases}
- \f]
+ \f$
+ @note the 1 is inclusive i.e. if Z == Z_X the functor always returns 1
  */
 struct ZCutter : public aCylindricalFunctor<ZCutter>
 {
-    ZCutter(double ZX): Z_X(ZX){}
+    ZCutter(double ZX, int sign = +1): m_heavi( ZX, sign){}
     double do_compute(double R, double Z) const {
-        if( Z > Z_X)
-            return 1;
-        return 0;
+        return m_heavi(Z);
     }
     private:
-    double Z_X;
+    dg::Heaviside m_heavi;
 };
 
 /**
@@ -179,7 +176,7 @@ struct Periodify : public aCylindricalFunctor<Periodify>
 /**
 * @brief This struct bundles a function and its first derivatives
 *
-* @snippet hector_t.cu doxygen
+* @snippet flux_t.cu hector
 */
 struct CylindricalFunctorsLvl1
 {
@@ -216,7 +213,7 @@ struct CylindricalFunctorsLvl1
 /**
 * @brief This struct bundles a function and its first and second derivatives
 *
-* @snippet hector_t.cu doxygen
+* @snippet flux_t.cu hector
 */
 struct CylindricalFunctorsLvl2
 {
@@ -284,7 +281,16 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
     double psipRZ = psi.dfxy()(X[0], X[1]);
     double psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
     double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
-    double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+    double D0 =  (psipZZ*psipRR - psipRZ*psipRZ);
+    if(D0 == 0) // try to change initial guess slightly if we are very lucky
+    {
+        X[0] *= 1.0001, X[1]*=1.0001;
+        psipRZ = psi.dfxy()(X[0], X[1]);
+        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
+        psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+        D0 =  (psipZZ*psipRR - psipRZ*psipRZ);
+    }
+    double Dinv = 1./D0;
     while( (eps < eps_old || eps > 1e-7) && eps > 1e-10 && counter < 100)
     {
         //newton iteration
@@ -296,10 +302,12 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
         psipRZ = psi.dfxy()(X[0], X[1]);
         psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
         psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
-        Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+        D0 = (psipZZ*psipRR - psipRZ*psipRZ);
+        Dinv = 1./D0;
+        if( D0 == 0) break;
         counter++;
     }
-    if ( counter >= 100 || std::isnan( Dinv) )
+    if ( counter >= 100 || D0 == 0|| std::isnan( Dinv) )
         return 0;
     RC = X[0], ZC = X[1];
     if( Dinv > 0 &&  psipRR > 0)
@@ -348,7 +356,7 @@ static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, d
 
 
 /// A symmetric 2d tensor field and its divergence
-///@snippet hector_t.cu doxygen
+///@snippet flux_t.cu hector
 struct CylindricalSymmTensorLvl1
 {
     /**
@@ -423,6 +431,50 @@ struct CylindricalVectorLvl0
     const CylindricalFunctor& z()const{return p_[2];}
     private:
     std::array<CylindricalFunctor,3> p_;
+};
+
+/**
+* @brief This struct bundles a vector field and its divergence
+*/
+struct CylindricalVectorLvl1
+{
+    ///the access functions are undefined as long as the class remains empty
+    CylindricalVectorLvl1(){}
+    ///Copy given Functors
+    CylindricalVectorLvl1(  CylindricalFunctor v_x,
+        CylindricalFunctor v_y,
+        CylindricalFunctor v_z,
+        CylindricalFunctor div,
+        CylindricalFunctor divvvz
+        ): f0{v_x, v_y, v_z},
+        m_div(div), m_divvvz(divvvz) {}
+    ///replace with given functors
+    void reset(  CylindricalFunctor v_x,
+        CylindricalFunctor v_y,
+        CylindricalFunctor v_z,
+        CylindricalFunctor div,
+        CylindricalFunctor divvvz
+        )
+    {
+        f0.reset( v_x,v_y,v_z);
+        m_div = div;
+        m_divvvz = divvvz;
+    }
+    ///type conversion: Lvl2 can also be used as Lvl1
+    operator CylindricalVectorLvl0 ()const {return f0;}
+    /// x-component of the vector
+    const CylindricalFunctor& x()const{return f0.x();}
+    /// y-component of the vector
+    const CylindricalFunctor& y()const{return f0.y();}
+    /// z-component of the vector
+    const CylindricalFunctor& z()const{return f0.z();}
+    /// \f$\nabla\cdot v\f$
+    const CylindricalFunctor& div()const{return m_div;}
+    /// \f$\nabla\cdot (v/z)\f$
+    const CylindricalFunctor& divvvz()const{return m_divvvz;}
+    private:
+    CylindricalVectorLvl0 f0;
+    CylindricalFunctor m_div, m_divvvz;
 };
 
 /**

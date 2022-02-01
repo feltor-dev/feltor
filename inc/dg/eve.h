@@ -58,97 +58,49 @@ class EVE
     }
     /// Get maximum number of iterations
     unsigned get_max() const {   return m_max_iter; }
+    ///@copydoc dg::PCG::set_throw_on_fail(bool)
+    void set_throw_on_fail( bool throw_on_fail){
+        m_throw_on_fail = throw_on_fail;
+    }
     /**
-     * @brief Unpreconditioned CG to estimate maximum Eigenvalue of \f$ A x = \lambda x\f$
+     * @brief Preconditioned CG to estimate maximum Eigenvalue of the generalized problem \f$ PAx = \lambda x\f$
      *
-     * This implements the original algorithm suggested in <a href="http://www.iam.fmph.uniba.sk/amuc/ojs/index.php/algoritmy/article/view/421">Tichy, On error estimation in the conjugate gradient method: Normwise backward error, Proceedings of the Conference Algorithmy, 323-332, 2016 </a>
-     * @note This is just a regular CG algorithm which updates an estimate for the largest Eigenvalue in each iteration and returns once the change is marginal.
-     * This means on output \c x is the same as after the same number of iterations of a regular CG method.
-     * @param A A symmetric, positive definit matrix
-     * @param x Contains an initial value on input and the solution on output.
-     * @param b The right hand side vector. x and b may be the same vector.
-     * @param ev_max (output) maximum Eigenvalue on output
-     * @param eps_ev The desired relative accuracy of the largest Eigenvalue
-     *
-     * @return Number of iterations used to achieve desired precision or max_iterations
-     * @copydoc hide_matrix
-     */
-    template< class MatrixType, class ContainerType0, class ContainerType1>
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, value_type& ev_max, value_type eps_ev=1e-16);
-    /**
-     * @brief Preconditioned CG to estimate maximum Eigenvalue of the generalized problem \f$ Ax = \lambda M x\f$
-     *
-     * where \f$ M^{-1}\f$ is the preconditioner.
+     * where \f$ P\f$ is the preconditioner.
      * @note This is just a regular PCG algorithm which updates an estimate for the largest Eigenvalue in each iteration and returns once the change is marginal.
      * This means on output \c x is the same as after the same number of iterations of a regular PCG method.
+     * The original algorithm is suggested in <a href="http://www.iam.fmph.uniba.sk/amuc/ojs/index.php/algoritmy/article/view/421">Tichy, On error estimation in the conjugate gradient method: Normwise backward error, Proceedings of the Conference Algorithmy, 323-332, 2016 </a>
      * @param A A symmetric, positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner (\f$ M^{-1}\f$  in the above notation)
+     * @param W The weights in which \c A and \c P are self-adjoint
      * @param ev_max (output) maximum Eigenvalue on output
      * @param eps_ev The desired accuracy of the largest Eigenvalue
      *
      * @return Number of iterations used to achieve desired precision or max_iterations
+     * @note The method will throw \c dg::Fail if the desired accuracy is not reached within \c max_iterations
+     * You can unset this behaviour with the \c set_throw_on_fail member
      * @copydoc hide_matrix
+     * @copydoc hide_ContainerType
      */
-    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner>
-    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev = 1e-12);
+    template< class MatrixType0, class ContainerType0, class ContainerType1, class MatrixType1, class ContainerType2>
+    unsigned solve( MatrixType0&& A, ContainerType0& x, const ContainerType1& b, MatrixType1&& P, const ContainerType2& W, value_type& ev_max, value_type eps_ev = 1e-12);
   private:
     ContainerType r, p, ap;
     unsigned m_max_iter;
+    bool m_throw_on_fail = true;
 };
 
 ///@cond
-template< class ContainerType>
-template< class MatrixType, class ContainerType0, class ContainerType1>
-unsigned EVE< ContainerType>::operator()( MatrixType& A, ContainerType0& x, const ContainerType1&
-b, value_type& ev_max, value_type eps_ev)
-{
-    blas2::symv( A, x, r);
-    blas1::axpby( 1., b, -1., r);
-    value_type nrm2r_old = blas1::dot( r,r);
-    blas1::copy( r, p);
-    value_type nrm2r_new, nrmAp;
-    value_type alpha = 1., alpha_inv = 1., delta = 0.;
-    value_type evdash, gamma = 0., lambda, omega, beta = 0.;
-    value_type ev_est = 0.;
-    ev_max = 0.;
-    for( unsigned i=1; i<m_max_iter; i++)
-    {
-        lambda = delta*alpha_inv;       // EVE!
-        blas2::symv( A, p, ap);
-        nrmAp = blas1::dot( p, ap);
-        alpha = nrm2r_old /nrmAp;
-        alpha_inv = nrmAp /nrm2r_old;   // EVE!
-        lambda += alpha_inv;            // EVE!
-        blas1::axpby( alpha, p, 1., x);
-        blas1::axpby( -alpha, ap, 1., r);
-        nrm2r_new = blas1::dot( r, r);
-
-        delta = nrm2r_new /nrm2r_old;                  // EVE!
-        evdash = ev_est -lambda;                       // EVE!
-        omega = sqrt( evdash*evdash +4.*beta*gamma);   // EVE!
-        gamma = 0.5 *(1. -evdash /omega);              // EVE!
-        ev_max += omega*gamma;                         // EVE!
-        beta = delta*alpha_inv*alpha_inv;              // EVE!
-        if( fabs(ev_est-ev_max) < eps_ev*ev_max) {
-            return i;
-        }
-        blas1::axpby(1., r, delta, p);
-        nrm2r_old=nrm2r_new;
-        ev_est = ev_max;
-    }
-    return m_max_iter;
-};
 
 template< class ContainerType>
-template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner>
-unsigned EVE< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type& ev_max, value_type eps_ev )
+template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class ContainerType2>
+unsigned EVE< ContainerType>::solve( Matrix&& A, ContainerType0& x, const ContainerType1& b, Preconditioner&& P, const ContainerType2& W, value_type& ev_max, value_type eps_ev )
 {
-    blas2::symv( A,x,r);
+    blas2::symv( std::forward<Matrix>(A),x,r);
     blas1::axpby( 1., b, -1., r);
-    blas2::symv( P, r, p );
-    value_type nrmzr_old = blas1::dot( p,r);
+    blas2::symv( std::forward<Preconditioner>(P), r, p );
+    value_type nrmzr_old = blas2::dot( p, W,r);
     value_type nrmzr_new, nrmAp;
     value_type alpha = 1., alpha_inv = 1., delta = 0.;
     value_type evdash, gamma = 0., lambda, omega, beta = 0.;
@@ -157,15 +109,15 @@ unsigned EVE< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Co
     for( unsigned i=1; i<m_max_iter; i++)
     {
         lambda = delta*alpha_inv;    // EVE!
-        blas2::symv( A, p, ap);
-        nrmAp = blas1::dot( p, ap);
+        blas2::symv( std::forward<Matrix>(A), p, ap);
+        nrmAp = blas2::dot( p, W, ap);
         alpha =  nrmzr_old/nrmAp;
         alpha_inv = nrmAp/nrmzr_old; //EVE!
         lambda+= alpha_inv;          //EVE!
         blas1::axpby( alpha, p, 1.,x);
         blas1::axpby( -alpha, ap, 1., r);
-        blas2::symv(P,r,ap);
-        nrmzr_new = blas1::dot( ap, r);
+        blas2::symv(std::forward<Preconditioner>(P),r,ap);
+        nrmzr_new = blas2::dot( ap, W, r);
         delta = nrmzr_new /nrmzr_old;                  // EVE!
         evdash = ev_est -lambda;                       // EVE!
         omega = sqrt( evdash*evdash +4.*beta*gamma);   // EVE!
@@ -177,6 +129,11 @@ unsigned EVE< ContainerType>::operator()( Matrix& A, ContainerType0& x, const Co
         blas1::axpby(1.,ap, delta, p );
         nrmzr_old=nrmzr_new;
         ev_est = ev_max;
+    }
+    if( m_throw_on_fail)
+    {
+        throw dg::Fail( eps_ev, Message(_ping_)
+            <<"After "<<m_max_iter<<" EVE iterations");
     }
     return m_max_iter;
 }

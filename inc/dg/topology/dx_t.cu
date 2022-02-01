@@ -16,7 +16,7 @@ typedef dg::EllSparseBlockMat<double> Matrix;
 int main ()
 {
     unsigned n, N;
-    std::cout << "Type in n an Nx!\n";
+    std::cout << "Type in n and Nx!\n";
     std::cin >> n>> N;
     std::cout << "# of Legendre nodes " << n <<"\n";
     std::cout << "# of cells          " << N <<"\n";

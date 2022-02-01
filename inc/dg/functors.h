@@ -138,6 +138,14 @@ struct SQRT
         return sqrt(x);
     }
 };
+
+///@brief \f$ f(x) = x^2\f$
+struct Square
+{
+    template<class T>
+    DG_DEVICE T operator()( T x) const{ return x*x;}
+};
+
 ///@brief \f$ f(x) = \frac{1}{\sqrt{x}}\f$
 template < class T = double>
 struct InvSqrt
@@ -274,9 +282,8 @@ struct MOD
 @code
 //Check if a vector contains Inf or NaN
 thrust::device_vector<double> x( 100);
-thrust::device_vector<bool> boolvec ( 100, false);
-dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+bool hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
+    dg::ISNFINITE<double>());
 std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
  */
@@ -300,9 +307,8 @@ struct ISNFINITE
 @code
 //Check if a vector contains is sane
 thrust::device_vector<double> x( 100);
-thrust::device_vector<bool> boolvec ( 100, false);
-dg::blas1::transform( x, boolvec, dg::ISNSANE<double>());
-bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+bool hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
+    dg::ISNSANE<double>());
 std::cout << "x contains insane numbers "<<std::boolalpha<<hasnan<<"\n";
 @endcode
  */
@@ -331,87 +337,144 @@ struct ISNSANE
 
 /**
  * @brief
- \f$ f(x_1, x_2, x_3) = \begin{cases}
-         \min(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 >0 \\
-         \max(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 <0 \\
-         0 \text{ else}
+ \f$ f(x_1, x_2, ...) = \begin{cases}
+         \min(x_1, x_2, ...) &\text{ for } x_1, x_2, ... >0 \\
+         \max(x_1, x_2, ...) &\text{ for } x_1, x_2, ... <0 \\
+         0 &\text{ else}
  \end{cases}
  \f$
  *
- * might be useful for flux limiter schemes
+ * Useful for Slope limiter
  */
-template < class T>
 struct MinMod
 {
-    /**
-     * @brief Minmod of three numbers
-     *
-     * @param a1 a1
-     * @param a2 a2
-     * @param a3 a3
-     *
-     * @return minmod(a1, a2, a3)
-     */
-    DG_DEVICE T operator() ( T a1, T a2, T a3)const
+    ///@return minmod(x1, x2)
+#ifdef __CUDACC__
+    template < class T>
+    DG_DEVICE T operator()( T x1, T x2) const
     {
-        if( a1*a2 > 0)
-            if( a1*a3 > 0)
-            {
-                if( a1 > 0)
-                    return min( a1, a2, a3, +1.);
-                else
-                    return min( a1, a2, a3, -1.);
-            }
+        if( x1 > 0 && x2 > 0)
+            return min(x1,x2);
+        else if( x1 < 0 && x2 < 0)
+            return max(x1,x2);
         return 0.;
-
-
     }
-    private:
-    T min( T a1, T a2, T a3, T sign)const
+#else
+    template < class T>
+    T operator()( T x1, T x2) const
     {
-        T temp = sign*a1;
-        if( sign*a2 < temp)
-            temp = sign*a2;
-        if( sign*a3 < temp)
-            temp = sign*a3;
-        return sign*temp;
-
+        if( x1 > 0 && x2 > 0)
+            return std::min(x1,x2);
+        else if( x1 < 0 && x2 < 0)
+            return std::max(x1,x2);
+        return 0.;
+    }
+#endif
+    ///@return minmod(x1, x2, x3);
+    template<class T>
+    DG_DEVICE T operator() ( T x1, T x2, T x3)const
+    {
+        return this-> operator()( this-> operator()( x1, x2), x3);
     }
 };
+
+
 /**
- * @brief \f$ f(v, a, b ) = \begin{cases}  a \text{ if } v \geq 0 \\
- *  b \text{ else}
+ * @brief \f$ f(x_1,x_2) = 2\begin{cases}
+ *  \frac{x_1x_2}{x_1+x_2} &\text{ if } x_1x_2 > 0 \\
+ *  0 & \text { else }
+ *  \end{cases}
+ *  \f$
+ *  @note The first case is the harmonic mean between x_1 and x_2
+ */
+struct VanLeer
+{
+    template<class T>
+    DG_DEVICE T operator()( T x1, T x2) const
+    {
+        if( x1*x2 <= 0)
+            return 0.;
+        return 2.*x1*x2/(x1+x2);
+    }
+};
+
+/**
+ * @brief \f$ \text{up}(v, b, f ) = \begin{cases}  b &\text{ if } v \geq 0 \\
+ *  f &\text{ else}
  *  \end{cases}
  *  \f$
  */
 struct Upwind
 {
     template<class T>
-    DG_DEVICE T operator()( T v, T a, T b){
-        if( v >= 0)
-            return a;
+    DG_DEVICE T operator()( T velocity, T backward, T forward) const{
+        if( velocity >= 0)
+            return backward;
         else
-            return b;
+            return forward;
     }
 };
 
 /**
- * @brief \f$ f(v, a, b ) = \begin{cases}  av \text{ if } v \geq 0 \\
- *  bv \text{ else}
+ * @brief \f$ \text{up}(v, b, f ) = v \begin{cases}  b &\text{ if } v \geq 0 \\
+ *  f &\text{ else}
  *  \end{cases}
  *  \f$
- *
- * @tparam T a real value
  */
 struct UpwindProduct
 {
     template<class T>
-    DG_DEVICE T operator()( T v, T a, T b){
-        if( v >= 0)
-            return a*v;
-        else
-            return b*v;
+    DG_DEVICE T operator()( T velocity, T backward, T forward)const{
+        return velocity*m_up(velocity, backward, forward);
     }
+    private:
+    Upwind m_up;
+};
+
+/**
+ * @brief \f$ \text{up}(v, g_m, g_0, g_p, h_m, h_p ) = \begin{cases}  +h_m \Lambda( g_0, g_m) &\text{ if } v \geq 0 \\
+ *  -h_p \Lambda( g_p, g_0) &\text{ else}
+ *  \end{cases}
+ *  \f$
+ *
+ * @tparam Limiter Any two-dimensional functor
+ * @sa VanLeer, MinMod
+ */
+template<class Limiter>
+struct SlopeLimiter
+{
+    SlopeLimiter() {}
+    SlopeLimiter( Limiter l ) : m_l( l){}
+    template<class T>
+    DG_DEVICE T operator()( T v, T gm, T g0, T gp, T hm, T hp ) const{
+        if( v >= 0)
+            return +hm*m_l( g0, gm);
+        else
+            return -hp*m_l( gp, g0);
+    }
+    private:
+    Limiter m_l;
+};
+/**
+ * @brief \f$ \text{up}(v, g_m, g_0, g_p, h_m, h_p ) = v \begin{cases}  +h_m \Lambda( g_0, g_m) &\text{ if } v \geq 0 \\
+ *  -h_p \Lambda( g_p, g_0) &\text{ else}
+ *  \end{cases}
+ *  \f$
+ *
+ * @tparam Limiter Any two-dimensional functor
+ * @sa VanLeer, MinMod
+ */
+template<class Limiter>
+struct SlopeLimiterProduct
+{
+    SlopeLimiterProduct() {}
+    SlopeLimiterProduct( Limiter l ) : m_s( l){}
+    template<class T>
+    DG_DEVICE T operator()( T v, T gm, T g0, T gp, T hm, T hp ) const{
+        return v*m_s(v,gm,g0,gp,hm,hp);
+    }
+    private:
+    SlopeLimiter<Limiter> m_s;
 };
 ///@}
 
@@ -2099,6 +2162,13 @@ struct WallDistance
      */
     WallDistance( std::vector<double> vertical, std::vector<double> horizontal) :
         m_vertical(vertical), m_horizontal( horizontal) {}
+    /**
+     * @brief Allocate lines
+     *
+     * @param walls two vertical (x0, x1) and two horizontal (y0, y1) walls
+     */
+    WallDistance( dg::Grid2d walls) : m_vertical({walls.x0(), walls.x1()}),
+        m_horizontal({walls.y0(), walls.y1()}){}
     /**
      * @brief Distance to closest wall in a box
      */

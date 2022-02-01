@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
                 dg::file::comments::are_discarded);
     }
     //Test coefficients
-    dg::geo::CylindricalFunctor wall, transition, sheath, direction;
+    dg::geo::CylindricalFunctor wall, transition, sheath;
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
             js["magnetic_field"][geometry_params]);
     dg::geo::TokamakMagneticField mod_mag =
@@ -61,29 +61,46 @@ int main( int argc, char* argv[])
     double Zmin=-boxscaleZm*mag.params().a();
     double Rmax=mag.R0()+boxscaleRp*mag.params().a();
     double Zmax=boxscaleZp*mag.params().a();
+    dg::Grid2d sheath_walls( Rmin, Rmax, Zmin, Zmax, 1,1,1);
+    //std::string sheath_bc = js["boundary"]["sheath"].get("type", "none").asString();
+    //if( sheath_bc != "none")
     dg::geo::createSheathRegion( js["boundary"]["sheath"],
-            mag, wall, Rmin, Rmax, Zmin, Zmax, sheath, direction);
+            mag, wall, sheath_walls, sheath);
 
     dg::geo::description mag_description = mag.params().getDescription();
-    double psipO = -1.;
-    if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO )
+
+    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
+    dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
+    double psipO = dg::blas1::reduce( psipog2d, 0., thrust::minimum<double>());
+    double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>());
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
         //Find O-point
         double RO = mag.R0(), ZO = 0.;
         int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
         psipO = mag.psip()( RO, ZO);
-        std::cout << "O-point found at "<<RO<<" "<<ZO<<" with Psip "<<psipO<<std::endl;
+        std::cout << "O-point found at "<<RO<<" "<<ZO
+                  <<" with Psip "<<psipO<<std::endl;
         if( point == 1 )
             std::cout << " (minimum)"<<std::endl;
         if( point == 2 )
             std::cout << " (maximum)"<<std::endl;
         double psip0 = mag.psip()(mag.R0(), 0);
         std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
+        double fx_0 = js["grid"].get( "fx_0", 1./8.).asDouble(); // must evenly divide Npsi
+        psipmax = -fx_0/(1.-fx_0)*psipO;
     }
+    double width_factor = js.get("width-factor",1.0).asDouble();
+    dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag, width_factor);
+    double deltaPsi = fsi.get_deltapsi();
+    if( deltaPsi < 1e-14) // protect against toroidal
+        deltaPsi = 0.1;
 
-
-    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
-    dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
+    double maxPhi = 2.*M_PI*js["boundary"]["sheath"].get("max_angle", 0.1).asDouble();
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
@@ -97,6 +114,7 @@ int main( int argc, char* argv[])
         {"IpolR", "Poloidal current derivative in R", mag.ipolR()},
         {"IpolZ", "Poloidal current derivative in Z", mag.ipolZ()},
         {"Rho_p", "Normalized Poloidal flux label", dg::geo::RhoP(mag)},
+        {"LaplacePsip", "Laplace of flux function", dg::geo::LaplacePsip(mag)},
         {"Bmodule", "Magnetic field strength", dg::geo::Bmodule(mag)},
         {"InvB", "Inverse of Bmodule", dg::geo::InvB(mag)},
         {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
@@ -124,69 +142,91 @@ int main( int argc, char* argv[])
         {"BHatR", "R-component of the magnetic field unit vector", dg::geo::BHatR(mag)},
         {"BHatZ", "Z-component of the magnetic field unit vector", dg::geo::BHatZ(mag)},
         {"BHatP", "Contravariant Phi-component of the magnetic field unit vector", dg::geo::BHatP(mag)},
-        {"GradBHatR", "Parallel derivative of BHatR", dg::geo::BHatR(mag)},
-        {"GradBHatZ", "Parallel derivative of BHatZ", dg::geo::BHatZ(mag)},
-        {"GradBHatP", "Parallel derivative of BHatP", dg::geo::BHatP(mag)},
+        {"BHatRR", "R derivative of BHatR", dg::geo::BHatRR(mag)},
+        {"BHatZR", "R derivative of BHatZ", dg::geo::BHatZR(mag)},
+        {"BHatPR", "R derivative of BHatP", dg::geo::BHatPR(mag)},
+        {"BHatRZ", "Z derivative of BHatR", dg::geo::BHatRZ(mag)},
+        {"BHatZZ", "Z derivative of BHatZ", dg::geo::BHatZZ(mag)},
+        {"BHatPZ", "Z derivative of BHatP", dg::geo::BHatPZ(mag)},
         {"NormGradPsip", "Norm of gradient of Psip", dg::geo::SquareNorm( dg::geo::createGradPsip(mag), dg::geo::createGradPsip(mag))},
+        {"SquareGradPsip", "Norm of gradient of Psip", dg::geo::ScalarProduct( dg::geo::createGradPsip(mag), dg::geo::createGradPsip(mag))},
         {"CurvatureNablaBGradPsip", "(Toroidal) Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureNablaB(mag, +1), dg::geo::createGradPsip(mag))},
         {"CurvatureKappaGradPsip", "(Toroidal) Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureKappa(mag, +1), dg::geo::createGradPsip(mag))},
         {"TrueCurvatureNablaBGradPsip", "True Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureNablaB(mag), dg::geo::createGradPsip(mag))},
         {"TrueCurvatureKappaGradPsip", "True Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureKappa(mag), dg::geo::createGradPsip(mag))},
         /////////////////////////////////////
-        {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()})) },
-        {"WallDirection", "Direction of magnetic field to closest wall", dg::geo::WallDirection(mag, {grid2d.x0(), grid2d.x1()}, {grid2d.y0(), grid2d.y1()}) },
+        {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( sheath_walls)) },
+        {"WallFieldlineAnglePDistance", "Distance to wall along fieldline",
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, maxPhi, 1e-6, "phi") },
+        {"WallFieldlineAngleMDistance", "Distance to wall along fieldline",
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, -maxPhi, 1e-6, "phi") },
+        {"WallFieldlineSPDistance", "Distance to wall along fieldline",
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, maxPhi, 1e-6, "s") },
+        {"WallFieldlineSMDistance", "Distance to wall along fieldline",
+            dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                    sheath_walls, -maxPhi, 1e-6, "s") },
         {"Sheath", "Sheath region", sheath},
-        {"SheathDirection", "Direction of magnetic field relative to sheath", direction},
+        {"SheathDirection", "Direction of magnetic field relative to sheath", dg::geo::WallDirection(mag, sheath_walls) },
+        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, maxPhi, 1e-6, "s")},
         //////////////////////////////////
         {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
         {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
         {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( 1.03), dg::geo::RhoP(mag) )},
         {"Wall", "Penalization region that acts as the wall", wall },
         {"MagneticTransition", "The region where the magnetic field is modified", transition},
-        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, 0.1, 1./(sqrt(2.*M_PI)*0.1)), mag.psip())},
+        {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, deltaPsi, 1./(sqrt(2.*M_PI)*deltaPsi)), mag.psip())},
         ////
         { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) }
     };
 
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
-    unsigned npsi = 3;
+    unsigned npsi = js["grid"].get("npsi", 3).asUInt();
     //set number of psivalues (NPsi % 8 == 0)
     unsigned Npsi = js["grid"].get("Npsi", 32).asUInt();
+    unsigned Neta = js["grid"].get("Neta", 640).asUInt();
     /// -------  Elements for fsa on X-point grid ----------------
-    double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
-    std::unique_ptr<dg::geo::CurvilinearGridX2d> gX2d;
-    if( mag_description == dg::geo::description::standardX)
+    std::unique_ptr<dg::geo::CurvilinearGrid2d> gX2d;
+    dg::direction integration_dir = psipO<psipmax ? dg::forward : dg::backward;
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
-        std::cout << "Generate X-point flux-aligned grid ... \n";
-        double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-        double ZX = -1.1*mag.params().elongation()*mag.params().a();
-        dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-        double psipX = mag.psip()(RX, ZX);
-        std::cout << "X-point found at "<<RX<<" "<<ZX<<" with Psip = "<<psipX<<std::endl;
-        if( fabs(psipX ) > 1e-10)
-        {
-            std::cerr << " Psip at X-point is not zero. Unable to construct grid\n";
-            return -1;
-        }
-        dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
-        dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, RX, ZX, mag.R0(), 0, 0, false);
-        double fx_0 = 1./8.;
+        std::cout << "Generate orthogonal flux-aligned grid ... \n";
+        double fx_0 = js["grid"].get( "fx_0", 1./8.).asDouble(); // must evenly divide Npsi
         psipmax = -fx_0/(1.-fx_0)*psipO;
         std::cout << "psi 1 is          "<<psipmax<<"\n";
-        gX2d = std::make_unique<dg::geo::CurvilinearGridX2d>(generator, fx_0, 0., npsi, Npsi, 640, dg::DIR, dg::NEU);
+        // this one is actually slightly better than the X-point grid
+        dg::geo::SimpleOrthogonal generator(mag.get_psip(),
+                psipO<psipmax ? psipO : psipmax,
+                psipO<psipmax ? psipmax : psipO,
+                mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
+        gX2d = std::make_unique<dg::geo::CurvilinearGrid2d>(generator,
+                npsi, Npsi, Neta, dg::DIR, dg::PER);
         std::cout << "DONE! \n";
-        dg::Average<dg::HVec > avg_eta( gX2d->grid(), dg::coo2d::y);
+        dg::Average<dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
         dg::SparseTensor<dg::HVec> metricX = gX2d->metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
         dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
+
+        // f0 makes a - sign if psipmax < psipO
         const double f0 = (gX2d->x1()-gX2d->x0())/ ( psipmax - psipO);
         dg::HVec dvdpsip;
         avg_eta( volX2d, dvdpsip, false);
         dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
         dg::Grid1d gX1d(psipO<psipmax ? psipO : psipmax,
-            psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
-        dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d);
+                        psipO<psipmax ? psipmax : psipO,
+                        npsi, Npsi, psipO < psipmax ? dg::DIR_NEU : dg::NEU_DIR);
+        dg::HMatrix dpsi = dg::create::dx( gX1d, dg::NEU, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
+        if( psipO > psipmax)
+            dpsi = dg::create::dx( gX1d, dg::NEU, dg::forward);
+        //O-point fsa value is always zero
+        dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d, integration_dir);
         map1d.emplace_back( "dvdpsip", dvdpsip,
             "Derivative of flux volume with respect to flux label psi");
         map1d.emplace_back( "psi_vol", X_psi_vol,
@@ -200,12 +240,17 @@ int main( int argc, char* argv[])
         dg::blas1::scal( X_psi_area, 4.*M_PI*M_PI);
         map1d.emplace_back( "psi_area", X_psi_area,
             "Flux area on X-point grid");
-        std::cout << "Total volume within separatrix is "<< dg::interpolate( dg::xspace, X_psi_vol, 0., gX1d)<<std::endl;
+        std::cout << "Total volume within separatrix is "
+              << dg::interpolate( dg::xspace, X_psi_vol, 0., gX1d)<<std::endl;
 
         //Compute FSA of cylindrical functions
-        dg::HVec transferH, transferH1d;
+        dg::HVec transferH, transferH1d, integral1d;
         for( auto tp : map)
         {
+            if( std::get<0>(tp).find("Wall") != std::string::npos)
+                continue;
+            if( std::get<0>(tp).find("Sheath") != std::string::npos)
+                continue;
             transferH = dg::pullback( std::get<2>(tp), *gX2d);
             dg::blas1::pointwiseDot( volX2d, transferH, transferH);
             avg_eta( transferH, transferH1d, false);
@@ -214,16 +259,25 @@ int main( int argc, char* argv[])
             map1d.emplace_back( std::get<0>(tp)+"_fsa", transferH1d,
                 std::get<1>(tp)+" (Flux surface average)");
             dg::blas1::pointwiseDot( transferH1d, dvdpsip, transferH1d );
-            transferH1d = dg::integrate( transferH1d, gX1d);
-            map1d.emplace_back( std::get<0>(tp)+"_ifs", transferH1d,
+            integral1d = dg::integrate( transferH1d, gX1d, integration_dir);
+            map1d.emplace_back( std::get<0>(tp)+"_ifs", integral1d,
                 std::get<1>(tp)+" (Flux surface integral)");
+            dg::blas2::symv( dpsi, transferH1d, integral1d);
+            dg::blas1::pointwiseDivide( integral1d, dvdpsip, integral1d);
+            map1d.emplace_back( std::get<0>(tp)+"_dfs", integral1d,
+                std::get<1>(tp)+" (Flux current derivative)");
+
 
         }
     }
     /// --------- More flux labels --------------------------------
     dg::Grid1d grid1d(psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO, npsi ,Npsi,dg::DIR_NEU); //inner value is always zero
-    if( mag_description != dg::geo::description::none && mag_description != dg::geo::description::centeredX)
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
         dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
@@ -232,34 +286,77 @@ int main( int argc, char* argv[])
         dg::blas1::transform( rho, rho, dg::SQRT<double>());
         map1d.emplace_back("rho_p", rho,
             "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
-        if( mag_description == dg::geo::description::standardX || mag_description == dg::geo::description::standardO)
+        dg::geo::SafetyFactor qprof( mag);
+        dg::HVec psi_vals = dg::evaluate( dg::cooX1d, grid1d);
+        // we need to avoid calling SafetyFactor outside closed fieldlines
+        dg::blas1::subroutine( [psipO]( double& psi){
+               if( (psipO < 0 && psi > 0) || (psipO>0 && psi <0))
+                   psi = psipO/2.; // just use a random value
+            }, psi_vals);
+        dg::HVec qprofile( psi_vals);
+        dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
+        map1d.emplace_back("q-profile", qprofile,
+            "q-profile (Safety factor) using direct integration");
+        if( mag_description == dg::geo::description::standardX
+            || mag_description == dg::geo::description::doubleX)
         {
-            dg::geo::SafetyFactor qprof( mod_mag); //mag can lead to dead-lock!?
-            dg::HVec qprofile = dg::evaluate( qprof, grid1d);
-            map1d.emplace_back("q-profile", qprofile,
-                "q-profile (Safety factor) using direct integration");
-            dg::HVec psit = dg::integrate( qprofile, grid1d);
-            map1d.emplace_back("psit1d", psit,
-                "Toroidal flux label psi_t integrated  on grid1d using direct q");
-            //we need to avoid integrating >=0
-            dg::Grid1d g1d_fine(psipO<0. ? psipO : 0.,
-                    psipO<0. ? 0. : psipO, npsi, Npsi,dg::NEU);
-            qprofile = dg::evaluate( qprof, g1d_fine);
-            dg::HVec w1d = dg::create::weights( g1d_fine);
-            double psit_tot = dg::blas1::dot( w1d, qprofile);
-            //std::cout << "psit tot "<<psit_tot<<"\n";
-            dg::blas1::scal ( psit, 1./psit_tot);
-            dg::blas1::transform( psit, psit, dg::SQRT<double>());
-            map1d.emplace_back("rho_t", psit,
-                "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
+            double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+            double ZX = -1.1*mag.params().elongation()*mag.params().a();
+            try{
+                dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+                double Z2X = Zmax;
+                if( mag_description == dg::geo::description::doubleX)
+                {
+                    Z2X = -ZX;
+                    dg::geo::findXpoint( mag.get_psip(), RX, Z2X);
+                }
+                dg::Grid2d grid2d_tmp(Rmin,Rmax,ZX,Z2X, n,Nx,Ny);
+                double width_factor = js.get("width-factor",1.0).asDouble();
+                dg::geo::SafetyFactorAverage qprof_avg(grid2d_tmp, mag, width_factor);
+                dg::HVec qprofile_avg( psi_vals);
+                dg::blas1::evaluate( qprofile_avg, dg::equals(), qprof_avg, psi_vals);
+                map1d.emplace_back("q-profile-avg", qprofile_avg,
+                    "q-profile (Safety factor) using average integration");
+                dg::HVec curvVec = dg::evaluate( dg::geo::ScalarProduct(
+                            dg::geo::createCurvatureNablaB(mag, +1),
+                            dg::geo::createGradPsip(mag)), grid2d_tmp);
+                dg::geo::FluxSurfaceAverage<dg::HVec> fsa_avg( grid2d_tmp, mag,
+                        curvVec, dg::evaluate( dg::cooX2d, grid2d_tmp), width_factor);
+                dg::blas1::evaluate( qprofile_avg, dg::equals(), fsa_avg, psi_vals);
+                map1d.emplace_back("CurvatureNablaBGradPsip_fsa-avg", qprofile_avg,
+                    "using average integration");
+                curvVec = dg::evaluate( dg::geo::ScalarProduct(
+                            dg::geo::createCurvatureKappa(mag, +1),
+                            dg::geo::createGradPsip(mag)), grid2d_tmp);
+                fsa_avg.set_container( curvVec);
+                dg::blas1::evaluate( qprofile_avg, dg::equals(), fsa_avg, psi_vals);
+                map1d.emplace_back("CurvatureKappaGradPsip_fsa-avg", qprofile_avg,
+                    "using average integration");
+
+
+            } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
         }
+        dg::HVec psit = dg::integrate( qprofile, grid1d, integration_dir);
+        map1d.emplace_back("psit1d", psit,
+            "Toroidal flux label psi_t integrated  on grid1d using direct q");
+        //we need to avoid integrating outside closed fieldlines
+        dg::Grid1d g1d_fine(psipO<0. ? psipO : 0.,
+                psipO<0. ? 0. : psipO, npsi, Npsi,dg::NEU);
+        qprofile = dg::evaluate( qprof, g1d_fine);
+        dg::HVec w1d = dg::create::weights( g1d_fine);
+        double psit_tot = dg::blas1::dot( w1d, qprofile);
+        //std::cout << "psit tot "<<psit_tot<<"\n";
+        dg::blas1::scal ( psit, 1./psit_tot);
+        dg::blas1::transform( psit, psit, dg::SQRT<double>());
+        map1d.emplace_back("rho_t", psit,
+            "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
     }
 
     /////////////////////////////set up netcdf/////////////////////////////////////
-    std::cout << "CREATING/OPENING FILE AND WRITING ... \n";
+    std::cout << "CREATING/OPENING FILE ... \n";
     dg::file::NC_Error_Handle err;
     int ncid;
-    std::string newfilename = argc<2 ? "geometry_diag.nc" : argv[2];
+    std::string newfilename = argc<3 ? "geometry_diag.nc" : argv[2];
     err = nc_create( newfilename.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
     /// Set global attributes
     std::map<std::string, std::string> att;
@@ -284,10 +381,15 @@ int main( int argc, char* argv[])
             pair.first.data(), pair.second.size(), pair.second.data());
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
-    if( mag_description == dg::geo::description::standardX)
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
     {
         int dim_idsX[2] = {0,0};
-        err = dg::file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
+        //err = dg::file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
+        err = dg::file::define_dimensions( ncid, dim_idsX, *gX2d, {"eta", "zeta"} );
         std::string long_name = "Flux surface label";
         err = nc_put_att_text( ncid, dim_idsX[0], "long_name",
             long_name.size(), long_name.data());
@@ -303,10 +405,8 @@ int main( int argc, char* argv[])
         long_name="Cartesian y-coordinate";
         err = nc_put_att_text( ncid, yccID, "long_name",
             long_name.size(), long_name.data());
-        err = nc_enddef( ncid);
         err = nc_put_var_double( ncid, xccID, gX2d->map()[0].data());
         err = nc_put_var_double( ncid, yccID, gX2d->map()[1].data());
-        err = nc_redef(ncid);
         dim1d_ids[0] = dim_idsX[1];
     }
     else
@@ -331,9 +431,7 @@ int main( int argc, char* argv[])
             &dim1d_ids[0], &vid);
         err = nc_put_att_text( ncid, vid, "long_name",
             std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef( ncid);
         err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid);
     }
     //write 2d vectors
     //allocate mem for visual
@@ -354,14 +452,18 @@ int main( int argc, char* argv[])
             std::get<1>(tp).size(), std::get<1>(tp).data());
         std::string coordinates = "zc yc xc";
         err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
-        err = nc_enddef( ncid);
+        dg::Timer t;
+        t.tic();
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
+        t.toc();
+        if((    std::get<0>(tp).find("Wall") != std::string::npos)
+            ||( std::get<0>(tp).find("Sheath") != std::string::npos))
+            std::cout<< std::get<0>(tp) << " took "<<t.diff()<<"s\n";
         dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
         dg::assign( hvisual, fvisual);
         dg::assign( hvisual3d, fvisual3d);
         err = nc_put_var_float( ncid, vectorID, fvisual.data());
         err = nc_put_var_float( ncid, vectorID3d, fvisual3d.data());
-        err = nc_redef(ncid);
     }
     std::cout << "WRTING 3D FIELDS ... \n";
     //compute & write 3d vectors
@@ -388,11 +490,9 @@ int main( int argc, char* argv[])
             std::string coordinates = "zc yc xc";
             err = nc_put_att_text( ncid, vectorID, "coordinates", coordinates.size(), coordinates.data());
         }
-        err = nc_enddef( ncid);
         hvisual3d = dg::evaluate( std::get<2>(tp), grid3d);
         dg::assign( hvisual3d, fvisual3d);
         err = nc_put_var_float( ncid, vectorID, fvisual3d.data());
-        err = nc_redef(ncid);
     }
     //////////////////////////////Finalize////////////////////////////////////
     err = nc_close(ncid);

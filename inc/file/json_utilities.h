@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <stdexcept> //std::runtime_error
 
 #include "json/json.h"
@@ -87,8 +88,9 @@ try{
  */
 struct WrappedJsonValue
 {
-    ///Default constructor
-    WrappedJsonValue() : m_js(0), m_mode( error::is_silent){}
+    ///@brief Default constructor
+    ///By default the error mode is \c error::is_throw
+    WrappedJsonValue() : m_js(0), m_mode( error::is_throw){}
     ///@brief Construct with error mode
     ///@param mode The error mode
     WrappedJsonValue( error mode): m_js(0), m_mode( mode) {}
@@ -100,7 +102,7 @@ struct WrappedJsonValue
     ///@param mode The error mode
     WrappedJsonValue(Json::Value js, error mode): m_js(js), m_mode( mode) {}
     ///@brief Change the error mode
-    ///@param mode The new error mode
+    ///@param new_mode The new error mode
     void set_mode( error new_mode){
         m_mode = new_mode;
     }
@@ -110,42 +112,55 @@ struct WrappedJsonValue
     Json::Value& asJson( ) { return m_js;}
 
     ////////////Members imitating the original Json::Value///////////////
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue operator[](std::string key) const{
         return get( key, Json::ValueType::objectValue, "empty object ");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue get( std::string key, const Json::Value& value) const{
         std::stringstream default_str;
         default_str << "value "<<value;
         return get( key, value, default_str.str());
     }
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue operator[]( unsigned idx) const{
         return get( idx, Json::ValueType::objectValue, "empty array");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue get( unsigned idx, const Json::Value& value) const{
         std::stringstream default_str;
         default_str << "value "<<value;
         return get( idx, value, default_str.str());
     }
+    /// Wrap the corresponding Json::Value function with error handling
+    unsigned size() const{
+        return m_js.size();
+    }
+    /// Wrap the corresponding Json::Value function with error handling
     double asDouble( double value = 0) const{
         if( m_js.isDouble())
             return m_js.asDouble();
         return type_error<double>( value, "a Double");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     unsigned asUInt( unsigned value = 0) const{
         if( m_js.isUInt())
             return m_js.asUInt();
         return type_error<unsigned>( value, "an Unsigned");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     int asInt( int value = 0) const{
         if( m_js.isInt())
             return m_js.asInt();
         return type_error<int>( value, "an Int");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     bool asBool( bool value = false) const{
         if( m_js.isBool())
             return m_js.asBool();
         return type_error<bool>( value, "a Bool");
     }
+    /// Wrap the corresponding Json::Value function with error handling
     std::string asString( std::string value = "") const{
         //return m_js["hhaha"].asString(); //does not throw
         if( m_js.isString())
@@ -208,80 +223,6 @@ struct WrappedJsonValue
 };
 
 /**
- * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
- *
- * @tparam T value type
- * @param err determines what to do when a key is missing
- * @param js the input Json value
- * @param key the key to look for in js
- * @param value the value to take if key is missing
- *
- * @return js[key] if key is present, else value
- */
-template<class T>
-Json::Value get( enum error err, const Json::Value& js, std::string key, T value)
-{
-    WrappedJsonValue ws( js, err);
-    return ws.get( key, value);
-}
-
-/**
- * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
- *
- * @tparam T value type
- * @param err determines what to do when a key or index is missing
- * @param js the input Json value
- * @param key the key to look for in js
- * @param idx the idx within key to look for in js
- * @param value the value to take if key is missing
- *
- * @return js[key][idx] if key is present, else value
- */
-template<class T>
-Json::Value get_idx( enum error err, const Json::Value& js, std::string key, unsigned idx, T value)
-{
-    WrappedJsonValue ws( js, err);
-    return ws[key].get( idx, value);
-}
-/**
- * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
- *
- * @tparam T value type
- * @param err determines what to do when a key is missing
- * @param js the input Json value
- * @param key the key to look for in js
- * @param key2 the key to look for in \c key
- * @param value the value to take if key is missing
- *
- * @return js[key][key2] if key is present, else value
- */
-template<class T>
-Json::Value get( enum error err, const Json::Value& js, std::string key, std::string key2, T value)
-{
-    WrappedJsonValue ws( js, err);
-    return ws[key].get( key2, value);
-}
-/**
- * @brief DEPRECATED Wrapper around Json::Value::get function that handles missing keys
- *
- * @tparam T value type
- * @param err determines what to do when a key or index is missing
- * @param js the input Json value
- * @param key the key to look for in js
- * @param key2 the key to look for in \c key
- * @param idx the index to look for in \c key2
- * @param value the value to take if key is missing
- *
- * @return js[key][key2][idx] if key is present, else value
- */
-template<class T>
-Json::Value get_idx( enum error err, const Json::Value& js, std::string key, std::string key2, unsigned idx, T value)
-{
-    WrappedJsonValue ws( js, err);
-    return ws[key][key2].get( idx, value);
-}
-
-/**
  * @brief Convenience wrapper to open a file and parse it into a Json::Value
  *
  * @note included in \c json_utilities.h
@@ -301,8 +242,11 @@ static inline void file2Json(std::string filename, Json::Value& js, enum comment
     else if( comments::are_discarded == comm )
     {
         Json::CharReaderBuilder::strictMode( &parser.settings_);
-        parser.settings_["allowComments"] = true;
-        parser.settings_["collectComments"] = false;
+        // workaround for a linker bug in jsoncpp from package manager
+        Json::Value js_true (true);
+        Json::Value js_false (false);
+        parser.settings_["allowComments"].swap( js_true);
+        parser.settings_["collectComments"].swap(js_false);
     }
     else
         Json::CharReaderBuilder::setDefaults( &parser.settings_);

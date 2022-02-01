@@ -6,7 +6,7 @@
 #include "backend/typedefs.h"
 #include "multistep.h"
 
-#include "cg.h"
+#include "pcg.h"
 
 const double eps = 1e-4;
 const double alpha = -0.5;
@@ -32,31 +32,27 @@ int main()
     std::cin >> n>> Nx >> Ny >> Nz;
     dg::Grid2d grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
     const dg::DVec w2d = dg::create::weights( grid);
-    const dg::DVec v2d = dg::create::inv_weights( grid);
     const dg::DVec rho = dg::evaluate( rhs, grid);
     const dg::DVec sol = dg::evaluate( lhs, grid);
-    dg::DVec x(rho.size(), 0.), rho_(rho);
+    dg::DVec x(rho.size(), 0.);
 
     dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv( grid, alpha);
 
     std::cout << "FIRST METHOD:\n";
-    dg::CG< dg::DVec > cg(x, x.size());
-    dg::blas2::symv( w2d, rho, rho_);
-    unsigned number = cg( gamma1inv, x, rho_, v2d, eps);
+    dg::PCG< dg::DVec > pcg(x, x.size());
+    unsigned number = pcg.solve( gamma1inv, x, rho, 1., w2d, eps);
 
     std::cout << "SECOND METHOD:\n";
     dg::DVec x_(rho.size(), 0.);
-    dg::Invert<dg::DVec> invert( x_, grid.size(), eps);
     dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > maxwell( grid, alpha);
-    invert( maxwell, x_, rho);
+    pcg.solve( maxwell, x_, rho, 1., w2d, eps);
 
     //std::cout << "THIRD METHOD:\n";
     //dg::DVec x__(rho.size(), 0.);
     //Diffusion<dg::DVec> diffusion( grid, 1.);
     //dg::DVec temp (w2d);
     //dg::detail::Implicit<Diffusion<dg::DVec>, dg::DVec > implicit( alpha, diffusion,temp);
-    //dg::blas2::symv( diffusion.weights(), rho, rho_);
-    //number = cg( implicit, x__, rho_, diffusion.precond(), eps);
+    //number = pcg( implicit, x__, rho, diffusion.precond(), eps);
 
     //Evaluation
     dg::blas1::axpby( 1., sol, -1., x);
@@ -77,15 +73,13 @@ int main()
     dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
     dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
     dg::DVec temp_(fct_);
-    dg::Elliptic< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > laplaceM( g3d, dg::normed);
+    dg::Elliptic< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > laplaceM( g3d);
     dg::Helmholtz< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
     dg::blas2::symv( laplaceM, fct_, temp_);
     dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
-    dg::DVec w3d =  laplaceM.inv_weights();
-    dg::blas1::transform(w3d, w3d,dg::INVERT<double>());
+    dg::DVec w3d =  laplaceM.weights();
     std::cout << "error Laplace " << sqrt( dg::blas2::dot( w3d, temp_))<<" (Note the supraconvergence!)"<<std::endl;
     dg::blas2::symv( helmholtz, fct_, temp_);
-    dg::blas1::pointwiseDot( helmholtz.inv_weights(), temp_, temp_);
     dg::blas1::axpby( 1., helmholtz_fct_, -1, temp_);
     std::cout << "error " << sqrt( dg::blas2::dot( w3d, temp_))<<" (Note the supraconvergence!)"<<std::endl;
 

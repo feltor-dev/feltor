@@ -681,39 +681,4 @@ struct SA{
          (-0.16666666666666666 - 0.08333333333333333*Sqrt(-mue))*Sin(P)*
           Sin(Pi*R)*Sin(Pi*t)*Sin(Pi*Z)))*Sin(2*Pi*Z))/(Sqrt(-mue)*R)
 ; }};
-struct Snehat{
-    double mue,mui,taue,taui,eta,beta,nuperp,nuparallele,nuparalleli,alpha;
-    DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return 1 + 0.5*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
-  (alpha*nuperp*(0. + 1.5707963267948966*Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*
-        Sin(Pi*Z) - 9.869604401089358*R*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
-        Sin(Pi*Z)))/R
-; }};
-struct SNihat{
-    double mue,mui,taue,taui,eta,beta,nuperp,nuparallele,nuparalleli,alpha;
-    DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return 1 + 0.25*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*Sin(Pi*Z) + 
-  (alpha*nuperp*(0. + 0.7853981633974483*Cos(Pi*(-10 + R))*Sin(P)*Sin(Pi*t)*
-        Sin(Pi*Z) - 4.934802200544679*R*Sin(P)*Sin(Pi*(-10 + R))*Sin(Pi*t)*
-        Sin(Pi*Z)))/R
-; }};
-struct SWehat{
-    double mue,mui,taue,taui,eta,beta,nuperp,nuparallele,nuparalleli,alpha;
-    DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return -((beta + beta*Sqrt(-mue) - mue)*Sin(2*P)*Sin(2*Pi*R)*Sin(2*Pi*t)*
-      Sin(2*Pi*Z))/(3.*Power(-mue,1.5)) + 
-  (alpha*nuperp*((-2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*
-          Sin(2*Pi*Z))/(3.*Sqrt(-mue)) + 
-       (8*Power(Pi,2)*R*Sin(2*P)*Sin(2*Pi*(-10 + R))*Sin(2*Pi*t)*
-          Sin(2*Pi*Z))/(3.*Sqrt(-mue))))/R
-; }};
-struct SWihat{
-    double mue,mui,taue,taui,eta,beta,nuperp,nuparallele,nuparalleli,alpha;
-    DG_DEVICE double operator()(double R, double Z, double P, double t)const{
-    return ((beta + beta*Sqrt(-mue) + Sqrt(-mue)*mui)*Sin(2*P)*Sin(2*Pi*R)*Sin(2*Pi*t)*
-     Sin(2*Pi*Z))/(3.*Sqrt(-mue)*mui) + 
-  (alpha*nuperp*((2*Pi*Cos(2*Pi*(-10 + R))*Sin(2*P)*Sin(2*Pi*t)*
-          Sin(2*Pi*Z))/3. - (8*Power(Pi,2)*R*Sin(2*P)*Sin(2*Pi*(-10 + R))*
-          Sin(2*Pi*t)*Sin(2*Pi*Z))/3.))/R
-; }};
 }}//namespace feltor namespace manufactured

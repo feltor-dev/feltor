@@ -18,9 +18,9 @@ int main ()
     thrust::host_vector<double> left, right, both, left_abs, right_abs, both_abs;
     //don't forget to test the case add_x = 0 once in a while!
     dg::Grid1d g( 0,1, 2,4, dg::PER);
-    int node;
-    std::cout<< "Type node to refine 0,..,4!\n";
-    std::cin >> node;
+    int node = 3;
+    //std::cout<< "Type node to refine 0,..,4!\n";
+    //std::cin >> node;
     dg::EquidistRefinement equi( 3, node, 1);
     int new_N = equi.N_new(g.N(), g.bcx());
     equi.generate( g, both, both_abs);
@@ -94,8 +94,25 @@ int main ()
     double error = dg::blas2::dot( vec_c, w2d_c, vec_c);
     std::cout << "error of derivative is "<<error<<std::endl;
 
-    dg::CartesianRefinedGrid3d g3d_f( lin,lin,lin, 0., 2*M_PI, 0., 2*M_PI, 0., 2*M_PI, 5, 20, 20, 20);
+    dg::CartesianRefinedGrid3d g3d_f( lin,lin,lin, 0., 2*M_PI, 0., 2*M_PI, 0.,
+            2*M_PI, 5, 20, 20, 20);
     g3d_f.display();
+    std::cout << "TEST finite element REFINEMENT\n";
+    //std::cout << "Type n Nx Ny \n";
+    unsigned n = 5, Nx = 20, Ny = 20;
+    //std::cin >> n >> Nx >> Ny;
+    for( unsigned m = 1; m<8; m++)
+    {
+        std::cout << "Refinement factor = "<<m<<"\n";
+        dg::FemRefinement fem_ref( m);
+        dg::CartesianRefinedGrid2d g2d_f( fem_ref, fem_ref, 0.1, 0.1+2*M_PI,
+                0.1, 0.1+2*M_PI, n, Nx,Ny);
+        dg::HVec vec = dg::pullback( function, g2d_f);
+        dg::HVec w2d = dg::create::volume( g2d_f);
+        double integral = dg::blas2::dot( vec, w2d, vec);
+        std::cout << "error of fine integral is "
+                  <<(integral-M_PI*M_PI)/M_PI/M_PI<<std::endl;
+    }
 
     return 0;
 }

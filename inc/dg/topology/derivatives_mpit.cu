@@ -5,6 +5,7 @@
 
 #include "dg/backend/mpi_init.h"
 #include "dg/blas.h"
+#include "dg/functors.h"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
 #include "mpi_weights.h"
@@ -20,8 +21,8 @@ double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
 double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 
 
-typedef dg::MDMatrix Matrix;
-typedef dg::MDVec Vector;
+using Matrix = dg::MDMatrix;
+using Vector = dg::MDVec;
 
 int main(int argc, char* argv[])
 {
@@ -86,6 +87,17 @@ int main(int argc, char* argv[])
         dg::blas2::symv( -1., m3[i], f3d, 1., error);
         double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary3[i]<<"\n";
+    }
+    if(rank==0)std::cout << "TEST if symv captures NaN\n";
+    for( unsigned i=0; i<6; i++)
+    {
+        Vector error = sol3[i];
+        error.data()[0] = NAN;
+        dg::blas2::symv(  m3[i], f3d, error);
+        dg::MPI_Vector<thrust::host_vector<double>> x( error);
+        bool hasnan = dg::blas1::reduce( x, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+        if(rank==0)std::cout << "Symv contains NaN: "<<std::boolalpha<<hasnan<<" (false)\n";
     }
     if(rank==0)std::cout << "\nFINISHED! Continue with arakawa_mpit.cu !\n\n";
 

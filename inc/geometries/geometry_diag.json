@@ -5,13 +5,33 @@
         "Nx" : 80,
         "Ny" : 80,
         "Nz" : 20,
+        "npsi": 3,
         "Npsi": 32,
-        "scaleR" : [1.1,1.1],
-        "scaleZ" : [1.9, 1.9]
+        "Neta": 640,
+        //"scaleR" : [1.4, 1.3],
+        //"scaleZ" : [2.5, 2.3]
+        "scaleR" : [1.0, 1.0],
+        "scaleZ" : [1.0, 1.0]
+    },
+    "boundary":
+    {
+        "wall":
+        {
+            "type" : "heaviside",
+            "boundary" : 1.1,
+            "alpha" : 0.2
+        },
+        "sheath":
+        {
+            "boundary" : 0.0625,
+            "alpha" : 0.015625,
+            "max_angle": 1e-3
+        }
     },
     "magnetic_field":
     {
         "input" : "file",
-        "file": "geometry_params_Xpoint.json"
-    }
+        "file": "guenther_params.json"
+    },
+    "width-factor" : 0.03
 }

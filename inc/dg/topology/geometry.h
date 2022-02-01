@@ -20,3 +20,5 @@
 #include "tensor.h"
 #include "transform.h"
 #include "multiply.h"
+// finite element method
+#include "fem.h"

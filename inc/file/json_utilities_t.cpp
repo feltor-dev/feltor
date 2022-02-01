@@ -74,6 +74,7 @@ int main()
         std::string hello = ws["hello"].asString();
         assert( hello == "world");
         int idx0 = ws[ "array"][0].asInt(0);
+        assert( ws["array"].size() == 2);
         assert( idx0 == 42);
         idx0 = ws[ "array"].get(0,0).asInt();
         assert( idx0 == 42);

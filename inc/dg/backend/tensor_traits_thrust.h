@@ -12,12 +12,14 @@ namespace dg
 
 ///@brief prototypical Shared Vector with Serial Tag
 template<class T>
-struct TensorTraits<thrust::host_vector<T> >//, std::enable_if_t< std::is_arithmetic<T>::value>>
+struct TensorTraits<thrust::host_vector<T>> //, std::enable_if_t< std::is_arithmetic<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;
     using execution_policy  = SerialTag;
 };
+//// MW Thrust should not be Recursive because of user-provided value_types
+//// or std::complex or similar
 //template<class T>
 //struct TensorTraits<thrust::host_vector<T>,
 //    std::enable_if_t< !std::is_arithmetic<T>::value>>
@@ -29,14 +31,16 @@ struct TensorTraits<thrust::host_vector<T> >//, std::enable_if_t< std::is_arithm
 
 ///@brief prototypical Shared Vector with Cuda or Omp Tag
 template<class T>
-struct TensorTraits<thrust::device_vector<T> >//, std::enable_if_t<std::is_arithmetic<T>::value>>
+struct TensorTraits<thrust::device_vector<T> >
 {
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    using execution_policy  = CudaTag ;  //!< enable if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    using execution_policy  = CudaTag ;
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
+    using execution_policy  = OmpTag ;
 #else
-    using execution_policy  = OmpTag ;  //!< enable if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    using execution_policy  = SerialTag ;
 #endif
 };
 ///@}
@@ -57,7 +61,7 @@ struct ThrustTag<CudaTag>
 {
     using thrust_tag = thrust::cuda::tag;
 };
-#else
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
 template <>
 struct ThrustTag<OmpTag>
 {

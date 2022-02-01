@@ -1,10 +1,6 @@
 #pragma once
 
-#include "dg/topology/gridX.h"
-#include "dg/topology/interpolationX.h"
-#include "dg/topology/evaluationX.h"
-#include "dg/topology/weightsX.h"
-#include "dg/runge_kutta.h"
+#include "dg/algorithm.h"
 #include "generatorX.h"
 #include "utilitiesX.h"
 
@@ -45,6 +41,14 @@ void computeX_rzy( const CylindricalFunctorsLvl1& psi,
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1; real_type eps = 1e10, eps_old=2e10;
+    using Vec = std::array<real_type,2>;
+    dg::SinglestepTimeloop<Vec> odeint;
+    if( mode == 0)
+        odeint.construct( dg::RungeKutta<Vec>( "Feagin-17-8-10", begin),
+                fieldRZYconf);
+    if(mode == 1)
+        odeint.construct( dg::RungeKutta<Vec>( "Feagin-17-8-10", begin),
+                fieldRZYequi);
     while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
     {
         eps_old = eps, r_old = r, z_old = z;
@@ -52,47 +56,40 @@ void computeX_rzy( const CylindricalFunctorsLvl1& psi,
         if( nodeX0 != 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[nodeX0-1], end, steps);
-            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[nodeX0-1], end, steps);
+            odeint.integrate_steps( 0, begin, y_vec[nodeX0-1], end, steps);
             r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
         }
         for( int i=nodeX0-2; i>=0; i--)
         {
             temp = end;
-            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i+1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i+1], temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i+1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         ////////////////middle region///////////////////////////
         begin[0] = R_init[0], begin[1] = Z_init[0];
-        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[nodeX0], end, steps);
-        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[nodeX0], end, steps);
+        odeint.integrate_steps( 0, begin, y_vec[nodeX0], end, steps);
         r[nodeX0] = end[0], z[nodeX0] = end[1];
         for( unsigned i=nodeX0+1; i<nodeX1; i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         temp = end;
-        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
-        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        odeint.integrate_steps( y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
         eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
         if(verbose)std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
-            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
+            odeint.integrate_steps( 2.*M_PI, begin, y_vec[nodeX1], end, steps);
             r[nodeX1] = end[0], z[nodeX1] = end[1];
         }
         for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only
@@ -266,10 +263,14 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 
         thrust::host_vector<double> xIC, yIC, hIC, xOC,yOC,hOC;
         thrust::host_vector<double> xIF, yIF, hIF, xOF,yOF,hOF;
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC, xIC, yIC, hIC);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC, xOC, yOC, hOC);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC,
+                xIC, yIC, hIC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC,
+                xOC, yOC, hOC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF,
+                xIF, yIF, hIF);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF,
+                xOF, yOF, hOF);
         //now glue far and close back together
         thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size());
         thrust::host_vector<double> yI(xI), hI(xI), yO(xO),hO(xO);

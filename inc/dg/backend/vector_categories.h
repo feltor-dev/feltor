@@ -64,9 +64,11 @@ struct MPIVectorTag     : public AnyVectorTag {};
  * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is the inner type and N is the size of the array
  */
 struct RecursiveVectorTag  : public AnyVectorTag {};
+//struct RecursiveScalarTag : public RecursiveVectorTag {};
+struct ArrayVectorTag  : public RecursiveVectorTag {};
+struct StdMapTag : public RecursiveVectorTag{};
 
-struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of containers
-
+struct ArrayScalarTag : public SharedVectorTag {};
 /**
  * @brief Indicate thrust/std - like behaviour
  *
@@ -87,9 +89,8 @@ struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of con
  *  - \c cend() returns a \c const_iterator to the end
  *  @note \c thrust::host_vector and \c thrust::device_vector meet these requirements
  */
-struct ThrustVectorTag  : public SharedVectorTag {};
+struct ThrustVectorTag  : public ArrayScalarTag {};
 struct CuspVectorTag    : public ThrustVectorTag {}; //!< special tag for cusp arrays
-struct StdArrayTag      : public ThrustVectorTag {}; //!< <tt> std::array< primitive_type, N> </tt>
 
 }//namespace dg
 

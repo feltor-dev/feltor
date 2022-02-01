@@ -1,8 +1,6 @@
 #pragma once
 
-#include "dg/backend/memory.h"
-#include "dg/blas1.h"
-#include "dg/topology/base_geometry.h"
+#include "dg/algorithm.h"
 #include "generator.h"
 
 namespace dg
@@ -14,34 +12,62 @@ namespace geo
  * @brief Construct a 3D grid
  *
  * the coordinates of the computational space are called x,y,z
- * @param generator generates the perpendicular grid
- * @param n number of %Gaussian nodes in x and y
- *  (1<=n<=20, note that the library is optimized for n=3 )
- * @attention # of polynomial coefficients in z direction is always 1
+ * @param generator generate the perpendicular grid: the grid boundaries are [0, generator.width()] x [0, generator.height()] x [0, 2Pi]
+ * @param n number of %Gaussian nodes in x and y (1<=n<=20 ), nz is set to 1
  * @param Nx number of cells in x
  * @param Ny number of cells in y
  * @param Nz  number of cells z
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
  * @param bcz boundary condition in z
+ *
+ * @class hide_grid_product3d
+ * @brief Construct the computational space as the product of three 1d grids
+ *
+ * @code
+ * dg::CurvilinearGrid2d g2d( generator, {nx,Nx,bcx},{ny,Ny,bcy}, {z0,z1,nz,Nz,bcz});
+ * @endcode
+ * @param generator generate the grid: the grid boundaries are [0, generator.width()] x [0, generator.height()]
+ * @param tx a Grid without boundaries in x - direction
+ * @param ty a Grid without boundaries in y - direction
+ * @param gz a Grid in z - direction
  */
 
 /*!@class hide_grid_parameters2d
  * @brief Construct a 2D grid
  *
- * the coordinates of the computational space are called x,y,z
- * @param generator generates the grid
+ * the coordinates of the computational space are called x,y
+ * @param generator generate the grid: the grid boundaries are [0, generator.width()] x [0, generator.height()]
  * @param n number of %Gaussian nodes in x and y
- *  (1<=n<=20, note that the library is optimized for n=3 )
+ *  (1<=n<=20 )
  * @param Nx number of cells in x
  * @param Ny number of cells in y
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
+ *
+ * @class hide_grid_product2d
+ * @brief Construct the computational space as the product of two 1d grids
+ *
+ * @code
+ * dg::CurvilinearGrid2d g2d( generator, {nx,Nx,bcx},{ny,Ny,bcy});
+ * @endcode
+ * @param generator generate the grid: the grid boundaries are [0, generator.width()] x [0, generator.height()]
+ * @param tx a Grid without boundaries in x - direction
+ * @param ty a Grid without boundaries in y - direction
  */
 
 
 ///@addtogroup grids
 ///@{
+/** @brief Helper class for construction
+ */
+struct Topology1d
+{
+    unsigned n;
+    unsigned N;
+    bc b = dg::PER;
+};
+
 
 ///@cond
 template<class real_type>
@@ -81,17 +107,18 @@ dg::SparseTensor<host_vector> square( const dg::SparseTensor<host_vector >& jac,
 
 /**
  * @brief A two-dimensional grid based on curvilinear coordinates
- *
- * @snippet flux_t.cu doxygen
  */
 template<class real_type>
 struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
 {
     ///@copydoc hide_grid_parameters2d
     RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
-        dg::aRealGeometry2d<real_type>( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), m_handle(generator)
+        RealCurvilinearGrid2d( generator, {n,Nx,bcx}, {n,Ny,bcy}){}
+    ///@copydoc hide_grid_product2d
+    RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty) :
+        dg::aRealGeometry2d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b}), m_handle(generator)
     {
-        construct( n,Nx,Ny);
+        construct( tx.n, tx.N, ty.n, ty.N);
     }
 
     /**
@@ -104,12 +131,12 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
     const aRealGenerator2d<real_type>& generator() const{return *m_handle;}
     virtual RealCurvilinearGrid2d* clone()const override final{return new RealCurvilinearGrid2d(*this);}
     private:
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny) override final
+    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny) override final
     {
-        dg::aRealTopology2d<real_type>::do_set( new_n, new_Nx, new_Ny);
-        construct( new_n, new_Nx, new_Ny);
+        dg::aRealTopology2d<real_type>::do_set( nx, Nx, ny,Ny);
+        construct( nx, Nx, ny, Ny);
     }
-    void construct( unsigned n, unsigned Nx, unsigned Ny);
+    void construct( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny);
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const override final{
         return m_jac;
     }
@@ -127,7 +154,6 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
  * @brief A 2x1 curvilinear product space grid
 
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
- * @snippet hector_t.cu doxygen
  */
 template<class real_type>
 struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_type>
@@ -136,12 +162,15 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
 
     ///@copydoc hide_grid_parameters3d
     RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
-        dg::aRealProductGeometry3d<real_type>( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
+        RealCurvilinearProductGrid3d( generator, {n,Nx,bcx}, {n,Ny,bcy}, {0., 2.*M_PI, 1,Nz,bcz}){}
+
+    ///@copydoc hide_grid_product3d
+    RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, RealGrid1d<real_type> gz):
+        dg::aRealProductGeometry3d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b},gz), m_handle(generator)
     {
         m_map.resize(3);
-        m_handle = generator;
-        constructPerp( n, Nx, Ny);
-        constructParallel(Nz);
+        constructPerp( this->nx(), this->Nx(), this->ny(), this->Ny());
+        constructParallel(this->nz(), this->Nz());
     }
 
 
@@ -150,25 +179,25 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
     virtual RealCurvilinearProductGrid3d* clone()const override final{return new RealCurvilinearProductGrid3d(*this);}
     private:
     virtual RealCurvilinearGrid2d<real_type>* do_perp_grid() const override final;
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny,unsigned new_Nz) override final{
-        dg::aRealTopology3d<real_type>::do_set( new_n, new_Nx, new_Ny,new_Nz);
-        if( !( new_n == this->n() && new_Nx == this->Nx() && new_Ny == this->Ny() ) )
-            constructPerp( new_n, new_Nx, new_Ny);
-        constructParallel(new_Nz);
+    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny,unsigned nz,unsigned Nz) override final{
+        dg::aRealTopology3d<real_type>::do_set( nx, Nx, ny, Ny, nz, Nz);
+        if( !( nx == this->nx() && Nx == this->Nx() && ny == this->ny() && Ny == this->Ny() ) )
+            constructPerp( nx, Nx, ny,Ny);
+        constructParallel(nz,Nz);
     }
     //construct phi and lift rest to 3d
-    void constructParallel(unsigned Nz)
+    void constructParallel(unsigned nz,unsigned Nz)
     {
         m_map[2]=dg::evaluate(dg::cooZ3d, *this);
         unsigned size = this->size();
-        unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
+        unsigned size2d = this->nx()*this->ny()*this->Nx()*this->Ny();
         //resize for 3d values
         for( unsigned r=0; r<6;r++)
             m_jac.values()[r].resize(size);
         m_map[0].resize(size);
         m_map[1].resize(size);
         //lift to 3D grid
-        for( unsigned k=1; k<Nz; k++)
+        for( unsigned k=1; k<nz*Nz; k++)
             for( unsigned i=0; i<size2d; i++)
             {
                 for(unsigned r=0; r<6; r++)
@@ -178,10 +207,10 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
             }
     }
     //construct 2d plane
-    void constructPerp( unsigned n, unsigned Nx, unsigned Ny)
+    void constructPerp( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny)
     {
-        dg::Grid1d gX1d( this->x0(), this->x1(), n, Nx);
-        dg::Grid1d gY1d( this->y0(), this->y1(), n, Ny);
+        dg::Grid1d gX1d( this->x0(), this->x1(), nx, Nx);
+        dg::Grid1d gY1d( this->y0(), this->y1(), ny, Ny);
         thrust::host_vector<real_type> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<real_type> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         m_jac = SparseTensor< thrust::host_vector<real_type>>( x_vec);//unit tensor
@@ -215,9 +244,9 @@ using CurvilinearProductGrid3d  = CurvilinearProductGrid3d ;
 ///@cond
 template<class real_type>
 RealCurvilinearGrid2d<real_type>::RealCurvilinearGrid2d( RealCurvilinearProductGrid3d<real_type> g):
-    dg::aRealGeometry2d<real_type>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), m_handle(g.generator())
+    dg::aRealGeometry2d<real_type>( g.gx(), g.gy() ), m_handle(g.generator())
 {
-    g.set( this->n(), this->Nx(), this->Ny(), 1); //shouldn't trigger 2d grid generator
+    g.set( this->nx(), this->Nx(), this->ny(), this->Ny(), 1, 1); //shouldn't trigger 2d grid generator
     m_map=g.map();
     m_jac=g.jacobian();
     m_metric=g.metric();
@@ -228,9 +257,9 @@ RealCurvilinearGrid2d<real_type>::RealCurvilinearGrid2d( RealCurvilinearProductG
     m_map.pop_back();
 }
 template<class real_type>
-void RealCurvilinearGrid2d<real_type>::construct( unsigned n, unsigned Nx, unsigned Ny)
+void RealCurvilinearGrid2d<real_type>::construct( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny)
 {
-    RealCurvilinearProductGrid3d<real_type> g( *m_handle, n,Nx,Ny,1,this->bcx());
+    RealCurvilinearProductGrid3d<real_type> g( *m_handle, {nx,Nx,this->bcx()}, {ny,Ny,this->bcy()}, {0., 2.*M_PI, 1,1});
     *this = RealCurvilinearGrid2d<real_type>(g);
 }
 template<class real_type>

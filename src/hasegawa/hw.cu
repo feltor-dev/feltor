@@ -35,7 +35,8 @@ int main( int argc, char* argv[])
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     bool mhw = (p.equations == "modified");
-    hw::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, mhw); 
+    hw::HW<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p.kappa,
+            p.tau, p.nu, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
@@ -50,10 +51,9 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -meanMass, one, 1., y0[0]);
         y0[1] = y0[0];
     }
-    //dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    //dg::TVB< std::vector<dg::DVec> > ab( y0);
-    dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
-    hw::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    dg::DefaultSolver<std::vector<dg::DVec> > solver( y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep<std::vector<dg::DVec> > ab( "ImEx-BDF-3-3", y0);
+    hw::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -62,13 +62,13 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( test, diffusion, time, y0, p.dt);
+    ab.init( std::tie(test, diffusion, solver), time, y0, p.dt);
     double E0 = test.energy(), E1 = 0, diff = 0; //energy0 = E0;
     double Ezf0 = test.zonal_flow_energy(), Ezf1 = 0, diffzf = 0; //energyzf0 = Ezf0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM(grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM(grid,  dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         if( p.bc_x == dg::PER && p.bc_y == dg::PER)
@@ -131,7 +131,7 @@ int main( int argc, char* argv[])
                 std::cout << diffzf << " "<< test.zonal_flow_diffusion() << " " <<test.capital_r()<<"\n";
 
             }
-            try{ ab.step( test, diffusion, time, y0);}
+            try{ ab.step( std::tie( test, diffusion, solver), time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

@@ -21,11 +21,7 @@ namespace create
 template<class real_type>
 MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology2d<real_type>& g)
 {
-    thrust::host_vector<real_type> w( g.local().size());
-    for( unsigned i=0; i<g.local().size(); i++)
-        w[i] = g.hx()*g.hy()/4.*
-                g.dlt().weights()[detail::get_i(g.n(),g.local().Nx(), i)]*
-                g.dlt().weights()[detail::get_j(g.n(),g.local().Nx(), i)];
+    thrust::host_vector<real_type> w = dg::create::weights( g.local());
     return MPI_Vector<thrust::host_vector<real_type> >( w, g.communicator());
 }
 ///@copydoc hide_inv_weights_doc
@@ -42,15 +38,7 @@ MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aRealMPITopology2
 template<class real_type>
 MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology2d<real_type>& g, enum coo2d coo)
 {
-    thrust::host_vector<real_type> w( g.local().size());
-    if( coo == coo2d::x) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
-    }
-    else if( coo == coo2d::y) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
-    }
+    thrust::host_vector<real_type> w = create::weights( g.local(), coo);
     return MPI_Vector<thrust::host_vector<real_type> >( w, g.communicator());
 }
 ///@copydoc hide_weights_doc
@@ -58,11 +46,7 @@ MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology2d<re
 template<class real_type>
 MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology3d<real_type>& g)
 {
-    thrust::host_vector<real_type> w( g.local().size());
-    for( unsigned i=0; i<g.local().size(); i++)
-        w[i] = g.hx()*g.hy()*g.hz()/4.*
-               g.dlt().weights()[detail::get_i(g.n(), g.local().Nx(), i)]*
-               g.dlt().weights()[detail::get_j(g.n(), g.local().Nx(), i)];
+    thrust::host_vector<real_type> w = weights( g.local());
     return MPI_Vector<thrust::host_vector<real_type> >( w, g.communicator());
 }
 ///@copydoc hide_inv_weights_doc
@@ -79,31 +63,7 @@ MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aRealMPITopology3
 template<class real_type>
 MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology3d<real_type>& g, enum coo3d coo)
 {
-    thrust::host_vector<real_type> w( g.local().size());
-    if( coo == coo3d::x) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
-    }
-    else if( coo == coo3d::y) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
-    }
-    else if( coo == coo3d::z) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hz();
-    }
-    else if( coo == coo3d::xy) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hx()*g.hy()/4.* g.dlt().weights()[i%g.n()]*g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
-    }
-    else if( coo == coo3d::yz) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hy()*g.hz()/2.* g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
-    }
-    else if( coo == coo3d::xz) {
-        for( unsigned i=0; i<g.local().size(); i++)
-            w[i] = g.hx()*g.hz()/2.* g.dlt().weights()[i%g.n()];
-    }
+    thrust::host_vector<real_type> w = weights( g.local(), coo);
     return MPI_Vector<thrust::host_vector<real_type> >( w, g.communicator());
 }
 

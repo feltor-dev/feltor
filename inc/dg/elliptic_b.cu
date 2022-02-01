@@ -10,7 +10,7 @@
 #include "topology/derivatives.h"
 #include "topology/split_and_join.h"
 
-#include "cg.h"
+#include "pcg.h"
 #include "elliptic.h"
 
 
@@ -52,24 +52,21 @@ int main()
     //! [invert]
     dg::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, bcz);
     dg::DVec w3d = dg::create::volume( grid);
-    dg::DVec v3d = dg::create::inv_volume( grid);
     dg::DVec x = dg::evaluate( initial, grid);
 
-    dg::Elliptic3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic3d<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::centered);
 
     laplace.set_jump_weighting(jump_weight);
 
-    dg::CG< dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
+    dg::PCG< dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
 
     const dg::DVec solution = dg::evaluate ( fct, grid);
     dg::DVec b = dg::evaluate ( laplace3d_fct, grid);
-    //compute W b
-    dg::blas2::symv( w3d, b, b);
 
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     unsigned num;
     t.tic();
-    num = pcg( laplace, x, b, v3d, eps);
+    num = pcg.solve( laplace, x, b, 1., w3d, eps);
     t.toc();
     std::cout << "Number of pcg iterations "<<num<<std::endl;
     std::cout << "... on the device took   "<< t.diff()<<"s\n";
@@ -103,7 +100,6 @@ int main()
     b = dg::evaluate ( laplace2d_fct, grid);
     //create grid and perp and parallel volume
     dg::ClonePtr<dg::aGeometry2d> grid_perp = grid.perp_grid();
-    dg::DVec v2d = dg::create::inv_volume( *grid_perp);
     dg::DVec w2d = dg::create::volume( *grid_perp);
     dg::DVec g_parallel = grid.metric().value(2,2);
     dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
@@ -111,7 +107,7 @@ int main()
     dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split(
-            grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(*grid_perp, dg::not_normed, dg::centered));
+            grid.Nz(), {*grid_perp, dg::centered});
     // create split  vectors and solve
     std::vector<dg::View<dg::DVec>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
@@ -124,8 +120,7 @@ int main()
     for( unsigned i=0; i<grid.Nz(); i++)
     {
         laplace_split[i].set_chi( chi_split[i]);
-        dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
-        number[i] = pcg( laplace_split[i], x_split[i], b_split[i], v2d, eps);
+        number[i] = pcg.solve( laplace_split[i], x_split[i], b_split[i], 1., w2d, eps);
     }
     t.toc();
     std::cout << "Number of iterations in split     "<< number[0]<<"\n";

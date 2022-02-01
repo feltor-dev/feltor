@@ -3,6 +3,16 @@
 #include "dg/backend/config.h"
 
 namespace dg{
+/**
+ * @brief \f$ f(x) = x\f$
+ * @ingroup basics
+ */
+struct IDENTITY
+{
+    template<class T>
+    DG_DEVICE T operator()(T x)const{return x;}
+};
+
 
 ///@addtogroup binary_operators
 ///@{
@@ -149,15 +159,15 @@ DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
 ///@addtogroup variadic_subroutines
 ///@{
 
-///@brief \f$ y = \sum_i a_i x_i,\quad \tilde y = \sum_i \tilde a_i x_i \f$
+///@brief \f$ y = \sum_i a_i x_i + b y,\quad \tilde y = \sum_i \tilde a_i x_i + \tilde b y \f$
 struct EmbeddedPairSum
 {
     ///@brief \f[ \sum_i \alpha_i x_i \f]
     template< class T1, class ...Ts>
-DG_DEVICE void operator()( T1& y, T1& yt, T1 a, T1 at, T1 x, Ts... rest) const
+DG_DEVICE void operator()( T1& y, T1& yt, T1 b, T1 bt, Ts... rest) const
     {
-        y = a*x;
-        yt = at*x;
+        y = b*y;
+        yt = bt*yt;
         sum( y, yt, rest...);
     }
     private:
@@ -352,7 +362,7 @@ struct Compose
  * @attention only works for host functions. The rationale is that this function is
  * intended to work with lambda functions and is to be used in the \c dg::evaluate function.
  * If a version for device functions is ever needed
- * it can be easily provided but the lambda support for CUDA is rather poor.
+ * it can be easily provided.
  *
  * @return a function object that forwards all parameters to g and returns the
  * return value of f, which is \f$ f(g(x_0,x_1,...)) \f$

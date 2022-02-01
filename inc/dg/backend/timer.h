@@ -1,10 +1,11 @@
 #ifndef _DG_TIMER_
 #define _DG_TIMER_
+
+///@cond
 #include "thrust/device_vector.h"
 //the <thrust/device_vector.h> header must be included for the THRUST_DEVICE_SYSTEM macros to work
 #if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA) //if we don't use a GPU
 #ifdef MPI_VERSION //(mpi.h is included)
-///@cond
 namespace dg
 {
 class Timer //CPU/ OMP + MPI
@@ -14,50 +15,21 @@ class Timer //CPU/ OMP + MPI
     void toc( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); stop = MPI_Wtime(); }
     double diff()const{ return stop - start; }
   private:
-    double start, stop;
+    double start = 0., stop = 0.;
 };
 }//namespace dg
-///@endcond
 #elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION not defined and THRUST ==  OMP
 #include "omp.h"
 namespace dg
 {
-/*! @brief Simple tool for performance measuring
- *
- * The implementation of this class is chosen with compile-time MACROS \c THRUST_DEVICE_SYSTEM and \c MPI_VERSION.
- * @code
-   dg::Timer t;
-   t.tic();
-   some_function_to_benchmark();
-   t.toc();
-   std::cout << "Function took "<<t.diff()<<"s\n";
- * @endcode
- * @ingroup timer
- */
 class Timer //OMP non-MPI
 {
   public:
-    /**
-    * @brief Start timer
-    *
-    * uses \c omp_get_wtime() if available, else \c gettimeofday.
-    * If compiled with nvcc we place \c cudaEvent_t in the gpu stream.
-    * The mpi version places an \c MPI_Barrier(MPI_COMM_WORLD)
-    * and then uses \c MPI_Wtime.
-    * MPI + Cuda adds an additional \c cudaDeviceSynchronize
-    */
     void tic( ){ start = omp_get_wtime();}
-    /**
-    * @brief Stop timer
-    * @copydetails tic
-    */
     void toc( ){ stop = omp_get_wtime(); }
-    /*! \brief Return time elapsed between tic and toc
-     *
-     * \return Time in seconds between calls of tic and toc*/
     double diff()const{ return stop - start; }
   private:
-    double start, stop;
+    double start = 0., stop = 0.;
 };
 }//namespace dg
 #else // MPI_VERSION not defined and THRUST == CPU
@@ -120,7 +92,7 @@ class Timer //GPU MPI
     }
     double diff()const{ return stop - start; }
   private:
-    double start, stop;
+    double start = 0., stop = 0.;
 };
 }//namespace dg
 
@@ -148,9 +120,9 @@ class Timer// GPU non-MPI
     cudaEvent_t start, stop;
 };
 } //namespace dg
-///@endcond
 #endif //MPI_VERSION
 #endif //THRUST
 
+///@endcond
 
 #endif //_DG_TIMER_

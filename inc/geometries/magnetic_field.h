@@ -252,6 +252,18 @@ static inline TokamakMagneticField periodify( const TokamakMagneticField& mag, d
             periodify( mag.get_ipol(), R0, R1, Z0, Z1, bcx, bcy), mag.params());
 }
 
+///@brief \f$   \Delta\psi_p = \psi_R/R + \psi_{RR}+\psi_{ZZ}   \f$
+struct LaplacePsip : public aCylindricalFunctor<LaplacePsip>
+{
+    LaplacePsip( const TokamakMagneticField& mag): m_mag(mag)  { }
+    double do_compute(double R, double Z) const
+    {
+        return m_mag.psipR()(R,Z)/R+ m_mag.psipRR()(R,Z) + m_mag.psipZZ()(R,Z);
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
 ///@brief \f$   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f$
 struct Bmodule : public aCylindricalFunctor<Bmodule>
 {
@@ -318,9 +330,9 @@ struct BR: public aCylindricalFunctor<BR>
     BR(const TokamakMagneticField& mag): m_invB(mag), m_mag(mag) { }
     double do_compute(double R, double Z) const
     {
-        double Rn;
-        Rn = R/m_mag.R0();
-        return -1./R/m_invB(R,Z) + m_invB(R,Z)/Rn/Rn*(m_mag.ipol()(R,Z)*m_mag.ipolR()(R,Z) + m_mag.psipR()(R,Z)*m_mag.psipRR()(R,Z) + m_mag.psipZ()(R,Z)*m_mag.psipRZ()(R,Z));
+        double Rn = R/m_mag.R0();
+        double invB = m_invB(R,Z);
+        return -1./R/invB + invB/Rn/Rn*(m_mag.ipol()(R,Z)*m_mag.ipolR()(R,Z) + m_mag.psipR()(R,Z)*m_mag.psipRR()(R,Z) + m_mag.psipZ()(R,Z)*m_mag.psipRZ()(R,Z));
     }
   private:
     InvB m_invB;
@@ -340,8 +352,7 @@ struct BZ: public aCylindricalFunctor<BZ>
     BZ(const TokamakMagneticField& mag ): m_mag(mag), m_invB(mag) { }
     double do_compute(double R, double Z) const
     {
-        double Rn;
-        Rn = R/m_mag.R0();
+        double Rn = R/m_mag.R0();
         return (m_invB(R,Z)/Rn/Rn)*(m_mag.ipol()(R,Z)*m_mag.ipolZ()(R,Z) + m_mag.psipR()(R,Z)*m_mag.psipRZ()(R,Z) + m_mag.psipZ()(R,Z)*m_mag.psipZZ()(R,Z));
     }
   private:
@@ -709,7 +720,7 @@ struct BHatZ: public aCylindricalFunctor<BHatZ>
     InvB m_invB;
 };
 
-///@brief \f$ b^\varphi = B^\varphi/|B|\f$
+///@brief \f$ \hat b^\varphi = B^\varphi/|B|\f$
 struct BHatP: public aCylindricalFunctor<BHatP>
 {
     BHatP( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag){ }
@@ -722,27 +733,19 @@ struct BHatP: public aCylindricalFunctor<BHatP>
     InvB m_invB;
 };
 
-/**
- * @brief Contravariant components of the magnetic unit vector field
- * in cylindrical coordinates.
- * @param mag the tokamak magnetic field
- * @return the tuple BHatR, BHatZ, BHatP constructed from mag
- */
-inline CylindricalVectorLvl0 createBHat( const TokamakMagneticField& mag){
-    return CylindricalVectorLvl0( BHatR(mag), BHatZ(mag), BHatP(mag));
-}
 
 /**
  * @brief Contravariant components of the unit vector field (0, 0, +/- 1/R)
+ * and its Divergence and derivative (0,0)
  * in cylindrical coordinates.
  * @param sign indicate positive or negative unit vector
- * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$
+ * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$, Constant(0), Constant(0)
  * @note This is equivalent to inserting a toroidal magnetic field into the \c dg::geo::createBHat function.
  */
-inline CylindricalVectorLvl0 createEPhi( int sign ){
+inline CylindricalVectorLvl1 createEPhi( int sign ){
     if( sign > 0)
-        return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return 1./x;});
-    return CylindricalVectorLvl0( Constant(0), Constant(0), [](double x, double y){ return -1./x;});
+        return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double y){ return 1./x;}, Constant(0), Constant(0));
+    return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double y){ return -1./x;}, Constant(0), Constant(0));
 }
 /**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))
@@ -797,70 +800,158 @@ inline CylindricalVectorLvl0 createGradPsip( const TokamakMagneticField& mag){
     return CylindricalVectorLvl0( mag.psipR(), mag.psipZ(),Constant(0));
 }
 
-//Necessary to analytically compute Laplacians:
-///@brief \f$ \nabla_\parallel b^R \f$
-struct GradBHatR: public aCylindricalFunctor<GradBHatR>
+
+///@brief \f$ \partial_R b^R\f$
+struct BHatRR: public aCylindricalFunctor<BHatRR>
 {
-    GradBHatR( const TokamakMagneticField& mag): m_bhatR(mag), m_divb(mag), m_mag(mag){}
+    BHatRR( const TokamakMagneticField& mag): m_invB(mag), m_br(mag), m_mag(mag){}
     double do_compute( double R, double Z) const
     {
-        double ipol = m_mag.ipol()(R,Z);
-        double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
-        double psipZZ = m_mag.psipZZ()(R,Z), psipRZ = m_mag.psipRZ()(R,Z);
-        return  m_divb(R,Z)*m_bhatR(R,Z) +
-                ( psipZ*(psipRZ-psipZ/R) - psipZZ*psipR  )/
-                    (ipol*ipol + psipR*psipR + psipZ*psipZ);
+        double psipZ = m_mag.psipZ()(R,Z);
+        double psipRZ = m_mag.psipRZ()(R,Z);
+        double binv = m_invB(R,Z);
+        return -psipZ*m_mag.R0()*binv/R/R + psipRZ*binv*m_mag.R0()/R
+            -psipZ*m_mag.R0()/R*binv*binv*m_br(R,Z);
     }
     private:
-    BHatR m_bhatR;
-    Divb m_divb;
+    InvB m_invB;
+    BR m_br;
     TokamakMagneticField m_mag;
 };
-///@brief \f$ \nabla_\parallel b^Z \f$
-struct GradBHatZ: public aCylindricalFunctor<GradBHatZ>
+///@brief \f$ \partial_Z b^R\f$
+struct BHatRZ: public aCylindricalFunctor<BHatRZ>
 {
-    GradBHatZ( const TokamakMagneticField& mag): m_bhatZ(mag), m_divb(mag), m_mag(mag){}
+    BHatRZ( const TokamakMagneticField& mag): m_invB(mag), m_bz(mag), m_mag(mag){}
     double do_compute( double R, double Z) const
     {
-        double ipol = m_mag.ipol()(R,Z);
-        double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
-        double psipRR = m_mag.psipRR()(R,Z), psipRZ = m_mag.psipRZ()(R,Z);
-
-        return  m_divb(R,Z)*m_bhatZ(R,Z) +
-                (psipR*(psipRZ+psipZ/R) - psipRR*psipZ)/
-                    (ipol*ipol + psipR*psipR + psipZ*psipZ);
+        double psipZ = m_mag.psipZ()(R,Z);
+        double psipZZ = m_mag.psipZZ()(R,Z);
+        double binv = m_invB(R,Z);
+        return m_mag.R0()/R*( psipZZ*binv  -binv*binv*m_bz(R,Z)*psipZ );
     }
     private:
-    BHatZ m_bhatZ;
-    Divb m_divb;
+    InvB m_invB;
+    BZ m_bz;
     TokamakMagneticField m_mag;
 };
-///@brief \f$ \nabla_\parallel b^\varphi \f$
-struct GradBHatP: public aCylindricalFunctor<GradBHatP>
+///@brief \f$ \partial_R b^Z\f$
+struct BHatZR: public aCylindricalFunctor<BHatZR>
 {
-    GradBHatP( const TokamakMagneticField& mag): m_bhatP(mag), m_divb(mag), m_mag(mag){}
+    BHatZR( const TokamakMagneticField& mag): m_invB(mag), m_br(mag), m_mag(mag){}
     double do_compute( double R, double Z) const
     {
-        double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z), ipolZ  = m_mag.ipolZ()(R,Z);
-        double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
-
-        return  m_divb(R,Z)*m_bhatP(R,Z) +
-             (psipZ*(ipolR/R - 2.*ipol/R/R) - ipolZ/R*psipR)/
-                    (ipol*ipol + psipR*psipR + psipZ*psipZ);
+        double psipR = m_mag.psipR()(R,Z);
+        double psipRR = m_mag.psipRR()(R,Z);
+        double binv = m_invB(R,Z);
+        return +psipR*m_mag.R0()*binv/R/R - psipRR*binv*m_mag.R0()/R
+            +psipR*m_mag.R0()/R*binv*binv*m_br(R,Z);
     }
     private:
+    InvB m_invB;
+    BR m_br;
+    TokamakMagneticField m_mag;
+};
+///@brief \f$ \partial_Z b^Z\f$
+struct BHatZZ: public aCylindricalFunctor<BHatZZ>
+{
+    BHatZZ( const TokamakMagneticField& mag): m_invB(mag), m_bz(mag), m_mag(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipR = m_mag.psipR()(R,Z);
+        double psipRZ = m_mag.psipRZ()(R,Z);
+        double binv = m_invB(R,Z);
+        return -m_mag.R0()/R*( psipRZ*binv  -binv*binv*m_bz(R,Z)*psipR );
+    }
+    private:
+    InvB m_invB;
+    BZ m_bz;
+    TokamakMagneticField m_mag;
+};
+///@brief \f$ \partial_R \hat b^\varphi\f$
+struct BHatPR: public aCylindricalFunctor<BHatPR>
+{
+    BHatPR( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag), m_br(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        double binv = m_invB(R,Z);
+        double ipol = m_mag.ipol()(R,Z);
+        double ipolR = m_mag.ipolR()(R,Z);
+        return -binv*binv*m_br(R,Z)*m_mag.R0()*ipol/R/R
+            - 2./R/R/R*binv*m_mag.R0()*ipol
+            + binv *m_mag.R0()/R/R*ipolR;
+    }
+    private:
+    TokamakMagneticField m_mag;
+    InvB m_invB;
+    BR m_br;
+};
+///@brief \f$ \partial_Z \hat b^\varphi\f$
+struct BHatPZ: public aCylindricalFunctor<BHatPZ>
+{
+    BHatPZ( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag), m_bz(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        double binv = m_invB(R,Z);
+        double ipol = m_mag.ipol()(R,Z);
+        double ipolZ = m_mag.ipolZ()(R,Z);
+        return -binv*binv*m_bz(R,Z)*m_mag.R0()*ipol/R/R
+            + binv *m_mag.R0()/R/R*ipolZ;
+    }
+    private:
+    TokamakMagneticField m_mag;
+    InvB m_invB;
+    BZ m_bz;
+};
+
+///@brief \f$ \nabla\cdot\left( \frac{ \hat b }{\hat b^\varphi}\right)\f$
+struct DivVVP: public aCylindricalFunctor<DivVVP>
+{
+    DivVVP( const TokamakMagneticField& mag): m_mag(mag),
+        m_bhatP(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z),
+               ipolZ  = m_mag.ipolZ()(R,Z);
+        double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
+        double bphi = m_bhatP(R,Z);
+        return -(psipZ*(ipolR/R - 2.*ipol/R/R) - ipolZ/R*psipR)/
+                     (ipol*ipol + psipR*psipR + psipZ*psipZ)/bphi/bphi;
+    }
+    private:
+    TokamakMagneticField m_mag;
     BHatP m_bhatP;
-    Divb m_divb;
-    TokamakMagneticField m_mag;
 };
 
-///@brief \f$ \sqrt{\psi_p/ \psi_{p,\min}} \f$
+/**
+ * @brief Contravariant components of the magnetic unit vector field
+ * and its Divergence and derivative in cylindrical coordinates.
+ * @param mag the tokamak magnetic field
+ * @return the tuple BHatR, BHatZ, BHatP, Divb, DivVVP constructed from mag
+ */
+inline CylindricalVectorLvl1 createBHat( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl1( BHatR(mag), BHatZ(mag), BHatP(mag),
+            Divb(mag), DivVVP(mag)
+           );
+}
+
+/*@brief \f$ \sqrt{1. - \psi_p/ \psi_{p,O}} \f$
+ *
+ * @attention undefined if there is no O-point near [R_0 , 0], except for
+ * \c description::centeredX when we take psipO = -10
+ */
 struct RhoP: public aCylindricalFunctor<RhoP>
 {
     RhoP( const TokamakMagneticField& mag): m_mag(mag){
         double RO = m_mag.R0(), ZO = 0;
-        findOpoint( mag.get_psip(), RO, ZO);
-        m_psipmin = m_mag.psip()(RO, ZO);
+        try{
+            findOpoint( mag.get_psip(), RO, ZO);
+            m_psipmin = m_mag.psip()(RO, ZO);
+        } catch ( dg::Error& err)
+        {
+            m_psipmin = 1.;
+            if( mag.params().getDescription() == description::centeredX)
+                m_psipmin = -10;
+        }
     }
     double do_compute( double R, double Z) const
     {
@@ -888,7 +979,9 @@ struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
     dg::geo::TokamakMagneticField m_mag;
 };
 
-///@brief Determine if field points towards or away from the nearest wall
+///@brief Determine if poloidal field points towards or away from the nearest wall
+///
+///@attention Does not account for toroidal field direction
 struct WallDirection : public dg::geo::aCylindricalFunctor<WallDirection>
 {
     /**
@@ -901,6 +994,15 @@ struct WallDirection : public dg::geo::aCylindricalFunctor<WallDirection>
     WallDirection( dg::geo::TokamakMagneticField mag, std::vector<double>
             vertical, std::vector<double> horizontal) : m_vertical(vertical),
         m_horizontal(horizontal), m_BR( mag), m_BZ(mag){}
+    /**
+     * @brief Allocate lines
+     *
+     * @param mag Use to construct magnetic field
+     * @param walls two vertical x0, x1 and two horizontal y0, y1 walls
+     */
+    WallDirection( dg::geo::TokamakMagneticField mag,
+            dg::Grid2d walls) : m_vertical({walls.x0(), walls.x1()}),
+        m_horizontal({walls.y0(), walls.y1()}), m_BR( mag), m_BZ(mag){}
     double do_compute ( double R, double Z) const
     {
         std::vector<double> v_dist(1,1e100), h_dist(1,1e100);

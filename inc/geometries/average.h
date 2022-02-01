@@ -41,7 +41,7 @@ struct FluxSurfaceIntegral
         thrust::host_vector<double> psipZ  = dg::evaluate( mag.psipZ(), g2d);
         double psipRmax = dg::blas1::reduce( psipR, 0., dg::AbsMax<double>()  );
         double psipZmax = dg::blas1::reduce( psipZ, 0., dg::AbsMax<double>()  );
-        double deltapsi = 0.5*(psipZmax*g2d.hy() +psipRmax*g2d.hx())/g2d.n();
+        double deltapsi = 0.5*(psipZmax*g2d.hy() +psipRmax*g2d.hx())/g2d.nx();
         m_eps = deltapsi*width_factor;
     }
     double get_deltapsi() const{return m_eps;}

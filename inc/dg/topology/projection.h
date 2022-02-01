@@ -62,7 +62,7 @@ namespace create{
    Matrix A = dg::create::interpolation( g_old, g_new);
    return A.transpose();
    @endcode
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @param g_new The new grid
  * @param g_old The old grid
  *
@@ -94,6 +94,27 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealT
 }
 
 /**
+ * @brief Create a diagonal matrix
+ *
+ * This matrix is given by \f$ D_{ij} = d_i \delta_{ij}\f$
+ * @param diagonal The diagonal elements d_i
+ * @return diagonal matrix
+ */
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::host_vector<real_type>& diagonal)
+{
+    unsigned size = diagonal.size();
+    cusp::coo_matrix<int, real_type, cusp::host_memory> W( size, size, size);
+    for( unsigned i=0; i<size; i++)
+    {
+        W.row_indices[i] = W.column_indices[i] = i;
+        W.values[i] = diagonal[i];
+    }
+    return W;
+}
+
+
+/**
  * @brief Create a projection between two grids
  *
  * This matrix can be applied to vectors defined on the old (fine) grid to obtain
@@ -103,7 +124,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealT
  of the projected vector will be conserved and the difference in the L2 norm
  between old and new vector small.
  * The projection matrix is the adjoint of the interpolation matrix
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa for integer multiples between old and new grid you may want to consider the dg::create::fast_projection functions
  *
  * @param g_new The new (coarse) grid
@@ -120,20 +141,10 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
 {
     if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
     //form the adjoint
-    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
-    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
+        dg::create::diagonal( dg::create::weights( g_old));
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
+        dg::create::diagonal( dg::create::inv_weights( g_new));
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     //!!! cusp::multiply removes explicit zeros in the output
     cusp::multiply( A, Wf, temp);
@@ -150,20 +161,10 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
-    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
-    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
+        dg::create::diagonal( dg::create::weights( g_old));
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
+        dg::create::diagonal( dg::create::inv_weights( g_new));
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
@@ -178,20 +179,10 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
-    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
-    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
+        dg::create::diagonal( dg::create::weights( g_old));
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
+        dg::create::diagonal( dg::create::inv_weights( g_new));
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
@@ -212,7 +203,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
  \f]
  where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
  old grid is already the lcm grid this function reduces to the interpolation/projection function.
- * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  *
  * @param g_new The new grid
  * @param g_old The old grid
@@ -224,9 +215,9 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
-    Grid3d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), g_new.z0(), g_new.z1(),
-                 lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()),
-                 lcm(g_new.Nz(), g_old.Nz()));
+    Grid3d g_lcm( Grid1d( g_new.x0(), g_new.x1(), lcm( g_new.nx(), g_old.nx()), lcm( g_new.Nx(), g_old.Nx())),
+                  Grid1d( g_new.y0(), g_new.y1(), lcm( g_new.ny(), g_old.ny()), lcm( g_new.Ny(), g_old.Ny())),
+                  Grid1d( g_new.z0(), g_new.z1(), lcm( g_new.nz(), g_old.nz()), lcm( g_new.Nz(), g_old.Nz())));
     cusp::coo_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
     cusp::coo_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
     cusp::multiply( P, Q, Y);
@@ -238,8 +229,8 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aReal
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
-    Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(),
-                 lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()));
+    Grid2d g_lcm( Grid1d( g_new.x0(), g_new.x1(), lcm( g_new.nx(), g_old.nx()), lcm( g_new.Nx(), g_old.Nx())),
+                  Grid1d( g_new.y0(), g_new.y1(), lcm( g_new.ny(), g_old.ny()), lcm( g_new.Ny(), g_old.Ny())));
     cusp::coo_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
     cusp::coo_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
     cusp::multiply( P, Q, Y);

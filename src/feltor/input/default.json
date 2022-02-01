@@ -1,75 +1,166 @@
 {
-    "n"  : 3,
-    "Nx" : 48,
-    "Ny" : 96,
-    "Nz" : 8,
-    "dt" : 1e-2,
-    "compression" : [2,2],
+    "grid":
+    {
+        "n"  : 3,
+        "Nx" : 48,
+        "Ny" : 96,
+        "Nz" : 8,
+        "scaleR" : [1.15,1.2],
+        "scaleZ" : [1.2, 1.15]
+    },
+    "advection":
+    {
+        "slope-limiter" : "none"
+    },
+    "timestepper":
+    {
+        "type" : "multistep",
+        "tableau": "TVB-3-3",
+        "dt" : 1e-2
+    },
+    "regularization":
+    {
+        "order" : 2,
+        "direction": "forward",
+        "nu_perp_n" : 1e-5,
+        "nu_perp_u" : 1e-5
+    },
+    "elliptic":
+    {
+        "stages" : 3,
+        "eps_pol"    : [1e-6,10,10],
+        "eps_gamma" : 1e-7,
+        "eps_ampere" : 1e-7,
+        "direction" : "centered",
+        "jumpfactor" : 1.0
+    },
     "FCI":
     {
         "refine" : [1,1],
         "rk4eps" : 1e-6,
-        "periodify": true
+        "periodify": true,
+        "bc" : "along_field",
+        "interpolation-method" : "dg"
     },
-    "inner_loop" : 2,
-    "itstp"  : 2,
-    "maxout" : 5,
-    "stages"     : 3,
-    "eps_pol"    : [1e-6,1,1],
-    "jumpfactor" : 1,
-    "eps_gamma"  : 1e-6,
-    "eps_time"   : 1e-7,
-    "mu"          : -0.000272121,
-    "tau"         : 0.5,
-    "beta"        : 0,
-    "nu_perp"     : 1e-3,
-    "perp_diff"   : ["hyperviscous","explicit"],
-    "resistivity" : 1e-4,
-    "curvmode"   : "toroidal",
-    "symmetric"  : false,
-    "bc" :
+    "physical":
     {
-        "density" : ["DIR", "DIR"],
-        "velocity": ["NEU", "NEU"],
-        "potential":["DIR", "DIR"]
+        "mu"          : -0.000272121,
+        "tau"         : 0.5,
+        "beta"        : 0,
+        "resistivity" : 1e-4,
+        "viscosity" : "braginskii"
     },
-    "box":
+    "output":
     {
-        "scaleR" : [1.15,1.2],
-        "scaleZ" : [1.2, 1.15]
+        "type" : "glfw",
+        "window" :
+        {
+            "rows":  6,
+            "reduction" : 4,
+            "width" : 200,
+            "height" : 200
+        },
+        "inner_loop" : 2,
+        "itstp"  : 2,
+        "maxout" : 1,
+        "compression" : [1,1]
     },
-    "initne"     : "turbulence",
-    "initphi"    : "zero",
-    "amplitude" : 0.002,
-    "sigma"     : 2.0,
-    "posX"      : 0.6,
-    "posY"      : 0,
-    "sigma_z"   : 0.5,
-    "k_psi"     : 0,
-    "profile":
+    "source":
     {
-        "amp": 0,
-        "alpha": 0.1
+        "minne" : 0.0,
+        "type" : "influx",
+        "rate" : 2e-3,
+        "ntilde": {
+            "type" : "turbulence",
+            "amplitude"  : 0.1,
+            "revolutions" : 1,
+            "parallel" : "gaussian",
+            "sigma_z" : 0.5
+        },
+        "profile":
+        {
+            "type" : "aligned",
+            "npeak" : 1.0,
+            "nsep" : 0.1,
+            "background" : 0.0
+        },
+        "damping":
+        {
+            "type": "alignedX",
+            "alpha" : 0.2,
+            "boundary" : 0.55
+        }
     },
-    "source" :
+    "init":
     {
-        "rate": 1e-3,
-        "type": "influx",
-        "boundary": 0.55,
-        "alpha": 0.2
+        "type" : "fields",
+        "density":
+        {
+            "type" : "ne",
+            "ntilde": {
+                "type" : "turbulence",
+                "amplitude"  : 0.1,
+                "revolutions" : 1,
+                "sigma_z" : 0.5
+            },
+            "profile":
+            {
+                "type" : "aligned",
+                "npeak" : 5.0,
+                "nsep" : 1.0
+            },
+            "damping":
+            {
+                "type": "alignedX",
+                "alpha" : 0.2,
+                "boundary" : 1.0
+            }
+        },
+        "potential" : {"type" :  "zero"},
+        "velocity" :
+        {
+            "type" : "ui",
+            "profile" : "linear_cs"
+        },
+        "aparallel" : {"type" : "zero"}
     },
-    "wall":
+    "boundary":
     {
-        "type": "sol_pfr",
-        "penalization" : 1e+0,
-        "boundary": [1.1,0.998],
-        "alpha": [0.10,0.10]
+        "wall":
+        {
+            "type": "heaviside",
+            "boundary": 1.1,
+            "alpha": 0.10,
+            "modify-B" : true,
+            "penalization" : 1e+0,
+            "penalize-rhs" : false,
+            "nwall" : 1.0,
+            "uwall" : 0.0
+        },
+        "sheath":
+        {
+            "type": "bohm",
+            "boundary": 0.125,
+            "alpha": 0.0625,
+            "penalization" : 1e+0,
+            "penalize-rhs" : false,
+            "coordinate" : "s",
+            "max_angle" : 4
+        },
+        "bc" :
+        {
+            "density" : ["DIR", "DIR"],
+            "nbc" : 1.0,
+            "velocity": ["NEU", "NEU"],
+            "potential":["DIR", "DIR"],
+            "aparallel":["NEU", "NEU"]
+        }
     },
-    "sheath":
+    "flags" : [ "symmetric"],
+    "magnetic_field":
     {
-        "bc": "bohm",
-        "penalization" : 1e+0,
-        "boundary": 0.30,
-        "alpha": 0.2
+        "curvmode" : "toroidal",
+        "input" : "file",
+        "file" : "geometry/geometry_params.json"
     }
 }

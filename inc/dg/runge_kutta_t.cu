@@ -7,18 +7,8 @@
 
 #include "backend/typedefs.h"
 #include "topology/evaluation.h"
-#include "arakawa.h"
 #include "runge_kutta.h"
 
-
-//![function]
-void rhs(double t, const std::array<double,2>& y, std::array<double,2>& yp, double damping, double omega_0, double omega_drive){
-    //damped driven harmonic oscillator
-    // x -> y[0] , v -> y[1]
-    yp[0] = y[1];
-    yp[1] = -2.*damping*omega_0*y[1] - omega_0*omega_0*y[0] + sin(omega_drive*t);
-}
-//![function]
 
 std::array<double, 2> solution( double t, double damping, double omega_0, double omega_drive)
 {
@@ -48,18 +38,37 @@ int main()
     //construct Runge Kutta class
     dg::RungeKutta<std::array<double,2> >  rk( "Runge-Kutta-4-4", u);
     //construct a functor with the right interface
-    using namespace std::placeholders; //for _1, _2, _3
-    auto functor = std::bind( rhs, _1, _2, _3, damping, omega_0, omega_drive);
+    //![function]
+    auto rhs = [=]( double t, const std::array<double,2>& y,
+            std::array<double,2>& yp)
+    {
+        //damped driven harmonic oscillator
+        // x -> y[0] , v -> y[1]
+        yp[0] = y[1];
+        yp[1] = -2.*damping*omega_0*y[1] - omega_0*omega_0*y[0]
+                + sin(omega_drive*t);
+    };
+    auto solve = [=]( double alpha, double t, std::array<double,2>& y,
+            const std::array<double,2>& yp)
+    {
+        // y - alpha RHS( t, y) = rho
+        // can be solved analytically
+        y[1] = ( yp[1] + alpha*sin(omega_drive*t) - alpha*omega_0*omega_0*yp[0])/
+               (1.+2.*alpha*damping*omega_0+alpha*alpha*omega_0*omega_0);
+        y[0] = yp[0] + alpha*y[1];
+    };
+    //![function]
     //integration loop
     double t=t_start;
     for( unsigned i=0; i<N; i++)
-        rk.step( functor, t, u, t, u, dt); //step inplace
+        rk.step( rhs, t, u, t, u, dt); //step inplace
     //now compute error
     dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1., u);
     std::cout << "Norm of error is "<<sqrt(dg::blas1::dot( u, u))<<"\n";
     //![doxygen]
     std::cout << "Explicit Methods with "<<N<<" steps:\n";
     std::vector<std::string> names{
+        // in order to test embedded method temporarily return bt in ButcherTableau
         "Euler",
         "Midpoint-2-2",
         "Kutta-3-3",
@@ -70,7 +79,11 @@ int main()
         "SSPRK-5-3",
         "SSPRK-5-4",
         "Heun-Euler-2-1-2",
+        "Cavaglieri-3-1-2 (explicit)",
+        "Fehlberg-3-2-3",
+        "Fehlberg-4-2-3",
         "Bogacki-Shampine-4-2-3",
+        "Cavaglieri-4-2-3 (explicit)",
         "ARK-4-2-3 (explicit)",
         "Zonneveld-5-3-4",
         "ARK-6-3-4 (explicit)",
@@ -81,15 +94,18 @@ int main()
         "Tsitouras09-7-4-5",
         "Tsitouras11-7-4-5",
         "ARK-8-4-5 (explicit)",
-        "Verner-8-5-6",
+        "Verner-9-5-6",
+        "Verner-10-6-7",
         "Fehlberg-13-7-8",
+        "Dormand-Prince-13-7-8",
         "Feagin-17-8-10"
     };
     for( auto name : names)
     {
         u = solution(t_start, damping, omega_0, omega_drive);
-        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
-        dg::stepperRK(name, functor, t_start, u, t_end, u1, N);
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0,
+                omega_drive);
+        dg::stepperRK(name, rhs, t_start, u, t_end, u1, N);
         dg::blas1::axpby( 1., sol , -1., u1);
         auto b = dg::create::tableau<double>(name);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<(b.isFsal()?" (fsal)" : "") <<"\n";
@@ -109,12 +125,11 @@ int main()
         dg::ShuOsher<std::array<double,2>> rk( name, u);
         dg::IdentityFilter id;
         const double dt = (t_end-t_start)/(double)N;
-        dg::blas1::copy( u, u1);
-        double t0 = t_start;
-        for( unsigned i=0; i<N; i++)
-            rk.step( functor, id, t0, u1, t0, u1, dt);
+        dg::SinglestepTimeloop<std::array<double,2>>( rk, std::tie(rhs,id),
+                dt).integrate( t_start, u, t_end, u1);
         dg::blas1::axpby( 1., sol , -1., u1);
-        std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
+        std::cout << "Norm of error in "<<std::setw(24)
+            <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }
     ///-------------------------------Implicit Methods----------------------//
     const unsigned N_im = 10; //we can take fewer steps
@@ -125,25 +140,41 @@ int main()
         "Midpoint (implicit)",
         "Trapezoidal-2-2",
         "SDIRK-2-1-2",
+        "Cavaglieri-3-1-2 (implicit)",
         "Billington-3-3-2",
         "TRBDF2-3-3-2",
+        "Sanchez-3-3",
         "Kvaerno-4-2-3",
+        "SDIRK-4-2-3",
+        "Cavaglieri-4-2-3 (implicit)",
         "ARK-4-2-3 (implicit)",
+        "Sanchez-3-4",
         "Cash-5-2-4",
         "Cash-5-3-4",
         "SDIRK-5-3-4",
         "ARK-6-3-4 (implicit)",
+        "Sanchez-6-5",
         "Kvaerno-7-4-5",
         "ARK-8-4-5 (implicit)",
+        "Sanchez-7-6",
     };
     for( auto name : implicit_names)
     {
         u = solution(t_start, damping, omega_0, omega_drive);
-        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0, omega_drive);
-        dg::ImplicitRungeKutta<std::array<double,2>, dg::FixedPointSolver<std::array<double,2>> > irk( name, u, 100, 1e-14);
-        double t=t_start;
-        for( unsigned i=0; i<N_im; i++)
-            irk.step( functor, t, u1, t, u1, dt_im); //step inplace
+        std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0,
+                omega_drive);
+        dg::ImplicitRungeKutta<std::array<double,2>> irk( name, u);
+        dg::SinglestepTimeloop<std::array<double,2>> odeint( irk,
+                std::tie(rhs,solve), dt_im);
+        // Test integrate at least
+        unsigned maxout = 3;
+        double deltaT = (t_end-t_start)/(double)maxout;
+        double time = t_start;
+        for( unsigned u=1; u<=maxout; u++)
+        {
+            odeint.integrate( time, u1, t_start + u*deltaT, u1,
+                u<maxout ? dg::to::at_least :  dg::to::exact);
+        }
         dg::blas1::axpby( 1., sol , -1., u1);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<"\n";
     }

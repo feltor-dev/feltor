@@ -127,8 +127,8 @@ int main( int argc, char* argv[])
   dg::DVec chi = dg::evaluate(dg::zero, g2d);
   dg::DVec gamma_n = dg::evaluate(dg::zero, g2d);
   dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gamma_s(g2d, 1.0, dg::centered);
-  dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol(g2d, dg::normed, dg::centered);
-  dg::Invert< dg::DVec > invert_invgamma(chi, chi.size(), p.eps_gamma);
+  dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol(g2d,  dg::centered);
+  dg::PCG< dg::DVec > invert_invgamma(chi, chi.size());
   //calculation variables per species
   double mass_[num_species] = {}, cn[num_species] = {};
   double posX = 0, posY =0 ;
@@ -255,7 +255,8 @@ int main( int argc, char* argv[])
       }
       else
       { gamma_s.alpha() = -0.5*p.tau[j]*p.mu[j];
-        invert_invgamma(gamma_s, gamma_n, ntilde[j]);
+        invert_invgamma.solve(gamma_s, gamma_n, ntilde[j], gamma_s.precond(),
+                gamma_s.weights(), p.eps_gamma);
         dg::blas1::axpby(p.a[j]*p.mu[j], ntilde[j], 0., chi);
         dg::blas1::plus( chi, p.a[j]*p.mu[j]);
         dg::blas1::pointwiseDot(chi, binv, chi);

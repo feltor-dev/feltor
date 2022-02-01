@@ -189,9 +189,7 @@ int main( int argc, char* argv[])
             dim3d, &vid);
         err = nc_put_att_text( ncid, vid, "long_name",
             std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef( ncid);
         err = nc_put_var_double( ncid, vid, periodify( std::get<1>(tp), g3d_periodic).data());
-        err = nc_redef(ncid);
     }
     err = nc_close( ncid);
     std::cout << "FILE orthogonalX.nc CLOSED AND READY TO USE NOW!\n" <<std::endl;

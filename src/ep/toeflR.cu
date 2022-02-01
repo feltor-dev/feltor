@@ -46,14 +46,9 @@ int main( int argc, char* argv[])
     dg::blas2::symv( gamma, gauss, y0[0]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     gamma.alpha() = -0.5*p.tau[1]*p.mu[1];
     dg::blas2::symv( gamma, gauss, y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-    {
-        dg::DVec v2d = dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[0], y0[0]);
-        dg::blas2::symv( v2d, y0[1], y0[1]);
-    }
 
-
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), 1e-9);
+    dg::DefaultSolver<std::vector<dg::DVec>> solver( imp, y0, 1000, 1e-9);
+    dg::ImExMultistep< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -62,7 +57,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    karniadakis.init( exp, imp, time, y0, p.dt);
+    karniadakis.init( std::tie(exp, imp, solver), time, y0, p.dt);
     const double mass0 = exp.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = exp.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
@@ -91,7 +86,7 @@ int main( int argc, char* argv[])
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw phi and swap buffers
         title <<"omega / "<<colors.scale()<<"\t";
-        title << std::fixed; 
+        title << std::fixed;
         title << " &&   time = "<<time;
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         glfwSetWindowTitle(w,title.str().c_str());
@@ -99,7 +94,7 @@ int main( int argc, char* argv[])
         glfwPollEvents();
         glfwSwapBuffers( w);
 
-        //step 
+        //step
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
@@ -116,8 +111,8 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             }
-            try{ karniadakis.step( exp, imp, time, y0);}
-            catch( dg::Fail& fail) { 
+            try{ karniadakis.step( std::tie( exp, imp, solver), time, y0);}
+            catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);

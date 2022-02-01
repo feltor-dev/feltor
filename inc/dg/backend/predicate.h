@@ -61,6 +61,9 @@ using is_vector = std::conditional_t< std::is_base_of<AnyVectorTag, get_tensor_c
 template< class T>
 using is_matrix = std::conditional_t< std::is_base_of<AnyMatrixTag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
 
+template< class T>
+using is_tensor = std::conditional_t< std::is_same<NotATensorTag, get_tensor_category<T>>::value, std::false_type, std::true_type>;
+
 namespace detail
 {
 template<class Category>

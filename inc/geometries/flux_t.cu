@@ -14,6 +14,7 @@
 #include "make_field.h"
 #include "flux.h"
 #include "simple_orthogonal.h"
+#include "ds_generator.h"
 #include "ribeiro.h"
 #include "hector.h"
 
@@ -48,14 +49,17 @@ int main( int argc, char* argv[])
     dg::file::file2Json( input, js.asJson(), dg::file::comments::are_discarded);
 
     std::string geometry_params = js["magnetic_field"]["input"].asString();
-    if( geomettry_params == "file")
+    if( geometry_params == "file")
     {
         std::string path = js["magnetic_field"]["file"].asString();
-        dg::file::file2Json( path, js.asJson()["magnetic_field"]["file"],
+        dg::file::file2Json( path, js.asJson()["magnetic_field"]["params"],
                 dg::file::comments::are_discarded);
     }
-    //write parameters from file into variables
-    //std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
+    else if( geometry_params != "params")
+    {
+        std::cerr << "Error: Unknown magnetic field input '"<<geometry_params<<"'. Exit now!\n";
+        return -1;
+    }
     dg::file::WrappedJsonValue grid = js["grid"];
     unsigned  n = grid ["n"].asUInt(), Nx = grid["Nx"].asUInt(),
              Ny = grid["Ny"].asUInt(), Nz = grid["Nz"].asUInt();
@@ -67,26 +71,43 @@ int main( int argc, char* argv[])
     std::unique_ptr<dg::geo::aGenerator2d> generator;
     //create the magnetic field
     dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
-            js["magnetic_field"][geometry_params]);
+            js["magnetic_field"]["params"]);
     //create a grid generator
     std::string type = js["grid"]["generator"]["type"].asString();
-    int mode = js["grid"]["generator"]["mode"].asInt();
+    int mode = 0;
+    if( type != "dsp")
+        mode = js["grid"]["generator"]["mode"].asInt();
     std::cout << "Constructing "<<type<<" grid ... \n";
     if( type == "flux")
         generator = std::make_unique<dg::geo::FluxGenerator>( mag.get_psip(),
                 mag.get_ipol(), psi_0, psi_1, mag.R0(), 0., mode, false);
     else if( type == "orthogonal")
     {
+        double psi_init = js["grid"]["generator"]["firstline"].asDouble();
         if( mode == 0 || mode == 1)
             generator = std::make_unique<dg::geo::SimpleOrthogonal>(
-                    mag.get_psip(), psi_0, psi_1, mag.R0(), 0., mode);
+                mag.get_psip(), psi_0, psi_1, mag.R0(), 0., psi_init, mode);
         if( mode > 1)
         {
             dg::geo::CylindricalSymmTensorLvl1 lc =
                 dg::geo::make_LiseikinCollective( mag.get_psip(), 0.1, 0.001);
             generator = std::make_unique<dg::geo::SimpleOrthogonal>(
-                    mag.get_psip(), lc, psi_0, psi_1, mag.R0(), 0., mode%2);
+                mag.get_psip(), lc, psi_0, psi_1, mag.R0(), 0., psi_init,
+                mode%2);
         }
+    }
+    else if ( type == "dsp")
+    {
+        double boxscaleRm  = js["grid"][ "scaleR"].get( 0u, 1.05).asDouble();
+        double boxscaleRp  = js["grid"][ "scaleR"].get( 1u, 1.05).asDouble();
+        double boxscaleZm  = js["grid"][ "scaleZ"].get( 0u, 1.05).asDouble();
+        double boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
+        const double Rmin=mag.R0()-boxscaleRm*mag.params().a();
+        const double Zmin=-boxscaleZm*mag.params().a();
+        const double Rmax=mag.R0()+boxscaleRp*mag.params().a();
+        const double Zmax=boxscaleZp*mag.params().a();
+        generator = std::make_unique<dg::geo::DSPGenerator>( mag,
+            Rmin, Rmax, Zmin, Zmax, 2.*M_PI/(double)Nz);
     }
     else if( type == "ribeiro-flux")
         generator = std::make_unique<dg::geo::RibeiroFluxGenerator>( mag.get_psip(),
@@ -153,7 +174,7 @@ int main( int argc, char* argv[])
     //////////////////////////////setup and write netcdf//////////////////
     int ncid;
     dg::file::NC_Error_Handle err;
-    std::string outfile = argc<2 ? "flux.nc" : argv[2];
+    std::string outfile = argc<3 ? "flux.nc" : argv[2];
     err = nc_create( outfile.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     err = dg::file::define_dimensions(  ncid, dim2d, g2d_periodic);
@@ -267,7 +288,7 @@ int main( int argc, char* argv[])
         //basically just tests if g_xy is really 0
         dg::HVec err = dg::tensor::volume2d( metric);
         dg::blas1::evaluate( err, dg::minus_equals(),
-                [](double g_xx, double g_yy){ return 1./sqrt(g_xx*g_yy); },
+                []DG_DEVICE(double g_xx, double g_yy){ return 1./sqrt(g_xx*g_yy); },
                 metric.value(0,0), metric.value(1,1));
         double error = dg::blas2::dot( err, vol2d, err);
         std::cout << "Error 1/sqrt( g_xx g_yy) - vol: "<<error<< "\n";

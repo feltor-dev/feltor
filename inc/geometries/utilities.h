@@ -479,29 +479,31 @@ void construct_psi_values( FieldFinv fpsiMinv,
         thrust::host_vector<double>& f_x_, bool verbose = false)
 {
     f_x_.resize( x_vec.size()), psi_x.resize( x_vec.size());
-    thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
+    double begin(psi_0), end(begin), temp(begin);
     unsigned N = 1;
     double eps = 1e10, eps_old=2e10;
     if(verbose)std::cout << "In psi function:\n";
     double x0=x_0, x1 = psi_1>psi_0? x_vec[0]:-x_vec[0];
+    dg::SinglestepTimeloop<double> odeint( dg::RungeKutta<double>(
+                "Feagin-17-8-10",0.), fpsiMinv);
     while( (eps <  eps_old || eps > 1e-8) && eps > 1e-14) //1e-8 < eps < 1e-14
     {
         eps_old = eps;
         x0 = x_0, x1 = x_vec[0];
         if( psi_1<psi_0) x1*=-1;
-        dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, begin, x1, end, N);
-        psi_x[0] = end[0]; fpsiMinv(0.,end,temp); f_x_[0] = temp[0];
+        odeint.integrate_steps( x0, begin, x1, end, N);
+        psi_x[0] = end; fpsiMinv(0.,end,temp); f_x_[0] = temp;
         for( unsigned i=1; i<x_vec.size(); i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
             if( psi_1<psi_0) x0*=-1, x1*=-1;
-            dg::stepperRK( "Feagin-17-8-10",  fpsiMinv, x0, temp, x1, end, N);
-            psi_x[i] = end[0]; fpsiMinv(0.,end,temp); f_x_[i] = temp[0];
+            odeint.integrate_steps( x0, temp, x1, end, N);
+            psi_x[i] = end; fpsiMinv(0.,end,temp); f_x_[i] = temp;
         }
         temp = end;
-        dg::stepperRK( "Feagin-17-8-10", fpsiMinv, x1, temp, psi_1>psi_0?x_1:-x_1, end,N);
-        double psi_1_numerical = end[0];
+        odeint.integrate_steps(x1, temp, psi_1>psi_0?x_1:-x_1, end,N);
+        double psi_1_numerical = end;
         eps = fabs( psi_1_numerical-psi_1);
         if(verbose)std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
         N*=2;
@@ -537,18 +539,21 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     if(verbose)std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     unsigned steps = 1;
     double eps = 1e10, eps_old=2e10;
+    using Vec = std::array<double,4>;
+    dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                begin), fieldRZYRYZY);
     while( eps < eps_old)
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
-        dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, 0, begin, y_vec[0], end, steps);
+        odeint.integrate_steps( 0, begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
         fieldRZYRYZY.derive( r[0], z[0], xr[0], xz[0]);
         //std::cout <<end[0]<<" "<< end[1] <<"\n";
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYRYZY, y_vec[i-1], temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive( r[i], z[i], xr[i], xz[i]);
         }

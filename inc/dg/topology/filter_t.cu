@@ -25,7 +25,7 @@ int main()
     const dg::DVec vec = dg::evaluate( function, g3);
     const dg::DVec weights = dg::create::weights( g3);
     dg::DVec filtered_vec(vec), projected_vec(dg::evaluate( dg::zero, g2)), inter_vec( vec);
-    dg::ModalFilter<dg::DMatrix, dg::DVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.n()), g3);
+    dg::ModalFilter<dg::DMatrix, dg::DVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.nx()), g3);
     dg::IDMatrix project = dg::create::projection( g2,g3);
     dg::IDMatrix interpo = dg::create::interpolation( g3,g2);
 
@@ -49,7 +49,7 @@ int main()
     const dg::DVec vec = dg::evaluate( function, g3);
     const dg::DVec weights = dg::create::weights( g3);
     dg::DVec filtered_vec(vec), projected_vec(dg::evaluate( dg::zero, g2)), inter_vec( vec);
-    dg::ModalFilter<dg::DMatrix, dg::DVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.n()), g3);
+    dg::ModalFilter<dg::DMatrix, dg::DVec> filter( dg::ExponentialFilter(36, 0.5, 8, g3.nx()), g3);
     dg::IDMatrix project = dg::create::projection( g2,g3);
     dg::IDMatrix interpo = dg::create::interpolation( g3,g2);
 
@@ -65,7 +65,7 @@ int main()
     else
         std::cout << "3D TEST PASSED!\n";
     //Test recursive filter
-    dg::ModalFilter<dg::DMatrix, std::vector<dg::DVec>> vec_filter( dg::ExponentialFilter(36, 0.5, 8, g3.n()), g3, 3);
+    dg::ModalFilter<dg::DMatrix, std::vector<dg::DVec>> vec_filter( dg::ExponentialFilter(36, 0.5, 8, g3.nx()), g3, 3);
     const std::vector<dg::DVec> vec_vec ( 3, vec);
     std::vector<dg::DVec> filtered_vec_vec ( vec_vec);
     vec_filter.apply( vec_vec, filtered_vec_vec);

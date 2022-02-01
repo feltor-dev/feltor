@@ -11,9 +11,6 @@ int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -40,8 +37,6 @@ int main( int argc, char* argv[])
         {   gamma.alpha() = -0.5*p.tau[1];
             y0[0] = dg::evaluate( gaussian, grid);
             dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
-            dg::DVec v2d=dg::create::inv_weights(grid);
-            dg::blas2::symv( v2d, y0[1], y0[1]);
             dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
             y0[2] = dg::evaluate( dg::zero, grid);
         }
@@ -57,8 +52,6 @@ int main( int argc, char* argv[])
         dg::DVec wallv = dg::evaluate( wall, grid);
         gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         dg::blas2::symv( gamma, wallv, y0[2]);
-        dg::DVec v2d=dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] != 0.)
             dg::blas1::scal( y0[2], 1./p.a[2]); //n_z ~1./a_z
 
@@ -66,7 +59,6 @@ int main( int argc, char* argv[])
         gamma.alpha() = -0.5*p.tau[1];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[1]);
-        dg::blas1::pointwiseDot( v2d, y0[1], y0[1]);
         if( p.a[2] == 1)
         {   std::cerr << "No blob with trace ions possible!\n";
             return -1;
@@ -81,8 +73,6 @@ int main( int argc, char* argv[])
     {   gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
         y0[0] = dg::evaluate( gaussian, grid);
         dg::blas2::symv( gamma, y0[0], y0[2]);
-        dg::DVec v2d=dg::create::inv_weights(grid);
-        dg::blas2::symv( v2d, y0[2], y0[2]);
         if( p.a[2] == 0)
         {   std::cerr << "No impurity blob with trace impurities possible!\n";
             return -1;
@@ -94,8 +84,9 @@ int main( int argc, char* argv[])
     //////////////////initialisation of timestepper and first step///////////////////
     std::cout << "init timestepper...\n";
     double time = 0.0;
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( toeflI, diffusion, time, y0, p.dt);
+    dg::DefaultSolver<std::vector<dg::DVec> > solver( diffusion, y0, y0[0].size(), p.eps_time);
+    dg::ImExMultistep< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0);
+    karniadakis.init( std::tie( toeflI, diffusion, solver), time, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
     int ncid;
@@ -136,7 +127,7 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //Potential
-    transfer = toeflI.polarization( y0);
+    transfer = toeflI.polarization( time, y0);
     dg::blas2::symv( interpolate, transfer, transferD);
     dg::assign( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
@@ -171,7 +162,7 @@ int main( int argc, char* argv[])
             ti.tic();
 #endif//DG_BENCHMARK
             for( unsigned j=0; j<p.itstp; j++)
-            {   karniadakis.step( toeflI, diffusion, time, y0);
+            {   karniadakis.step( std::tie( toeflI, diffusion, solver), time, y0);
                 y0.swap( y1);
                 step++;
                 Estart[0] = step;

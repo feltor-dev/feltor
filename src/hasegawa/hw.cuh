@@ -9,40 +9,36 @@
 namespace hw
 {
 
-template< class Matrix, class container>
+template< class Geometry, class Matrix, class Container>
 struct Diffusion
 {
-    Diffusion( const dg::CartesianGrid2d& g, double nu): nu_(nu),
-        w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
-        }
-    void operator()( double t, const std::vector<container>& x, std::vector<container>& y)
+    Diffusion( const Geometry& g, double nu): m_nu(nu), m_LaplacianM( g),
+                                              m_temp( m_LaplacianM.weights())
     {
-        dg::blas1::axpby( 0., x, 0, y);
+    }
+    void operator()( double t, const std::vector<Container>& x, std::vector<Container>& y)
+    {
         for( unsigned i=0; i<x.size(); i++)
         {
-            dg::blas2::gemv( LaplacianM, x[i], temp);
-            dg::blas2::gemv( LaplacianM, temp, y[i]);
-            //dg::blas2::gemv( LaplacianM, y[i], temp);
-            //dg::blas1::axpby( 0., y[i], -nu_ , y[i]);
-            dg::blas1::scal( y[i], -nu_);
+            dg::blas2::gemv( m_LaplacianM, x[i], m_temp);
+            dg::blas2::gemv( m_LaplacianM, m_temp, y[i]);
+            dg::blas1::scal( y[i], -m_nu);
         }
     }
-    const container& weights(){return w2d;}
-    const container& inv_weights(){return v2d;}
-    const container& precond(){return v2d;}
+    const Container& weights(){return m_LaplacianM.weights();}
+    const Container& precond(){return m_LaplacianM.precond();}
   private:
-    double nu_;
-    const container w2d, v2d;
-    container temp;
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
+    double m_nu;
+    dg::Elliptic<Geometry,Matrix,Container> m_LaplacianM;
+    Container m_temp;
 };
 
 
-template< class Matrix, class container=thrust::device_vector<double> >
+template< class Geometry, class Matrix, class Container >
 struct HW
 {
-    typedef std::vector<container> Vector;
-    typedef typename container::value_type value_type;
+    using Vector = std::vector<Container>;
+    using value_type = dg::get_value_type<Container>;
 
     /**
      * @brief Construct a HW solver object
@@ -55,7 +51,7 @@ struct HW
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    HW( const dg::CartesianGrid2d& g, double , double , double , double , bool);
+    HW( const Geometry& g, double , double , double , double , bool);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -63,7 +59,7 @@ struct HW
      * In a multistep scheme this belongs to the point HEAD-1
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
-    const container& potential( ) const { return phi;}
+    const Container& potential( ) const { return phi;}
 
 
     /**
@@ -72,7 +68,7 @@ struct HW
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( double t, const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( double t, const std::vector<Container>& y, std::vector<Container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -107,20 +103,20 @@ struct HW
     double zonal_flow_diffusion() {return diff_;}
 
   private:
-    const container& polarisation( const std::vector<container>& y);
+    const Container& polarisation( const std::vector<Container>& y);
 
-    container chi, omega;
+    Container chi, omega;
 
-    container phi, phi_old, dyphi, lapphiM;
-    std::vector<container> lapy, laplapy;
+    Container phi, phi_old, dyphi, lapphiM;
+    std::vector<Container> lapy, laplapy;
 
     //matrices and solvers
-    dg::ArakawaX< dg::CartesianGrid2d, Matrix, container> arakawa; 
-    dg::CG<container > pcg;
-    dg::Average<container> average;
-    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> A, laplaceM;
+    dg::ArakawaX< Geometry, Matrix, Container> arakawa; 
+    dg::PCG<Container > pcg;
+    dg::Average<Container> average;
+    dg::Elliptic<Geometry, Matrix, Container> A, laplaceM;
 
-    const container w2d, v2d, one;
+    const Container w2d;
     const double alpha;
     const double g;
     const double nu;
@@ -132,23 +128,23 @@ struct HW
 
 };
 
-template< class Matrix, class container>
-HW<Matrix, container>::HW( const dg::CartesianGrid2d& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
+template< class Geometry, class Matrix, class Container>
+HW<Geometry,Matrix, Container>::HW( const Geometry& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
     chi( grid.size(), 0.), omega(chi), phi( chi), phi_old( chi), dyphi( chi),
     lapphiM(chi), lapy( 2, chi),  laplapy( lapy),
     arakawa( grid), 
     pcg( omega, omega.size()), 
     average( grid,dg::coo2d::y),
-    A( grid, dg::not_normed, dg::centered), laplaceM( grid, dg::normed, dg::centered),
-    w2d( dg::create::weights(grid)), v2d( dg::create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
+    A( grid,  dg::centered), laplaceM( grid,  dg::centered),
+    w2d( dg::create::weights(grid)),
     alpha( alpha), g(g), nu( nu), eps_pol(eps_pol), mhw( mhw)
 {
 
 }
 
 //computes and modifies expy!!
-template<class M, class container>
-const container& HW<M, container>::polarisation( const std::vector<container>& y)
+template<class G, class M, class Container>
+const Container& HW<G, M, Container>::polarisation( const std::vector<Container>& y)
 {
     //extrapolate phi and gamma_n
     dg::blas1::axpby( 2., phi, -1.,  phi_old);
@@ -157,23 +153,22 @@ const container& HW<M, container>::polarisation( const std::vector<container>& y
     dg::Timer t; 
     t.tic();
 #endif
-    dg::blas1::axpby( 1., y[1], -1., y[0], lapphiM); //n_i - n_e = omega
-    dg::blas2::symv( w2d, lapphiM, omega); 
-    unsigned number = pcg( A, phi, omega, v2d, eps_pol);
+    dg::blas1::axpby( 1., y[1], -1., y[0], omega); //n_i - n_e = omega
+    unsigned number = pcg.solve( A, phi, omega, 1., w2d, eps_pol);
     if( number == pcg.get_max())
         throw dg::Fail( eps_pol);
 #ifdef DG_BENCHMARK
     std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
     t.toc();
     std::cout<< "took \t"<<t.diff()<<"s\n";
-    double meanPhi = dg::blas2::dot( phi, w2d, one);
+    double meanPhi = dg::blas2::dot( phi, w2d, 1.);
     std::cout << "Mean phi "<<meanPhi<<"\n";
 #endif //DG_DEBUG
     return phi;
 }
 
-template< class M, class container>
-void HW< M, container>::operator()( double t, const std::vector<container>& y, std::vector<container>& yp)
+template< class G, class M, class Container>
+void HW< G, M, Container>::operator()( double t, const std::vector<Container>& y, std::vector<Container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

@@ -123,8 +123,10 @@ int main( int argc, char* argv[])
 
     }
 
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
+    dg::DefaultSolver< std::vector<dg::DVec> > solver( rolkar, y0,
+            y0[0].size(), p.eps_time);
+    dg::ImExMultistep< std::vector<dg::DVec> > karniadakis( "ImEx-BDF-3-3", y0);
+    karniadakis.init( std::tie(feltor, rolkar, solver), 0., y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
     dg::file::NC_Error_Handle err;
@@ -240,7 +242,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis.step( feltor, rolkar, time, y0);}
+            try{ karniadakis.step( std::tie(feltor, rolkar, solver), time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
