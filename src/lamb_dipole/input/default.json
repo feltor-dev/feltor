@@ -64,9 +64,9 @@
     "advection":
     {
         //"type": "arakawa",
-       // "multiplication": "pointwise",
-        "type": "upwind",
-        "multiplication": "projection"
+        "multiplication": "pointwise",
+        "type": "upwind"
+        //"multiplication": "projection"
     },
 
     "init":
