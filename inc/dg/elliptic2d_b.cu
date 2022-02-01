@@ -47,9 +47,9 @@ int main()
 	eps = 1e-6;
 	jfactor = 1;
 
-	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
-    std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
-    std::cin >> eps >> jfactor;*/
+    //std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
+    //std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
+    //std::cin >> eps >> jfactor;
     bool jump_weight = false;
     //std::cout << "Jump weighting on or off? Type 1 for true or 0 for false (default): \n";
     //std::cin >> jump_weight;
