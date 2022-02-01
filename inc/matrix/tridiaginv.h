@@ -172,7 +172,7 @@ class TridiagInvHMGTI
 
 /**
 * @brief Functor class for computing the inverse of a general tridiagonal matrix. The algorithm does not rely on the determinant.
-* @Note For some special cases division by zero occurs (can be fixed if necessary cf. 2nd paper)
+* @note For some special cases division by zero occurs (can be fixed if necessary cf. 2nd paper)
 *       This is the algorihm of "On the inverses of general tridiagonal matrices" by Hou-Biao Li, Ting-Zhu Huang, Xing-Ping Liu, Hong Li
 *       Appears to be the same than the algorithm in "ON AN INVERSE FORMULA OF A TRIDIAGONAL MATRIX" by Tomoyuki Sugimoto
 * 

@@ -8,7 +8,7 @@
 
 all: doc
 
-.PHONY: clean doc exblas.tag dg.tag geometries.tag dg file geometries exblas
+.PHONY: clean doc exblas.tag dg.tag geometries.tag matrix.tag dg file geometries exblas matrix
 
 # the semicolons and backslashes are needed by Makefile
 dg.tag:
@@ -32,8 +32,16 @@ geometries.tag:
 		echo "GENERATE_HTML = NO"; \
 		echo "GENERATE_TAGFILE = ../../doc/geometries.tag" ) | doxygen - ;
 
+matrix.tag:
+	cd ../inc/matrix;  \
+		(cat Doxyfile; \
+		echo "OUTPUT_DIRECTORY = ../../doc/matrix"; \
+		echo "GENERATE_HTML = NO"; \
+		echo "GENERATE_TAGFILE = ../../doc/matrix.tag" ) | doxygen - ;
+
+
 # needs doxygen >= 1.9.1 (for the sidebar only theme)
-dg: exblas.tag geometries.tag
+dg: exblas.tag geometries.tag matrix.tag
 	cd ../inc/dg; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/dg"; \
@@ -42,9 +50,7 @@ dg: exblas.tag geometries.tag
 		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
-    	echo "EXTERNAL_GROUPS=NO" ;\
-    	echo "EXTERNAL_PAGES=NO" ;\
-		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html") | doxygen - ;
+		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html" ../../doc/matrix.tag=../../matrix/html) | doxygen - ;
 
 # MW don't know what these are good for (recommended by doxygen-awesome)
 #echo "HTML_COLORSTYLE_GAMMA = 113";\
@@ -60,8 +66,17 @@ geometries: dg.tag
 		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
-    	echo "EXTERNAL_GROUPS=NO" ;\
-    	echo "EXTERNAL_PAGES=NO" ;\
+		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
+
+matrix: dg.tag
+	cd ../inc/matrix; \
+		(cat Doxyfile; \
+		echo "OUTPUT_DIRECTORY = ../../doc/matrix"; \
+		echo "HTML_HEADER = ../../doc/header.html"; \
+		echo "HTML_FOOTER = ../../doc/footer.html"; \
+		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
 
 file:
@@ -81,14 +96,13 @@ exblas:
 		echo "OUTPUT_DIRECTORY = ../../../../doc/exblas"; \
 		echo "HTML_HEADER = ../../../../doc/header.html"; \
 		echo "HTML_FOOTER = ../../../../doc/footer.html"; \
-		echo "GENERATE_TREEVIEW = YES"; \
 		echo "HTML_EXTRA_STYLESHEET = ../../../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/menubar.css";\
 		echo ) | doxygen - ;
 
 
-doc: dg geometries file exblas
+doc: dg geometries file exblas matrix
 	ln -sf dg/html/modules.html index.html
 	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 	#Open with:     firefox index.html                                        #
@@ -98,4 +112,4 @@ doc: dg geometries file exblas
 full_doc: doc
 
 clean:
-	rm -rf dg file geometries exblas dg.tag file.tag geometries.tag exblas.tag index.html
+	rm -rf dg file geometries matrix exblas dg.tag file.tag geometries.tag matrix.tag exblas.tag index.html

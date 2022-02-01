@@ -183,7 +183,7 @@ struct SqrtCauchyInt
      * @brief Construct Rhs operator
      *
      * @param A A symmetric or non-symmetric Matrix
-     * @param g The grid to use
+     * @param copyable
      * @param eps Accuarcy for CG solve
      * @param multiply_weights multiply inverse weights in front of matrix A 
      * @param symmetric true = symmetric A / false = non-symmetric A
@@ -196,7 +196,7 @@ struct SqrtCauchyInt
      * @brief Construct Rhs operator
      *
      * @param A A symmetric or non-symmetric Matrix
-     * @param g The grid to use
+     * @param copyable
      * @param eps Accuarcy for CG solve
      * @param multiply_weights multiply inverse weights in front of matrix A 
      * @param symmetric true = symmetric A / false = non-symmetric A
@@ -270,8 +270,11 @@ struct SqrtCauchyInt
      * @brief Compute cauchy integral (including inversion) 
      *
      * i.e. \f[ b=  \frac{- 2 K' \sqrt{m}}{\pi N} V A \sum_{j=1}^{N} (w_j^2 I -V A)^{-1} c_j d_j  x \f]
-     * @param y is \f$ y\f$
+     * @param x is \f$ x\f$
      * @param b is \f$ b\approx \sqrt{V A} x\f$
+     * @param minEV
+     * @param maxEV
+     * @param iter
      * @note The Jacobi elliptic functions are related to the Mathematica functions via jacobi_cn(k,u ) = JacobiCN_(u,k^2), ... and the complete elliptic integral of the first kind via comp_ellint_1(k) = EllipticK(k^2) 
      */
     void operator()(const Container& x, Container& b, const value_type& minEV, const value_type& maxEV, const unsigned& iter)

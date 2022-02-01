@@ -238,7 +238,7 @@ class PolCharge
      * i.e. \c y=M*x
      * @param x left-hand-side
      * @param y result
-     * @tparamm_ ContainerTypes must be usable with \c Container in \ref dispatch
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
     void operator()( const ContainerType0& x, ContainerType1& y){
@@ -406,6 +406,7 @@ struct TensorTraits< PolCharge<G, M, V> >
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
+///@endcond
 
   
 }  //namespace dg

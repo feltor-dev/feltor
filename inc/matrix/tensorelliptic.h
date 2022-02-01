@@ -54,12 +54,12 @@ namespace dg{
      {
          construct( g, bcx, bcy, no, dir, jfactor);
      }
-     ///@copydoc TensorElliptic::ArbPo(const Geometry&,value_type,direction,value_type)
+     ///@copydoc TensorElliptic::TensorElliptic(const Geometry&,norm,direction,value_type)
      void construct( const Geometry& g,  norm no = not_normed, direction dir = dg::centered, value_type jfactor = 1.)
      {
          construct( g, g.bcx(), g.bcy(), no,  dir, jfactor);
      }
-     ///@copydoc TensorElliptic::TensorElliptic(const Geometry&,bc,bc,value_type,direction,value_type)
+     ///@copydoc TensorElliptic::TensorElliptic(const Geometry&,bc,bc,norm,direction,value_type)
      void construct( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = dg::centered, value_type jfactor = 1.)
      {
         m_jfactor=jfactor;
@@ -165,14 +165,16 @@ namespace dg{
      * Computes
      * \f[ y = W\left[-\nabla \cdot \chi \nabla_\perp - \Delta_\perp \iota \Delta_\perp +  2\nabla \cdot\nabla \cdot \iota \nabla_\perp \nabla_\perp \right] x \f] to make the matrix symmetric
      * 
+     * @param alpha
      * @param x lhs (is constant up to changes in ghost cells)
+     * @param beta
      * @param y rhs contains solution
      * 
-     * @Note Note that for cartesian and cylindrical coordinate systems (with the straight field line approximation) the following relation holds  \f[\nabla \cdot\nabla \cdot (\chi \nabla_\perp^2 f) =  \frac{1}{\sqrt{g}}  \partial_j \left\{\partial_i \left[\sqrt{g} \chi P^{ni} \left( \partial_n ( P^{jm} \partial_m f)\right) \right]\right\} \f] where P is the projection tensor
+     * @note Note that for Cartesian and Cylindrical coordinate systems (with the straight field line approximation) the following relation holds  \f[\nabla \cdot\nabla \cdot (\chi \nabla_\perp^2 f) =  \frac{1}{\sqrt{g}}  \partial_j \left\{\partial_i \left[\sqrt{g} \chi P^{ni} \left( \partial_n ( P^{jm} \partial_m f)\right) \right]\right\} \f] where P is the projection tensor
      */
     template<class ContainerType0, class ContainerType1>
-    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)                                                               
-     {               
+    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
+     {
          //tensor term first
         dg::blas2::symv( m_rightx, x, m_helper); //R_x*f        
         dg::blas2::symv(-1.0, m_leftx, m_helper, 0.0, m_tempx); //L_x R_x *f   

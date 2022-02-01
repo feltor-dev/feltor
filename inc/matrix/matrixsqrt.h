@@ -81,6 +81,7 @@ struct DirectSqrtCauchySolve
      * @param A Helmholtz operator
      * @param g grid
      * @param epsCG accuracy of conjugate gradient solver
+     * @param iterCauchy maximum number of Cauchy iterations
      */
     DirectSqrtCauchySolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG, unsigned iterCauchy)
     {
@@ -137,6 +138,7 @@ struct KrylovSqrtODESolve
      *
      * @param A Helmholtz operator
      * @param g grid
+     * @param copyable
      * @param epsCG accuracy of conjugate gradient solver in adaptive ODE solver
      * @param epsTimerel relative accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
      * @param epsTimeabs absolute accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
@@ -255,6 +257,7 @@ struct KrylovSqrtCauchySolve
      *
      * @param A Helmholtz operator
      * @param g grid
+     * @param copyable
      * @param epsCG accuracy of conjugate gradient solver in Cauchy integral solver
      * @param max_iterations Max iterations of Lanczos method (e.g. 500)
      * @param iterCauchy iterations of cauchy integral
@@ -297,7 +300,6 @@ struct KrylovSqrtCauchySolve
      *
      * @param x input vector
      * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \approx  ||x||_M V \sqrt{T} e_1\f$
-     * @param iterCauchy iterations of sum of cauchy integral
      * 
      * @return number of time steps in sqrt ODE solve
      */    
@@ -374,6 +376,7 @@ class KrylovSqrtODEinvert
      *
      * @param A Helmholtz operator
      * @param g grid
+     * @param copyable
      * @param epsCG accuracy of conjugate gradient solver in adaptive ODE solver
      * @param epsTimerel relative accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
      * @param epsTimeabs absolute accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
@@ -403,13 +406,8 @@ class KrylovSqrtODEinvert
     /**
      * @brief Solve the system \f$\sqrt{A}*x = b \f$ for x using PCG method and sqrt ODE solve
      * 
-     * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. (is multiplied by weights)
-     * @param P The preconditioner to be used
-     * @param S (Inverse) Weights used to compute the norm for the error condition
-     * @param eps The relative error to be respected
-     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * 
      * @return Number of iterations used to achieve desired precision
      * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium.
@@ -481,6 +479,7 @@ class KrylovSqrtCauchyinvert
      *
      * @param A Helmholtz operator
      * @param g grid
+     * @param copyable
      * @param epsCG accuracy of conjugate gradient solver in Cauchy integral solver
      * @param max_iterations max number of iterations
      * @param iterCauchy iterations of cauchy integral
@@ -514,13 +513,8 @@ class KrylovSqrtCauchyinvert
     /**
      * @brief Solve the system \f$\sqrt{A}*x = b \f$ for x using PCG method and sqrt ODE solve
      * 
-     * @param A A symmetric, positive definit matrix (e.g. not normed Helmholtz operator)
      * @param x Contains an initial value
      * @param b The right hand side vector. (is multiplied by weights)
-     * @param P The preconditioner to be used
-     * @param S (Inverse) Weights used to compute the norm for the error condition
-     * @param eps The relative error to be respected
-     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * 
      * @return Number of iterations used to achieve desired precision
      * @note So far only ordinary convergence criterium of CG method. Should be adapted to square root criterium.

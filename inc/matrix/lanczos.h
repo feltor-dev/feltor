@@ -208,7 +208,7 @@ class Lanczos
      * @param compute_b Specify if \f$b = || x ||_M  V T e_1 \f$ should be computed or if only T should be computed
      * @param res_fac factor that is multiplied to the norm of the residual. Used to account for specific matrix function and operator in the convergence criterium
      * 
-     * @return returns the tridiagonal matrix T. Note that  \[f T = V^T A V \f$
+     * @return returns the tridiagonal matrix T. Note that  \f$ T = V^T A V \f$
      * 
      * @note So far only ordinary convergence criterium (residuum) of Lanczos method is used, in particular for \f$ M^{-1} A x  = b \f$. If used for matrix function computation \f$ f(M^{-1} A) x  = b \f$, the parameter eps should be multiplied with appropriate factors to account for the different convergence criterium.
      */
@@ -306,12 +306,15 @@ class MCG
     {
           construct(copyable, max_iterations);
     }
+
     ///@brief Set the maximum number of iterations
     ///@param new_max New maximum number
     void set_max( unsigned new_max) {m_max_iter = new_max;}
+
     ///@brief Get the current maximum number of iterations
     ///@return the current maximum
     unsigned get_max() const {return m_max_iter;}
+
     /**
      * @brief Allocate memory for the pcg method
      *

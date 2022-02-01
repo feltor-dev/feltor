@@ -268,6 +268,7 @@ struct SqrtODE
      *
      * i.e. \f[ yp= ((t-1) I -t V A)^{-1} (I - V A)/2  y \f] if weights are multiplied or 
      * \f$ yp= ((t-1) I -t  A)^{-1} (I -  A)/2 * y \f$ otherwise
+     * @param t  is time
      * @param y  is \f$ y\f$
      * @param yp is \f$ \dot{y}\f$
      * @note Solution of ODE: \f$ y(1) = \sqrt{V A} y(0)\f$ if weights are multiplied or  \f$ y(1) = \sqrt{A} y(0)\f$ otherwise
@@ -350,6 +351,7 @@ struct ExpODE
     }  
     /**
      * @brief Compute rhs term  \f$ yp= A y \f$ 
+     * @param t  is time
      * @param y  is \f$ y\f$
      * @param yp is \f[ \dot{y} \f]
      * @note Solution of ODE: \f$ y(1) = \exp{A} y(0)\f$ otherwise
@@ -413,6 +415,7 @@ struct BesselI0ODE
      * @brief Compute rhs term  
      * \f[ \dot{z_0}= z_1 \f]
      * \f[ \dot{z_1}= A^2 z_0 - t^{-1} z_1 \f] 
+     * @param t  is time
      * @param z  is \f[ z = (y, \dot{y}) \f]
      * @param zp is \f[ \dot{z} \f]
      * @note Solution of ODE: \f$ y(1) = \exp{A} y(0)\f$ for initial condition \f$ z(0) = (y(0),0)^T \f$
