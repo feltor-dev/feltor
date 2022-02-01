@@ -1,12 +1,8 @@
 #include <iostream>
-#include "blas.h"
+
 #include "dg/file/file.h"
 
 #include "polarization.h"
-#include "multigrid.h"
-#include "backend/exceptions.h"
-#include "multistep.h"
-#include "cg.h"
 #include "functors.h"
 
 const double tau = 1.;

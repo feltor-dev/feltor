@@ -1,10 +1,8 @@
 #include <cmath>
-#include "blas.h"
-#include "functors.h"
+#include "dg/algorithm.h"
 
-#include "adaptive.h"
+#include "functors.h"
 #include "lanczos.h"
-#include "helmholtz.h"
 #include "sqrt_cauchy.h"
 #include "sqrt_ode.h"
 

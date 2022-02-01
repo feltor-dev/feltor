@@ -1,18 +1,13 @@
 #include <iostream>
 #include <iomanip>
-
-#include "tridiaginv.h"
-
-#include "backend/timer.h"
 #include <cusp/transpose.h>
 #include <cusp/print.h>
 #include <cusp/array2d.h>
 #include <cusp/elementwise.h>
 #include <cusp/blas/blas.h>
-#include "cg.h"
-#include "lgmres.h"
-#include "bicgstabl.h"
 #include <cusp/print.h>
+
+#include "tridiaginv.h"
 
 using value_type = double;
 using memory_type = cusp::host_memory;
@@ -64,7 +59,7 @@ int main()
     std::cout << "#Constructing Matrix inversion and linear solvers\n";
     value_type eps= 1e-20;
     t.tic();
-    dg::CG <Container> pcg( x,  size*size+1);
+    dg::PCG <Container> pcg( x,  size*size+1);
     t.toc();
     std::cout << "#Construction of CG took "<< t.diff()<<"s \n";
     t.tic();    
@@ -150,7 +145,7 @@ int main()
     std::cout << "CG:" << std::endl;
     dg::blas1::scal(x, 0.);
     t.tic();
-    unsigned number = pcg( Tsym, x, d, d, eps);
+    unsigned number = pcg.solve( Tsym, x, d, d, eps);
     if(  number == pcg.get_max())
         throw dg::Fail( eps);
     t.toc();

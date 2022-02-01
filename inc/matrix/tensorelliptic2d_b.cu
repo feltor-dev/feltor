@@ -2,13 +2,10 @@
 #include <iomanip>
 
 #include <thrust/device_vector.h>
-#include "backend/timer.h"
-#include "topology/projection.h"
 #include "dg/file/file.h"
+#include "dg/algorithm.h"
 
-#include "blas.h"
 #include "tensorelliptic.h"
-#include "multigrid.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

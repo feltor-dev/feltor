@@ -3,10 +3,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "blas.h"
-#include "backend/typedefs.h"
-#include "topology/evaluation.h"
-#include "backend/timer.h"
 #include "matrixsqrt.h"
 #include "matrixfunction.h"
 

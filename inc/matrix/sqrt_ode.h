@@ -1,8 +1,6 @@
 #pragma once
 
-#include "blas.h"
-#include "cg.h"
-#include "lgmres.h"
+#include "dg/algorithm.h"
 
 /**
 * @brief Classes for Matrix function-Vector product computation via the ODE method

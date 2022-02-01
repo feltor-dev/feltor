@@ -1,19 +1,9 @@
 #include <iostream>
-#include "blas.h"
 #include "dg/file/file.h"
-
-#include "backend/timer.h"
+#include "dg/algorithm.h"
 
 #include "polarization_init.h"
-#include "multigrid.h"
-#include "backend/exceptions.h"
-#include "multistep.h"
-#include "cg.h"
 #include "functors.h"
-#include "andersonacc.h"
-#include "lgmres.h"
-#include "bicgstabl.h"
-#include "backend/timer.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

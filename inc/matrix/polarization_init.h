@@ -1,7 +1,6 @@
 #pragma once
 
-#include "elliptic.h"
-#include "helmholtz.h"
+#include "dg/algorithm.h"
 
 namespace dg
 {

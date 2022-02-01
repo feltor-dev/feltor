@@ -4,11 +4,6 @@
 #include <iomanip>
 #include <mpi.h>
 
-#include "blas.h"
-#include "backend/typedefs.h"
-#include "topology/evaluation.h"
-#include "backend/timer.h"
-#include "backend/mpi_init.h"
 #include "matrixsqrt.h"
 #include "matrixfunction.h"
 

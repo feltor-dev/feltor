@@ -1,9 +1,8 @@
 #define DG_DEBUG
 #include <iostream>
 #include <iomanip>
-#include "backend/timer.h"
+
 #include "lanczos.h"
-#include "helmholtz.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

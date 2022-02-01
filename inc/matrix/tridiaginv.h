@@ -1,9 +1,7 @@
 #pragma once
-#include "blas.h"
-#include "functors.h"
-#include "backend/timer.h"
 #include <cusp/dia_matrix.h>
 #include <cusp/coo_matrix.h>
+#include "dg/algorithm.h"
 
 /**
 * @brief Classes for Krylov space approximations of a Matrix-Vector product

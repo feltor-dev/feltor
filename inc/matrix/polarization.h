@@ -1,8 +1,6 @@
 #pragma once
+#include "dg/algorithm.h"
 
-#include "elliptic.h"
-#include "helmholtz.h"
-#include "multigrid.h"
 #include "matrixsqrt.h"
 #include "matrixfunction.h"
 #include "tensorelliptic.h"

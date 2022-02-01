@@ -1,8 +1,4 @@
 #include <cmath>
-#include "blas.h"
-#include "functors.h"
-
-#include "lanczos.h"
 
 #include <cusp/transpose.h>
 #include <cusp/array1d.h>
@@ -10,9 +6,10 @@
 #include <cusp/print.h>
 
 #include <cusp/lapack/lapack.h>
-#ifdef DG_BENCHMARK
-#include "backend/timer.h"
-#endif //DG_BENCHMARK
+#include "dg/algorithm.h"
+
+#include "functors.h"
+#include "lanczos.h"
 
 namespace dg
 {

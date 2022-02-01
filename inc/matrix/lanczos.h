@@ -1,15 +1,10 @@
 #pragma once
-#include "blas.h"
-#include "functors.h"
-#include "backend/timer.h"
 #include <cusp/dia_matrix.h>
 #include <cusp/coo_matrix.h>
 
-#include "tridiaginv.h"
 #include <cusp/print.h>
-#include "lgmres.h"
-
-
+#include "dg/algorithm.h"
+#include "tridiaginv.h"
 
 
 /**

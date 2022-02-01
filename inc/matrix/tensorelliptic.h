@@ -2,8 +2,7 @@
 
 #include <cassert>
 
-#include "blas.h"
-#include "elliptic.h"
+#include "dg/algorithm.h"
 
 /*!@file
  *

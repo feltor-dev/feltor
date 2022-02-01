@@ -3,11 +3,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "blas.h"
-#include "backend/typedefs.h"
-#include "topology/evaluation.h"
-#include "backend/timer.h"
-#include "helmholtz.h"
+#include "dg/algorithm.h"
 #include "matrixfunction.h"
 
 const double lx = 2.*M_PI;
@@ -52,7 +48,6 @@ int main(int argc, char * argv[])
 
     dg::Grid2d g( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);    
     const Container w2d = dg::create::weights( g);
-    const Container v2d = dg::create::inv_weights( g);    
     double max_weights =   dg::blas1::reduce(w2d, 0., dg::AbsMax<double>() );
     double min_weights =  -dg::blas1::reduce(w2d, max_weights, dg::AbsMin<double>() );
     std::cout << "#   min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
@@ -83,7 +78,7 @@ int main(int argc, char * argv[])
         std::cout << "SQRT (M-Lanczos+Eigen):\n";
         dg::KrylovFuncEigenSolve<Container> krylovfunceigensolve( x,   max_iter);
         t.tic();
-        iter = krylovfunceigensolve(x, b, std::get<0>(func), A, A.inv_weights(), A.weights(),  eps, res_fac); 
+        iter = krylovfunceigensolve(x, b, std::get<0>(func), A, 1., A.weights(),  eps, res_fac); 
         t.toc();
         double time = t.diff();
 
@@ -114,7 +109,7 @@ int main(int argc, char * argv[])
         std::cout << "SQRT (M-CG+Eigen):\n";
         dg::KrylovFuncEigenInvert<Container> krylovfunceigeninvert( x,   max_iter);
         t.tic();
-        iter = krylovfunceigeninvert(x, b_exac, std::get<0>(func), A, A.inv_weights(), A.weights(),  eps, res_fac); 
+        iter = krylovfunceigeninvert(x, b_exac, std::get<0>(func), A, 1., A.weights(),  eps, res_fac); 
         t.toc();
         double time = t.diff();
 
@@ -149,7 +144,7 @@ int main(int argc, char * argv[])
         std::cout << "EXP (M-CG+Eigen):\n";
         dg::KrylovFuncEigenInvert<Container> krylovfunceigeninvert( x,   max_iter);
         t.tic();
-        iter = krylovfunceigeninvert(x, b_exac, std::get<1>(func), A, A.inv_weights(), A.weights(),  eps, res_fac); 
+        iter = krylovfunceigeninvert(x, b_exac, std::get<1>(func), A, 1., A.weights(),  eps, res_fac); 
         t.toc();
         double time = t.diff();
 
@@ -185,7 +180,7 @@ int main(int argc, char * argv[])
         std::cout << "BESSELI0 (M-CG+Eigen):\n";
         dg::KrylovFuncEigenInvert<Container> krylovfunceigeninvert( x,   max_iter);
         t.tic();
-        iter = krylovfunceigeninvert(x, b_exac, std::get<2>(func), A, A.inv_weights(), A.weights(),  eps, res_fac); 
+        iter = krylovfunceigeninvert(x, b_exac, std::get<2>(func), A, 1., A.weights(),  eps, res_fac); 
         t.toc();
         double time = t.diff();
 
@@ -221,7 +216,7 @@ int main(int argc, char * argv[])
         std::cout << "GAMMA0 (M-CG+Eigen):\n";
         dg::KrylovFuncEigenInvert<Container> krylovfunceigeninvert( x,   max_iter);
         t.tic();
-        iter = krylovfunceigeninvert(x, b_exac, std::get<3>(func), A, A.inv_weights(), A.weights(),  eps, res_fac); 
+        iter = krylovfunceigeninvert(x, b_exac, std::get<3>(func), A, 1., A.weights(),  eps, res_fac); 
         t.toc();
         double time = t.diff();
 

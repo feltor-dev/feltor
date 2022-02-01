@@ -3,8 +3,7 @@
 // #define BOOST_MATH_MAX_SERIES_ITERATION_POLICY 1000000000    
 #include <boost/math/special_functions.hpp>
 
-#include "blas.h"
-#include "lgmres.h"
+#include "dg/algorithm.h"
 
 //! M_PI is non-standard ... so MSVC complains
 #ifndef M_PI

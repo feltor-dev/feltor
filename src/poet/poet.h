@@ -1,7 +1,7 @@
 #pragma once
 #include <exception>
 #include "dg/algorithm.h"
-#include "dg/matrixsqrt.h"
+#include "dg/matrix/matrixsqrt.h"
 #include "parameters.h"
 namespace poet
 {
