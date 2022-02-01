@@ -10,11 +10,11 @@ NVCCARCH=-arch sm_70 -Xcudafe "--diag_suppress=code_is_unreachable --diag_suppre
 NVCCFLAGS= -std=c++14 -Xcompiler "-mcpu=power9 -Wall" --extended-lambda# -mavx -mfma" #flags for NVCC
 
 INCLUDE += -I$(NETCDF_INC) -I$(HDF5_INC) -I$(JSONCPP_INC)
-INCLUDE += -L$(BOOST_INC)
+INCLUDE += -L$(BOOST_INC) -I$(LAPACK_INC)
 JSONLIB=-L$(JSONCPP_LIB) -ljsoncpp # json library for input parameters
 LIBS    =-L$(HDF5_LIB) -lhdf5 -lhdf5_hl
 LIBS    +=-L$(NETCDF_LIB) -lnetcdf -lcurl
-LIBS    +=-L$(BOOST_LIB)
+LAPACKLIB = -L$(LAPACK_LIB) -llapacke
 endif
 #########################Modules to load ##################
 #module load profile/base

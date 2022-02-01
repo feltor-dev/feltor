@@ -25,6 +25,7 @@ Your machine specific config file (e.g. feltor/config/your-machine.mk) should ha
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json, vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
 |   LIBS    | -lnetcdf -lhdf5 -ldhf5_hl                | netcdf library                           |
 |  JSONLIB  | -L$(HOME)/include/json/../../src/lib_json -ljsoncpp | the JSONCPP library                      |
+|  LAPACKLIB  | -llapacke | the lapack library                      |
 |  GLFLAGS  | $$(pkg-config --static --libs glfw3)     | glfw3 installation (if glfw3 was installed correctly the default should work) |
 
 
