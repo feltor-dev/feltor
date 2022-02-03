@@ -77,6 +77,18 @@ class TridiagInvHMGTI
                 T.values.column(0), // -1 diagonal
                 Tinv);
     }
+    /**
+     * @brief Compute the inverse of a tridiagonal matrix T
+     *
+     * @param T tridiagonal matrix
+     * @return the inverse of the tridiagonal matrix (coordinate format)
+     **/
+    CooMatrix operator()(const DiaMatrix& T)
+    {
+        CooMatrix Tinv;
+        this->operator()( T, Tinv);
+        return Tinv;
+    }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
      *
@@ -224,7 +236,6 @@ class TridiagInvDF
      * @brief Compute the inverse of a tridiagonal matrix T
      *
      * @param T tridiagonal matrix
-     *
      * @param Tinv the inverse of the tridiagonal matrix (coordinate format),
      *  gets resized if necessary
      **/
@@ -235,6 +246,18 @@ class TridiagInvDF
                 T.values.column(2), // +1 diagonal
                 T.values.column(0), // -1 diagonal
                 Tinv);
+    }
+    /**
+     * @brief Compute the inverse of a tridiagonal matrix T
+     *
+     * @param T tridiagonal matrix
+     * @return the inverse of the tridiagonal matrix (coordinate format)
+     **/
+    CooMatrix operator()(const DiaMatrix& T)
+    {
+        CooMatrix Tinv;
+        this->operator()( T, Tinv);
+        return Tinv;
     }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
@@ -388,6 +411,18 @@ class TridiagInvD
                 T.values.column(2), // +1 diagonal
                 T.values.column(0), // -1 diagonal
                 Tinv);
+    }
+    /**
+     * @brief Compute the inverse of a tridiagonal matrix T
+     *
+     * @param T tridiagonal matrix
+     * @return the inverse of the tridiagonal matrix (coordinate format)
+     **/
+    CooMatrix operator()(const DiaMatrix& T)
+    {
+        CooMatrix Tinv;
+        this->operator()( T, Tinv);
+        return Tinv;
     }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
