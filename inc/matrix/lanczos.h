@@ -288,7 +288,6 @@ class MCG
         class ContainerType1, class ContainerType2>
     void Ry( MatrixType&& A,
             DiaMatrixType& T,
-            const ContainerType& weights,
             const ContainerType0& y, ContainerType1& x, const ContainerType2& b,
             unsigned iter)
     {
@@ -413,7 +412,7 @@ class MCG
             dg::TridiagInvDF<HVec, HDiaMatrix, HCooMatrix> tridiaginv(yH);
             auto TinvH = tridiaginv(m_TH); //Compute on Host!
             dg::blas2::symv(TinvH, e1H, yH);  // m_y= T^(-1) e_1
-            Ry(std::forward<MatrixType>(A), m_TH, weights, yH, x, b,  get_iter());  // x = 0 + R T^(-1) e_1
+            Ry(std::forward<MatrixType>(A), m_TH, yH, x, b,  get_iter());  // x = 0 + R T^(-1) e_1
         }
         return m_TH;
     }
