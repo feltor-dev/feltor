@@ -77,6 +77,14 @@ int main()
         std::cerr << "Error: result has NaN!\n";
     else
         std::cout <<ud.i-4620007020034741378<<std::endl;;
+    // host transform (checks if nvcc generates warnings, it should be suppressed)
+    thrust::host_vector<double> v1h ( v1), v3h(v3);
+    dg::blas1::transform( v1h, v3h, [](double x){return exp(x);});
+    std::cout << "h_transform y=exp(x)    ";
+    if ( !std::isfinite( v3[0]))
+        std::cerr << "Error: result has NaN!\n";
+    else
+        std::cout <<ud.i-4620007020034741378<<std::endl;;
     }
 
     //v1 = 2, v2 = 3
