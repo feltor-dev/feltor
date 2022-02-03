@@ -277,7 +277,6 @@ class MCG
     /** @brief Compte x = R y
      * @param A A self-adjoint, positive definit matrix
      * @param T T non-symmetric tridiagonal Matrix from MCG tridiagonalization
-     * @param weights Weights used to compute the norm for the error condition
      * @param y (host) vector with v.size() = iter.
      *  Typically \f$ T^(-1) e_1 \f$ or \f$ f(T^(-1)) e_1 \f$
      * @param x Contains the matrix approximation \f$x = A^{-1} b\f$ as output

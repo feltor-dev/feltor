@@ -18,7 +18,7 @@ namespace dg{
 *  Is unstable for matrix size of roughly > 150. Fails for certain
 *  tridiagonal matrix forms.
 * @attention Not tested thoroughly!
-* @ingroup invert
+* @ingroup matrixinvert
 * @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
 * @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
 * @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
@@ -188,7 +188,7 @@ class TridiagInvHMGTI
 *  This is the algorihm of "On the inverses of general tridiagonal matrices" by Hou-Biao Li, Ting-Zhu Huang, Xing-Ping Liu, Hong Li
 *  Appears to be the same as the algorithm in "ON AN INVERSE FORMULA OF A TRIDIAGONAL MATRIX" by Tomoyuki Sugimoto
 *
-* @ingroup invert
+* @ingroup matrixinvert
 * @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
 * @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
 * @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
@@ -353,7 +353,7 @@ class TridiagInvDF
 *  it performs extremely fast if it stays below this value.  This is the
 *  algorihm of "Inversion of a Tridiagonal Jacobi Matrix" by Riaz A. Usmani
 *
-* @ingroup invert
+* @ingroup matrixinvert
 * @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
 * @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
 * @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;

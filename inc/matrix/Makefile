@@ -19,14 +19,11 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 %_b: %_b.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
 
-%_mpit: %_mpit.cu
-	$(MPICC) $(OPT) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
-
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
 
-bathRZ_t: bathRZ_t.cu
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)  -g
+polarization_init_t: polarization_init_t.cu polarization_init.h
+	$(CC) $(OPT)$(INCLUDE)  -DDG_DEBUG $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
 
 .PHONY: clean doc
 
