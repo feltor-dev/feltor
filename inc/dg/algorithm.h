@@ -20,6 +20,7 @@
 #include "helmholtz.h"
 #include "pcg.h"
 #include "bicgstabl.h"
+#include "andersonacc.h"
 #include "lgmres.h"
 #include "functors.h"
 #include "multistep.h"

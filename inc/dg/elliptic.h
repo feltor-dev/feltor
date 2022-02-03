@@ -125,12 +125,7 @@ class Elliptic
         m_sigma = m_vol = dg::tensor::volume(m_chi);
     }
 
-    /**
-    * @brief Perfect forward parameters to one of the constructors
-    *
-    * @tparam Params deduced by the compiler
-    * @param ps parameters forwarded to constructors
-    */
+    ///@copydoc hide_construct
     template<class ...Params>
     void construct( Params&& ...ps)
     {
@@ -467,7 +462,7 @@ class Elliptic3d
         m_chi=g.metric();
         m_sigma = m_vol = dg::tensor::volume(m_chi);
     }
-    ///@copydoc Elliptic::construct()
+    ///@copydoc hide_construct
     template<class ...Params>
     void construct( Params&& ...ps)
     {
