@@ -84,7 +84,8 @@ int main(int argc, char* argv[])
     for( unsigned i=0; i<6; i++)
     {
         Vector error = sol3[i];
-        dg::blas2::symv( -1., m3[i], f3d, 1., error);
+        // test beta != 1 in symv
+        dg::blas2::symv( 1., m3[i], f3d, -1., error);
         double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary3[i]<<"\n";
     }

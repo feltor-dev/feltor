@@ -297,7 +297,9 @@ void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type
     if( num_entries==0)
         return;
     if( beta!= 1 )
-        std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!!\n";
+        std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!! Beta = "<<beta<<"\n";
+    assert( beta == 1 && "Beta != 1 yields wrong results in CooSparseBlockMat!!");
+    // In fact, Beta is ignored in the following code
 
     //simplest implementation (sums block by block)
     for( int s=0; s<left_size; s++)

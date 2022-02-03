@@ -146,7 +146,7 @@ struct RowColDistMat
         m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
         //3. compute and add outer points
         const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
-        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), alpha, b_ptr, beta, y_ptr);
+        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), alpha, b_ptr, 1., y_ptr);
     }
 
     /**

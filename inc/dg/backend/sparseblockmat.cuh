@@ -175,6 +175,8 @@ inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, v
 {
     if( num_entries==0)
         return;
+    assert( beta == 1 && "Beta != 1 yields wrong results in CooSparseBlockMat!!");
+    // In fact, Beta is ignored in the following code
     if( !omp_in_parallel())
     {
         #pragma omp parallel
