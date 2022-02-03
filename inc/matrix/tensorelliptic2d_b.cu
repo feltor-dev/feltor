@@ -16,12 +16,12 @@ double initial( double x, double y) {return 0.;}
 double amp = 0.999;
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive //chi
 
-// double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}   //-div chi nabla phi solution 
-// double rhs( double x, double y) { return -1.0*(-amp*cos(2.*y) + amp* cos(2.*x) *(-1. + 4. * cos(2.*y)) + 4.*sin(x)*sin(y));}                              //-Div div chi nabla^2 phi solution 
-// double rhs( double x, double y) { return -1.0*(-2.*amp*cos(2.*y) + 2.* amp* cos(2.*x) *(-1. + 2. * cos(2.*y)) + 4.*sin(x)*sin(y));}                       //-lap chi lap phi solution 
+// double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}   //-div chi nabla phi solution
+// double rhs( double x, double y) { return -1.0*(-amp*cos(2.*y) + amp* cos(2.*x) *(-1. + 4. * cos(2.*y)) + 4.*sin(x)*sin(y));}                              //-Div div chi nabla^2 phi solution
+// double rhs( double x, double y) { return -1.0*(-2.*amp*cos(2.*y) + 2.* amp* cos(2.*x) *(-1. + 2. * cos(2.*y)) + 4.*sin(x)*sin(y));}                       //-lap chi lap phi solution
 // double rhs( double x, double y) { return -1.0*(-2.*amp*cos(y)*cos(y)*sin(x)*sin(x) + sin(y)*(2.*sin(x) + amp* (1.0-3.0*cos(2.*x))*sin(y)));}                       //-Div div chi nabla^2 phi i solution (only diagonal terms)
 
-double rhs( double x, double y) { return 2.0*(-amp*cos(2.*y) + amp* cos(2.*x) *(-1. + 4. * cos(2.*y)) + 4.*sin(x)*sin(y))   -1.0*(-2.*amp*cos(2.*y) + 2.* amp* cos(2.*x) *(-1. + 2. * cos(2.*y)) + 4.*sin(x)*sin(y)) +2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}                              //full solution - div chi nabla phi - lap chi lap phi + 2 div div chi nabla^2 phi 
+double rhs( double x, double y) { return 2.0*(-amp*cos(2.*y) + amp* cos(2.*x) *(-1. + 4. * cos(2.*y)) + 4.*sin(x)*sin(y))   -1.0*(-2.*amp*cos(2.*y) + 2.* amp* cos(2.*x) *(-1. + 2. * cos(2.*y)) + 4.*sin(x)*sin(y)) +2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}                              //full solution - div chi nabla phi - lap chi lap phi + 2 div div chi nabla^2 phi
 
 double sol(double x, double y)  { return sin( x)*sin(y);} //phi
 
@@ -36,8 +36,8 @@ int main(int argc, char * argv[])
 // 	n = 3;
 // 	Nx = Ny = 32;
 // 	eps = 1e-6;
-    
-    
+
+
 // 	jfactor = 1;
 
 	std::cout << "# Type n, Nx and Ny, and epsilon, and epsilon_factor (0.1) and jfactor (1)! \n";
@@ -78,28 +78,26 @@ int main(int argc, char * argv[])
     const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
     std::vector<dg::TensorElliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> > multi_tensorelliptic( stages);
     for(unsigned u=0; u<stages; u++)
-    {        
-        multi_tensorelliptic[u].construct( multigrid.grid(u),  dg::not_normed, dg::centered, jfactor);
+    {
+        multi_tensorelliptic[u].construct( multigrid.grid(u), dg::centered, jfactor);
         multi_tensorelliptic[u].set_chi( multi_chi[u]);
         multi_tensorelliptic[u].set_iota( multi_chi[u]);
     }
     t.toc();
     std::cout << "# Creation of multigrid took: "<<t.diff()<<"s\n";
-    
+
     std::cout << "# Inverting tensor elliptic operator\n";
     t.tic();
     std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, b,{eps, eps*eps_fac, eps*eps_fac});
     t.toc();
-    
+
     std::cout << "time: "<< t.diff() <<"s\n";
-    for( unsigned u=0; u<number.size(); u++)
-    	std::cout << "iterations["<< number.size()-1-u <<"]: " << number[number.size()-1-u] << " \n";
     //! [multigrid]
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err_norm = dg::blas2::dot( w2d, error);
-    err_norm = sqrt( err_norm/norm); 
+    err_norm = sqrt( err_norm/norm);
     std::cout << "error: "<<err_norm <<"\n";
-    
+
     return 0;
 }
 
