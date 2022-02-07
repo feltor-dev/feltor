@@ -84,7 +84,7 @@ int main(int argc, char* argv[] )
     if(rank==0)std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
     t.tic();
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, x, b, eps);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, x, b, eps);
     t.toc();
     for( unsigned u=0; u<number.size(); u++)
     	if(rank==0)std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";

@@ -142,7 +142,7 @@ int main()
                     1e-6, 1e-10);
         // Test integrate at least
         dg::blas1::copy( u_start, u_end);
-        unsigned maxout = 3;
+        unsigned maxout = 10; //force it to make smaller steps than it wants
         double deltaT = (t_end-t_start)/(double)maxout;
         double time = t_start;
         for( unsigned u=1; u<=maxout; u++)

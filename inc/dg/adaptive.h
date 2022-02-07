@@ -310,10 +310,10 @@ struct Adaptive
             t1 = t0;
             return;
         }
-        if( m_eps0 < 1e-20) // small or zero
+        if( m_eps0 < 1e-30) // small or zero
         {
             dt = 1e14*m_dt0; // a very large number
-            m_eps0 = 1e-20; // prevent storing zero
+            m_eps0 = 1e-30; // prevent storing zero
         }
         else
         {
@@ -321,6 +321,9 @@ struct Adaptive
                     std::array<value_type,3>{m_eps0, m_eps1, m_eps2},
                     m_stepper.embedded_order(),
                     m_stepper.order());
+            // a safety net
+            if( fabs(dt) > 100*fabs(m_dt0))
+                dt = 100*m_dt0;
         }
         m_eps2 = m_eps1;
         m_eps1 = m_eps0;
@@ -335,15 +338,19 @@ struct Adaptive
     bool failed() const {
         return m_failed;
     }
+    ///Get total number of failed steps
     const unsigned& nfailed() const {
         return m_nfailed;
     }
+    ///Set total number of failed steps
     unsigned& nfailed() {
         return m_nfailed;
     }
+    ///Get total number of step calls
     const unsigned& nsteps() const {
         return m_nsteps;
     }
+    ///Re-set total number of step calls
     unsigned& nsteps() {
         return m_nsteps;
     }
@@ -641,6 +648,10 @@ void AdaptiveTimeloop<ContainerType>::do_integrate(
                 &&( (forward && t_current + dt_current > t1)
                 || (!forward && t_current + dt_current < t1) ) )
             dt_current = t1-t_current;
+        if( dg::to::at_least == mode
+                &&( (forward && dt_current > deltaT)
+                || (!forward && dt_current < deltaT) ) )
+            dt_current = deltaT;
         // Compute a step and error
         try{
             m_step( t_current, u1, t_current, u1, dt_current);

@@ -111,7 +111,7 @@ int main()
     const dg::DVec b =    dg::evaluate( rhs,     grid);
     dg::DVec x       =    dg::evaluate( initial, grid);
     t.tic();
-    std::vector<unsigned> number = multigrid.direct_solve(multi_pol, x, b, {eps, 1.5*eps, 1.5*eps});
+    std::vector<unsigned> number = multigrid.solve(multi_pol, x, b, {eps, 1.5*eps, 1.5*eps});
     t.toc();
     std::cout << "Solution took "<< t.diff() <<"s\n";
     for( unsigned u=0; u<number.size(); u++)

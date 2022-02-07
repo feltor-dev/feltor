@@ -134,10 +134,8 @@ struct aTimeloop
      * @param t1 (read-only) end time
      * @param u1 (write only) contains the result corresponding to exactly or
      * at least t1 on output (may alias u0)
-     * @param mode either integrate exactly to \c t1 or at least to \c t1
-     * @attention Don't make the difference between t0 and t1 too small (on the
-     * order of the timestep dt) else it may happen that the integrator
-     * overshoots too much and has to integrate back (which it won't do)
+     * @param mode either integrate exactly to \c t1 or at least to \c t1. In
+     * \c dg::at_least mode the timestep is bound only by \c t1-t0
      * @attention The function may throw \c dg::Error (or anything derived
      * from \c std::exception).
      */
