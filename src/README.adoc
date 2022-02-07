@@ -22,12 +22,6 @@ reproduces results for, among others, the paper M. Wiesenberger, J. Madsen,
 and A. Kendl, "Radial convection of finite ion temperature, high amplitude
 plasma blobs" Phys. Plasmas 21, 092301 (2014).
 
-ep:: the electron positron plasma (branches off the toefl code) in the
-paper "Interchange instability and transport in matter-antimatter plasmas"
-Physical Review Letters 118, 235001 (2017)
-
-impurities:: A multi-species version of the toefl project (currently unmaintained)
-
 reco2d:: 2d reconnection model based on the feltor model
 
 
