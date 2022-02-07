@@ -126,7 +126,7 @@ void Asela<Geometry, Matrix, Container>::compute_phi( double time, const std::ar
     {
         //compute Gamma N_i - n_e
         m_old_gammaN.extrapolate( time, m_temp0);
-        std::vector<unsigned> numberG = m_multigrid.direct_solve(
+        std::vector<unsigned> numberG = m_multigrid.solve(
             m_multi_invgamma, m_temp0, nme[1], m_p.eps_gamma);
         m_old_gammaN.update( time, m_temp0);
         if(  numberG[0] == m_multigrid.max_iter())
@@ -135,7 +135,7 @@ void Asela<Geometry, Matrix, Container>::compute_phi( double time, const std::ar
     }
     //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( time, m_phi[0]);
-    std::vector<unsigned> number = m_multigrid.direct_solve(
+    std::vector<unsigned> number = m_multigrid.solve(
         m_multi_pol, m_phi[0], m_temp0, m_p.eps_pol);
     m_old_phi.update( time, m_phi[0]);
     if(  number[0] == m_multigrid.max_iter())
@@ -150,7 +150,7 @@ void Asela<Geometry, Matrix, Container>::compute_psi(
         dg::blas1::copy( m_phi[0], m_phi[1]);
     } else {
         m_old_psi.extrapolate( time, m_phi[1]);
-        std::vector<unsigned> number = m_multigrid.direct_solve(
+        std::vector<unsigned> number = m_multigrid.solve(
             m_multi_invgamma, m_phi[1], m_phi[0], m_p.eps_gamma);
         m_old_psi.update( time, m_phi[1]);
         if(  number[0] == m_multigrid.max_iter())
@@ -183,7 +183,7 @@ void Asela<Geometry, Matrix, Container>::compute_apar(
                               0., m_temp0);
     //----------Invert Induction Eq----------------------------//
     m_old_apar.extrapolate( time, m_apar[0]);
-    std::vector<unsigned> number = m_multigrid.direct_solve(
+    std::vector<unsigned> number = m_multigrid.solve(
         m_multi_maxwell, m_apar[0], m_temp0, m_p.eps_pol[0]);
     m_old_apar.update( time, m_apar[0]);
     if(  number[0] == m_multigrid.max_iter())

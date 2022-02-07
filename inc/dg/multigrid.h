@@ -482,22 +482,19 @@ void fmg_solve(
 
 
 /**
-* @brief Solve the Equation \f[ \hat O \phi = \rho \f]
+* @brief Solve \f[ \hat O \phi = \rho \f] for self-adjoint \f$\hat O\f$
 *
- * using a multigrid algorithm for any operator \f$\hat O\f$ that is self-adjoing
- * in appropriate weights \f$W\f$ (s. comment below).
- * @note Implements \c dg::nested_iterations and \c dg::full_multigrid using \c dg::PCG solvers on every grid
+* using \c dg::nested_iterations with \c dg::PCG solvers for any operator
+* \f$\hat O\f$ that is self-adjoint in appropriate weights \f$W\f$
+* We refine the grids in the first two dimensions (2d / x and y)
+* @note The \c dg::Elliptic and \c dg::Helmholtz classes are self-adjoint so
+*  these are the intended target operators.
+* @note The preconditioner and weights for the \c dg::PCG solver are taken from the
+* \c precond() and \c weights() method in the \c MatrixType class
 *
 * @snippet elliptic2d_b.cu multigrid
-* We use conjugate gradient (\c dg::PCG) at each stage and refine the grids in the first two dimensions (2d / x and y)
- * @note A normalized DG-discretized derivative or operator is normally
- * self-adjoint with respect to the weights \c W,
- * A self-adjoint preconditioner should be used to solve the
- * self-adjoint matrix equation.
-* @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c MatrixType class
 * @copydoc hide_geometry_matrix_container
-* @sa \c Extrapolation  to generate an initial guess
-*
+* @sa \c Extrapolation to generate an initial guess
 */
 template< class Geometry, class Matrix, class Container>
 struct MultigridCG2d
@@ -576,23 +573,34 @@ struct MultigridCG2d
      * @param new_max new maximum number of iterations allowed at stage 0
     */
     void set_max_iter(unsigned new_max){ m_pcg[0].set_max(new_max);}
-    ///@brief Set or unset performance timings during iterations
-    ///@param benchmark If true, additional output will be written to \c std::cout during solution
-    void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
+    /**
+     *@brief Set or unset performance timings during iterations
+     *@param benchmark If true, additional output will be written to \c std::cout during solution
+     *@param message An optional identifier that is printed together with the
+     * benchmark (intended use is to distinguish different messages
+     * in the output)
+    */
+    void set_benchmark( bool benchmark, std::string message = ""){
+        m_benchmark = benchmark;
+        m_message = message;
+    }
 
     ///@brief Return an object of same size as the object used for construction on the finest grid
     ///@return A copyable object; what it contains is undefined, its size is important
     const Container& copyable() const {return m_nested.copyable();}
     /**
-     * @brief USE THIS %ONE Nested iterations
+     * @brief Nested iterations
      *
      * Equivalent to the following
      * -# Compute residual with given initial guess.
      * -# Project residual down to the coarsest grid.
      * -# Solve equation on the coarse grid.
      * -# interpolate solution up to next finer grid and repeat 3 and 4 until the original grid is reached.
-     * @note The preconditioner for the \c dg::PCG solver is taken from the \c precond() method in the \c MatrixType class
+     * @sa \c dg::nested_iterations
+     * @note The weights and preconditioner for the \c dg::PCG solver is taken
+     *  from the \c weights() and \c precond() method in the \c MatrixType class
      * @param ops Index 0 is the \c MatrixType on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+     *  \c ops[u].precond() and \c ops[u].weights() need to be callable!
      * @param x (read/write) contains initial guess on input and the solution on output (if the initial guess is good enough the solve may return immediately)
      * @param b The right hand side
      * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon(
@@ -607,16 +615,16 @@ struct MultigridCG2d
      * @copydoc hide_ContainerType
     */
 	template<class MatrixType, class ContainerType0, class ContainerType1>
-    std::vector<unsigned> direct_solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, value_type eps)
+    std::vector<unsigned> solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, value_type eps)
     {
         std::vector<value_type> v_eps( m_stages, eps);
 		for( unsigned u=m_stages-1; u>0; u--)
             v_eps[u] = eps;
-        return direct_solve( ops, x, b, v_eps);
+        return solve( ops, x, b, v_eps);
     }
-    ///@copydoc direct_solve()
+    ///@copydoc solve()
 	template<class MatrixType, class ContainerType0, class ContainerType1>
-    std::vector<unsigned> direct_solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
+    std::vector<unsigned> solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
     {
 #ifdef MPI_VERSION
         int rank;
@@ -640,7 +648,7 @@ struct MultigridCG2d
                             pol.weights(), eps[u], 1, 10);
                 t.toc();
                 if( m_benchmark)
-                    DG_RANK0 std::cout << "# Nested iterations stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
+                    DG_RANK0 std::cout << "# `"<<m_message<<"` nested stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
             };
         }
         nested_iterations( ops, x, b, multi_inv_pol, m_nested);
@@ -653,6 +661,7 @@ struct MultigridCG2d
     std::vector< PCG<Container> > m_pcg;
     unsigned m_stages;
     bool m_benchmark = true;
+    std::string m_message = "";
 
 };
 ///@}

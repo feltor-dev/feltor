@@ -50,7 +50,7 @@ struct Esol
             dg::blas1::copy(y,yp);
         else
         {
-            std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, yp, y, m_p.eps_gamma1);
+            std::vector<unsigned> number = m_multigrid.solve( m_multi_g1dag, yp, y, m_p.eps_gamma1);
             if(  number[0] == m_multigrid.max_iter())
                 throw dg::Fail( m_p.eps_gamma1);
         }
@@ -82,7 +82,7 @@ struct Esol
         for( unsigned u=0; u<3; u++) 
             m_multi_elliptic[u].set_chi( m_multi_chi[u]);
         
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_elliptic, yp, y, m_p.eps_pol);
+        std::vector<unsigned> number = m_multigrid.solve( m_multi_elliptic, yp, y, m_p.eps_pol);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_pol[0]);
     }
@@ -105,7 +105,7 @@ struct Esol
             else
             {
                 m_gamma_SNi_ex.extrapolate(t, m_omega);
-                std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, m_omega, SNi, m_p.eps_gamma1);
+                std::vector<unsigned> number = m_multigrid.solve( m_multi_g1dag, m_omega, SNi, m_p.eps_gamma1);
                 m_gamma_SNi_ex.update(t, m_omega);
                 if(  number[0] == m_multigrid.max_iter())
                     throw dg::Fail( m_p.eps_gamma1);
@@ -232,7 +232,7 @@ const container& Esol<G,  M,  container>::compute_psi( double t, const container
     }
     else {
         m_psi1_ex.extrapolate( t, m_psi1);
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1, m_psi1, potential, m_p.eps_gamma1);
+        std::vector<unsigned> number = m_multigrid.solve( m_multi_g1, m_psi1, potential, m_p.eps_gamma1);
         m_psi1_ex.update( t, m_psi1);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma1);
@@ -279,7 +279,7 @@ const container& Esol<G,  M, container>::polarisation( double t, const std::arra
     else
     {
         m_gamma_n_ex.extrapolate(t, m_gamma_n);
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_g1dag, m_gamma_n, y[1], m_p.eps_gamma1);
+        std::vector<unsigned> number = m_multigrid.solve( m_multi_g1dag, m_gamma_n, y[1], m_p.eps_gamma1);
         m_gamma_n_ex.update(t, m_gamma_n);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_gamma1);
@@ -303,7 +303,7 @@ const container& Esol<G,  M, container>::polarisation( double t, const std::arra
     //solve polarization equation for phi
     if( m_p.equations == "ff-O2" ) {
         m_gamma0sqrt_phi_ex.extrapolate(t, m_iota);
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_elliptic, m_iota, m_omega, m_p.eps_pol);
+        std::vector<unsigned> number = m_multigrid.solve( m_multi_elliptic, m_iota, m_omega, m_p.eps_pol);
         m_gamma0sqrt_phi_ex.update( t, m_iota); 
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_pol[0]);
@@ -317,7 +317,7 @@ const container& Esol<G,  M, container>::polarisation( double t, const std::arra
     }
     else { // "ff-lwl" || "ff-lwl-OB" || "ff-O2-OB"
         m_phi_ex.extrapolate(t, m_psi[0]);
-        std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_elliptic, m_psi[0], m_omega, m_p.eps_pol);
+        std::vector<unsigned> number = m_multigrid.solve( m_multi_elliptic, m_psi[0], m_omega, m_p.eps_pol);
         m_phi_ex.update( t, m_psi[0]);
         if(  number[0] == m_multigrid.max_iter())
             throw dg::Fail( m_p.eps_pol[0]);

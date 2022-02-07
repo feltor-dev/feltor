@@ -194,7 +194,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
             dg::blas1::axpby(1.0,omega,(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv*p.tau[1],one,omega);        
             
             old_gammaN.extrapolate( chi);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chi,omega, p.eps_gamma);
             old_gammaN.update( chi);
             
             dg::blas1::pointwiseDot(chi,lambda,chi);   //chi = B^2/T_i chi Gamma (Ni-(bgamp+profamp))   
@@ -207,7 +207,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
             }
             dg::blas1::axpby(1.0,y[1],0.0,omega,omega);
             old_gammaN.extrapolate( chi);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chi,omega, p.eps_gamma);
             old_gammaN.update( chi);
         }  
     }
@@ -216,7 +216,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
 
      //invert pol
     old_phi.extrapolate( phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], chi, p.eps_pol);
     old_phi.update( phi[0]);
     if( number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);
@@ -240,7 +240,7 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
             }
             dg::blas1::pointwiseDot(lambda,potential,lambda); //lambda= B^2/T phi
             old_psi.extrapolate( phi[1]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, phi[1], lambda, p.eps_gamma);
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, phi[1], lambda, p.eps_gamma);
             old_psi.update( phi[1]);
         }
         if (p.flrmode == 0)
@@ -251,7 +251,7 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
                 multi_invgamma1[u].set_chi( multi_chi[u]);
             }
             old_psi.extrapolate( phi[1]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, phi[1], potential, p.eps_gamma);
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, phi[1], potential, p.eps_gamma);
             old_psi.update( phi[1]);
         }
     }
@@ -279,12 +279,12 @@ container& Explicit<G, Matrix,container>::compute_chii(const container& ti,conta
             dg::blas2::gemv(lapperpM,potential,lambda); //lambda = - nabla_perp^2 phi
             dg::blas1::scal(lambda,-0.5*p.tau[1]*p.mu[1]); // lambda = 0.5*tau_i*nabla_perp^2 phi 
             old_chiia.extrapolate( chii);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chii, lambda, p.eps_gamma);
             old_chiia.update( chii);
             dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
             dg::blas1::pointwiseDot(chii,lambda,lambda);
             old_chiib.extrapolate( chii);
-            number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
+            number = multigrid.solve( multi_invgamma1, chii, lambda, p.eps_gamma);
             old_chiib.update( chii);
         }
     }
@@ -306,7 +306,7 @@ void Explicit<G, Matrix, container>::initializene( const container& src, const c
         dg::blas2::gemv(lapperpM,chi,omega); //- lap t_i_tilde/b^2    
         dg::blas1::axpby(1.0,src ,-(p.bgprofamp + p.nprofileamp)*0.5*p.tau[1],omega,omega);  //omega = Ni_tilde +a tau/2 lap t_i_tilde/b^2    
         dg::blas1::axpby(1.0,omega,(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv*p.tau[1],one,omega);   
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, target,omega, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+        std::vector<unsigned> number = multigrid.solve( multi_invgamma1, target,omega, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
         if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
         dg::blas1::pointwiseDot(target,lambda,target);
@@ -318,7 +318,7 @@ void Explicit<G, Matrix, container>::initializene( const container& src, const c
         {
             multi_invgamma1[u].set_chi( multi_chi[u]);
         }
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+        std::vector<unsigned> number = multigrid.solve( multi_invgamma1, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
         if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }
@@ -357,7 +357,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
             // chi+= - a^2 tau^2/4 lap (Ti/B^2 lap T_i_tilde/B)
             dg::blas1::axpby(1.0, chi, -(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.tau[1]*p.tau[1]*0.25,target, chi);    
         
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma2, target,chi, p.eps_gamma);   //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)   }
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma2, target,chi, p.eps_gamma);   //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)   }
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_gamma);
             dg::blas1::pointwiseDot(target,lambda,target); //target = B^2/Ti target
@@ -369,7 +369,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
             {
             multi_invgamma1[u].set_chi( multi_chi[u]);
             }
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, target,src, p.eps_gamma);  //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)}
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, target,src, p.eps_gamma);  //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)}
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_gamma);
         }
@@ -401,7 +401,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
             dg::blas1::transform( ti, chi, dg::PLUS<>( -1.0*(p.bgprofamp + p.nprofileamp))); //chi = T_i_tilde
             dg::blas1::axpby(1.0,chi,-(p.bgprofamp + p.nprofileamp)*0.5*p.tau[1],omega,omega); //omega = T_i_tilde + a^2 tau*0.5* lap T_i_tilde/B^2   
             dg::blas1::axpby(1.0,omega,(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv*p.tau[1],one,omega);  //omega = T_i_tilde + a^2 tau*0.5* lap T_i_tilde/B^2 + a^2 mcv^2 tau      
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);// chi = Gamma^-1 omega
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chi,omega, p.eps_gamma);// chi = Gamma^-1 omega
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_gamma);
 
@@ -410,7 +410,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
             dg::blas1::transform( ti, lambda, dg::PLUS<>( -1.0*(p.bgprofamp + p.nprofileamp))); //T_i_tilde
             dg::blas1::axpby( -1., lambda, 1.,chi,chi);  //chi= Gamma1^dagger (Ti-(bgamp+profamp)) -(Ti-(bgamp+profamp))
 
-            number = multigrid.direct_solve( multi_pol, omega, chi, p.eps_pol); //(Gamma1^dagger -1) T_i = -nabla ( chi nabla phi)
+            number = multigrid.solve( multi_pol, omega, chi, p.eps_pol); //(Gamma1^dagger -1) T_i = -nabla ( chi nabla phi)
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_pol);
            
@@ -448,7 +448,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
             // chi+= - a^2 tau^2/4 lap (Ti/B^2 lap T_i_tilde/B)
             dg::blas1::axpby(1.0, chi, -(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.tau[1]*p.tau[1]*0.25,target, chi);     
 
-            number = multigrid.direct_solve( multi_invgamma2, target, chi, p.eps_gamma); //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)   }
+            number = multigrid.solve( multi_invgamma2, target, chi, p.eps_gamma); //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)   }
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_gamma);
             dg::blas1::pointwiseDot(target,lambda,target); //target = B^2/Ti target
@@ -473,13 +473,13 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
             }
             dg::blas1::transform( ti, omega, dg::PLUS<>( -1.0*(p.bgprofamp + p.nprofileamp))); //chi = T_i_tilde = ne_tilde
 	    
-            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);// chi = Gamma^-1 omega
+            std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chi,omega, p.eps_gamma);// chi = Gamma^-1 omega
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_gamma);
 
             dg::blas1::axpby( -1., omega, 1.,chi,chi);  //chi= Gamma1^dagger (Ti-(bgamp+profamp)) -(Ti-(bgamp+profamp))
 
-            number = multigrid.direct_solve( multi_pol, omega, chi, p.eps_pol); //(Gamma1^dagger -1) T_i = -nabla ( chi nabla phi)
+            number = multigrid.solve( multi_pol, omega, chi, p.eps_pol); //(Gamma1^dagger -1) T_i = -nabla ( chi nabla phi)
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_pol);
             
@@ -492,7 +492,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
             //omega=phi
             
             //solve gamma_1 Pi
-            number = multigrid.direct_solve( multi_invgamma1, target,src, p.eps_gamma); //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)}
+            number = multigrid.solve( multi_invgamma1, target,src, p.eps_gamma); //=(p_i_tilde) = bar(Gamma)_dagger { P_i_tilde + a^2 tau_i lap T_i_tilde/B^2  - a^2 tau^2 /4 lap (Ti/B^2 lap T_i_tilde/B^2)}
             if( number[0] == multigrid.max_iter())
                 throw dg::Fail( p.eps_gamma);
             

@@ -164,7 +164,7 @@ int main()
     t.tic();
     //nested_iterations( multi_pol, x, b, multi_inv_pol, nested);
     // same as
-    multigrid.direct_solve( multi_pol, x, b, {eps,eps,eps} );
+    multigrid.solve( multi_pol, x, b, {eps,eps,eps} );
     t.toc();
     double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);

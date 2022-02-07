@@ -337,7 +337,7 @@ int main( int argc, char* argv[])
             //output all fields
             ti.tic();
             start = i;
-            DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
+            DG_RANK0 err = nc_open(outputfile.c_str(), NC_WRITE, &ncid);
             DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
             for( auto& record : asela::diagnostics2d_list)
             {

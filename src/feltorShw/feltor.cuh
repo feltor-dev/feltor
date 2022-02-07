@@ -166,7 +166,7 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
         } 
         else {
             old_psi.extrapolate( phi[1]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
+            std::vector<unsigned> number = multigrid.solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
             old_psi.update( phi[1]);
         }
         multi_pol[0].variation(binv,potential, omega);         // omega = u_E^2
@@ -179,7 +179,7 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
         } 
         else {
             old_psi.extrapolate( phi[1]);
-            std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
+            std::vector<unsigned> number = multigrid.solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
             old_psi.update( phi[1]);
         }
     }
@@ -207,7 +207,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     } 
     else {
         old_gammaN.extrapolate( chi);
-        std::vector<unsigned> numberG = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+        std::vector<unsigned> numberG = multigrid.solve( multi_gammaN, chi, y[1], p.eps_gamma);
         old_gammaN.update( chi);
         if( numberG[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
@@ -218,7 +218,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     
      //invert pol
     old_phi.extrapolate( phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], omega, p.eps_pol);
     old_phi.update( phi[0]);
     if( number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);	    
@@ -242,7 +242,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     } 
     else {
         old_gammaN.extrapolate( chi);
-        std::vector<unsigned> numberG = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+        std::vector<unsigned> numberG = multigrid.solve( multi_gammaN, chi, y[1], p.eps_gamma);
         old_gammaN.update( chi);
         if(  numberG[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
@@ -257,7 +257,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
 
      //invert pol
     old_phi.extrapolate( phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], omega, p.eps_pol);
     old_phi.update( phi[0]);
     if(  number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);
@@ -275,7 +275,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     } 
     else {
         old_gammaN.extrapolate( chi);
-        std::vector<unsigned> numberG = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+        std::vector<unsigned> numberG = multigrid.solve( multi_gammaN, chi, y[1], p.eps_gamma);
         old_gammaN.update( chi);
         if(  numberG[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
@@ -286,7 +286,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     
      //invert pol
     old_phi.extrapolate( phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], omega, p.eps_pol);
     old_phi.update( phi[0]);
     if(  number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);	
@@ -308,7 +308,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     else {
         old_gammaN.extrapolate( omega);
         dg::blas1::transform( npe[1], chi, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
-        std::vector<unsigned> numberG = multigrid.direct_solve( multi_gammaN, omega, chi, p.eps_gamma);
+        std::vector<unsigned> numberG = multigrid.solve( multi_gammaN, omega, chi, p.eps_gamma);
         dg::blas1::transform( npe[0], chi, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
         old_gammaN.update( omega);
         if(  numberG[0] == multigrid.max_iter())
@@ -320,7 +320,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     
      //invert pol
     old_phi.extrapolate( phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], omega, p.eps_pol);
     old_phi.update( phi[0]);
     if(  number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);	
@@ -336,7 +336,7 @@ void Explicit<Grid, Matrix, container>::initializene(const container& src, conta
         dg::blas1::axpby( 1.,src, 0., target); //  ne-1 = N_i -1
     } 
     else {
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+        std::vector<unsigned> number = multigrid.solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
         if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }

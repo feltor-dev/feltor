@@ -173,7 +173,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     } 
     else {
         old_gammaN.extrapolate( chi);
-        std::vector<unsigned> numberG = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+        std::vector<unsigned> numberG = multigrid.solve( multi_gammaN, chi, y[1], p.eps_gamma);
         old_gammaN.update(chi);
         if( numberG[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
@@ -181,7 +181,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     dg::blas1::axpby( -1., y[0], 1., chi, chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
     old_phi.extrapolate( phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], chi, p.eps_pol);
     old_phi.update( phi[0]);
     if( number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);
@@ -196,7 +196,7 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
     } 
     else {
         old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
+        std::vector<unsigned> number = multigrid.solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);    
         if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
@@ -214,7 +214,7 @@ void Explicit<G, Matrix, container>::initializene( const container& src, contain
         dg::blas1::axpby( 1.,src, 0., target); //  ne-1 = N_i -1
     } 
     else {
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+        std::vector<unsigned> number = multigrid.solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
         if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }

@@ -695,7 +695,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
             // ne-nbc = Gamma (ni-nbc)
             dg::blas1::transform(src, m_temp0, dg::PLUS<double>(-m_p.nbc));
             dg::blas1::plus(target, -m_p.nbc);
-            std::vector<unsigned> number = m_multigrid.direct_solve(
+            std::vector<unsigned> number = m_multigrid.solve(
                 m_multi_invgammaN, target, m_temp0, m_p.eps_gamma);
             if(  number[0] == m_multigrid.max_iter())
                 throw dg::Fail( m_p.eps_gamma);
@@ -780,7 +780,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
             m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
             m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
-        std::vector<unsigned> numberG = m_multigrid.direct_solve(
+        std::vector<unsigned> numberG = m_multigrid.solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
         if( staggered)
             m_old_gammaNST.update( time, m_temp0); // store N - nbc
@@ -802,7 +802,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         m_old_phiST.extrapolate( time, phi);
     else
         m_old_phi.extrapolate( time, phi);
-    std::vector<unsigned> number = m_multigrid.direct_solve(
+    std::vector<unsigned> number = m_multigrid.solve(
         m_multi_pol, phi, m_temp0, m_p.eps_pol);
     if( staggered)
         m_old_phiST.update( time, phi);
@@ -829,10 +829,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
             m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
             m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},m_R,m_Z,m_P,time);
-        std::vector<unsigned> number = m_multigrid.direct_solve(
+        std::vector<unsigned> number = m_multigrid.solve(
             m_multi_invgammaP, psi, m_temp0, m_p.eps_gamma);
 #else
-        std::vector<unsigned> number = m_multigrid.direct_solve(
+        std::vector<unsigned> number = m_multigrid.solve(
             m_multi_invgammaP, psi, phi, m_p.eps_gamma);
 #endif //DG_MANUFACTURED
         if( staggered)
@@ -881,7 +881,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     //----------Invert Induction Eq----------------------------//
     if( update)
         m_old_aparST.extrapolate( time, aparST);
-    std::vector<unsigned> number = m_multigrid.direct_solve(
+    std::vector<unsigned> number = m_multigrid.solve(
         m_multi_ampere, aparST, m_temp0, m_p.eps_ampere);
     if( update)
         m_old_aparST.update( time, aparST);

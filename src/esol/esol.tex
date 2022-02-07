@@ -1,6 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{../../doc/related_pages/header.tex}
-\input{../../doc/related_pages/newcommands.tex}
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+
 \usepackage{minted}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -124,7 +125,7 @@ Alternatively, the ordinary Hasegawa-Wakatani ("ordinary") closure is given by~\
 \ln(n/\langle n\rangle) \right] \\
  \Lambda_{N,\parallel,-} &= 0
 \end{align}
-The third option is to normalize the logarithmic term to a constant reference density ("ordinary_nonper")
+The third option is to normalize the logarithmic term to a constant reference density ("ordinary\_nonper")
 \begin{align}
  \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\phi - 
 \ln(n/n_0) \right] \\
@@ -336,7 +337,7 @@ Input file format: json
     "curvature"  : 0.00015, //$\kappa$
     "tau"  : 4.0,           //$\tau_i = T_{i0}/(T_{e0} Z_i)$
     "alpha"  : 0.005,       //adiabaticity $\alpha:= T_{e,\parallel} k_\parallel^2/(\eta_\parallel e^2 n_{e,0} \Omega_{i,0} )$
-    "hwmode" : "modified"   //hasegawa-wakatani model $\in$ ("modified" ,"ordinary" ,"ordinary_nonper" )
+    "hwmode" : "modified"   //hasegawa-wakatani model $\in$ ("modified" ,"ordinary" ,"ordinary\_nonper" )
     "lambda"  : 0.000001,    //sheath dissipation $\lambda:= \rho_{s0}/L_\parallel$
     "mu_e"  : -0.000272121, //$\mu_e:=m_e/(Z_e m_i)$ negative electron to ion mass ratio
     "equations": "ff-O2",   //model $\in$ ("ff-lwl-OB" ,"ff-O2-OB" ,"ff-lwl" ,"ff-O2" ,"ff-O4" )
@@ -413,7 +414,7 @@ lperpinvphi                 & Dataset & 3 (time, y, x) & inverse perp eletric po
 \bottomrule
 \end{longtable}
 %..................................................................
-\bibliography{../../doc/related_pages/references}
+\bibliography{../common/references}
 %..................................................................
 \bibliographystyle{aipnum4-1.bst}
 

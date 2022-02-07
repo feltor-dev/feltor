@@ -91,7 +91,7 @@ struct Helmholtz
      * @brief apply operator
      *
      * Computes
-     * \f[ y = W( \chi + \alpha\Delta) x \f] to make the matrix symmetric
+     * \f[ y = ( \chi + \alpha\Delta) x \f] to make the matrix symmetric
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
      * @tparam ContainerTypes must be usable with \c Container_type in \ref dispatch
@@ -315,7 +315,7 @@ struct Helmholtz2
      * @brief apply operator
      *
      * Computes
-     * \f[ y = W\left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] x \f] to make the matrix symmetric
+     * \f[ y = \left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] x \f] to make the matrix symmetric
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
@@ -325,7 +325,7 @@ struct Helmholtz2
         if( alpha_ != 0)
         {
             blas2::symv( m_laplaceM, x, temp1_); // temp1_ = -nabla_perp^2 x
-            blas1::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
+            blas1::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*nabla_perp^2 x
             blas2::symv( m_laplaceM, y, temp2_);//temp2_ = nabla_perp^2 *(chi^-1)*nabla_perp^2 x
         }
         blas1::pointwiseDot( chi_, x, y); //y = chi*x

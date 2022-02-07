@@ -161,7 +161,7 @@ void Shu<Geometry, Matrix, Container>::operator()(double t, const Container& y, 
         m_old_psi.extrapolate( t, m_psi);
     //else
     //    dg::blas1::copy( 0., m_psi);
-    std::vector<unsigned> number = m_multigrid.direct_solve( m_multi_laplaceM, m_psi, y, m_eps);
+    std::vector<unsigned> number = m_multigrid.solve( m_multi_laplaceM, m_psi, y, m_eps);
     //if( m_update)
         m_old_psi.update( t, m_psi);
     if( number[0] == m_multigrid.max_iter())
