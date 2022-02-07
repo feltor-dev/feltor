@@ -754,7 +754,7 @@ void MultistepTimeloop<ContainerType>::do_integrate(
     if( m_dt == 0)
         throw dg::Error( dg::Message(_ping_)<<"Timestep may not be zero in MultistepTimeloop!");
     dg::blas1::copy( begin, end);
-    if( detail::is_divisable( t_end-t_begin, m_dt))
+    if( is_divisable( t_end-t_begin, m_dt))
     {
         unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
         for( unsigned i=0; i<N; i++)

@@ -114,7 +114,7 @@
  * @{
  *     @defgroup arakawa Advection terms
  *     @brief \f$ \vec v \cdot \nabla u\f$ and \f$ \{ f,g\} \f$
- *     @defgroup matrixoperators Matrix operators
+ *     @defgroup matrixoperators Elliptic operators
  *     @brief Elliptic \f$ -\nabla\cdot (\chi \nabla f)\f$ and Helmholtz \f$ (\chi + \alpha \Delta) f\f$
  *     @defgroup multigrid Multigrid matrix inversion
  *     @brief \f$ A x = b\f$

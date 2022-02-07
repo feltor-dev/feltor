@@ -851,28 +851,32 @@ template<class ContainerType>
 using ImplicitRungeKutta = DIRKStep<ContainerType>;
 
 
-///@cond
-namespace detail
-{
+/// Checks if two number are same within accuracy
+/// @ingroup misc
 inline bool is_same( double x, double y, double eps = 1e-15)
 {
     return fabs(x - y) < std::max(1.0, std::max( fabs(x), fabs(y)));
 }
+/// Checks if two number are same within accuracy
+/// @ingroup misc
 inline bool is_same( float x, float y, float eps = 1e-6)
 {
     return fabsf(x - y) < eps * std::max(1.0f, std::max( fabsf(x), fabsf(y)));
 }
-//Does not check for equal sign!
+/// Checks if two number are integer divisable within accuracy
+/// @attention Does not check for equal sign!
+/// @ingroup misc
 inline bool is_divisable( double a, double b, double eps = 1e-15)
 {
     return is_same( round(a/b)*b, a);
 }
+/// Checks if two number are integer divisable within accuracy
+/// @attention Does not check for equal sign!
+/// @ingroup misc
 inline bool is_divisable( float a, float b, float eps = 1e-6)
 {
     return is_same( (float)round(a/b)*b, (float)a);
 }
-}
-///@endcond
 
 /*! @brief Integrate using a for loop and a fixed time-step
  *
@@ -993,7 +997,7 @@ void SinglestepTimeloop<ContainerType>::do_integrate(
     dg::blas1::copy( begin, end);
     if( m_dt == 0)
         throw dg::Error( dg::Message(_ping_)<<"Timestep may not be zero in SinglestepTimeloop!");
-    if( detail::is_divisable( t_end-t_begin, m_dt))
+    if( is_divisable( t_end-t_begin, m_dt))
     {
         unsigned N = (unsigned)round((t_end - t_begin)/m_dt);
         for( unsigned i=0; i<N; i++)
