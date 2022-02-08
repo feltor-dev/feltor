@@ -81,7 +81,6 @@ int main()
     double hxhy = grid2d.lx()*grid2d.ly()/(grid2d.n()*grid2d.n()*grid2d.Nx()*grid2d.Ny());
 
     const Container w2d = dg::create::weights( grid2d);
-    const Container v2d = dg::create::inv_weights( grid2d);
     const Container one = dg::evaluate( dg::one, grid2d);
     const Container rho = dg::evaluate( rho_ana_df, grid2d);
     const Container sol = dg::evaluate( phi_ana_df, grid2d);
@@ -103,7 +102,7 @@ int main()
         std::cout << "\n#####df polarization charge with nested inversion (commute = false)\n";
         std::cout << "df-nested-nocommute:" << std::endl;
         dg::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_df;
-        pol_df.construct(alpha, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1., true, "df");        
+        pol_df.construct(alpha, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1., true, "df");        
         pol_df.set_commute(false);
         dg::blas1::scal(x,0.0); 
         
@@ -147,19 +146,17 @@ int main()
     {
         std::cout << "#####df polarization charge without nested inversion (commute = false)\n"; 
         std::cout << "df-notnested-nocommute:" << std::endl;
-        dg::Elliptic< dg::CartesianGrid2d, Matrix, Container > lapperp(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered);
+        dg::Elliptic< dg::CartesianGrid2d, Matrix, Container > lapperp(grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered);
         dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
     
         dg::blas1::scal(x,0.0);
         
         t.tic();
-        dg::blas2::symv(w2d, rho, temp); //not normed
+        dg::blas1::copy( rho, temp);
         dg::blas1::scal(temp,-1.0);
-        unsigned number = pcg( lapperp, x, temp, v2d, w2d, eps_pol);
-                if(  number == pcg.get_max())
-                throw dg::Fail( eps_pol);
+        unsigned number = pcg( lapperp, x, temp, 1., w2d, eps_pol);
         dg::blas2::symv(gamma0inv, x, temp); 
-        dg::blas2::symv(v2d, temp, x);
+        dg::blas1::copy( temp, x);
         t.toc();
         
         dg::blas1::axpby( 1., sol, -1., x, error);
@@ -175,9 +172,9 @@ int main()
         dg::blas1::scal(x, 0.0);
         
         t.tic();
-        dg::blas2::symv(gamma0inv, rho, temp); // not normed for cg inversion
+        dg::blas2::symv(gamma0inv, rho, temp);
         dg::blas1::scal(temp,-1.0);
-        number = pcg( lapperp, x, temp, v2d, w2d, eps_pol);
+        number = pcg( lapperp, x, temp, 1., w2d, eps_pol);
                 if(  number == pcg.get_max())
                 throw dg::Fail( eps_pol);
         t.toc();
@@ -196,7 +193,7 @@ int main()
         std::cout << "ffO2-nested-nocommute:" << std::endl;
 
         dg::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_ff;    
-        pol_ff.construct(alpha, {eps_gamma}, grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered, 1., false, "ff");        
+        pol_ff.construct(alpha, {eps_gamma}, grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1., false, "ff");        
         pol_ff.set_commute(false);
         pol_ff.set_chi(chi);
         dg::blas1::scal(x, 0.0);    
@@ -228,7 +225,7 @@ int main()
     {
         std::cout << "#####ff polarization charge without nested inversion (commute = false)\n";
         std::cout << "ffO2-notnested-nocommute:" << std::endl;
-        dg::Elliptic< dg::CartesianGrid2d, Matrix, Container > lapperp(grid2d, grid2d.bcx(), grid2d.bcy(), dg::not_normed, dg::centered);
+        dg::Elliptic< dg::CartesianGrid2d, Matrix, Container > lapperp(grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered);
         lapperp.set_chi( chi);
         dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  grid2d, grid2d.bcx(), grid2d.bcy(), alpha, dg::centered, 1.0);
         dg::blas1::scal(x_gamma, 0.0);
@@ -247,8 +244,7 @@ int main()
         sqrtsolve(rho_FF, temp);
 //         unsigned iter_tri_inner =  sqrtsolve(rho_FF, temp, dg::SQRT<double>(), gamma0inv, gamma0inv.inv_weights(), gamma0inv.weights(), eps_gamma, res_fac);
         dg::blas1::scal(temp,-1.0);
-        dg::blas1::pointwiseDot(w2d, temp, temp); //make not normed
-        unsigned number = pcg( lapperp, x_gamma, temp, v2d, w2d, eps_pol);
+        unsigned number = pcg( lapperp, x_gamma, temp, 1., w2d, eps_pol);
                 if(  number == pcg.get_max())
                 throw dg::Fail( eps_pol);
         sqrtsolve(x_gamma, x);
@@ -273,7 +269,7 @@ int main()
 //         dg::PolCharge<dg::CartesianGrid2d, Matrix, Container> pol_ffO4;
 //         eps_gamma_vec = {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma};
 // 
-//         pol_ffO4.construct(beta, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(),  dg::not_normed, dg::centered, 1., false, "ffO4");
+//         pol_ffO4.construct(beta, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1., false, "ffO4");
 //         pol_ffO4.set_chi(chi);
 //         pol_ffO4.set_iota(chi);
 //    
@@ -305,7 +301,7 @@ int main()
 //         std::vector<dg::TensorElliptic<dg::CartesianGrid2d, Matrix, Container> > multi_tensorelliptic( stages);
 //         for(unsigned u=0; u<stages; u++)
 //         {        
-//             multi_tensorelliptic[u].construct( multigrid.grid(u), dg::not_normed, dg::centered, 1.);
+//             multi_tensorelliptic[u].construct( multigrid.grid(u), dg::centered, 1.);
 //             multi_tensorelliptic[u].set_chi( multi_chi[u]);
 //             multi_tensorelliptic[u].set_iota( multi_chi[u]);
 //         }
@@ -315,10 +311,10 @@ int main()
 //         
 //         t.tic();
 //         dg::blas2::symv(gamma1inv, rho_FFO4, temp); //fullfills no DIR bc conditions/only PER on [0,2 pi]!
-//         dg::blas1::pointwiseDot(v2d, temp, temp); //should be normed for multigrid
+//         dg::blas1::pointwiseDot(1., temp, temp); //should be normed for multigrid
 //         std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, temp, eps_pol_vec);
 //         dg::blas2::symv(gamma1inv, x, temp); 
-//         dg::blas1::pointwiseDot(v2d, temp, x); 
+//         dg::blas1::pointwiseDot(1., temp, x); 
 //         t.toc();
 //         
 //         dg::blas1::axpby( 1., sol_FF, -1., x, error);        

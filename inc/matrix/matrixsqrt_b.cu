@@ -24,7 +24,7 @@ using Container = dg::DVec;
 int main(int argc, char * argv[])
 {
     dg::Timer t;
-    
+
     unsigned n, Nx, Ny;
     std::cout << "# Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
@@ -40,7 +40,7 @@ int main(int argc, char * argv[])
     unsigned max_iter = 500;
     unsigned max_iterC = 40;
     std::cout << "# Type max_iter of tridiagonalization (500) and of Cauchy integral (40) ?\n";
-//     std::cin >> max_iter >> max_iterC;    
+//     std::cin >> max_iter >> max_iterC;
     std::cout << "# Type in eps of tridiagonalization (1e-7)\n";
     double eps = 1e-7; //# of pcg iter increases very much if
 //     std::cin >> eps;
@@ -51,8 +51,8 @@ int main(int argc, char * argv[])
               <<"max_iter: "<<max_iter<<"\n"
               <<"max_iterC: "<<max_iterC<<"\n"
               <<"eps: "<<eps<<std::endl;
-    
-    
+
+
     double erel = 0;
     std::array<unsigned,2> iter_arr;
 
@@ -62,14 +62,14 @@ int main(int argc, char * argv[])
     Container x_exac = dg::evaluate(lhs, g);
     Container b = dg::evaluate(rhsHelmholtzsqrt, g), b_exac(b), error(b_exac);
     Container bs = dg::evaluate(rhsHelmholtz, g), bs_exac(bs);
-    
+
     const Container w2d = dg::create::weights( g);
     const Container v2d = dg::create::inv_weights( g);
 
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered); //not_normed
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered);
     dg::Invert<Container> invert( x, g.size(), epsCG);
 
-    double hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
+    double hxhy = 1.; // ((2pi)/lx )^2
     double max_weights =   dg::blas1::reduce(A.weights(), 0., dg::AbsMax<double>() );
     double min_weights =  -dg::blas1::reduce(A.weights(), max_weights, dg::AbsMin<double>() );
     double kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
@@ -80,7 +80,7 @@ int main(int argc, char * argv[])
 
         t.tic();
         iter_arr[1] = directsqrtcauchysolve(b, bs);
-        t.toc();   
+        t.toc();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));  
         double time = t.diff();
@@ -110,21 +110,21 @@ int main(int argc, char * argv[])
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
         double time = t.diff();
-        std::cout << "    time: "<<time<<"s \n"; 
-        std::cout << "    error: "<<erel  << "\n"; 
-        std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n"; 
-        
+        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    error: "<<erel  << "\n";
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr[1] << "\n";
+
         std::cout << "\nODE+CG:\n";
         t.tic();
         iter_arr[0] = invert(A,x,bs);
         t.toc();
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac)); 
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
         time+=t.diff();
-        std::cout << "    time: "<<time<<"s \n"; 
-        std::cout << "    error: "<<erel  << "\n"; 
-        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";     
-        
+        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    error: "<<erel  << "\n";
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr[0] << "\n";
+
     }
     
     //////////////////Krylov solve via Lanczos method and Cauchy solve

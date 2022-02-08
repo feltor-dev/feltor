@@ -76,7 +76,7 @@ int main(int argc, char * argv[])
     const Container w2d = dg::create::weights( g);
     const Container v2d = dg::create::inv_weights( g);
 
-    dg::Helmholtz<dg::aRealMPIGeometry2d<double>, Matrix, Container> A( g, alpha, dg::centered); //not_normed
+    dg::Helmholtz<dg::aRealMPIGeometry2d<double>, Matrix, Container> A( g, alpha, dg::centered);
     dg::Invert<Container> invert( x, g.size(), epsCG);
 
     double hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());

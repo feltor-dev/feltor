@@ -10,8 +10,8 @@ namespace dg
 /**
  * @brief Various arbitary wavelength polarization charge operators of delta-f (df) and full-f (ff)
  *
- * @ingroup matrixoperators
- * 
+ * @ingroup matrixmatrixoperators
+ *
  */
 template <class Geometry, class Matrix, class Container>
 class PolCharge
@@ -26,18 +26,15 @@ class PolCharge
      * @param alpha alpha of the Helmholtz operator
      * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion or the sqrt Helmholtz operator inversion
      * @param g The Grid, boundary conditions are taken from here
-     * @param no choose \c dg::normed if you want to directly use the object,
-     *  \c dg::not_normed if you want to invert the elliptic equation
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
-     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
      * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
      */
-    PolCharge(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false, std::string mode = "df", bool commute = false)
+    PolCharge(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, direction dir = forward, value_type jfactor=1., std::string mode = "df", bool commute = false)
     {
-        construct(alpha, eps_gamma, g,  g.bcx(), g.bcy(), no, dir, jfactor, chi_weight_jump, mode);
+        construct(alpha, eps_gamma, g,  g.bcx(), g.bcy(), dir, jfactor, mode);
     }
     /**
      * @brief Construct from boundary conditions
@@ -47,18 +44,15 @@ class PolCharge
      * @param g The Grid, boundary conditions are taken from here
     * @param bcx boundary condition in x
      * @param bcy boundary contition in y
-     * @param no choose \c dg::normed if you want to directly use the object,
-     *  \c dg::not_normed if you want to invert the elliptic equation
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
-     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
      * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
     */
-    PolCharge( value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false, std::string mode = "df", bool commute = false)
+    PolCharge( value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, direction dir = forward, value_type jfactor=1., std::string mode = "df", bool commute = false)
     { 
-         construct(alpha, eps_gamma, g,  bcx, bcy, no, dir, jfactor, chi_weight_jump, mode);
+         construct(alpha, eps_gamma, g,  bcx, bcy, dir, jfactor, mode);
     }
     /**
      * @brief Construct from boundary conditions
@@ -68,29 +62,25 @@ class PolCharge
      * @param g The Grid, boundary conditions are taken from here
     * @param bcx boundary condition in x
      * @param bcy boundary contition in y
-     * @param no choose \c dg::normed if you want to directly use the object,
-     *  \c dg::not_normed if you want to invert the elliptic equation
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
-     * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
      * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
      * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
     */
-    void construct(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false, std::string mode = "df", bool commute = false)
+    void construct(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, direction dir = forward, value_type jfactor=1., std::string mode = "df", bool commute = false)
     {
         m_alpha = alpha;
         m_eps_gamma = eps_gamma;
         m_mode = mode;
         m_commute = commute;
-        m_no = no,
         m_temp2 = dg::evaluate(dg::zero, g);
-        m_temp =  m_temp2;        
+        m_temp =  m_temp2;
         m_temp2_ex.set_max(1, m_temp2);
         m_temp_ex.set_max(1, m_temp);
         if (m_mode == "df")
         {
-            m_ell.construct(g, bcx, bcy, m_no, dir, jfactor, chi_weight_jump );
+            m_ell.construct(g, bcx, bcy, dir, jfactor );
             m_multi_gamma.resize(3);
             m_multi_g.construct(g, 3);
             for( unsigned u=0; u<3; u++)
@@ -100,14 +90,14 @@ class PolCharge
         }
         if (m_mode == "ff")
         {
-            m_ell.construct(g, bcx, bcy, m_no, dir, jfactor, chi_weight_jump );
+            m_ell.construct(g, bcx, bcy, dir, jfactor );
             m_multi_gamma.resize(1);
             m_multi_gamma.resize(1);
             m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
             m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-14, 2000, 40, eps_gamma[0]);
-                        
+
 //             m_sqrtG0inv.construct(m_temp, g.size());
-            
+
             value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
             value_type max_weights =   dg::blas1::reduce(m_multi_gamma[0].weights(), 0., dg::AbsMax<double>() );
             value_type min_weights =  -dg::blas1::reduce(m_multi_gamma[0].weights(), max_weights, dg::AbsMin<double>() );
@@ -117,7 +107,7 @@ class PolCharge
         }
         if (m_mode == "ffO4")
         {
-            m_tensorell.construct(g, bcx, bcy, m_no, dir, jfactor); //not normed by default
+            m_tensorell.construct(g, bcx, bcy, dir, jfactor);
             m_multi_gamma.resize(3);
 //             m_multi_gamma.resize(3);
             m_multi_g.construct(g, 3);
@@ -127,9 +117,6 @@ class PolCharge
 //                 m_multi_gamma[u].construct( m_multi_g.grid(u), inverse( bcx), inverse( bcy), m_alpha, dir, jfactor);
             }
         }
-        
-
-        
     }
     /**
      * @brief Change \f$\chi\f$ in the elliptic or tensor elliptic operator
@@ -188,17 +175,6 @@ class PolCharge
      */
     bool get_commute() const {return m_commute;}
     /**
-     * @brief Return the vector missing in the un-normed symmetric matrix
-     *
-     * i.e. the inverse of the weights() function
-     * @return inverse volume form including inverse weights
-     */
-    const Container& inv_weights()const {
-        if (m_mode == "ffO4")
-            return m_tensorell.inv_weights();
-        else return m_ell.inv_weights();
-    }
-    /**
      * @brief Return the vector making the matrix symmetric
      *
      * i.e. the volume form
@@ -221,7 +197,7 @@ class PolCharge
             return m_tensorell.precond();
         else return m_ell.precond();
     }
-    
+
     template<class ContainerType0, class ContainerType1>
     void variation( const ContainerType0& phi, ContainerType1& varphi)
     {
@@ -273,10 +249,10 @@ class PolCharge
         {
             if (m_mode == "ffO4")
             {
-                m_tensorell.symv(alpha, x, beta, y); //is not normed by default
+                m_tensorell.symv(alpha, x, beta, y);
             }
-            if (m_mode == "ff" || m_mode == "df")                
-                m_ell.symv(alpha, x, beta, y);            
+            if (m_mode == "ff" || m_mode == "df")
+                m_ell.symv(alpha, x, beta, y);
         }
         else
         {
@@ -289,56 +265,43 @@ class PolCharge
                     if(  number[0] == m_multi_g.max_iter())
                         throw dg::Fail( m_eps_gamma[0]);
                     m_temp2_ex.update(m_temp2);
-                    
+
                     m_ell.symv(alpha, m_temp2, beta, y);
                 }
                 else
                 {
                     m_ell.symv(1.0, x, 0.0, m_temp);
-                    if (m_no == not_normed) 
-                        dg::blas1::pointwiseDot(m_temp, m_ell.inv_weights(), m_temp);    //temp should be normed
-                    
+
                     m_temp2_ex.extrapolate(m_temp2);
                     std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, m_temp, m_eps_gamma);
                     if(  number[0] == m_multi_g.max_iter())
                         throw dg::Fail( m_eps_gamma[0]);
                     m_temp2_ex.update(m_temp2);
-                   
-                    
-                    if( m_no == normed)
-                        dg::blas1::axpby(alpha, m_temp2, beta, y);  //m_temp2 is normed
 
-                    if( m_no == not_normed)
-                        dg::blas1::pointwiseDot( alpha, m_temp2, m_ell.weights(), beta, y);         
-                }    
-                
+
+                    dg::blas1::axpby(alpha, m_temp2, beta, y);
+
+                }
+
             }
             if (m_mode == "ff" ) //assuming constant FLR effects
-            {     
+            {
                 if (m_commute == false)
                 {
                     dg::blas1::scal(m_temp2, 0.0);
 
-                    std::array<unsigned,2> number = m_sqrtG0inv( m_temp2, x);  //m_temp2 is normed
+                    std::array<unsigned,2> number = m_sqrtG0inv( m_temp2, x);
                     std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
-//                     m_sqrtG0inv( m_temp2, x, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);  //m_temp2 is normed
-        
-                    m_ell.symv(1.0, m_temp2, 0.0, m_temp); //m_temp is not normed or not normed
-                    
-                    //make normed before operator is applied
-                    if (m_no == not_normed) 
-                        dg::blas1::pointwiseDot(m_temp, m_ell.inv_weights(), m_temp);
-                    
+//                     m_sqrtG0inv( m_temp2, x, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);
+
+                    m_ell.symv(1.0, m_temp2, 0.0, m_temp);
+
                     dg::blas1::scal(m_temp2, 0.0);
-                    number =m_sqrtG0inv( m_temp2, m_temp);  //m_temp2 is normed
+                    number =m_sqrtG0inv( m_temp2, m_temp);
                     std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
-//                     m_sqrtG0inv( m_temp2, m_temp, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);  //m_temp2 is normed
-                    
-                    if( m_no == normed)
-                        dg::blas1::axpby(alpha, m_temp2, beta, y);  
-                    if( m_no == not_normed)
-                        dg::blas1::pointwiseDot( alpha, m_temp2, m_ell.weights(), beta, y);   
-                    
+//                     m_sqrtG0inv( m_temp2, m_temp, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);
+
+                    dg::blas1::axpby(alpha, m_temp2, beta, y);
                 }
                 else
                 {
@@ -346,29 +309,24 @@ class PolCharge
                 }
             }
             if (m_mode == "ffO4")
-            {  
+            {
                 if (m_commute == false)
-                {      
+                {
                     m_temp2_ex.extrapolate(m_temp2);
                     std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, x, m_eps_gamma);
                     if(  number[0] == m_multi_g.max_iter())
                         throw dg::Fail( m_eps_gamma[0]);
                     m_temp2_ex.update(m_temp2);
 
-                    m_tensorell.symv(1.0, m_temp2, 0.0, m_temp); 
-                    if (m_no == not_normed) 
-                        dg::blas1::pointwiseDot(m_temp, m_tensorell.inv_weights(), m_temp);
-                    
+                    m_tensorell.symv(1.0, m_temp2, 0.0, m_temp);
+
                     m_temp_ex.extrapolate(m_temp2);
                     number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, m_temp, m_eps_gamma);
                     if(  number[0] == m_multi_g.max_iter())
                         throw dg::Fail( m_eps_gamma[0]);
                     m_temp_ex.update(m_temp2);
-                    
-                    if( m_no == normed)
-                        dg::blas1::axpby(alpha, m_temp2, beta, y);  
-                    if( m_no == not_normed)
-                        dg::blas1::pointwiseDot( alpha, m_temp2, m_tensorell.weights(), beta, y); 
+
+                    dg::blas1::axpby(alpha, m_temp2, beta, y);
                 }
                 if (m_commute == true)
                 {
@@ -381,22 +339,21 @@ class PolCharge
     private:
     dg::Elliptic<Geometry,  Matrix, Container> m_ell;
     dg::TensorElliptic<Geometry,  Matrix, Container> m_tensorell;
-    
+
     std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multi_g;
     dg::KrylovSqrtCauchyinvert<Geometry, Matrix, Container> m_sqrtG0inv;
-//     dg::KrylovFuncEigenInvert< Container> m_sqrtG0inv;        
+//     dg::KrylovFuncEigenInvert< Container> m_sqrtG0inv;
     Container m_temp, m_temp2;
-    norm m_no;
     value_type  m_alpha,  m_res_fac;
     std::vector<value_type> m_eps_gamma;
     std::string m_mode;
     dg::Extrapolation<Container> m_temp2_ex, m_temp_ex;
     bool m_commute;
-    
+
 
 };
-    
+
 ///@cond
 template< class G, class M, class V>
 struct TensorTraits< PolCharge<G, M, V> >
@@ -406,5 +363,5 @@ struct TensorTraits< PolCharge<G, M, V> >
 };
 ///@endcond
 
-  
+
 }  //namespace dg

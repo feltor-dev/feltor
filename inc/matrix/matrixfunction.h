@@ -147,7 +147,6 @@ class KrylovFuncEigenInvert
     using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
     KrylovFuncEigenInvert(){}
-    ///@copydoc construct()
     /**
      * @brief Construct KrylovFuncEigenInvert
      *

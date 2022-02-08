@@ -208,14 +208,19 @@ class Lanczos
 };
 
 /*!
- * @brief Class for approximating \f$x \approx A^{-1} b  \f$ solve via exploiting a Krylov projection achieved by the CG method
+ * @brief Class for approximating \f$x = R f(T^{-1})\vec e_1 \approx f(A^{-1}) b  \f$ solve via exploiting a Krylov projection achieved by the CG method
  *
  * @ingroup matrixapproximation
  *
  * This class is based on the approach of the paper <a href="https://doi.org/10.1016/0377-0427(87)90020-3)" > An iterative solution method for solving f(A)x = b, using Krylov subspace information obtained for the symmetric positive definite matrix A</a> by H. A. Van Der Vorst
  *
- * @note The approximation relies on Projection \f$x = A^{-1} b  \approx  R T^{-1} e_1\f$, where \f$T\f$ and \f$R\f$ is the tridiagonal and orthogonal matrix of the PCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$T^{-1} e_1\f$ can be further processed for matrix function approximation
- \f$f(T^{-1}) e_1\f$  */
+ * @note The approximation relies on Projection
+ * \f$x = A^{-1} b  \approx  R  T^{-1} e_1\f$,
+ * where \f$T\f$ and \f$R\f$ are the tridiagonal and orthogonal
+ * matrix of the CG solve respectively and \f$e_1\f$ is the normalized unit
+ * vector. The vector \f$T^{-1} e_1\f$ can be further processed for matrix
+ * function approximation \f$f(T^{-1}) e_1\f$
+ */
 template< class ContainerType>
 class MCG
 {
@@ -274,12 +279,13 @@ class MCG
     ///@brief Get the current  number of iterations
     ///@return the current number of iterations
     unsigned get_iter() const {return m_iter;}
-    /** @brief Compte x = R y
+    /**
+     * @brief Compute x = R y
      * @param A A self-adjoint, positive definit matrix
      * @param T T non-symmetric tridiagonal Matrix from MCG tridiagonalization
      * @param y (host) vector with v.size() = iter.
-     *  Typically \f$ T^(-1) e_1 \f$ or \f$ f(T^(-1)) e_1 \f$
-     * @param x Contains the matrix approximation \f$x = A^{-1} b\f$ as output
+     *  Typically \f$ T^{(-1)} e_1 \f$ or \f$ f(T^{(-1)}) e_1 \f$
+     * @param x Contains the matrix approximation \f$x = Ry \f$ as output
      * @param b The right hand side vector.
      * @param iter number of iterations (size of T)
      */
@@ -308,7 +314,7 @@ class MCG
         }
     }
     /**
-     * @brief Solve the system \f$A*x = b \f$ for x using PCG method
+     * @brief Solve the system \f$A*x = b \f$ for x using CG method
      *
      * @param A A self-adjoint, positive definit matrix
      * @param x Contains the initial value (\f$x\equiv 0\f$ if used for
@@ -326,7 +332,7 @@ class MCG
      *  Used to account for specific matrix function and operator in the
      *  convergence criterium
      *
-     * @return Number of iterations used to achieve desired precision
+     * @return The tridiagonal matrix \f$ T\f$
      * @note So far only ordinary convergence criterium of CG method, in
      * particular for \f$ A x  = b \f$. If used for matrix function
      * computation, \f$ f(A) x  = b \f$, the parameter eps should be

@@ -12,53 +12,46 @@
 namespace dg
 {
 /**
- * @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve directly via sqrt ODE solve with adaptive ERK class as timestepper
+ * @brief Operator that integrates an ODE from 0 to 1 with an  adaptive ERK class as timestepper
+ *
+ * The intended use is to integrate Matrix equations
+ * @code{.cpp}
+ * dg::Helmholtz<Geometry, Matrix, Container> A( g, alpha, dg::centered);
+ * auto sqrt_ode = dg::make_sqrtode( A, x, eps, true);
+ * unsigned number = 0;
+ * auto sqrtA = dg::make_directODESolve( sqrt_ode, "Dormand-Prince-7-4-5",1e-5, 1e-7, number);
+ * dg::apply ( sqrtA , x , b);
+ * @endcode
+ * The call \f$ b = f(x) \f$ corresponds to integrating \f$ \dot y = F(y)\f$ with \f$ y(0 ) = x\f$ to \f$ b = y(1)\f$
+ * @param ode The differential equation to integrate (forwarded to \c dg::Adaptive<dg::ERKStep>)
+ * @param tableau The tableau for \c dg::ERKStep
+ * @param epsTimerel relative accuracy of adaptive ODE solver
+ * @param epsTimeabs absolute accuracy of adaptive ODE solver
+ * @param number Is linked to the lambda. Contains the number of steps the
+ *  adaptive timestepper used to completion
+ * @param t0 Change starting time to \c t0
+ * @param t1 Change end time to \c t1
+ *
+ * @sa \c dg::make_sqrtode \c dg::make_expode, \c dg::make_besselI0ode
  * @ingroup matrixfunctionapproximation
-*/
-template< class Geometry, class Matrix, class Container>
-struct DirectSqrtODESolve
+ */
+template<class value_type, class ExplicitRHS>
+auto make_directODESolve( ExplicitRHS&& ode, dg::ConvertsToButcherTableau<value_type> tableau, value_type epsTimerel, value_type epsTimeabs, unsigned& number, value_type t0 = 0., value_type t1 = 1.)
 {
-   public:
-    using geometry_type = Geometry;
-    using matrix_type = Matrix;
-    using container_type = Container;
-    using value_type = dg::get_value_type<Container>;
-    ///@brief empty object ( no memory allocation)
-    DirectSqrtODESolve() {}
-    /**
-     * @brief Construct DirectSqrtSolve
-     *
-     * @param A Helmholtz operator
-     * @param g grid
-     * @param epsCG accuracy of conjugate gradient solver
-     * @param epsTimerel relative accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
-     * @param epsTimeabs absolute accuracy of adaptive ODE solver (Dormand-Prince-7-4-5)
-     */
-    DirectSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG, value_type epsTimerel, value_type epsTimeabs)
-    { 
-        Container temp = dg::evaluate(dg::zero,g);
-        m_sqrtode.construct(A, temp, epsCG, true, true);
-        m_epsTimerel = epsTimerel;
-        m_epsTimeabs = epsTimeabs;
-        m_sqrtode.set_weights(A.weights());
-        m_sqrtode.set_inv_weights(A.inv_weights());
-        m_sqrtode.set_precond(A.precond());
-    }
-    /**
-     * @brief Compute \f$b \approx \sqrt{A} x  \f$ via sqrt ODE solve
-     *
-     * @param x input vector
-     * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \f$
-     * @return number of timesteps of sqrt ODE solve
-     */    
-    unsigned operator()(const Container& x, Container& b)
-    {
-        return dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtode, 0., x, 1., b, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
-    }
-  private:
-    dg::SqrtODE<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_sqrtode;  
-    value_type m_epsTimerel, m_epsTimeabs;
-};
+    return [&, t0 = t0, t1 = t1,
+            cap = std::tuple<ExplicitRHS>(std::forward<ExplicitRHS>(ode)),
+            rtol = epsTimerel, atol = epsTimeabs]
+            ( const auto& x, auto& b) mutable
+        {
+            value_type reject_limit = 2;
+            dg::Adaptive<dg::ERKStep<decltype(x)>> adapt( tableau, x);
+            dg::AdaptiveTimeloop<decltype(x)> loop( adapt, std::get<0>(cap),
+                    dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
+            loop.integrate( t0, x, t1, b);
+            number = adapt.nsteps();
+        };
+}
+
 
 /** @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve directly via sqrt Cauchy integral solve
  * @ingroup matrixfunctionapproximation
@@ -83,19 +76,19 @@ struct DirectSqrtCauchySolve
      */
     DirectSqrtCauchySolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG, unsigned iterCauchy)
     {
-        construct(A, g, epsCG, iterCauchy);
-    }
-    void construct(const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, value_type epsCG, unsigned iterCauchy)
-    {
         Container temp = dg::evaluate(dg::zero,g);
         m_iterCauchy = iterCauchy;
-        m_cauchysqrtint.construct(A, temp, epsCG, true, true);
-        m_cauchysqrtint.set_weights(A.weights());
-        m_cauchysqrtint.set_inv_weights(A.inv_weights());
-        m_cauchysqrtint.set_precond(A.precond());
+        m_cauchysqrtint.construct(temp, epsCG, true);
         value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
         m_EVmin = 1.-A.alpha()*hxhy*(1+1);
         m_EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
+    }
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = DirectSqrtCauchySolve( std::forward<Params>( ps)...);
     }
     /**
      * @brief Compute \f$b \approx \sqrt{A} x  \f$ via sqrt Cauchy integral solve
@@ -103,23 +96,26 @@ struct DirectSqrtCauchySolve
      * @param x input vector
      * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \f$
      * @return number of integration steps of sqrt cauchy solve
-     */    
+     */
     unsigned operator()(const Container& x, Container& b)
     {
-        m_cauchysqrtint(x, b, m_EVmin, m_EVmax, m_iterCauchy);
+        m_cauchysqrtint(m_A, x, b, m_EVmin, m_EVmax, m_iterCauchy);
         return m_iterCauchy;
     }
   private:
     unsigned m_iterCauchy;
-    dg::SqrtCauchyInt<dg::Helmholtz<Geometry,  Matrix, Container>, Container> m_cauchysqrtint;
+    dg::Helmholtz<Geometry, Matrix, Container> m_A;
+    dg::SqrtCauchyInt<Container> m_cauchysqrtint;
     value_type m_EVmin,m_EVmax;
 };
 
-/*! 
- * @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper. 
- * 
+auto make_directSqrtCauchySolve
+
+/*!
+ * @brief Shortcut for \f$b \approx \sqrt{A} x  \f$ solve via exploiting first a Krylov projection achived by the M-lanczos method and and secondly a sqrt ODE solve with the adaptive ERK class as timestepper.
+ *
  * @ingroup matrixfunctionapproximation
- * 
+ *
  * @note The approximation relies on Projection \f$b \approx \sqrt{A} x \approx b \approx ||x||_M V \sqrt{T} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the Lanczos solve and \f$e_1\f$ is the normalized unit vector. The vector \f$\sqrt{T} e_1\f$ is computed via the sqrt ODE solve.
  */
 template< class Geometry, class Matrix, class Container>
@@ -143,12 +139,12 @@ struct KrylovSqrtODESolve
      * @param max_iterations max number of iterations
      * @param eps accuracy of Lanczos method
      */
-    KrylovSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable, value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned max_iterations, value_type eps)  
-    { 
+    KrylovSqrtODESolve( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable, value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned max_iterations, value_type eps)
+    {
         construct(A, g, copyable, epsCG, epsTimerel, epsTimeabs, max_iterations, eps);
     }
     void construct( const dg::Helmholtz<Geometry,  Matrix, Container>& A, const Geometry& g, const Container& copyable,value_type epsCG, value_type epsTimerel, value_type epsTimeabs, unsigned max_iterations, value_type eps)
-    {      
+    {
         m_A = A;
         m_epsCG = epsCG;
         m_epsTimerel = epsTimerel;
@@ -181,34 +177,34 @@ struct KrylovSqrtODESolve
      *
      * @param x input vector
      * @param b output vector. Is approximating \f$b \approx \sqrt{A} x  \approx  ||x||_M V \sqrt{T} e_1\f$
-     * 
+     *
      * @return number of time steps in sqrt ODE solve
-     */    
+     */
     std::array<unsigned,2> operator()(const Container& x, Container& b)
     {
 #ifdef DG_BENCHMARK
         Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        //Lanczos solve first         
-        value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x)); 
+        //Lanczos solve first
+        value_type xnorm = sqrt(dg::blas2::dot(m_A.weights(), x));
         if( xnorm == 0)
         {
             dg::blas1::copy( x,b);
             return {0,0} ;
         }
-        m_TH  = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(),  m_eps, false, m_kappa*sqrt(m_EVmin)); 
+        m_TH  = m_lanczos(m_A, x, b, m_A.weights(), m_eps, false, m_kappa*sqrt(m_EVmin));
         unsigned iter = m_lanczos.get_iter();
         m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
         m_yH.resize( iter);
-        
+
         m_sqrtodeH.new_size(iter); //resize  vectors in sqrtODE
-        m_sqrtodeH.set_A(m_TH); //set T in sqrtODE 
+        m_sqrtodeH.set_A(m_TH); //set T in sqrtODE
 
         unsigned counter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs); // y = T^(1/2) e_1
 
-        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, iter);          // b = ||x|| V T^(1/2) e_1  
+        m_lanczos.normMxVy(m_A, m_TH, m_yH,  b, x, xnorm, iter);          // b = ||x|| V T^(1/2) e_1
         //reset max iterations if () operator is called again
         m_lanczos.set_iter(m_max_iter);
 #ifdef DG_BENCHMARK
@@ -229,9 +225,9 @@ struct KrylovSqrtODESolve
     unsigned m_max_iter;
     value_type m_epsCG, m_epsTimerel, m_epsTimeabs, m_eps, m_EVmin, m_kappa;
     HVec m_e1H, m_yH;
-    dg::SqrtODE<HDiaMatrix, HVec> m_sqrtodeH;  
+    dg::SqrtODE<HDiaMatrix, HVec> m_sqrtodeH;
     dg::Lanczos< Container > m_lanczos;
-    HDiaMatrix m_TH; 
+    HDiaMatrix m_TH;
 };
 
 /*! 
@@ -314,7 +310,7 @@ struct KrylovSqrtCauchySolve
             return {0, m_iterCauchy};
         }
         
-        m_TH = m_lanczos(m_A, x, b, m_A.inv_weights(), m_A.weights(), m_eps, false, m_kappa*sqrt(m_EVmin)); 
+        m_TH = m_lanczos(m_A, x, b, m_A.weights(), m_eps, false, m_kappa*sqrt(m_EVmin)); 
         unsigned iter = m_lanczos.get_iter();
 
         m_e1H.resize(iter, 0.);
@@ -324,7 +320,7 @@ struct KrylovSqrtCauchySolve
         m_cauchysqrtH.new_size(iter); //resize vectors in cauchy
         m_cauchysqrtH.set_A(m_TH);         //set T in cauchy
         m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated from Helmholtz operator, which are close to the min and max EVs of T
-        m_lanczos.normMxVy(m_A, m_TH, m_A.inv_weights(), m_A.weights(),  m_yH,  b, x, xnorm, iter);
+        m_lanczos.normMxVy(m_A, m_TH, m_yH,  b, x, xnorm, iter);
 
         //reset max iterations if () operator is called again
         m_lanczos.set_iter(m_max_iter);
@@ -421,7 +417,7 @@ class KrylovSqrtODEinvert
         //multiply weights
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
+        m_TH = m_mcg(m_A, x, m_b, m_A.weights(), m_eps, 1., false); 
         unsigned iter = m_mcg.get_iter();
         m_TridiaginvH.resize(iter);
         m_TinvH = m_TridiaginvH(m_TH);
@@ -434,7 +430,7 @@ class KrylovSqrtODEinvert
 
         //could be replaced by Cauchy sqrt solve
         unsigned time_iter = dg::integrateERK( "Dormand-Prince-7-4-5", m_sqrtodeH, 0., m_e1H, 1., m_yH, 0., dg::pid_control, dg::l2norm, m_epsTimerel, m_epsTimeabs);
-        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  iter); // x =  R T^(-1/2) e_1
+        m_mcg.Ry(m_A, m_TH, m_yH, x, m_b,  iter); // x =  R T^(-1/2) e_1
 
         m_mcg.set_iter(m_max_iter);
         return {iter,time_iter};
@@ -527,20 +523,20 @@ class KrylovSqrtCauchyinvert
         //multiply weights
         dg::blas2::symv(m_A.weights(), b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_TH = m_mcg(m_A, x, m_b, m_A.inv_weights(), m_A.weights(), m_eps, 1., false); 
+        m_TH = m_mcg(m_A, x, m_b, m_A.weights(), m_eps, 1., false);
         unsigned iter = m_mcg.get_iter();
         m_TridiaginvH.resize(iter);
-        m_TinvH = m_TridiaginvH(m_TH); 
+        m_TinvH = m_TridiaginvH(m_TH);
 
         m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
         m_yH.resize( iter, 0.);
         m_cauchysqrtH.new_size(iter); //resize  vectors in sqrtODE solver
         m_cauchysqrtH.set_A(m_TinvH);
-        
-        m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated // y= T^(-1/2) e_1  
 
-        m_mcg.Ry(m_A, m_TH, m_A.inv_weights(), m_A.weights(), m_yH, x, m_b,  iter); // x =  R T^(-1/2) e_1  
+        m_cauchysqrtH(m_e1H, m_yH, m_EVmin, m_EVmax, m_iterCauchy); //(minEV, maxEV) estimated // y= T^(-1/2) e_1
+
+        m_mcg.Ry(m_A, m_TH, m_yH, x, m_b,  iter); // x =  R T^(-1/2) e_1
 
         m_mcg.set_iter(m_max_iter);
         return {iter,m_iterCauchy};
@@ -551,10 +547,10 @@ class KrylovSqrtCauchyinvert
     value_type m_epsCG,  m_eps, m_EVmin, m_EVmax;
     Container m_b;
     HVec m_e1H, m_yH;
-    dg::SqrtCauchyInt<HDiaMatrix, HVec> m_cauchysqrtH; 
+    dg::SqrtCauchyInt<HDiaMatrix, HVec> m_cauchysqrtH;
     dg::TridiagInvDF<HVec, HDiaMatrix, HCooMatrix> m_TridiaginvH;
     dg::MCG< Container > m_mcg;
-    HCooMatrix  m_TinvH;     
+    HCooMatrix  m_TinvH;
     HDiaMatrix m_TH;
 };
 

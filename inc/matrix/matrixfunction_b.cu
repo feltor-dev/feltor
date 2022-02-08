@@ -51,7 +51,7 @@ int main(int argc, char * argv[])
     double max_weights =   dg::blas1::reduce(w2d, 0., dg::AbsMax<double>() );
     double min_weights =  -dg::blas1::reduce(w2d, max_weights, dg::AbsMin<double>() );
     std::cout << "#   min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
-    double hxhy = 1.; //g.lx()*g.ly();///(g.n()*g.n()*g.Nx()*g.Ny());
+    double hxhy = 1.; // ((2pi)/lx )^2
 
     dg::SQRT<double> sqrt_f;
     dg::EXP<double> exp_f;
