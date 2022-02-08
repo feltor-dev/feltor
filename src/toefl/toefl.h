@@ -7,117 +7,29 @@
 namespace toefl
 {
 
-template<class Geometry, class Matrix, class container>
-struct Implicit
-{
-    Implicit( const Geometry& g, double nu):
-        nu_(nu), LaplacianM_perp( g,  dg::centered){ }
-    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
-    {
-        /* x[0] := N_e - 1
-         * x[2] := N_i - 1 
-         */
-        for( unsigned i=0; i<x.size(); i++)
-        {
-            //dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-            //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
-            //dg::blas1::axpby( -nu_, y[i], 0., y[i]);
-            dg::blas2::gemv( -nu_, LaplacianM_perp, x[i], 0., y[i]);
-        }
-    }
-    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
-    const container& weights(){return LaplacianM_perp.weights();}
-    const container& precond(){return LaplacianM_perp.precond();}
-
-  private:
-    double nu_;
-    container temp;
-    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
-};
-
 template< class Geometry,  class Matrix, class container >
 struct Explicit
 {
-    /**
-     * @brief Construct a Explicit solver object
-     *
-     * @param g The grid on which to operate
-     * @param p The parameters
-     */
     Explicit( const Geometry& g, const Parameters& p );
 
+    const std::array<container,2>& potential( ) const { return phi;}
 
-    /**
-     * @brief Returns phi and psi that belong to the last y in operator()
-     *
-     * In a multistep scheme this belongs to the point HEAD-1
-     * @return phi[0] is the electron and phi[1] the generalized ion potential
-     */
-    const std::vector<container>& potential( ) const { return phi;}
-
-    /**
-     * @brief Return the normalized negative laplacian used by this object
-     *
-     * @return cusp matrix
-     */
     dg::Elliptic<Geometry, Matrix, container>& laplacianM( ) { return laplaceM;}
 
-    /**
-     * @brief Return the Gamma operator used by this object
-     *
-     * @return Gamma operator
-     */
     dg::Helmholtz<Geometry, Matrix, container >&  gamma() {return multi_gamma1[0];}
 
-    /**
-     * @brief Compute the right-hand side of the toefl equations
-     *
-     * y[0] = N_e - 1, 
-     * y[1] = N_i - 1 || y[1] = Omega
-     * @param y input vector
-     * @param yp the rhs yp = f(y)
-     */
-    void operator()( double t, const std::vector<container>& y, std::vector<container>& yp);
-
-    /**
-     * @brief Return the mass of the last field in operator() in a global computation
-     *
-     * @return int exp(y[0]) dA
-     * @note undefined for a local computation
-     */
-    double mass( ) {return mass_;}
-    /**
-     * @brief Return the last integrated mass diffusion of operator() in a global computation
-     *
-     * @return int \nu \Delta (exp(y[0])-1)
-     * @note undefined for a local computation
-     */
-    double mass_diffusion( ) {return diff_;}
-    /**
-     * @brief Return the energy of the last field in operator() in a global computation
-     *
-     * @return integrated total energy in {ne, ni}
-     * @note undefined for a local computation
-     */
-    double energy( ) {return energy_;}
-    /**
-     * @brief Return the integrated energy diffusion of the last field in operator() in a global computation
-     *
-     * @return integrated total energy diffusion
-     * @note undefined for a local computation
-     */
-    double energy_diffusion( ){ return ediff_;}
+    void operator()( double t, const std::array<container,2>& y, std::array<container,2>& yp);
 
   private:
     //use chi and omega as helpers to compute square velocity in omega
     const container& compute_psi( double t, const container& potential);
-    const container& polarisation( double t, const std::vector<container>& y);
+    const container& polarisation( double t, const std::array<container,2>& y);
 
     container chi, omega;
-    const container binv; //magnetic field
+    const container m_binv; //magnetic field
 
-    std::vector<container> phi, dyphi, ype;
-    std::vector<container> dyy, lny, lapy;
+    std::array<container,2> phi, dyphi, ype;
+    std::array<container,2> dyy, lny, lapy;
     container gamma_n;
 
     //matrices and solvers
@@ -131,19 +43,14 @@ struct Explicit
     std::vector<container> multi_chi;
 
     const container w2d, one;
-    const double eps_pol, eps_gamma;
-    const double kappa, friction, nu, tau;
-    const std::string equations;
-    bool boussinesq;
-
-    double mass_, energy_, diff_, ediff_;
+    Parameters m_p;
 
 };
 
 template< class Geometry, class M, class container>
 Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Parameters& p ):
     chi( evaluate( dg::zero, grid)), omega(chi),
-    binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
+    m_binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)),
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
@@ -152,8 +59,6 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     arakawa( grid),
     multigrid( grid, 3),
     old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
-    w2d( dg::create::volume(grid)), one( dg::evaluate(dg::one, grid)),
-    eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
 {
     multi_chi= multigrid.project( chi);
     multi_pol.resize(3);
@@ -168,9 +73,9 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
 template< class G, class M, class container>
 const container& Explicit<G, M, container>::compute_psi( double t, const container& potential)
 {
-    if(equations == "gravity_local") return potential;
+    if(m_p.model == "gravity_local") return potential;
     //in gyrofluid invert Gamma operator
-    if( equations == "local" || equations == "global")
+    if( m_p.model == "local" || m_p.model == "global")
     {
         if (tau == 0.) {
             dg::blas1::axpby( 1.,potential, 0.,phi[1]); //chi = N_i - 1
@@ -186,15 +91,15 @@ const container& Explicit<G, M, container>::compute_psi( double t, const contain
     //compute (nabla phi)^2
     pol.variation(potential, omega);
     //compute psi
-    if(equations == "global")
+    if(m_p.model == "global")
     {
-        dg::blas1::pointwiseDot( -0.5, binv, binv, omega, 1., phi[1]);
+        dg::blas1::pointwiseDot( -0.5, m_binv, m_binv, omega, 1., phi[1]);
     }
-    else if ( equations == "drift_global")
+    else if ( m_p.model == "drift_global")
     {
-        dg::blas1::pointwiseDot( 0.5, binv, binv, omega, 0., phi[1]);
+        dg::blas1::pointwiseDot( 0.5, m_binv, m_binv, omega, 0., phi[1]);
     }
-    else if( equations == "gravity_global" )
+    else if( m_p.model == "gravity_global" )
         dg::blas1::axpby( 0.5, omega, 0., phi[1]);
     return phi[1];
 }
@@ -202,15 +107,15 @@ const container& Explicit<G, M, container>::compute_psi( double t, const contain
 
 //computes and modifies expy!!
 template<class G, class M, class container>
-const container& Explicit<G, M, container>::polarisation( double t, const std::vector<container>& y)
+const container& Explicit<G, M, container>::polarisation( double t, const std::array<container,2>& y)
 {
     //compute chi
-    if(equations == "global" )
+    if(m_p.model == "global" )
     {
         dg::assign( y[1], chi);
         dg::blas1::plus( chi, 1.);
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_i
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
+        dg::blas1::pointwiseDot( m_binv, chi, chi); //\chi = n_i
+        dg::blas1::pointwiseDot( m_binv, chi, chi); //\chi *= m_binv^2
         if( !boussinesq)
         {
             multigrid.project( chi, multi_chi);
@@ -219,7 +124,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
             //pol.set_chi( chi);
         }
     }
-    else if(equations == "gravity_global" )
+    else if(m_p.model == "gravity_global" )
     {
         dg::assign( y[0], chi);
         dg::blas1::plus( chi, 1.);
@@ -231,12 +136,12 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
             //pol.set_chi( chi);
         }
     }
-    else if( equations == "drift_global" )
+    else if( m_p.model == "drift_global" )
     {
         dg::assign( y[0], chi);
         dg::blas1::plus( chi, 1.);
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi = n_e
-        dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
+        dg::blas1::pointwiseDot( m_binv, chi, chi); //\chi = n_e
+        dg::blas1::pointwiseDot( m_binv, chi, chi); //\chi *= m_binv^2
         if( !boussinesq)
         {
             multigrid.project( chi, multi_chi);
@@ -246,7 +151,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
         }
     }
     //compute polarisation
-    if( equations == "local" || equations == "global")
+    if( m_p.model == "local" || m_p.model == "global")
     {
         if (tau == 0.) {
             dg::blas1::axpby( 1., y[1], 0.,gamma_n); //chi = N_i - 1
@@ -262,7 +167,7 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
     }
     else
         dg::blas1::axpby( -1. ,y[1], 0., omega);
-    if( equations == "global" || equations == "gravity_global" || equations == "drift_global")
+    if( m_p.model == "global" || m_p.model == "gravity_global" || m_p.model == "drift_global")
         if( boussinesq)
             dg::blas1::pointwiseDivide( omega, chi, omega);
     //invert
@@ -276,27 +181,24 @@ const container& Explicit<G, M, container>::polarisation( double t, const std::v
 }
 
 template< class G, class M, class container>
-void Explicit<G, M, container>::operator()( double t, const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<G, M, container>::operator()( double t, const std::array<container,2>& y, std::array<container,2>& yp)
 {
     //y[0] = N_e - 1
     //y[1] = N_i - 1 || y[1] = Omega
-    assert( y.size() == 2);
-    assert( y.size() == yp.size());
 
     phi[0] = polarisation( t, y);
     phi[1] = compute_psi( t, phi[0]);
 
     for( unsigned i=0; i<y.size(); i++)
     {
-        dg::blas1::transform( y[i], ype[i], dg::PLUS<double>(1.));
-        dg::blas1::transform( ype[i], lny[i], dg::LN<double>());
-        dg::blas2::symv( laplaceM, y[i], lapy[i]);
+        dg::blas1::transform( y[i], m_ype[i], dg::PLUS<double>(1.));
+        dg::blas2::symv( -1., m_laplaceM, y[i], 0., m_lapy[i]);
     }
 
     /////////////////////////update energetics, 2% of total time///////////////
     mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
     diff_ = nu*dg::blas2::dot( one, w2d, lapy[0]);
-    if(equations == "global")
+    if(m_p.model == "global")
     {
         double Ue = dg::blas2::dot( lny[0], w2d, ype[0]);
         double Ui = tau*dg::blas2::dot( lny[1], w2d, ype[1]);
@@ -310,7 +212,7 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    else if ( equations == "drift_global")
+    else if ( m_p.model == "drift_global")
     {
         double Se = dg::blas2::dot( lny[0], w2d, ype[0]);
         double Ephi = dg::blas2::dot( ype[0], w2d, phi[1]); //phi[1] equals 0.5*u_E^2
@@ -322,7 +224,7 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge - GeE - Gpsi);
     }
-    else if(equations == "gravity_global" || equations == "gravity_local")
+    else if(m_p.model == "gravity_global" || m_p.model == "gravity_local")
     {
         energy_ = 0.5*dg::blas2::dot( y[0], w2d, y[0]);
         double Ge = - dg::blas2::dot( y[0], w2d, lapy[0]);
@@ -343,7 +245,7 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
     ///////////////////////////////////////////////////////////////////////
-    if( equations == "gravity_global")
+    if( m_p.model == "gravity_global")
     {
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
@@ -352,7 +254,7 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
         dg::blas2::gemv( 1., arakawa.dy(), y[0], 1., yp[1]);
         return;
     }
-    else if( equations == "gravity_local")
+    else if( m_p.model == "gravity_local")
     {
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
@@ -360,14 +262,14 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
         dg::blas1::axpbypgz( -friction, y[1], -1., dyy[0], 1., yp[1]);
         return;
     }
-    else if( equations == "drift_global")
+    else if( m_p.model == "drift_global")
     {
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
         arakawa(y[0], phi[1], omega);
-        dg::blas1::pointwiseDot( binv, yp[0], yp[0]);
-        dg::blas1::pointwiseDot( binv, yp[1], yp[1]);
-        dg::blas1::pointwiseDot( 1., binv, omega, 1., yp[1]);
+        dg::blas1::pointwiseDot( m_binv, yp[0], yp[0]);
+        dg::blas1::pointwiseDot( m_binv, yp[1], yp[1]);
+        dg::blas1::pointwiseDot( 1., m_binv, omega, 1., yp[1]);
 
         dg::blas2::gemv( arakawa.dy(), phi[0], dyphi[0]);
         dg::blas2::gemv( arakawa.dy(), phi[1], dyphi[1]);
@@ -380,25 +282,25 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
     }
     else
     {
-        for( unsigned i=0; i<y.size(); i++)
+        for( unsigned i=0; i<2; i++)
         {
             arakawa( y[i], phi[i], yp[i]);
-            if(equations == "global") dg::blas1::pointwiseDot( binv, yp[i], yp[i]);
+            if(m_p.model == "global")
+                dg::blas1::pointwiseDot( m_binv, yp[i], yp[i]);
         }
         double _tau[2] = {-1., tau};
         //compute derivatives and exb compression
-        for( unsigned i=0; i<y.size(); i++)
+        for( unsigned i=0; i<2; i++)
         {
             dg::blas2::gemv( arakawa.dy(), y[i], dyy[i]);
             dg::blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
-            if(equations == "global") dg::blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
+            if(m_p.model == "global")
+                dg::blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
             dg::blas1::axpbypgz( kappa, dyphi[i], _tau[i]*kappa, dyy[i], 1., yp[i]);
         }
     }
 
-    //If you want to test an explicit timestepper:
-    //for( unsigned i=0; i<y.size(); i++)
-    //    dg::blas2::gemv( -nu, laplaceM, y[i], 1., yp[i]);
+    dg::blas1::axpby( nu, m_lapy, 1., yp);
     return;
 }
 

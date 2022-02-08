@@ -312,8 +312,8 @@ We are now ready to compile and run a simulation program
 ----
 cd path/to/feltor/src/toefl # or any other project in the src folder
 
-make toeflR device=gpu     # (compile for gpu, cpu or omp)
-./toeflR <inputfile.json>  # (behold a live simulation with glfw output on screen)
+make toefl device=gpu     # (compile for gpu, cpu or omp)
+./toefl <inputfile.json>  # (behold a live simulation with glfw output on screen)
 # or
 make toefl_hpc device=gpu  # (compile for gpu, cpu or omp)
 ./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
