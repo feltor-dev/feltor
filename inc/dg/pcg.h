@@ -30,6 +30,15 @@ namespace dg{
 * used to solve the left preconditioned system
 * \f[ PAx=Pb\f]
 *
+* @note Our implementation uses a stopping criterion based on the residual at iteration i
+*     \f$ || r_i ||_W = ||Ax_i-b||_W < \epsilon( ||b||_W + C) \f$. However, the real error is bound by
+*     \f[ \frac{ ||e_i||_W}{||x||_W} \leq \kappa(PA) \frac{||r_i||_W}{||b||_W} \f]
+*     Thus, if the condition number \f$ \kappa\f$ is large the real error may
+*     still be large even if the residual error is small
+*     see <a href="https://doi.org/10.1023/A:1021961616621"> Ashby et al., The
+*     Role of the Inner Product in Stopping Criteria for Conjugate Gradient
+*     Iterations (2001) </a>
+*
 * @ingroup invert
 *
 * @sa This implements the PCG algorithm (applied to \f$(WA)\f$ as given in

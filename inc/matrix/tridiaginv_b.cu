@@ -111,10 +111,10 @@ int main()
         for( unsigned j=0; j<size; j++) //column index
         {
             Tinv_sol.row_indices[i*size+j]    = i;
-            Tinv_sol.column_indices[i*size+j] = j; 
+            Tinv_sol.column_indices[i*size+j] = j;
             Tsyminv_sol.row_indices[i*size+j]    = i;
-            Tsyminv_sol.column_indices[i*size+j] = j; 
-            if (i>= j) 
+            Tsyminv_sol.column_indices[i*size+j] = j;
+            if (i>= j)
             {
                 Tinv_sol.values[i*size+j] = (2.0+s)/(1.0+s)*mu(s,i+1,size+1)*mu(s,size+1-(j+1),size+1)/mu(s,0,size+1);
                 Tsyminv_sol.values[i*size+j] = (j+1.0)/(i+1.0);
@@ -164,7 +164,9 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_symsol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_symsol,x_symsol)) << "\n";
-    std::cout <<  "    #error_rel in T_{m,1}: " << abs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/abs(Tsyminv_sol.values[size-1]) << "\n";
+    std::cout <<  "    #error_rel in T_{m,1}: " << fabs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/fabs(Tsyminv_sol.values[size-1]) << "\n";
+    if(  size < 150)
+    {
     std::cout << "InvtridiagD(v_sym):" << std::endl;
     t.tic();
     tridiaginvD(a_sym,b_sym,c_sym, Tsyminv);
@@ -181,7 +183,22 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_symsol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_symsol,x_symsol)) << "\n";
-    std::cout <<  "    #error_rel in T_{m,1}: " << abs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/abs(Tsyminv_sol.values[size-1]) << "\n";
+    std::cout <<  "    #error_rel in T_{m,1}: " << fabs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/fabs(Tsyminv_sol.values[size-1]) << "\n";
+    }
+    std::cout << "# Test Thomas algorithm\n";
+    t.tic();
+    double T1m = dg::compute_Tinv_m1(Tsym, size);
+    t.toc();
+    std::cout <<  "    # time: "<< t.diff()<<"s \n";
+    dg::HVec e1( size, 0.), em ( e1), y(e1);
+    e1[0] = 1.;
+    em[size-1] = 1.;
+    dg::blas2::symv( Tsyminv, e1, y);
+    double T1mana = dg::blas1::dot( em, y);
+    //std::cout << "    # result "<<T1mana<<" "<<T1m<<"\n";
+    std::cout << "    # error_rel "<<fabs(T1mana - T1m)/T1m<<"\n";
+
+
 
     std::cout << "\n####Compute inverse of non-symmetric tridiagonal matrix\n";
     std::cout << "lGMRES:" << std::endl;
@@ -217,6 +234,8 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_sol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_sol,x_sol)) << "\n";
+    if( size < 150)
+    {
     std::cout << "InvtridiagD(v):" << std::endl;
     t.tic();
     tridiaginvD(a,b,c,Tinv);
@@ -233,6 +252,16 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_sol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_sol,x_sol)) << "\n";
+    }
+
+    std::cout << "# Test Thomas algorithm\n";
+    t.tic();
+    T1m = dg::compute_Tinv_m1(T, size);
+    t.toc();
+    std::cout <<  "    # time: "<< t.diff()<<"s \n";
+    dg::blas2::symv( Tinv, e1, y);
+    T1mana = dg::blas1::dot( em, y);
+    std::cout << "    # error_rel "<<fabs(T1mana - T1m)/T1m<<"\n";
 
     return 0;
 }
