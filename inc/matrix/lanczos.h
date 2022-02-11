@@ -16,7 +16,7 @@ namespace mat{
 
 /**
 * @brief Tridiagonalize \f$A\f$ and approximate \f$f(A)b \approx |b|_W V f(T) e_1\f$
-*. A is self-adjoint in the weights \f$ W\f$
+*  via Lanczos algorithm. A is self-adjoint in the weights \f$ W\f$
 *
 * @ingroup matrixapproximation
 *
@@ -128,7 +128,7 @@ class Lanczos
      * @param b The initial vector that starts orthogonalization
      * @param weights Weights that define the scalar product in which \c A is
      *  self-adjoint and in which the error norm is computed.
-     * @param eps accuracy of residual
+     * @param eps relative accuracy of residual
      * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
      * @param res_fac factor \f$ \tau\f$ that is multiplied to the norm of the
      * residual.  Used to account for specific matrix function and operator in
@@ -233,8 +233,10 @@ class Lanczos
 };
 
 /*!
- * @brief Class for approximating \f$x = R f(\tilde T)\vec e_1 \approx f(A) b \f$ via exploiting a Krylov projection achieved by the CG method
+* @brief Tridiagonalize \f$A\f$ and approximate \f$f(A)b \approx R f(\tilde T) e_1\f$
+*  via CG algorithm. A is self-adjoint in the weights \f$ W\f$
  *
+ * A is self-adjoint in the weights \f$ W\f$
  * @ingroup matrixapproximation
  *
  * This class is based on the approach of the paper <a href="https://doi.org/10.1016/0377-0427(87)90020-3)" > An iterative solution method for solving f(A)x = b, using Krylov subspace information obtained for the symmetric positive definite matrix A</a> by H. A. Van Der Vorst
@@ -329,16 +331,13 @@ class MCG
         }
     }
     /**
-     * @brief Solve the system \f$A*x = b \f$ for x using CG method
+     * @brief Tridiagonalize the system \f$ A\vec b\f$ using CG
      *
      * @param A A self-adjoint, positive definit matrix
-     * @param x Contains the initial value (\f$x\equiv 0\f$ if used for
-     * tridiagonalization) and the matrix approximation \f$x = A^{-1} b\f$ as
-     * output if \c compute_x is set to true
      * @param b The right hand side vector.
      * @param weights Weights that define the scalar product in which \c A is
      *  self-adjoint and in which the error norm is computed.
-     * @param eps The relative error to be respected
+     * @param eps relative accuracy of residual
      * @param nrmb_correction the absolute error \c C in units of \c eps to be
      *  respected
      * @param res_fac factor that is multiplied to the norm of the residual.

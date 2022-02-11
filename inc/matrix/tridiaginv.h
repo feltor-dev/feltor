@@ -10,6 +10,8 @@
 namespace dg{
 namespace mat{
 
+///@addtogroup matrixinvert
+///@{
 
 /**
  * @brief Computes the value of \f$ (T^{-1})_{m1} = \langle \vec e_m, T^{-1}\vec e_1\rangle\f$ via a Thomas algorithm
@@ -46,7 +48,6 @@ value_type compute_Tinv_m1( const cusp::dia_matrix<int, value_type,
 *  Is unstable for matrix size of roughly > 150. Fails for certain
 *  tridiagonal matrix forms.
 * @attention Not tested thoroughly!
-* @ingroup matrixinvert
 * @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
 * @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
 * @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
@@ -219,12 +220,11 @@ class TridiagInvHMGTI
 
 
 /**
-* @brief Compute the inverse of a general tridiagonal matrix. The algorithm does not rely on the determinant.
+* @brief USE THIS ONE Compute the inverse of a general tridiagonal matrix. The algorithm does not rely on the determinant.
 * @note For some special cases division by zero occurs (can be fixed if necessary cf. 2nd paper)
 *  This is the algorihm of "On the inverses of general tridiagonal matrices" by Hou-Biao Li, Ting-Zhu Huang, Xing-Ping Liu, Hong Li
 *  Appears to be the same as the algorithm in "ON AN INVERSE FORMULA OF A TRIDIAGONAL MATRIX" by Tomoyuki Sugimoto
 *
-* @ingroup matrixinvert
 * @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
 * @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
 * @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
@@ -389,7 +389,6 @@ class TridiagInvDF
 *  it performs extremely fast if it stays below this value.  This is the
 *  algorihm of "Inversion of a Tridiagonal Jacobi Matrix" by Riaz A. Usmani
 *
-* @ingroup matrixinvert
 * @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
 * @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
 * @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
@@ -576,6 +575,7 @@ cusp::coo_matrix<int,value_type,cusp::host_memory> invert(
     using HVec = dg::HVec;
     return TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T);
 }
+///@}
 
 } // namespace mat
 } // namespace dg

@@ -3,7 +3,7 @@
 #include <cusp/transpose.h>
 #include <cusp/array1d.h>
 #include <cusp/array2d.h>
-#include <cusp/print.h>
+//#include <cusp/print.h>
 
 #include <cusp/lapack/lapack.h>
 #include "dg/algorithm.h"
@@ -11,17 +11,22 @@
 #include "functors.h"
 #include "lanczos.h"
 
-namespace dg
-{
+namespace dg {
+namespace mat {
+
 /*!
- * @brief Shortcut for \f$b \approx f(A) x  \f$ solve via exploiting first a Krylov projection achieved by the M-lanczos method and a matrix function computation via eigen-decomposition
+ * @brief Shortcut for \f$x \approx f(A) b  \f$ solve via exploiting first a Krylov projection achieved by the M-Lanczos method and a matrix function computation via Eigen-decomposition
  *
  * @ingroup matrixfunctionapproximation
  *
- * @note The approximation relies on Projection \f$b \approx f(A) x \approx  ||x||_M V f(T) e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the Lanczos solve and \f$e_1\f$ is the normalized unit vector. The vector \f$f(T) e_1\f$ is computed via eigen decomposition
+ * The approximation relies on Projection
+ * \f$x \approx f(A) b \approx ||x||_M V f(T) e_1\f$,
+ * where \f$T\f$ and \f$V\f$ are the tridiagonal and orthogonal matrix of the
+ * M-Lanczos solve and \f$e_1\f$ is the normalized unit vector. The vector
+ * \f$f(T) e_1\f$ is computed via Eigen decomposition of \f$ T \f$.
  */
 template< class Container >
-struct KrylovFuncEigenSolve
+struct LanczosFuncEigenSolve
 {
    public:
     using value_type = dg::get_value_type<Container>;
@@ -31,16 +36,15 @@ struct KrylovFuncEigenSolve
     using HArray1d = cusp::array1d< value_type, cusp::host_memory>;
     using HVec = dg::HVec;
     ///@brief empty object ( no memory allocation)
-    KrylovFuncEigenSolve() {}
+    LanczosFuncEigenSolve() {}
     /**
-     * @brief Construct KrylovFuncEigenSolve
+     * @brief Construct LanczosFuncEigenSolve
      *
      * @param copyable a copyable container
      * @param max_iterations Max iterations of Lanczos method
      */
-    KrylovFuncEigenSolve( const Container& copyable, unsigned max_iterations)
+    LanczosFuncEigenSolve( const Container& copyable, unsigned max_iterations)
     {
-        m_max_iter = max_iterations;
         m_e1H.assign(max_iterations, 0.);
         m_e1H[0] = 1.;
         m_yH.assign(max_iterations, 1.);
@@ -51,53 +55,49 @@ struct KrylovFuncEigenSolve
     void construct( Params&& ...ps)
     {
         //construct and swap
-        *this = KrylovFuncEigenSolve( std::forward<Params>( ps)...);
+        *this = LanczosFuncEigenSolve( std::forward<Params>( ps)...);
     }
     /**
-     * @brief Compute \f$b \approx f(A) x \approx  ||x||_M V f(T) e_1\f$ via M-Lanczos and eigendecomposition
+     * @brief Compute \f$x \approx f(A) b \approx  ||x||_M V f(T) e_1\f$ via M-Lanczos and Eigen decomposition
      *
-     * @param x input vector
-     * @param b output vector. Is approximating \f$b \approx f(A) x  \approx  ||x||_M V f(T) e_1\f$
-     * @param f the matrix function (e.g. dg::SQRT<double>)
+     * @param b input vector
+     * @param x output vector
+     * @param f the matrix function (e.g. dg::SQRT<double> or dg::EXP<double>)
      * @param A self-adjoint and semi-positive definit matrix
      * @param weights weights
-     * @param eps accuracy of M-Lanczos method
+     * @param eps relative accuracy of M-Lanczos method
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be
+     *  respected
      * @param res_fac residual factor for stopping criterium of M-Lanczos method
      *
      * @return number of iterations of M-Lanczos routine
      */
-    template < class MatrixType, class ContainerType0, class ContainerType1 , class ContainerType2, class UnaryOp>
-    unsigned operator()(const ContainerType0& x, ContainerType1& b, UnaryOp f,  MatrixType&& A, const ContainerType2& weights, value_type eps, value_type res_fac )
+    template < class MatrixType, class ContainerType0, class ContainerType1,
+             class ContainerType2, class UnaryOp>
+    unsigned operator()(ContainerType0& x, UnaryOp f,
+            MatrixType&& A, const ContainerType1& b,
+            const ContainerType2& weights, value_type eps,
+            value_type nrmb_correction, value_type res_fac )
     {
-        value_type xnorm = sqrt(dg::blas2::dot(weights, x));
-        if( xnorm == 0)
+        value_type bnorm = sqrt(dg::blas2::dot(b, weights, b));
+        if( bnorm == 0)
         {
-            dg::blas1::copy( x,b);
+            dg::blas1::copy( b, x);
             return 0;
         }
-        m_TH = m_lanczos(std::forward<MatrixType>(A), x, b, weights, eps, false,
-                res_fac);
-
+        m_TH = m_lanczos(std::forward<MatrixType>(A), b, weights, eps,
+                nrmb_correction, res_fac);
         unsigned iter = m_lanczos.get_iter();
         //resize
-        m_alpha.resize(iter);
-        m_beta.resize(iter-1);
         m_evals.resize(iter);
         m_evecs.resize(iter,iter);
         m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
         m_yH.resize(iter);
-        //fill diagonal entries
-        for(unsigned i = 0; i<iter; i++)
-        {
-            m_alpha[i] = m_TH.values(i,1);
-            if (i<iter-1) m_beta[i]  = m_TH.values(i,2);
-        }
-        //Compute eigendecomposition
-        cusp::lapack::stev(m_alpha, m_beta, m_evals, m_evecs);
-        //MW ?? It is quite weird that the subdiagonal entries start at 0
-        //even though lapack docu says otherwise
-        //cusp::lapack::stev(m_TH.values.column(1), m_TH.values.column(0), m_evals, m_evecs);
+        //Compute Eigendecomposition
+        //MW !! the subdiagonal entries start at 0 in lapack, the n-th element
+        // is used as workspace (from lapack docu)
+        cusp::lapack::stev(m_TH.values.column(1), m_TH.values.column(2), m_evals, m_evecs);
         //for( unsigned u=0; u<iter; u++)
         //    std::cout << u << " "<<m_evals[u]<<std::endl;
 
@@ -106,37 +106,47 @@ struct KrylovFuncEigenSolve
         cusp::transpose(m_EH, m_EHt);
         //Compute f(T) e1 = E f(Lambda) E^t e1
         dg::blas2::symv(m_EHt, m_e1H, m_yH);
-        dg::blas1::transform(m_evals, m_e1H, f);
+        dg::blas1::transform(m_evals, m_e1H, [f] (double x){
+            try{
+                return f(x);
+            }
+            catch(boost::exception& e) //catch boost overflow error
+            {
+                return 0.;
+            }
+        });
         dg::blas1::pointwiseDot(m_e1H, m_yH, m_e1H);
         dg::blas2::symv(m_EH, m_e1H, m_yH);
-        //Compute |x|_M V f(T) e1
-        m_lanczos.normMxVy(std::forward<MatrixType>(A), m_TH, m_yH,  b, x,
-                xnorm, iter);
+        //Compute x = |b|_M V f(T) e1
+        m_lanczos.normMbVy(std::forward<MatrixType>(A), m_TH, m_yH, x, b,
+                bnorm);
 
-        //reset max iterations if () operator is called again
-        m_lanczos.set_iter(m_max_iter);
         return iter;
     }
   private:
-    unsigned m_max_iter;
     HVec m_e1H, m_yH;
     HDiaMatrix m_TH;
     HCooMatrix m_EH, m_EHt;
     HArray2d m_evecs;
-    HArray1d m_alpha, m_beta, m_evals;
-    dg::Lanczos< Container> m_lanczos;
+    HArray1d m_evals;
+    dg::mat::Lanczos< Container> m_lanczos;
 };
 
 
 /*!
- * @brief Shortcut for \f$x \approx \sqrt{A}^{-1} b  \f$ solve via exploiting first a Krylov projection achieved by the M-CG method and and secondly a sqrt cauchy solve
+ * @brief Shortcut for \f$x \approx f(A) b  \f$ solve via exploiting first a Krylov projection achieved by the M-CG method and a matrix function computation via Eigen-decomposition
  *
  * @ingroup matrixfunctionapproximation
  *
- * @note The approximation relies on Projection \f$x = f(A)^{-1} b  \approx  R f(T)^{-1} e_1\f$, where \f$T\f$ and \f$V\f$ is the tridiagonal and orthogonal matrix of the MCG solve and \f$e_1\f$ is the normalized unit vector. The vector \f$f(T)^{-1} e_1\f$ is computed via the eigen decomposition and similarity transform of T.
+ * The approximation relies on Projection
+ * \f$x = f(A) b  \approx  R f(\tilde T)^{-1} e_1\f$,
+ * where \f$\tilde T\f$ and \f$R\f$ are the tridiagonal and orthogonal matrix
+ * of the M-CG solve and \f$e_1\f$ is the normalized unit vector. The vector
+ * \f$f(\tilde T) e_1\f$ is computed via the Eigen decomposition and similarity
+ * transform of \f$ \tilde T\f$.
  */
 template<class Container>
-class KrylovFuncEigenInvert
+class MCGFuncEigenSolve
 {
   public:
     using value_type = dg::get_value_type<Container>;
@@ -146,17 +156,15 @@ class KrylovFuncEigenInvert
     using HArray1d = cusp::array1d< value_type, cusp::host_memory>;
     using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
-    KrylovFuncEigenInvert(){}
+    MCGFuncEigenSolve(){}
     /**
-     * @brief Construct KrylovFuncEigenInvert
+     * @brief Construct MCGFuncEigenSolve
      *
      * @param copyable a copyable container
      * @param max_iterations Max iterations of Lanczos method
      */
-    KrylovFuncEigenInvert( const Container& copyable, unsigned max_iterations)
+    MCGFuncEigenSolve( const Container& copyable, unsigned max_iterations)
     {
-        m_max_iter = max_iterations;
-        m_b = copyable;
         m_e1H.assign(max_iterations, 0.);
         m_e1H[0] = 1.;
         m_yH.assign(max_iterations, 1.);
@@ -167,34 +175,38 @@ class KrylovFuncEigenInvert
     void construct( Params&& ...ps)
     {
         //construct and swap
-        *this = KrylovFuncEigenInvert( std::forward<Params>( ps)...);
+        *this = MCGFuncEigenSolve( std::forward<Params>( ps)...);
     }
     /**
-     * @brief Solve the system \f$f(A)*x = b \f$ for x using M-CG method and eigen decomposition
+     * @brief Compute \f$x \approx f(A)*b \f$ via M-CG method and Eigen decomposition
      *
-     * @param x output vector
      * @param b input vector
+     * @param x output vector
      * @param f the matrix function (e.g. dg::SQRT<double> or dg::EXP<double>)
      * @param A self-adjoint and semi-positive definit matrix
      * @param weights weights
-     * @param eps accuracy of M-CG method
+     * @param eps relative accuracy of M-CG method
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be
+     *  respected
      * @param res_fac residual factor for stopping criterium of M-CG method
      *
      * @return number of iterations of M-CG routine
      */
-    template < class MatrixType, class ContainerType0, class ContainerType1 , class ContainerType2, class UnaryOp>
-    unsigned operator()(ContainerType0& x, const ContainerType1& b, UnaryOp f,  MatrixType&& A, const ContainerType2& weights, value_type eps, value_type res_fac )
+    template < class MatrixType, class ContainerType0, class ContainerType1 ,
+             class ContainerType2, class UnaryOp>
+    unsigned operator()(ContainerType0& x, UnaryOp f,
+            MatrixType&& A, const ContainerType1& b,
+            const ContainerType2& weights, value_type eps,
+            value_type nrmb_correction, value_type res_fac )
     {
-        if( sqrt(dg::blas2::dot(weights, b)) == 0)
+        if( sqrt(dg::blas2::dot(b, weights, b)) == 0)
         {
             dg::blas1::copy( b, x);
             return 0;
         }
-        //multiply weights
-        dg::blas1::copy( b, m_b);
         //Compute x (with initODE with gemres replacing cg invert)
-        m_TH = m_mcg(std::forward<MatrixType>(A), x, m_b, weights, eps, 1.,
-                false, res_fac);
+        m_TH = m_mcg(std::forward<MatrixType>(A), b, weights, eps,
+                nrmb_correction, res_fac);
         unsigned iter = m_mcg.get_iter();
         //resize
         m_alpha.resize(iter);
@@ -216,42 +228,41 @@ class KrylovFuncEigenInvert
             }
             if (i>0) m_delta[i] = m_delta[i-1]*sqrt(m_TH.values(i,0)/m_TH.values(i-1,2));
         }
-        //Compute eigendecomposition
+        //Compute Eigendecomposition
         cusp::lapack::stev(m_alpha, m_beta, m_evals, m_evecs);
         //convert to COO matrix format
 //         cusp::print(m_evals);
         cusp::convert(m_evecs, m_EH);
         cusp::transpose(m_EH, m_EHt);
-        //Compute f(T)^{-1} e1 = D E f(Lambda)^{-1} E^t D^{-1} e1
+        //Compute f(T) e1 = D E f(Lambda) E^t D^{-1} e1
         dg::blas1::pointwiseDivide(m_e1H, m_delta, m_e1H);
         dg::blas2::symv(m_EHt, m_e1H, m_yH);
         dg::blas1::transform(m_evals, m_e1H, [f] (double x){
             try{
-                return 1./f(x);
+                return f(x);
             }
             catch(boost::exception& e) //catch boost overflow error
             {
                 return 0.;
             }
-        });  //f(Lambda)^{-1}
+        });
         dg::blas1::pointwiseDot(m_e1H, m_yH, m_e1H);
         dg::blas2::symv(m_EH, m_e1H, m_yH);
         dg::blas1::pointwiseDot(m_yH, m_delta, m_yH);
+        //Compute x = R f(T) e_1
+        m_mcg.Ry(std::forward<MatrixType>(A), m_TH, m_yH, x, b);
 
-        m_mcg.Ry(std::forward<MatrixType>(A), m_TH, m_yH, x, m_b, iter); // x =  R f(T)^{-1} e_1
-
-        m_mcg.set_iter(m_max_iter);
         return iter;
     }
   private:
-    unsigned m_max_iter;
-    Container m_b;
     HVec m_e1H, m_yH;
     HDiaMatrix m_TH;
     HCooMatrix m_EH, m_EHt;
     HArray2d m_evecs;
     HArray1d m_alpha, m_beta, m_delta, m_evals;
-    dg::MCG< Container > m_mcg;
+    dg::mat::MCG< Container > m_mcg;
 
 };
+
+} //namespace mat
 } //namespace dg

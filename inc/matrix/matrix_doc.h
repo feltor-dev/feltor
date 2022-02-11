@@ -5,11 +5,10 @@
  * @defgroup matrixnumerical0 Level 2: Basic numerical algorithms
  * @{
  *     @defgroup matrixinvert Inversion of tridiagonal matrices
- *     @brief \f$T^{-1}\f$
- *     @defgroup matrixapproximation Matrix approximation
- *     @brief \f$ b = f(A)x \f$ \c dg::Lanczos or \f$ x=f(A^{-1}) b \f$ \c dg::MCG
- *
- *      @defgroup matrixfunctionapproximation Matrix-function approximation
+ *      @brief \f$T^{-1}\f$
+ *     @defgroup matrixapproximation Matrix tridiagonalization
+ *      @brief \f$ b = f(A)x \f$ using \c dg::mat::Lanczos or \c dg::mat::MCG
+ *     @defgroup matrixfunctionapproximation Matrix-function approximation
  *      @brief \f$ b \approx f(A)x \f$
  * @}
  *
