@@ -8,6 +8,7 @@
 */
 
 namespace dg{
+namespace mat{
 
 
 /**
@@ -553,7 +554,7 @@ void invert(const cusp::dia_matrix<int,value_type,cusp::host_memory>& T,
     using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
     using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
     using HVec = dg::HVec;
-    return dg::TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T, Tinv);
+    return TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T, Tinv);
 }
 /**
  * @brief Invert a tridiagonal matrix
@@ -573,7 +574,8 @@ cusp::coo_matrix<int,value_type,cusp::host_memory> invert(
     using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
     using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
     using HVec = dg::HVec;
-    return dg::TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T);
+    return TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T);
 }
 
+} // namespace mat
 } // namespace dg

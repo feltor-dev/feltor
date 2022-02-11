@@ -12,6 +12,7 @@
 */
 
 namespace dg{
+namespace mat{
 
 /**
 * @brief Tridiagonalize \f$A\f$ and approximate \f$f(A)b \approx |b|_W V f(T) e_1\f$
@@ -447,5 +448,6 @@ class MCG
     value_type m_bnorm = 0.;
 };
 
+} //namespace mat
 } //namespace dg
 

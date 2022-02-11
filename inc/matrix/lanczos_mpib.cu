@@ -9,17 +9,15 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-const double alpha = -0.5;
-const double m = 4.;
-const double n = 4.;
+const double alpha = -1;
+const double m = 1.;
+const double n = 1.;
 
 double lhs( double x, double y) {return sin(m*x)*sin(n*y);}
 double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 
 using Matrix = dg::MDMatrix;
 using Container = dg::MDVec;
-using HDiaMatrix = cusp::dia_matrix<int, double, cusp::host_memory>;
-using HCooMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 
 int main(int argc, char * argv[])
 {
@@ -54,59 +52,53 @@ int main(int argc, char * argv[])
     const Container w2d = dg::create::weights( grid);
 
     Container x = dg::evaluate( lhs, grid), b(x), error(x), xexac(x);
-    Container bexac = dg::evaluate( rhs, grid);
     dg::Helmholtz<dg::aRealMPIGeometry2d<double>, Matrix, Container> A( grid, alpha, dg::centered);
     {
         t.tic();
-        dg::Lanczos< Container > lanczos(x, max_iter);
+        dg::mat::Lanczos< Container > lanczos(x, max_iter);
         lanczos.set_verbose(true);
         t.toc();
         if(rank==0) std::cout << "# Lanczos creation took "<< t.diff()<<"s   \n";
 
-        HDiaMatrix T;
-        if(rank==0) std::cout << "Lanczos:\n";
-
+        if(rank==0) std::cout << "\nM-Lanczos-T:\n";
+        b = dg::evaluate( lhs, grid);
+        xexac = dg::evaluate( rhs, grid);
         t.tic();
-        T = lanczos( A, x, b, 1., eps, true); 
-        t.toc();
-
-        if(rank==0) std::cout << "    iter: "<< lanczos.get_iter() << "\n";
-        if(rank==0) std::cout << "    time: "<< t.diff()<<"s \n";
-        dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
-        if(rank==0) std::cout << "    # Relative error between b=||x||_2 V^T T e_1 and b: \n";   
-        double temp = dg::blas2::dot( w2d, error)/dg::blas2::dot( w2d, bexac);
-        if(rank==0) std::cout << "    error: " << sqrt(temp) << " \n";   
-
-        if(rank==0) std::cout << "\nM-Lanczos:\n";
-        x = dg::evaluate( lhs, grid);
-        t.tic();
-        T = lanczos(A, x, b, w2d, eps, true); 
+        auto T = lanczos(A, b, w2d, eps);
+        auto e1 = lanczos.make_e1(), y( e1);
+        dg::blas2::symv( T, e1, y);
+        lanczos.normMbVy( A, T, y, x, b, lanczos.get_bnorm());
         t.toc();
         if(rank==0) std::cout << "    iter: "<< lanczos.get_iter() << "\n";
         if(rank==0) std::cout << "    time: "<< t.diff()<<"s \n";
-        dg::blas1::axpby(-1.0, bexac, 1.0, b,error);
-        if(rank==0) std::cout << "    # Relative error between b=||x||_M V^T T e_1 and b: \n";  
-        temp = dg::blas2::dot( w2d, error)/dg::blas2::dot( w2d, bexac);
-        if(rank==0) std::cout << "    error: " << sqrt(temp) << " \n";   
+        dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
+        if(rank==0) std::cout << "    # Relative error between b=||x||_M V^T T e_1 and b: \n";
+        double temp = dg::blas2::dot( w2d, error)/dg::blas2::dot( w2d, xexac);
+        if(rank==0) std::cout << "    error: " << sqrt(temp) << " \n";
 
-    } 
+    }
     {
         if(rank==0) std::cout << "\nM-CG: \n";
         t.tic();
-        dg::MCG<Container> mcg(x, max_iter);
+        dg::mat::MCG<Container> mcg(x, max_iter);
         t.toc();
         if(rank==0) std::cout << "#    M-CG creation took "<< t.diff()<<"s   \n";
         dg::blas1::scal(x, 0.0); //initialize with zero
+        b = dg::evaluate( rhs, grid);
+        xexac = dg::evaluate( lhs, grid);
         t.tic();
-        HDiaMatrix T = mcg(A, x, b, w2d, eps, 1., true); 
+        auto T = mcg(A, b, w2d, eps);
+        auto e1 = mcg.make_e1(), y( e1);
+        dg::blas2::symv( dg::mat::invert(T) , e1, y);
+        mcg.Ry( A, T, y, x, b);
         t.toc();
 
         dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
         if(rank==0) std::cout << "    iter: "<< mcg.get_iter() << "\n";
         if(rank==0) std::cout << "    time: "<< t.diff()<<"s \n";
         if(rank==0) std::cout << "    # Relative error between x= R T^{-1} e_1 and x: \n";
-        double temp = dg::blas2::dot( w2d, error)/dg::blas2::dot( w2d, bexac);
-        if(rank==0) std::cout << "    error: " << sqrt(temp) << " \n";   
+        double temp = dg::blas2::dot( w2d, error)/dg::blas2::dot( w2d, xexac);
+        if(rank==0) std::cout << "    error: " << sqrt(temp) << " \n";
     }
 
     MPI_Finalize();

@@ -73,11 +73,11 @@ int main()
     t.toc();
     std::cout << "#Construction of BICGSTABl took "<< t.diff()<<"s \n";
     t.tic();
-    dg::TridiagInvDF<Container, DiaMatrix, CooMatrix> tridiaginvDF(a);
+    dg::mat::TridiagInvDF<Container, DiaMatrix, CooMatrix> tridiaginvDF(a);
     t.toc();
     std::cout << "#Construction of Tridiagonal inversion DF routine took "<< t.diff()<<"s \n";
     t.tic();
-    dg::TridiagInvD<Container, DiaMatrix, CooMatrix> tridiaginvD(a);
+    dg::mat::TridiagInvD<Container, DiaMatrix, CooMatrix> tridiaginvD(a);
     t.toc();
     std::cout << "#Construction of Tridiagonal inversion D routine took "<< t.diff()<<"s \n";
 
@@ -187,7 +187,7 @@ int main()
     }
     std::cout << "# Test Thomas algorithm\n";
     t.tic();
-    double T1m = dg::compute_Tinv_m1(Tsym, size);
+    double T1m = dg::mat::compute_Tinv_m1(Tsym, size);
     t.toc();
     std::cout <<  "    # time: "<< t.diff()<<"s \n";
     dg::HVec e1( size, 0.), em ( e1), y(e1);
@@ -256,7 +256,7 @@ int main()
 
     std::cout << "# Test Thomas algorithm\n";
     t.tic();
-    T1m = dg::compute_Tinv_m1(T, size);
+    T1m = dg::mat::compute_Tinv_m1(T, size);
     t.toc();
     std::cout <<  "    # time: "<< t.diff()<<"s \n";
     dg::blas2::symv( Tinv, e1, y);
