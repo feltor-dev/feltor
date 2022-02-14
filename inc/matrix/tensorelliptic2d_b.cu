@@ -76,7 +76,7 @@ int main(int argc, char * argv[])
 
     t.tic();
     const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
-    std::vector<dg::TensorElliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> > multi_tensorelliptic( stages);
+    std::vector<dg::mat::TensorElliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> > multi_tensorelliptic( stages);
     for(unsigned u=0; u<stages; u++)
     {
         multi_tensorelliptic[u].construct( multigrid.grid(u), dg::centered, jfactor);
@@ -88,7 +88,7 @@ int main(int argc, char * argv[])
 
     std::cout << "# Inverting tensor elliptic operator\n";
     t.tic();
-    std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, b,{eps, eps*eps_fac, eps*eps_fac});
+    std::vector<unsigned> number = multigrid.solve(multi_tensorelliptic, x, b,{eps, eps*eps_fac, eps*eps_fac});
     t.toc();
 
     std::cout << "time: "<< t.diff() <<"s\n";

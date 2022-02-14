@@ -344,7 +344,7 @@ class MCG
      *  Used to account for specific matrix function and operator in the
      *  convergence criterium
      *
-     * @return The tridiagonal matrix \f$ T\f$
+     * @return The tridiagonal matrix \f$ T\f$ with size \c get_iter()
      * @note So far only ordinary convergence criterium of CG method, in
      * particular for \f$ A x  = b \f$. If used for matrix function
      * computation, \f$ f(A) x  = b \f$, the parameter eps should be

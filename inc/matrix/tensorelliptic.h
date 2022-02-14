@@ -9,6 +9,7 @@
  * @brief contains special differential operators
  */
 namespace dg{
+namespace mat{
 
 /**
  * @brief Matrix class that represents the arbitrary polarization operator
@@ -229,15 +230,16 @@ struct TensorElliptic
      Container m_sigma, m_vol;
      value_type m_jfactor;
 };
+
+
+} //namespace mat
 ///@cond
 template< class G, class M, class V>
-struct TensorTraits< TensorElliptic<G, M, V> >
+struct TensorTraits< mat::TensorElliptic<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 ///@endcond
-
-
 } //namespace dg
 

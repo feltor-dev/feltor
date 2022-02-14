@@ -544,7 +544,7 @@ class TridiagInvD
  * @endcode
  * @tparam value_type real type
  * @param T
- * @param Tinv
+ * @param Tinv (gets resized if necessary)
  */
 template<class value_type>
 void invert(const cusp::dia_matrix<int,value_type,cusp::host_memory>& T,
