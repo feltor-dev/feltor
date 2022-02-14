@@ -116,6 +116,17 @@ class Lanczos
     ///@param verbose If true, additional output will be written to \c std::cout during solution
     void set_verbose( bool verbose){ m_verbose = verbose;}
 
+    /**
+     * @brief Return the vector \f$ \vec e_1\f$ with size \c get_iter()
+     *
+     * @param iter size
+     * @return e_1
+     */
+    HVec make_e1( ) {
+        HVec e1H(m_iter, 0.);
+        e1H[0] = 1.;
+        return e1H;
+    }
 
     ///@brief Norm of \c b from last call to \c operator()
     ///@return bnorm
@@ -144,9 +155,92 @@ class Lanczos
      * convergence criteria.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    const HDiaMatrix& operator()( MatrixType&& A, const ContainerType0& b,
+    const HDiaMatrix& tridiag( MatrixType&& A, const ContainerType0& b,
             const ContainerType1& weights, value_type eps = 1e-12,
-            value_type nrmb_correction = 1., value_type res_fac = 1.)
+            value_type nrmb_correction = 1.,
+            std::string error_norm = "residual", value_type res_fac = 1.,
+            unsigned q = 1
+        )
+    {
+        auto op = []( value_type t) {return 1./t;};
+        tridiag( op, std::forward<MatrixType>(A), b, weights, eps,
+                nrmb_correction, error_norm, res_fac, q);
+        return m_TH;
+    }
+
+    /**
+    * @brief Compute \f$ x = f(A)b \approx ||b||_W V f(T) e_1 = |b|_W V Ef(\Lambda) E^T e_1\f$
+    *  via Lanczos and Eigen decomposition. A is self-adjoint in the weights \f$ W\f$.
+    *
+    * Tridiagonalize \f$A\f$ using Lanczos algorithm with a residual or
+    * universal stopping criterion
+    * @ingroup matrixapproximation
+    *
+    * @note The universal stopping criterion is based on the paper
+    * <a href="https://doi.org/10.1007/s10444-021-09882-7"> Estimating the error in matrix function approximations</a>  by Q.
+    * Eshghi, N. and Reichel L.,
+    * The iteration stops when \f[
+    ||\vec{e}_{f,m}||_W = ||\vec{b}||_W ||\left(\check{T} - f(\bar{T})\right)\vec{e}_1||_2
+    \f]
+    with
+    \f[
+    \bar{T} &=
+       \begin{pmatrix}
+       T & \beta_m \vec{e}_m & & \\
+        \beta_m \vec{e}_m^T &  \alpha_{m-1}  & \beta_{m-2} &  \\
+        & \beta_{m-2} & \alpha_{m-2} & \beta_{m-1-q} \\
+        & & \beta_{n-1-q} & \alpha_{n-q}
+       \end{pmatrix}
+       \\
+       \check{T} &=
+       \begin{pmatrix}
+       f(T) & 0  \\
+        0 & 0
+       \end{pmatrix}
+    \f]
+     * @param x output vector
+     * @param f the matrix function (e.g. dg::SQRT<double> or dg::EXP<double>)
+     * @param A self-adjoint and semi-positive definit matrix
+     * @param b input vector
+     * @param weights weights
+     * @param eps relative accuracy of M-Lanczos method
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be
+     *  respected
+     * @param error_norm Either "residual" or "universal"
+     * @param res_fac residual factor for stopping criterium of M-Lanczos method
+     * @param q The q-number in the "universal stopping criterion
+     *
+     * @return number of iterations of M-Lanczos routine
+    */
+    template < class MatrixType, class ContainerType0, class ContainerType1,
+             class ContainerType2, class UnaryOp>
+    unsigned solve(ContainerType0& x, UnaryOp f,
+            MatrixType&& A, const ContainerType1& b,
+            const ContainerType2& weights, value_type eps,
+            value_type nrmb_correction,
+            std::string error_norm = "residual",
+            value_type res_fac = 1.,
+            unsigned q = 1 )
+    {
+        tridiag( f, std::forward<MatrixType>(A), b, weights, eps,
+                nrmb_correction, error_norm, res_fac, q);
+        if( "residual" == error_norm)
+            m_yH = compute_funcTe1( f, m_TH);
+        //Compute x = |b|_M V f(T) e1
+        normMbVy(std::forward<MatrixType>(A), m_TH, m_yH, x, b,
+                m_bnorm);
+        return m_iter;
+    }
+  private:
+    template < class MatrixType, class ContainerType1,
+             class ContainerType2, class UnaryOp>
+    void tridiag(UnaryOp f,
+            MatrixType&& A, const ContainerType1& b,
+            const ContainerType2& weights, value_type eps,
+            value_type nrmb_correction,
+            std::string error_norm = "residual",
+            value_type res_fac = 1.,
+            unsigned q = 1 )
     {
 #ifdef MPI_VERSION
         int rank;
@@ -162,7 +256,6 @@ class Lanczos
         if( m_bnorm == 0)
         {
             set_iter(1);
-            return m_TH;
         }
         value_type residual;
         dg::blas1::axpby(1./m_bnorm, b, 0.0, m_v); //m_v[1] = x/||x||
@@ -185,8 +278,19 @@ class Lanczos
                 break;
             }
             m_TH.values(i,2) = betaip;  // +1 diagonal
-            double T1 = compute_Tinv_m1( m_TH, i+1);
-            residual = m_bnorm*betaip*fabs(T1); //Tinv_i1
+
+            if( "residual" == error_norm)
+            {
+                residual = compute_residual_error( m_TH, i, m_bnorm);
+            }
+            else
+            {
+                if( i>=q)
+                    residual = compute_universal_error( m_TH, i, m_bnorm, q, f, m_yH);
+                else
+                    residual = 1e10;
+            }
+
             if( m_verbose)
                 DG_RANK0 std::cout << "# ||r||_W = " << residual << "\tat i = " << i << "\n";
             if (res_fac*residual< eps*(m_bnorm + nrmb_correction) )
@@ -197,22 +301,45 @@ class Lanczos
             dg::blas1::scal(m_vp, 1./betaip);
             m_vm.swap(m_v);
             m_v.swap( m_vp);
+            set_iter( m_max_iter);
         }
-        return m_TH;
     }
-
-    /**
-     * @brief Return the vector \f$ \vec e_1\f$ with size \c get_iter()
-     *
-     * @param iter size
-     * @return e_1
-     */
-    HVec make_e1( ) {
-        HVec e1H(m_iter, 0.);
-        e1H[0] = 1.;
-        return e1H;
+    value_type compute_residual_error( const HDiaMatrix& TH, unsigned iter,
+            value_type bnorm)
+    {
+        value_type T1 = compute_Tinv_m1( TH, iter+1);
+        return bnorm*TH.values(iter,2)*fabs(T1); //Tinv_i1
     }
-  private:
+    template<class UnaryOp>
+    value_type compute_universal_error( const HDiaMatrix& TH, unsigned iter,
+            value_type bnorm, unsigned q, UnaryOp f, HVec& yH)
+    {
+        unsigned new_iter = iter + 1 + q;
+        set_iter( iter+1);
+        HDiaMatrix THtilde( new_iter, new_iter, 3*new_iter-2, 3);
+        THtilde.diagonal_offsets[0] = -1;
+        THtilde.diagonal_offsets[1] =  0;
+        THtilde.diagonal_offsets[2] =  1;
+        for( unsigned u=0; u<iter+1; u++)
+        {
+            THtilde.values(u,0) = TH.values(u,0);
+            THtilde.values(u,1) = TH.values(u,1);
+            THtilde.values(u,2) = TH.values(u,2);
+        }
+        for( unsigned u=1; u<=q; u++)
+        {
+            THtilde.values( iter+u, 0) = u==1 ? TH.values(iter,2) :
+                TH.values( iter+1-u, 1);
+            THtilde.values( iter+u, 1) = TH.values( iter-u, 1);
+            THtilde.values( iter+u, 2) = TH.values( iter-u, 0);
+        }
+        yH = compute_funcTe1( f, TH);
+        HVec yHtilde = compute_funcTe1( f, THtilde);
+        for( unsigned u=0; u<yH.size(); u++)
+            yHtilde[u] -= yH[u];
+        value_type norm = dg::fast_l2norm( yHtilde);
+        return norm * bnorm;
+    }
 
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
@@ -227,6 +354,7 @@ class Lanczos
     }
     ContainerType  m_v, m_vp, m_vm;
     HDiaMatrix m_TH;
+    HVec m_yH;
     unsigned m_iter, m_max_iter;
     bool m_verbose = false;
     value_type m_bnorm = 0.;

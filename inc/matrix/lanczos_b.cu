@@ -49,27 +49,39 @@ int main(int argc, char * argv[])
         t.toc();
         std::cout << "# Lanczos creation took "<< t.diff()<<"s   \n";
 
-
         std::cout << "\nM-Lanczos-T:\n";
         b = dg::evaluate( lhs, grid);
         xexac = dg::evaluate( rhs, grid);
         t.tic();
-        auto T = lanczos(A, b, w2d, eps);
+        auto T = lanczos.tridiag(A, b, w2d, eps);
         auto e1 = lanczos.make_e1(), y( e1);
         dg::blas2::symv( T , e1, y);
         lanczos.normMbVy( A, T, y, x, b, lanczos.get_bnorm());
         t.toc();
+        dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
         std::cout << "    iter: "<< lanczos.get_iter() << "\n";
         std::cout << "    time: "<< t.diff()<<"s \n";
-        dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
         std::cout << "    # Relative error between x=||b||_M V^T T e_1 and b: \n";
         std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
+
+        std::cout << "\nM-Lanczos-T-universal:\n";
+        b = dg::evaluate( lhs, grid);
+        xexac = dg::evaluate( rhs, grid);
+        t.tic();
+        lanczos.solve( x, [](double x){return x;}, A, b, w2d, eps, 1., "universal", 1., 1);
+        t.toc();
+        dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
+        std::cout << "    iter: "<< lanczos.get_iter() << "\n";
+        std::cout << "    time: "<< t.diff()<<"s \n";
+        std::cout << "    # Relative error between x=||b||_M V^T T e_1 and b: \n";
+        std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
+
 
         std::cout << "\nM-Lanczos-Tinv:\n";
         b = dg::evaluate( rhs, grid);
         xexac = dg::evaluate( lhs, grid);
         t.tic();
-        T = lanczos(A, b, w2d, eps);
+        T = lanczos.tridiag(A, b, w2d, eps);
         e1 = lanczos.make_e1(), y = e1;
         dg::blas2::symv( dg::mat::invert( T) , e1, y);
         lanczos.normMbVy( A, T, y, x, b, lanczos.get_bnorm());
@@ -81,6 +93,18 @@ int main(int argc, char * argv[])
         std::cout << "    # Relative error between x=||b||_M V^T T^{-1} e_1 and x: \n";
         std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
 
+        std::cout << "\nM-Lanczos-Tinv-universal:\n";
+        b = dg::evaluate( rhs, grid);
+        xexac = dg::evaluate( lhs, grid);
+        t.tic();
+        lanczos.solve(x, []( double x) {return 1./x;}, A, b, w2d, eps, 1., "universal", 1., 1);
+        t.toc();
+
+        dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
+        std::cout << "    iter: "<< lanczos.get_iter() << "\n";
+        std::cout << "    time: "<< t.diff()<<"s \n";
+        std::cout << "    # Relative error between x=||b||_M V^T T^{-1} e_1 and x: \n";
+        std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
     }
     {
         std::cout << "\nM-CG-Tinv: \n";
@@ -130,7 +154,7 @@ int main(int argc, char * argv[])
         t.toc();
 
         dg::blas1::axpby(-1.0, xexac, 1.0, x, error);
-        std::cout << "    #iter: "<< mcg.get_iter() << "\n";
+        std::cout << "    #iter: "<< number << "\n";
         std::cout << "    #time: "<< t.diff()<<"s \n";
         std::cout << "    # Relative error between x=R T e_1 and b: \n";
         std::cout << "    #error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";

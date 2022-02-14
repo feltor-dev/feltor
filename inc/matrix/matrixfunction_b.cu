@@ -48,178 +48,81 @@ int main(int argc, char * argv[])
 
     dg::Grid2d g( 0, lx, 0, ly,n, Nx, Ny, bcx, bcy);
     const Container w2d = dg::create::weights( g);
-    double max_weights =   dg::blas1::reduce(w2d, 0., dg::AbsMax<double>() );
-    double min_weights =  -dg::blas1::reduce(w2d, max_weights, dg::AbsMin<double>() );
-    const double kappa = sqrt(max_weights/min_weights); //condition number
+    double max_weights = dg::blas1::reduce(w2d, 0., dg::AbsMax<double>() );
+    double min_weights = dg::blas1::reduce(w2d, max_weights, dg::AbsMin<double>() );
     std::cout << "#   min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
+    const double kappa = sqrt(max_weights/min_weights); //condition number
     double hxhy = 1.; // ((2pi)/lx )^2
 
-    auto sqrt_f =  [](double x) { return sqrt(x);};
-    auto sqrt_inv_f =  [](double x) { return 1./sqrt(x);};
-    auto exp_inv_f =  [](double x) { return 1./exp(x);};
-    auto besseli0_inv_f =  [](double x) {
-        return 1./boost::math::cyl_bessel_i(0, x);};
-    auto gamma0_inv_f = [](double x){
-        return 1./exp(x)/boost::math::cyl_bessel_i(0, x);
+    std::vector< std::function<double (double)>> funcs{
+        [](double x) { return sqrt(x);},
+        [](double x) { return 1./sqrt(x);},
+        [](double x) { return 1./exp(x);},
+        [](double x) {
+            return 1./boost::math::cyl_bessel_i(0, x);},
+        [](double x){
+            return 1./exp(x)/boost::math::cyl_bessel_i(0, x);
+        },
+        [](double x) { return 1./x;}
     };
+    std::vector<std::string> outs = {"Sqrt", "Inv-Sqrt", "Inv-Exp",
+        "Inv-Bessel", "Inv-Gamma", "Inverse"};
+    for( unsigned u=0; u<funcs.size(); u++)
     {
-        std::cout << "\n#Compute x = Sqrt(1+ alpha Delta) b " << std::endl;
+        std::cout << "\n#Compute x = "<<outs[u]<<"(1+ alpha Delta) b " << std::endl;
         dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered);
 
         double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
         double EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); //EVs of helmholtz
 
         Container x = dg::evaluate(lhs, g), x_exac(x), b(x), error(x);
-        dg::blas1::scal(x_exac, sqrt_f(helm_fac));
+        dg::blas1::scal(x_exac, funcs[u](helm_fac));
 
-        double res_fac = kappa*1./sqrt_f(EVmin);
+        double res_fac = kappa*funcs[u](EVmin);
         std::cout << "#   min(EV) = "<<EVmin <<"  max(EV) = "<<EVmax << "\n";
         std::cout << "#   kappa   = "<<kappa <<"\n";
         std::cout << "#   res_fac = "<<res_fac<< "\n";
-        std::cout << "SQRT (M-CG+Eigen):\n";
-        dg::mat::LanczosFuncEigenSolve<Container> krylovfunceigensolve( x, max_iter);
+        std::cout << outs[u] << "\n";
+        dg::mat::Lanczos<Container> krylovfunceigen( x, max_iter);
         t.tic();
-        iter = krylovfunceigensolve(x, sqrt_f, A, b, w2d, eps, 1., res_fac);
+        iter = krylovfunceigen.solve(x, funcs[u], A, b, w2d, eps, 1.,
+                "residual", res_fac);
         t.toc();
         double time = t.diff();
 
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
 
-        std::cout << "    time: "<<time<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iter << "\n";
-    }
-    {
-        std::cout << "\n#Compute  x = Sqrt(1+ alpha Delta)^(-1) b " << std::endl;
-        dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered);
-        //EVs of helmholtz
-        double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
-        double EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
+        std::cout << "    residual-time: "<<time<<"s \n";
+        std::cout << "    residual-error: "<<erel  << "\n";
+        std::cout << "    residual-iter: "<<std::setw(3)<<iter << "\n";
 
-        Container x = dg::evaluate(lhs, g), x_exac(x), b(x), error(x);
-        dg::blas1::scal(x_exac, sqrt_inv_f(helm_fac));
-
-        double res_fac = kappa*sqrt_inv_f(EVmin);
-        std::cout << "#   min(EV) = "<<EVmin <<"  max(EV) = "<<EVmax << "\n";
-        std::cout << "#   kappa   = "<<kappa <<"\n";
-        std::cout << "#   res_fac = "<<res_fac<< "\n";
-        std::cout << "SQRT (M-CG+Eigen):\n";
-        dg::mat::LanczosFuncEigenSolve<Container> krylovfunceigeninvert( x,   max_iter);
+        dg::mat::MCGFuncEigen<Container> mcgfunceigen( x, max_iter);
         t.tic();
-        iter = krylovfunceigeninvert(x, sqrt_inv_f, A,  b, w2d, eps, 1., res_fac);
+        iter = mcgfunceigen(x, funcs[u], A, b, w2d, eps, 1.,
+                res_fac);
         t.toc();
-        double time = t.diff();
+        time = t.diff();
 
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
 
-        std::cout << "    time: "<<time<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iter << "\n";
-    }
-    {
-        std::cout << "\n#Compute x = e^(-alpha Delta) b" << std::endl;
+        std::cout << "    mcg-time: "<<time<<"s \n";
+        std::cout << "    mcg-error: "<<erel  << "\n";
+        std::cout << "    mcg-iter: "<<std::setw(3)<<iter << "\n";
 
-        dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> A( g, g.bcx(), g.bcy(), dg::centered); //negative laplace
-        Container chi = dg::evaluate(dg::one, g);
-        dg::blas1::scal(chi, -alpha); //-alpha must be positive for SPD operator! // MW ???
-        A.set_chi(chi);
-        //EVs of elliptic
-        double EVmin = -alpha*hxhy*(1.0 + 1.0);
-        double EVmax = -alpha*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
-
-        Container x = dg::evaluate(lhs, g), x_exac(x), b(x), error(x);
-        dg::blas1::scal(x_exac, exp_inv_f(ell_fac));
-
-        double res_fac = kappa*exp_inv_f(EVmin);
-        std::cout << "#   min(EV) = "<<EVmin <<"  max(EV) = "<<EVmax << "\n";
-        std::cout << "#   kappa   = "<<kappa <<"\n";
-        std::cout << "#   res_fac = "<<res_fac<< "\n";
-
-        std::cout << "EXP (M-CG+Eigen):\n";
-        dg::mat::LanczosFuncEigenSolve<Container> krylovfunceigeninvert( x,   max_iter);
         t.tic();
-        iter = krylovfunceigeninvert(x, exp_inv_f, A, b, w2d, eps, 1., res_fac);
+        iter = krylovfunceigen.solve(x, funcs[u], A, b, w2d, eps, 1.,
+                "universal");
         t.toc();
-        double time = t.diff();
+        time = t.diff();
 
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
 
-        std::cout << "    time: "<<time<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iter << "\n";
-
-    }
-    {
-        std::cout << "\n#Compute x = I_0(-alpha Delta) b" << std::endl;
-
-        dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> A( g, g.bcx(), g.bcy(), dg::centered); //negative laplace
-        Container chi = dg::evaluate(dg::one, g);
-        dg::blas1::scal(chi, -alpha); //-alpha must be positive for SPD operator!
-        A.set_chi(chi);
-        //EVs of elliptic
-        double EVmin = -alpha*hxhy*(1.0 + 1.0);
-        double EVmax = -alpha*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
-
-
-        Container x = dg::evaluate(lhs, g), x_exac(x), b(x), error(x);
-        dg::blas1::scal(x_exac, besseli0_inv_f(ell_fac));
-
-        double res_fac = kappa*besseli0_inv_f(EVmin);
-        std::cout << "#   min(EV) = "<<EVmin <<"  max(EV) = "<<EVmax << "\n";
-        std::cout << "#   kappa   = "<<kappa <<"\n";
-        std::cout << "#   res_fac = "<<res_fac<< "\n";
-
-        std::cout << "BESSELI0 (M-CG+Eigen):\n";
-        dg::mat::LanczosFuncEigenSolve<Container> krylovfunceigeninvert( x, max_iter);
-        t.tic();
-        iter = krylovfunceigeninvert(x, besseli0_inv_f, A, b, w2d, eps, 1., res_fac);
-        t.toc();
-        double time = t.diff();
-
-        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-
-        std::cout << "    time: "<<time<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iter << "\n";
-
-    }
-    {
-        std::cout << "\n#Compute x = I_0(alpha Delta)^-1 e^(-alpha Delta) b " << std::endl;
-
-        dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> A( g, g.bcx(), g.bcy(), dg::centered); //negative laplace
-        Container chi = dg::evaluate(dg::one, g);
-        dg::blas1::scal(chi, -alpha); //-alpha must be positive for SPD operator!
-        A.set_chi(chi);
-        //EVs of elliptic
-        double EVmin = -alpha*hxhy*(1.0 + 1.0);
-        double EVmax = -alpha*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
-
-        Container x = dg::evaluate(lhs, g), x_exac(x), b(x), error(x);
-        dg::blas1::scal(x_exac, gamma0_inv_f(ell_fac));
-
-        double res_fac = kappa*gamma0_inv_f(EVmin);
-        std::cout << "#   min(EV) = "<<EVmin <<"  max(EV) = "<<EVmax << "\n";
-        std::cout << "#   kappa   = "<<kappa <<"\n";
-        std::cout << "#   res_fac = "<<res_fac<< "\n";
-
-        std::cout << "GAMMA0 (M-CG+Eigen):\n";
-        dg::mat::LanczosFuncEigenSolve<Container> krylovfunceigeninvert( x,   max_iter);
-        t.tic();
-        iter = krylovfunceigeninvert(x, gamma0_inv_f, A, b, w2d, eps, 1., res_fac);
-        t.toc();
-        double time = t.diff();
-
-        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-
-        std::cout << "    time: "<<time<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iter << "\n";
-
+        std::cout << "    universal-time: "<<time<<"s \n";
+        std::cout << "    universal-error: "<<erel  << "\n";
+        std::cout << "    universal-iter: "<<std::setw(3)<<iter << "\n";
     }
     return 0;
 }

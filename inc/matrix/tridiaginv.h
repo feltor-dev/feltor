@@ -1,8 +1,10 @@
 #pragma once
 #include <cusp/dia_matrix.h>
 #include <cusp/coo_matrix.h>
+#include <cusp/lapack/lapack.h>
 #include "dg/algorithm.h"
 
+#include "functors.h"
 /**
 * @brief Classes for Krylov space approximations of a Matrix-Vector product
 */
@@ -574,6 +576,50 @@ cusp::coo_matrix<int,value_type,cusp::host_memory> invert(
     using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
     using HVec = dg::HVec;
     return TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T);
+}
+
+/**
+ * @brief Use Eigenvalue decomposition to compute
+ * \f$ f(T)e_1 = E f(\Lambda) E^T e_1 \f$
+ *
+ * @param T the tridiagonal matrix
+ * @param f the matrix function (e.g. dg::SQRT<double> or dg::EXP<double>)
+ * @return the result vector
+ */
+template<class UnaryOp, class value_type>
+dg::HVec compute_funcTe1( UnaryOp f, const cusp::dia_matrix<int, value_type,
+        cusp::host_memory>& T)
+{
+    unsigned iter = T.num_rows;
+    cusp::array2d< value_type, cusp::host_memory> evecs(iter,iter);
+    cusp::array1d< value_type, cusp::host_memory> evals(iter);
+    dg::HVec e1H(iter,0.), yH(e1H);
+    e1H[0] = 1.;
+    yH.resize( iter);
+    //Compute Eigendecomposition
+    //MW !! the subdiagonal entries start at 0 in lapack, the n-th element
+    // is used as workspace (from lapack docu)
+    cusp::lapack::stev(T.values.column(1), T.values.column(2),
+            evals, evecs, 'V');
+    //for( unsigned u=0; u<iter; u++)
+    //    std::cout << u << " "<<evals[u]<<std::endl;
+    cusp::coo_matrix<int, value_type, cusp::host_memory> EH, EHt;
+    cusp::convert(evecs, EH);
+    cusp::transpose(EH, EHt);
+    //Compute f(T) e1 = E f(Lambda) E^t e1
+    dg::blas2::symv(EHt, e1H, yH);
+    dg::blas1::transform(evals, e1H, [f] (double x){
+        try{
+            return f(x);
+        }
+        catch(boost::exception& e) //catch boost overflow error
+        {
+            return 0.;
+        }
+    });
+    dg::blas1::pointwiseDot(e1H, yH, e1H);
+    dg::blas2::symv(EH, e1H, yH);
+    return yH;
 }
 ///@}
 
