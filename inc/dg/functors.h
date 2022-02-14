@@ -220,7 +220,7 @@ struct AbsMin
     {
         T absx = x<0 ? -x : x;
         T absy = y<0 ? -y : y;
-        return absx < absy ? absx : -absy;
+        return absx < absy ? absx : absy;
     }
 };
 
