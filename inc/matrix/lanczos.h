@@ -279,21 +279,29 @@ class Lanczos
             }
             m_TH.values(i,2) = betaip;  // +1 diagonal
 
+            value_type xnorm = 0.;
             if( "residual" == error_norm)
             {
-                residual = compute_residual_error( m_TH, i, m_bnorm);
+                residual = compute_residual_error( m_TH, i)*m_bnorm;
+                xnorm = m_bnorm;
             }
             else
             {
                 if( i>=q)
-                    residual = compute_universal_error( m_TH, i, m_bnorm, q, f, m_yH);
+                {
+                    residual = compute_universal_error( m_TH, i, q, f,
+                            m_yH)*m_bnorm;
+                    xnorm = dg::fast_l2norm( m_yH)*m_bnorm;
+                }
                 else
+                {
                     residual = 1e10;
+                    xnorm = m_bnorm;
+                }
             }
-
             if( m_verbose)
                 DG_RANK0 std::cout << "# ||r||_W = " << residual << "\tat i = " << i << "\n";
-            if (res_fac*residual< eps*(m_bnorm + nrmb_correction) )
+            if (res_fac*residual< eps*(xnorm + nrmb_correction) )
             {
                 set_iter(i+1);
                 break;
@@ -304,15 +312,14 @@ class Lanczos
             set_iter( m_max_iter);
         }
     }
-    value_type compute_residual_error( const HDiaMatrix& TH, unsigned iter,
-            value_type bnorm)
+    value_type compute_residual_error( const HDiaMatrix& TH, unsigned iter)
     {
         value_type T1 = compute_Tinv_m1( TH, iter+1);
-        return bnorm*TH.values(iter,2)*fabs(T1); //Tinv_i1
+        return TH.values(iter,2)*fabs(T1); //Tinv_i1
     }
     template<class UnaryOp>
     value_type compute_universal_error( const HDiaMatrix& TH, unsigned iter,
-            value_type bnorm, unsigned q, UnaryOp f, HVec& yH)
+            unsigned q, UnaryOp f, HVec& yH)
     {
         unsigned new_iter = iter + 1 + q;
         set_iter( iter+1);
@@ -338,7 +345,7 @@ class Lanczos
         for( unsigned u=0; u<yH.size(); u++)
             yHtilde[u] -= yH[u];
         value_type norm = dg::fast_l2norm( yHtilde);
-        return norm * bnorm;
+        return norm;
     }
 
     ///@brief Set the new number of iterations and resize Matrix T and V

@@ -1,50 +1,43 @@
 #pragma once
 
 #include "dg/algorithm.h"
+#include "tridiaginv.h"
 
 /**
 * @brief Classes for Matrix function-Vector product computation via the ODE method
 */
-namespace dg
-{
+namespace dg {
+namespace mat {
 
 /**
- * @brief Right hand side of the square root ODE \f[ \dot{y}= \left[(t-1) I -t A\right]^{-1} (I - A)/2  y \f]
+ * @brief Right hand side of the square root ODE \f[ \dot{y}= \left[(1-t) A +t I\right]^{-1} (I - A)/2  y \f]
  * where \f$ A\f$ is the matrix
  *
  * @ingroup matrixfunctionapproximation
  *
  * This class is based on the approach of the paper <a href="https://doi.org/10.1016/S0024-3795(00)00068-9" > Numerical approximation of the product of the square root of a matrix with a vector</a> by E. J. Allen et al
  *
- * @note Solution of ODE: \f$ y(1) = \sqrt{A} y(0)\f$
+ * @note Solution of ODE: \f$ y(1) = \frac{1}{\sqrt{A}} y(0)\f$ If \f$ y(0) = A b \f$ then we get \f$ y(1) = \sqrt{A} b\f$
  */
-template< class Matrix, class Container>
-struct SqrtODE
+template< class Container>
+struct InvSqrtODE
 {
   public:
-    using matrix_type = Matrix;
     using container_type = Container;
     using value_type = dg::get_value_type<Container>;
-    SqrtODE() {};
+    InvSqrtODE() {};
 
     /**
      * @brief Construct SqrtOde operator
      *
-     * @param A self-adjoint matrix (stored by reference so needs to live)
+     * @param A matrix (stored by reference so needs to live)
      * @param copyable copyable container
-     * @param eps Accuracy for CG solve
-     * @param symmetric true = self-adjoint A / false = non-self-adjoint A
      */
-    SqrtODE( Matrix& A,  const Container& copyable,  value_type eps, bool symmetric)
+    template<class MatrixType>
+    InvSqrtODE( MatrixType& A, const Container& copyable)
     {
         m_helper = copyable;
-        m_A = A;
-        m_symmetric = symmetric;
-        m_eps = eps;
-        m_size = m_helper.size();
-        m_number = 0;
-        if (m_symmetric == true) m_pcg.construct( m_helper, m_size*m_size+1);
-        else m_lgmres.construct( m_helper, 30, 10, 100*m_size*m_size);
+        m_A = [&]( const Container& x, Container& y){ return dg::apply( A, x, y);};
         m_yp_ex.set_max(3, copyable);
     }
     ///@copydoc hide_construct
@@ -54,83 +47,90 @@ struct SqrtODE
         //construct and swap
         *this = SqrtODE( std::forward<Params>( ps)...);
     }
-    /**
-     * @brief Resize matrix and set A and vectors and set new size
-     *
-     * @param new_max new size
-     */
-     void new_size( unsigned new_max) {
-        m_helper.resize(new_max);
-        if (m_symmetric == true)  m_pcg.construct( m_helper, new_max*new_max+1);
-        else m_lgmres.construct( m_helper, 30, 10, 100*new_max*new_max);
-        m_yp_ex.set_max(3, m_helper);
-        m_size = new_max;
+
+    const value_type& time() const{ return m_time;}
+
+    auto make_operator() const{
+        return [&t = m_time, &A = m_A](  const Container& x, Container& y)
+        {
+            dg::blas2::symv(A, x, y);
+            dg::blas1::axpby( t, x, (1.-t), y);
+        };
     }
-    ///@brief Get the current size of vectors
-    ///@return the current vector size
-    unsigned get_size() const {return m_size;}
+    template<class MatrixType>
+    void set_inverse_operator( const MatrixType& OpInv ) {
+        m_Ainv = OpInv;
+    }
     /**
-     * @brief Compute rhs term (including inversion of lhs via cg or lgmres)
+     * @brief Compute rhs term
      *
-     * i.e. \f[ yp= ((t-1) I -t V A)^{-1} (I - V A)/2  y \f] if weights are
-     * multiplied or
-     * \f$ yp= ((t-1) I -t  A)^{-1} (I -  A)/2 * y \f$ otherwise
+     * i.e. \f[ yp= (tI + (1-t) A)^{-1} (I - A)/2  y \f]
      * @param t  is time
      * @param y  is \f$ y\f$
      * @param yp is \f$ \dot{y}\f$
-     * @note Solution of ODE: \f$ y(1) = \sqrt{V A} y(0)\f$ if weights are multiplied or  \f$ y(1) = \sqrt{A} y(0)\f$ otherwise
+     * @note Solution of ODE: \f$ y(1) = 1/\sqrt{A} y(0)\f$
      */
     void operator()(value_type t, const Container& y, Container& yp)
     {
+        m_time = t;
         dg::blas2::symv(m_A, y, m_helper);
         dg::blas1::axpby(0.5, y, -0.5, m_helper);
 
         m_yp_ex.extrapolate(t, yp);
-        auto lhs = [&t = t, &A = m_A](  const Container& y, Container& y)
-        {
-            dg::blas2::symv(A, x, y);
-            dg::blas1::axpby((t-1.), x, -t, y);
-        }
-        if (m_symmetric == true)
-        {
-            m_number = m_pcg( lhs, yp, m_helper, 1., m_A.weights(), m_eps);
-            if( m_number == m_pcg.get_max()) throw dg::Fail( m_eps);
-        }
-        else
-            m_lgmres.solve( lhs, yp, m_helper, 1., m_A.weights(), m_eps, 1);
-
+        dg::blas2::symv( m_Ainv, m_helper, yp);
         m_yp_ex.update(t, yp);
     }
   private:
     Container m_helper;
-    Matrix& m_A;
-    unsigned m_size, m_number;
-    bool m_symmetric;
-    value_type m_eps;
-    dg::CG<Container> m_pcg;
-    dg::LGMRES<Container> m_lgmres;
+    std::function<void(const Container&, Container&)> m_A, m_Ainv;
+    value_type m_time;
     dg::Extrapolation<Container> m_yp_ex;
 };
 
 
 /**
- * @brief Right hand side of the square root ODE \f[ \dot{y}= \left[(t-1) I -t A\right]^{-1} (I - A)/2  y \f]
- * where \f$ A\f$ is the matrix
+ * @brief Right hand side of the square root ODE \f[ \dot{y}= \left[tI + (1-t) A\right]^{-1} (I - A)/2  y \f]
+ * where \f$ A\f$ is the matrix and the inverse is computed via a \c dg::PCG solver
  *
  * @ingroup matrixfunctionapproximation
  *
  * This class is based on the approach of the paper <a href="https://doi.org/10.1016/S0024-3795(00)00068-9" > Numerical approximation of the product of the square root of a matrix with a vector</a> by E. J. Allen et al
  *
- * @note Solution of ODE: \f$ y(1) = \sqrt{A} y(0)\f$
+ * @note Solution of ODE: \f$ y(1) = 1/\sqrt{A} y(0)\f$
  * @param A self-adjoint matrix (stored by reference so needs to live)
- * @param copyable copyable container
- * @param eps Accuracy for CG solve
- * @param symmetric true = self-adjoint A / false = non-self-adjoint A
+ * @param P the preconditioner for the PCG method
+ * @param weights Weights for PCG method
+ * @param epsCG Accuracy for PCG solve
  */
-template< class Matrix, class Container>
-dg::SqrtODE<Matrix,Container> make_sqrtode( Matrix& A, const Container& copyable, value_type eps, bool symmetric)
+template< class Matrix, class Preconditioner, class Container>
+InvSqrtODE<Container> make_inv_sqrtodeCG( Matrix& A, const Preconditioner& P,
+        const Container& weights, dg::get_value_type<Container> epsCG)
 {
-    return SqrtODE<Matrix,Container>( A, copyable, eps, symmetric);
+    InvSqrtODE<Container> sqrtode( A, weights);
+    dg::PCG<Container> pcg( weights, 10000);
+    auto op = sqrtode.make_operator();
+    sqrtode.set_inverse_operator( [ = ]( const auto& x, auto& y) mutable
+        {
+            pcg.solve( op, y, x, P, weights, epsCG);
+        });
+    return sqrtode;
+}
+
+template< class Matrix, class Container>
+InvSqrtODE<Container> make_inv_sqrtodeTri( const Matrix& TH, const Container&
+        copyable)
+{
+    InvSqrtODE<Container> sqrtode( TH, copyable);
+    sqrtode.set_inverse_operator( [ =, &TH = TH, &t = sqrtode.time() ]
+            ( const auto& x, auto& y) mutable
+        {
+            Matrix wTH = TH;
+            dg::blas1::scal( wTH.values.values, (1-t));
+            for( unsigned u=0; u<wTH.num_rows; u++)
+                wTH.values( u,1) += t;
+            dg::apply( dg::mat::invert( wTH), x, y);
+        });
+    return sqrtode;
 }
 
 /**
@@ -141,7 +141,8 @@ dg::SqrtODE<Matrix,Container> make_sqrtode( Matrix& A, const Container& copyable
  *
  * @note Solution of ODE: \f$ y(1) = \exp{A} y(0)\f$
  */
-auto make_expode( Matrix& A)
+template<class MatrixType>
+auto make_expode( MatrixType& A)
 {
     return [&]( auto t, const auto& y, auto& yp) mutable
     {
@@ -159,8 +160,8 @@ auto make_expode( Matrix& A)
  *
  * @note Solution of ODE: \f$ y(1) = I_0(A) y(0)\f$ for initial condition \f$ z(0) = (y(0),0)^T \f$
  */
-template<class Matrix>
-auto make_besselI0ode( Matrix& A)
+template<class MatrixType>
+auto make_besselI0ode( MatrixType& A)
 {
     return [&m_A = A]( auto t, const auto& z, auto& zp) mutable
     {
@@ -173,4 +174,5 @@ auto make_besselI0ode( Matrix& A)
 }
 
 
+} //namespace mat
 } //namespace dg
