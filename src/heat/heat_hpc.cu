@@ -106,8 +106,9 @@ int main( int argc, char* argv[])
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
     dg::DVec y0 = dg::evaluate( init0, grid);
     ///////////////////TIME STEPPER
-    dg::Adaptive<dg::ARKStep_s<dg::DVec>> adaptive(
-        "ARK-4-2-3", y0, grid.size(), p.eps_time);
+    dg::DefaultSolver<dg::DVec> solver( diffusion, y0, grid.size(), p.eps_time);
+    dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
+        "ARK-4-2-3", y0);
     double dt = p.dt, dt_new = dt;
 
     ex.energies( y0);//now energies and potential are at time 0
@@ -200,7 +201,7 @@ int main( int argc, char* argv[])
                 do
                 {
                     dt = dt_new;
-                    adaptive.step(ex,diffusion,time,y0,time,y0,dt_new,
+                    adaptive.step(std::tie(ex,diffusion,solver),time,y0,time,y0,dt_new,
                         dg::pid_control, dg::l2norm, p.rtol, 1e-10);
                     if( adaptive.failed())
                         std::cout << "Step Failed! REPEAT!\n";
