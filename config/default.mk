@@ -1,3 +1,5 @@
+# !DO NOT CHANGE THIS FILE!
+# If you must, just copy one of the other *.mk files and fill in your own values
 ifndef DEFAULT_MK #include guard
 DEFAULT_MK=1
 

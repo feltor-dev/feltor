@@ -10,7 +10,9 @@ namespace mat{
 /**
  * @brief Fast computation of \f$ \vec x = A^{\pm 1/2}\vec b\f$
  *
- * Uses \c dg::mat::UniversalLanczos combined with \c dg::mat::make_SqrtCauchyEigen_Te1 in its
+ * Convenience wrapper that
+ * uses \c dg::mat::UniversalLanczos combined with
+ * \c dg::mat::make_SqrtCauchyEigen_Te1 in its
  * "universal" stopping criterion
  * @note This is the fastest method to compute matrix square roots vector
  *  multiplications that we found to date
@@ -34,7 +36,7 @@ struct MatrixSqrt
      * @param exp exponent, if < 0 then 1/sqrt(A) is computed, else sqrt(A)
      * @param weights the weights in which A is self-adjoint
      * @param eps_rel relative accuracy of solution
-     * @param  nrmb_correction absolute accuracy in units of \c eps_rel
+     * @param nrmb_correction absolute accuracy in units of \c eps_rel
      * @param max_iter Maximum number of iterations in Lanczos tridiagonalization
      * @param cauchy_steps number of cells in the Cauchy integral
      */

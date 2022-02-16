@@ -1,7 +1,7 @@
 #pragma once
 #include <exception>
 #include "dg/algorithm.h"
-#include "dg/matrix/matrixsqrt.h"
+#include "dg/matrix/matrix.h"
 #include "parameters.h"
 namespace esol
 {
@@ -27,7 +27,7 @@ struct Esol
     {
         m_lapMperp.set_chi(m_binv);
         dg::blas2::symv( -1.0*alpha, m_lapMperp, in, beta, result);
-        m_lapMperp.set_chi(m_one);
+        m_lapMperp.set_chi(1.);
     }
     void compute_diff( double alpha, const container& nme, double beta, container& result)
     {
@@ -63,12 +63,11 @@ struct Esol
      */
     void gamma1inv_y( const container& y, container& yp)
     {
-        if (m_p.tau[1]==0.0) 
+        if (m_p.tau[1]==0.0)
             dg::blas1::copy(y, yp);
         else
         {
-            dg::blas2::symv( m_multi_g1dag[0], y, m_chi); //invG ne-1
-            dg::blas2::symv( m_v2d, m_chi, yp);
+            dg::blas2::symv( m_multi_g1dag[0], y, yp); //invG ne-1
         }
     }
     /**
@@ -119,7 +118,7 @@ struct Esol
                 dg::blas1::pointwiseDot(1.0, m_binv, m_binv, SNi, 0.0, m_chi); //\chi = SNi / B^2
                 m_lapMperp.set_chi( m_chi);
                 dg::blas2::symv(-1.0, m_lapMperp, potential, 1.0, Sne);
-                m_lapMperp.set_chi( m_one);
+                m_lapMperp.set_chi( 1.);
             }
             else if (m_p.equations == "ff-O2")
             {
@@ -151,7 +150,8 @@ struct Esol
     std::vector<dg::Elliptic<Geometry, Matrix, container> > m_multi_elliptic;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > m_multi_g1, m_multi_g1dag, m_multi_g0;
     
-    dg::KrylovSqrtCauchySolve< Geometry, Matrix, container> m_sqrtsolve;
+    //dg::KrylovSqrtCauchySolve< Geometry, Matrix, container> m_sqrtsolve;
+    dg::mat::MatrixSqrt<container> m_sqrt;
     
     dg::Advection<Geometry, Matrix, container> m_adv;
     
@@ -163,22 +163,22 @@ struct Esol
     
     Matrix m_centered[2], m_centeredN;
     
-    const container m_volume, m_v2d, m_one;
+    const container m_volume;
 
     const esol::Parameters m_p;
 };
 
 template< class Geometry, class M, class container>
 Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p ):
-    m_chi( evaluate( dg::zero, grid)), m_omega(m_chi), m_iota(m_chi), m_gamma_n(m_chi), m_psi1(m_chi), m_psi2(m_chi), m_rho_m1(m_chi), m_phi_m1(m_chi), m_logn(m_chi), m_gamma0sqrtinv_rho_m1(m_chi), m_gamma0sqrt_phi_m1(m_chi),
+    m_chi( evaluate( dg::zero, grid)), m_omega(m_chi), m_iota(m_chi), m_gamma_n(m_chi), m_psi1(m_chi), m_psi2(m_chi), m_rho_m1(m_chi), m_phi_m1(m_chi), m_gamma0sqrtinv_rho_m1(m_chi), m_gamma0sqrt_phi_m1(m_chi), m_logn(m_chi),
+    m_hp( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, 1), grid)),
+    m_hm( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, -1), grid)),
     m_binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
-    m_lapMperp( grid, dg::normed, dg::centered),
-    m_lapMperpN( grid, p.bc_N_x, p.bc_y, dg::normed, dg::centered),
+    m_lapMperp( grid, dg::centered),
+    m_lapMperpN( grid, p.bc_N_x, p.bc_y, dg::centered),
     m_multigrid( grid, 3),
     m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi), m_gamma0sqrt_phi_ex( 2, m_chi), m_rho_ex(2, m_chi), m_gamma0sqrtinv_rho_ex(2, m_chi), m_gamma_SNi_ex(2, m_chi),
-    m_volume( dg::create::volume(grid)), m_v2d( dg::create::inv_weights(grid)), m_one( dg::evaluate(dg::one, grid)),
-    m_hm( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, -1), grid)),
-    m_hp( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, 1), grid)),
+    m_volume( dg::create::volume(grid)),
     m_polavg(grid, dg::coo2d::y,"simple"),
     m_p(p)
 {
@@ -208,13 +208,14 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     m_centered[1] = dg::create::dy( grid, grid.bcy(), dg::centered);
     for( unsigned u=0; u<3; u++)
     {
-        m_multi_elliptic[u].construct( m_multigrid.grid(u), dg::not_normed, dg::centered, p.jfactor);
+        m_multi_elliptic[u].construct( m_multigrid.grid(u), dg::centered, p.jfactor);
         m_multi_g0[u].construct( m_multigrid.grid(u), -p.tau[1], dg::centered, p.jfactor);
         m_multi_g1[u].construct( m_multigrid.grid(u), -0.5*p.tau[1], dg::centered, p.jfactor);     
         m_multi_g1dag[u].construct( m_multigrid.grid(u), p.bc_N_x, p.bc_y, -0.5*p.tau[1], dg::centered, p.jfactor);
     }
-    m_sqrtsolve.construct( m_multi_g0[0], grid, m_chi,  p.eps_cauchy, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma0);
-    
+    //m_sqrtsolve.construct( m_multi_g0[0], grid, m_chi,  p.eps_cauchy, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma0);
+    m_sqrt.construct( m_multi_g0[0], +1, m_volume, p.eps_gamma0, 1., p.maxiter_sqrt, p.maxiter_cauchy);
+
     if(p.bgproftype == "tanh"){
            m_prof = dg::evaluate( dg::TanhProfX(p.lx*p.xfac_p, p.ln,-1.0, p.bgprofamp,p.profamp), grid);
     }
@@ -251,7 +252,7 @@ const container& Esol<G,  M,  container>::compute_psi( double t, const container
         dg::blas1::scal(m_psi2, -0.5); //Compute for ExB energy only
         if (m_p.equations == "ff-O2-OB") {
             dg::blas2::symv(m_multi_g0[0], m_psi2, m_chi);
-            dg::blas2::symv(m_v2d, m_chi, m_psi2);
+            dg::blas1::copy(m_chi, m_psi2);
         }
         dg::blas1::axpby( 1.0, m_psi1, 0.0, m_psi[1]); //psi2 not added to psi!
     }
@@ -288,15 +289,15 @@ const container& Esol<G,  M, container>::polarisation( double t, const std::arra
     dg::blas1::axpby( 1., m_gamma_n, -1., y[0], m_omega); 
     if (m_p.equations == "ff-O2-OB") {            
         dg::blas2::symv(m_multi_g0[0], m_omega, m_chi);
-        dg::blas2::symv(m_v2d, m_chi, m_omega);
+        dg::blas1::copy(m_chi, m_omega);
     }
     else if (m_p.equations == "ff-O2") {
         dg::blas1::axpby(-1.0, m_gamma0sqrtinv_rho_m1, 1.0, m_omega, m_chi);
         dg::blas1::copy(m_omega, m_gamma0sqrtinv_rho_m1);
-        m_sqrtsolve(m_chi, m_omega); 
+        dg::apply( m_sqrt, m_chi, m_omega);
         dg::blas1::axpby( 1.0, m_rho_m1, 1.0, m_omega); 
         dg::blas1::copy(m_omega, m_rho_m1);
-//             m_sqrtsolve(m_omega, m_chi); //without using linearity
+//             m_sqrt(m_omega, m_chi); //without using linearity
 //             dg::blas1::copy(m_chi, m_omega);            
     }
 
@@ -310,7 +311,7 @@ const container& Esol<G,  M, container>::polarisation( double t, const std::arra
         
         dg::blas1::axpby(1.0, m_iota, -1.0, m_gamma0sqrt_phi_m1, m_chi); 
         dg::blas1::copy(m_iota, m_gamma0sqrt_phi_m1);
-        m_sqrtsolve(m_chi, m_psi[0]); 
+        dg::apply( m_sqrt, m_chi, m_psi[0]); 
         dg::blas1::axpby( 1.0, m_phi_m1, 1.0, m_psi[0]); 
         dg::blas1::copy(m_psi[0], m_phi_m1);
 //         m_sqrtsolve(m_iota, m_psi[0]);    //without using linearity
