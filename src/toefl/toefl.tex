@@ -81,14 +81,14 @@ B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
  -\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right) = \Gamma_1 N-n, \quad
  \text{Boussinesq:}\quad -\nabla_\perp^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
 \psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
- \frac{\partial n}{\partial t}     = 
-    \frac{1}{B}\{ n, \phi\} 
-  + \kappa n\frac{\partial \phi}{\partial y} 
+ \frac{\partial n}{\partial t}     =
+    \frac{1}{B}\{ n, \phi\}
+  + \kappa n\frac{\partial \phi}{\partial y}
   -\kappa \frac{\partial n}{\partial y}
   + \nu \nabla_\perp^2 n  \\
   \frac{\partial N}{\partial t} =
-  \frac{1}{B}\{ N, \psi\} 
-  + \kappa N\frac{\partial \psi}{\partial y} 
+  \frac{1}{B}\{ N, \psi\}
+  + \kappa N\frac{\partial \psi}{\partial y}
   + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla_\perp^2N
 \end{align}
 \end{subequations}
@@ -97,7 +97,7 @@ This model is chosen in the input file via
 "model":
 {
     "type"  : "global",
-    "boussinesq" : true, // or false
+    "boussinesq" : false, // or true
     "curvature" : 0.0005, // $\kappa$
     "tau" : 0, // $\tau$
     "nu" : 1e-9
@@ -165,7 +165,7 @@ This model is chosen in the input file via
 "model":
 {
     "type"  : "drift-global",
-    "boussinesq" : true, // or false
+    "boussinesq" : false, // or true
     "curvature" : 0.0005, // $\kappa$
     "nu" : 1e-9
 }
@@ -208,7 +208,7 @@ In the case of the "local" and "global" models we can choose how to initialize
 the ion density
 \begin{align}
     \ni(x,y) &= \ne(x,y) \text{ no FLR correction} \\
-    \ni(x,y) &= \Gamma_{1i}^{-1}\bar \ne(x,y) \text{ inverse FLR correction} \\
+    \ni(x,y) &= \Gamma_{1i}^{-1} \ne(x,y) \text{ inverse FLR correction} \\
 \end{align}
 \begin{minted}[texcomments]{js}
 "init":
@@ -341,35 +341,106 @@ Here, we introduced the heaviside function
 and the position of the maximum density \( \vec{X}_{max}(t)\).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Blob related quantities}
-For the blob quantities it is important that we use the physical $\ne$.
-\begin{tcolorbox}[title=Note]
-    These quantities can be easily computed in post-processing in e.g. a python script.
-\end{tcolorbox}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Invariants}
+\subsection{Mass}
+In all models the particles density conservation reads
+\begin{align} \label{eq:mass_theorem}
+  \frac{\partial}{\partial t} \mathcal M
+  + \nc\vec{ j_{n,e}}
+  =  \Lambda_{\ne}
+\end{align}
+with
+\begin{align}
+    \mathcal M &= \ne \\
+    \vec j_{n,s} &= \ne \vec v_E + \vec v_\kappa \\
+     \Lambda_\ne &= -\nu_\perp \Delta_\perp^2 \ne
+\end{align}
+With vanishing flux on the boundaries and zero viscosity we have
+\begin{align}
+    \frac{\partial}{\partial t} \int \dV \mathcal M_s = 0
+\end{align}
 
-\subsection{Center of mass}
-The first quantity of interest is the Center-of-mass position
-\begin{align}
-    M :=& \int (\ne -1 ) \dV \\
-    X :=& \frac{1}{M} \int x(\ne - 1) \dV \\
-    Y :=& \frac{1}{M} \int y(\ne - 1) \dV
+\subsection{Energy}
+The energy theorem reads
+\begin{align} \label{eq:energy_theorem}
+  \frac{\partial}{\partial t} \mathcal E
+  + \nc\vec{ j_{\mathcal E}}
+  =  \Lambda_{\mathcal E}
 \end{align}
-\subsection{Blob compactness}
-The blobs ability to retain its initial (Gaussian) shape is quantified by the  blob compactness
+With our choice of boundary conditions the energy flux
+vanishes on the boundary.
+In the absence of artificial viscosity the volume integrated
+ energy density is thus an exact invariant of the system.
 \begin{align}
-     I_c(t) &:= \frac{\int dA (\ne(\vec{x},t)-1) h(\vec{x},t)}{\int dA
-(\ne(\vec{x},0)-1) h(\vec{x},0)}
+    \frac{\partial}{\partial t} \int \dV \mathcal E = 0
 \end{align}
-Here, we introduced the heaviside function
+
+\subsubsection{ Full-F gyro-fluid model}
+The inherent energy density of our system is:
 \begin{align}
-     h(\vec{x},t) &:= \begin{cases}
-          1,
-        &\ \text{if} \hspace{2mm}||\vec{x} - \vec{X}_{max}||^2 < \sigma^2 \\
-0,  &\ \text{else}
-           \end{cases} \nonumber
+ \mathcal{E} := &
+ \ne \ln{(\ne)} + \tau_i \ni\ln{(\ni)}  + \frac{1}{2} \ni u_E^2
 \end{align}
-and the position of the maximum density \( \vec{X}_{max}(t)\).
+The energy current density and diffusion are
+\begin{align}
+  \vec j_{\mathcal E} =& \left[
+  \left( \ln \ne - \phi \right)\ne\left(
+  \vec u_E + \vec u_\kappa \right) \right]
+  +\left[
+      \left(\tau_i \ln \ni + \psi_{i} \right)\ni\left(
+  \vec u_E^i + \vec u_\kappa \right) \right]
+  , \\
+    \Lambda_\mathcal{E} :=  &+ \left( ( 1+\ln \ne) - \phi\right)(\nu_\perp \Delta_\perp \ne)+ \left( ( 1+\ln \ni) + \psi\right)(\nu_\perp \Delta_\perp \ni)
+    \label{eq:energy_diffusion}
+\end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric potentials and we sum over all species.
+
+With our choice of boundary conditions the energy flux
+vanishes on the boundary.
+In the absence of artificial viscosity the volume integrated
+ energy density is thus an exact invariant of the system.
+\begin{align}
+    \frac{\partial}{\partial t} \int \dV \mathcal E = 0
+\end{align}
+\subsubsection{ Delta-F gyro-fluid model}
+The inherent energy density of our system is:
+\begin{align}
+ \mathcal{E} := &
+ \frac{1}{2}\ne^2  + \frac{1}{2}\tau_i \ni^2 + \frac{1}{2} (\nabla\phi)^2
+\end{align}
+The energy current density and diffusion are
+\begin{align}
+  \vec j_{\mathcal E} =& \sum_s a_s\left[
+  \left(\tau_s \ln \ne + \psi_s \right)\ne\left(
+  \vec u_E + \vec u_\kappa \right) \right]
+  , \\
+    \Lambda_\mathcal{E} :=  &+ \left( ( 1+\ln \ne) - \phi\right)(\nu_\perp \Delta_\perp \ne)
+    + \left( \tau_i( 1+\ln \ni) + \psi\right)(\nu_\perp \Delta_\perp \ni)
+    \label{eq:energy_diffusion}
+\end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric potentials and we sum over all species.
+
+\subsubsection{Gravity delta-f model}
+\begin{align}
+ \mathcal{E} := &
+ \frac{1}{2} \ne^2
+\end{align}
+
+\subsubsection{Gravity full-f model}
+\begin{align}
+ \mathcal{E} := &
+ \frac{1}{2} \ne^2
+\end{align}
+
+\subsubsection{Full-f global drift-fluid model}
+\begin{align}
+ \mathcal{E} := & n \ln ( n) + \frac{1}{2} n u_E^2
+\end{align}
 
 
 

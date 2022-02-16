@@ -4,9 +4,8 @@
 #include "dg/file/json_utilities.h"
 #include "json/json.h"
 
-/**
- * @brief Provide a mapping between input file and named parameters
- */
+namespace toefl{
+
 struct Parameters
 {
     unsigned n, Nx, Ny;
@@ -22,6 +21,7 @@ struct Parameters
     std::string model;
     double tau, kappa, friction, nu;
     bool boussinesq;
+    Parameters() = default;
 
     Parameters( const dg::file::WrappedJsonValue& js) {
         n  = js["grid"]["n"].asUInt();
@@ -52,9 +52,9 @@ struct Parameters
         bcx = dg::str2bc(js["bc"][0].asString());
         bcy = dg::str2bc(js["bc"][1].asString());
         model = js["model"].get("type", "global").asString();
-        nu = js["model"]["nu"].asDouble();
         boussinesq = false;
-        tau = nu = friction = 0.;
+        tau = friction = 0.;
+        nu = js["model"]["nu"].asDouble();
         if( "local" == model)
         {
             kappa = js["model"]["curvature"].asDouble();
@@ -80,7 +80,7 @@ struct Parameters
             kappa = js["model"]["curvature"].asDouble();
         }
         else
-            throw dg::Error( dg::Message(_ping_) << "Model : type `"<<model<<"` not recognized!\n";
+            throw dg::Error( dg::Message(_ping_) << "Model : type `"<<model<<"` not recognized!\n");
     }
 
     void display( std::ostream& os = std::cout ) const
@@ -97,14 +97,13 @@ struct Parameters
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
         os << "Boundary conditions in x are: \n"
-            <<"    "<<bc2str(bc_x)<<"\n";  //Curious! dg:: is not needed due to ADL!
+            <<"    "<<bc2str(bcx)<<"\n";  //Curious! dg:: is not needed due to ADL!
         os << "Boundary conditions in y are: \n"
-            <<"    "<<bc2str(bc_y)<<"\n";
+            <<"    "<<bc2str(bcy)<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
-            <<"    Ny = "<<Ny<<"\n"
-            <<"    dt = "<<dt<<"\n"
+            <<"    Ny = "<<Ny<<"\n";
         os  <<"Blob parameters are: \n"
             << "    width:        "<<sigma<<"\n"
             << "    amplitude:    "<<amp<<"\n"
@@ -114,3 +113,4 @@ struct Parameters
             <<"Stopping for Gamma CG:   "<<eps_gamma[0]<<std::endl;
     }
 };
+}//namespace toefl

@@ -26,7 +26,7 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif //WITH_MPI
     dg::file::WrappedJsonValue js( dg::file::error::is_throw);
-    impurities::Parameters p;
+    toefl::Parameters p;
     try{
         std::string inputfile = "input/default.json";
         if( argc != 1) inputfile = argv[1];
@@ -42,19 +42,20 @@ int main( int argc, char* argv[])
     DG_RANK0 p.display(std::cout);
 
     //Construct grid
-    dg::x::CartesianGrid2d grid( p.x[0], p.x[1], p.y[0], p.y[1], p.n, p.Nx, p.Ny,
-            dg::DIR, dg::PER
+    dg::x::CartesianGrid2d grid( 0, p.lx, 0., p.ly, p.n, p.Nx, p.Ny,
+            p.bcx, p.bcy
         #ifdef WITH_MPI
         , comm
         #endif //WITH_MPI
         );
     //create RHS
     toefl::Explicit<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>
-        ex( grid, p);
+        rhs( grid, p);
     //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::array<dg::x::DVec,2 > y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    if( p.equations == "local" || p.equations == "global")
+    std::array<dg::x::DVec,2 > y0({dg::evaluate( g, grid), dg::evaluate(g, grid)}),
+        y1(y0); // n_e' = gaussian
+    if( p.model == "local" || p.model == "global")
     {
         dg::blas1::copy( y0[0], y0[1]);
         if( p.tau != 0)
@@ -64,35 +65,44 @@ int main( int argc, char* argv[])
                 ;
             else if( "gamma_inv" == flr)
             {
-                dg::apply( ex.gamma_inv(), y0[0], y0[1]);
+                dg::apply( rhs.gamma_inv(), y0[0], y0[1]);
             }
         }
     }
-    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
+    if( p.model == "gravity_local" || p.model == "gravity_global" ||
+            p.model == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
     //////////////////////////////////////////////////////////////////////
+    // Construct timestepper
+    std::string tableau;
+    double rtol, atol, time = 0.;
+    try{
+        rtol = js["timestepper"].get("rtol", 1e-5).asDouble();
+        atol = js["timestepper"].get("atol", 1e-5).asDouble();
+        tableau = js[ "timestepper"].get( "tableau",
+                "Bogacki-Shampine-4-2-3").asString();
+    }catch ( std::exception& error){
+        DG_RANK0 std::cerr << "Error in input file " << argv[1]<< std::endl;
+        DG_RANK0 std::cerr << error.what() << std::endl;
+        dg::abort_program();
+    }
+    DG_RANK0 std::cout<< "Construct timeloop ...\n";
+    using Vec = std::array< dg::x::DVec, 2>;
+    dg::Adaptive< dg::ERKStep< Vec>> adapt(tableau, y0);
+    dg::AdaptiveTimeloop<Vec> timeloop( adapt, rhs,
+                        dg::pid_control, dg::l2norm, rtol, atol);
 
+    ////////////////////////////////////////////////////////////////////
 
-    dg::DefaultSolver<std::vector<dg::DVec>> solver( im, y0, 1000, p.eps_time);
-    dg::Adaptive<dg::ARKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3", y0);
-    //dg::Adaptive<dg::ERKStep<std::vector<dg::DVec>>> stepper( "ARK-4-2-3 (explicit)", y0);
-
-    dg::DVec dvisual( grid.size(), 0.);
-    dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
-    dg::IHMatrix equi = dg::create::backscatter( grid);
-    draw::ColorMapRedBlueExt colors( 1.);
-    //create timer
-    dg::Timer t;
-    double time = 0;
-    double dt = 1e-5;
-    const double mass0 = ex.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = ex.energy(), energy0 = E0, E1 = 0, diff = 0;
-    std::cout << "Begin computation \n";
-    std::cout << std::scientific << std::setprecision( 2);
-    unsigned step = 0;
-    unsigned failed_counter = 0;
-
+    toefl::Variables var = { rhs, grid, p};
+    // trigger first computation of potential
+    {
+        DG_RANK0 std::cout<< "First potential\n";
+        auto temp = y0;
+        rhs( 0., y0, temp);
+        DG_RANK0 std::cout<< "Done\n";
+    }
     std::string output = js[ "output"]["type"].asString("glfw");
     dg::Timer t;
     t.tic();
@@ -118,8 +128,8 @@ int main( int argc, char* argv[])
         std::map<std::string, const dg::DVec* > v2d;
         v2d["ne / "] = &y0[0];
         v2d["Ni / "] = &y0[1];
-        v2d["Phi / "] = &rhs.potential();
-        v2d["Vor / "] = &rhs.potential();
+        v2d["Phi / "] = &rhs.phi(0);
+        v2d["Vor / "] = &rhs.phi(0);
         unsigned itstp = js["output"]["itstp"].asUInt();
         unsigned step = 0;
 
@@ -129,7 +139,7 @@ int main( int argc, char* argv[])
             {
                 if( pair.first == "Vor / " )
                 {
-                    rhs.compute_lapPhi( temp);
+                    dg::blas2::gemv( rhs.laplacianM(), *pair.second, temp);
                     dg::blas2::gemv( equidistant, temp, visual);
                 }
                 else
@@ -222,8 +232,8 @@ int main( int argc, char* argv[])
         unsigned Nx_out    = js[ "output"]["Nx"].asUInt( 48);
         unsigned Ny_out    = js[ "output"]["Ny"].asUInt( 48);
 
-        dg::x::CartesianGrid2d grid_out( p.x[0], p.x[1], p.y[0], p.y[1],
-                    n_out, Nx_out, Ny_out, dg::DIR, dg::PER
+        dg::x::CartesianGrid2d grid_out( 0., p.lx, 0., p.ly,
+                    n_out, Nx_out, Ny_out, p.bcx, p.bcy
                     #ifdef WITH_MPI
                     , comm
                     #endif //WITH_MPI
@@ -235,23 +245,20 @@ int main( int argc, char* argv[])
                         {"time", "y", "x"});
 
         std::map<std::string, int> id3d;
-        for( auto s : p.species)
+        for( auto& record : toefl::diagnostics2d_list.at( p.model))
         {
-            for( auto& record : impurities::diagnostics2d_s_list)
-            {
-                std::string name = record.name + "_"+s;
-                std::string long_name = record.long_name + " for species " + s;
-                id3d[name] = 0;
-                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
-                        &id3d.at(name));
-                DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
-                        long_name.size(), long_name.data());
-            }
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
+                    &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
         }
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
         dg::x::DVec resultD = transferH; // transfer to device
-        for( auto& record : impurities::diagnostics2d_static_list)
+        for( auto& record : toefl::diagnostics2d_static_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
@@ -260,7 +267,7 @@ int main( int argc, char* argv[])
                 &staticID);
             DG_RANK0 err = nc_put_att_text( ncid, staticID, "long_name",
                                            long_name.size(), long_name.data());
-            record.function( resultD, var, "");
+            record.function( resultD, var);
             dg::assign( resultD, resultH);
             dg::blas2::gemv( projection, resultH, transferH);
             dg::file::put_var_double( ncid, staticID, grid_out, transferH);
@@ -268,17 +275,14 @@ int main( int argc, char* argv[])
         dg::x::DVec volume = dg::create::volume( grid);
         size_t start = {0};
         size_t count = {1};
-        for( auto s : p.species)
+        for( auto& record : toefl::diagnostics2d_list.at( p.model))
         {
-            for( auto& record : impurities::diagnostics2d_s_list)
-            {
-                record.function( resultD, var, s);
-                dg::assign( resultD, resultH);
-                dg::blas2::gemv( projection, resultH, transferH);
-                // note that all processes call this function (for MPI)
-                dg::file::put_vara_double( ncid, id3d.at(record.name+"_"+s), start,
-                        grid_out, transferH);
-            }
+            record.function( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::blas2::gemv( projection, resultH, transferH);
+            // note that all processes call this function (for MPI)
+            dg::file::put_vara_double( ncid, id3d.at(record.name), start,
+                    grid_out, transferH);
         }
         DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
         DG_RANK0 err = nc_close( ncid);
@@ -311,16 +315,13 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_open(outputfile.c_str(), NC_WRITE, &ncid);
             // First write the time variable
             DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-            for( auto s : p.species)
+            for( auto& record : toefl::diagnostics2d_list.at(p.model))
             {
-                for( auto& record : impurities::diagnostics2d_s_list)
-                {
-                    record.function( resultD, var, s);
-                    dg::assign( resultD, resultH);
-                    dg::blas2::gemv( projection, resultH, transferH);
-                    dg::file::put_vara_double( ncid, id3d.at(record.name+"_"+s),
-                                              start, grid_out, transferH);
-                }
+                record.function( resultD, var);
+                dg::assign( resultD, resultH);
+                dg::blas2::gemv( projection, resultH, transferH);
+                dg::file::put_vara_double( ncid, id3d.at(record.name),
+                                          start, grid_out, transferH);
             }
             DG_RANK0 err = nc_close( ncid);
             if( abort) break;
