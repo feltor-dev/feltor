@@ -3,8 +3,9 @@
 #include <iostream>
 #include <iomanip>
 
-#include "matrixsqrt.h"
-#include "matrixfunction.h" 
+#include "lanczos.h"
+#include "matrixfunction.h"
+
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;

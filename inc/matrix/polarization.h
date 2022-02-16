@@ -1,7 +1,7 @@
 #pragma once
 #include "dg/algorithm.h"
 
-#include "matrixsqrt.h"
+#include "lanczos.h"
 #include "matrixfunction.h"
 #include "tensorelliptic.h"
 

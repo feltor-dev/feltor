@@ -7,7 +7,6 @@
 #include "lanczos.h"
 #include "mcg.h"
 #include "matrixfunction.h"
-#include "matrixsqrt.h"
 #include "polarization.h"
 #include "polarization_init.h"
 #include "sqrt_cauchy.h"
