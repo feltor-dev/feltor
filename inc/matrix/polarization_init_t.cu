@@ -112,7 +112,7 @@ int main()
 //             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
 //         }
         {
-            dg::PolChargeN< dg::CartesianGrid2d, Matrix, Container >
+            dg::mat::PolChargeN< dg::CartesianGrid2d, Matrix, Container >
                 polN(grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1.0);
             polN.set_phi(phi);
             polN.set_dxphi(dxphi);

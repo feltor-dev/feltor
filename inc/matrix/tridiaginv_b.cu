@@ -197,6 +197,13 @@ int main()
     double T1mana = dg::blas1::dot( em, y);
     //std::cout << "    # result "<<T1mana<<" "<<T1m<<"\n";
     std::cout << "    # error_rel "<<fabs(T1mana - T1m)/T1m<<"\n";
+    t.tic();
+    dg::mat::compute_Tinv_y(Tsym, x, d);
+    t.toc();
+    dg::blas1::axpby(1.0, x, -1.0, x_symsol, err );
+    std::cout <<  "    # time: "<< t.diff()<<"s \n";
+    //std::cout << "    # result "<<T1mana<<" "<<T1m<<"\n";
+    std::cout <<  "    # error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_symsol,x_symsol)) << "\n";
 
 
 
@@ -262,6 +269,13 @@ int main()
     dg::blas2::symv( Tinv, e1, y);
     T1mana = dg::blas1::dot( em, y);
     std::cout << "    # error_rel "<<fabs(T1mana - T1m)/T1m<<"\n";
+    t.tic();
+    dg::mat::compute_Tinv_y(T, x, d);
+    t.toc();
+    dg::blas1::axpby(1.0, x, -1.0, x_sol, err );
+    std::cout <<  "    # time: "<< t.diff()<<"s \n";
+    //std::cout << "    # result "<<T1mana<<" "<<T1m<<"\n";
+    std::cout <<  "    # error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_sol,x_sol)) << "\n";
 
     return 0;
 }

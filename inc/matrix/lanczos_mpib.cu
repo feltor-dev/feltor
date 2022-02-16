@@ -4,6 +4,7 @@
 #include <mpi.h>
 
 #include "lanczos.h"
+#include "mcg.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -55,7 +56,7 @@ int main(int argc, char * argv[])
     dg::Helmholtz<dg::aRealMPIGeometry2d<double>, Matrix, Container> A( grid, alpha, dg::centered);
     {
         t.tic();
-        dg::mat::Lanczos< Container > lanczos(x, max_iter);
+        dg::mat::UniversalLanczos< Container > lanczos(x, max_iter);
         lanczos.set_verbose(true);
         t.toc();
         if(rank==0) std::cout << "# Lanczos creation took "<< t.diff()<<"s   \n";
@@ -64,10 +65,8 @@ int main(int argc, char * argv[])
         b = dg::evaluate( lhs, grid);
         xexac = dg::evaluate( rhs, grid);
         t.tic();
-        auto T = lanczos(A, b, w2d, eps);
-        auto e1 = lanczos.make_e1(), y( e1);
-        dg::blas2::symv( T, e1, y);
-        lanczos.normMbVy( A, T, y, x, b, lanczos.get_bnorm());
+        lanczos.solve( x, dg::mat::make_Linear_Te1( 1), A, b, w2d, eps, 1.,
+                "residual", 1.);
         t.toc();
         if(rank==0) std::cout << "    iter: "<< lanczos.get_iter() << "\n";
         if(rank==0) std::cout << "    time: "<< t.diff()<<"s \n";

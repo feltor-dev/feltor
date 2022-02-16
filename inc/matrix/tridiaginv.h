@@ -40,6 +40,40 @@ value_type compute_Tinv_m1( const cusp::dia_matrix<int, value_type,
     }
     return di;
 }
+/**
+ * @brief Computes the value of \f$ x = ((aT+dI)^{-1})y \f$ via Thomas algorithm
+ *
+ * @note This is extremely fast (timings can bearly be measured;
+ *  for size = 100 <1e-6s)
+ * @tparam value_type real type
+ * @param T The tridiagonal matrix
+ * @param x contains the solution (resized if necessary)
+ * @param y the right hand side
+ * @param a optional scaling factor of T
+ * @param d optional addition to diagonal of T
+ */
+template<class value_type>
+void compute_Tinv_y( const cusp::dia_matrix<int, value_type,
+        cusp::host_memory>& T,
+        thrust::host_vector<value_type>& x,
+        const thrust::host_vector<value_type>& y, value_type a  = 1.,
+        value_type d = 0.)
+{
+    unsigned size = y.size();
+    x.resize(size);
+    thrust::host_vector<value_type> ci(size), di(size);
+    ci[0] = a*T.values(0,2)/( a*T.values(0,1) + d);
+    di[0] = y[0]/( a*T.values(0,1) + d);
+    for( unsigned i=1; i<size; i++)
+    {
+        ci[i] = a*T.values(i,2)/ ( a*T.values(i,1) + d -a*T.values(i,0)*ci[i-1]);
+        di[i] = (y[i]-a*T.values( i, 0)*di[i-1])/(a*T.values(i,1) + d
+                -a*T.values(i,0)*ci[i-1]);
+    }
+    x[size-1] = di[size-1];
+    for( int i=size-2; i>=0; i--)
+        x[i] = di[i] - ci[i]*x[i+1];
+}
 
 
 /**
@@ -579,48 +613,32 @@ cusp::coo_matrix<int,value_type,cusp::host_memory> invert(
 }
 
 /**
- * @brief Use Eigenvalue decomposition to compute
- * \f$ f(T)e_1 = E f(\Lambda) E^T e_1 \f$
+ * @brief Compute extreme Eigenvalues of a symmetric tridiangular matrix
  *
- * @param T the tridiagonal matrix
- * @param f the matrix function (e.g. dg::SQRT<double> or dg::EXP<double>)
- * @return the result vector
+ * @code{.cpp}
+ *  dg::mat::UniversalLanczos lanczos( A.weights(), 20);
+ *  auto T = lanczos.tridiag( A, A.weights(), A.weights());
+ *  auto EV = dg::mat::compute_extreme_EV( T);
+ *  // EV[0] is the minimum, EV[1] the maximum Eigenvalue
+ * @endcode
+ * @tparam value_type real type
+ * @param T symmetric tridiangular matrix
+ * @return {EVmin, EVmax}
  */
-template<class UnaryOp, class value_type>
-dg::HVec compute_funcTe1( UnaryOp f, const cusp::dia_matrix<int, value_type,
-        cusp::host_memory>& T)
+template<class value_type>
+std::array<value_type, 2> compute_extreme_EV( const cusp::dia_matrix<int,value_type, cusp::host_memory>& T)
 {
-    unsigned iter = T.num_rows;
-    cusp::array2d< value_type, cusp::host_memory> evecs(iter,iter);
-    cusp::array1d< value_type, cusp::host_memory> evals(iter);
-    dg::HVec e1H(iter,0.), yH(e1H);
-    e1H[0] = 1.;
-    yH.resize( iter);
-    //Compute Eigendecomposition
-    //MW !! the subdiagonal entries start at 0 in lapack, the n-th element
-    // is used as workspace (from lapack docu)
+    unsigned size = T.num_rows;
+    cusp::array2d< value_type, cusp::host_memory> evecs;
+    cusp::array1d< value_type, cusp::host_memory> evals(size);
     cusp::lapack::stev(T.values.column(1), T.values.column(2),
-            evals, evecs, 'V');
-    //for( unsigned u=0; u<iter; u++)
-    //    std::cout << u << " "<<evals[u]<<std::endl;
-    cusp::coo_matrix<int, value_type, cusp::host_memory> EH, EHt;
-    cusp::convert(evecs, EH);
-    cusp::transpose(EH, EHt);
-    //Compute f(T) e1 = E f(Lambda) E^t e1
-    dg::blas2::symv(EHt, e1H, yH);
-    dg::blas1::transform(evals, e1H, [f] (double x){
-        try{
-            return f(x);
-        }
-        catch(boost::exception& e) //catch boost overflow error
-        {
-            return 0.;
-        }
-    });
-    dg::blas1::pointwiseDot(e1H, yH, e1H);
-    dg::blas2::symv(EH, e1H, yH);
-    return yH;
+            evals, evecs, 'N');
+    value_type EVmax = dg::blas1::reduce( evals, 0., dg::AbsMax<value_type>());
+    value_type EVmin = dg::blas1::reduce( evals, EVmax, dg::AbsMin<value_type>());
+    return std::array<value_type, 2>{EVmin, EVmax};
 }
+
+
 ///@}
 
 } // namespace mat

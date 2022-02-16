@@ -6,10 +6,12 @@
  * @{
  *     @defgroup matrixinvert Inversion of tridiagonal matrices
  *      @brief \f$T^{-1}\f$
- *     @defgroup matrixapproximation Matrix tridiagonalization
- *      @brief \f$ b = f(A)x \f$ using \c dg::mat::Lanczos or \c dg::mat::MCG
- *     @defgroup matrixfunctionapproximation Matrix-function approximation
- *      @brief \f$ b \approx f(A)x \f$
+ *     @defgroup tridiagfunction Tridiagonal Matrix-functions
+ *       approximation
+ *      @brief \f$ x \approx f(T)b \f$
+ *     @defgroup matrixfunctionapproximation Matrix-functions
+ *       approximation
+ *      @brief \f$ x \approx f(A)b \f$
  * @}
  *
  * @defgroup matrixnumerical1 Level 4: Advanced numerical schemes

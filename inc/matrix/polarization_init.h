@@ -2,8 +2,9 @@
 
 #include "dg/algorithm.h"
 
-namespace dg
-{
+namespace dg {
+namespace mat {
+
 /**
  * @brief EXPERIMENTAL polarization solver class for N
  *
@@ -218,8 +219,10 @@ class PolChargeN
 
 };
 
+}  //namespace mat
+
 template< class G, class M, class V>
-struct TensorTraits< PolChargeN<G, M, V> >
+struct TensorTraits< mat::PolChargeN<G, M, V> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

@@ -10,6 +10,50 @@ namespace dg {
 namespace mat {
 
 /**
+ * @brief %Operator that integrates an ODE from 0 to 1 with an adaptive ERK class as timestepper
+ *
+ * The intended use is to integrate Matrix equations
+ * @code{.cpp}
+ * dg::Helmholtz<Geometry, Matrix, Container> A( g, alpha, dg::centered);
+ * auto sqrt_ode = dg::mat::make_sqrtode( A, 1., A.weights(), eps);
+ * unsigned number = 0;
+ * auto sqrtA = dg::mat::make_directODESolve( sqrt_ode, "Dormand-Prince-7-4-5",1e-5, 1e-7, number);
+ * dg::apply ( sqrtA , x , b);
+ * @endcode
+ * The call \f$ b = f(x) \f$ corresponds to integrating \f$ \dot y = F(y)\f$ with \f$ y(0 ) = x\f$ to \f$ b = y(1)\f$
+ * @param ode The differential equation to integrate (forwarded to \c dg::Adaptive<dg::ERKStep>)
+ * @param tableau The tableau for \c dg::ERKStep
+ * @param epsTimerel relative accuracy of adaptive ODE solver
+ * @param epsTimeabs absolute accuracy of adaptive ODE solver
+ * @param number Is linked to the lambda. Contains the number of steps the
+ *  adaptive timestepper used to completion
+ * @param t0 Change starting time to \c t0
+ * @param t1 Change end time to \c t1
+ * @return %Operator that integrates the ode from t0 to t1
+ *
+ * @sa \c dg::make_sqrtode \c dg::make_expode, \c dg::make_besselI0ode
+ * @ingroup matrixfunctionapproximation
+ */
+template<class value_type, class ExplicitRHS>
+auto make_directODESolve( ExplicitRHS&& ode,
+        std::string tableau, value_type epsTimerel, value_type epsTimeabs,
+        unsigned& number, value_type t0 = 0., value_type t1 = 1.)
+{
+    return [=, cap = std::tuple<ExplicitRHS>(std::forward<ExplicitRHS>(ode)),
+            rtol = epsTimerel, atol = epsTimeabs]
+            ( const auto& x, auto& b) mutable
+        {
+            value_type reject_limit = 2;
+            dg::Adaptive<dg::ERKStep<std::decay_t<decltype(b)>>> adapt( tableau, x);
+            dg::AdaptiveTimeloop<std::decay_t<decltype(b)>> loop( adapt,
+                    std::get<0>(cap), dg::pid_control, dg::l2norm, rtol, atol,
+                    reject_limit);
+            loop.integrate( t0, x, t1, b);
+            number = adapt.nsteps();
+        };
+}
+
+/**
  * @brief Right hand side of the square root ODE \f[ \dot{y}= \left[(1-t) A +t I\right]^{-1} (I - A)/2  y \f]
  * where \f$ A\f$ is the matrix
  *
@@ -121,14 +165,10 @@ InvSqrtODE<Container> make_inv_sqrtodeTri( const Matrix& TH, const Container&
         copyable)
 {
     InvSqrtODE<Container> sqrtode( TH, copyable);
-    sqrtode.set_inverse_operator( [ =, &TH = TH, &t = sqrtode.time() ]
+    sqrtode.set_inverse_operator( [ &TH = TH, &t = sqrtode.time() ]
             ( const auto& x, auto& y) mutable
         {
-            Matrix wTH = TH;
-            dg::blas1::scal( wTH.values.values, (1-t));
-            for( unsigned u=0; u<wTH.num_rows; u++)
-                wTH.values( u,1) += t;
-            dg::apply( dg::mat::invert( wTH), x, y);
+            dg::mat::compute_Tinv_y( TH, y, x, (1.-t), t);
         });
     return sqrtode;
 }

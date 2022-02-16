@@ -22,31 +22,28 @@ dg::bc bcy = dg::PER;
 double phi_ana_df( double x,double y){ return sin(m*x)*sin(n*y);}
 double rho_ana_df( double x,double y){ return (m*m+n*n)/(-1.+(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 
-// full_f  TODO: calculate boundary consistent analyitical rho 
+// full_f  TODO: calculate boundary consistent analytical rho
 double amp = 0.1;
 // double chi_ana( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 double chi_ana( double x, double y) {return 1. + amp*sin(y); } //must be strictly positive
 // double rho_ana_FF( double x, double y) { return (amp*cos(2.*x)*(1./sqrt(1.-4.*alpha) - 2.*cos(2.*y)/sqrt(1.-8.*alpha)) + amp* cos(2.*y)/sqrt(1.-4.*alpha)-(4.*sin(x)*sin(y))/sqrt(1.-2.*alpha))/2.; }
 // double phi_ana_FF(double x, double y)  { return (sin(x)*sin(y))*sqrt(1.-(1.+1.)*alpha);}
 // double rho_ana_FF( double x, double y) { return (
-//     amp*cos(2.*x)*(1./sqrt(1.-4.*alpha)  - 2.*cos(2.*y)/sqrt(1.-8.*alpha)) 
+//     amp*cos(2.*x)*(1./sqrt(1.-4.*alpha)  - 2.*cos(2.*y)/sqrt(1.-8.*alpha))
 //     + amp* cos(2.*y)/sqrt(1.-4.*alpha)
 //     -(4.*sin(x)*sin(y))/sqrt(1.-2.*alpha)
 //         )/2./sqrt(1.-2.*alpha); }
 double rho_ana_FF( double x, double y) { return  (sin(x)*((3.0*amp*(1.0-2.0*alpha)*cos(2.0*y))/sqrt(1.0-5.0*alpha)-             (amp-2.0*amp*alpha+4.0*sqrt(1.0-2.0*alpha)*sqrt(1.0-alpha)*sin(y))/sqrt(1.0-alpha)))/(2.0*sqrt((1.0-2.0*alpha)*(1.0-2.0*alpha)*(1.0-2.0*alpha))); }
-    
 
-    
+
 double phi_ana_FF(double x, double y)  { return (sin(x)*sin(y));}
-        
-       
-        
-        
-// double rho_ana_FFO4( double x, double y) { return ((amp * cos(2.* y))/(1. - 4.* beta) + 
+
+
+// double rho_ana_FFO4( double x, double y) { return ((amp * cos(2.* y))/(1. - 4.* beta) +
 //  amp* cos(2.* x)* (1./(1. - 4.* beta) + (10.* cos(2.* y))/(-1. + 8.* beta)) + (
-//  12.* sin(x) *sin(y))/(-1. + 2.* beta ))/(-2. + 4.* beta);} 
-double rho_ana_FFO4( double x, double y) { return  (sin(x)*(amp*(2.0 + 1.0/(-1.0 + beta)) + (11.0*amp*(1.0 - 2.0*beta)*cos(2.0*y))/(-1.0 + 5.0*beta) + 
-   12.0*sin(y)))/(2.0*(1.0 - 2.0*beta)*(1.0 - 2.0*beta));} 
+//  12.* sin(x) *sin(y))/(-1. + 2.* beta ))/(-2. + 4.* beta);}
+double rho_ana_FFO4( double x, double y) { return  (sin(x)*(amp*(2.0 + 1.0/(-1.0 + beta)) + (11.0*amp*(1.0 - 2.0*beta)*cos(2.0*y))/(-1.0 + 5.0*beta) +
+   12.0*sin(y)))/(2.0*(1.0 - 2.0*beta)*(1.0 - 2.0*beta));}
 
 // //Full f cold
 // double rho_ana_FFO2( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1.)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
@@ -66,19 +63,18 @@ int main()
     std::cout <<"# You typed\n"
               <<"n:  "<<n<<"\n"
               <<"Nx: "<<Nx<<"\n"
-              <<"Ny: "<<Ny<<std::endl;    
+              <<"Ny: "<<Ny<<std::endl;
     double eps_pol = 1e-6;
     double eps_gamma = 1e-7;
     std::cout << "# Type in eps_pol and eps_gamma (eps_gamma < eps_pol)\n";
     std::cin >> eps_pol >> eps_gamma;
     std::cout <<"# You typed\n"
               <<"eps_pol: "<<eps_pol<<"\n"
-              <<"eps_gamma: "<<eps_gamma<<std::endl; 
+              <<"eps_gamma: "<<eps_gamma<<std::endl;
     std::vector<double> eps_pol_vec = {eps_pol, eps_pol, eps_pol};
     std::vector<double> eps_gamma_vec = {eps_gamma, eps_gamma, eps_gamma};
-    
+
     dg::CartesianGrid2d grid2d( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    double hxhy = grid2d.lx()*grid2d.ly()/(grid2d.n()*grid2d.n()*grid2d.Nx()*grid2d.Ny());
 
     const Container w2d = dg::create::weights( grid2d);
     const Container one = dg::evaluate( dg::one, grid2d);
@@ -89,51 +85,48 @@ int main()
     Container x(rho.size(), 0.), temp(rho), error(rho), x_gamma(x);
     const Container chi =  dg::evaluate( chi_ana, grid2d);
     const Container rho_FFO4 =    dg::evaluate( rho_ana_FFO4, grid2d);
-    
+
     dg::exblas::udouble res;
 
-    dg::CG <Container> pcg( x,  grid2d.size()*grid2d.size());
-    
+    dg::PCG <Container> pcg( x,  grid2d.size()*grid2d.size());
+
     const unsigned stages = 3;
     dg::MultigridCG2d<dg::CartesianGrid2d, Matrix, Container > multigrid( grid2d, stages);
-    
+
     //df polarization charge with nested inversions
     {
         std::cout << "\n#####df polarization charge with nested inversion (commute = false)\n";
         std::cout << "df-nested-nocommute:" << std::endl;
-        dg::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_df;
-        pol_df.construct(alpha, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1., true, "df");        
+        dg::mat::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_df;
+        pol_df.construct(alpha, eps_gamma_vec, grid2d, grid2d.bcx(),
+                grid2d.bcy(), dg::centered, 1., "df", true);
         pol_df.set_commute(false);
-        dg::blas1::scal(x,0.0); 
-        
+        dg::blas1::scal(x, 0.0);
+
         t.tic();
-        dg::blas1::pointwiseDot( pol_df.weights(), rho, temp);
-        unsigned number = pcg( pol_df, x, temp, pol_df.precond(), pol_df.weights(), eps_pol);
-                if(  number == pcg.get_max())
-                throw dg::Fail( eps_pol);
+        unsigned number = pcg.solve( pol_df, x, rho, pol_df.precond(),
+                pol_df.weights(), eps_pol);
         dg::blas1::scal(x, -1.0);
         t.toc();
-        
+
         dg::blas1::axpby( 1., sol, -1., x, error);
         res.d = sqrt( dg::blas2::dot( w2d, error));
         std::cout << "    time: "<<t.diff() << "s \n";
         std::cout << "    iter:  "<<number<<std::endl;
         std::cout << "    error_abs: " << res.d<<" \n";
         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol))<<std::endl;
-        
-        std::cout << "\n#####df polarization charge with nested inversion (commute = true)\n";         
+
+        std::cout << "\n#####df polarization charge with nested inversion (commute = true)\n";
         std::cout << "df-nested-commute:" << std::endl;
         pol_df.set_commute(true);
-        dg::blas1::scal(x,0.0);   
-        
+        dg::blas1::scal(x,0.0);
+
         t.tic();
-        dg::blas1::pointwiseDot( pol_df.weights(), rho, temp);
-        number = pcg( pol_df, x, temp, pol_df.precond(), pol_df.weights(), eps_pol);
-                if(  number == pcg.get_max())
-                throw dg::Fail( eps_pol);
+        number = pcg.solve( pol_df, x, rho, pol_df.precond(),
+                pol_df.weights(), eps_pol);
         dg::blas1::scal(x, -1.0);
         t.toc();
-        
+
         dg::blas1::axpby( 1., sol, -1., x, error);
         res.d = sqrt( dg::blas2::dot( w2d, error));
         std::cout << "    time: "<<t.diff() << "s \n";
@@ -144,83 +137,79 @@ int main()
 
     //df polarization charge without nested inversions
     {
-        std::cout << "#####df polarization charge without nested inversion (commute = false)\n"; 
+        std::cout << "#####df polarization charge without nested inversion (commute = false)\n";
         std::cout << "df-notnested-nocommute:" << std::endl;
         dg::Elliptic< dg::CartesianGrid2d, Matrix, Container > lapperp(grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered);
         dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
-    
+
         dg::blas1::scal(x,0.0);
-        
+
         t.tic();
         dg::blas1::copy( rho, temp);
         dg::blas1::scal(temp,-1.0);
-        unsigned number = pcg( lapperp, x, temp, 1., w2d, eps_pol);
-        dg::blas2::symv(gamma0inv, x, temp); 
+        unsigned number = pcg.solve( lapperp, x, temp, 1., w2d, eps_pol);
+        dg::blas2::symv(gamma0inv, x, temp);
         dg::blas1::copy( temp, x);
         t.toc();
-        
+
         dg::blas1::axpby( 1., sol, -1., x, error);
-        res.d = sqrt( dg::blas2::dot( w2d, error));        
+        res.d = sqrt( dg::blas2::dot( w2d, error));
         std::cout << "    time: "<<t.diff() << "s \n";
         std::cout << "    iter:  "<<number<<std::endl;
         std::cout << "    error_abs: " << res.d<<std::endl;
         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol))<<std::endl;
-        
-        
-        std::cout << "#####df polarization charge without nested inversion (commute = true)\n";  
+
+
+        std::cout << "#####df polarization charge without nested inversion (commute = true)\n";
         std::cout << "df-notnested-commute:" << std::endl;
         dg::blas1::scal(x, 0.0);
-        
+
         t.tic();
         dg::blas2::symv(gamma0inv, rho, temp);
         dg::blas1::scal(temp,-1.0);
-        number = pcg( lapperp, x, temp, 1., w2d, eps_pol);
-                if(  number == pcg.get_max())
-                throw dg::Fail( eps_pol);
+        number = pcg.solve( lapperp, x, temp, 1., w2d, eps_pol);
         t.toc();
-        
+
         dg::blas1::axpby( 1., sol, -1., x, error);
-        res.d = sqrt( dg::blas2::dot( w2d, error));        
+        res.d = sqrt( dg::blas2::dot( w2d, error));
         std::cout << "    time: "<<t.diff() << "s \n";
         std::cout << "    iter:  "<<number<<std::endl;
         std::cout << "    error_abs: " << res.d<<std::endl;
         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol))<<std::endl;
     }
-    
+
     //ff polarization charge of order 2 with nested inversions //TODO not converging
     {
         std::cout << "#####ff polarization charge with nested inversion (commute = false)\n";
         std::cout << "ffO2-nested-nocommute:" << std::endl;
 
-        dg::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_ff;    
-        pol_ff.construct(alpha, {eps_gamma}, grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1., false, "ff");        
+        dg::mat::PolCharge< dg::CartesianGrid2d, Matrix, Container > pol_ff;
+        pol_ff.construct(alpha, eps_gamma_vec, grid2d,
+                dg::centered, 1., "ff", false);
         pol_ff.set_commute(false);
         pol_ff.set_chi(chi);
-        dg::blas1::scal(x, 0.0);    
+        dg::blas1::copy(0., x);
 
         t.tic();
-        dg::blas1::pointwiseDot(w2d, rho_FF, temp);
-        unsigned number = pcg( pol_ff, x, temp, pol_ff.precond(), pol_ff.weights(), eps_pol);
-                if(  number == pcg.get_max())
-                throw dg::Fail( eps_pol);
+        unsigned number = pcg.solve( pol_ff, x, rho_FF, pol_ff.precond(),
+                pol_ff.weights(), eps_pol);
         dg::blas1::scal(x,-1.0);
         t.toc();
-        
+
         dg::blas1::axpby( 1., sol_FF, -1., x, error);
         res.d = sqrt( dg::blas2::dot( w2d, error));
         std::cout << "    time: "<<t.diff() << "s \n";
         std::cout << "    iter:  "<<number<<std::endl;
         std::cout << "    error_abs: " << res.d<<std::endl;
         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
-        
+
         //test application of operator //TODO not converging but relatively close to sol
         dg::blas2::symv( pol_ff,  sol_FF, x);
-        dg::blas1::pointwiseDot(pol_ff.inv_weights(), x, x);
         dg::blas1::scal(x,-1.0);
-        
+
         dg::blas1::axpby( 1., rho_FF, -1., x, error);
-        std::cout << "#   error_rel in Operator application " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, rho_FF))<<std::endl;    
-    }    
+        std::cout << "#   error_rel in Operator application " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, rho_FF))<<std::endl;
+    }
     //ff polarization charge of order 2 without nested inversions
     {
         std::cout << "#####ff polarization charge without nested inversion (commute = false)\n";
@@ -231,40 +220,43 @@ int main()
         dg::blas1::scal(x_gamma, 0.0);
         dg::blas1::scal(temp, 0.0);
         dg::blas1::scal(x, 0.0);
-        dg::KrylovSqrtCauchySolve< dg::CartesianGrid2d, Matrix, Container> sqrtsolve( gamma0inv, grid2d, x,  1e-14, 400, 40,  eps_gamma);
-
-//         dg::KrylovFuncEigenSolve<Container> sqrtsolve(  x, grid2d.size());
-        double max_weights =   dg::blas1::reduce(gamma0inv.weights(), 0., dg::AbsMax<double>() );
-        double min_weights =  -dg::blas1::reduce(gamma0inv.weights(), max_weights, dg::AbsMin<double>() );
-        double kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
-        double EVmin = 1.0-gamma0inv.alpha()*hxhy*(1.0 + 1.0);   
-        double res_fac = kappa*sqrt(EVmin);
+        dg::mat::UniversalLanczos<Container> sqrtsolve( x, grid2d.size());
 
         t.tic();
-        sqrtsolve(rho_FF, temp);
-//         unsigned iter_tri_inner =  sqrtsolve(rho_FF, temp, dg::SQRT<double>(), gamma0inv, gamma0inv.inv_weights(), gamma0inv.weights(), eps_gamma, res_fac);
+        unsigned number = 0, numberCG = 0;
+        dg::Timer ti;
+        ti.tic();
+        //auto func = dg::mat::make_FuncEigen_Te1([](double x){return sqrt(x);});
+        dg::mat::UniversalLanczos<Container> lanczos( w2d, 20);
+        auto T = lanczos.tridiag( gamma0inv, w2d, w2d);
+        auto EVs = dg::mat::compute_extreme_EV( T);
+        auto func = dg::mat::make_SqrtCauchyEigen_Te1(+1, EVs, 40  );
+
+        number = sqrtsolve.solve(temp,  func, gamma0inv, rho_FF, w2d,
+                eps_gamma, 1., "universal", 1., 2 );
+        ti.toc();
+        std::cout << "# SQRT solve with "<<number<<" iterations took "<<ti.diff()<<"s\n";
         dg::blas1::scal(temp,-1.0);
-        unsigned number = pcg( lapperp, x_gamma, temp, 1., w2d, eps_pol);
-                if(  number == pcg.get_max())
-                throw dg::Fail( eps_pol);
-        sqrtsolve(x_gamma, x);
-//         unsigned iter_tri_outer =  sqrtsolve(x_gamma, x, dg::SQRT<double>(), gamma0inv, gamma0inv.inv_weights(), gamma0inv.weights(), eps_gamma, res_fac);
+        numberCG = pcg.solve( lapperp, x_gamma, temp, 1., w2d, eps_pol);
+        ti.tic();
+        number = sqrtsolve.solve(x,  func, gamma0inv, x_gamma, w2d,
+                eps_gamma, 1., "universal", 1., 2 );
+        ti.toc();
+        std::cout << "# SQRT solve with "<<number<<" iterations took "<<ti.diff()<<"s\n";
 
         t.toc();
-        
+
         dg::blas1::axpby( 1., sol_FF, -1., x, error);
         res.d = sqrt( dg::blas2::dot( w2d, error));
         std::cout << "    time: "<<t.diff() << "s \n";
-        std::cout << "    iter:  "<<number<<std::endl;
-//         std::cout << "    iter_tri_inner:  "<<iter_tri_inner<<std::endl;
-//         std::cout << "    iter_tri_outer:  "<<iter_tri_outer<<std::endl;
+        std::cout << "    iter:  "<<numberCG<<std::endl;
         std::cout << "    error_abs: " << res.d<<std::endl;
         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
     }
-//     
+//
 //   ff polarization charge of order 4 with nested inversions (Note: converges for eps_gamma <=  machine precision and if BC fo outer helmholtz are changed to PER, )
-//     {        
-//         std::cout << "#####ff polarization charge of order 4 with nested inversions  (commute = false)\n";   
+//     {
+//         std::cout << "#####ff polarization charge of order 4 with nested inversions  (commute = false)\n";
 //         std::cout << "ffO4-nested-nocommute:" << std::endl;
 //         dg::PolCharge<dg::CartesianGrid2d, Matrix, Container> pol_ffO4;
 //         eps_gamma_vec = {eps_gamma, 0.1*eps_gamma, 0.1*eps_gamma};
@@ -272,35 +264,32 @@ int main()
 //         pol_ffO4.construct(beta, eps_gamma_vec, grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1., false, "ffO4");
 //         pol_ffO4.set_chi(chi);
 //         pol_ffO4.set_iota(chi);
-//    
+//
 //         dg::blas1::scal(x, 0.0);
-//         
+//
 //         t.tic();
-//         dg::blas1::pointwiseDot(pol_ffO4.weights(), rho_FFO4, temp);
-//         unsigned number = pcg(pol_ffO4, x, temp, eps_pol);
-//         if(  number == pcg.get_max())
-//                 throw dg::Fail( eps_pol);
+//         unsigned number = pcg.solve(pol_ffO4, x, rho_FF04, eps_pol);
 //         t.toc();
-// 
-//         dg::blas1::axpby( 1., sol_FF, -1., x, error);        
+//
+//         dg::blas1::axpby( 1., sol_FF, -1., x, error);
 //         res.d = sqrt( dg::blas2::dot( w2d, error));
 //         std::cout << "    time: "<<t.diff() << "s \n";
 //         std::cout << "    iter:  "<<number<<std::endl;
 //         std::cout << "    error_abs: " << res.d<<std::endl;
 //         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
-//         
-// 
+//
+//
 //     }
-// 
+//
 // //  ff polarization charge of order 4 without nested inversions
 //     {
 //         std::cout << "#####ff polarization charge of order 4 without nested inversion (commute = false)\n";
 //         std::cout << "ffO4-notnested-nocommute:" << std::endl;
 //         const std::vector<Container> multi_chi = multigrid.project( chi);
-// 
+//
 //         std::vector<dg::TensorElliptic<dg::CartesianGrid2d, Matrix, Container> > multi_tensorelliptic( stages);
 //         for(unsigned u=0; u<stages; u++)
-//         {        
+//         {
 //             multi_tensorelliptic[u].construct( multigrid.grid(u), dg::centered, 1.);
 //             multi_tensorelliptic[u].set_chi( multi_chi[u]);
 //             multi_tensorelliptic[u].set_iota( multi_chi[u]);
@@ -308,16 +297,15 @@ int main()
 //         dg::Helmholtz< dg::CartesianGrid2d,  Matrix, Container > gamma1inv(grid2d, grid2d.bcx(),grid2d.bcy(), beta, dg::centered, 1.);
 //         dg::blas1::scal(x, 0.0);
 //         eps_pol_vec = {eps_pol, 0.1*eps_pol, 0.1*eps_pol};
-//         
+//
 //         t.tic();
 //         dg::blas2::symv(gamma1inv, rho_FFO4, temp); //fullfills no DIR bc conditions/only PER on [0,2 pi]!
-//         dg::blas1::pointwiseDot(1., temp, temp); //should be normed for multigrid
 //         std::vector<unsigned> number = multigrid.direct_solve(multi_tensorelliptic, x, temp, eps_pol_vec);
-//         dg::blas2::symv(gamma1inv, x, temp); 
-//         dg::blas1::pointwiseDot(1., temp, x); 
+//         dg::blas2::symv(gamma1inv, x, temp);
+//         dg::blas1::copy( temp, x);
 //         t.toc();
-//         
-//         dg::blas1::axpby( 1., sol_FF, -1., x, error);        
+//
+//         dg::blas1::axpby( 1., sol_FF, -1., x, error);
 //         res.d = sqrt( dg::blas2::dot( w2d, error));
 //         std::cout << "    time: "<<t.diff() << "s \n";
 //         for( unsigned u=0; u<number.size(); u++)
@@ -326,7 +314,7 @@ int main()
 //         std::cout << "    error_abs: " << res.d<<std::endl;
 //         std::cout << "    error_rel: " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, sol_FF))<<std::endl;
 //     }
-//    
-    
+//
+
     return 0;
 }

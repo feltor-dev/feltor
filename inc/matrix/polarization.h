@@ -5,10 +5,27 @@
 #include "matrixfunction.h"
 #include "tensorelliptic.h"
 
-namespace dg
-{
+namespace dg {
+namespace mat {
+
 /**
- * @brief Various arbitary wavelength polarization charge operators of delta-f (df) and full-f (ff)
+ * @brief Various arbitary wavelength polarization charge operators of delta-f
+ *  (df) and full-f (ff)
+ *
+ * "df"
+ * \f[
+ * x = -\Delta \left(1+\alpha\Delta\right)^{-1} \phi  \f]  \f[
+ * \f]
+ * "ff"
+ * \f[
+ * x = \sqrt{1+\alpha\Delta}^{-1}\left(-\nabla \cdot \chi
+ *  \nabla\right)\sqrt{1+\alpha\Delta}^{-1}\phi \f]
+ * "ffO4"
+ * \f[
+ *   x = (1+\alpha\Delta)^{-1} \left(-\nabla \cdot \chi \nabla - \Delta \iota \Delta
+ *   +  \nabla \cdot\nabla \cdot 2\iota \nabla \nabla \right)(1+\alpha\Delta)^{-1}
+ *   \phi
+ * \f]
  *
  * @ingroup matrixmatrixoperators
  *
@@ -24,51 +41,45 @@ class PolCharge
      * @brief Construct from Grid
      *
      * @param alpha alpha of the Helmholtz operator
-     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion or the sqrt Helmholtz operator inversion
+     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion
+     *  or the sqrt Helmholtz operator inversion
      * @param g The Grid, boundary conditions are taken from here
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
-     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
-     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
-     * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value
+     *  but in some cases 0.1 or 0.01 might be better)
+     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" /
+     *  "ffO4" are implemented)
+     * @param commute false if Helmholtz operators (or their square root) are
+     *  outside the elliptic or tensorelliptic operator and true otherwise
      */
-    PolCharge(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, direction dir = forward, value_type jfactor=1., std::string mode = "df", bool commute = false)
-    {
-        construct(alpha, eps_gamma, g,  g.bcx(), g.bcy(), dir, jfactor, mode);
-    }
+    PolCharge(value_type alpha, std::vector<value_type> eps_gamma,
+            const Geometry& g, direction dir = forward, value_type jfactor=1.,
+            std::string mode = "df", bool commute = false):
+        PolCharge( alpha, eps_gamma, g, g.bcx(), g.bcy(), dir, jfactor, mode,
+                commute)
+    { }
     /**
      * @brief Construct from boundary conditions
      *
      * @param alpha alpha of the Helmholtz operator
-     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion or the sqrt Helmholtz operator inversion
+     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion
+     *  or the sqrt Helmholtz operator inversion
      * @param g The Grid, boundary conditions are taken from here
-    * @param bcx boundary condition in x
+     * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
-     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
-     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
-     * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value
+     *  but in some cases 0.1 or 0.01 might be better)
+     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" /
+     *  "ffO4" (O as in Order!) are implemented)
+     * @param commute false if Helmholtz operators (or their square root) are
+     *  outside the elliptic or tensorelliptic operator and true otherwise
     */
-    PolCharge( value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, direction dir = forward, value_type jfactor=1., std::string mode = "df", bool commute = false)
-    { 
-         construct(alpha, eps_gamma, g,  bcx, bcy, dir, jfactor, mode);
-    }
-    /**
-     * @brief Construct from boundary conditions
-     *
-     * @param alpha alpha of the Helmholtz operator
-     * @param eps_gamma epsilon (-vector) for the Helmholtz operator inversion or the sqrt Helmholtz operator inversion
-     * @param g The Grid, boundary conditions are taken from here
-    * @param bcx boundary condition in x
-     * @param bcy boundary contition in y
-     * @param dir Direction of the right first derivative in x and y
-     *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
-     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
-     * @param mode arbitrary wavelength polarization charge mode ("df" / "ff" / "ffO4" are implemented)
-     * @param commute false if Helmholtz operators (or their square root) are outside the elliptic or tensorelliptic operator and true otherwise
-    */
-    void construct(value_type alpha, std::vector<value_type> eps_gamma, const Geometry& g, bc bcx, bc bcy, direction dir = forward, value_type jfactor=1., std::string mode = "df", bool commute = false)
+    PolCharge( value_type alpha, std::vector<value_type> eps_gamma,
+            const Geometry& g, bc bcx, bc bcy, direction dir = forward,
+            value_type jfactor=1., std::string mode = "df", bool commute = false)
     {
         m_alpha = alpha;
         m_eps_gamma = eps_gamma;
@@ -81,11 +92,11 @@ class PolCharge
         if (m_mode == "df")
         {
             m_ell.construct(g, bcx, bcy, dir, jfactor );
-            m_multi_gamma.resize(3);
             m_multi_g.construct(g, 3);
             for( unsigned u=0; u<3; u++)
             {
-                m_multi_gamma[u].construct( m_multi_g.grid(u), bcx, bcy, m_alpha, dir, jfactor);
+                m_multi_gamma.push_back( {m_multi_g.grid(u), bcx, bcy,
+                        m_alpha, dir, jfactor});
             }
         }
         if (m_mode == "ff")
@@ -94,29 +105,33 @@ class PolCharge
             m_multi_gamma.resize(1);
             m_multi_gamma.resize(1);
             m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
-            m_sqrtG0inv.construct(m_multi_gamma[0], g,  m_temp,  1e-14, 2000, 40, eps_gamma[0]);
 
-//             m_sqrtG0inv.construct(m_temp, g.size());
-
-            value_type hxhy = g.lx()*g.ly()/(g.n()*g.n()*g.Nx()*g.Ny());
-            value_type max_weights =   dg::blas1::reduce(m_multi_gamma[0].weights(), 0., dg::AbsMax<double>() );
-            value_type min_weights =  -dg::blas1::reduce(m_multi_gamma[0].weights(), max_weights, dg::AbsMin<double>() );
-            value_type kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
-            value_type EVmin = 1./(1.-m_multi_gamma[0].alpha()*hxhy*(1.0 + 1.0)); //EVs of Helmholtz
-            m_res_fac = kappa*sqrt(EVmin);
+            m_lanczos.construct(m_temp, 500);
+            m_lanczos.set_max( 20);
+            auto T = m_lanczos.tridiag( m_multi_gamma[0],
+                    m_multi_gamma[0].weights(), m_multi_gamma[0].weights());
+            m_EVs =  compute_extreme_EV( T);
+            std::cout << "Computed  EVs "<<m_EVs[0]<<" "<<m_EVs[1]<<"\n";
+            m_lanczos.set_max( 500);
         }
         if (m_mode == "ffO4")
         {
             m_tensorell.construct(g, bcx, bcy, dir, jfactor);
-            m_multi_gamma.resize(3);
-//             m_multi_gamma.resize(3);
             m_multi_g.construct(g, 3);
             for( unsigned u=0; u<3; u++)
             {
-                m_multi_gamma[u].construct( m_multi_g.grid(u), bcx, bcy, m_alpha, dir, jfactor);
-//                 m_multi_gamma[u].construct( m_multi_g.grid(u), inverse( bcx), inverse( bcy), m_alpha, dir, jfactor);
+                m_multi_gamma.push_back({ m_multi_g.grid(u), bcx, bcy,
+                        m_alpha, dir, jfactor});
             }
         }
+    }
+
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = PolCharge( std::forward<Params>( ps)...);
     }
     /**
      * @brief Change \f$\chi\f$ in the elliptic or tensor elliptic operator
@@ -188,8 +203,9 @@ class PolCharge
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
      *
-     * Currently returns the inverse weights without volume elment divided by the scalar part of \f$ \chi\f$.
-     * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
+     * Currently returns the inverse scalar part of \f$ \chi\f$.
+     * This is especially good when \f$ \chi\f$ exhibits large amplitudes or
+     *  variations
      * @return the inverse of \f$\chi\f$.
      */
     const Container& precond()const {
@@ -247,121 +263,111 @@ class PolCharge
 
         if (m_alpha == 0)
         {
-            if (m_mode == "ffO4")
-            {
-                m_tensorell.symv(alpha, x, beta, y);
-            }
-            if (m_mode == "ff" || m_mode == "df")
-                m_ell.symv(alpha, x, beta, y);
+            dg::blas1::scal( y, beta);
+            return;
         }
-        else
+        if (m_mode == "df")
         {
-            if (m_mode == "df")
+            if (m_commute == false)
             {
-                if (m_commute == false)
-                {
-                    m_temp2_ex.extrapolate(m_temp2);
-                    std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, x, m_eps_gamma);
-                    if(  number[0] == m_multi_g.max_iter())
-                        throw dg::Fail( m_eps_gamma[0]);
-                    m_temp2_ex.update(m_temp2);
+                m_temp2_ex.extrapolate(m_temp2);
+                std::vector<unsigned> number = m_multi_g.solve(
+                        m_multi_gamma, m_temp2, x, m_eps_gamma);
+                m_temp2_ex.update(m_temp2);
 
-                    m_ell.symv(alpha, m_temp2, beta, y);
-                }
-                else
-                {
-                    m_ell.symv(1.0, x, 0.0, m_temp);
+                m_ell.symv(alpha, m_temp2, beta, y);
+            }
+            else
+            {
+                m_ell.symv(1.0, x, 0.0, m_temp);
 
-                    m_temp2_ex.extrapolate(m_temp2);
-                    std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, m_temp, m_eps_gamma);
-                    if(  number[0] == m_multi_g.max_iter())
-                        throw dg::Fail( m_eps_gamma[0]);
-                    m_temp2_ex.update(m_temp2);
+                m_temp2_ex.extrapolate(m_temp2);
+                std::vector<unsigned> number = m_multi_g.solve(
+                        m_multi_gamma, m_temp2, m_temp, m_eps_gamma);
+                m_temp2_ex.update(m_temp2);
 
-
-                    dg::blas1::axpby(alpha, m_temp2, beta, y);
-
-                }
+                dg::blas1::axpby(alpha, m_temp2, beta, y);
 
             }
-            if (m_mode == "ff" ) //assuming constant FLR effects
+
+        }
+        if (m_mode == "ff" ) //assuming constant FLR effects
+        {
+            if (m_commute == false)
             {
-                if (m_commute == false)
-                {
-                    dg::blas1::scal(m_temp2, 0.0);
+                unsigned number = 0 ;
+                auto func = make_SqrtCauchyEigen_Te1( -1., m_EVs, 40);
+                number = m_lanczos.solve( m_temp2, func, m_multi_gamma[0], x,
+                        m_multi_gamma[0].weights(), m_eps_gamma[0], 1.,
+                        "universal", 1., 2);
+                //std::cout << "#number of sqrt iterations: " << number << " "<<m_eps_gamma[0]<< std::endl;
 
-                    std::array<unsigned,2> number = m_sqrtG0inv( m_temp2, x);
-                    std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
-//                     m_sqrtG0inv( m_temp2, x, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);
+                m_ell.symv(1.0, m_temp2, 0.0, m_temp);
 
-                    m_ell.symv(1.0, m_temp2, 0.0, m_temp);
+                number = m_lanczos.solve( m_temp2, func, m_multi_gamma[0], m_temp,
+                        m_multi_gamma[0].weights(), m_eps_gamma[0], 1.,
+                        "universal", 1., 2);
+                //std::cout << "#number of sqrt iterations: " << number << std::endl;
+                number++;//avoid compiler warning
 
-                    dg::blas1::scal(m_temp2, 0.0);
-                    number =m_sqrtG0inv( m_temp2, m_temp);
-                    std::cout << "#number of sqrt iterations: " << number[0] << std::endl;
-//                     m_sqrtG0inv( m_temp2, m_temp, dg::SQRT<double>(), m_multi_gamma[0], m_multi_gamma[0].inv_weights(), m_multi_gamma[0].weights(),  m_eps_gamma[0], m_res_fac);
-
-                    dg::blas1::axpby(alpha, m_temp2, beta, y);
-                }
-                else
-                {
-                    //TODO not implemented so far (relevant thermal models)
-                }
+                dg::blas1::axpby(alpha, m_temp2, beta, y);
             }
-            if (m_mode == "ffO4")
+            else
             {
-                if (m_commute == false)
-                {
-                    m_temp2_ex.extrapolate(m_temp2);
-                    std::vector<unsigned> number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, x, m_eps_gamma);
-                    if(  number[0] == m_multi_g.max_iter())
-                        throw dg::Fail( m_eps_gamma[0]);
-                    m_temp2_ex.update(m_temp2);
+                //TODO not implemented so far (relevant thermal models)
+            }
+        }
+        if (m_mode == "ffO4")
+        {
+            if (m_commute == false)
+            {
+                m_temp2_ex.extrapolate(m_temp2);
+                std::vector<unsigned> number = m_multi_g.solve(
+                        m_multi_gamma, m_temp2, x, m_eps_gamma);
+                m_temp2_ex.update(m_temp2);
 
-                    m_tensorell.symv(1.0, m_temp2, 0.0, m_temp);
+                m_tensorell.symv(1.0, m_temp2, 0.0, m_temp);
 
-                    m_temp_ex.extrapolate(m_temp2);
-                    number = m_multi_g.direct_solve( m_multi_gamma, m_temp2, m_temp, m_eps_gamma);
-                    if(  number[0] == m_multi_g.max_iter())
-                        throw dg::Fail( m_eps_gamma[0]);
-                    m_temp_ex.update(m_temp2);
+                m_temp_ex.extrapolate(m_temp2);
+                number = m_multi_g.solve( m_multi_gamma, m_temp2,
+                        m_temp, m_eps_gamma);
+                m_temp_ex.update(m_temp2);
 
-                    dg::blas1::axpby(alpha, m_temp2, beta, y);
-                }
-                if (m_commute == true)
-                {
-                    //TODO not implemented so far (relevant thermal models)
-                }
+                dg::blas1::axpby(alpha, m_temp2, beta, y);
+            }
+            if (m_commute == true)
+            {
+                //TODO not implemented so far (relevant thermal models)
             }
         }
     }
 
     private:
     dg::Elliptic<Geometry,  Matrix, Container> m_ell;
-    dg::TensorElliptic<Geometry,  Matrix, Container> m_tensorell;
+    dg::mat::TensorElliptic<Geometry,  Matrix, Container> m_tensorell;
 
     std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multi_g;
-    dg::KrylovSqrtCauchyinvert<Geometry, Matrix, Container> m_sqrtG0inv;
-//     dg::KrylovFuncEigenInvert< Container> m_sqrtG0inv;
+    dg::mat::UniversalLanczos<Container> m_lanczos;
     Container m_temp, m_temp2;
     value_type  m_alpha,  m_res_fac;
     std::vector<value_type> m_eps_gamma;
     std::string m_mode;
     dg::Extrapolation<Container> m_temp2_ex, m_temp_ex;
     bool m_commute;
+    std::array<value_type,2> m_EVs;
 
 
 };
 
+}  //namespace mat
+
 ///@cond
 template< class G, class M, class V>
-struct TensorTraits< PolCharge<G, M, V> >
+struct TensorTraits< mat::PolCharge<G, M, V> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 ///@endcond
-
-
 }  //namespace dg

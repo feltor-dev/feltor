@@ -3,6 +3,7 @@
 #include <iomanip>
 
 #include "lanczos.h"
+#include "mcg.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -44,7 +45,7 @@ int main(int argc, char * argv[])
 
     {
         t.tic();
-        dg::mat::Lanczos< Container > lanczos(x, max_iter);
+        dg::mat::UniversalLanczos< Container > lanczos(x, max_iter);
         //lanczos.set_verbose(true);
         t.toc();
         std::cout << "# Lanczos creation took "<< t.diff()<<"s   \n";
@@ -53,13 +54,11 @@ int main(int argc, char * argv[])
         b = dg::evaluate( lhs, grid);
         xexac = dg::evaluate( rhs, grid);
         t.tic();
-        auto T = lanczos.tridiag(A, b, w2d, eps);
-        auto e1 = lanczos.make_e1(), y( e1);
-        dg::blas2::symv( T , e1, y);
-        lanczos.normMbVy( A, T, y, x, b, lanczos.get_bnorm());
+        unsigned iter = lanczos.solve( x, dg::mat::make_Linear_Te1( 1), A, b,
+                w2d, eps, 1., "residual", 1.);
         t.toc();
         dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
-        std::cout << "    iter: "<< lanczos.get_iter() << "\n";
+        std::cout << "    iter: "<< iter << "\n";
         std::cout << "    time: "<< t.diff()<<"s \n";
         std::cout << "    # Relative error between x=||b||_M V^T T e_1 and b: \n";
         std::cout << "    error: " << sqrt(dg::blas2::dot(w2d, error)/dg::blas2::dot(w2d, xexac)) << " \n";
@@ -68,7 +67,8 @@ int main(int argc, char * argv[])
         b = dg::evaluate( lhs, grid);
         xexac = dg::evaluate( rhs, grid);
         t.tic();
-        lanczos.solve( x, [](double x){return x;}, A, b, w2d, eps, 1., "universal", 1., 1);
+        lanczos.solve( x, dg::mat::make_Linear_Te1( 1), A, b, w2d, eps, 1.,
+                "universal", 1., 1);
         t.toc();
         dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
         std::cout << "    iter: "<< lanczos.get_iter() << "\n";
@@ -81,10 +81,8 @@ int main(int argc, char * argv[])
         b = dg::evaluate( rhs, grid);
         xexac = dg::evaluate( lhs, grid);
         t.tic();
-        T = lanczos.tridiag(A, b, w2d, eps);
-        e1 = lanczos.make_e1(), y = e1;
-        dg::blas2::symv( dg::mat::invert( T) , e1, y);
-        lanczos.normMbVy( A, T, y, x, b, lanczos.get_bnorm());
+        lanczos.solve( x, dg::mat::make_Linear_Te1( -1), A, b, w2d, eps, 1.,
+                "residual");
         t.toc();
 
         dg::blas1::axpby(-1.0, xexac, 1.0, x,error);
@@ -97,7 +95,8 @@ int main(int argc, char * argv[])
         b = dg::evaluate( rhs, grid);
         xexac = dg::evaluate( lhs, grid);
         t.tic();
-        lanczos.solve(x, []( double x) {return 1./x;}, A, b, w2d, eps, 1., "universal", 1., 1);
+        lanczos.solve( x, dg::mat::make_Linear_Te1( -1), A, b, w2d, eps, 1.,
+                "universal", 1., 1);
         t.toc();
 
         dg::blas1::axpby(-1.0, xexac, 1.0, x,error);

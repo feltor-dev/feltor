@@ -4,6 +4,8 @@
 #include <iomanip>
 
 #include "dg/algorithm.h"
+#include "lanczos.h"
+#include "mcg.h"
 #include "matrixfunction.h"
 
 const double lx = 2.*M_PI;
@@ -52,7 +54,12 @@ int main(int argc, char * argv[])
     double min_weights = dg::blas1::reduce(w2d, max_weights, dg::AbsMin<double>() );
     std::cout << "#   min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
     const double kappa = sqrt(max_weights/min_weights); //condition number
-    double hxhy = 1.; // ((2pi)/lx )^2
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered);
+    dg::mat::UniversalLanczos<Container> lanczos( A.weights(), 20);
+    auto T = lanczos.tridiag( A, A.weights(), A.weights());
+    auto extremeEVs = dg::mat::compute_extreme_EV( T);
+    double EVmin = extremeEVs[0];
+    double EVmax = extremeEVs[1];
 
     std::vector< std::function<double (double)>> funcs{
         [](double x) { return sqrt(x);},
@@ -70,10 +77,6 @@ int main(int argc, char * argv[])
     for( unsigned u=0; u<funcs.size(); u++)
     {
         std::cout << "\n#Compute x = "<<outs[u]<<"(1+ alpha Delta) b " << std::endl;
-        dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered);
-
-        double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
-        double EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny())); //EVs of helmholtz
 
         Container x = dg::evaluate(lhs, g), x_exac(x), b(x), error(x);
         dg::blas1::scal(x_exac, funcs[u](helm_fac));
@@ -83,9 +86,10 @@ int main(int argc, char * argv[])
         std::cout << "#   kappa   = "<<kappa <<"\n";
         std::cout << "#   res_fac = "<<res_fac<< "\n";
         std::cout << outs[u] << "\n";
-        dg::mat::Lanczos<Container> krylovfunceigen( x, max_iter);
+        dg::mat::UniversalLanczos<Container> krylovfunceigen( x, max_iter);
         t.tic();
-        iter = krylovfunceigen.solve(x, funcs[u], A, b, w2d, eps, 1.,
+        auto func = dg::mat::make_FuncEigen_Te1( funcs[u]);
+        iter = krylovfunceigen.solve(x, func, A, b, w2d, eps, 1.,
                 "residual", res_fac);
         t.toc();
         double time = t.diff();
@@ -112,7 +116,7 @@ int main(int argc, char * argv[])
         std::cout << "    mcg-iter: "<<std::setw(3)<<iter << "\n";
 
         t.tic();
-        iter = krylovfunceigen.solve(x, funcs[u], A, b, w2d, eps, 1.,
+        iter = krylovfunceigen.solve(x, func, A, b, w2d, eps, 1.,
                 "universal");
         t.toc();
         time = t.diff();

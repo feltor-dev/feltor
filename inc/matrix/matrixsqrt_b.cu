@@ -73,20 +73,19 @@ int main(int argc, char * argv[])
         return pcg.solve( A, x, y, A.precond(), A.weights(), eps);
     };
 
-    double hxhy = 1.; // ((2pi)/lx )^2
-    double max_weights = dg::blas1::reduce(A.weights(), 0., dg::AbsMax<double>() );
-    double min_weights = dg::blas1::reduce(A.weights(), max_weights, dg::AbsMin<double>() );
-    double EVmin = 1.-A.alpha()*hxhy*(1.0 + 1.0);
-    double EVmax = 1.-A.alpha()*hxhy*(g.n()*g.n() *(g.Nx()*g.Nx() + g.Ny()*g.Ny()));
-    double kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
-
-
+    //double max_weights = dg::blas1::reduce(A.weights(), 0., dg::AbsMax<double>() );
+    //double min_weights = dg::blas1::reduce(A.weights(), max_weights, dg::AbsMin<double>() );
+    //double kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
+    dg::mat::UniversalLanczos<Container> lanczos( A.weights(), 20);
+    auto T = lanczos.tridiag( A, A.weights(), A.weights());
+    auto extremeEVs = dg::mat::compute_extreme_EV( T);
+    lanczos.set_max( max_iter);
 
     ////////////////////////Direct Cauchy integral solve
     {
         std::cout << "\nCauchy-Inv: \n";
         dg::mat::DirectSqrtCauchy<Container>
-            directsqrtcauchy(A, w2d, epsCG, max_iterC, EVmin, EVmax, -1);
+            directsqrtcauchy(A, w2d, epsCG, max_iterC, extremeEVs, -1);
 
         t.tic();
         iter_arr = directsqrtcauchy(b_exac, x);
@@ -113,10 +112,9 @@ int main(int argc, char * argv[])
     //////////////////Krylov solve via Lanczos method and Cauchy solve
     {
         std::cout << "\nM-Lanczos+Cauchy-Inv:\n";
-        dg::mat::KrylovSqrtCauchy<Container> krylovsqrtcauchy(A, -1, w2d,
-                EVmin, EVmax, max_iterC, eps, max_iter);
         t.tic();
-        iter_arr = krylovsqrtcauchy(b_exac, x);
+        iter_arr = lanczos.solve( x, dg::mat::make_SqrtCauchy_Te1( -1,
+                extremeEVs, max_iterC), A, b_exac, w2d, eps, 1., "residual");
         t.toc();
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
@@ -128,10 +126,9 @@ int main(int argc, char * argv[])
         std::cout << "    iterT: "<<std::setw(3)<<max_iterC << "\n";
 
         std::cout << "\nM-Lanczos+Cauchy:\n";
-        krylovsqrtcauchy.construct(A, +1, w2d,
-                EVmin, EVmax, max_iterC, eps, max_iter);
         t.tic();
-        iter_arr = krylovsqrtcauchy(b_exac, bs);
+        iter_arr = lanczos.solve( bs, dg::mat::make_SqrtCauchy_Te1( +1,
+                extremeEVs, max_iterC), A, b_exac, w2d, eps, 1., "residual");
         t.toc();
         time = t.diff();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
@@ -145,12 +142,12 @@ int main(int argc, char * argv[])
     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
     {
         std::cout << "\nM-Lanczos+ODE:\n";
-        dg::mat::KrylovSqrtODE<Container>
-            krylovsqrtode(A, +1, w2d, "Dormand-Prince-7-4-5", epsTrel,
-                    epsTabs, max_iter, eps);
         b = dg::evaluate(rhsHelmholtzsqrt, g);
+        unsigned number;
         t.tic();
-        auto iterA = krylovsqrtode(b_exac, bs);
+        iter_arr = lanczos.solve( bs, dg::mat::make_SqrtODE_Te1( +1,
+                    "Dormand-Prince-7-4-5", epsTrel, epsTabs, number), A,
+                b_exac, w2d, eps, 1., "residual");
         t.toc();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
@@ -158,35 +155,31 @@ int main(int argc, char * argv[])
 
         std::cout << "    time: "<<time<<"s \n";
         std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iterA[0] << "\n";
-        std::cout << "    iterT: "<<std::setw(3)<<iterA[1] << "\n";
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
+        std::cout << "    iterT: "<<std::setw(3)<<number << "\n";
 
         std::cout << "\nM-Lanczos+ODE-Inv:\n";
-        krylovsqrtode.construct(A, -1, w2d, "Dormand-Prince-7-4-5", epsTrel,
-                    epsTabs, max_iter, eps);
         t.tic();
-        iterA = krylovsqrtode( bs, b);
+        iter_arr = lanczos.solve( b, dg::mat::make_SqrtODE_Te1( -1,
+                    "Dormand-Prince-7-4-5", epsTrel, epsTabs, number), A,
+                bs, w2d, eps, 1., "residual");
         t.toc();
         time = t.diff();
         dg::blas1::axpby(1.0, b, -1.0, b_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, b_exac));
         std::cout << "    time: "<<time<<"s \n";
         std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iterA[0] << "\n";
-        std::cout << "    iterT: "<<std::setw(3)<<iterA[1] << "\n";
+        std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
+        std::cout << "    iterT: "<<std::setw(3)<<number << "\n";
     }
     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
     {
         std::cout << "\nUniversal-M-Lanczos-Eigen:\n";
-        //EVs of Helmholtz
-        double res_fac = kappa*sqrt(EVmin);
-
-        dg::mat::Lanczos<Container> krylovfunceigen(x,   max_iter);
         b = dg::evaluate(rhsHelmholtzsqrt, g);
         auto sqrt_f =  [](double x) { return sqrt(x);};
         t.tic();
-        iter_arr  = krylovfunceigen.solve( bs, sqrt_f, A, b_exac,
-                A.weights(),  eps, 1., "universal", res_fac);
+        iter_arr  = lanczos.solve( bs, dg::mat::make_FuncEigen_Te1(  sqrt_f),
+                A, b_exac, A.weights(),  eps, 1., "universal", 1., 2);
         t.toc();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
@@ -199,8 +192,8 @@ int main(int argc, char * argv[])
         std::cout << "\nUniversal-M-Lanczos-Eigen-Inv:\n";
         auto inv_sqrt_f =  [](double x) { return 1./sqrt(x);};
         t.tic();
-        iter_arr  = krylovfunceigen.solve( b, inv_sqrt_f, A, bs,
-                A.weights(),  eps, 1., "universal", res_fac);
+        iter_arr  = lanczos.solve( b, dg::mat::make_FuncEigen_Te1(  inv_sqrt_f),
+                A, bs, A.weights(),  eps, 1., "universal", 1., 2);
         t.toc();
         time = t.diff();
         dg::blas1::axpby(1.0, b, -1.0, b_exac, error);
@@ -208,52 +201,6 @@ int main(int argc, char * argv[])
         std::cout << "    time: "<<time<<"s \n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
-    }
-    //sqrt invert schemes
-    {
-        std::cout << "\nM-CG+Cauchy:\n";
-        dg::mat::KrylovSqrtCauchy<Container>
-            krylovsqrtcauchy(A, -1, w2d, EVmin, EVmax, max_iterC, eps, max_iter);
-        t.tic();
-        iter_arr = krylovsqrtcauchy( b_exac, x);
-        t.toc();
-        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-        std::cout << "    time: "<<t.diff()<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
-        std::cout << "    iterT: "<<std::setw(3)<<max_iterC << "\n";
-    }
-    {
-        std::cout << "\nM-CG+ODE:\n";
-        dg::mat::KrylovSqrtODE<Container> krylovsqrtode(A, -1, w2d,
-                "Dormand-Prince-7-4-5",  epsTrel, epsTabs, max_iter, eps);
-        t.tic();
-        auto iterA= krylovsqrtode( b_exac, x);
-        t.toc();
-        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-        std::cout << "    time: "<<t.diff()<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iterA[0] << "\n";
-        std::cout << "    iterT: "<<std::setw(3)<<iterA[1] << "\n";
-    }
-    {
-        std::cout << "\nM-CG+EIGEN:\n";
-        //EVs of inverse Helmholtz
-        double res_fac = kappa*sqrt(EVmin);
-
-        dg::mat::MCGFuncEigen< Container> krylovfunceigen( x, max_iter);
-        t.tic();
-        auto sqrt_inv_f =  [](double x) { return 1./sqrt(x);};
-        iter_arr  = krylovfunceigen( x, sqrt_inv_f, A, b_exac,
-                A.weights(),  eps, 1., res_fac);
-        t.toc();
-        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
-        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
-        std::cout << "    time: "<<t.diff()<<"s \n";
-        std::cout << "    error: "<<erel  << "\n";
-        std::cout << "    iter: "<<std::setw(3)<<iter_arr  << "\n";
     }
     //////////////////////Direct sqrt ODE solve
     {
