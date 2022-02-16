@@ -1,9 +1,25 @@
 ###
 ##Packages needed on linux for compilation of doxygen doc
 ##sudo apt install
-#doxygen
+#doxygen >= 1.9.1
 #libjs-mathjax (for nice mathematical formulas)
 #graphviz (for nice graphical nodes)
+
+# To update the online documentation we use ghp-import with the -o option, such
+# that the gh-pages always
+# contains only a single commit (to save space; and the history of documentation
+# is contained in the main branch anyway).
+#```bash
+#pip install ghp-import
+#cd path/to/feltor-dev/doc
+#make clean
+#make doc
+#cd ..
+#ghp-import -n -f -p -o doc
+# # or
+#ghp-import -n -f -p -o --remote==mygithub doc
+#```
+
 ###
 
 all: doc
