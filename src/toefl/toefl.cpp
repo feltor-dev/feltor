@@ -127,8 +127,6 @@ int main( int argc, char* argv[])
         // the things to plot:
         std::map<std::string, const dg::DVec* > v2d;
         v2d["ne / "] = &y0[0];
-        v2d["Ni / "] = &y0[1];
-        v2d["Phi / "] = &rhs.phi(0);
         v2d["Vor / "] = &rhs.phi(0);
         unsigned itstp = js["output"]["itstp"].asUInt();
         unsigned step = 0;
@@ -163,7 +161,7 @@ int main( int argc, char* argv[])
             //step
             dg::Timer ti;
             ti.tic();
-            std::cout << "\n\t dt "<<dt;
+            std::cout << "\n\t dt "<<dt<<"\n";
             for( unsigned i=0; i<itstp; i++)
             {
                 try{
@@ -181,7 +179,7 @@ int main( int argc, char* argv[])
             }
             ti.toc();
             std::cout << "\n\t Step "<<step;
-            std::cout << "\n\t dt "<<dt;
+            std::cout << "\n\t Time "<<time<<" dt "<<dt;
             std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)itstp<<"s\n\n";
         }
         glfwTerminate();

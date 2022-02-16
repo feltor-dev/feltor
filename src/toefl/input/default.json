@@ -27,7 +27,7 @@
         "stages" : 3,
         "eps_pol"   : [1e-6, 1, 1],
         "eps_gamma" : [1e-7, 1, 1],
-        "direction" : "forward"
+        "direction" : "centered"
     },
     "model" :
     {
