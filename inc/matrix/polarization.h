@@ -2,6 +2,7 @@
 #include "dg/algorithm.h"
 
 #include "lanczos.h"
+#include "matrixsqrt.h"
 #include "matrixfunction.h"
 #include "tensorelliptic.h"
 
@@ -106,13 +107,8 @@ class PolCharge
             m_multi_gamma.resize(1);
             m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
 
-            m_lanczos.construct(m_temp, 500);
-            m_lanczos.set_max( 20);
-            auto T = m_lanczos.tridiag( m_multi_gamma[0],
-                    m_multi_gamma[0].weights(), m_multi_gamma[0].weights());
-            m_EVs =  compute_extreme_EV( T);
-            std::cout << "Computed  EVs "<<m_EVs[0]<<" "<<m_EVs[1]<<"\n";
-            m_lanczos.set_max( 500);
+            m_inv_sqrt.construct( m_multi_gamma[0], -1,
+                    m_multi_gamma[0].weights(), m_eps_gamma[0]);
         }
         if (m_mode == "ffO4")
         {
@@ -296,17 +292,12 @@ class PolCharge
             if (m_commute == false)
             {
                 unsigned number = 0 ;
-                auto func = make_SqrtCauchyEigen_Te1( -1., m_EVs, 40);
-                number = m_lanczos.solve( m_temp2, func, m_multi_gamma[0], x,
-                        m_multi_gamma[0].weights(), m_eps_gamma[0], 1.,
-                        "universal", 1., 2);
+                dg::apply( m_inv_sqrt, x, m_temp2);
                 //std::cout << "#number of sqrt iterations: " << number << " "<<m_eps_gamma[0]<< std::endl;
 
                 m_ell.symv(1.0, m_temp2, 0.0, m_temp);
 
-                number = m_lanczos.solve( m_temp2, func, m_multi_gamma[0], m_temp,
-                        m_multi_gamma[0].weights(), m_eps_gamma[0], 1.,
-                        "universal", 1., 2);
+                dg::apply( m_inv_sqrt, m_temp, m_temp2);
                 //std::cout << "#number of sqrt iterations: " << number << std::endl;
                 number++;//avoid compiler warning
 
@@ -348,14 +339,13 @@ class PolCharge
 
     std::vector< dg::Helmholtz<Geometry,  Matrix, Container> > m_multi_gamma;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multi_g;
-    dg::mat::UniversalLanczos<Container> m_lanczos;
+    dg::mat::MatrixSqrt<Container> m_inv_sqrt;
     Container m_temp, m_temp2;
-    value_type  m_alpha,  m_res_fac;
+    value_type  m_alpha;
     std::vector<value_type> m_eps_gamma;
     std::string m_mode;
     dg::Extrapolation<Container> m_temp2_ex, m_temp_ex;
     bool m_commute;
-    std::array<value_type,2> m_EVs;
 
 
 };

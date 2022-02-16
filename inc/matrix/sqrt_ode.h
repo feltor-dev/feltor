@@ -81,7 +81,9 @@ struct InvSqrtODE
     InvSqrtODE( MatrixType& A, const Container& copyable)
     {
         m_helper = copyable;
-        m_A = [&]( const Container& x, Container& y){ return dg::apply( A, x, y);};
+        m_A = [&]( const Container& x, Container& y){
+            return dg::apply( A, x, y);
+        };
         m_yp_ex.set_max(3, copyable);
     }
     ///@copydoc hide_construct

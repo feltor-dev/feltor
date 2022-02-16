@@ -220,27 +220,23 @@ int main()
         dg::blas1::scal(x_gamma, 0.0);
         dg::blas1::scal(temp, 0.0);
         dg::blas1::scal(x, 0.0);
-        dg::mat::UniversalLanczos<Container> sqrtsolve( x, grid2d.size());
-
         t.tic();
         unsigned number = 0, numberCG = 0;
         dg::Timer ti;
         ti.tic();
         //auto func = dg::mat::make_FuncEigen_Te1([](double x){return sqrt(x);});
-        dg::mat::UniversalLanczos<Container> lanczos( w2d, 20);
-        auto T = lanczos.tridiag( gamma0inv, w2d, w2d);
-        auto EVs = dg::mat::compute_extreme_EV( T);
-        auto func = dg::mat::make_SqrtCauchyEigen_Te1(+1, EVs, 40  );
+        dg::mat::MatrixSqrt<Container> sqrtsolve( gamma0inv, +1, w2d,
+                eps_gamma);
 
-        number = sqrtsolve.solve(temp,  func, gamma0inv, rho_FF, w2d,
-                eps_gamma, 1., "universal", 1., 2 );
+        dg::apply( sqrtsolve, rho_FF, temp);
+        number = sqrtsolve.get_iter();
         ti.toc();
         std::cout << "# SQRT solve with "<<number<<" iterations took "<<ti.diff()<<"s\n";
         dg::blas1::scal(temp,-1.0);
         numberCG = pcg.solve( lapperp, x_gamma, temp, 1., w2d, eps_pol);
         ti.tic();
-        number = sqrtsolve.solve(x,  func, gamma0inv, x_gamma, w2d,
-                eps_gamma, 1., "universal", 1., 2 );
+        dg::apply( sqrtsolve, x_gamma, x);
+        number = sqrtsolve.get_iter();
         ti.toc();
         std::cout << "# SQRT solve with "<<number<<" iterations took "<<ti.diff()<<"s\n";
 

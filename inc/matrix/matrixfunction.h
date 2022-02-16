@@ -108,7 +108,7 @@ auto make_SqrtCauchy_Te1( int exp, std::array<value_type,2> EVs, unsigned stepsC
 }
 
 /**
- * @brief Compute \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using either Eigen or SqrtCauchy solve
+ * @brief Compute \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using either Eigen or SqrtCauchy solve based on whichever is fastest for given size
  *
  * @note The Eigenvalues can be estimated from a few lanczos iterations (which
  *  is at least more reliable than doing it semi-analytically)
@@ -120,7 +120,7 @@ auto make_SqrtCauchy_Te1( int exp, std::array<value_type,2> EVs, unsigned stepsC
  * @endcode
  * This function uses an Eigen decomposition for small sizes of  T and a
  * SqrtCauchyInt solve for larger sizes to optimize execution times
- * @param exp exponent if +1 compute \f$ \sqrt(T)\f$, if -1 compute \f$ 1/\sqrt(T)\f$
+ * @param exp exponent if +1 compute \f$ \sqrt{T}\f$, if -1 compute \f$ 1/\sqrt{T}\f$
  * @param EVs {minimum Eigenvalue of A, maximum Eigenvalue of A}
  * @param stepsCauchy iterations of cauchy integral
  * @return an operator to use in \c UniversalLanczos solve method

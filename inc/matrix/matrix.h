@@ -6,6 +6,7 @@
 #include "functors.h"
 #include "lanczos.h"
 #include "mcg.h"
+#include "matrixsqrt.h"
 #include "matrixfunction.h"
 #include "polarization.h"
 #include "polarization_init.h"
