@@ -24,17 +24,17 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const Parameters p( js);
+    const toefl::Parameters p( js);
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
     /////////////////////////////////////////////////////////////////////////
-    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    //create RHS 
-    bool mhw = ( p.equations == "fullF");
-    mima::Mima< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.tau, p.eps_pol, mhw); 
+    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bcx, p.bcy);
+    //create RHS
+    bool mhw = ( p.model == "fullF");
+    mima::Mima< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.tau, p.eps_pol[0], p.nu, mhw);
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
@@ -47,15 +47,26 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., phi, 1., omega, y0);
 
     dg::DVec w2d( dg::create::weights( grid));
-    if( p.bc_x == dg::PER && p.bc_y == dg::PER)
+    if( p.bcx == dg::PER && p.bcy == dg::PER)
     {
         double meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
         std::cout << "Mean Mass is "<<meanMass<<"\n";
         dg::blas1::axpby( -meanMass, one, 1., y0);
     }
-    dg::DefaultSolver<dg::DVec> solver( y0, y0.size(), p.eps_time);
-    dg::ImExMultistep<dg::DVec > ab( "ImEx-BDF-3-3", y0);
-    mima::Diffusion<dg::CartesianGrid2d,dg::DMatrix,dg::DVec> diffusion( grid, p.nu);
+    std::string tableau;
+    double rtol, atol, time = 0.;
+    try{
+        rtol = js["timestepper"].get("rtol", 1e-5).asDouble();
+        atol = js["timestepper"].get("atol", 1e-5).asDouble();
+        tableau = js[ "timestepper"].get( "tableau",
+                "Bogacki-Shampine-4-2-3").asString();
+    }catch ( std::exception& error){
+        DG_RANK0 std::cerr << "Error in input file " << argv[1]<< std::endl;
+        DG_RANK0 std::cerr << error.what() << std::endl;
+        dg::abort_program();
+    }
+    DG_RANK0 std::cout<< "Construct timeloop ...\n";
+    dg::Adaptive< dg::ERKStep< dg::DVec>> adapt(tableau, y0);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -63,14 +74,14 @@ int main( int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
-    double time = 0;
-    ab.init( std::tie(mima, diffusion, solver), time, y0, p.dt);
+    double dt = 1e-5;
+    unsigned itstp = js["output"]["itstp"].asUInt();
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
     while ( !glfwWindowShouldClose( w ))
     {
-        if( p.bc_x == dg::PER && p.bc_y == dg::PER)
+        if( p.bcx == dg::PER && p.bcy == dg::PER)
         {
             double meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
             std::cout << "Mean Mass is "<<meanMass<<"\n";
@@ -107,10 +118,10 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
-        for( unsigned i=0; i<p.itstp; i++)
+        for( unsigned i=0; i<itstp; i++)
         {
             step++;
-            if( p.bc_x == dg::PER && p.bc_y == dg::PER)
+            if( p.bcx == dg::PER && p.bcy == dg::PER)
             {
                 double meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
                 dg::blas1::axpby( -meanMass, one, 1., y0);
@@ -118,9 +129,13 @@ int main( int argc, char* argv[])
                 dg::blas1::axpby( -meanMass, one, 1., y0);
             }
 
-            try{ ab.step( std::tie(mima, diffusion, solver), time, y0);}
-            catch( dg::Fail& fail) { 
-                std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+            try{
+                adapt.step( mima, time, y0, time, y0, dt, dg::pid_control,
+                        dg::l2norm, rtol, atol);
+            }
+            catch( std::exception& fail) {
+                std::cerr << "ERROR in Timestepper\n";
+                std::cerr << fail.what() << std::endl;
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
@@ -129,7 +144,7 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;
-        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
+        std::cout << "\n\t Average time for one step: "<<t.diff()/(double)itstp<<"s\n\n";
 #endif//DG_BENCHMARK
     }
     glfwTerminate();

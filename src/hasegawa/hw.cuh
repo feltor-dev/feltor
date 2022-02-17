@@ -9,30 +9,6 @@
 namespace hw
 {
 
-template< class Geometry, class Matrix, class Container>
-struct Diffusion
-{
-    Diffusion( const Geometry& g, double nu): m_nu(nu), m_LaplacianM( g),
-                                              m_temp( m_LaplacianM.weights())
-    {
-    }
-    void operator()( double t, const std::vector<Container>& x, std::vector<Container>& y)
-    {
-        for( unsigned i=0; i<x.size(); i++)
-        {
-            dg::blas2::gemv( m_LaplacianM, x[i], m_temp);
-            dg::blas2::gemv( m_LaplacianM, m_temp, y[i]);
-            dg::blas1::scal( y[i], -m_nu);
-        }
-    }
-    const Container& weights(){return m_LaplacianM.weights();}
-    const Container& precond(){return m_LaplacianM.precond();}
-  private:
-    double m_nu;
-    dg::Elliptic<Geometry,Matrix,Container> m_LaplacianM;
-    Container m_temp;
-};
-
 
 template< class Geometry, class Matrix, class Container >
 struct HW
@@ -40,34 +16,11 @@ struct HW
     using Vector = std::vector<Container>;
     using value_type = dg::get_value_type<Container>;
 
-    /**
-     * @brief Construct a HW solver object
-     *
-     * @param g The grid on which to operate
-     * @param kappa The curvature
-     * @param nu The artificial viscosity
-     * @param tau The ion temperature
-     * @param eps_pol stopping criterion for polarisation equation
-     * @param eps_gamma stopping criterion for Gamma operator
-     * @param global local or global computation
-     */
-    HW( const Geometry& g, double , double , double , double , bool);
+    HW( const Geometry& grid, double alpha, double g, double nu, double eps_pol, bool mhw);
 
-    /**
-     * @brief Returns phi and psi that belong to the last y in operator()
-     *
-     * In a multistep scheme this belongs to the point HEAD-1
-     * @return phi[0] is the electron and phi[1] the generalized ion potential
-     */
     const Container& potential( ) const { return phi;}
 
 
-    /**
-     * @brief Compute the right-hand side of the toefl equations
-     *
-     * @param y input vector
-     * @param yp the rhs yp = f(y)
-     */
     void operator()( double t, const std::vector<Container>& y, std::vector<Container>& yp);
 
     /**
@@ -205,7 +158,7 @@ void HW< G, M, Container>::operator()( double t, const std::vector<Container>& y
     {
         dg::blas2::gemv( laplaceM, y[i], lapy[i]);
         dg::blas2::gemv( laplaceM, lapy[i], laplapy[i]);
-       // dg::blas1::axpby( -nu, laplapy[i], 1., yp[i]); //rescale 
+        dg::blas1::axpby( -nu, laplapy[i], 1., yp[i]); //rescale 
     }
 
     double ue = 0.5*dg::blas2::dot( y[0], w2d, y[0]);

@@ -8,24 +8,6 @@
 
 namespace mima
 {
-template< class Geometry, class Matrix, class Container>
-struct Diffusion
-{
-    Diffusion( const Geometry& g, double nu): m_nu(nu), m_LaplacianM( g)
-    {
-    }
-    void operator()( double t, const Container& x, Container& y)
-    {
-        dg::blas2::gemv( m_LaplacianM, x, y);
-        dg::blas1::scal( y, -m_nu);
-    }
-    const Container& weights(){return m_LaplacianM.weights();}
-    const Container& precond(){return m_LaplacianM.precond();}
-  private:
-    double m_nu;
-    dg::Elliptic<Geometry,Matrix,Container> m_LaplacianM;
-};
-
 
 template< class Geometry, class Matrix, class Container >
 struct Mima
@@ -44,7 +26,7 @@ struct Mima
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    Mima( const Geometry& g, double kappa, double alpha, double eps, bool global);
+    Mima( const Geometry& g, double kappa, double alpha, double eps, double nu, bool global);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -71,15 +53,15 @@ struct Mima
 
     //matrices and solvers
     dg::Elliptic<Geometry, Matrix, Container> m_laplaceM;
-    dg::ArakawaX<Geometry, Matrix, Container> m_arakawa;
+    dg::ArakawaX< Geometry, Matrix, Container> m_arakawa;
     dg::PCG<Container> m_pcg;
     dg::Extrapolation<Container> m_extra;
-    double m_eps;
+    double m_eps, m_nu;
     dg::Helmholtz<Geometry, Matrix, Container> m_helmholtz;
 };
 
 template< class G, class M, class Container>
-Mima< G, M, Container>::Mima( const G& grid, double kappa, double alpha, double eps, bool global ):
+Mima< G, M, Container>::Mima( const G& grid, double kappa, double alpha, double eps, double nu, bool global ):
     kappa( kappa), global(global),
     phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi), lambda(phi),
     chi(phi), nGinv(dg::evaluate(dg::ExpProfX(1.0, 0.0,kappa),grid)),
@@ -88,7 +70,7 @@ Mima< G, M, Container>::Mima( const G& grid, double kappa, double alpha, double 
     m_arakawa( grid),
     m_pcg( phi, grid.size()),
     m_extra( 2, phi),
-    m_eps(eps),
+    m_eps(eps), m_nu(nu),
     m_helmholtz( grid, -1)
 {
 }
@@ -101,7 +83,6 @@ void Mima< G, M, Container>::operator()( double t, const Container& y, Container
         m_helmholtz.precond(), m_helmholtz.weights(), m_eps );
     m_extra.update( t, phi);
     dg::blas1::axpby( 1., phi, -1., y, chi); //chi = lap \phi
-
 
     m_arakawa( phi, chi, yp);
     //compute derivatives
@@ -131,6 +112,8 @@ void Mima< G, M, Container>::operator()( double t, const Container& y, Container
         dg::blas1::pointwiseDivide(omega,nGinv,omega);   //omega = e^(kappa*x)*(phi - lap phi)*d_x phi
         dg::blas1::axpby( -kappa*alpha, omega, 1., yp);  // -kappa*alpha*e^(kappa*x)*(phi - lap phi)*d_x phi
     }
+    // add diffusion
+    dg::blas2::gemv( -m_nu, m_laplaceM, y, 1., yp);
 }
 
 
