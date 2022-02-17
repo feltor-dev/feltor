@@ -580,7 +580,7 @@ struct MultigridCG2d
      * benchmark (intended use is to distinguish different messages
      * in the output)
     */
-    void set_benchmark( bool benchmark, std::string message = ""){
+    void set_benchmark( bool benchmark, std::string message = "Nested Iterations"){
         m_benchmark = benchmark;
         m_message = message;
     }
@@ -648,7 +648,7 @@ struct MultigridCG2d
                             pol.weights(), eps[u], 1, 10);
                 t.toc();
                 if( m_benchmark)
-                    DG_RANK0 std::cout << "# `"<<m_message<<"` nested stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
+                    DG_RANK0 std::cout << "# `"<<m_message<<"` stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
             };
         }
         nested_iterations( ops, x, b, multi_inv_pol, m_nested);
@@ -661,7 +661,7 @@ struct MultigridCG2d
     std::vector< PCG<Container> > m_pcg;
     unsigned m_stages;
     bool m_benchmark = true;
-    std::string m_message = "";
+    std::string m_message = "Nested Iterations";
 
 };
 ///@}

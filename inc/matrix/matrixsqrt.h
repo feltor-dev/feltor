@@ -18,15 +18,14 @@ namespace mat{
  *  multiplications that we found to date
  * @ingroup matrixfunctionapproximation
  */
-template<class Container>
+template<class ContainerType>
 struct MatrixSqrt
 {
-    using container_type = Container;
-    using value_type = dg::get_value_type<Container>;
+    using container_type = ContainerType;
+    using value_type = dg::get_value_type<ContainerType>;
 
     /// Construct empty
     MatrixSqrt() = default;
-
 
     /**
      * @brief Construct from matrix
@@ -42,18 +41,18 @@ struct MatrixSqrt
      */
     template<class MatrixType>
     MatrixSqrt(  MatrixType& A, int exp,
-            const Container& weights, value_type eps_rel,
+            const ContainerType& weights, value_type eps_rel,
             value_type nrmb_correction  = 1.,
             unsigned max_iter = 500, unsigned cauchy_steps = 40
             ) : m_weights(weights),
     m_exp(exp), m_cauchy( cauchy_steps), m_eps(eps_rel),
         m_abs(nrmb_correction)
     {
-        m_A = [&]( const Container& x, Container& y){
+        m_A = [&]( const ContainerType& x, ContainerType& y){
             return dg::apply( A, x, y);
         };
         m_lanczos.construct( weights, max_iter);
-        dg::mat::UniversalLanczos<Container> eigen( weights, 20);
+        dg::mat::UniversalLanczos<ContainerType> eigen( weights, 20);
         auto T = eigen.tridiag( A, weights, weights);
         m_EVs = dg::mat::compute_extreme_EV( T);
     }
@@ -66,7 +65,18 @@ struct MatrixSqrt
     }
     /// Get the number of Lanczos iterations in latest call to \c operator()
     unsigned get_iter() const{return m_number;}
-    template<class ContainerType0, class ContainerType1>
+
+    /**
+     *@brief Set or unset performance timings during iterations
+     *@param benchmark If true, additional output will be written to \c std::cout during solution
+     *@param message An optional identifier that is printed together with the
+     * benchmark (intended use is to distinguish different messages
+     * in the output)
+    */
+    void set_benchmark( bool benchmark, std::string message = "SQRT"){
+        m_benchmark = benchmark;
+        m_message = message;
+    }
 
     /**
      * @brief Apply matrix sqrt
@@ -74,20 +84,32 @@ struct MatrixSqrt
      * @param b input vector
      * @param x output vector, contains \f$ x = A^{\pm 1/2} \vec b\f$
      */
+    template<class ContainerType0, class ContainerType1>
     void operator()( const ContainerType0 b, ContainerType1& x)
     {
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
+        dg::Timer t;
+        t.tic();
         auto func = make_SqrtCauchyEigen_Te1( m_exp, m_EVs, m_cauchy);
         m_number = m_lanczos.solve( x, func, m_A, b, m_weights, m_eps, m_abs,
                 "universal", 1., 2);
+        t.toc();
+        if( m_benchmark)
+            DG_RANK0 std::cout << "# `"<<m_message<<"` solve with {"<<m_number<<","<<m_cauchy<<"} iterations took "<<t.diff()<<"s\n";
     }
     private:
-    UniversalLanczos<Container> m_lanczos;
-    Container m_weights;
-    std::function< void( const Container&, Container&)> m_A;
+    UniversalLanczos<ContainerType> m_lanczos;
+    ContainerType m_weights;
+    std::function< void( const ContainerType&, ContainerType&)> m_A;
     std::array<value_type, 2> m_EVs;
     int m_exp;
     unsigned m_number, m_cauchy;
     value_type m_eps, m_abs;
+    bool m_benchmark = true;
+    std::string m_message = "SQRT";
 
 };
 }//namespace mat
