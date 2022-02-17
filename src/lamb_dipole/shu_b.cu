@@ -79,13 +79,12 @@ int main( int argc, char* argv[])
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
     dg::IdentityFilter identity;
     bool apply_filter = false;
-    dg::ImExMultistep_s<dg::DVec, dg::AndersonSolver<dg::DVec>> imex;
+    dg::DefaultSolver<dg::DVec> solver;
+    dg::ImExMultistep<dg::DVec> imex;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
-    dg::ImplicitMultistep<dg::DVec> multistep_implicit;
     dg::Adaptive<dg::ERKStep<dg::DVec> > adaptive;
-    dg::Adaptive<dg::ARKStep_s<dg::DVec> > adaptive_imex;
-    dg::Adaptive<dg::DIRKStep<dg::DVec, dg::AndersonSolver<dg::DVec> >> adaptive_implicit;
+    dg::Adaptive<dg::ARKStep<dg::DVec> > adaptive_imex;
     if( regularization == "modal")
     {
         double alpha = ws[ "regularization"].get( "alpha", 36).asDouble();
@@ -111,9 +110,9 @@ int main( int argc, char* argv[])
         unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
         double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
         double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
-        //imex.construct( tableau, y0, y0.size(), eps_time);
-        imex.construct( tableau, y0, mMax, eps_time, max_iter, damping, mMax );
-        imex.init( shu, diffusion, time, y0, dt);
+        solver.construct( diffusion, y0, y0.size(), eps_time);
+        imex.construct( tableau, y0);
+        imex.init( std::tie(shu, diffusion, solver), time, y0, dt);
     }
     else if( "Shu-Osher" == stepper)
     {
@@ -125,22 +124,9 @@ int main( int argc, char* argv[])
         dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
         multistep.construct( tableau, y0);
         if( apply_filter)
-            multistep.init( shu, filter, time, y0, dt);
+            multistep.init( std::tie(shu, filter), time, y0, dt);
         else
-            multistep.init( shu, identity, time, y0, dt);
-    }
-    else if( "FilteredImplicitMultistep" == stepper)
-    {
-        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
-        unsigned mMax = ws["timestepper"].get( "mMax", 8).asUInt();
-        unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
-        double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
-        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
-        multistep_implicit.construct( tableau, y0, mMax, eps_time, max_iter, damping, mMax );
-        if( apply_filter)
-            multistep_implicit.init( shu, filter, time, y0, dt);
-        else
-            multistep_implicit.init( shu, identity, time, y0, dt);
+            multistep.init( std::tie(shu, identity), time, y0, dt);
     }
     else if( "ERK" == stepper)
     {
@@ -153,17 +139,8 @@ int main( int argc, char* argv[])
         double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
         rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
         atol = ws["timestepper"].get(atol, 1e-5).asDouble();
-        adaptive_imex.construct( tableau, y0, y0.size(), eps_time);
-    }
-    else if ( "DIRK" == stepper)
-    {
-        unsigned mMax = ws["timestepper"].get( "mMax", 8).asUInt();
-        unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
-        double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
-        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
-        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
-        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
-        adaptive_implicit.construct( tableau, y0, mMax, eps_time, max_iter, damping, mMax);
+        solver.construct( diffusion, y0, y0.size(), eps_time);
+        adaptive_imex.construct( tableau, y0);
     }
     else
     {
@@ -205,27 +182,20 @@ int main( int argc, char* argv[])
                 for( unsigned j=0; j<itstp; j++)
                 {
                     if( "ImExMultistep" == stepper)
-                        imex.step( shu, diffusion, time, y0);
+                        imex.step( std::tie(shu, diffusion,solver), time, y0);
                     else if ( "FilteredExplicitMultistep" == stepper)
                     {
                         if( apply_filter)
-                            multistep.step( shu, filter, time, y0);
+                            multistep.step( std::tie(shu, filter), time, y0);
                         else
-                            multistep.step( shu, identity, time, y0);
+                            multistep.step( std::tie(shu, identity), time, y0);
                     }
                     else if ( "Shu-Osher" == stepper)
                     {
                         if( apply_filter)
-                            shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                            shu_osher.step( std::tie(shu, filter), time, y0, time, y0, dt);
                         else
-                            shu_osher.step( shu, identity, time, y0, time, y0, dt);
-                    }
-                    else if ( "FilteredImplicitMultistep" == stepper)
-                    {
-                        if( apply_filter)
-                            multistep_implicit.step( shu, filter, time, y0);
-                        else
-                            multistep_implicit.step( shu, identity, time, y0);
+                            shu_osher.step( std::tie(shu, identity), time, y0, time, y0, dt);
                     }
                 }
             } catch( dg::Fail& fail) {
@@ -347,27 +317,20 @@ int main( int argc, char* argv[])
             for( unsigned j=0; j<itstp; j++)
             {
                 if( "ImExMultistep" == stepper)
-                    imex.step( shu, diffusion, time, y0);
+                    imex.step( std::tie(shu, diffusion, solver), time, y0);
                 else if ( "FilteredExplicitMultistep" == stepper)
                 {
                     if( apply_filter)
-                        multistep.step( shu, filter, time, y0);
+                        multistep.step( std::tie( shu, filter), time, y0);
                     else
-                        multistep.step( shu, identity, time, y0);
+                        multistep.step( std::tie( shu, identity), time, y0);
                 }
                 else if ( "Shu-Osher" == stepper)
                 {
                     if( apply_filter)
-                        shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                        shu_osher.step( std::tie( shu, filter), time, y0, time, y0, dt);
                     else
-                        shu_osher.step( shu, identity, time, y0, time, y0, dt);
-                }
-                else if ( "FilteredImplicitMultistep" == stepper)
-                {
-                    if( apply_filter)
-                        multistep_implicit.step( shu, filter, time, y0);
-                    else
-                        multistep_implicit.step( shu, identity, time, y0);
+                        shu_osher.step( std::tie( shu, identity), time, y0, time, y0, dt);
                 }
             }
             step+=itstp;

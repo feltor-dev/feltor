@@ -335,7 +335,6 @@ struct Diffusion
     const Container& weights(){
         return m_weights;
     }
-    const Container& inv_weights(){ return m_shu->m_LaplacianM.inv_weights();}
     const Container& precond(){ return m_shu->m_LaplacianM.precond();}
   private:
     Container m_weights;

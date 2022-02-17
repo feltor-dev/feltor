@@ -102,6 +102,13 @@ struct DefaultSolver
             return pcg.solve( wrapper, y, ys, precond, weights, eps);
         };
     }
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = DefaultSolver( std::forward<Params>( ps)...);
+    }
     ///@brief Set or unset performance timings during iterations
     ///@param benchmark If true, additional output will be written to \c std::cout during solution
     void set_benchmark( bool benchmark){ m_benchmark = benchmark;}
