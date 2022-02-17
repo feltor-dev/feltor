@@ -458,7 +458,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     compute_perp_diffusiveU( 1., m_velocityST[1], m_densityST[1], m_temp0, m_temp1, 1.,
             yp[1][1]);
 
-    add_rhs_penalization( yp);
+    // partitioned means imex timestepper
+    for( unsigned i=0; i<2; i++)
+    {
+        for( unsigned j=0; j<2; j++)
+            multiply_rhs_penalization( yp[i][j]); // F*(1-chi_w-chi_s)
+    }
 
     //Add source terms
     // set m_s
@@ -534,19 +539,19 @@ struct ImplicitSolver
         return m_tmp;
     }
     // solve (y + alpha I(t,y) = rhs
-    void solve( double alpha,
-            Implicit<Geometry,IMatrix,Matrix,Container>& im,
+    void operator()( double alpha,
             double t,
             std::array<std::array<Container,2>,2>& y,
             const std::array<std::array<Container,2>,2>& rhs)
     {
         dg::blas1::copy( rhs[0], y[0]);// I_n = 0
-        im( t, y, m_tmp); //ignores y[1], solves Poisson at time t for y[0] and
+        m_ex->implicit( t, y, m_tmp); //ignores y[1], solves Poisson at time t for y[0] and
         // writes 0 in m_tmp[0] and updates m_tmp[1]
-        dg::blas1::axpby( 1., rhs[1], -alpha, m_tmp[1], y[1]); // u = rhs_u - alpha I_u
+        dg::blas1::axpby( 1., rhs[1], +alpha, m_tmp[1], y[1]); // u = rhs_u + alpha I_u
     }
     private:
     std::array<std::array<Container,2>,2> m_tmp;
+    Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
 };
 // The following is still for the NavierStokes project
 // (turns out doing the parallel force implicitly does not help with anything)

@@ -245,44 +245,41 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////////////////////////////////////////
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
     dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
-    dg::ImExMultistep< std::array<std::array<dg::x::DVec,2>,2>,
-        feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
-        dg::x::DMatrix, dg::x::DVec> > multistep_imex;
+    feltor::ImplicitSolver<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> solver;
+    dg::ImExMultistep< std::array<std::array<dg::x::DVec,2>,2> > multistep_imex;
     dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
-    dg::Adaptive< dg::ARKStep< std::array<std::array<dg::x::DVec,2>,2>,
-        feltor::ImplicitSolver< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
-            dg::x::DMatrix, dg::x::DVec> > > adapt_ark;
-    double rtol = 0., atol = 0., dt = 0.;
+    dg::Adaptive< dg::ARKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt_ark;
+    double rtol = 0., atol = 0., dt = 0., reject_limit = 2;
     if( p.timestepper == "multistep")
     {
-        multistep.construct( p.tableau, y0);
+        multistep = { p.tableau, y0};
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
     }
     else if( p.timestepper == "multistep-imex")
     {
         double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
-        multistep_imex.construct( p.tableau, feltor, eps_time);
+        solver = { feltor, eps_time};
+        multistep_imex = { p.tableau, y0};
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
     }
     else if (p.timestepper == "adaptive")
     {
-        adapt.construct( p.tableau, y0);
+        adapt = {p.tableau, y0};
         adapt.stepper().ignore_fsal();
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess
-        double reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
-        adapt.set_reject_limit( reject_limit);
+        reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
     }
     else if (p.timestepper == "adaptive-imex")
     {
         double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
-        adapt_ark.construct( p.tableau, feltor, eps_time);
+        solver = { feltor, eps_time};
+        adapt_ark = { p.tableau, y0};
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess
-        double reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
-        adapt.set_reject_limit( reject_limit);
+        reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
     }
     else
     {
@@ -560,7 +557,8 @@ int main( int argc, char* argv[])
         if( p.timestepper == "multistep")
             multistep.init( feltor, time, y0, dt);
         if( p.timestepper == "multistep-imex")
-            multistep_imex.init( feltor, implicit, time, y0, dt);
+            multistep_imex.init( std::tie( feltor, implicit, solver), time, y0,
+                    dt);
         else if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
         {
             output_mode = js["timestepper"].get(
@@ -594,7 +592,7 @@ int main( int argc, char* argv[])
                             do{
                                 adapt.step( feltor, time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol,
-                                        atol);
+                                        atol, reject_limit);
                                 if( adapt.failed())
                                     var.nfailed++;
                                 if( dt < 1e-6)
@@ -603,9 +601,10 @@ int main( int argc, char* argv[])
                         }
                         else if ( p.timestepper == "adaptive-imex")
                             do{
-                                adapt_ark.step( feltor, implicit, time, y0,
-                                        time, y0, dt, dg::pid_control,
-                                        dg::l2norm, rtol, atol);
+                                adapt_ark.step( std::tie( feltor, implicit,
+                                            solver), time, y0, time, y0, dt,
+                                        dg::pid_control, dg::l2norm, rtol,
+                                        atol, reject_limit);
                                 if( adapt_ark.failed())
                                     var.nfailed++;
                                 if( dt < 1e-6)
@@ -624,7 +623,7 @@ int main( int argc, char* argv[])
                             do{
                                 adapt.step( feltor, time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol,
-                                        atol);
+                                        atol, reject_limit);
                                 if( adapt.failed())
                                     var.nfailed++;
                                 if( dt < 1e-6)
@@ -633,9 +632,10 @@ int main( int argc, char* argv[])
                         }
                         else if( p.timestepper == "adaptive-imex")
                             do{
-                                adapt_ark.step( feltor, implicit, time, y0,
-                                        time, y0, dt, dg::pid_control,
-                                        dg::l2norm, rtol, atol);
+                                adapt_ark.step( std::tie( feltor, implicit,
+                                            solver), time, y0, time, y0, dt,
+                                        dg::pid_control, dg::l2norm, rtol,
+                                        atol, reject_limit);
                                 if( adapt_ark.failed())
                                     var.nfailed++;
                                 if( dt < 1e-6)
@@ -644,7 +644,8 @@ int main( int argc, char* argv[])
                         else if ( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);
                         else if ( p.timestepper == "multistep-imex")
-                            multistep_imex.step( feltor, implicit, time, y0);
+                            multistep_imex.step( std::tie( feltor, implicit,
+                                        solver), time, y0);
                         step++;
                     }
                 }
@@ -879,7 +880,8 @@ int main( int argc, char* argv[])
             if( p.timestepper == "multistep")
                 multistep.init( feltor, time, y0, dt);
             if( p.timestepper == "multistep-imex")
-                multistep_imex.init( feltor, implicit, time, y0, dt);
+                multistep_imex.init( std::tie( feltor, implicit, solver), time,
+                        y0, dt);
             for( unsigned i=0; i<p.itstp; i++)
             {
                 for( unsigned k=0; k<p.inner_loop; k++)
@@ -899,9 +901,10 @@ int main( int argc, char* argv[])
                         }
                         else if( p.timestepper == "adaptive-imex")
                             do{
-                                adapt_ark.step( feltor, implicit, time, y0,
-                                        time, y0, dt, dg::pid_control,
-                                        dg::l2norm, rtol, atol);
+                                adapt_ark.step( std::tie( feltor, implicit,
+                                            solver), time, y0, time, y0, dt,
+                                        dg::pid_control, dg::l2norm, rtol,
+                                        atol);
                                 if( adapt_ark.failed())
                                     var.nfailed++;
                                 if( dt < 1e-6)
@@ -910,7 +913,8 @@ int main( int argc, char* argv[])
                         else if ( p.timestepper == "multistep")
                             multistep.step( feltor, time, y0);
                         else if ( p.timestepper == "multistep-imex")
-                            multistep_imex.step( feltor, implicit, time, y0);
+                            multistep_imex.step( std::tie( feltor, implicit,
+                                        solver), time, y0);
                     }
                     catch( dg::Fail& fail) {
                         std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";

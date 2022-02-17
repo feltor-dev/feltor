@@ -1489,10 +1489,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
             else // "bohm" == m_p.sheath_bc
             {
                 //u_e,sh = s*1/sqrt(|mu_e|2pi) exp(-phi)
+                double mue = fabs(m_p.mu[0]), tau = m_p.tau[1];
                 dg::blas1::evaluate( yp[1][0], dg::plus_equals(),
-                    [mue = fabs(m_p.mu[0]), sheath_rate, tau =
-                    m_p.tau[1]]DG_DEVICE( double sheath_coord, double sheath,
-                        double phi) {
+                    [mue, sheath_rate, tau]DG_DEVICE(
+                        double sheath_coord, double sheath, double phi) {
                         return sheath_rate * sheath_coord * sheath *
                             sqrt(1.+tau) * exp(-phi) / sqrt( mue*2.*M_PI);
                     },
@@ -1883,9 +1883,8 @@ struct ImplicitSolver
     const std::array<std::array<Container,2>,2>& copyable() const{
         return m_ex->m_s;
     }
-    // solve (y + alpha I(t,y) = rhs
-    void solve( double alpha,
-            Implicit<Geometry,IMatrix,Matrix,Container>& im,
+    // solve (y - alpha I(t,y) = rhs
+    void operator()( double alpha,
             double t,
             std::array<std::array<Container,2>,2>& y,
             const std::array<std::array<Container,2>,2>& rhs)
@@ -1896,8 +1895,8 @@ struct ImplicitSolver
 #endif//MPI
         dg::Timer ti;
         ti.tic();
-        m_imdens.set_params( alpha, t);
-        m_imvelo.set_params( alpha, t);
+        m_imdens.set_params( -alpha, t);
+        m_imvelo.set_params( -alpha, t);
 
         dg::blas2::symv( m_ex->m_lapperpN.weights(), rhs[0], m_ex->m_dssU);
         unsigned number = m_pcg.solve( m_imdens, y[0], m_ex->m_dssU,
