@@ -7,6 +7,8 @@ into a pdf.  Here is a short description of each:
 
 feltor::    3d gyrofluid full-F electrodynamic model in toroidal geometry
 
+navier_stokes:: 3d Navier Stokes equations along magnetic fieldlines
+
 heat::  3d parallel / perpendicular diffusion equation in tokamak geometry
 with realistic flux surfaces. Used in the paper "Three discontinuous
 Galerkin schemes for the anisotropic heat conduction equation on
@@ -23,7 +25,6 @@ and A. Kendl, "Radial convection of finite ion temperature, high amplitude
 plasma blobs" Phys. Plasmas 21, 092301 (2014).
 
 reco2d:: 2d reconnection model based on the feltor model
-
 
 hasegawa:: 2d Hasegawa-Wakatani and Hasegawa-Mima models
 
