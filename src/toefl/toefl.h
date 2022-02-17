@@ -227,7 +227,7 @@ void Explicit<G, M, Container>::operator()( double t,
         {
             // ExB advection with updwind scheme
             dg::blas2::symv(  1., m_centered[0], m_phi[u], 0., m_v[1]);
-            dg::blas2::symv( -1., m_centered[1], m_phi[u], 0,. m_v[0]);
+            dg::blas2::symv( -1., m_centered[1], m_phi[u], 0., m_v[0]);
             m_adv.upwind( -1., m_v[0], m_v[1], y[u], 0., yp[u]);
         }
         // diamagnetic compression
@@ -284,7 +284,7 @@ void Explicit<G, M, Container>::operator()( double t,
             // ExB + Curv advection with updwind scheme
             dg::blas2::symv( m_centered[0], m_phi[u], m_dxphi[u]);
             dg::blas2::symv( m_centered[1], m_phi[u], m_dyphi[u]);
-            dg::blas2::axpby( -1., m_dyphi[u], 0., m_v[0]);
+            dg::blas1::axpby( -1., m_dyphi[u], 0., m_v[0]);
             dg::blas1::axpby( +1., m_dxphi[u], 0., m_v[1]);
             dg::blas1::plus( m_v[1], -tau[u]*m_p.kappa);
             m_adv.upwind( -1., m_v[0], m_v[1], y[u], 0., yp[u]);
