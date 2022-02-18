@@ -17,7 +17,7 @@
 #cd ..
 #ghp-import -n -f -p -o doc
 # # or
-#ghp-import -n -f -p -o --remote==mygithub doc
+#ghp-import -n -f -p -o --remote=mygithub doc
 #```
 
 ###

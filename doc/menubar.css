@@ -1,4 +1,4 @@
-/* Maybe share here https://github.com/jothepro/doxygen-awesome-css/discussions/13  at some point*/
+/* Shared here: https://github.com/jothepro/doxygen-awesome-css/discussions/13 */
 html{
     /* font sizes */
     --page-font-size: 15.6px;
@@ -25,7 +25,7 @@ html{
     --fragment-background: #fbfcfd;*/
 
     --fragment-lineheight: 20px;
-    --top-height: 220px;
+    --top-height: 220px; /* Height of the left side menu top section */
 
 }
 /* Make code blocks in light mode when color scheme is in light-mode*/
