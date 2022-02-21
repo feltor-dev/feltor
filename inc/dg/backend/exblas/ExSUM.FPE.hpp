@@ -105,6 +105,8 @@ FPExpansionVect<T,N,TRAITS>::FPExpansionVect(int64_t * sa) :
 template<typename T>
 inline static T KnuthTwoSum(T a, T b, T & s)
 {
+    // MW: The compiler may not respect the order here (if one of the inputs is 0?)
+    // better use fmas to avoid unsafe optimization
     T r = a + b;
     T z = r - a;
     s = (a - (r - z)) + (b - z);

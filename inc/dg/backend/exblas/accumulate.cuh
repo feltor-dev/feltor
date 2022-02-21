@@ -108,7 +108,7 @@ static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) {
     double xscaled = ldexp(x, -DIGITS * exp_word);
 
     int i;
-    for (i = iup; xscaled != 0 && i>=0; --i) { //MW: i>=0 protects agains NaN
+    for (i = iup; i>=0 && xscaled != 0; --i) { //MW: i>=0 protects agains NaN
         double xrounded = rint(xscaled);
         int64_t xint = (int64_t) xrounded;
         AccumulateWord(accumulator, i, xint, stride);
@@ -173,11 +173,13 @@ static inline double Round( int64_t * accumulator) {
     // Find leading word
     int i;
     // Skip zeroes
-    for (i = imax; accumulator[i] == 0 && i >= imin; --i) {
+    for (i = imax; i >= imin && accumulator[i] == 0; --i) {
+        // MW: note that i >= imin has to come *before* accumulator[i]
+        // else it is possible that accumulator[-1] is accessed
     }
     if (negative) {
         // Skip ones
-        for(; (accumulator[i] & ((1ll << DIGITS) - 1)) == ((1ll << DIGITS) - 1) && i >= imin;--i) {
+        for(; i >= imin && (accumulator[i] & ((1ll << DIGITS) - 1)) == ((1ll << DIGITS) - 1);--i) {
         }
     }
     if (i < 0) {

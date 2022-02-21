@@ -16,6 +16,8 @@
 namespace dg
 {
 
+    //MW this scheme cannot be formulated as a weak form
+
 /**
  * @brief %Upwind discretization of advection operator \f$ \vec v\cdot\nabla f\f$
  *

@@ -2,7 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
-#include "shu.cuh"
+#include "shu.h"
 
 namespace shu{
 
@@ -13,8 +13,7 @@ struct Variables{
     const double& time;
     const dg::DVec& weights;
     double duration;
-    enum dg::file::error mode;
-    Json::Value& js;
+    dg::file::WrappedJsonValue& js;
 };
 
 struct Record1d{
@@ -78,11 +77,11 @@ std::vector<Record1d> diagnostics1d_list = {
     },
     {"error", "Relative error to analytical solution (not available for every intitial condition)",
         []( Variables& v ) {
-            std::string initial = dg::file::get( v.mode, v.js, "init", "type", "lamb").asString();
+            std::string initial = v.js[ "init"].get( "type", "lamb").asString();
             if( "mms" == initial)
             {
-                double R = dg::file::get( v.mode, v.js, "init", "sigma", 0.1).asDouble();
-                double U = dg::file::get( v.mode, v.js, "init", "velocity", 1).asDouble();
+                double R = v.js[ "init"].get( "sigma", 0.1).asDouble();
+                double U = v.js[ "init"].get( "velocity", 1).asDouble();
                 shu::MMSVorticity vortex( R, U, v.grid.ly(), v.time);
                 dg::DVec sol = dg::evaluate( vortex, v.grid);
                 dg::blas1::axpby( 1., v.y0, -1., sol);
@@ -92,11 +91,11 @@ std::vector<Record1d> diagnostics1d_list = {
             {
                 double nu = 0.;
                 unsigned order = 1;
-                std::string regularization = dg::file::get( v.mode, v.js, "regularization", "type", "moddal").asString();
+                std::string regularization = v.js[ "regularization"].get( "type", "moddal").asString();
                 if( "viscosity" == regularization)
                 {
-                    nu = dg::file::get( v.mode, v.js, "regularization", "nu_perp", 1e-3).asDouble();
-                    order = dg::file::get( v.mode, v.js, "regularization", "order", 1).asUInt();
+                    nu = v.js[ "regularization"].get( "nu_perp", 1e-3).asDouble();
+                    order = v.js[ "regularization"].get( "order", 1).asUInt();
                 }
                 double time = v.time;
                 dg::DVec sol = dg::evaluate( [time,nu,order](double x, double y) {

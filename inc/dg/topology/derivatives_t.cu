@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include "dg/blas.h"
+#include "dg/functors.h"
 #include "derivatives.h"
 #include "evaluation.h"
 
@@ -74,6 +75,17 @@ int main()
         dg::blas2::symv( -1., m3[i], f3d, 1., error);
         value_t norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary3[i]<<"\n";
+    }
+    std::cout << "TEST if symv captures NaN\n";
+    for( unsigned i=0; i<6; i++)
+    {
+        Vector error = sol3[i];
+        error[0] = NAN;
+        dg::blas2::symv(  m3[i], f3d, error);
+        thrust::host_vector<double> x( error);
+        bool hasnan = dg::blas1::reduce( x, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+        std::cout << "Symv contains NaN: "<<std::boolalpha<<hasnan<<" (false)\n";
     }
     std::cout << "\nFINISHED! Continue with arakawa_t.cu !\n\n";
 

@@ -1,0 +1,296 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+\usepackage{minted}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The poet project}
+\author{M.~Held}
+\maketitle
+
+\begin{abstract}
+    This is a program for 2d isothermal delta-f and full-f gyro-fluid simulations with different treatments of the polarization charge ~\cite{HeldPhD}
+\end{abstract}
+
+\section{Equations}
+Currently we implemented $5$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density. $\phi$ is the electric potential. We
+use Cartesian coordinates $x$, $y$.
+\subsection{Models}
+\subsubsection{Delta-F gyro-fluid models}
+The two delta-f models ("df-lwl" \& "df-O2") share the same evolution equations\footnote{The densities are for delta-f models are understood as fluctuating quantities with respect to a background} 
+\begin{subequations}
+\begin{align}
+ \frac{\partial n}{\partial t}     &= 
+    \{ n, \phi\} 
+  + \kappa \frac{\partial \phi}{\partial y} 
+  -\kappa \frac{\partial n}{\partial y}
+  - \nu \Delta_{\perp}^2 n  \\
+  \frac{\partial N}{\partial t} &=
+  \{ N, \psi\} 
+  + \kappa \frac{\partial \psi}{\partial y} 
+  + \tau \kappa\frac{\partial N}{\partial y} -\nu\Delta_{\perp}^2 N \\
+   \vec{\nabla}\cdot \vec{P}_2 &=  \Gamma_1 N -n, 
+\end{align}
+\end{subequations}
+and differ only in the polarization equation given in Section~\ref{sec:polarization}:
+%%%%%%%%%
+\subsubsection{Full-F gyro-fluid models}
+Likewise the full-f models ("ff-lwl" \& "ff-O2" \& "ff-O4") share the same evolution equations
+\begin{subequations}
+\begin{align}
+ \frac{\partial n}{\partial t}     &= 
+    \frac{1}{B}\{ n, \phi\} 
+  + \kappa n\frac{\partial \phi}{\partial y} 
+  -\kappa \frac{\partial n}{\partial y}
+  - \nu \Delta_\perp^2 n  \\
+  \frac{\partial N}{\partial t} &=
+  \frac{1}{B}\{ N, \psi\} 
+  + \kappa N\frac{\partial \psi}{\partial y} 
+  + \tau \kappa\frac{\partial N}{\partial y} -\nu \Delta_\perp^2 N \\
+   \vec{\nabla}\cdot \vec{P}_2 &= \Gamma_1 N-n
+\end{align}
+\end{subequations}
+and are based upon a ``radially'' varying magnetic field magnitude
+\begin{align}
+ B(x)^{-1} = \kappa x +1-\kappa X 
+\end{align}
+The full-f models differ only in the treatment the  polarization terms \(\psi_2\) and \(\vec{P}_2\), given in Sec.~\ref{sec:polarization}
+%%%%%
+\subsubsection{Polarization and FLR terms}
+\label{sec:polarization}
+The FLR and polarization operators enter the gyro-fluid potential (\(\psi)\) as well as the polarization density.
+The operators and gyro-fluid potential are
+\begin{align}
+ \Gamma_1 &= ( 1- \tau/2 \Delta_{\perp})^{-1} &
+ \Gamma_0 &= ( 1- \tau\Delta_{\perp})^{-1} &
+   \psi = \Gamma_1 \phi + \psi_2 
+\end{align}
+The  (negative) polarization charge is 
+\begin{align}
+  \vec{\nabla}\cdot \vec{P}_2 &=    
+\begin{cases}
+-\Delta_{\perp} \phi , 
+        &\ \text{if "df-lwl"} \\
+-\Gamma_0\Delta_{\perp} \phi, 
+      &\ \text{if "df-O2"} \\
+-\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right)
+       &\ \text{if "ff-lwl"} \\
+-\sqrt{\Gamma_0}\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp\sqrt{\Gamma_0} \phi\right) 
+         &\ \text{if "ff-O2"} \\
+-\Gamma_1 \left[\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp\right)-2   \nabla\cdot\nabla\cdot \left(\frac{\tau N}{B^4} \nabla_\perp^2\right)+  \Delta_{\perp} \left(\frac{\tau N}{B^4} \Delta_{\perp}\right)\right]\Gamma_1 \phi 
+        &\ \text{if "ff-O4"} \\
+\end{cases}
+\end{align}
+The polarization part of the gyro-fluid potential is
+\begin{align}
+\psi_2&=    
+\begin{cases}
+0 , 
+        &\ \text{if "df-lwl"} \\
+0, 
+      &\ \text{if "df-O2"} \\
+- \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}
+       &\ \text{if "ff-lwl"} \\
+- \frac{1}{2} \frac{(\nabla\sqrt{\Gamma_0}\phi)^2}{B^2}
+         &\ \text{if "ff-O2"} \\
+- \frac{1}{2 B^2} \left[|\nabla_\perp \Gamma_1\phi|^2 + \frac{\tau}{2 B^2} \left[|\nabla_\perp^2 \Gamma_1\phi |^2 - (\Delta_{\perp} \Gamma_1\phi)^2 /2 \right]\right]
+        &\ \text{if "ff-O4"} \\
+\end{cases}
+\end{align}
+\subsection{Initialization}
+We follow the strategy to enforce the initial fields of the physical variables, the electron density \(n\) and the electric potential \(\phi\), in order to compute the initial ion gyro-center density.
+\subsubsection{Non-rotating Gaussian ("blob")}
+Initialization of $n$ is a Gaussian 
+\begin{align}
+    n(x,y,0) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
+    \phi(x,y)&=const.
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
+radius of the blob.
+We initialize 
+\begin{align}
+    N &= \Gamma_1^{-1} n 
+\end{align}
+\subsubsection{Gaussian with zero polarization charge density("blob")}
+Initialization of $n$ is a Gaussian 
+\begin{align}
+    n(x,y,0) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the radius of the blob. We initialize then
+\begin{align}
+    N &= n 
+\end{align}
+so that the total polarization charge vanishes  \(\vec{\nabla}\cdot \vec{P}=0\).
+
+\subsubsection{Double Rotating Gaussian }
+We initialize two blobs
+\begin{align}
+    n(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
+    \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= \delta \hspace{1mm} (n-1)
+\end{align}
+where \(\delta = 10\) is a parameter for the rotation.
+Thus we have
+\begin{align}
+  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E 
+\end{align}
+
+the ion gyro-center density follows from the respective polarization equation.
+
+\subsubsection{Shear flow (double shear layer)}
+\begin{align}
+ n(x,y) &= n_{e0}\\
+    \Omega_E:= \vec{\nabla} \cdot \left(\frac{1}{B} \vec{\nabla}_\perp \phi\right) &= A
+    \begin{cases}
+        \delta \cos(2 \pi y/l_y) - \frac{1}{\rho} \text{sech}^2 \left(\frac{2 \pi x/l_x-\pi/2}{\rho}\right),\ x \leq l_x/2 \\
+        \delta \cos(2 \pi y/l_y) + \frac{1}{\rho} \text{sech}^2 \left(\frac{3 \pi /2-2 \pi x/l_x}{\rho}\right),\ x > l_x/2 \\
+    \end{cases}
+%  \phi(x,y) &= \dots \\
+\end{align}
+where \(\rho=\pi/15\) is the width of the shear layer and \(\delta=0.05\). The A parameter serves to control the magnitude.
+\begin{align}
+  \phi(x,y) &= \Delta_\perp^{-1} \Omega_E
+\end{align}
+the ion gyro-center density follows from the respective polarization equation, which requires a non-linear solve \(f(N,\phi) = n_e\). An initial guess for the ion gyro-cente rdensity \(N\) is obtained via the lwl approximated polarization equation.
+
+\subsection{Diagnostics}
+Diagnostics are the mass \(M\), the center of mass position \(\vec{X}_{com}\) and the (non-normalized) compactness \(I_c\)
+\begin{align}
+    M(t) &:= \int dA (n-1)  \\
+    M \vec{X}_{com} &:= \int dA \vec{x} (n-1) \\
+    I_c(t)  &:= \int dA (n(\vec{x},t)-1) h(\vec{x},t) \\
+    h(\vec{x},t) &:= \begin{cases}
+          1, 
+        &\ \text{if} \hspace{2mm}||\vec{x} - \vec{X}_{max}||^2 < \sigma^2 \\
+0,  &\ \text{else} 
+           \end{cases}
+\end{align}
+\section{Numerical methods}
+discontinuous Galerkin on structured grid
+\rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & Cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
+matrix inversions & multigrid conjugate gradient &  \\
+matrix functions & cauchy integral  method & \\
+\ExB advection & centered upwind-scheme\\
+curvature terms & centered difference & \\
+time &  adaptive explicit RK or explicit multistep  &  \\
+\bottomrule
+\end{longtable}
+
+\section{Compilation and useage}
+There are two programs poet.cu and poet\_hpc.cu . Compilation with
+\begin{verbatim}
+make <poet poet_hpc poet_mpi> device = <omp gpu>
+\end{verbatim}
+Run with
+\begin{verbatim}
+path/to/feltor/src/poet/poet input.json
+path/to/feltor/src/poet/poet_hpc input.json output.nc
+echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/poet/poet_mpi\
+    input.json output.nc
+\end{verbatim}
+All programs write performance informations to std::cout.
+The first is for shared memory systems (OpenMP/GPU) and opens a terminal window with life simulation results.
+ The
+second can be compiled for both shared and distributed memory systems and uses serial netcdf in both cases
+to write results to a file.
+For distributed
+memory systems (MPI+OpenMP/GPU) the program expects the distribution of processes in the
+x and y directions as command line input parameters.
+
+\subsection{Input file structure}
+Input file format: json
+\begin{minted}[texcomments]{js}
+"grid":
+{
+    "n" :  5,    //Legendre polynomial order in x and y 
+    "Nx" : 32,   //grid points in x
+    "Ny" : 32,   //grid points in y
+    "lx"  : 64,  //Box size in x in units of $\rho_s$
+    "ly"  : 64   //Box size in y in units of $\rho_s$
+},
+"timestepper":
+{
+    "type": "adaptive", //"adaptive" (explicit adaptive RK) or "multistep" (explicit multistep)
+    "tableau": "Bogacki-Shampine-4-2-3", // recommended "Bogacki-Shampine-4-2-3" (default adaptive) or "TVB-3-3" (multistep)
+    "rtol": 1e-10, //relative tolerance of adaptive time stepper
+    "atol": 1e-12, //absolute tolerance of adaptive time stepper
+    "dt" : 0.1   //time step in units of $c_s/\rho_s$ for multistep. Also determines together with itstep output step $dt_{out} = dt itstp$
+},
+"output":
+{
+    "type": "glfw",  // output format "glfw" & "netcdf",
+    "itstp"  : 1,    //time steps between outputs
+    "maxout" : 2,    //\# of netcdf outputs
+    "n" : 5,         //Legendre polynomial order in x and y for netcdf output
+    "Nx" : 32,       //grid points in x for netcdf output
+    "Ny" : 32        //grid points in y for netcdf output
+},    
+"elliptic":
+{
+    "stages"     : 3, //\# of stages of the multigrid solver for the (tensor) elliptic operator
+    "eps_pol"    : [1e-6,1.0,1.0], //accuracy at each stage of the multigrid solver
+    "jumpfactor": 1 //jump factor of the (tensor) elliptic operator
+},
+"helmholtz":
+{
+    "eps_gamma1" :   1e-8, //accuracy of the $\Gamma_1$ operator
+    "eps_gamma0" :   1e-6, //accuracy of the $\Gamma_0$ or $\sqrt{\Gamma_0}$ operator
+    "maxiter_sqrt":  200,  //max iterations of the $\sqrt{\Gamma_0}$ computation
+    "maxiter_cauchy": 35,  //max iterations of the Cauchy terms in $\sqrt{\Gamma_0}$ computation
+    "eps_cauchy" :  1e-12  //accuracy of the Cauchy integral in the $\sqrt{\Gamma_0}$ computation
+},
+"physical":
+{
+    "curvature"  : 0.00015, //$\kappa$
+    "tau"  : 4.0,           //$\tau_i = T_{i0}/T_{e0}$
+    "equations": "ff-O2"    //model $\in$ ("df-lwl" ,"df-O2" ,"ff-lwl" ,"ff-O2" ,"ff-O4" )
+},
+"init":
+{
+    "type"       : "blob",  // Gaussian blob initialization
+    "amplitude"  :1.0,      //$A$ of the Gaussian blob
+    "sigma"  : 5,           //$\sigma$ of Gaussian blob units of $\rho_s$
+    "posX"  : 0.5,          //x initial position $\in (0,1)$
+    "posY"  : 0.5           //y initial position $\in (0,1)$
+},
+"nu_perp"  : 0e-5,          //hyper-diffusion parameter
+"bc_x"  : "DIR",            //Boundary condtion in x
+"bc_y"  : "PER"             //Boundary condtion in y
+\end{minted}
+\subsection{Structure of output file}
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &
+ \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &             text attribute & 1 & verbose input file as a string \\
+energy\_time             & Dataset & 1 & timesteps at which 1d variables are written \\
+time                     & Dataset & 1 & time at which fields are written \\
+x                        & Dataset & 1 & x-coordinate  \\
+y                        & Dataset & 1 & y-coordinate \\
+electrons                & Dataset & 3 (time, y, x) & electon density $n$ \\
+ions                     & Dataset & 3 (time, y, x) & ion density $N$ \\
+potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
+vorticity                & Dataset & 3 (time, y, x) & z-component of ExB vorticity  $\Omega_E = \vec{\nabla}\cdot (B^{-1} \vec{\nabla}_{\perp}\phi)$  \\
+lperpinv                 & Dataset & 3 (time, y, x) & inverse perp density gradient length scale $L_\perp^{-1} := |\nabla_\perp n| / n$ \\
+lperpinvphi                 & Dataset & 3 (time, y, x) & inverse perp eletric potential gradient length scale $L_{\perp,\phi}^{-1} := |\nabla_\perp \phi| $ \\
+% dEdt                     & Dataset & 1 (energy\_time) & change of energy per time  \\
+% dissipation              & Dataset & 1 (energy\_time) & diffusion integrals  \\
+% energy                   & Dataset & 1 (energy\_time) & total energy integral  \\
+% mass                     & Dataset & 1 (energy\_time) & mass integral   \\
+\bottomrule
+\end{longtable}
+%..................................................................
+\bibliography{../common/references}
+%..................................................................
+
+
+\end{document}

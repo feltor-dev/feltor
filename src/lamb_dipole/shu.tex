@@ -1,7 +1,8 @@
 %%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\input{../../doc/related_pages/header.tex}
-\input{../../doc/related_pages/newcommands.tex}
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+\usepackage{minted}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -54,6 +55,7 @@ among them the total vorticity $V$, the kinetic energy $E$ and the enstrophy $\O
 
 
 \section{Initialization}
+Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json} \\
 We will consider several different initial conditions in order to test
 our numerical methods
 \subsection{Lamb Dipole}
@@ -68,22 +70,22 @@ boundary conditions
 Unfortunately, for a finite box this is not an exact solution any more.
 on the domain $[0,1]\times [0,1]$.
 The Lamb dipole is chosen with the following parameters in the input file
-%%This is a booktabs table
-\begin{longtable}{llll}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-grid & dict &  & Grid parameters \\
-\qquad x & float[2]& [0,1] & Choose x box boundaries appropriately \\
-\qquad y & float[2]& [0,1] & Choose y box boundaries appropriately \\
-\qquad bc & string[2] & [DIR, PER] & Choose boundary conditions [x,y] appropriately \\
-init &  dict &   & Parameters for initialization \\
-\qquad type      & string & lamb & This choice necessitates the following parameters \\
-\qquad velocity  & float &  1    &  blob speed \\
-\qquad sigma     & float &  0.1  & dipole radius in units of lx \\
-\qquad posX      & float &  0.5  & in units of lx \\
-\qquad posY      & float &  0.8  & in units of ly \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "x" : [0.0,1.0], // Choose x box boundaries appropriately
+    "y" : [0.0,1.0], // Choose y box boundaries appropriately
+    "bc" : ["DIR", "PER"] // Choose boundary conditions [x,y] appropriately
+}
+"init" :
+{
+    "type"      : "lamb", // This choice necessitates the following parameters
+    "velocity"  : 1.0,  //  blob speed $U$
+    "sigma"     : 0.1,  // dipole radius in units of $l_x$
+    "posX"      : 0.5,  // in units of $l_x$
+    "posY"      : 0.8  // in units of $l_y$
+}
+\end{minted}
 \subsection{Manufactured Solution}
 We manufacture a solution via
 \begin{align}
@@ -107,19 +109,20 @@ with the source
 on the domain $[-1,1]\times [-1,1]$.
 
 The manufactured solution is chosen with the following parameters in the input file
-\begin{longtable}{llll}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-grid & dict &  & Grid parameters \\
-\qquad x & float[2]& [-1,1] & Choose x box boundaries appropriately \\
-\qquad y & float[2]& [-1,1] & Choose y box boundaries appropriately \\
-\qquad bc & string[2] & [DIR, PER] & Choose boundary conditions appropriately \\
-init &  dict &   & Parameters for initialization \\
-\qquad type      & string & mms & This choice necessitates the following parameters \\
-\qquad sigma      & float & 0.2 & The width $\sigma$ \\
-\qquad velocity   & float & 1 & The velocity $v$ \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "x" : [-1.0,1.0], // Choose x box boundaries appropriately
+    "y" : [-1.0,1.0], // Choose y box boundaries appropriately
+    "bc" : ["DIR", "PER"] // Choose boundary conditions [x,y] appropriately
+}
+"init" :
+{
+    "type"      : "mms", // This choice necessitates the following parameters
+    "velocity"  : 1.0, //  blob speed $v$
+    "sigma"     : 0.2  // the width $\sigma$
+}
+\end{minted}
 \subsection{Simple sine function}
 A simple sine function is given by
 \begin{align}
@@ -131,19 +134,19 @@ which has an analytical solution
 \end{align}
 if there is artificial viscosity and is invariant else.
 on the domain $[0,2\pi]\times [0,2\pi]$.
-
 This solution is chosen with the following parameters in the input file
-\begin{longtable}{llll}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-grid & dict &  & Grid parameters \\
-\qquad x & float[2]& [0, 6.283185307179586] & Choose x box boundaries appropriately \\
-\qquad y & float[2]& [0, 6.283185307179586] & Choose y box boundaries appropriately \\
-\qquad bc & string[2] & [DIR, PER] & Choose boundary conditions appropriately \\
-init &  dict &   & Parameters for initialization \\
-\qquad type      & string & sine & No other parameters are necessary \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "x" : [0.0, 6.283185307179586], // Choose x box boundaries appropriately
+    "y" : [0.0, 6.283185307179586], // Choose y box boundaries appropriately
+    "bc" : ["DIR", "PER"] // Choose boundary conditions [x,y] appropriately
+}
+"init" :
+{
+    "type"      : "sine" // No other parameters are necessary
+}
+\end{minted}
 
 \subsection{ Double Shear layer}
 Here, we follow~\cite{Liu2000} and test the scheme on a double shear layer problem.
@@ -157,20 +160,20 @@ where $\rho = \pi/15$ and $\delta =0.05$ on the domain $[0,2\pi]\times [0,2\pi]$
 This solution will quickly roll-up and generate smaller and smaller scales.
 A thin shear layer corresponds to $\rho = \pi/50$ or smaller.
 The double shear layer initialization is chosen with the following parameters in the input file
-%%This is a booktabs table
-\begin{longtable}{llll}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-grid & dict &  & Grid parameters \\
-\qquad x & float[2]& [0, 6.283185307179586] & Choose x box boundaries appropriately \\
-\qquad y & float[2]& [0, 6.283185307179586] & Choose y box boundaries appropriately \\
-\qquad bc & string[2] & [PER, DIR] & Choose boundary conditions appropriately \\
-init &  dict &   & Parameters for initialization \\
-\qquad type      & string & shear & This choice necessitates the following parameters \\
-\qquad rho    & float & 0.20943951023931953 & The width $\rho = \pi/15$ \\
-\qquad delta  & float & 0.05 & The velocity $v$ \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "x"  : [0.0, 6.283185307179586], // Choose x box boundaries appropriately
+    "y"  : [0.0, 6.283185307179586], // Choose y box boundaries appropriately
+    "bc" : ["PER", "DIR"] // Choose boundary conditions [x,y] appropriately
+}
+"init" :
+{
+    "type"  : "shear", // This choice necessitates the following parameters
+    "rho"   : 0.20943951023931953, // The width $\rho = \pi/15$ \\
+    "delta" : 0.05 // The velocity $v$ \\
+}
+\end{minted}
 
 \section{Numerical methods}
 Our goal is to try out various time integration and advection discretization techniques.
@@ -178,52 +181,59 @@ We know from Godunov's theorem
 that any linear advection scheme of order 2 or higher is prone to oscillations.
 \subsection{Spatial grid}
 The spatial grid is a two-dimensional Cartesian product-grid adaptable with the following parameters
-\begin{longtable}{llll}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-grid & dict & & \\
-\qquad n  & integer & 3  & The number of polynomial coefficients \\
-\qquad Nx & integer & 48 & Number of cells in x \\
-\qquad Ny & integer & 48 & Number of cells in y \\
-\qquad  x & float[2]& [0,1] & Boundaries in x \\
-\qquad  y & float[2]& [0,1] & Boundaries in y \\
-\qquad bc & string[2] & [DIR, PER] & Boundary conditions in [x,y] \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "n"  :  3, // The number of polynomial coefficients
+    "Nx"  : 48, // Number of cells in x
+    "Ny"  : 48, // Number of cells in y
+    "x"  : [0.0,1.0], // Boundaries in x
+    "y"  : [0.0,1.0], // Boundaries in y
+    "bc" : ["DIR", "PER"] // Boundary conditions in [x,y]
+}
+\end{minted}
 \subsection{Time steppers}
 Possible time-steppers are the explicit and semi-implicit multistep schemes
 as well as the Shu-Osher scheme that originally incorporated limiters in the dG scheme.
-\begin{longtable}{lllp{6cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-timestepper & dict & & \\
-\qquad type     & string& ImExMultistep & The semi-implicit multistep scheme (only in combination with viscosity regularization) \\
-\qquad tableau  & string & Any ImEx tableau & for example ImEx-BDF-3-3* \\
-\qquad dt       & float & 2e-3 & Fixed timestep \\
-\qquad eps\_time & float & 1e-9 & Accuracy requirement for implicit solver \\
-timestepper & dict & & \\
-\qquad type & string & Shu-Osher & An explicit Runge Kutta method with filter (viscosity is treated explicitly) \\
-\qquad tableau   & string & Any Shu-Osher tableau & for example SSPRK-3-3* \\
-\qquad dt      & float & 1e-3 & Fixed Time-step \\
-timestepper & dict & & \\
-\qquad type & string & FilteredExplicitMultistep & an explicit multistep class with the option to use a filter (viscosity is treated explicitly)\\
-\qquad tableau   & string & Any explicit multistep tableau & for example eBDF-3-3* \\
-\qquad dt      & float & 2e-3 & Fixed timestep \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"timestepper" :
+{
+    // The semi-implicit multistep scheme (only in combination with
+    // viscosity regularization)
+    "type"     : "ImExMultistep",
+    "tableau"  : "ImEx-BDF-3-3", //  Any ImEx tableau *
+    "dt"       : 2e-3, // Fixed timestep
+    "eps_time" : 1e-9 // Accuracy requirement for implicit solver
+},
+"timestepper":
+{
+    // An explicit Runge Kutta method with filter (viscosity is treated
+    // explicitly)
+    "type"      : "Shu-Osher",
+    "tableau"   : "SSPRK-3-3", // Any Shu-Osher tableau *
+    "dt"        : 1e-3 // Fixed Time-step
+},
+"timestepper",
+{
+    // an explicit multistep class with the option to use a filter (viscosity
+    // is treated explicitly)
+    "type"      : "FilteredExplicitMultistep"
+    "tableau"   : "eBDF-3-3" // Any explicit multistep tableau *
+    "dt"        : 2e-3 // Fixed timestep
+},
+\end{minted}
 *See the dg documentation for what tableaus are available.
 \subsection{Regularization technique}
 Choose either no regularization or artificial viscosity or modal filtering by the following
 parameters in the input file.
 
 For no regularization choose
-\begin{longtable}{lllp{7.5cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-regularization & dict & & \\
-\qquad type  & string& none & No regularization\\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type" : "none" //No regularization
+}
+\end{minted}
 
 For artificial viscosity Eqs.~\eqref{eq:euler_poisson} are modified to
 \begin{subequations}
@@ -234,16 +244,17 @@ For artificial viscosity Eqs.~\eqref{eq:euler_poisson} are modified to
 \label{eq:euler_poisson_viscous}
 \end{subequations}
 where $\nu$ is the viscosity coefficient and $s=1,2,3,\cdots$ is the order
-\begin{longtable}{lllp{7.5cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-regularization & dict & & \\
-\qquad type  & string& viscosity & the artificial viscosity \\
-\qquad order    & integer & 2 & Order: 1 is normal diffusion, 2 is hyperdiffusion, can be arbitrarily high, but higher orders might take longer to solve or restrict the CFL condition \\
-\qquad nu    & float & 1e-3 & Viscosity coefficient \\
-\qquad direction & string & centered & Direction of the Laplacian: forward or centered \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type"      : "viscosity", // Artificial viscosity
+    "order"     : 2 , // Order: 1 is normal diffusion, 2 is hyperdiffusion, can be
+    // arbitrarily high, but higher orders might take longer to solve or restrict
+    // the CFL condition
+    "nu"        : 1e-3, // Viscosity coefficient
+    "direction" : "centered" //Direction of Laplacian: forward or centered
+}
+\end{minted}
 The other regularization method is the modal filter that applies an exponential filter
 \begin{align}
     \begin{cases}
@@ -254,56 +265,49 @@ The other regularization method is the modal filter that applies an exponential 
     \end{cases}
 \end{align}
 and is choosable with the following parameters
-\begin{longtable}{lllp{7.5cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-regularization & dict & & \\
-\qquad type  & string& modal & Not choosable for \textbf{ImExMultistep} timestepper\\
-\qquad order & integer & 8 & Order: normally 8 or 16 \\
-\qquad eta\_c & float & 0.5 & cutoff wavelength below which no damping is applied \\
-\qquad alpha & float & 36 & damping coefficient determining damping for highest wavenumber \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type"  : "modal", // Not choosable for \textbf{ImExMultistep} timestepper
+    "order" : 8,  // Order: normally 8 or 16
+    "eta_c" : 0.5, // cutoff wavelength below which no damping is applied
+    "alpha" : 36.0 // damping coefficient determining damping for highest
+    //wavenumber
+}
+\end{minted}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Elliptic solver}
 Currently, the multigrid solver is the only one choosable
 to solve Eq.~\eqref{eq:euler_poisson_elliptic}
-\begin{longtable}{lllp{7.5cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-elliptic & dict & & \\
-\qquad type  & string& multigrid & Actually a nested iterations class \\
-\qquad stages    & integer & 3 & Number of stages (3 is best in virtually all cases) \\
-\qquad eps\_pol    & float[stages] & [1e-6,10,10] & Accuracy requirement on each stage of the multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
-\qquad direction & string & centered & Direction of the Laplacian: forward or centered \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"elliptic",
+{
+    "type"      : "multigrid", // Actually a nested iterations method
+    "stages"    : 3,  // Number of stages (3 is best in virtually all cases)
+    "eps_pol"   : [1e-6,10,10],
+    // Accuracy requirement on each stage of the
+    // multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
+    "direction" : "centered" // Direction of the Laplacian: forward or centered
+}
+\end{minted}
 \subsection{Advection schemes}
 The following parameters control the advection scheme in the code
-\begin{longtable}{lllp{7.5cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-advection & dict & & \\
-\qquad type  & string& arakawa & Discretize Eqs.~\eqref{eq:euler_poisson} using Arakawa's scheme \cite{Einkemmer2014} \\
-\qquad type  & string& centered & Discretize Eqs.~\eqref{eq:euler_conservative} using the centered flux \\
-\qquad type  & string& upwind & Discretize Eqs.~\eqref{eq:euler_conservative} using the upwind flux \\
-\qquad type  & string& centered-advection & Discretize Eqs.~\eqref{eq:euler_advection} using the centered flux \\
-\qquad type  & string& upwind-advection & Discretize Eqs.~\eqref{eq:euler_advection} using the upwind flux \\
-\qquad multiplication    & string & pointwise & The multiplications in the scheme
-are done pointwise in nodal space\\
-\qquad multiplication    & string & projection & The multiplications in the scheme
-are done by first interpolating to a higher polynomial grid with $n_{fine} = 2n$, and projecting the result back to the coarse grid\\
-\bottomrule
-\end{longtable}
-%\subsection{Forward time and centered space}
-%It is well known that the forward in time, centered in space method for solving
-%hyperbolic systems is unconditionally unstable~\cite{LeVeque}.
-%\subsection{Arakawa scheme and centered flux}
-%Reference~\cite{Liu2000} reports that the centered flux does not have any numerical
-%diffusion while the upwind flux does.
-%They also prove that upwind and centered fluxes do not dissipate energy.
-%From finite differences we know that centered differences for the advection term
-%are unstable (or at least produce a lot of oscillations).
+\begin{minted}[texcomments]{js}
+"advection",
+{
+    "type" : "arakawa", // Discretize Eqs.\eqref{eq:euler_poisson} using Arakawa's scheme \cite{Einkemmer2014}
+    "type" : "centered" // Discretize Eqs.\eqref{eq:euler_conservative} using the centered flux
+    "type" : "upwind" // Discretize Eqs.\eqref{eq:euler_conservative} using the upwind flux
+    "type" : "centered-advection" // Discretize Eqs.\eqref{eq:euler_advection} using the centered flux
+    "type" : "upwind-advection" // Discretize Eqs.\eqref{eq:euler_advection} using the upwind flux
+    "multiplication" : "pointwise"
+    // The multiplications in the scheme are done pointwise in nodal space
+    "multiplication" : "projection"
+    // The multiplications in the scheme are done by first interpolating to a
+    // higher polynomial grid with $n_{fine} = 2n$, and projecting the result back
+    // to the coarse grid
+}
+\end{minted}
 
 \section{Compilation and useage}
 The program shu\_b.cu compiles with
@@ -318,21 +322,25 @@ path/to/feltor/src/shu/shu_b input.json
 \end{verbatim}
 
 \subsection{Output structure}
-Input file format: json
 
 We can either display the results in real-time to screen using the glfw3 library or
 write the results to a file in netcdf-4 format.
 This is regulated by the output paramters in the input file
-\begin{longtable}{lllp{7cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Value}  & \textbf{Description}  \\ \midrule
-output & dict & & \\
-\qquad type  & string& glfw & Use glfw to display results in a window while computing (requires to compile with the glfw3 library) \\
-\qquad type  & string& netcdf & Use netcdf to write results into a file (see next section for information about what is written in there) \\
-\qquad itstp  & integer& 4 & The number of steps between outputs of 2d fields \\
-\qquad maxout  & integer& 500 & The total number of field outputs. The endtime is T=itstp*maxout*dt \\
-\bottomrule
-\end{longtable}
+\begin{minted}[texcomments]{js}
+"output":
+{
+    // Use glfw to display results in a window while computing (requires to
+    // compile with the glfw3 library)
+    "type"  : "glfw"
+    "itstp"  : 4, // The number of steps between outputs of 2d fields \\
+    // Use netcdf to write results into a file
+    // (see next section for information about what is written in there)
+    "type"  : "netcdf"
+    "itstp"  : 4, // The number of steps between outputs of 2d fields \\
+    "maxout"  : 500 // The total number of field outputs. The endtime is
+    //T=itstp*maxout*dt
+}
+\end{minted}
 \subsection{Structure of output file}
 Output file format: netcdf-4/hdf5
 %
@@ -345,19 +353,21 @@ inputfile  &             text attribute & 1 & verbose input file as a string \\
 time                     & Coord. Var. & 1 (time) & time at which fields are written \\
 x                        & Coord. Var. & 1 (x) & x-coordinate  \\
 y                        & Coord. Var. & 1 (y) & y-coordinate \\
+xc                       & Dataset & 2 (y,x) & Cartesian x-coordinate  \\
+yc                       & Dataset & 2 (y,x) & Cartesian y-coordinate \\
 vorticity                & Dataset & 3 (time, y, x) & electon density $n$ \\
 potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
 vorticity\_1d            & Dataset & 1 (time) & Vorticity integral $V$  \\
 enstrophy\_1d            & Dataset & 1 (time) & Enstropy integral $\Omega$  \\
 energy\_1d               & Dataset & 1 (time) & Total energy integral computed using $E = \int_D \phi\omega \dA$ \\
-time\_per\_step          & Dataset & 1 (time) & Average time for one output \\
+time\_per\_step          & Dataset & 1 (time) & Average computation time for one step \\
 error                    & Dataset & 1 (time) & Relative error to analytical solution if available, 0 else \\
 \bottomrule
 \end{longtable}
 The output fields are determined in the file \texttt{feltor/src/lamb\_dipole/diag.h}.
 
 %..................................................................
-\bibliography{../../doc/related_pages/references}
+\bibliography{../common/references}
 %..................................................................
 
 

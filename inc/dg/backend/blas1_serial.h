@@ -49,11 +49,12 @@ inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, PointerOrV
     }
 }
 
-template<class T, class Pointer, class BinaryOp>
-inline T doReduce_dispatch( SerialTag, int size, Pointer x, T init, BinaryOp op)
+template<class T, class Pointer, class BinaryOp, class UnaryOp>
+inline T doReduce_dispatch( SerialTag, int size, Pointer x, T init, BinaryOp
+        op, UnaryOp unary_op)
 {
     for(int i=0; i<size; i++)
-        init = op( init, x[i]);
+        init = op( init, unary_op(x[i]));
     return init;
 }
 

@@ -24,8 +24,8 @@ struct Implicit
     Implicit( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
-        LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g,g.bcx(),g.bcy(),  dg::centered),
+        LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(),  dg::centered)
     {
     }
     void operator()( double t, const std::vector<container>& x, std::vector<container>& y)
@@ -44,7 +44,6 @@ struct Implicit
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp_phi;}
     const container& weights(){return LaplacianM_perp.weights();}
-    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
@@ -91,7 +90,7 @@ struct Explicit
     container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta,Niavg; //dont use them as helper
     const container binv;
     const container one;
-    const container w2d, v2d;
+    const container w2d;
     std::vector<container> phi;
     std::vector<container> npe, logn; 
 
@@ -102,7 +101,6 @@ struct Explicit
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gammaN,multi_gammaPhi;
     
-    dg::Invert<container> invert_pol,invert_invgamma;
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
     
@@ -123,12 +121,10 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
     one( dg::evaluate( dg::one, g)),    
-    w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
+    w2d( dg::create::weights(g)),
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
-    lapperpM ( g,g.bcx(), g.bcy(),       dg::normed,         dg::centered),
-    invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
-    invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    lapperpM ( g,g.bcx(), g.bcy(),                dg::centered),
     multigrid( g, 3),
     old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
     polavg(g,dg::coo2d::y),
@@ -149,7 +145,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     multi_gammaPhi.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct(      multigrid.grid(u), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
+        multi_pol[u].construct(      multigrid.grid(u), p.bc_x_phi, g.bcy(),  dg::centered, p.jfactor);
         multi_gammaN[u].construct(   multigrid.grid(u), g.bcx(),    g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
         multi_gammaPhi[u].construct( multigrid.grid(u), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
@@ -177,17 +173,17 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     } 
     else {
         old_gammaN.extrapolate( chi);
-        std::vector<unsigned> numberG = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+        std::vector<unsigned> numberG = multigrid.solve( multi_gammaN, chi, y[1], p.eps_gamma);
         old_gammaN.update(chi);
-        if(  numberG[0] == invert_invgamma.get_max())
+        if( numberG[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
+    dg::blas1::axpby( -1., y[0], 1., chi, chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
     old_phi.extrapolate( phi[0]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], chi, p.eps_pol);
     old_phi.update( phi[0]);
-    if(  number[0] == invert_pol.get_max())
+    if( number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);
     return phi[0];
 }
@@ -200,9 +196,9 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
     } 
     else {
         old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
+        std::vector<unsigned> number = multigrid.solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);    
-        if(  number[0] == invert_invgamma.get_max())
+        if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }
     multi_pol[0].variation(binv, potential, omega);        // omega = u_E^2
@@ -218,8 +214,8 @@ void Explicit<G, Matrix, container>::initializene( const container& src, contain
         dg::blas1::axpby( 1.,src, 0., target); //  ne-1 = N_i -1
     } 
     else {
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
-        if(  number[0] == invert_invgamma.get_max())
+        std::vector<unsigned> number = multigrid.solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+        if( number[0] == multigrid.max_iter())
             throw dg::Fail( p.eps_gamma);
     }
 }
@@ -390,8 +386,8 @@ void Explicit<G, Matrix, container>::operator()( double ttt, const std::vector<c
         //dt ne
         dg::blas1::pointwiseDot(neavg,lhso,omega); //lambda =lhs*(ne)
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = omega_source*(ne) 
-        dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
-        dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
+        dg::blas1::axpby(1., one, 1., logn[0], chi); //chi = (1+lnN)
+        dg::blas1::axpby(1., phi[0], p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
         sourceenergy =  z[0]*p.omega_source*dg::blas2::dot(chi, w2d, omega); 	
 	
         //dt Ni

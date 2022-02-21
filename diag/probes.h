@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 
+
 /**
  * @brief Class that takes care of probe output
  * 
@@ -72,7 +73,7 @@ probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, cons
     std::stringstream fn;
 
     /* Create datafiles for probe data */
-    for(int n = 0; n < num_probes; n++)
+    for(unsigned n = 0; n < num_probes; n++)
     {
         fn << "probe_" << std::setfill('0') << std::setw(3) << n << ".dat";
         fnames.push_back(fn.str());
@@ -119,7 +120,7 @@ void probes<IMatrix, Matrix, container> :: profiles(double time, container& npe,
     of_ne << time << "\n";
     of_phi << time << "\n";
 
-    for(int n = 0; n < Nx; n++)
+    for(unsigned n = 0; n < Nx; n++)
     {
         of_ne << "\t" << prof_ne[n];
         of_phi << "\t" << prof_phi[n];
@@ -157,7 +158,7 @@ void probes<IMatrix, Matrix, container> :: fluxes(double time, container& npe, c
 
     std::ofstream of;
 
-    for(int n = 0; n < num_probes; n++)
+    for(unsigned n = 0; n < num_probes; n++)
     {
         // Compute radial flux on-the-fly
         ip_gamma_n = -1.0 * ip_n[n] * ip_phi_y[n];

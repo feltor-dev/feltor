@@ -1,7 +1,7 @@
 #ifndef _DG_BLAS_OMP_
 #define _DG_BLAS_OMP_
 #include <omp.h>
-#include <thrust/reduce.h>
+#include <thrust/transform_reduce.h>
 #include <thrust/system/omp/execution_policy.h>
 #include "config.h"
 #include "blas1_serial.h"
@@ -12,7 +12,7 @@ namespace blas1
 {
 namespace detail
 {
-const int MIN_SIZE=100;//don't parallelize if work is too small
+constexpr int MIN_SIZE=100;//don't parallelize if work is too small
 
 template<class PointerOrValue1, class PointerOrValue2>
 inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
@@ -68,10 +68,11 @@ inline void doSubroutine_dispatch( OmpTag, int size, Subroutine f, PointerOrValu
         doSubroutine_dispatch( SerialTag(), size, f, x, xs...);
 }
 
-template<class T, class Pointer, class BinaryOp>
-inline T doReduce_dispatch( OmpTag, int size, Pointer x, T init, BinaryOp op)
+template<class T, class Pointer, class BinaryOp, class UnaryOp>
+inline T doReduce_dispatch( OmpTag, int size, Pointer x, T init, BinaryOp op,
+        UnaryOp unary_op)
 {
-    return thrust::reduce(thrust::omp::par, x, x+size, init, op);
+    return thrust::transform_reduce(thrust::omp::par, x, x+size, unary_op, init, op);
 }
 
 }//namespace detail

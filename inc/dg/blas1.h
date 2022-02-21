@@ -8,13 +8,13 @@
 #include "backend/tensor_traits_std.h"
 #include "backend/blas1_dispatch_scalar.h"
 #include "backend/blas1_dispatch_shared.h"
-//#include "backend/blas1_array.h"
 #include "backend/tensor_traits_cusp.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
 #include "backend/blas1_dispatch_mpi.h"
 #endif
 #include "backend/blas1_dispatch_vector.h"
+#include "backend/blas1_dispatch_map.h"
 #include "subroutines.h"
 
 /*!@file
@@ -62,7 +62,7 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
  * @copydoc hide_iterations
  *
 For example
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three(100,3);
 double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
 @endcode
@@ -90,10 +90,10 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
     return exblas::cpu::Round(acc.data());
 }
 
-/*! @brief \f$ x_0 \otimes x_1 \otimes \dots \otimes x_{N-1} \f$ Custom reduction
+/*! @brief \f$ f(x_0) \otimes f(x_1) \otimes \dots \otimes f(x_{N-1}) \f$ Custom (transform) reduction
  *
- * This routine computes \f[ s = s_0 + x_0 \otimes x_1 \otimes \dots \otimes x_i \otimes \dots \otimes x_{N-1} \f]
- * where \f$ \otimes \f$ is an arbitrary **commutative** and **associative** binary operator, \f$ s_0\f$ is the initial value and
+ * This routine computes \f[ s = f(x_0) \otimes f(x_1) \otimes \dots \otimes f(x_i) \otimes \dots \otimes f(x_{N-1}) \f]
+ * where \f$ \otimes \f$ is an arbitrary **commutative** and **associative** binary operator, \f$ f\f$ is an optional unary operator and
  * @copydoc hide_iterations
  *
  * @note numerical addition/multiplication is **not** exactly associative
@@ -101,28 +101,49 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
  * However, this function is more general and faster to execute than dg::blas1::dot.
 
 For example
-@code
+@code{.cpp}
 //Check if a vector contains Inf or NaN
 thrust::device_vector<double> x( 100);
-thrust::device_vector<bool> boolvec ( 100, false);
-dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+bool hasnan = false;
+hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
+    dg::ISNFINITE<double>());
 std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
- * @param x Left Container
- * @param init initial value of the reduction
- * @param op an associative and commutative binary operator
+ * @param x Container to reduce
+ * @param zero The neutral element with respect to binary_op that is
+ * <tt> x == binary_op( zero, x) </tt>. Determines the \c OutputType so make
+ * sure to make the type clear to the compiler (e.g. write <tt> (double)0 </tt> instead
+ * of \c 0 if you want \c double output)
+ * @attention In the current implementation \c zero is used to initialize
+ * partial sums e.g. when reducing MPI Vectors so it is important that \c zero
+ * is actually the neutral element. The reduction will yield wrong results
+ * if it is not.
+ * @param binary_op an associative and commutative binary operator
+ * @param unary_op a unary operator applies to each element of \c x
  * @return Custom reduction as defined above
  * @note This routine is always executed synchronously due to the
-        implicit memcpy of the result. With mpi the result is broadcasted to all processes
- * @tparam BinaryOp Functor with signature: \c value_type \c operator()( value_type, value_type), must be associative and commutative
+        implicit memcpy of the result. With mpi the result is broadcasted to
+        all processes
+ * @tparam BinaryOp Functor with signature: <tt> value_type  operator()(
+ * value_type, value_type) </tt>, must be associative and commutative.
+ * \c value_tpye must be compatible with \c OutputType
+ * @tparam UnaryOp a unary operator. The argument type must be compatible with
+ * \c get_value_type<ContainerType>. The return type must be convertible to
+ * \c OutputType
+ * @tparam OutputType The type of the result. Infered from \c zero so make sure
+ * \c zero's type is clear to the compiler.
  * @copydoc hide_ContainerType
  */
-template< class ContainerType, class BinaryOp>
-inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_type<ContainerType> init, BinaryOp op )
+template< class ContainerType, class OutputType, class BinaryOp, class UnaryOp
+    = IDENTITY>
+inline OutputType reduce( const ContainerType& x, OutputType zero, BinaryOp
+        binary_op, UnaryOp unary_op = UnaryOp())
 {
     //init must indeed have the same type as the values of Container since op must be associative
-    return dg::blas1::detail::doReduce( dg::get_tensor_category<ContainerType>(), x, init, op);
+    // The generalization would be a transform_reduce combining subroutine and reduce
+    return dg::blas1::detail::doReduce(
+            dg::get_tensor_category<ContainerType>(), x, zero, binary_op,
+            unary_op);
 }
 
 /**
@@ -151,7 +172,7 @@ inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
  * This routine computes \f[ \alpha x_i \f]
  * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2);
 dg::blas1::scal( two,  0.5 )); // result[i] = 1.
 @endcode
@@ -173,7 +194,7 @@ inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
  * This routine computes \f[ x_i + \alpha \f]
  * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2);
 dg::blas1::plus( two,  2. )); // result[i] = 4.
 @endcode
@@ -195,7 +216,7 @@ inline void plus( ContainerType& x, get_value_type<ContainerType> alpha)
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]
  * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three(100,3);
 dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
 @endcode
@@ -226,7 +247,7 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]
  * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two(100,2), five(100,5), result(100, 12);
 dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
 // result[i] = -21 (2.5*2+2*5-3*12)
@@ -274,7 +295,7 @@ inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1&
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]
  * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three(100,3), result(100);
 dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
 @endcode
@@ -298,7 +319,7 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  * Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]
  * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three( 100,3), result(100,6);
 dg::blas1::pointwiseDot(2., two,  three, -4., result );
 // result[i] = -12. (2*2*3-4*6)
@@ -337,7 +358,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 * Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]
 * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three( 100,3), result(100);
 dg::blas1::pointwiseDot( two,  three, result ); // result[i] = 6.
 @endcode
@@ -359,7 +380,7 @@ inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, Co
 * Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]
 * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
 dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
 // result[i] = 24. (2*2*3*4-4*6)
@@ -390,7 +411,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 
 * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three( 100,3), result(100,1);
 dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
 // result[i] = 7 (3*2/3+5*1)
@@ -424,7 +445,7 @@ inline void pointwiseDivide( get_value_type<ContainerType> alpha, const Containe
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]
 * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), three( 100,3), result(100);
 dg::blas1::pointwiseDivide( two,  three, result );
 // result[i] = -0.666... (2/3)
@@ -447,7 +468,7 @@ inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2,
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]
 * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
 dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
 // result[i] = -56.
@@ -486,14 +507,14 @@ void pointwiseDot(  get_value_type<ContainerType> alpha, const ContainerType1& x
  * This routine computes \f[ y_i = op(x_i) \f]
  * @copydoc hide_iterations
 
-@code
+@code{.cpp}
 dg::DVec two( 100,2), result(100);
 dg::blas1::transform( two, result, dg::EXP<double>());
 // result[i] = 7.389056... (e^2)
 @endcode
  * @param x ContainerType x may alias y
  * @param y (write-only) ContainerType y contains result, may alias x
- * @param op unary Operator to use on every element
+ * @param op unary %Operator to use on every element
  * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
  * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_naninf
@@ -510,7 +531,7 @@ inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
  * This routine elementwise evaluates \f[ f(g(x_{0i}, x_{1i}, ...), y_i) \f]
  * @copydoc hide_iterations
  *
-@code
+@code{.cpp}
 double function( double x, double y) {
     return sin(x)*sin(y);
 }
@@ -568,7 +589,7 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Conta
  * \f[ f(x_{0i}, x_{1i}, ...)  \f]
  * @copydoc hide_iterations
  *
-@code
+@code{.cpp}
 struct Routine{
 DG_DEVICE
 void operator()( double x, double y, double& z){

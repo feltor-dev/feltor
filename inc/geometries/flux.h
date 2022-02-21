@@ -1,13 +1,6 @@
 #pragma once
 
-#include "dg/topology/grid.h"
-#include "dg/topology/functions.h"
-#include "dg/topology/interpolation.h"
-#include "dg/topology/derivatives.h"
-#include "dg/topology/geometry.h"
-#include "dg/functors.h"
-#include "dg/runge_kutta.h"
-#include "dg/nullstelle.h"
+#include "dg/algorithm.h"
 #include "fluxfunctions.h"
 #include "ribeiro.h"
 
@@ -51,10 +44,14 @@ struct Fpsi
         begin2d[0] = end2d[0] = end2d_old[0] = X_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Y_init;
         double eps = 1e10, eps_old = 2e10;
+        using Vec = std::array<double,2>;
+        dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                    begin2d), fieldRZtau_);
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
+            N*=2; odeint.integrate_steps( psip_.f()(X_init, Y_init), begin2d,
+                    psi, end2d, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -70,11 +67,15 @@ struct Fpsi
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
         unsigned nan_counter = 0;
+        using Vec = std::array<double,3>;
+        dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                    begin), fieldRZYT_);
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             eps_old = eps, end_old = end; N*=2;
-            dg::stepperRK( "Feagin-17-8-10",  fieldRZYT_, 0., begin, 2*M_PI, end, N);
-            eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+            odeint.integrate_steps( 0., begin, 2*M_PI, end, N);
+            eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) +
+                    (end[1]-begin[1])*(end[1]-begin[1]));
             if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
             if( std::isnan( eps) && nan_counter < 4) eps = 1e10, end = end_old, nan_counter++;
         }
@@ -231,6 +232,7 @@ struct FluxGenerator : public aGenerator2d
 /**
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
  * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
 struct RibeiroFluxGenerator : public aGenerator2d
 {

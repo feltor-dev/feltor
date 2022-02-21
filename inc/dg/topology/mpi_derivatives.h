@@ -142,7 +142,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dx( const aRealMPITopology2d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::dx( g.global(), bcx, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -153,7 +153,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
     int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
     //distribute_rows, collective and save_outer_values are aware of howmany[1] == 1
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
+    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -172,7 +172,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dy( const aRealMPITopology2d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::dy( g.global(), bcy, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -182,7 +182,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {1, dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
+    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -200,7 +200,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpX( const aRealMPITopology2d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::jumpX( g.global(), bcx);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -210,7 +210,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
+    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -227,7 +227,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpY( const aRealMPITopology2d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::jumpY( g.global(), bcy);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -237,7 +237,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {1, dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
+    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -256,7 +256,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dx( const aRealMPITopology3d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::dx( g.global(), bcx, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), (unsigned)(g.local().Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -266,7 +266,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
+    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -284,7 +284,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dy( const aRealMPITopology3d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::dy( g.global(), bcy, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), (unsigned)(g.local().Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -294,7 +294,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {dims[2], dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
+    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -312,7 +312,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dz( const aRealMPITopology3d<real_type>& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::dz( g.global(), bcz, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), (unsigned)(g.local().Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -322,7 +322,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[2], howmany);
-    NNCH<real_type> c( 1, vector_dimensions, comm, 2);
+    NNCH<real_type> c( g.nz(), vector_dimensions, comm, 2);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -340,7 +340,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpX( const aRealMPITopology3d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::jumpX( g.global(), bcx);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), (unsigned)(g.local().Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -350,7 +350,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {dims[2]*dims[1], dims[0], 1};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 0);
+    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -368,7 +368,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpY( const aRealMPITopology3d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::jumpY( g.global(), bcy);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), (unsigned)(g.local().Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -378,7 +378,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {dims[2], dims[1], dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.n(), vector_dimensions, comm, 1);
+    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
@@ -395,7 +395,7 @@ template<class real_type>
 RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpZ( const aRealMPITopology3d<real_type>& g, bc bcz)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::jumpZ( g.global(), bcz);
-    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.local().Nx()), (unsigned)(g.n()*g.local().Ny()), (unsigned)(g.local().Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -405,7 +405,7 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[2], howmany);
-    NNCH<real_type> c( 1, vector_dimensions, comm, 2);
+    NNCH<real_type> c( g.nz(), vector_dimensions, comm, 2);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);

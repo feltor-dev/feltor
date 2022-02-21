@@ -20,9 +20,9 @@ using HVec  = thrust::host_vector<double>; //!< Host Vector
 using iHVec = thrust::host_vector<int>; //!< integer Host Vector
 using fHVec = thrust::host_vector<float>; //!< Host Vector
 
-using DVec  = thrust::device_vector<double>; //!< Device Vector. The device can be an OpenMP parallelized cpu or a gpu. This depends on the value of the macro THRUST_DEVICE_SYSTEM, which can be either THRUST_DEVICE_SYSTEM_OMP for openMP or THRUST_DEVICE_SYSTEM_CUDA for a gpu.
+using DVec  = thrust::device_vector<double>; //!< Device Vector. The device can be an OpenMP parallelized cpu or a gpu. This depends on the value of the macro THRUST_DEVICE_SYSTEM, which can be either THRUST_DEVICE_SYSTEM_OMP for openMP or THRUST_DEVICE_SYSTEM_CUDA for a gpu or THRUST_DEVICE_SYSTEM_CPP for a cpu.
 using iDVec = thrust::device_vector<int>; //!< integer Device Vector
-using fDVec = thrust::device_vector<float>; //!< Device Vector. The device can be an OpenMP parallelized cpu or a gpu. This depends on the value of the macro THRUST_DEVICE_SYSTEM, which can be either THRUST_DEVICE_SYSTEM_OMP for openMP or THRUST_DEVICE_SYSTEM_CUDA for a gpu.
+using fDVec = thrust::device_vector<float>; //!< Device Vector. The device can be an OpenMP parallelized cpu or a gpu. This depends on the value of the macro THRUST_DEVICE_SYSTEM, which can be either THRUST_DEVICE_SYSTEM_OMP for openMP or THRUST_DEVICE_SYSTEM_CUDA for a gpu or THRUST_DEVICE_SYSTEM_CPP for a cpu.
 
 //derivative matrices
 template<class T>
@@ -110,5 +110,12 @@ using fDMatrix = fDMatrix;
 }//namespace x
 ///@}
 }//namespace dg
+
+////CONVENIENCE MACRO////////
+#ifdef MPI_VERSION
+#define DG_RANK0 if(rank==0)
+#else //MPI_VERSION
+#define DG_RANK0
+#endif //MPI_VERSION
 
 #endif//_DG_TYPEDEFS_CUH_

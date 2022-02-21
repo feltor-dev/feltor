@@ -1,0 +1,21 @@
+{
+    "grid":
+    {
+        "type": "curvilinear",
+        "generator":{
+            "type": "orthogonal",
+            "mode": 0,
+            "firstline" : -4.0
+        },
+        "n" : 3,
+        "Nx" : 8,
+        "Ny" : 80,
+        "Nz" : 20,
+        "psi": [-20,-4]
+    },
+    "magnetic_field":
+    {
+        "input" : "file",
+        "file": "geometry_params_Xpoint.json"
+    }
+}

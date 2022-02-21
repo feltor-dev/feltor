@@ -1,27 +1,26 @@
 device=gpu
 
-#configure machine 
+#configure machine
 include ../../config/default.mk
-include ../../config/*.mk 
+include ../../config/version.mk
+include ../../config/*.mk
 include ../../config/devices/devices.mk
 
 INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
-all: reconnection
+all: reconnection reconnection_hpc reconnection_mpi
 
-reconnection: reconnection.cu reconnection.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK 
+reconnection: reconnection.cpp reconnection.h init.h diag.h parameters.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -g
 
-reconnection_hpc: reconnection_hpc.cu reconnection.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
+reconnection_hpc: reconnection.cpp reconnection.h init.h diag.h parameters.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -DWITHOUT_GLFW
 
-reconnection_mpi: reconnection_mpi.cu reconnection.cuh 
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
+reconnection_mpi: reconnection.cpp reconnection.h init.h diag.h
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -DWITH_MPI -DWITHOUT_GLFW
+
 .PHONY: clean
 
-doc: 
-	doxygen Doxyfile
-	
 clean:
-	rm -f reconnection 
+	rm -f reconnection reconnection_hpc reconnection_mpi

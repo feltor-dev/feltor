@@ -3,7 +3,7 @@
 #include "average_cpu.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "average_gpu.cuh"
-#else
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
 #include "average_omp.h"
 #endif
 

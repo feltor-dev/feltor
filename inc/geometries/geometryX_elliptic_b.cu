@@ -62,7 +62,7 @@ int main(int argc, char**argv)
     /////////////
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     dg::geo::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+    dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::forward);
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi_0 = "<<psi_0<<" psi_1 = "<<psi_1<<"\n";
@@ -123,9 +123,8 @@ int main(int argc, char**argv)
     std::cout << "eps \t# iterations error \thxX hyX \thx_max hy_max \ttime/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
-    //unsigned number = invert(pol, x,b, vol2d, inv_vol2d );
-    unsigned number = invert(pol, x,b, vol2d, v2d, v2d ); //inv weights are better preconditioners
+    dg::PCG<dg::DVec > pcg( x, n*n*Nx*Ny);
+    unsigned number = pcg.solve(pol, x,b, pol.precond(), vol2d, eps );
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

@@ -10,7 +10,7 @@
 #include "backend/timer.h"
 #include "helmholtz.h"
 
-#include "cg.h"
+#include "pcg.h"
 
 
 
@@ -27,7 +27,6 @@ int main()
     std::cin >> n>> Nx >> Ny;
     dg::Grid2d grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
     const dg::DVec w2d = dg::create::weights( grid);
-    const dg::DVec v2d = dg::create::inv_weights( grid);
     const dg::DVec one(grid.size(), 1.);
     dg::DVec rho = dg::evaluate( rhs, grid);
     const dg::DVec sol = dg::evaluate( lhs, grid);
@@ -36,11 +35,10 @@ int main()
 
     dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1( grid, alpha, dg::centered);
 
-    dg::CG< dg::DVec > cg(x, x.size());
-    dg::blas2::symv( w2d, rho, rho);
+    dg::PCG< dg::DVec > pcg(x, x.size());
     dg::Timer t;
     t.tic();
-    unsigned number = cg( gamma1, x, rho, v2d, eps);
+    unsigned number = pcg.solve( gamma1, x, rho, 1., w2d, eps);
     t.toc();
     dg::blas1::axpby( 1., sol, -1., x);
     std::cout << "DG   performance:\n";

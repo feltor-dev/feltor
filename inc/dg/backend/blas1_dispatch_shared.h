@@ -1,10 +1,6 @@
 #ifndef _DG_BLAS_VECTOR_
 #define _DG_BLAS_VECTOR_
 
-#ifdef DG_DEBUG
-#include <cassert>
-#endif //DG_DEBUG
-
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
@@ -16,7 +12,7 @@
 #include "blas1_serial.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "blas1_cuda.cuh"
-#else
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
 #include "blas1_omp.h"
 #endif
 
@@ -36,14 +32,22 @@ void doAssign( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Param
 {
     to.assign( from.begin(), from.end());
 }
+template< class To, class From, class ...Params>
+To doConstruct( const From& from, ArrayScalarTag, ArrayScalarTag, Params&& ...ps)
+{
+    return from;
+}
+template< class From, class To, class ...Params>
+void doAssign( const From& from, To& to, ArrayScalarTag, ArrayScalarTag, Params&& ...ps)
+{
+    to = from;
+}
 }//namespace detail
 
 namespace blas1
 {
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
-template<class ContainerType, class BinaryOp>
-inline get_value_type<ContainerType> reduce( const ContainerType& x, get_value_type<ContainerType> init, BinaryOp op);
 namespace detail
 {
 template< class ContainerType1, class ContainerType2>
@@ -77,11 +81,6 @@ template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
 
-//#ifdef DG_DEBUG
-    //is this possible?
-    //assert( !x.empty());
-    //assert( x.size() == xs.size() );
-//#endif //DG_DEBUG
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
     using execution_policy = get_execution_policy<vector_type>;
     static_assert( all_true<
@@ -99,10 +98,11 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
             );
 }
 
-template<class T, class ContainerType, class BinaryOp>
-inline T doReduce( SharedVectorTag, const ContainerType& x, T init, BinaryOp op)
+template<class T, class ContainerType, class BinaryOp, class UnaryOp>
+inline T doReduce( SharedVectorTag, const ContainerType& x, T init, BinaryOp op, UnaryOp unary_op)
 {
-    return doReduce_dispatch( get_execution_policy<ContainerType>(), x.size(), thrust::raw_pointer_cast( x.data()), init, op);
+    return doReduce_dispatch( get_execution_policy<ContainerType>(), x.size(),
+            thrust::raw_pointer_cast( x.data()), init, op, unary_op);
 }
 
 } //namespace detail

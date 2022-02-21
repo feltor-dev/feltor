@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "cg.h"
+#include "pcg.h"
 #include "eve.h"
 #include "bicgstabl.h"
 #include "lgmres.h"
@@ -19,36 +19,29 @@ double initial( double x, double y) {return sin(0);}
 template<class Matrix, class Container>
 void solve( std::string solver, Matrix& A, Container& x, const Container& b, const dg::Grid2d& grid)
 {
-    unsigned n = grid.n(), Nx = grid.Nx(), Ny = grid.Ny();
+    double lmin = 1+1, lmax = 2*grid.size(); //Eigenvalues of Laplace
     if( "eve cg" == solver)
     {
         std::cout <<" EVE SOLVER:\n";
         dg::EVE<Container> eve( x);
-        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
-        double hxhy = lx*ly/(n*n*Nx*Ny);
-        lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
         std::cout << "L_min     "<<lmin<<" L_max     "<<lmax<<"\n";
         double eve_max;
-        unsigned counter = eve( A, x, b, eve_max, 1e-10);
+        unsigned counter = eve.solve( A, x, b, 1., A.weights(), eve_max, 1e-10);
         std::cout << "Maximum EV mod "<<eve_max<<" after "<<counter<<" EVE iterations\n";
     }
     if( "eve pcg" == solver)
     {
         std::cout <<" PRECONDITIONED EVE SOLVER:\n";
         dg::EVE<Container> eve( x);
-        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
         std::cout << "L_min     "<<lmin<<" L_max     "<<lmax<<"\n";
         double eve_max;
-        unsigned counter = eve( A, x, b, A.inv_weights(), eve_max, 1e-10);
+        unsigned counter = eve.solve( A, x, b, A.precond(), A.weights(), eve_max, 1e-10);
         std::cout << "Maximum EV     "<<eve_max<<" after "<<counter<<" EVE iterations\n";
     }
     if( "cheby" == solver)
     {
         std::cout <<" CHEBYSHEV SOLVER:\n";
         dg::ChebyshevIteration<Container> cheby( x);
-        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
-        double hxhy = lx*ly/(n*n*Nx*Ny);
-        lmin *= hxhy, lmax *= hxhy; //we multiplied the matrix by w2d
         unsigned num_iter =200;
         cheby.solve( A, x, b, lmin, lmax/2., num_iter);
         std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";
@@ -57,23 +50,22 @@ void solve( std::string solver, Matrix& A, Container& x, const Container& b, con
     {
         std::cout <<" PRECONDITIONED CHEBYSHEV SOLVER:\n";
         dg::ChebyshevIteration<Container> cheby( x);
-        double lmin = 1+1, lmax = n*n*Nx*Nx + n*n*Ny*Ny; //Eigenvalues of Laplace
         unsigned num_iter =200;
-        cheby.solve( A, x, b, A.inv_weights(), lmin, lmax/2., num_iter);
+        cheby.solve( A, x, b, A.precond(), lmin, lmax/2., num_iter);
         std::cout << "After "<<num_iter<<" Chebyshev iterations we have:\n";
     }
     if( "bicgstabl" == solver)
     {
         std::cout <<" BICGSTABl SOLVER:\n";
         dg::BICGSTABl<Container> bicg( x, 100, 2);
-        unsigned num_iter = bicg.solve( A, x, b, A.precond(), A.inv_weights(), 1e-6);
+        unsigned num_iter = bicg.solve( A, x, b, A.precond(), A.weights(), 1e-6);
         std::cout << "After "<<num_iter<<" BICGSTABl iterations we have:\n";
     }
     if( "lgmres" == solver)
     {
         std::cout <<" LGMRES SOLVER:\n";
         dg::LGMRES<Container> lgmres( x, 30, 4, 10000);
-        unsigned num_iter = lgmres.solve( A, x, b, A.precond(), A.inv_weights(), 1e-6);
+        unsigned num_iter = lgmres.solve( A, x, b, A.precond(), A.weights(), 1e-6);
         std::cout << "After "<<num_iter<<" LGMRES iterations we have:\n";
     }
 
@@ -97,24 +89,20 @@ int main()
 //! [doxygen]
     // create volume and inverse volume on previously defined grid
     const dg::HVec w2d = dg::create::weights( grid);
-    const dg::HVec v2d = dg::create::inv_weights( grid);
 
     // Create unnormalized Laplacian
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid);
 
     // allocate memory in conjugate gradient
-    dg::CG<dg::HVec > pcg( copyable_vector, max_iter);
+    dg::PCG<dg::HVec > pcg( copyable_vector, max_iter);
 
     // Evaluate right hand side and solution on the grid
     dg::HVec b = dg::evaluate ( laplace_fct, grid);
     const dg::HVec solution = dg::evaluate ( fct, grid);
 
-    // normalize right hand side
-    dg::blas2::symv( w2d, b, b);
-
     // use inverse volume as preconditioner in solution method
     const double eps = 1e-6;
-    unsigned num_iter = pcg( A, x, b, v2d, eps);
+    unsigned num_iter = pcg.solve( A, x, b, 1., w2d, eps);
 //! [doxygen]
     std::cout << "Number of pcg iterations "<< num_iter<<std::endl;
     std::cout << "For a precision of "<< eps<<std::endl;
@@ -158,45 +146,6 @@ int main()
         res.d = sqrt(dg::blas2::dot( w2d, resi));
         std::cout << "L2 Norm of Residuum is        " << res.d<<"\n\n";
     }
-    // Test Extrapolation object
-    double value;
-    dg::Extrapolation<double> extra(3,-1);
-    extra.update( 0, 0);
-    extra.update( 1, 1);
-    extra.extrapolate( 5, value);
-    std::cout << "Linear Extrapolated value is "<<value<< " (5)\n";
-    extra.update( 1, 1); //should not change anything
-    extra.derive( 4, value);
-    std::cout << "Linear Derived value is "<<value<< " (1)\n";
-    extra.update( 3, 9);
-    extra.update( 2, 4);
-    extra.extrapolate( 5, value);
-    std::cout << "Extrapolated value is "<<value<< " (25)\n";
-    extra.derive( 4, value);
-    std::cout << "Derived value is "<<value<< " (8)\n";
-    extra.set_max(2,-1);
-    extra.update( 0, 0);
-    extra.update( 1, 1);
-    extra.update( 3, 9);
-    extra.update( 2, 4);
-    extra.extrapolate( 5, value);
-    std::cout << "Linear Extrapolated value is "<<value<< " (19)\n";
-    extra.derive( 4, value);
-    std::cout << "Linear Derived value is "<<value<< " (5)\n";
-    extra.set_max(1,-1);
-    extra.extrapolate( 5, value);
-    std::cout << "Empty Extrapolated value is "<<value<< " (0)\n";
-    extra.derive( 4, value);
-    std::cout << "Empty Derived value is "<<value<< " (0)\n";
-    extra.update( 0, 0);
-    extra.update( 1, 1);
-    extra.update( 3, 9);
-    extra.update( 2, 4);
-    extra.update( 2, 4);
-    extra.extrapolate( 5, value);
-    std::cout << "Monomial Extrapolated value is "<<value<< " (4)\n";
-    extra.derive( 4, value);
-    std::cout << "Monomial Derived value is "<<value<< " (0)\n";
 
 
     return 0;

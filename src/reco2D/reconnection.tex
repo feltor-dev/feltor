@@ -1,0 +1,451 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+\usepackage{minted}
+
+\renewcommand{\ne}{\ensuremath{n }}
+\newcommand{\Ni}{\ensuremath{N}}
+\newcommand{\ue}{\ensuremath{u_\parallel}}
+\newcommand{\Ui}{\ensuremath{U_\parallel}}
+\newcommand{\Apar}{\ensuremath{A_\parallel}}
+\newcommand{\bperp}{\ensuremath{ \vec b_\perp}}
+\newcommand{\neref}{\ensuremath{n_0}}
+\newcommand{\Teref}{\ensuremath{T_{e0}}} %\rhoN
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{Collisionless Reconnection}
+\author{ M.~Held and M.~Wiesenberger}
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+\tableofcontents
+
+\section{Compilation and Usage}
+Input file format: json\\
+Output file format: NetCDF-4\\
+File path: \texttt{feltor/src/reco2D/}
+\begin{verbatim}
+make reconnection device = <omp gpu>
+make reconnection_hpc device = <omp gpu>
+make reconnection_mpi device = <omp gpu>
+\end{verbatim}
+\texttt{reconnection} depends on both GLFW3 and NETCDF, while
+\texttt{reconnection\_hpc} and \texttt{reconnection\_mpi} avoids the GLFW3 dependency and only operate with ``netcdf'' output.
+Run with
+\begin{verbatim}
+path/to/feltor/src/reco2D/reconnection(_hpc) input.json <output.nc>
+\end{verbatim}
+The output file is only needed if you chose ``netcdf'' in the output field
+of the input file.
+\begin{verbatim}
+echo 2 2 | mpirun -n 4 path/to/feltor/src/reco2D/reconnection_mpi input.json output.nc
+\end{verbatim}
+For the mpi program you need to provide the distribution of processes along each
+axis on the command line.
+
+\section{Equations}
+%tearing instability <-> reconnection
+Collisionless reconnection was studied in~\cite{Stanier2015}, gyro-fluid and gyro-kinetic studies~\cite{Comisso2013,Zacharias2014}.
+Our reduced model is based on a recent formulation of a full-F gyro-fluid model~\cite{Madsen2013}.
+It consists of the first two moment equations for electrons and ions
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne
++ \nc\left( \ne (\vec u_E + \ue \vec b_\perp) \right)=& 0
+\\
+%%%
+\label{firstgyromom}
+\frac{\partial}{\partial t} \Ni 
++ \nc\left( \Ni (\vec u_E^i + \Ui \vec b_\perp^i) \right)=& 0
+ \\
+ %%%
+    \mu_e \frac{\partial}{\partial t} \left( \ne\ue \right)
++  \mu_e \nc\left( \left(\vec u_E+ \ue\vec b_\perp\right) \ne\ue \right) =&
+- \tau_e \vec b_\perp\cn\ne - \ne\left(\vec b_\perp\cn\phi +\frac{\partial}{\partial t}\Apar\right)
+      \\
+%%%
+  \mu_i\frac{\partial}{\partial t} \left( \Ni\Ui \right)
+      +  \mu_i\nc\left( \left(\vec u_E^i + \Ui \vec b_\perp^i\right) \Ni\Ui \right) =&
+      - \tau_i  \vec b_\perp^i \cn \Ni - \Ni \left(\vec b_\perp \cn \psi + \frac{\partial}{\partial t} \Gamma_1\Apar\right)
+\end{align}
+where
+$\vec u_E := \zhat \times \nabla\phi = [-\partial_y \phi,\ \partial_x \phi]$ and
+$\bperp := \nabla \Apar \times \zhat = [\partial_y \Apar,\ -\partial_x \Apar]$.
+
+The equations are coupled by polarisation and induction
+\begin{align}
+ -\ne + \Gamma_1 \Ni &= -\vec{\nabla}\cdot\left(\Ni \vec{\nabla}_\perp \phi\right) \\
+ -\frac{1}{\beta} \vec{\nabla}_\perp^2 \Apar &=  -\ne \ue + \Gamma_1 (\Ni \Ui)
+\end{align}
+where the signs are such that the elliptic operators are positive definite and
+with gyro-averaged parallel electromagnetic vector potential, generalized electric potential and gyro-averaging operator
+\begin{align}
+ \psi &:= \Gamma_1 \phi - u_E^2 /2  \\
+  \Gamma_1 &:= (1-\frac{\tau_i}{2} \vec{\nabla}_\perp^2 )^{-1}
+\end{align}
+and ion gyro-radius, vacuum permeability and ion gyrofrequency
+\begin{align}
+  \rho_{i}   := \frac{\sqrt{T_{i} m_i}}{e B} \quad
+  \mu_0 := 1/(\epsilon_0 c^2) \quad
+  \Omega_i := e B / m_i
+\end{align}
+After exploiting the gyro-Bohm normalisation, our model is controlled by the dimensionless parameters. These
+are the
+\begin{align}
+ \mu   :=  \frac{m}{Z m_i} \quad
+ \tau  :=  \frac{T}{ Z T_i}\quad
+ \beta_{e0} :=  \frac{\mu_0 \neref \Teref }{ B_0^2 }
+\end{align}
+
+Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json} \\
+\begin{minted}[texcomments]{js}
+"physical" : // physical parameters
+{
+    "mu"   : -0.000544617, // the electron to ion mass ratio $\mu_e$
+    "tau"  :  0.0,    // electron to ion temperature $\tau_i$
+    "beta" :  1e-3    // plasma beta $\beta$
+}
+\end{minted}
+
+\section{Initial and boundary conditions}
+The boundary conditions for all variables are Dirichlet in $x$.
+The $y$-direction is periodic.
+
+The initial conditions are set in the file \texttt{feltor/src/reco2D/init.h}.
+
+We initialize
+\begin{align}
+ \Ni&=\ne=1 \\
+ \phi &= 0 \\
+  \Ui&=0 \\
+  \ue &= \frac{1}{\ne \beta }\vec{\nabla}^2_{\perp} \Apar
+\end{align}
+where we can choose $\Apar$.
+\subsection{Harris sheet}
+The initial parallel magnetic vector potential is
+\begin{align}
+    \Apar =\beta\left( A_0 / \cosh{( 4  \pi x / L_x )}^2 +A_1\cos{(2 m_y\pi y/L_y)}\right) \cos( \pi x /L_x)
+\end{align}
+The harris sheet initial condition can be chosen with the following parameters in the input file
+\begin{minted}[texcomments]{js}
+"init" : // Parameters for initialization
+{
+    "type" : "harris", // This choice necessitates the following parameters
+    "amplitude0"  : 0.1, // harris amplitude
+    "amplitude1"  : 1e-3, // perturbation amplitude (making this negative will
+    // shift the perturbation by an angle $\pi$)
+    "my"  :  1    // perturbation wave number in y
+}
+\end{minted}
+We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
+\subsection{Island}
+The initial parallel magnetic vector potential is~\cite{Stanier2015}
+\begin{align}
+    \Apar =\beta \left[ A_0\frac{L_x}{4\pi} \ln \left\{ \cosh( 4\pi x/L_x) + \varepsilon \cos( 4\pi y/L_x)\right\} + A_1\cos{(2m_y \pi y/L_y)}\right] \cos( \pi x /L_x)
+\end{align}
+with $\varepsilon = 0.2$.
+The island initial condition can be chosen with the following parameters in the input file
+\begin{minted}[texcomments]{js}
+"init" : // Parameters for initialization
+{
+    "type" : "island", // This choice necessitates the following parameters
+    "amplitude0"  : 0.1, // island amplitude
+    "amplitude1"  : 1e-3, // perturbation amplitude (making this negative will
+    // shift the perturbation by an angle $\pi$)
+    "my"  :  1    // perturbation wave number in y
+}
+\end{minted}
+We analytically compute the Laplacian of $\Apar$ with the help of Mathematica.
+(The island simulation takes approximately a factor 5 times smaller timestep than
+the harris simulation).
+
+\section{Invariants}
+The mass density and diffusions are
+\begin{align}
+    \mathcal M &= \ne \\
+    \vec j_n &= \ne \vec u_E + \ne\ue\bperp \\
+     \Lambda_n &= -\nu_\perp \Delta_\perp^2 \ne
+\end{align}
+\begin{tcolorbox}[title=Note]
+    We already incorporate the artificial diffusion terms defined in
+    Section~\ref{sec:regularization}
+\end{tcolorbox}
+
+The inherent energy density of our system is:
+\begin{align}
+ \mathcal{E} := &
+                    \ne \ln{(\ne)}
+                  + \tau_i \Ni \ln{( \Ni)}
+                  \nonumber \\
+                 &- \frac{1}{2} \mu_e \ne \ue^2
+                  + \frac{1}{2} \Ni \Ui^2
+                  \nonumber \\
+                 &+\frac{1}{2} \Ni u_E^2
+                  + \frac{|\nabla_\perp \Apar|^2}{2 \beta}
+\end{align}
+The energy current density and diffusion are
+\begin{align}
+  \vec j_{\mathcal E} =& \sum_s z\left[
+  \left(\tau \ln N + \frac{1}{2}\mu U_\parallel^2 + \psi \right)N\left(
+  \vec u_E +U_\parallel\bperp  \right) + \tau NU_\parallel \bperp\right]
+  , \\
+    \Lambda_\mathcal{E} :=  &\left( (1+\ln \ne) + \frac{1}{2} z_e \mu_e \ue^2 - \phi \right) (-\nu_\perp \Delta_\perp^2 \ne)
+    \nonumber\\
+    &+ \left( \tau_i ( 1+\ln \Ni) + \frac{1}{2} \Ui^2 + \psi_i\right)(-\nu_\perp \Delta_\perp^2 \Ni)
+    \nonumber\\
+    &+ z_e\mu_e \ue\ne (-\nu_\perp \Delta_\perp^2 \ue)
+    \nonumber\\
+    &+ \Ui\Ni (-\nu_\perp \Delta_\perp^2 \Ui)
+    \label{eq:energy_diffusion}
+\end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric and magnetic potentials and we sum over all species.
+
+With our choice of boundary conditions both the mass as well as the energy flux
+vanishes on the boundary. In the absence of artificial viscosity the volume integrated
+mass and energy density are thus exact invariants of the system.
+\begin{tcolorbox}[title=Note]
+    For the canonical-viscosity scheme the viscosity terms in the last two
+    terms of Eq.~\eqref{eq:energy_diffusion} change to the canonical velocity.
+\end{tcolorbox}
+
+
+\section{Reconnection rate}
+ A consistent definition of the reconnection rate is not trivial~\cite{Comisso2016}.
+ We adopt a similar definiton as in Ref.~\cite{Comisso2013}
+\begin{align}
+    Q_X&:= \Apar(\vec{x}_X,t) - \Apar( \vec{x}_X,0) \\
+ \gamma&:= \frac{1}{Q_X}\frac{\d Q_X}{\d t} = \frac{\d \ln{|Q_X|}}{\d t}
+\end{align}
+where $\vec{x}_X = [0,0]$.
+This can be easily evaluated in post-processing using a python script.
+
+\section{Numerical methods}
+
+\subsection{Spatial grid}
+The spatial grid is a two-dimensional Cartesian product-grid $[-L_x/2, L_x/2]\times [-L_y/2, L_y/2]$ adaptable with the following parameters
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "n"  :  3, // The number of polynomial coefficients
+    "Nx"  : 48, // Number of cells in x
+    "Ny"  : 48, // Number of cells in y
+    "lxhalf"  : 80.0, // Half box length in x
+    "lyhalf"  : 80.0, // Half box length in y
+}
+\end{minted}
+\subsection{Timestepper}
+The time stepper can be an explicit multistep method where you can chose the
+tableau to use
+\begin{minted}[texcomments]{js}
+"timestepper" :
+{
+    "type"    : "multistep", //Choose an explicit multistep method
+    "tableau" : "TVB-3-3", //  Any explicit multistep tableau *
+    "dt"      : 20.0, // Fixed timestep
+}
+\end{minted}
+*See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_explicit_multistep.html}{dg documentation} for what tableaus are available.
+The second option is an adaptive explicit embedded Runge-Kutta scheme
+\begin{minted}[texcomments]{js}
+"timestepper":
+{
+    "type"    : "adaptive", //Choose an explicit adaptive RK scheme
+    "tableau" : "Tsitouras09-7-4-5", // Any explicit embedded RK tableau *
+    "rtol"    : 1e-7, // The relative tolerance in the timestep
+    "atol"    : 1e-10 // The absolute tolerance in the timestep
+}
+\end{minted}
+*See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_e_r_k_step.html}{dg documentation} for what tableaus are available.
+
+\subsection{Advection scheme}
+\begin{minted}[texcomments]{js}
+"advection":
+{
+    "type" : "arakawa" // The Arakawa bracket scheme
+    //note that this should only be used in connection with artificial diffusion
+}
+\end{minted}
+We implemented the advection in terms of Arakawa brackets
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne =&
+ - \left[\phi, \ne\right]
++ \left[\Apar,\ne \ue  \right]
+\\
+%%%
+\label{firstgyromom}
+\frac{\partial}{\partial t} \Ni =&
+ - \left[\psi, \Ni\right]
++ \left[\Gamma_1 \Apar ,\Ni \Ui  \right]
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+      -  \left[ \phi, \ue+ \frac{1}{\mu_e} \Apar  \right]% \nonumber \\
+    +   \left[\Apar,\ue^2/2   \right]% \nonumber \\
+      - \frac{1}{\mu_e}  \left[\Apar,\ln{\ne}   \right]
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
+      -  \left[ \psi, \Ui+ \Gamma_1 \Apar  \right]% \nonumber \\
+     +   \left[\Gamma_1 \Apar,\Ui^2/2   \right]% \nonumber \\
+      + \tau_i  \left[\Gamma_1 \Apar,\ln{\Ni}   \right]
+\end{align}
+
+\begin{minted}[texcomments]{js}
+"advection":
+{
+    "type" : "upwind"  // The upwind scheme
+}
+\end{minted}
+For the upwind scheme we first rewrite the equations in terms of
+$\vec u_E := \zhat \times \nabla\phi = [-\partial_y \phi,\ \partial_x \phi]$ and
+$\bperp := \nabla \Apar \times \zhat = [\partial_y \Apar,\ -\partial_x \Apar]$. We use
+that $\nc \vec u_E = \nc \bperp =0$
+\begin{align}
+%%%
+\frac{\partial}{\partial t} \ne =&
+- ( \vec u_E + \ue \bperp)\cn \ne - \ne \bperp \cn  \ue
+\\
+%%%
+\frac{\partial}{\partial t} \Ni =&
+- ( \vec u_E^i + \Ui \bperp^i)\cn \Ni - \Ni \bperp^i\cn  \Ui
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+-  (\vec u_E + \ue \bperp ) \cn \ue
++ \frac{1}{\mu_e} \bperp \cn \ln \ne
+- \frac{1}{\mu_e} \bperp \cn \phi
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =&
+    - (\vec u_E^i + \Ui \bperp^i ) \cn \Ui
+    - \tau_i \bperp^i \cn \ln \Ni
+    - \bperp^i \cn \psi
+\end{align}
+where the $i$ index signifies that $\vec u_E$ respectively $\bperp$ are to
+be evaluated using the ion potentials $\psi$ and $\Apar$.
+\begin{tcolorbox}[title=Note]
+    We also tried to use the conservative upwind scheme, where the density equation
+    is discretized in divergence form together with an interpolated multiplication
+    scheme. This however was completely unstable for the harris sheet.
+\end{tcolorbox}
+\subsection{Regularization} \label{sec:regularization}
+In order to prevent shocks and regularize the advection scheme
+we implement an artificial viscosity of order 2.
+\begin{align}
+%%%
+    \frac{\partial}{\partial t} \ne =& \ldots -\nu_\perp \Delta_\perp^2 \ne
+\\
+%%%
+\frac{\partial}{\partial t} \Ni =& \ldots -\nu_\perp \Delta_\perp^2 \Ni
+ \\
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+\ldots -\nu_\perp \Delta_\perp^2 \ue
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =& \ldots -\nu_\perp \Delta_\perp^2 \Ui
+\end{align}
+Regularly we apply the artificial viscosity to the parallel velocities. However,
+we can also apply it to the canonical velocity:
+\begin{align}
+ %%%
+\frac{\partial}{\partial t} \left( \ue+ \frac{1}{\mu_e} \Apar \right) =&
+\ldots -\nu_\perp \Delta_\perp^2 \left( \ue+ \frac{1}{\mu_e} \Apar \right)
+      \\
+      \frac{\partial}{\partial t} \left( \Ui+ \Gamma_1 \Apar  \right) =& \ldots -\nu_\perp \Delta_\perp^2 \left( \Ui+ \Gamma_1 \Apar  \right)
+\end{align}
+
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type" : "velocity-viscosity",  // Apply viscosity on density and
+    // parel velocity
+    "type" : "canonical-viscosity",  // Apply viscosity on density and
+    // parallel canonical velocity
+    "direction" : "centered",  // The direction of the Laplacian
+    "nu_perp" : 1e-6 // The strength of the diffusion
+}
+\end{minted}
+Simply set the diffusion to 0 if you do not want any regularization.
+\begin{tcolorbox}[title=Note]
+    If you set nu\_perp too large the timestep in the explicit timestepper will
+    have to be very small due to the restrictive CFL condition. At the same
+    time in our experience having to make the timestep smaller due to viscosity
+    is a clear warning that nu\_perp is too large for the chosen resolution.
+    Chose nu\_perp as large as you can without decreasing the timestep.
+\end{tcolorbox}
+
+\subsection{Elliptic solvers}
+In order to solve the elliptic equations we chose a multigrid scheme (nested
+iterations). The accuaracies for the polarization equation can be chosen for
+each stage separately, while for the Helmholtz type equations (The gamma
+operators and the Ampere equation) only one accuracy can be set:
+\begin{minted}[texcomments]{js}
+"elliptic",
+{
+    "stages"    : 3,  // Number of stages (3 is best in virtually all cases)
+    "eps_pol"   : [1e-6,10,10],
+    // Accuracy requirement on each stage of the
+    // multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
+    "eps_gamma" : 1e-10, // Accuracy requirement of Gamma operator on density
+    "eps_maxwell": 1e-7, //Accuracy requirement of Ampere equation
+    "direction" : "forward", // Direction of the Laplacian: forward or centered
+    "jumpfactor" : 1.0
+    // Jump factor of Laplacian in polarization, Gamma and Ampere equations
+}
+\end{minted}
+
+%..................................................................
+\section{Output}
+Our program can either write results directly to screen using the glfw library
+or write results to disc using netcdf.
+This can be controlled via
+\begin{minted}[texcomments]{js}
+"output":
+{
+    // Use glfw to display results in a window while computing (requires to
+    // compile with the glfw3 library)
+    "type"  : "glfw"
+    "itstp"  : 4, // The number of steps between outputs of 2d fields
+
+    // Use netcdf to write results into a file (filename given on command line)
+    // (see next section for information about what is written in there)
+    "type"  : "netcdf"
+    "itstp"  : 4,    // The number of steps between outputs of 2d fields
+    "maxout"  : 500, // The total number of field outputs. The endtime is
+    // T=itstp*maxout*dt
+    "n"  : 3 , // The number of polynomial coefficients in the output file
+    "Nx" : 48, // Number of cells in x in the output file
+    "Ny" : 48  // Number of cells in y in the output file
+}
+\end{minted}
+The number of points in the output file can be lower (or higher) than the number of
+grid points used for the calculation. The points will be interpolated from the
+computational grid.
+\subsection{Netcdf file}
+Output file format: netcdf-4/hdf5
+
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile        & text attribute & 1 & verbose input file as a string \\
+time             & Coord. Var. & 1 (time) & time at which fields are written \\
+x                & Coord. Var. & 1 (x) & x-coordinate  \\
+y                & Coord. Var. & 1 (y) & y-coordinate \\
+xc               & Dataset & 2 (y,x) & Cartesian x-coordinate  \\
+yc               & Dataset & 2 (y,x) & Cartesian y-coordinate \\
+X                & Dataset & 3 (time, y, x) & 2d outputs \\
+X\_1d            & Dataset & 1 (time) & 1d volume integrals $\int \dV X$ \\
+time\_per\_step  & Dataset & 1 (time) & Average computation time for one step \\
+\bottomrule
+\end{longtable}
+The output fields X are determined in the file \texttt{feltor/src/reco2D/diag.h}.
+
+%..................................................................
+\bibliography{../common/references, references}
+%..................................................................
+\end{document}

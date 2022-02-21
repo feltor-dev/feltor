@@ -16,23 +16,23 @@ namespace create{
 ///@{
 
 /*!@class hide_weights_doc
-* @brief create host vector containing X-space weight coefficients
+* @brief Nodal weight coefficients
 * @param g The grid
 * @return Host Vector
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_inv_weights_doc
-* @brief create host_vector containing inverse X-space weight coefficients
+* @brief inverse nodal weight coefficients
 * @param g The grid
 * @return Host Vector
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_weights_coo_doc
-* @brief create host vector containing X-space weight coefficients
+* @brief nodal weight coefficients
 * @param g The grid
 * @param coo The coordinate for which to generate the weights (in 2d only \c dg::x and \c dg::y are allowed)
 * @return Host Vector with full grid size
-* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
 */
 
 ///@copydoc hide_weights_doc
@@ -56,16 +56,6 @@ thrust::host_vector<real_type> inv_weights( const RealGrid1d<real_type>& g)
     return v;
 }
 
-///@cond
-namespace detail{
-
-static inline int get_i( unsigned n, int idx) { return idx%(n*n)/n;}
-static inline int get_j( unsigned n, int idx) { return idx%(n*n)%n;}
-static inline int get_i( unsigned n, unsigned Nx, int idx) { return (idx/(n*Nx))%n;}
-static inline int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
-}//namespace detail
-///@endcond
-
 ///@copydoc hide_weights_doc
 ///@copydoc hide_code_evaluate2d
 template<class real_type>
@@ -74,8 +64,8 @@ thrust::host_vector<real_type> weights( const aRealTopology2d<real_type>& g)
     thrust::host_vector<real_type> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
         v[i] = g.hx()*g.hy()/4.*
-                g.dlt().weights()[detail::get_i(g.n(),g.Nx(), i)]*
-                g.dlt().weights()[detail::get_j(g.n(),g.Nx(), i)];
+                g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()]*
+                g.dltx().weights()[i%g.nx()];
     return v;
 }
 ///@copydoc hide_inv_weights_doc
@@ -95,11 +85,11 @@ thrust::host_vector<real_type> weights( const aRealTopology2d<real_type>& g, enu
     thrust::host_vector<real_type> w( g.size());
     if( coo == coo2d::x) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
+            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
     }
     else if( coo == coo2d::y) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
+            w[i] = g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
     }
     return w;
 }
@@ -110,11 +100,13 @@ thrust::host_vector<real_type> weights( const aRealTopology2d<real_type>& g, enu
 template<class real_type>
 thrust::host_vector<real_type> weights( const aRealTopology3d<real_type>& g)
 {
+    // this implementation is binary compatible with nz = 1 old implementation
     thrust::host_vector<real_type> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
         v[i] = g.hx()*g.hy()*g.hz()/4.*
-               g.dlt().weights()[detail::get_i(g.n(), g.Nx(), i)]*
-               g.dlt().weights()[detail::get_j(g.n(), g.Nx(), i)];
+               (g.dltz().weights()[(i/(g.nx()*g.ny()*g.Nx()*g.Ny()))%g.nz()]/2.)*
+               g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()]*
+               g.dltx().weights()[i%g.nx()];
     return v;
 }
 
@@ -135,27 +127,36 @@ thrust::host_vector<real_type> weights( const aRealTopology3d<real_type>& g, enu
     thrust::host_vector<real_type> w( g.size());
     if( coo == coo3d::x) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
+            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
     }
     else if( coo == coo3d::y) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
+            w[i] = g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
     }
     else if( coo == coo3d::z) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hz();
+            w[i] = g.hz()/2.* g.dltz().weights()[(i/(g.nx()*g.Nx()*g.ny()*g.Ny()))%g.nz()];
     }
     else if( coo == coo3d::xy) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hx()*g.hy()/4.* g.dlt().weights()[i%g.n()]*g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
+        {
+            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
+            w[i]*= g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
+        }
     }
     else if( coo == coo3d::yz) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hy()*g.hz()/2.* g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
+        {
+            w[i] = g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
+            w[i]*= g.hz()/2.* g.dltz().weights()[(i/(g.nx()*g.Nx()*g.ny()*g.Ny()))%g.nz()];
+        }
     }
     else if( coo == coo3d::xz) {
         for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hx()*g.hz()/2.* g.dlt().weights()[i%g.n()];
+        {
+            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
+            w[i]*= g.hz()/2.* g.dltz().weights()[(i/(g.nx()*g.Nx()*g.ny()*g.Ny()))%g.nz()];
+        }
     }
     return w;
 }

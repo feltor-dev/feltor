@@ -30,7 +30,7 @@ struct Parameters
     double amp, sigma, posX, posY;
     
     double  nprofileamp, bgprofamp;
-    unsigned hwmode,fluxmode;
+    unsigned hwmode, fluxmode;
     double solb;
     double omega_source,sourceb;
     double omega_sink,sinkb;

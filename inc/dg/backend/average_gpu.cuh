@@ -83,7 +83,14 @@ void average( CudaTag, unsigned nx, unsigned ny, const value_type* in0, const va
     h_round.resize( ny);
     for( unsigned i=0; i<ny; i++)
         h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT]);
-    cudaMemcpy( out, &h_round[0], ny*sizeof(value_type), cudaMemcpyHostToDevice);
+    // This test checks for errors in the current stream, the error may come
+    // from any kernel prior to this point not necessarily the above one
+    cudaError_t code = cudaGetLastError( );
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+    code = cudaMemcpy( out, &h_round[0], ny*sizeof(value_type), cudaMemcpyHostToDevice);
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
 }
 
 #ifdef MPI_VERSION
@@ -110,7 +117,15 @@ void average_mpi( CudaTag, unsigned nx, unsigned ny, const value_type* in0, cons
     h_round.resize( ny);
     for( unsigned i=0; i<ny; i++)
         h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT]);
-    cudaMemcpy( out, &h_round[0], ny*sizeof(value_type), cudaMemcpyHostToDevice);
+
+    // This test checks for errors in the current stream, the error may come
+    // from any kernel prior to this point not necessarily the above one
+    cudaError_t code = cudaGetLastError( );
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+    code = cudaMemcpy( out, &h_round[0], ny*sizeof(value_type), cudaMemcpyHostToDevice);
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
 }
 #endif //MPI_VERSION
 

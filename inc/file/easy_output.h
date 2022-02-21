@@ -19,7 +19,7 @@ namespace file
 {
 /**
  * @defgroup netcdf NetCDF utilities
- * \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5 -lhdf5_hl)
+ * \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5[_serial] -lhdf5[_serial]_hl)
  *
  * @addtogroup netcdf
  * @{
@@ -119,8 +119,8 @@ struct NC_Error_Handle
 * writes to the file independently in parallel (\c true)
 * or each process funnels its data through the master rank (\c false),
 * which involves communication but may be faster than the former method.
-* @attention In the MPI version (i) all processes must call this function and (ii) if \c parallel==true a **parallel netcdf** must be
-* linked, the file opened with the \c NC_MPIIO flag from the \c netcdf_par.h header and the variable be marked with \c NC_COLLECTIVE access while if \c parallel==false we need **serial netcdf** and only the master thread needs to open and access the file.
+* @attention In the MPI version (i) all processes must call this function and (ii) if \c parallel==true a **parallel netcdf and hdf5** must be
+* linked, the file opened with the \c NC_MPIIO flag from the \c netcdf_par.h header and the variable be marked with \c NC_COLLECTIVE access while if \c parallel==false we need **serial netcdf and hdf5** and only the master thread needs to open and access the file.
 * Note that serious performance penalties have been observed on some platforms for parallel netcdf.
 */
 template<class host_vector>
@@ -129,8 +129,8 @@ void put_var_double(int ncid, int varid, const dg::aTopology2d& grid,
 {
     file::NC_Error_Handle err;
     size_t start[2] = {0,0}, count[2];
-    count[0] = grid.n()*grid.Ny();
-    count[1] = grid.n()*grid.Nx();
+    count[0] = grid.ny()*grid.Ny();
+    count[1] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -154,9 +154,12 @@ void put_var_double(int ncid, int varid, const dg::aTopology2d& grid,
 * writes to the file independently in parallel (\c true)
 * or each process funnels its data through the master rank (\c false),
 * which involves communication but may be faster than the former method.
-* @attention In the MPI version (i) all processes must call this function and (ii) if \c parallel==true a **parallel netcdf** must be
-* linked, the file opened with the \c NC_MPIIO flag from the \c netcdf_par.h header and the variable be marked with \c NC_COLLECTIVE access while if \c parallel==false we need **serial netcdf** and only the master thread needs to open and access the file.
-* Note that serious performance penalties have been observed on some platforms for parallel netcdf.
+* @attention In the MPI version (i) all processes must call this function and (ii) if \c parallel==true a **parallel netcdf and hdf5** must be
+* linked, the file opened with the \c NC_MPIIO flag from the \c netcdf_par.h
+* header and the variable be marked with \c NC_COLLECTIVE access while if \c
+* parallel==false we need **serial netcdf and hdf5** and only the master thread
+* needs to open and access the file.  Note that serious performance penalties
+* have been observed on some platforms for parallel netcdf.
 */
 template<class host_vector>
 void put_vara_double(int ncid, int varid, unsigned slice,
@@ -165,8 +168,8 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[3] = {slice,0,0}, count[3];
     count[0] = 1;
-    count[1] = grid.n()*grid.Ny();
-    count[2] = grid.n()*grid.Nx();
+    count[1] = grid.ny()*grid.Ny();
+    count[2] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -177,9 +180,9 @@ void put_var_double(int ncid, int varid, const dg::aTopology3d& grid,
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0,0}, count[3];
-    count[0] = grid.Nz();
-    count[1] = grid.n()*grid.Ny();
-    count[2] = grid.n()*grid.Nx();
+    count[0] = grid.nz()*grid.Nz();
+    count[1] = grid.ny()*grid.Ny();
+    count[2] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -191,9 +194,9 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[4] = {slice, 0,0,0}, count[4];
     count[0] = 1;
-    count[1] = grid.Nz();
-    count[2] = grid.n()*grid.Ny();
-    count[3] = grid.n()*grid.Nx();
+    count[1] = grid.nz()*grid.Nz();
+    count[2] = grid.ny()*grid.Ny();
+    count[3] = grid.nx()*grid.Nx();
     err = nc_put_vara_double( ncid, varid, start, count, data.data());
 }
 
@@ -205,8 +208,8 @@ void put_var_double(int ncid, int varid, const dg::aMPITopology2d& grid,
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0}, count[2];
-    count[0] = grid.n()*grid.local().Ny();
-    count[1] = grid.n()*grid.local().Nx();
+    count[0] = grid.ny()*grid.local().Ny();
+    count[1] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);
@@ -257,8 +260,8 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[3] = {slice, 0,0}, count[3];
     count[0] = 1;
-    count[1] = grid.n()*grid.local().Ny();
-    count[2] = grid.n()*grid.local().Nx();
+    count[1] = grid.ny()*grid.local().Ny();
+    count[2] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);
@@ -308,9 +311,9 @@ void put_var_double(int ncid, int varid,
 {
     file::NC_Error_Handle err;
     size_t start[3] = {0,0,0}, count[3];
-    count[0] = grid.local().Nz();
-    count[1] = grid.n()*grid.local().Ny();
-    count[2] = grid.n()*grid.local().Nx();
+    count[0] = grid.nz()*grid.local().Nz();
+    count[1] = grid.ny()*grid.local().Ny();
+    count[2] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);
@@ -363,9 +366,9 @@ void put_vara_double(int ncid, int varid, unsigned slice,
     file::NC_Error_Handle err;
     size_t start[4] = {slice, 0,0,0}, count[4];
     count[0] = 1;
-    count[1] = grid.local().Nz();
-    count[2] = grid.n()*grid.local().Ny();
-    count[3] = grid.n()*grid.local().Nx();
+    count[1] = grid.nz()*grid.local().Nz();
+    count[2] = grid.ny()*grid.local().Ny();
+    count[3] = grid.nx()*grid.local().Nx();
     int rank, size;
     MPI_Comm comm = grid.communicator();
     MPI_Comm_rank( comm, &rank);

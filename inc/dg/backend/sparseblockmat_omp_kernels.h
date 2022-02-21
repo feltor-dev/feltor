@@ -41,7 +41,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
-                y[I]*= beta;
+                // if y[I] isnan then even beta = 0 does not make it 0
+                y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 for( int d=0; d<blocks_per_line; d++)
                 {
                     value_type temp = 0;
@@ -109,7 +110,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                         temp[d] = DG_FMA(data[B+q], xprivate[d*n+q], temp[d]);
                 }
                 int I = ((s*num_rows + i)*n+k);
-                y[I]*= beta;
+                // if y[I] isnan then even beta = 0 does not make it 0
+                y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 for( int d=0; d<blocks_per_line; d++)
                     y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
@@ -122,7 +124,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             for( int k=0; k<n; k++)
             {
                 int I = ((s*num_rows + i)*n+k);
-                y[I]*= beta;
+                // if y[I] isnan then even beta = 0 does not make it 0
+                y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 int B = n*blocks_per_line*k;
                 for( int d=0; d<blocks_per_line; d++)
                 {
@@ -154,7 +157,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                         temp[d] = DG_FMA( data[B+q], xprivate[d*n+q], temp[d]);
                 }
                 int I = ((s*num_rows + i)*n+k);
-                y[I]*= beta;
+                // if y[I] isnan then even beta = 0 does not make it 0
+                y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 for( int d=0; d<blocks_per_line; d++)
                     y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
@@ -184,7 +188,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                     temp[d] = DG_FMA( data[B+q], xprivate[d*n+q], temp[d]);
             }
             int I = ((s*num_rows + i)*n+k);
-            y[I]*= beta;
+            // if y[I] isnan then even beta = 0 does not make it 0
+            y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
             for( int d=0; d<blocks_per_line; d++)
                 y[I] = DG_FMA(alpha, temp[d], y[I]);
         }
@@ -217,7 +222,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
-                y[I]*= beta;
+                // if y[I] isnan then even beta = 0 does not make it 0
+                y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 for( int d=0; d<blocks_per_line; d++)
                 {
                     value_type temp = 0;
@@ -251,7 +257,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
-                y[I]*= beta;
+                // if y[I] isnan then even beta = 0 does not make it 0
+                y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 for( int d=0; d<blocks_per_line; d++)
                 {
                     value_type temp = 0;

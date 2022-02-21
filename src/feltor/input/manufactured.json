@@ -1,75 +1,102 @@
 {
-    "n"  : 3,
-    "Nx" : 64,
-    "Ny" : 64,
-    "Nz" : 7,
-    "dt" : 1e-4,
-    "compression" : [2,2],
+    "grid":
+    {
+        "n"  : 3,
+        "Nx" : 16,
+        "Ny" : 16,
+        "Nz" : 7,
+        "scaleR" : [1.0,1.0],
+        "scaleZ" : [1.0,1.0]
+    },
+    "advection":
+    {
+        "slope-limiter" : "none"
+    },
+    "timestepper":
+    {
+        "type" : "multistep",
+        "tableau": "TVB-3-3",
+        "dt" : 1e-3
+    },
     "FCI":
     {
-        "refine" : [1,1],
+        "refine" : [5,5],
         "rk4eps" : 1e-6,
-        "periodify": false
+        "periodify": false,
+        "bc" : "along_field",
+        "interpolation-method" : "linear"
     },
-    "inner_loop" : 2,
-    "itstp"  : 2,
-    "maxout" : 5,
-    "eps_pol"    : [1e-7,1,1],
-    "jumpfactor" : 1,
-    "eps_gamma"  : 1e-5,
-    "stages"     : 3,
-    "eps_time"   : 1e-7,
-    "mu"          : -0.000272121,
-    "tau"         : 0,
-    "beta"        : 0,
-    "nu_perp"     : 0.1,
-    "perp_diff"   : ["viscous","explicit"],
-    "resistivity" : 0.1,
-    "curvmode"   : "toroidal",
-    "symmetric"  : false,
-    "bc" :
-    {
-        "density" : ["DIR", "DIR"],
-        "velocity": ["DIR", "DIR"],
-        "potential":["DIR", "DIR"]
+    "output" :{
+        "type" : "glfw",
+        "inner_loop" : 2,
+        "itstp"  : 2,
+        "maxout" : 3
     },
-    "box":
+    "elliptic":
     {
-        "scaleR" : [1.15,1.2],
-        "scaleZ" : [1.2, 1.15]
+        "stages" : 3,
+        "eps_pol"    : [1e-6,10,10],
+        "eps_gamma" : 1e-6,
+        "eps_ampere" : 1e-6,
+        "direction" : "centered",
+        "jumpfactor" : 1.0
     },
-    "initne"     : "turbulence",
-    "initphi"    : "zero",
-    "amplitude" : 0.01,
-    "sigma"     : 2.0,
-    "posX"      : 0.6,
-    "posY"      : 0,
-    "sigma_z"   : 0.25,
-    "k_psi"     : 0,
-    "profile":
+    "regularization":
     {
-        "amp": 4,
-        "alpha": 0.1
+        "order" : 1,
+        "direction": "forward",
+        "nu_perp_n" : 1e-1,
+        "nu_perp_u" : 1e-1
     },
-    "source" :
+    "physical":
     {
-        "rate": 0,
-        "type": "influx",
-        "boundary": 0.5,
-        "alpha": 0.2
+        "mu"          : -0.000272121,
+        "tau"         : 0.0,
+        "beta"        : 0.0,
+        "resistivity" : 1e-1,
+        "viscosity" :  "braginskii"
     },
-    "wall":
+    "magnetic_field":
     {
-        "type": "sol_pfr",
-        "penalization" : 1e+0,
-        "boundary": [1.1,0.998],
-        "alpha": [0.10,0.10]
+        "curvmode" : "toroidal",
+        "input": "params",
+        "params":
+        {
+            "equilibrium" : "circular",
+            "R_0" : 10,
+            "I_0" : 20
+        }
     },
-    "sheath":
+    "flags": [],
+    "boundary":
     {
-        "bc": "bohm",
-        "penalization" : 1e+0,
-        "boundary": 0.30,
-        "alpha": 0.2
+        "wall" : { "type" : "none" },
+        "sheath": { "type" : "none" },
+        "bc" :
+        {
+            "density" : ["DIR", "DIR"],
+            "nbc" : 1.0,
+            "velocity": ["DIR", "DIR"],
+            "potential":["DIR", "DIR"],
+            "aparallel":["DIR", "DIR"]
+        }
+    },
+    "init":
+    {
+        "type" : "fields",
+        "density" :
+        {
+            "type" : "const",
+            "background" : 1.0
+        },
+        "velocity" :
+        {
+            "type" : "zero"
+        }
+    },
+    "source":
+    {
+        "type" : "zero",
+        "minne" : 0.0
     }
 }

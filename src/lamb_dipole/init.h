@@ -8,17 +8,17 @@
 
 namespace shu{
 
-dg::CartesianGrid2d createGrid( Json::Value& js, enum dg::file::error mode)
+dg::CartesianGrid2d createGrid( dg::file::WrappedJsonValue grid)
 {
-    unsigned n = dg::file::get( mode, js, "grid", "n",3).asUInt();
-    unsigned Nx = dg::file::get( mode, js, "grid", "Nx", 48).asUInt();
-    unsigned Ny = dg::file::get( mode, js, "grid", "Ny", 48).asUInt();
-    double x0 = dg::file::get_idx( mode, js, "grid", "x", 0u, 0.).asDouble();
-    double x1 = dg::file::get_idx( mode, js, "grid", "x", 1u, 1.).asDouble();
-    double y0 = dg::file::get_idx( mode, js, "grid", "y", 0u, 0.).asDouble();
-    double y1 = dg::file::get_idx( mode, js, "grid", "y", 1u, 1.).asDouble();
-    dg::bc bcx = dg::str2bc ( dg::file::get_idx( mode, js, "grid", "bc", 0u, "DIR").asString());
-    dg::bc bcy = dg::str2bc ( dg::file::get_idx( mode, js, "grid", "bc", 1u, "PER").asString());
+    unsigned n = grid.get( "n", 3).asUInt();
+    unsigned Nx = grid.get( "Nx", 48).asUInt();
+    unsigned Ny = grid.get( "Ny", 48).asUInt();
+    double x0 = grid["x"].get( 0u, 0.).asDouble();
+    double x1 = grid["x"].get( 1u, 1.).asDouble();
+    double y0 = grid["y"].get( 0u, 0.).asDouble();
+    double y1 = grid["y"].get( 1u, 1.).asDouble();
+    dg::bc bcx = dg::str2bc ( grid["bc"].get( 0u, "DIR").asString());
+    dg::bc bcy = dg::str2bc ( grid["bc"].get( 1u, "PER").asString());
     return dg::CartesianGrid2d( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy);
 }
 
@@ -93,57 +93,40 @@ struct MMSSource{
     double m_s, m_v, m_ly;
 };
 
-std::map<std::string, std::function< dg::HVec(
-    Json::Value& js, enum dg::file::error mode,
-    const dg::CartesianGrid2d& grid) >
-> initial_conditions =
+dg::HVec initial_conditions(
+    dg::file::WrappedJsonValue init,
+    const dg::CartesianGrid2d& grid)
 {
-    {"lamb", [](
-        Json::Value& js, enum dg::file::error mode,
-        const dg::CartesianGrid2d& grid)
-        {
-            dg::HVec omega;
-            double posX = dg::file::get( mode, js, "init", "posX", 0.5).asDouble();
-            double posY = dg::file::get( mode, js, "init", "posY", 0.8).asDouble();
-            double R = dg::file::get( mode, js, "init", "sigma", 0.1).asDouble();
-            double U = dg::file::get( mode, js, "init", "velocity", 1).asDouble();
-            dg::Lamb lamb( posX*grid.lx(), posY*grid.ly(), R, U);
-            omega = dg::evaluate ( lamb, grid);
-            return omega;
-        }
-    },
-    {"shear", [](
-        Json::Value& js, enum dg::file::error mode,
-        const dg::CartesianGrid2d& grid)
-        {
-            dg::HVec omega;
-            double rho = dg::file::get( mode, js, "init", "rho", M_PI/15.).asDouble();
-            double delta = dg::file::get( mode, js, "init", "delta", 0.05).asDouble();
-            omega = dg::evaluate ( ShearLayer( rho, delta), grid);
-            return omega;
-        }
-    },
-    {"sine", [](
-        Json::Value& js, enum dg::file::error mode,
-        const dg::CartesianGrid2d& grid)
-        {
-            dg::HVec omega;
-            omega = dg::evaluate ( [](double x, double y) { return 2*sin(x)*sin(y);}, grid);
-            return omega;
-        }
-    },
-    {"mms", [](
-        Json::Value& js, enum dg::file::error mode,
-        const dg::CartesianGrid2d& grid)
-        {
-            dg::HVec omega;
-            double sigma = dg::file::get( mode, js, "init", "sigma", 0.2).asDouble();
-            double velocity = dg::file::get( mode, js, "init", "velocity", 0.1).asDouble();
-            std::cout << "Sigma "<<sigma<<" "<<velocity<<std::endl;
-            omega = dg::evaluate ( MMSVorticity( sigma, velocity,grid.ly(), 0.), grid);
-            return omega;
-        }
+    dg::HVec omega;
+    std::string initial = init.get( "type", "lamb").asString();
+    if( "lamb" == initial)
+    {
+        double posX = init.get("posX", 0.5).asDouble();
+        double posY = init.get("posY", 0.8).asDouble();
+        double R =    init.get("sigma", 0.1).asDouble();
+        double U =    init.get("velocity", 1).asDouble();
+        dg::Lamb lamb( posX*grid.lx(), posY*grid.ly(), R, U);
+        omega = dg::evaluate ( lamb, grid);
     }
+    else if( "shear" == initial)
+    {
+        double rho   = init.get( "rho", M_PI/15.).asDouble();
+        double delta = init.get( "delta", 0.05).asDouble();
+        omega = dg::evaluate ( ShearLayer( rho, delta), grid);
+    }
+    else if( "sine" == initial)
+    {
+        omega = dg::evaluate ( [](double x, double y) { return 2*sin(x)*sin(y);}, grid);
+    }
+    else if( "mms" == initial)
+    {
+        double sigma    = init.get( "sigma", 0.2).asDouble();
+        double velocity = init.get( "velocity", 0.1).asDouble();
+        omega = dg::evaluate ( MMSVorticity( sigma, velocity,grid.ly(), 0.), grid);
+    }
+    else
+        throw dg::Error( dg::Message() << "Initial condition "<<initial<<" not recognized!");
+    return omega;
 };
 
 }//namespace shu

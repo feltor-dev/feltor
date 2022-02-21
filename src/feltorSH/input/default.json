@@ -22,7 +22,7 @@
     "ly"  : 200,     
     "bc_x"  : "DIR", 
     "bc_y"  : "PER", 
-    "initmode": 1, 
+    "initmode": 0, 
     "tempmode": 0, 
     "flrmode": 1  
 }

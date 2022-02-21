@@ -24,7 +24,8 @@ template< class Vector1, class Vector2, class ...Params>
 Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
     Vector1 out;
-    out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
+    out.set_communicator(in.communicator(), in.communicator_mod(),
+            in.communicator_mod_reduce());
     using container1 = typename std::decay_t<Vector1>::container_type;
     out.data() = dg::construct<container1>( in.data(), std::forward<Params>(ps)...);
     return out;
@@ -32,7 +33,8 @@ Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...
 template< class Vector1, class Vector2, class ...Params>
 void doAssign( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
-    out.set_communicator(in.communicator(), in.communicator_mod(), in.communicator_mod_reduce());
+    out.set_communicator(in.communicator(), in.communicator_mod(),
+            in.communicator_mod_reduce());
     dg::assign( in.data(), out.data(), std::forward<Params>(ps)...);
 }
 
@@ -90,17 +92,24 @@ inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&
         do_get_data(std::forward<Containers>(xs), get_tensor_category<Containers>())...);
 }
 
-template<class T, class ContainerType, class BinaryOp>
-inline T doReduce( MPIVectorTag, const ContainerType& x, T init, BinaryOp op)
+template<class T, class ContainerType, class BinaryOp, class UnaryOp>
+inline T doReduce( MPIVectorTag, const ContainerType& x, T zero, BinaryOp op,
+        UnaryOp unary_op)
 {
-    init = dg::blas1::reduce( x.data(), init, op);
+    T result = doReduce( get_tensor_category<decltype( x.data())>(), x.data(),
+            zero, op, unary_op);
     //now do the MPI reduction
     int size;
     MPI_Comm_size( x.communicator(), &size);
     thrust::host_vector<T> reduction( size);
-    MPI_Allgather( &init, 1, getMPIDataType<T>(), thrust::raw_pointer_cast(reduction.data()), 1, getMPIDataType<T>(), x.communicator());
+    MPI_Allgather( &result, 1, getMPIDataType<T>(),
+            thrust::raw_pointer_cast(reduction.data()), 1, getMPIDataType<T>(),
+            x.communicator());
     //reduce received data (serial execution)
-    return dg::blas1::reduce( reduction, init, op) ;
+    result = zero;
+    for ( unsigned u=0; u<(unsigned)size; u++)
+        result = op( result, reduction[u]);
+    return result;
 }
 
 } //namespace detail

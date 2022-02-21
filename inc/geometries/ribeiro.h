@@ -1,13 +1,6 @@
 #pragma once
 
-#include "dg/topology/grid.h"
-#include "dg/topology/functions.h"
-#include "dg/topology/interpolation.h"
-#include "dg/topology/derivatives.h"
-#include "dg/topology/geometry.h"
-#include "dg/functors.h"
-#include "dg/runge_kutta.h"
-#include "dg/nullstelle.h"
+#include "dg/algorithm.h"
 #include "generator.h"
 #include "utilities.h"
 
@@ -46,11 +39,16 @@ struct Fpsi
         begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
         if(m_verbose)std::cout << "In init function\n";
         double eps = 1e10, eps_old = 2e10;
+        using Vec = std::array<double,2>;
+        dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                    begin2d), fieldRZtau_);
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(R_init, Z_init), begin2d, psi, end2d, N);
-            eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
+            N*=2; odeint.integrate_steps( psip_.f()(R_init, Z_init), begin2d,
+                    psi, end2d, N);
+            eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) +
+                    (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         R_init = R_0 = end2d_old[0], Z_init = Z_0 = end2d_old[1];
         if(m_verbose)std::cout << "In init function error: psi(R,Z)-psi0: "<<psip_.f()(R_init, Z_init)-psi<<"\n";
@@ -66,12 +64,20 @@ struct Fpsi
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
         //double y_eps = 1;
+        using Vec = std::array<double,3>;
+        dg::SinglestepTimeloop<Vec> odeint;
+        if( mode_ == 0)
+            odeint.construct( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                    begin), fieldRZYTribeiro_);
+        if( mode_ == 1)
+            odeint.construct( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                    begin), fieldRZYTequalarc_);
         while( (eps < eps_old || eps > 1e-7)&& N < 1e6)
         {
             eps_old = eps, end_old = end; N*=2;
-            if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYTribeiro_,  0., begin, 2*M_PI, end, N);
-            if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequalarc_, 0., begin, 2*M_PI, end, N);
-            eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+            odeint.integrate_steps(  0., begin, 2*M_PI, end, N);
+            eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) +
+                    (end[1]-begin[1])*(end[1]-begin[1]));
         }
         if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
         if(m_verbose)std::cout <<end_old[2] << " "<<end[2] <<"\n";
@@ -165,13 +171,20 @@ struct FieldFinv
 {
     FieldFinv( const CylindricalFunctorsLvl1& psi, double x0, double y0, unsigned N_steps, int mode):
         fpsi_(psi, x0, y0, mode), fieldRZYTribeiro_(psi, x0, y0), fieldRZYTequalarc_(psi, x0, y0), N_steps(N_steps), mode_(mode) { }
-    void operator()(double t, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
+    void operator()(double t, double psi, double& fpsiM)
     {
         std::array<double, 3> begin{ {0,0,0} }, end(begin);
-        fpsi_.find_initial( psi[0], begin[0], begin[1]);
-        if(mode_==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYTribeiro_,  0., begin, 2*M_PI, end, N_steps);
-        if(mode_==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequalarc_, 0., begin, 2*M_PI, end, N_steps);
-        fpsiM[0] = end[2]/2./M_PI;
+        fpsi_.find_initial( psi, begin[0], begin[1]);
+        using Vec = std::array<double,3>;
+        dg::SinglestepTimeloop<Vec> odeint;
+        if( mode_ == 0)
+            odeint.construct( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                    begin), fieldRZYTribeiro_);
+        if( mode_ == 1)
+            odeint.construct( dg::RungeKutta<Vec>( "Feagin-17-8-10",
+                    begin), fieldRZYTequalarc_);
+        odeint.integrate_steps(  0., begin, 2*M_PI, end, N_steps);
+        fpsiM = end[2]/2./M_PI;
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
@@ -188,6 +201,7 @@ struct FieldFinv
 /**
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010
  * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
 struct Ribeiro : public aGenerator2d
 {

@@ -6,7 +6,7 @@
 #include "backend/exceptions.h"
 
 #include "helmholtz.h"
-#include "cg.h"
+#include "pcg.h"
 #include "functors.h"
 
 const double eps = 1e-4;
@@ -37,11 +37,11 @@ int main()
     const dg::DVec chi = dg::evaluate( dg::LinearX(1.0,1.0), grid2d);
 
     dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d, alpha,dg::centered);
-    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2tilde(grid2d, dg::normed, dg::centered);
+    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2tilde(grid2d, dg::centered);
     gamma2barinv.set_chi(chi);
 
-    dg::Invert<dg::DVec> invertg2( x, grid2d.size(), eps);
-    dg::Invert<dg::DVec> invertg1( x, grid2d.size(), eps);
+    dg::PCG<dg::DVec> pcg2( x, grid2d.size());
+    dg::PCG<dg::DVec> pcg1( x, grid2d.size());
 
     dg::DVec rho = dg::evaluate( rhs, grid2d);
     dg::DVec rholap = dg::evaluate( dxrhs, grid2d);
@@ -51,9 +51,7 @@ int main()
     //test gamma2
     dg::Timer t;
     t.tic();
-    unsigned number = invertg2( gamma2barinv, x, rholap);
-            if(  number == invertg2.get_max())
-            throw dg::Fail( eps);
+    unsigned number = pcg2.solve( gamma2barinv, x, rholap, 1., w2d, eps);
     t.toc();
 
     //Evaluation
@@ -70,12 +68,12 @@ int main()
     std::cout << "Alternative test with two Helmholtz operators\n";
     dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d, alpha ,dg::centered);
     gamma1inv.set_chi( chi);
-    dg::Invert<dg::DVec> invertO(  x, grid2d.size(), eps/100);
-    dg::Invert<dg::DVec> invertOO( x, grid2d.size(), eps/100);
+    dg::PCG<dg::DVec> pcgO(  x, grid2d.size());
+    dg::PCG<dg::DVec> pcgOO( x, grid2d.size());
     t.tic();
-    unsigned number1 = invertO( gamma1inv, phi, rholap);
+    unsigned number1 = pcgO.solve( gamma1inv, phi, rholap, 1., w2d, eps/100);
     dg::blas1::pointwiseDot( phi, chi, phi);
-    unsigned number2 = invertOO( gamma1inv, x, phi);
+    unsigned number2 = pcgOO.solve( gamma1inv, x, phi, 1., w2d, eps/100);
     t.toc();
     //Evaluation
     dg::blas1::axpby( 1., sol, -1., x);

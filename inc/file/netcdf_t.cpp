@@ -16,7 +16,7 @@ typedef thrust::host_vector<double> HVec;
 
 int main()
 {
-    std::cout << "WRITE A TIMEDEPENDENT SCALAR, SCALAR FIELD, AND VECTOR FIELD TO A NETCDF4 FILE\n";
+    std::cout << "WRITE A TIMEDEPENDENT SCALAR, SCALAR FIELD, AND VECTOR FIELD TO NETCDF4 FILE test.nc\n";
     double Tmax=2.*M_PI;
     double NT = 10;
     double h = Tmax/NT;
@@ -40,8 +40,7 @@ int main()
     err = nc_def_var( ncid, "vectorX", NC_DOUBLE, 4, dim_ids, &vectorID[0]);
     err = nc_def_var( ncid, "vectorY", NC_DOUBLE, 4, dim_ids, &vectorID[1]);
     err = nc_def_var( ncid, "vectorZ", NC_DOUBLE, 4, dim_ids, &vectorID[2]);
-    err = nc_enddef( ncid);
-    size_t count[4] = {1, g.Nz(), g.n()*g.Ny(), g.n()*g.Nx()};
+    size_t count[4] = {g.nz(), g.Nz(), g.ny()*g.Ny(), g.nx()*g.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     for(unsigned i=0; i<=NT; i++)
     {

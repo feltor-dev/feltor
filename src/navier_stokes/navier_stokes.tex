@@ -1,0 +1,272 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+\newcommand{\PP}{H^+}
+\newcommand{\QQ}{H^-}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The heat diffusion project}
+\author{ M.~Wiesenberger and M.~Held}
+\maketitle
+
+\begin{abstract}
+    Test parallel advection and diffusion schemes on the 1d Navier-Stokes equations
+    along a parallel magnetic field.
+\end{abstract}
+\tableofcontents
+
+\section{Parallel advection schemes}
+In this section we want to focus on the discretization of the Navier-Stokes equation
+along a magnetic field-line:
+\begin{align}
+    \frac{\partial}{\partial t} n &= - \nc\left( nu\bhat\right) \\
+    \frac{\partial}{\partial t} u &= - \npar\left(\frac{u^2}{2}\right) - \frac{\tau}{\mu} \frac{\npar n}{n} + \nu_u \frac{\Delta_\parallel u}{n}
+\end{align}
+with
+\begin{align}
+\Delta_\parallel u &= \nabla\cdot ( \bhat\bhat\cdot\nabla u)
+\end{align}
+$\bhat = \bhat(\vec x)$ is the prescribed magnetic field unit vector,
+and $\nu_u$ is the viscosity coefficient parallel to this field.
+
+The first equation is a linear advection type equation while the second one includes
+a quadratic non-linearity (the Burger term $u^2/2$) which tends to generate
+shocks (at least in the dissipationless case). This is because crests of a wave
+travel faster than the valley of waves.
+The continuity equation can be written as
+\begin{align}
+    \frac{\partial}{\partial t} n = - \npar (nu) - nu \nc\bhat = -u\npar n - n \npar u - nu\nc \bhat
+\end{align}
+The first term on the right hand side is the advection term (of density with velocity u). The second term is the wave term, because together with $\npar n$ in the velocity
+equation it couples the two equations to make waves. This can be seen by linearizing
+the system around $n= 1 + \tilde n$, $u = \tilde u$
+\begin{align}
+    \frac{\partial^2}{\partial t^2} \tilde n = \frac{\tau}{\mu} \npar^2 \tilde n + \frac{\tau}{\mu} \npar \tilde n \nc\bhat
+\end{align}
+This equation describes sound waves with speed $\sqrt{\tau/\mu}$ and a
+dispersive term.
+
+The above equations have the following conservative formulation:
+\begin{align}
+    \frac{\partial}{\partial t} n  + \nc\left( nu \bhat\right) &= 0 \\
+    \frac{\partial}{\partial t} (\mu nu)  + \nc\left(\mu nu^2 \bhat\right) &=
+    -\tau \npar n + \mu \nu_u \Delta_\parallel u \\
+    \frac{\partial}{\partial t} \left(\tau n \ln n + \frac{1}{2}\mu nu^2\right)
+    + \nc\left( \left( \tau n ( 1 + \ln n)  +\mu \frac{1}{2} nu^2\right) u\bhat \right) &= \mu \nu_u u \Delta_\parallel u
+\end{align}
+A good scheme:
+\begin{itemize}
+    \item respects the above written conservation equations, in particular when
+        integrated over a flux-aligned volume the flux terms must vanish
+    \item works with the FCI discretization developed in previous sections
+\end{itemize}
+Note that the latter point excludes discontinuous Galerkin methods, which we have not
+yet developed for the FCI discretization.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Staggered grids in 1d}
+When $\bhat = \xhat$ the system reduces to the one-dimensional Navier-Stokes equations for which there is a large amount of literature on numerical schemes available
+( see for example \cite{LeVeque} and references therein).
+\begin{align}
+    \
+    \frac{\partial}{\partial t} n &= - \frac{\partial}{\partial x}\left( nu\right) \\
+    \frac{\partial}{\partial t} u &= - \frac{\partial}{\partial x}\left(\frac{u^2}{2} + \frac{\tau}{\mu} \ln n\right) + \nu_u \frac{1}{n}\frac{\partial^2}{\partial x^2} u
+\end{align}
+
+We here choose a class of schemes known as staggered grids. The main is to discretize
+the variables $n$ and $u$ on two grids that are adjoint to each other.
+If $n$ is discretized on the cell-centers $x_k$ then $u$ is discretized on the cell
+boundaries $x_{k+1/2}$. We will indicate this by writing $u^\dagger_k$ that is $u^\dagger_k = u_{k+1/2}$.
+We base our discretization on the finite volume scheme presented by
+\cite{Gunawan2015,Herbin2013}:
+\begin{align}
+    \frac{n_k^{n+1} - n_k^n}{\Delta t} = - \frac{1}{\Delta x}(\hat q^\dagger_k  - \hat q^\dagger_{k-1})
+\end{align}
+where
+\begin{align}
+    \hat q^\dagger_k := u^\dagger_k \begin{cases}
+        n_k     + \frac{1}{2}\Lambda( n_{k+1}-n_k    , n_k - n_{k-1})&\text{ if } u^\dagger_k \geq 0 \\
+        n_{k+1} - \frac{1}{2}\Lambda( n_{k+2}-n_{k+1}, n_{k+1} - n_k)&\text{ if } u^\dagger_k < 0
+    \end{cases}
+\end{align}
+and
+\begin{align}
+    \frac{(n_k^\dagger u_k^\dagger)^{n+1}-(n_k^\dagger u_k^\dagger)^{n}}{\Delta
+    t} = - \frac{1}{\Delta x} \left[ \hat f_{k+1} - \hat f_k -
+    \frac{\tau}{\mu} \left(n_{k+1}^{n+1} - n_k^{n+1}\right)  \right]
+\end{align}
+where $n^\dagger_k = \left(n_{k+1}+n_k\right)/2$ and $u_k =
+\left(u^\dagger_k + u^\dagger_{k-1}\right)/2$ (local shock speed in Burger's equation)
+and analogous for $q_k$ and
+\begin{align}
+    \hat f_k := q_k \begin{cases}
+        u^\dagger_{k-1} + \frac{1}{2}\Lambda( u^\dagger_{k}-u^\dagger_{k-1}, u^\dagger_{k-1} - u^\dagger_{k-2})&\text{ if } q_k \geq 0 \\
+        u^\dagger_k     - \frac{1}{2}\Lambda( u^\dagger_{k+1}-u^\dagger_k    , u^\dagger_k - u^\dagger_{k-1})&\text{ if } q_k < 0
+    \end{cases}
+\end{align}
+where we have the flux limiter
+\begin{align}
+\Lambda_{\text{minmod}}(x,y) &:=
+    \begin{cases}
+        \min(x,y) & \text{ if } x,y \geq 0 \\
+        \max(x,y) & \text{ if } x,y \leq 0 \\
+        0         & \text{ else }
+    \end{cases}
+    \\
+\Lambda_{\text{vanLeer}}(x,y) &:=
+    \begin{cases}
+        0               & \text{ if } xy \leq 0 \\
+        \frac{2xy}{x+y} & \text{ else }
+    \end{cases}
+\end{align}
+
+We note that this is a semi-implicit scheme (the pressure term in the momentum equation is implicit). The implicit equation can however be solved trivially because
+the density equation decouples and is completely explicit.
+
+We implement this scheme and investigate several variations in this notebook
+\url{https://mwiesenberger.github.io/advection/OneDimensional.html}.
+
+The authors of the scheme claim that if the pressure term is treated explicitly the
+scheme loses its shock conserving properties. We cannot reproduce this behaviour
+in our experiments. Furthermore, we were looking into discretizing the
+velocity equation over the momentum formulation because the Feltor equations
+prefer that formulation. In this formulation the equations are not shock-capturing
+but are very close to the original scheme once viscosity is added to the system.
+
+The best scheme that we found in this formulation is
+\begin{align}
+    \frac{n_k^{n+1} - n_k^n}{\Delta t} = &- \frac{1}{\Delta x}(q^\dagger_k  - q^\dagger_{k-1}) \\
+    \frac{(u_k^\dagger)^{n+1}-(u_k^\dagger)^{n}}{\Delta t} = &- \frac{1}{\Delta
+    x} \left( \hat f_{k+1} -\hat f_k\right) - \frac{1}{\Delta x}\left[
+        \frac{\tau}{\mu} \left(n_{k+1} - n_k\right) \frac{1}{2}\left(\frac{1}{n_{k+1}}
+    +\frac{1}{n_k}\right)\right]
+    \nonumber\\
+    &+ \frac{\nu_u}{n^\dagger_k (\Delta x)^2}
+    \left(u^\dagger_{k+1} - 2 u^\dagger_k + u^\dagger_{k-1}\right)
+\end{align}
+with
+\begin{align}
+    \hat q^\dagger_k &:= u^\dagger_k \begin{cases}
+        n_k     + \frac{1}{2}\Lambda( n_{k+1}-n_k    , n_k - n_{k-1})&\text{ if } u^\dagger_k \geq 0 \\
+        n_{k+1} - \frac{1}{2}\Lambda( n_{k+2}-n_{k+1}, n_{k+1} - n_k)&\text{ if } u^\dagger_k < 0
+    \end{cases}
+    \\
+    \hat f_k &:= \frac{1}{2}u_k \begin{cases}
+        u^\dagger_{k-1} + \frac{1}{2}\Lambda( u^\dagger_{k}-u^\dagger_{k-1}, u^\dagger_{k-1} - u^\dagger_{k-2})&\text{ if } u_k \geq 0 \\
+        u^\dagger_k     - \frac{1}{2}\Lambda( u^\dagger_{k+1}-u^\dagger_k    , u^\dagger_k - u^\dagger_{k-1})&\text{ if } u_k < 0
+    \end{cases}
+\end{align}
+\begin{tcolorbox}[title=Note]
+    We divide by the harmonic mean in the pressure gradient term, which from empirical tests
+    yields better convergence than other types like the arithmetic
+    or geometric mean
+\end{tcolorbox}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Elevating the scheme to three dimensions}
+Our idea to generalize the scheme to the FCI formulation is to use the
+locally fieldaligned coordinate system.
+Care must be taken as we need to integrate the fieldlines twice, once to the
+next plane and once to the adjoint plane halfway between the original planes.
+
+We denote the interpolation between the original planes with $I^+$ and $I^-$ and
+the interpolation between the half planes with $\PP$ and $\QQ$.
+We will use $\varphi$ as the fieldline-following coordinate as the resulting
+grid is then equidistant in the transformed coordinates.
+
+First, we denote quantities transformed into the coordinate system centered on $k$ as
+\begin{align}
+    \bar n_{k-2} = (I^-)^2n_{k-2} \quad \bar n_{k-1} = I^- n_{k-1}
+    \quad \bar n_k = n_k \quad
+    \bar n_{k+1} = I^+n_{k+1} \quad \bar n_{k+2} = (I^+)^2 n_k \nonumber\\
+\bar u_{k-1/2} = \QQ u_{k-1}^\dagger \quad \bar u_{k+1/2} = \PP u_k^\dagger \qquad\qquad\qquad\qquad
+\end{align}
+With these definitions we can discretize the continuity equation by
+\begin{align}
+    \frac{n_k^{n+1} - n_k^n}{\Delta t} = &-\frac{1}{\Delta\varphi \sqrt{G^k}}
+    \left( \sqrt{G^{k+1/2}}b^\varphi_{k+1/2}  \bar q_{k+1/2}
+    -\sqrt{G^{k-1/2}}b^\varphi_{k-1/2}  \bar q_{k-1/2} \right)
+\end{align}
+where $\sqrt{G^{k\pm 1/2}}$ and $b^\varphi_{k\pm 1/2}$ are the volume form and
+the contravariant $\varphi$ component of $\bhat$ on the half planes and
+\begin{align}
+    \bar q_{k+1/2} &:= \bar u_{k+1/2} \begin{cases}
+        \bar n_k     + \frac{1}{2}\Lambda( \bar n_{k+1}-\bar n_k    , \bar n_k - \bar n_{k-1})&\text{ if } \bar u_{k+1/2} \geq 0 \\
+        \bar n_{k+1} - \frac{1}{2}\Lambda( \bar n_{k+2}-\bar n_{k+1}, \bar n_{k+1} - \bar n_k)&\text{ if } \bar u_{k+1/2} < 0
+    \end{cases}
+\end{align}
+Next, we denote quantities transformed into the coordinate system centered on the adjoint plane $k$ as
+\begin{align}
+    \bar u^\dagger_{k-2} = (I^-)^2u^\dagger_{k-2} \quad \bar u^\dagger_{k-1} = I^- u^\dagger_{k-1}
+    \quad \bar u^\dagger_k = u^\dagger_k \quad
+    \bar u^\dagger_{k+1} = I^+u^\dagger_{k+1} \quad \bar u^\dagger_{k+2} = (I^+)^2 u^\dagger_k \nonumber\\
+    \bar n^\dagger_{k-1/2} = \QQ n_{k} \quad \bar n^\dagger_{k+1/2} = \PP n_{k+1} \qquad\qquad\qquad\qquad
+\end{align}
+Such that for the velocity equation we have
+\begin{align}
+    \frac{(u_k^\dagger)^{n+1}-(u_k^\dagger)^{n}}{\Delta t} = &- \frac{b^\varphi_k}{\Delta
+    \varphi} \left( \bar f^\dagger_{k+1/2} -\bar f^\dagger_{k-1/2}\right) -\frac{b^\varphi_k}{\Delta\varphi}
+        \left[\frac{\tau}{\mu} \left(\bar n^\dagger_{k+1/2} - \bar n^\dagger_{k-1/2}\right) \frac{1}{2}\left(\frac{1}{\bar n^\dagger_{k+1/2}}
+    +\frac{1}{\bar n^\dagger_{k-1/2}}\right)\right]
+    \nonumber\\
+    &+ \frac{2\nu_u
+        \left(\sqrt{G^{k+1/2}}b^\varphi_{k+1/2}b^\varphi_{k+1/2} (\bar u^\dagger_{k+1} - \bar u^\dagger_k)
+        - \sqrt{G^{k-1/2}}b^\varphi_{k-1/2}b^\varphi_{k-1/2} (\bar u^\dagger_k - \bar u^\dagger_{k-1})\right)
+    }{\sqrt{G^k}(\bar n^\dagger_{k+1/2} + \bar n^\dagger_{k-1/2}) (\Delta \varphi)^2}
+\end{align}
+The flux is discretized according to
+\begin{align}
+    \bar f^\dagger_{k+1/2} &:= \frac{1}{4}(\bar u^\dagger_{k+1}+\bar u^\dagger_k)
+    \begin{cases}
+        \bar u^\dagger_{k} + \frac{1}{2}\Lambda\left( \bar u^\dagger_{k+1} - \bar u^\dagger_k, \bar u^\dagger_k - \bar u^\dagger_{k-1}\right)&
+        \text{ if } \frac{1}{2}(\bar u^\dagger_{k+1}+\bar u^\dagger_k) \geq 0 \\
+        \bar u^\dagger_{k+1}   - \frac{1}{2}\Lambda\left( \bar u^\dagger_{k+2} - \bar u^\dagger_{k+1}, \bar u^\dagger_{k+1} -\bar u^\dagger_k \right) &
+        \text{ if } \frac{1}{2}(\bar u^\dagger_{k+1}+\bar u^\dagger_k) < 0
+    \end{cases}
+\end{align}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{2nd Elevating the scheme to three-dimensions}
+A second possibility is to first center the coordinate system on the fluxes on the staggered grid and then
+in a second step center on the time-derivative:
+\begin{align}
+n_k^\dagger =& \frac{1}{2}\left( \QQ n_k + \PP n_{k+1}\right) \\
+u_k =& \frac{1}{2}\left( \QQ u^\dagger_{k-1} + \PP u_{k}^\dagger\right)\\
+\left[\partial_\parallel u^\dagger \right]_k =& \left( \PP u^\dagger_{k} - \QQ
+u^\dagger_{k-1}\right) \\
+\left[\partial_\parallel n\right]^\dagger_k =& \left( \PP n_{k+1} - \QQ
+n_k\right)
+\end{align}
+Such that in total we have
+\begin{align}
+    \frac{n_k^{n+1} - n_k^n}{\Delta t} = &-\frac{1}{\Delta\varphi \sqrt{G^k}}
+    \left( \sqrt{G^{k+1/2}}b^\varphi_{k+1/2}  \PP \hat q_{k}^\dagger
+    -\sqrt{G^{k-1/2}}b^\varphi_{k-1/2}  \QQ \hat q_{k-1}^\dagger \right)
+     \\
+    \frac{(u_k^\dagger)^{n+1}-(u_k^\dagger)^{n}}{\Delta t} = &-
+ \frac{b^\varphi_k}{\Delta\varphi}\left( \PP\hat f_{k+1} - \QQ\hat f_k\right)
+ -\frac{\tau}{\mu}\frac{b^\varphi_k}{\Delta\varphi} \frac{\PP n_{k+1} - \QQ n_k}{2}\left( \frac{1}{\PP n_{k+1}} + \frac{1}{\QQ n_k} \right)
+    \nonumber\\
+    &+ \frac{\nu_u
+        \left(\sqrt{G^{k+1/2}}b^\varphi_{k+1/2}b^\varphi_{k+1/2} (I^+ u^\dagger_{k+1} - u^\dagger_k)
+        - \sqrt{G^{k-1/2}}b^\varphi_{k-1/2}b^\varphi_{k-1/2} ( u^\dagger_k - I^- u^\dagger_{k-1})\right)
+    }{n^\dagger_{k} \sqrt{G^k}(\Delta \varphi)^2}
+\end{align}
+The fluxes are discretized according to
+\begin{align}
+    \hat q^\dagger_k &:= u^\dagger_k \begin{cases}
+        \QQ n_k     + \frac{1}{2}\Lambda\left( (\partial_\parallel n)^\dagger_k, I^- (\partial_\parallel n)^\dagger_{k-1}\right)&\text{ if } u^\dagger_k \geq 0 \\
+        \PP n_{k+1} - \frac{1}{2}\Lambda\left( I^+(\partial_\parallel n)^\dagger_{k+1}, (\partial_\parallel n)^\dagger_k\right) &\text{ if } u^\dagger_k < 0
+    \end{cases}
+    \\
+    \hat f_k &:= \frac{1}{2}u_k\begin{cases}
+        \QQ u^\dagger_{k-1} + \frac{1}{2}\Lambda\left( (\partial_\parallel u^\dagger )_k, I^- (\partial_\parallel u^\dagger)_{k-1}\right)&\text{ if } u_k \geq 0 \\
+        \PP u^\dagger_{k}   - \frac{1}{2}\Lambda\left( I^+(\partial_\parallel u^\dagger)_{k+1}, (\partial_\parallel u^\dagger)_k\right) &\text{ if } u_k < 0 \\
+    \end{cases}
+\end{align}
+
+%..................................................................
+\bibliography{../common/references}
+%..................................................................
+
+\end{document}

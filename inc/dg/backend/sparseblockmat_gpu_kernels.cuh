@@ -28,7 +28,9 @@ template<class value_type>
             j=right_range[0]+row%right_;
         int idx = ((s*num_rows+i)*n+k)*right_size+j;
         //idx != row ( if right_range[0] != 0)
-        y[idx]*= beta;
+        //y[idx]*= beta;
+        // if y[I] isnan then even beta = 0 does not make it 0
+        y[idx] = beta == 0 ? (value_type)0 : y[idx]*beta;
         for( int d=0; d<blocks_per_line; d++)
         {
             value_type temp=0;
@@ -59,6 +61,8 @@ template<class value_type, size_t n, size_t blocks_per_line>
     const int grid_size = gridDim.x*blockDim.x;
     const int right_ = right_range[1]-right_range[0];
     //every thread takes num_rows/grid_size rows
+    if( beta != 0)
+    {
     for( int row = thread_id; row<size; row += grid_size)
     {
         value_type temp[blocks_per_line]={0};
@@ -73,7 +77,7 @@ template<class value_type, size_t n, size_t blocks_per_line>
                 for( int q=0; q<n; q++) //multiplication-loop
                     temp[d] = fma( data[ B+q], x[(J+q)], temp[d]);
             }
-            y[row]*= beta;
+            y[row] = y[row]*beta;
             for( int d=0; d<blocks_per_line; d++)
                 y[row] = fma( alpha, temp[d], y[row]);
         }
@@ -92,10 +96,52 @@ template<class value_type, size_t n, size_t blocks_per_line>
             }
             int idx = ((s*num_rows+i)*n+k)*right_size+j;
             //idx != row ( if right_range[0] != 0)
-            y[idx]*= beta;
+            y[idx] = y[idx]*beta;
             for( int d=0; d<blocks_per_line; d++)
                 y[idx] = fma( alpha, temp[d], y[idx]);
         }
+    }
+    }
+    else
+    {
+    for( int row = thread_id; row<size; row += grid_size)
+    {
+        value_type temp[blocks_per_line]={0};
+        if(right_size==1)
+        {
+            int rrn = row/n, k = row%n;
+            int s=rrn/num_rows, i = (rrn)%num_rows;
+            for( int d=0; d<blocks_per_line; d++)
+            {
+                int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
+                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                for( int q=0; q<n; q++) //multiplication-loop
+                    temp[d] = fma( data[ B+q], x[(J+q)], temp[d]);
+            }
+            y[row] = 0;
+            for( int d=0; d<blocks_per_line; d++)
+                y[row] = fma( alpha, temp[d], y[row]);
+        }
+        else
+        {
+            int rr = row/right_size;
+            int rrn = rr/n, k = rr%n;
+            int s=rrn/num_rows, i = (rrn)%num_rows;
+            int j=right_range[0]+row%right_;
+            for( int d=0; d<blocks_per_line; d++)
+            {
+                int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
+                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                for( int q=0; q<n; q++) //multiplication-loop
+                    temp[d] = fma( data[ B+q], x[(J+q)*right_size+j], temp[d]);
+            }
+            int idx = ((s*num_rows+i)*n+k)*right_size+j;
+            //idx != row ( if right_range[0] != 0)
+            y[idx] = 0;
+            for( int d=0; d<blocks_per_line; d++)
+                y[idx] = fma( alpha, temp[d], y[idx]);
+        }
+    }
     }
 }
 

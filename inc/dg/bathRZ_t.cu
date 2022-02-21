@@ -61,8 +61,8 @@ int main()
         colors.scalemin() = (float)thrust::reduce( visual_old.begin(), visual_old.end(), colors.scalemax(), thrust::minimum<double>()  );
         title <<"bath / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
 
-        render.renderQuad( visual_old, grid_old.n()*grid_old.Nx(), grid_old.n()*grid_old.Ny(), colors);
-        render.renderQuad( visual_new, grid_new.n()*grid_new.Nx(), grid_new.n()*grid_new.Ny(), colors);
+        render.renderQuad( visual_old, grid_old.nx()*grid_old.Nx(), grid_old.ny()*grid_old.Ny(), colors);
+        render.renderQuad( visual_new, grid_new.nx()*grid_new.Nx(), grid_new.ny()*grid_new.Ny(), colors);
         title << std::fixed;
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");

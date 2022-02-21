@@ -1,0 +1,421 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+
+\usepackage{minted}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The esol project}
+\author{M.~Held}
+\maketitle
+
+\begin{abstract}
+  This is a program for 2d isothermal full-f gyro-fluid turbulence simulations 
+that cover the edge and scrape off layer and include different treatments of the 
+polarization charge
+\end{abstract}
+
+\section{Equations}
+Currently we implemented $4$ slightly different sets of equations. $n$ is the 
+electron density, $N$ is the ion gyrocentre density. $\phi$ is the electric 
+potential. We
+use Cartesian coordinates $x$, $y$.
+\subsection{Models}
+\subsubsection{Full-F gyro-fluid models}
+The full-f models ("ff-O2-OB" \& "ff-lwl-OB" \& "ff-lwl" \& "ff-O2") share the 
+same evolution equations
+\begin{subequations}
+\begin{align}
+ \frac{\partial n}{\partial t}     &= 
+    \frac{1}{B}\{ n, \phi\} 
+  + \kappa n\frac{\partial \phi}{\partial y} 
+  -\kappa \frac{\partial n}{\partial y} + \Lambda_{n,\parallel}
+  - \nu \Delta_\perp^2 n  \\
+  \frac{\partial N}{\partial t} &=
+  \frac{1}{B}\{ N, \psi\} 
+  + \kappa N\frac{\partial \psi}{\partial y} 
+  + \tau \kappa\frac{\partial N}{\partial y} + \Lambda_{N,\parallel}-\nu 
+\Delta_\perp^2 N \\
+   \vec{\nabla}\cdot \vec{P}_2 &= \Gamma_1 N-n
+\end{align}
+\end{subequations}
+and are based upon a ``radially'' varying magnetic field magnitude
+\begin{align}
+ B(x)^{-1} = \kappa x +1-\kappa X 
+\end{align}
+The full-f models differ only in the treatment the  polarization terms 
+\(\psi_2\) and \(\vec{P}_2\), given in Sec.~\ref{sec:polarization}
+%%%%%
+\subsubsection{Polarization and FLR terms}
+\label{sec:polarization}
+The FLR and polarization operators enter the gyro-fluid potential (\(\psi)\) as 
+well as the polarization density.
+The operators and gyro-fluid potential are
+\begin{align}
+ \Gamma_1 &= ( 1- \tau/2 \Delta_{\perp})^{-1} &
+ \Gamma_0 &= ( 1- \tau\Delta_{\perp})^{-1} &
+   \psi = \Gamma_1 \phi + \psi_2 
+\end{align}
+The  (negative) polarization charge is~\cite{Held2020} 
+\begin{align}
+  \vec{\nabla}\cdot \vec{P}_2 &=    
+\begin{cases}
+-\frac{N_0}{B_0^2}\Delta_{\perp} \phi , 
+        &\ \text{if "ff-lwl-OB"} \\
+-\frac{N_0}{B_0^2}\Gamma_0\Delta_{\perp} \phi, 
+      &\ \text{if "ff-O2-OB"} \\
+-\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right)
+       &\ \text{if "ff-lwl"} \\
+-\sqrt{\Gamma_0}\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp\sqrt{\Gamma_0} 
+\phi\right) 
+         &\ \text{if "ff-O2"} 
+\end{cases}
+\end{align}
+The polarization part of the gyro-fluid potential is
+\begin{align}
+\psi_2&=    
+\begin{cases}
+0 , 
+        &\ \text{if "ff-lwl-OB"} \\
+0, 
+      &\ \text{if "ff-O2-OB"} \\
+- \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}
+       &\ \text{if "ff-lwl"} \\
+- \frac{1}{2} \frac{(\nabla\sqrt{\Gamma_0}\phi)^2}{B^2}
+         &\ \text{if "ff-O2"} 
+\end{cases}
+\end{align}
+\subsubsection{Closure of the parallel dynamics}
+\label{sec:parallelclosure}
+The closure terms for the parallel dynamics exploit a two region 
+approach~\cite{HeldPhD}: a closed field line and an open field line region. The 
+transition between this regions is mimiced by the damping function \( 
+h_{\pm}(x)\)
+where \(h_{+}\) is a polynomial Heaviside function (cf. feltor docu) and the 
+\(-\) refers to its reflection in x-direction. The polynomial Heaviside function 
+parameters are \(x_s\) and \(\sigma_s\).
+Here, \(x_s\) represents the position of the separatrix and \(\sigma_s\) is the 
+width of the transition. 
+\\
+The complete parallel closure consists then of two contributions:
+\begin{align}
+ \Lambda_{n,\parallel} &= \sum_{b \in \left\{+,-\right\} 
+}\Lambda_{n,\parallel,b} &
+ \Lambda_{N,\parallel} &= \sum_{b \in \left\{+,-\right\} } 
+\Lambda_{N,\parallel,b}
+\end{align}
+
+\paragraph{Edge:} In the edge region we take the modified Hasegawa-Waktani ("modified")
+closure~\cite{Held2018}
+\begin{align}
+ \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\widetilde{\phi} - 
+\widetilde{\ln(n)} \right] \\
+ \Lambda_{N,\parallel,-} &= 0
+\end{align}
+with the fluctuation given by \(\widetilde{f} := f - \langle f\rangle_y\) and 
+the y-average \(\langle f\rangle_y:= \int dy f / L_y\). The adiabaticity 
+parameter is defined as \(\alpha := T_{e,\parallel} 
+k_\parallel^2/(\eta_\parallel e^2 n_{e,0} \Omega_{i,0} )\).
+\\
+Alternatively, the ordinary Hasegawa-Wakatani ("ordinary") closure is given by~\cite{Held2018}
+\begin{align}
+ \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\phi - 
+\ln(n/\langle n\rangle) \right] \\
+ \Lambda_{N,\parallel,-} &= 0
+\end{align}
+The third option is to normalize the logarithmic term to a constant reference density ("ordinary\_nonper")
+\begin{align}
+ \Lambda_{n,\parallel,-} &= \alpha h_{-}(x) \left[\phi - 
+\ln(n/n_0) \right] \\
+ \Lambda_{N,\parallel,-} &= 0
+\end{align}
+\paragraph{Scrape-off-Layer:} In the scrape off layer we assume Bohm sheath 
+boundary conditions~\cite{Mosetto2015}~\footnote{Note that strictly speaking the 
+boundary conditions for the density and electric potential are Neumann, in 
+particular \(\partial_s n_e (\vec{x}) |_{\pm L_\parallel /2 } =0 \) and 
+\(\partial_s  n_e (\vec{x}) |_{\pm L_\parallel /2 } = 0\).}
+\begin{align}
+n_e (x,y,\pm L_\parallel /2 ) &= n_e (\vec{x}) &
+\phi (x,y,\pm L_\parallel /2 ) &= \phi (\vec{x})\\
+ u_e (x,y,\pm L_\parallel /2 ) &= \pm \exp{(\Lambda_{sh} - \phi)} &
+ U_i (x,y,\pm L_\parallel /2 ) &= \pm\sqrt{1+\tau}
+\end{align}
+where we introduced the constant (also known as sheath or Bohm potential) 
+\(\Lambda_{sh} := \ln \sqrt{m_i/(2 \pi m_e)} = \ln  (1/\sqrt{|\mu_e| 2 \pi})\). 
+With this we obtain for the closure terms~\cite{HeldPhD}
+\begin{align}
+ \Lambda_{n,\parallel,+} &:= -h_{+}(x) n \lambda \exp{(\Lambda_{sh} - \phi)} \\
+ \Lambda_{N,\parallel,+} &:=  -\sqrt{1 + \tau} \lambda \Gamma_1^{-1} ( h_{+}(x)  
+n)
+\end{align}
+with the so called sheath dissipation parameter \(\lambda = 
+\rho_s/L_\parallel\).
+Note that this results into the following term in the vorticity density equation
+\begin{align}
+ \Lambda_{\mathcal{W},\parallel,+} := \Gamma_1\Lambda_{N,\parallel,+} - 
+\Lambda_{n,\parallel,+} = -\lambda  h_{+}(x)  n \sqrt{1 + \tau} \left[1  -  
+\frac{1}{\sqrt{1 + \tau}}\exp{(\Lambda_{sh} - \phi)} \right]
+\end{align}
+In order to circumvent \ExB shear flows on the boundaries when we choose Dirichlet boundary conditions we can renormalize our potential. We choose
+\begin{align}
+ \phi' := \phi - \Lambda_{sh}+ \ln{\sqrt{1+\tau}}
+\end{align}
+and substitute into the relevant closure term
+\begin{align}
+ \Lambda_{n,\parallel,+} &:= -\sqrt{1 + \tau}h_{+}(x) n \lambda \exp{(- \phi')} 
+\end{align}
+to obtain
+\begin{align}
+ \Lambda_{\mathcal{W},\parallel,+} :=  -\lambda  h_{+}(x)  n \sqrt{1 + \tau} \left[1  -  
+\exp{(-\phi')} \right]
+\end{align}
+which is vanishing for \(\phi'=0\) at the boundaries. Note that the density and vorticity density sink rate increases with \(\tau\)!
+\subsubsection{Sources}
+The particle source is related to the the ion gyro-center source 
+and the electric potential via the transformation rule
+\begin{align}
+ S_n =\Gamma_1 S_N +
+ \begin{cases}
+0, 
+        &\ \text{if "ff-lwl-OB"} \\
+0, 
+      &\ \text{if "ff-O2-OB"} \\
+\nabla\cdot \left(\frac{S_N}{B^2} \nabla_\perp \phi\right)
+       &\ \text{if "ff-lwl"} \\
+\sqrt{\Gamma_0}\nabla\cdot \left(\frac{S_N}{B^2} \nabla_\perp\sqrt{\Gamma_0} 
+\phi\right) 
+         &\ \text{if "ff-O2"} 
+\end{cases}
+\end{align}
+Instead, we could use the long wavelength approximation \(
+S_N =(1+\tau/2 \Delta_\perp) S_n + \vec{\nabla} \cdot \left(\frac{S_n}{B^2} 
+\vec{\nabla}_\perp \phi\right)\). However this transformation rule is not exact 
+and care has to be taken when short wavelength structures arise! \\
+Another possibility is to neglect the polarization charge term in the exact transformation rule, which results in a vanishing source term in the evolution equation of the polarization charge density.
+\paragraph{Forced profile (``forced'')}
+The following source forces the poloidally averaged profile to a prescribed profile in a limited region if the averaged profile is below the prescribed profile. 
+\begin{align}
+ S_N := \omega_s p \Theta\left(p \right)
+\end{align}
+with \(p = h_s (n_{prof,s} - \langle N \rangle_y)\) with \(h_s\) a polynomial heaviside function.
+
+\paragraph{Constant influx (``flux'')}
+\begin{align}
+ S_N := \omega_s n_{prof,s} 
+\end{align}
+with the source profile function 
+\begin{align}
+ n_{prof,s}&:= 
+ \begin{cases}
+   e^{1+\left(\frac{(x-x_s)^2}{2 \sigma_s^2}-1\right)^{-1}}, &\frac{(x-x_s)^2}{2 
+\sigma_s^2}<1  \\
+   0, & else
+ \end{cases}
+\end{align}
+with \(x_s:= l_x  f_s\)
+\subsection{Initialization}
+We follow the strategy to enforce the initial fields of the physical variables, 
+the electron density \(n\) and the electric potential \(\phi\), in order to 
+compute the initial ion gyro-center density.
+\subsubsection{Non-rotating Gaussian ("blob")}
+Initialization of $n$ is a Gaussian 
+\begin{align}
+    n(x,y,0) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
+    \phi(x,y)&=const.
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position 
+coordinates, $A$ is the amplitude and $\sigma$ the
+radius of the blob.
+We initialize 
+\begin{align}
+    N &= \Gamma_1^{-1} n 
+\end{align}
+\subsubsection{Gaussian with zero polarization charge density("blob\_zeropol")}
+Initialization of $n$ is a Gaussian 
+\begin{align}
+    n(x,y,0) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position 
+coordinates, $A$ is the amplitude and $\sigma$ the radius of the blob. We 
+initialize then
+\begin{align}
+    N &= n 
+\end{align}
+so that the total polarization charge vanishes  \(\vec{\nabla}\cdot \vec{P}=0\).
+\subsection{Diagnostics}
+Diagnostics are the mass \(M\)
+\begin{align}
+    M(t) &:= \int dA (n)  \\
+\end{align}
+\section{Numerical methods}
+discontinuous Galerkin on structured grid
+\rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ 
+\midrule
+coordinate system & Cartesian 2D & equidistant discretization of $[0,l_x] \times 
+[0,l_y]$, equal number of Gaussian nodes in x and y \\
+matrix inversions & multigrid conjugate gradient &  \\
+matrix functions & cauchy integral  method & \\
+\ExB advection & centered upwind-scheme\\
+curvature terms & centered difference & \\
+time &  adaptive explicit RK or explicit multistep  &  \\
+\bottomrule
+\end{longtable}
+\section{Compilation and useage}
+There are two programs esol.cu and esol\_hpc.cu . Compilation with
+\begin{verbatim}
+make <esol esol_hpc esol_mpi> device = <omp gpu>
+\end{verbatim}
+Run with
+\begin{verbatim}
+path/to/feltor/src/esol/esol input.json
+path/to/feltor/src/esol/esol_hpc input.json output.nc
+echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/esol/esol_mpi/
+    input.json output.nc
+\end{verbatim}
+All programs write performance informations to std::cout.
+The first is for shared memory systems (OpenMP/GPU) and opens a terminal window 
+with life simulation results.
+ The
+second can be compiled for both shared and distributed memory systems and uses 
+serial netcdf in both cases
+to write results to a file.
+For distributed
+memory systems (MPI+OpenMP/GPU) the program expects the distribution of 
+processes in the
+x and y directions as command line input parameters.
+
+\subsection{Input file structure}
+Input file format: json
+\begin{minted}[texcomments]{js}
+"grid":
+{
+    "n" :  5,    //Legendre polynomial order in x and y 
+    "Nx" : 32,   //grid points in x
+    "Ny" : 32,   //grid points in y
+    "lx"  : 64,  //Box size in x in units of $\rho_s$
+    "ly"  : 64   //Box size in y in units of $\rho_s$
+},
+"timestepper":
+{
+    "type": "adaptive", //"adaptive" (explicit adaptive RK) or "multistep" (explicit multistep)
+    "tableau": "Bogacki-Shampine-4-2-3", // recommended "Bogacki-Shampine-4-2-3" (default adaptive) or "TVB-3-3" (multistep)
+    "rtol": 1e-5, //relative tolerance of adaptive time stepper
+    "atol": 1e-7, //absolute tolerance of adaptive time stepper
+    "dt" : 0.1   //time step in units of $c_s/\rho_s$ for multistep. Also determines together with itstep output step $dt_{out} = dt itstp$
+},
+"output":
+{
+    "type": "glfw",  // output format "glfw" & "netcdf",
+    "itstp"  : 1,    //time steps between outputs
+    "maxout" : 2,    //\# of netcdf outputs
+    "n" : 5,         //Legendre polynomial order in x and y for netcdf output
+    "Nx" : 32,       //grid points in x for netcdf output
+    "Ny" : 32        //grid points in y for netcdf output
+},    
+"elliptic":
+{
+    "stages"     : 3, //\# of stages of the multigrid solver for the (tensor) elliptic operator
+    "eps_pol"    : [1e-6,1.0,1.0], //accuracy at each stage of the multigrid solver
+    "jumpfactor": 1 //jump factor of the (tensor) elliptic operator
+},
+"helmholtz":
+{
+    "eps_gamma1" :   1e-8, //accuracy of the $\Gamma_1$ operator
+    "eps_gamma0" :   1e-6, //accuracy of the $\Gamma_0$ or $\sqrt{\Gamma_0}$ operator
+    "maxiter_sqrt":  200,  //max iterations of the $\sqrt{\Gamma_0}$ computation
+    "maxiter_cauchy": 35,  //max iterations of the Cauchy terms in $\sqrt{\Gamma_0}$ computation
+    "eps_cauchy" :  1e-12  //accuracy of the Cauchy integral in the $\sqrt{\Gamma_0}$ computation
+},
+
+"physical":
+{
+    "curvature"  : 0.00015, //$\kappa$
+    "tau"  : 4.0,           //$\tau_i = T_{i0}/(T_{e0} Z_i)$
+    "alpha"  : 0.005,       //adiabaticity $\alpha:= T_{e,\parallel} k_\parallel^2/(\eta_\parallel e^2 n_{e,0} \Omega_{i,0} )$
+    "hwmode" : "modified"   //hasegawa-wakatani model $\in$ ("modified" ,"ordinary" ,"ordinary\_nonper" )
+    "lambda"  : 0.000001,    //sheath dissipation $\lambda:= \rho_{s0}/L_\parallel$
+    "mu_e"  : -0.000272121, //$\mu_e:=m_e/(Z_e m_i)$ negative electron to ion mass ratio
+    "equations": "ff-O2",   //model $\in$ ("ff-lwl-OB" ,"ff-O2-OB" ,"ff-lwl" ,"ff-O2" ,"ff-O4" )
+    "renormalize": true,    //Renormalize potential (useful for DIR conditions with finite sheath dissipation)
+    "xfac_sep"  : 0.3,      //$f_s$ x-position of separatrix in units of $l_x$     
+    "sigma_sep"  : 0.5      //$\sigma_s$ width of damping function $h_{pm}$ of separatrix in units of $\rho_{s0}$    
+},
+"source":
+{
+     "source_shape" :"cauchy",  //type of profile $\in$ ("cauchy", "gaussian")
+     "source_type" : "flux",    //type of source $\in$ ("forced", "flux")
+     "source_rel" : "zero_pol", //relation for source, $\in$ ("zero-pol", "finite-pol")
+     "omega_s" : 0.005,         //source rate in units of $\Omega_i$
+     "xfac_s": 0.1,             //position of source in units of the $l_x$
+     "sigma_s" : 5.0,           //width of source in units of $\rho_{s0}$
+     "n_min" :1e-3,             //minimum density that is enforced
+     "omega_n": 1e8             //forcing rate for minimum density 
+},
+"profile":
+{
+     "bgproftype": "exp",  //type of background profile $\in$ ("exp","tanh")
+     "bgprofamp" : 1.0, //amplitude of background in units of $n_{e0}$, typically 1
+     "profamp": 0.0,    //amplitude of profile in units of $n_{e0}$
+     "ln": 20.0,    //width of gradient region of the profile in units of $\rho_{s0}$
+     "xfac_p": 0.5   //position of tanh profile in units of box size in x-direction
+},
+"init":
+{
+    "type"       : "blob",  // Gaussian blob initialization
+    "amplitude"  :1.0,      //$A$ of the Gaussian blob
+    "mx": 1.0,              //Wavenumber in x-direction
+    "my":1.0,               //Wavenumber in y-direction
+    "sigma"  : 5,           //$\sigma$ of Gaussian blob units of $\rho_s$
+    "posX"  : 0.5,          //x initial position $\in (0,1)$
+    "posY"  : 0.5           //y initial position $\in (0,1)$
+    "xfac_d": 0.05,         //damping position of initial perturbation at left and right boundaries in x
+    "sigma_d" : 4.0         //damping transition width
+},
+"nu_perp"  : 0e-5,          //hyper-diffusion parameter
+"bc_x"  : "DIR_NEU",        //Boundary condtion in x for $\phi$ and $\psi$
+"bc_N_x": "NEU",            //Boundary condition in x for the densities
+"bc_y"  : "PER",             //Boundary condtion in y
+"formulation": "conservative"//formulation of the continuity equations $\in ("conservative","ln")$
+\end{minted}
+\subsection{Structure of output file}
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} & 
+ \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &             text attribute & 1 & verbose input file as a string \\
+energy\_time             & Dataset & 1 & timesteps at which 1d variables are 
+written \\
+time                     & Dataset & 1 & time at which fields are written \\
+x                        & Dataset & 1 & x-coordinate  \\
+y                        & Dataset & 1 & y-coordinate \\
+electrons                & Dataset & 3 (time, y, x) & electon density $n$ \\
+ions                     & Dataset & 3 (time, y, x) & ion density $N$ \\
+potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  
+\\
+vorticity                & Dataset & 3 (time, y, x) & z-component of ExB 
+vorticity  $\Omega_E = \vec{\nabla}\cdot (B^{-1} \vec{\nabla}_{\perp}\phi)$  \\
+lperpinv                 & Dataset & 3 (time, y, x) & inverse perp density gradient length scale $L_\perp^{-1} := |\nabla_\perp n| / n$ \\
+lperpinvphi                 & Dataset & 3 (time, y, x) & inverse perp eletric potential gradient length scale $L_{\perp,\phi}^{-1} := |\nabla_\perp \phi| $ \\
+% dEdt                     & Dataset & 1 (energy\_time) & change of energy per 
+% dissipation              & Dataset & 1 (energy\_time) & diffusion integrals  
+\\
+% energy                   & Dataset & 1 (energy\_time) & total energy integral  
+\\
+% mass                     & Dataset & 1 (energy\_time) & mass integral   \\
+\bottomrule
+\end{longtable}
+%..................................................................
+\bibliography{../common/references}
+%..................................................................
+\bibliographystyle{aipnum4-1.bst}
+
+\end{document}

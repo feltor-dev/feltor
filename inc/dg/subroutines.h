@@ -3,6 +3,16 @@
 #include "dg/backend/config.h"
 
 namespace dg{
+/**
+ * @brief \f$ f(x) = x\f$
+ * @ingroup basics
+ */
+struct IDENTITY
+{
+    template<class T>
+    DG_DEVICE T operator()(T x)const{return x;}
+};
+
 
 ///@addtogroup binary_operators
 ///@{
@@ -56,6 +66,7 @@ DG_DEVICE void operator()( T1 x, T2& y) const
 
 ///@addtogroup variadic_evaluates
 ///@{
+
 ///\f$ y = x_1/x_2 \f$
 struct divides
 {
@@ -148,15 +159,15 @@ DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
 ///@addtogroup variadic_subroutines
 ///@{
 
-///@brief \f$ y = \sum_i a_i x_i,\quad \tilde y = \sum_i \tilde a_i x_i \f$
+///@brief \f$ y = \sum_i a_i x_i + b y,\quad \tilde y = \sum_i \tilde a_i x_i + \tilde b y \f$
 struct EmbeddedPairSum
 {
     ///@brief \f[ \sum_i \alpha_i x_i \f]
     template< class T1, class ...Ts>
-DG_DEVICE void operator()( T1& y, T1& yt, T1 a, T1 at, T1 x, Ts... rest) const
+DG_DEVICE void operator()( T1& y, T1& yt, T1 b, T1 bt, Ts... rest) const
     {
-        y = a*x;
-        yt = at*x;
+        y = b*y;
+        yt = bt*yt;
         sum( y, yt, rest...);
     }
     private:
@@ -183,6 +194,15 @@ struct Evaluate
     Evaluate( BinarySub sub, Functor g):
         m_f( sub),
         m_g( g) {}
+#ifdef __CUDACC__
+// cuda compiler spits out a lot of warnings if
+// e.g. dg::transform is used on host vectors with host function
+// hd_warning_disable is unfortunately undocumented, but let's try
+// If it ever causes trouble we can remove it again
+// it just suppresses compiler warnings:
+// https://stackoverflow.com/questions/55481202/how-to-disable-cuda-host-device-warning-for-just-one-function
+#pragma hd_warning_disable
+#endif
     template< class T, class... Ts>
 DG_DEVICE void operator() ( T& y, Ts... xs){
         m_f(m_g(xs...), y);
@@ -348,10 +368,10 @@ struct Compose
  * @tparam Functor Inner functor, takes an arbitrary number of parameters and returns one \c return_type_g \c g(value_type0,value_type1,...)
  * @param f outer functor
  * @param g inner functor
- * @attention only works for host functions. The rationale is that this function is
- * intended to work with lambda functions and is to be used in the \c dg::evaluate function.
- * If a version for device functions is ever needed
- * it can be easily provided but the lambda support for CUDA is rather poor.
+ * @attention only works for host functions. The rationale is that this
+ * function is intended to work with lambda functions and previously nvcc did
+ * not support lambdas. If a version for device functions is ever needed it can
+ * be provided.
  *
  * @return a function object that forwards all parameters to g and returns the
  * return value of f, which is \f$ f(g(x_0,x_1,...)) \f$

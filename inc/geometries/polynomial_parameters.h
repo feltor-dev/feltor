@@ -60,24 +60,23 @@ struct Parameters
      * @copydoc hide_polynomial_json
      * @sa dg::geo::description to see valid values for the %description field
      * @param js valid Json object (see code above to see the valid key : value pairs)
-     * @param mode determine what happens when a key is missing
      * @note the default values in brackets are taken if the variables are not found in the input file
      * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
-    Parameters( const Json::Value& js, dg::file::error mode = dg::file::error::is_silent) {
-        pp  = dg::file::get( mode, js, "PP", 1).asDouble();
-        pi  = dg::file::get( mode, js, "PI", 1).asDouble();
-        M = dg::file::get( mode, js, "M", 1).asUInt();
-        N = dg::file::get( mode, js, "N", 1).asUInt();
+    Parameters( const dg::file::WrappedJsonValue& js) {
+        pp  = js.get( "PP", 1).asDouble();
+        pi  = js.get( "PI", 1).asDouble();
+        M = js.get( "M", 1).asUInt();
+        N = js.get( "N", 1).asUInt();
         c.resize(M*N);
         for (unsigned i=0;i<M*N;i++)
-            c[i] = dg::file::get_idx( mode, js, "c", i, 0.).asDouble();
+            c[i] = js["c"].get(i,0.).asDouble();
 
-        R_0  = dg::file::get( mode, js, "R_0", 0.).asDouble();
-        a  = R_0*dg::file::get( mode, js, "inverseaspectratio", 0.).asDouble();
-        elongation=dg::file::get( mode, js, "elongation", 1.).asDouble();
-        triangularity=dg::file::get( mode, js, "triangularity", 0.).asDouble();
-        description = dg::file::get( mode, js, "description", "standardX").asString();
+        R_0  = js.get( "R_0", 0.).asDouble();
+        a  = R_0*js.get( "inverseaspectratio", 0.).asDouble();
+        elongation=js.get( "elongation", 1.).asDouble();
+        triangularity=js.get( "triangularity", 0.).asDouble();
+        description = js.get( "description", "standardX").asString();
     }
     /**
      * @brief Put values into a json string

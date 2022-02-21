@@ -1,0 +1,7 @@
+{
+
+    "rows": 2, //# of rows
+    "cols": 2, //# of cols
+    "width": 1000, //window width (in pixel)
+    "height": 1000 //window height(in pixel)
+}

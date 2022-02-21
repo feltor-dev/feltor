@@ -11,20 +11,6 @@
 #include "evaluation.h"
 #include "weights.h"
 
-struct exp_function{
-DG_DEVICE
-double operator()( double x)
-{
-    return exp(x);
-}
-};
-struct sin_function{
-DG_DEVICE
-double operator()( double x)
-{
-    return sin(x);
-}
-};
 template<class T>
 T function(T x, T y)
 {
@@ -36,7 +22,7 @@ T function(T x, T y)
 }
 double function3d( double x, double y, double z)
 {
-        return exp(x)*exp(y)*exp(z);
+    return exp(x)*exp(y)*exp(z);
 }
 
 
@@ -49,8 +35,10 @@ int main()
 
     dg::Grid1d g1d( 1, 2, n, 12);
     dg::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48);
+    //dg::Grid2d g2d( {0.0, 6.2831853071795862, 3, 48}, {0.0, 6.2831853071795862, 5, 28});
     dg::RealGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48);
     dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
+    //dg::Grid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx});
 
     //test evaluation functions
     const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( exp, g1d));
@@ -106,30 +94,35 @@ int main()
     std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n\n";
 
     std::cout << "TEST result of a sin and exp function to compare compiler specific math libraries:\n";
-    dg::DVec x(1, 6.12610567450009658);
-    dg::blas1::transform( x, x, sin_function() );
+    dg::DVec x(100, 6.12610567450009658);
+    dg::blas1::transform( x, x, []DG_DEVICE(double x){ return sin(x);} );
     res.d = x[0];
     std::cout << "Result of sin:    "<<res.i<<"\n"
               << "          GCC:    -4628567870976535683 (correct)"<<std::endl;
     dg::DVec y(1, 5.9126151457310376);
-    dg::blas1::transform( y, y, exp_function() );
+    dg::blas1::transform( y, y, []DG_DEVICE(double x){return exp(x);} );
     res.d = y[0];
     std::cout << "Result of exp:     "<<res.i<<"\n"
               << "          GCC:     4645210948416067678 (correct)"<<std::endl;
 
     //TEST OF INTEGRAL
-    dg::HVec integral_num = dg::integrate( cos, g1d);
+    dg::HVec integral_num = dg::integrate( cos, g1d, dg::forward);
     dg::HVec integral_ana = dg::evaluate( sin, g1d);
     dg::blas1::plus( integral_ana, -sin(g1d.x0()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
-    std::cout << " Error norm of  1d integral function "<<norm<<"\n";
+    std::cout << " Error norm of  1d integral function (forward) "<<norm<<"\n";
+    integral_num = dg::integrate( cos, g1d, dg::backward);
+    integral_ana = dg::evaluate( sin, g1d);
+    dg::blas1::plus( integral_ana, -sin(g1d.x1()));
+    dg::blas1::axpby( 1., integral_ana, -1., integral_num);
+    norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
+    std::cout << " Error norm of  1d integral function (backward) "<<norm<<"\n";
     // TEST if dot throws on NaN
     std::cout << "TEST if dot throws on Inf or Nan:\n";
     dg::blas1::transform( x,x, dg::LN<double>());
-    thrust::device_vector<bool> boolvec ( 100, false);
-    dg::blas1::transform( x, boolvec, dg::ISNFINITE<double>());
-    bool hasnan = dg::blas1::reduce( boolvec, false, thrust::logical_or<bool>());
+    bool hasnan = dg::blas1::reduce( x, false,
+            thrust::logical_or<bool>(), dg::ISNFINITE<double>());
     std::cout << "x contains Inf or Nan numbers "<<std::boolalpha<<hasnan<<"\n";
     try{
         dg::blas1::dot( x,x);
@@ -138,6 +131,27 @@ int main()
         std::cerr << "Error thrown as expected\n";
         //std::cerr << e.what() << std::endl;
     }
+    std::cout << "Test MinMod function:\n";
+    dg::MinMod minmod;
+    std::cout << " 3 -5 ="<<minmod( 3,-5)<< " (0) "<<std::endl;
+    std::cout << " 2 4 1 ="<<minmod( 2,4,1)<< " (1) "<<std::endl;
+    std::cout << " 0 1 2 ="<<minmod( 0,1,2)<< " (0) "<<std::endl;
+    std::cout << " -1 1 2 ="<<minmod( -1,1,2)<< " (0) "<<std::endl;
+    std::cout << " -5 -3 -2 ="<<minmod( -5,-3,-2)<< " (-2) "<<std::endl;
+    std::cout << "Test accuracy Dense Matrix\n";
+    // massage a scalar product into dg::blas2::symv
+    const dg::HVec func_h = dg::evaluate( function<double>, g2d);
+    const dg::HVec w_h = dg::create::weights( g2d);
+    std::vector<dg::DVec> matrix( func_h.size());
+    for( unsigned i=0; i<func_h.size(); i++)
+        matrix[i] = dg::DVec( 2, func_h[i]);
+    dg::DVec integral_d( 2);
+    dg::blas2::symv( 1., dg::asDenseMatrix( dg::asPointers( matrix)), w_h,
+            0., integral_d);
+    res.d = integral_d[0];
+    std::cout << "2D integral               "<<std::setw(6)<<res.d <<"\t" << res.i + 4823280491526356992<< "\n";
+    std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
+    std::cout << "2d error is               "<<(res.d-sol2d)<<"\n\n";
 
     std::cout << "\nFINISHED! Continue with topology/derivatives_t.cu !\n\n";
     return 0;

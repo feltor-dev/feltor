@@ -35,7 +35,7 @@ namespace circular{
 ///@addtogroup circular
 ///@{
 /**
- * @brief \f[ \psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right) \f]
+ * @brief \f[ \psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 -1\right) \f]
  * gives circular flux surfaces
  */
 struct Psip : public aCylindricalFunctor<Psip>
@@ -46,7 +46,7 @@ struct Psip : public aCylindricalFunctor<Psip>
     Psip( double R0): m_R0(R0) { }
     double do_compute(double R, double Z) const
     {
-        return 0.5*((R-m_R0)*(R-m_R0) + Z*Z);
+        return 0.5*((R-m_R0)*(R-m_R0) + Z*Z - 1.0);
     }
   private:
     double m_R0;
@@ -76,7 +76,7 @@ struct PsipZ : public aCylindricalFunctor<PsipZ>
 };
 
 /**
- * @brief circular \f$\psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right)\f$
+ * @brief circular \f$\psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 -1 \right)\f$
  * @return
  */
 static inline CylindricalFunctorsLvl2 createPsip( double R0 )
@@ -104,6 +104,7 @@ static inline CylindricalFunctorsLvl1 createIpol( double I0 )
  * @return A magnetic field object
  * @ingroup toroidal
  * @note The solovev field can also be made to model a todoidal slab field
+ * @note Chooses elongation=a=1, triangularity=0 and description as "none"
  */
 static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
 {
@@ -114,11 +115,12 @@ static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
 /**
  * @brief Create a Magnetic field with circular flux surfaces and constant current
 
- * \f[ \psi_p(R,Z) = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right), \quad I(\psi_p) = I_0 \f]
+ * \f[ \psi_p(R,Z) = \frac{1}{2}\left((R-R_0)^2 + Z^2 - 1\right), \quad I(\psi_p) = I_0 \f]
  * @param R0 the major radius
  * @param I0 the current
  * @return A magnetic field object
- * @ingroup toroidal
+ * @ingroup circular
+ * @note Chooses elongation=a=1, triangularity=0 and description as standardO
  */
 static inline dg::geo::TokamakMagneticField createCircularField( double R0, double I0)
 {

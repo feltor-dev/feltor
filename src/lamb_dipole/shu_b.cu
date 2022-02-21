@@ -12,27 +12,34 @@
 
 #include "init.h"
 #include "diag.h"
-#include "shu.cuh"
+#include "shu.h"
 
 
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Value js;
-    enum dg::file::error mode = dg::file::error::is_throw;
     if( argc == 1)
         dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
     else
         dg::file::file2Json( argv[1], js);
     std::cout << js <<std::endl;
+    dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
 
     /////////////////////////////////////////////////////////////////
-    dg::CartesianGrid2d grid = shu::createGrid( js, mode);
+    dg::CartesianGrid2d grid = shu::createGrid( ws["grid"]);
     dg::DVec w2d( dg::create::weights(grid));
     /////////////////////////////////////////////////////////////////
 
-    std::string initial = dg::file::get( mode, js, "init", "type", "lamb").asString();
-    dg::HVec omega = shu::initial_conditions.at( initial)(js, mode, grid);
+    dg::HVec omega;
+    try{
+        omega = shu::initial_conditions( ws["init"], grid);
+    }
+    catch ( std::exception& e) {
+        std::cerr << e.what()<<"\n";
+        std::cerr << "Exit now!\n";
+        return -1;
+    }
 
     dg::DVec y0( omega ), y1( y0);
     //subtract mean mass
@@ -43,17 +50,17 @@ int main( int argc, char* argv[])
     }
     //make solver and stepper
     shu::Shu<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>
-        shu( grid, js, mode);
-    shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, js, mode);
-    if( "mms" == initial)
+        shu( grid, ws);
+    shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( shu);
+    if( "mms" == ws["init"]["type"].asString())
     {
-        double sigma = dg::file::get( mode, js, "init", "sigma", 0.2).asDouble();
-        double velocity = dg::file::get( mode, js, "init", "velocity", 0.1).asDouble();
+        double sigma = ws["init"].get( "sigma", 0.2).asDouble();
+        double velocity = ws["init"].get( "velocity", 0.1).asDouble();
         shu.set_mms_source( sigma, velocity, grid.ly());
     }
 
     double time = 0;
-    shu::Variables var = {shu, grid, y0, time, w2d, 0., mode, js};
+    shu::Variables var = {shu, grid, y0, time, w2d, 0., ws};
     dg::Timer t;
     t.tic();
     shu( 0., y0, y1);
@@ -66,59 +73,84 @@ int main( int argc, char* argv[])
     }
 
     /// ////////////// Initialize timestepper ///////////////////////
-    std::string stepper = dg::file::get( mode, js, "timestepper", "type", "FilteredExplicitMultistep").asString();
-    std::string regularization = dg::file::get( mode, js, "regularization", "type", "moddal").asString();
+    std::string stepper = ws[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
+    std::string tableau = ws[ "timestepper"].get( "tableau", "ImEx-BDF-3-3").asString();
+    std::string regularization = ws[ "regularization"].get( "type", "modal").asString();
     dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
-    dg::IdentityFilter id;
-    bool apply_filter = true;
+    dg::IdentityFilter identity;
+    bool apply_filter = false;
+    dg::DefaultSolver<dg::DVec> solver;
     dg::ImExMultistep<dg::DVec> imex;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
+    dg::Adaptive<dg::ERKStep<dg::DVec> > adaptive;
+    dg::Adaptive<dg::ARKStep<dg::DVec> > adaptive_imex;
     if( regularization == "modal")
     {
-        double alpha = dg::file::get( mode, js, "regularization", "alpha", 36).asDouble();
-        double order = dg::file::get( mode, js, "regularization", "order", 8).asDouble();
-        double eta_c = dg::file::get( mode, js, "regularization", "eta_c", 0.5).asDouble();
+        double alpha = ws[ "regularization"].get( "alpha", 36).asDouble();
+        double order = ws[ "regularization"].get( "order", 8).asDouble();
+        double eta_c = ws[ "regularization"].get( "eta_c", 0.5).asDouble();
         filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
-    }
-    else
-        apply_filter = false;
-
-    double dt = dg::file::get( mode, js, "timestepper", "dt", 2e-3).asDouble();
-    if( "ImExMultistep" == stepper)
-    {
-        if( regularization != "viscosity")
+        apply_filter = true;
+        if( stepper != "FilteredExplicitMultistep" && stepper != "Shu-Osher" && stepper != "FilteredImplicitMultistep" )
         {
-            throw dg::Error(dg::Message(_ping_)<<"Error: ImExMultistep only works with viscosity regularization! Exit now!");
-
+            throw std::runtime_error( "Error: modal regularization only works with either FilteredExplicit- or -ImplicitMultistep or Shu-Osher!");
             return -1;
         }
-        double eps_time = dg::file::get( mode, js, "timestepper", "eps_time", 1e-10).asDouble();
-        std::string tableau = dg::file::get( mode, js, "timestepper", "tableau", "ImEx-BDF-3-3").asString();
-        imex.construct( tableau, y0, y0.size(), eps_time);
-        imex.init( shu, diffusion, time, y0, dt);
+    }
+    else if( regularization != "viscosity")
+        throw std::runtime_error( "ERROR: Unkown regularization type "+regularization);
+
+    double dt = 0.;
+    double rtol = 1., atol = 1.;
+    if( "ImExMultistep" == stepper)
+    {
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
+        unsigned mMax = ws["timestepper"].get( "mMax", 8).asUInt();
+        unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
+        double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
+        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
+        solver.construct( diffusion, y0, y0.size(), eps_time);
+        imex.construct( tableau, y0);
+        imex.init( std::tie(shu, diffusion, solver), time, y0, dt);
     }
     else if( "Shu-Osher" == stepper)
     {
-        shu_osher.construct( "SSPRK-3-3", y0);
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
+        shu_osher.construct( tableau, y0);
     }
     else if( "FilteredExplicitMultistep" == stepper)
     {
-        multistep.construct( "eBDF-3-3", y0);
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
+        multistep.construct( tableau, y0);
         if( apply_filter)
-            multistep.init( shu, filter, time, y0, dt);
+            multistep.init( std::tie(shu, filter), time, y0, dt);
         else
-            multistep.init( shu, id, time, y0, dt);
+            multistep.init( std::tie(shu, identity), time, y0, dt);
+    }
+    else if( "ERK" == stepper)
+    {
+        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
+        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
+        adaptive.construct( tableau, y0);
+    }
+    else if( "ARK" == stepper)
+    {
+        double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
+        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
+        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
+        solver.construct( diffusion, y0, y0.size(), eps_time);
+        adaptive_imex.construct( tableau, y0);
     }
     else
     {
-        throw dg::Error(dg::Message(_ping_)<<"Error! Timestepper not recognized!\n");
+        throw std::runtime_error( "Error! Timestepper "+stepper+" not recognized!\n");
 
         return -1;
     }
-    unsigned maxout = dg::file::get( mode, js, "output", "maxout", 100).asUInt();
-    unsigned itstp = dg::file::get( mode, js, "output", "itstp", 5).asUInt();
-    std::string output = dg::file::get( mode, js, "output", "type", "glfw").asString();
+    unsigned maxout =    ws[ "output"].get( "maxout", 100).asUInt();
+    unsigned itstp =     ws[ "output"].get( "itstp", 5).asUInt();
+    std::string output = ws[ "output"].get( "type", "glfw").asString();
 #ifndef WITHOUT_GLFW
     if( "glfw" == output)
     {
@@ -150,20 +182,20 @@ int main( int argc, char* argv[])
                 for( unsigned j=0; j<itstp; j++)
                 {
                     if( "ImExMultistep" == stepper)
-                        imex.step( shu, diffusion, time, y0);
+                        imex.step( std::tie(shu, diffusion,solver), time, y0);
                     else if ( "FilteredExplicitMultistep" == stepper)
                     {
                         if( apply_filter)
-                            multistep.step( shu, filter, time, y0);
+                            multistep.step( std::tie(shu, filter), time, y0);
                         else
-                            multistep.step( shu, id, time, y0);
+                            multistep.step( std::tie(shu, identity), time, y0);
                     }
                     else if ( "Shu-Osher" == stepper)
                     {
                         if( apply_filter)
-                            shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                            shu_osher.step( std::tie(shu, filter), time, y0, time, y0, dt);
                         else
-                            shu_osher.step( shu, id, time, y0, time, y0, dt);
+                            shu_osher.step( std::tie(shu, identity), time, y0, time, y0, dt);
                     }
                 }
             } catch( dg::Fail& fail) {
@@ -255,13 +287,10 @@ int main( int argc, char* argv[])
                 &staticID);
             err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
                 long_name.data());
-            err = nc_enddef(ncid);
             record.function( resultD, var);
             dg::assign( resultD, resultH);
             dg::file::put_var_double( ncid, staticID, grid, resultH);
-            err = nc_redef(ncid);
         }
-        err = nc_enddef(ncid);
         size_t start[3] = {0, 0, 0};
         size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
         ///////////////////////////////////first output/////////////////////////
@@ -288,20 +317,20 @@ int main( int argc, char* argv[])
             for( unsigned j=0; j<itstp; j++)
             {
                 if( "ImExMultistep" == stepper)
-                    imex.step( shu, diffusion, time, y0);
+                    imex.step( std::tie(shu, diffusion, solver), time, y0);
                 else if ( "FilteredExplicitMultistep" == stepper)
                 {
                     if( apply_filter)
-                        multistep.step( shu, filter, time, y0);
+                        multistep.step( std::tie( shu, filter), time, y0);
                     else
-                        multistep.step( shu, id, time, y0);
+                        multistep.step( std::tie( shu, identity), time, y0);
                 }
                 else if ( "Shu-Osher" == stepper)
                 {
                     if( apply_filter)
-                        shu_osher.step( shu, filter, time, y0, time, y0, dt);
+                        shu_osher.step( std::tie( shu, filter), time, y0, time, y0, dt);
                     else
-                        shu_osher.step( shu, id, time, y0, time, y0, dt);
+                        shu_osher.step( std::tie( shu, identity), time, y0, time, y0, dt);
                 }
             }
             step+=itstp;
@@ -335,8 +364,7 @@ int main( int argc, char* argv[])
     }
     if( !("netcdf" == output) && !("glfw" == output))
     {
-        throw dg::Error(dg::Message(_ping_)<<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!");
-
+        std::cerr<<"Error: Wrong value for output type "<<output<<" Must be glfw or netcdf! Exit now!";
         return -1;
     }
     ////////////////////////////////////////////////////////////////////

@@ -1,86 +1,7 @@
-%\documentclass[12pt]{article}
-%\documentclass[12pt]{scrartcl}
-\documentclass{hitec} % contained in texlive-latex-extra 
-\settextfraction{0.9} % indent text
-\usepackage{csquotes}
-\usepackage[hidelinks]{hyperref} % doi links are short and usefull?
-\hypersetup{%
-    colorlinks=true,
-    linkcolor=blue,
-    urlcolor=magenta
-}
-\urlstyle{rm}
-\usepackage[english]{babel}
-\usepackage{mathtools} % loads and extends amsmath
-\usepackage{amssymb}
-% packages not used
-%\usepackage{graphicx}
-%\usepackage{amsthm}
-%\usepackage{subfig}
-\usepackage{bm}
-\usepackage{longtable}
-\usepackage{booktabs}
-\usepackage{ragged2e} % maybe use \RaggedRight for tables and literature?
-\usepackage[table]{xcolor} % for alternating colors
-\rowcolors{2}{gray!25}{white}
-\renewcommand\arraystretch{1.3}
-
-%%% reset bibliography distances %%%
-\let\oldthebibliography\thebibliography
-\let\endoldthebibliography\endthebibliography
-\renewenvironment{thebibliography}[1]{
-  \begin{oldthebibliography}{#1}
-    \RaggedRight % remove if justification is desired
-    \setlength{\itemsep}{0em}
-    \setlength{\parskip}{0em}
-}
-{
-  \end{oldthebibliography}
-}
-%%% --- %%%
-
 %%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\eps}{\varepsilon}
-\renewcommand{\d}{\mathrm{d}}
-\newcommand{\T}{\mathrm{T}}
-\renewcommand{\vec}[1]{\boldsymbol{#1}}
 
-\newcommand{\dx}{\,\mathrm{d}x}
-%\newcommand{\dA}{\,\mathrm{d}(x,y)}
-%\newcommand{\dV}{\mathrm{d}^3{x}\,}
-\newcommand{\dA}{\,\mathrm{dA}}
-\newcommand{\dV}{\mathrm{dV}\,}
-\newcommand{\Eins}{\mathbf{1}}
-\newcommand{\ExB}{$\bm{E}\times\bm{B} \,$}
-\newcommand{\GKI}{\int d^6 \bm{Z} \BSP}
-\newcommand{\GKIV}{\int dv_{\|} d \mu d \theta \BSP}
-\newcommand{\BSP}{B_{\|}^*}
-\newcommand{\GA}[1]{\langle #1   \rangle}
-\newcommand{\Abar}{\langle A_\parallel \rangle}
-%Vectors
-\newcommand{\bhat}{\bm{\hat{b}}}
-\newcommand{\bbar}{\overline{\bm{b}}}
-\newcommand{\chat}{\bm{\hat{c}}}
-\newcommand{\ahat}{\bm{\hat{a}}}
-\newcommand{\xhat}{\bm{\hat{x}}}
-\newcommand{\yhat}{\bm{\hat{y}}}
-\newcommand{\zhat}{\bm{\hat{z}}}
-\newcommand{\Xbar}{\bar{\vec{X}}}
-\newcommand{\phat}{\bm{\hat{\perp}}}
-\newcommand{\that}{\bm{\hat{\theta}}}
-\newcommand{\eI}{\bm{\hat{e}}_1}
-\newcommand{\eII}{\bm{\hat{e}}_2}
-\newcommand{\ud}{\mathrm{d}}
-%Derivatives etc.
-\newcommand{\pfrac}[2]{\frac{\partial#1}{\partial#2}}
-\newcommand{\ffrac}[2]{\frac{\delta#1}{\delta#2}}
-\newcommand{\fixd}[1]{\Big{\arrowvert}_{#1}}
-\newcommand{\curl}[1]{\nabla \times #1}
-\newcommand{\np}{\nabla_{\perp}}
-\newcommand{\npc}{\nabla_{\perp} \cdot }
-\newcommand{\nc}{\nabla\cdot }
-\newcommand{\GAI}{\Gamma_{1}^{\dagger}}
-\newcommand{\GAII}{\Gamma_{1}^{\dagger -1}}
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -89,7 +10,7 @@
 \maketitle
 
 \begin{abstract}
-This is a program for 2d isothermal electrostatic \(\delta\)f and full-F simulations for resistive drift-wave turbulence.
+    This is a program for 2d isothermal electrostatic \(\delta\)f and full-F simulations for resistive drift-wave turbulence~\cite{HeldPhd}.
 \end{abstract}
 \section{Equations}
 \subsection{\(\delta\)f Hasegawa-Wakatani models}
@@ -281,11 +202,9 @@ The default value is taken if the value name is not found in the input file. If 
 the value is not found,
 the program exits with an error message.
 %..................................................................
-\begin{thebibliography}{1}
- \bibitem{held:phd17}
-  M. Held, Full-F gyro-fluid modelling of the tokamak edge and scrape-off, Universit{\"a}t Innsbruck (2017)
-\end{thebibliography}
 %..................................................................
 
+\bibliography{../common/references}
+%..................................................................
 
 \end{document}

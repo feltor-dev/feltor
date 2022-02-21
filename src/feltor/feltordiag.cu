@@ -9,20 +9,13 @@
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
 #include "dg/file/file.h"
-using HVec = dg::HVec;
-using DVec = dg::DVec;
-using DMatrix = dg::DMatrix;
-using IDMatrix = dg::IDMatrix;
-using IHMatrix = dg::IHMatrix;
-using Geometry = dg::CylindricalGrid3d;
-#define MPI_OUT
 #include "feltordiag.h"
 
 int main( int argc, char* argv[])
 {
-    if( argc < 3)
+    if( argc < 4)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [input0.nc ... inputN.nc] [output.nc]\n";
+        std::cerr << "Usage: "<<argv[0]<<" [config.json] [input0.nc ... inputN.nc] [output.nc]\n";
         return -1;
     }
     for( int i=1; i<argc-1; i++)
@@ -32,114 +25,102 @@ int main( int argc, char* argv[])
     //------------------------open input nc file--------------------------------//
     dg::file::NC_Error_Handle err;
     int ncid_in;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
+    err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
     size_t length;
     err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
     std::string inputfile(length, 'x');
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "geomfile", &length);
-    std::string geomfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "geomfile", &geomfile[0]);
     err = nc_close( ncid_in);
-    Json::Value js,gs;
-    dg::file::string2Json(inputfile, js, dg::file::comments::are_forbidden);
-    dg::file::string2Json(geomfile, gs, dg::file::comments::are_forbidden);
+    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
-    const feltor::Parameters p(js, dg::file::error::is_warning);
-    const dg::geo::solovev::Parameters gp(gs);
-    p.display();
-    gp.display();
-    std::vector<std::string> names_input{
-        "electrons", "ions", "Ue", "Ui", "potential", "induction"
-    };
-
-    //-----------------Create Netcdf output file with attributes----------//
-    int ncid_out;
-    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
-
-    /// Set global attributes
-    std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor/feltordiag.cu";
-    att["Conventions"] = "CF-1.7";
-    ///Get local time and begin file history
-    auto ttt = std::time(nullptr);
-    auto tm = *std::localtime(&ttt);
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/feltor.tex";
-    att["source"] = "FELTOR";
-    att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = inputfile;
-    att["geomfile"] = geomfile;
-    for( auto pair : att)
-        err = nc_put_att_text( ncid_out, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
+    const feltor::Parameters p(js);
+    std::cout << js.asJson() <<  std::endl;
+    dg::file::WrappedJsonValue config( dg::file::error::is_warning);
+    try{
+        dg::file::file2Json( argv[1], config.asJson(),
+                dg::file::comments::are_discarded, dg::file::error::is_warning);
+    } catch( std::exception& e) {
+        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+        DG_RANK0 std::cerr << e.what()<<std::endl;
+        return -1;
+    }
 
     //-------------------Construct grids-------------------------------------//
 
-    const double Rmin=gp.R_0-p.boxscaleRm*gp.a;
-    const double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    const double Rmax=gp.R_0+p.boxscaleRp*gp.a;
-    const double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-    const unsigned FACTOR=10;
-
-    dg::Grid2d g2d_out( Rmin,Rmax, Zmin,Zmax,
-        p.n_out, p.Nx_out, p.Ny_out, p.bcxN, p.bcyN);
-    /////////////////////////////////////////////////////////////////////////
-    Geometry g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    Geometry g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
-        p.n_out, p.Nx_out, p.Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
-
     dg::geo::CylindricalFunctor wall, transition;
-    dg::geo::TokamakMagneticField mag =
-        dg::geo::createModifiedField(gs, js, dg::file::error::is_warning, wall, transition);
-    dg::HVec psipog2d = dg::evaluate( mag.psip(), g2d_out);
+    dg::geo::TokamakMagneticField mag, mod_mag;
+    try{
+        mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
+        mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
+                js["boundary"]["wall"], wall, transition);
+    }catch(std::runtime_error& e)
+    {
+        std::cerr << "ERROR in input file "<<argv[2]<<std::endl;
+        std::cerr <<e.what()<<std::endl;
+        return -1;
+    }
+
+    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
+    const double Zmin=-p.boxscaleZm*mag.params().a();
+    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
+    const double Zmax=p.boxscaleZp*mag.params().a();
+    const unsigned FACTOR=config.get( "Kphi", 10).asUInt();
+
+    unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
+    unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
+    unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy;
+    dg::Grid2d g2d_out( Rmin,Rmax, Zmin,Zmax,
+        n_out, Nx_out, Ny_out, p.bcxN, p.bcyN);
+    /////////////////////////////////////////////////////////////////////////
+    dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+        n_out, Nx_out, Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
+    dg::CylindricalGrid3d g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+        n_out, Nx_out, Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
+
+    //create RHS
+    if( p.periodify)
+        mod_mag = dg::geo::periodify( mod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
+    dg::HVec psipog2d = dg::evaluate( mod_mag.psip(), g2d_out);
     // Construct weights and temporaries
 
     dg::HVec transferH2d = dg::evaluate(dg::zero,g2d_out);
     dg::HVec t2d_mp = dg::evaluate(dg::zero,g2d_out);
-    std::cout << "Construct Fieldaligned derivative ... \n";
-
-    auto bhat = dg::geo::createBHat( mag);
-    dg::geo::Fieldaligned<Geometry, IDMatrix, DVec> fieldaligned(
-        bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
-        p.rk4eps, 5, 5);
 
 
     ///--------------- Construct X-point grid ---------------------//
 
 
-    //std::cout << "Type X-point grid resolution (n(3), Npsi(32), Neta(640)) Must be divisible by 8\n";
     //we use so many Neta so that we get close to the X-point
-    std::cout << "Using default X-point grid resolution (n(3), Npsi(64), Neta(640))\n";
-    unsigned npsi = 3, Npsi = 64, Neta = 640;//set number of psivalues (NPsi % 8 == 0)
-    //std::cin >> npsi >> Npsi >> Neta;
-    std::cout << "You typed "<<npsi<<" x "<<Npsi<<" x "<<Neta<<"\n";
-    std::cout << "Generate X-point flux-aligned grid!\n";
-    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-    double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::findXpoint( mag.get_psip(), R_X, Z_X);
-    dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), R_X, Z_X) ;
-    double R_O = gp.R_0, Z_O = 0;
-    dg::geo::findOpoint( mag.get_psip(), R_O, Z_O);
-    double psipO = mag.psip()(R_O, Z_O);
-
-    dg::geo::SeparatrixOrthogonal generator(mag.get_psip(), monitor_chi, psipO, R_X, Z_X, mag.R0(), 0, 0, false);
-    double fx_0 = 1./8.;
-    double psipmax = dg::blas1::reduce( psipog2d, 0. ,thrust::maximum<double>()); //DEPENDS ON GRID RESOLUTION!!
-    std::cout << "psi max is            "<<psipmax<<"\n";
-    psipmax = -fx_0/(1.-fx_0)*psipO;
-    std::cout << "psi max in g1d_out is "<<psipmax<<"\n";
-    dg::geo::CurvilinearGridX2d gridX2d( generator, fx_0, 0., npsi, Npsi, Neta, dg::DIR_NEU, dg::NEU);
-    std::cout << "psi max in gridX2d is "<<gridX2d.x1()<<"\n";
+    unsigned npsi = config.get("n",3).asUInt();
+    unsigned Npsi = config.get("Npsi", 64).asUInt();
+    unsigned Neta = config.get("Neta", 640).asUInt();
+    std::cout << "Using X-point grid resolution (n("<<npsi<<"), Npsi("<<Npsi<<"), Neta("<<Neta<<"))\n";
+    double RO = mag.R0(), ZO = 0;
+    int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    double psipO = mag.psip()(RO, ZO);
+    std::cout << "O-point found at "<<RO<<" "<<ZO
+              <<" with Psip "<<psipO<<std::endl;
+    if( point == 1 )
+        std::cout << " (minimum)"<<std::endl;
+    if( point == 2 )
+        std::cout << " (maximum)"<<std::endl;
+    double fx_0 = config.get( "fx_0", 1./8.).asDouble(); //must evenly divide Npsi
+    double psipmax = -fx_0/(1.-fx_0)*psipO;
+    std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
+    std::cout << "Generate orthogonal flux-aligned grid ... \n";
+    dg::geo::SimpleOrthogonal generator(mag.get_psip(),
+            psipO<psipmax ? psipO : psipmax,
+            psipO<psipmax ? psipmax : psipO,
+            mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
+    dg::geo::CurvilinearGrid2d gridX2d (generator,
+            npsi, Npsi, Neta, dg::DIR, dg::PER);
     std::cout << "DONE!\n";
-    //Create 1d grid
-    dg::Grid1d g1d_out(psipO, psipmax, npsi, Npsi, dg::DIR_NEU); //inner value is always 0
-    std::cout << "Cell separatrix boundary is "<<Npsi*(1.-fx_0)*g1d_out.h()+g1d_out.x0()<<"\n";
+    dg::Grid1d g1d_out(psipO<psipmax ? psipO : psipmax,
+                       psipO<psipmax ? psipmax : psipO,
+                       npsi, Npsi, psipO < psipmax ? dg::DIR_NEU : dg::NEU_DIR);
+    //O-point fsa value is always 0 (hence the DIR boundary condition)
+    //f0 makes a - sign if psipmax < psipO
     const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
@@ -148,7 +129,7 @@ int main( int argc, char* argv[])
 
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     /// Compute flux volume label
-    dg::Average<dg::HVec > poloidal_average( gridX2d.grid(), dg::coo2d::y);
+    dg::Average<dg::HVec > poloidal_average( gridX2d, dg::coo2d::y);
     dg::HVec dvdpsip;
     //metric and map
     dg::SparseTensor<dg::HVec> metricX = gridX2d.metric();
@@ -160,7 +141,8 @@ int main( int argc, char* argv[])
     dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
     map1d.emplace_back( "dvdpsi", dvdpsip,
         "Derivative of flux volume with respect to flux label psi");
-    dg::HVec X_psi_vol = dg::integrate( dvdpsip, g1d_out);
+    dg::direction integration_dir = psipO < psipmax ? dg::forward : dg::backward;
+    dg::HVec X_psi_vol = dg::integrate( dvdpsip, g1d_out, integration_dir);
     map1d.emplace_back( "psi_vol", X_psi_vol,
         "Flux volume evaluated with X-point grid");
 
@@ -180,17 +162,26 @@ int main( int argc, char* argv[])
     dg::blas1::transform( rho, rho, dg::SQRT<double>());
     map1d.emplace_back("rho_p", rho,
         "Alternative flux label rho_p = sqrt(1-psi/psimin)");
-    dg::geo::SafetyFactor qprof( mag);
-    dg::HVec qprofile = dg::evaluate( qprof, g1d_out);
+    dg::geo::SafetyFactor qprof( mod_mag);
+    dg::HVec psi_vals = dg::evaluate( dg::cooX1d, g1d_out);
+    // we need to avoid calling SafetyFactor outside closed fieldlines
+    dg::blas1::subroutine( [psipO]( double& psi){
+           if( (psipO < 0 && psi > 0) || (psipO>0 && psi <0))
+               psi = psipO/2.; // just use a random value
+        }, psi_vals);
+    dg::HVec qprofile( psi_vals);
+    for( unsigned i=0; i<qprofile.size(); i++)
+        qprofile[i] = qprof( psi_vals[i]);
     map1d.emplace_back("q-profile", qprofile,
         "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
         "Poloidal flux label psi (same as coordinate)");
-    dg::HVec psit = dg::integrate( qprofile, g1d_out);
+    dg::HVec psit = dg::integrate( qprofile, g1d_out, integration_dir);
     map1d.emplace_back("psit1d", psit,
         "Toroidal flux label psi_t integrated using q-profile");
     //we need to avoid integrating >=0 for total psi_t
-    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, npsi ,Npsi,dg::DIR_NEU);
+    dg::Grid1d g1d_fine(psipO<0. ? psipO : 0., psipO<0. ? 0. : psipO, npsi
+            ,Npsi,dg::DIR_NEU);
     qprofile = dg::evaluate( qprof, g1d_fine);
     dg::HVec w1d = dg::create::weights( g1d_fine);
     double psit_tot = dg::blas1::dot( w1d, qprofile);
@@ -199,6 +190,53 @@ int main( int argc, char* argv[])
     map1d.emplace_back("rho_t", psit,
         "Toroidal flux label rho_t = sqrt( psit/psit_tot)");
 
+    //-----------------Create Netcdf output file with attributes----------//
+    //-----------------And 1d static output                     ----------//
+    int ncid_out;
+    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
+
+    /// Set global attributes
+    std::map<std::string, std::string> att;
+    att["title"] = "Output file of feltor/src/feltor/feltordiag.cu";
+    att["Conventions"] = "CF-1.7";
+    ///Get local time and begin file history
+    auto ttt = std::time(nullptr);
+    auto tm = *std::localtime(&ttt);
+    std::ostringstream oss;
+    ///time string  + program-name + args
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    for( int i=0; i<argc; i++) oss << " "<<argv[i];
+    att["history"] = oss.str();
+    att["comment"] = "Find more info in feltor/src/feltor.tex";
+    att["source"] = "FELTOR";
+    att["references"] = "https://github.com/feltor-dev/feltor";
+    att["inputfile"] = inputfile;
+    for( auto pair : att)
+        err = nc_put_att_text( ncid_out, NC_GLOBAL,
+            pair.first.data(), pair.second.size(), pair.second.data());
+
+    int dim_id1d = 0;
+    err = dg::file::define_dimension( ncid_out, &dim_id1d, g1d_out, {"psi"} );
+    //write 1d static vectors (psi, q-profile, ...) into file
+    for( auto tp : map1d)
+    {
+        int vid;
+        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1,
+            &dim_id1d, &vid);
+        err = nc_put_att_text( ncid_out, vid, "long_name",
+            std::get<2>(tp).size(), std::get<2>(tp).data());
+        err = nc_enddef( ncid_out);
+        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
+        err = nc_redef(ncid_out);
+    }
+    if( p.calibrate )
+    {
+        err = nc_close( ncid_out);
+        return 0;
+    }
+    //
+    //---------------------END OF CALIBRATION-----------------------------//
+    //
     // interpolate from 2d grid to X-point points
     dg::IHMatrix grid2gridX2d  = dg::create::interpolation(
         coordsX[0], coordsX[1], g2d_out);
@@ -208,36 +246,23 @@ int main( int argc, char* argv[])
 
     dg::HVec dvdpsip2d = dg::evaluate( dg::zero, g2d_out);
     dg::blas2::symv( fsa2rzmatrix, dvdpsip, dvdpsip2d);
-    dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::DIR_NEU, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
+    dg::HMatrix dpsi = dg::create::dx( g1d_out, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
+    if( psipO > psipmax)
+        dpsi = dg::create::dx( g1d_out, dg::forward);
     //although the first point outside LCFS is still wrong
-
     // define 2d and 1d and 0d dimensions and variables
     int dim_ids[3], tvarID;
     err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
+    int dim_ids2d[2] = {dim_ids[0], dim_id1d}; //time,  psi
     //Write long description
     std::string long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
-    int dim_ids1d[2] = {dim_ids[0], 0}; //time,  psi
-    err = dg::file::define_dimension( ncid_out, &dim_ids1d[1], g1d_out, {"psi"} );
     std::map<std::string, int> id0d, id1d, id2d;
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
     size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
     size_t start2d[3] = {0, 0, 0};
-
-    //write 1d static vectors (psi, q-profile, ...) into file
-    for( auto tp : map1d)
-    {
-        int vid;
-        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1,
-            &dim_ids1d[1], &vid);
-        err = nc_put_att_text( ncid_out, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef( ncid_out);
-        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid_out);
-    }
 
     for( auto& record : feltor::diagnostics2d_list)
     {
@@ -267,13 +292,13 @@ int main( int argc, char* argv[])
 
         name = record_name + "_fsa";
         long_name = record.long_name + " (Flux surface average.)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids2d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
         name = record_name + "_std_fsa";
         long_name = record.long_name + " (Flux surface average standard deviation on outboard midplane.)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids2d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
@@ -282,7 +307,7 @@ int main( int argc, char* argv[])
         long_name = record.long_name + " (wrt. vol integrated flux surface average)";
         if( record_name[0] == 'j')
             long_name = record.long_name + " (wrt. vol derivative of the flux surface average)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids1d,
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 2, dim_ids2d,
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
@@ -305,10 +330,18 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, id0d[name], "long_name", long_name.size(),
             long_name.data());
     }
+    std::cout << "Construct Fieldaligned derivative ... \n";
+
+    auto bhat = dg::geo::createBHat( mod_mag);
+    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
+        bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
+        p.rk4eps, 5, 5, -1, "dg");
     /////////////////////////////////////////////////////////////////////////
     size_t counter = 0;
     int ncid;
-    for( int j=1; j<argc-1; j++)
+    std::string fsa_mode = config.get( "fsa", "convoluted-toroidal-average").asString();
+    std::cout << "Using flux-surface-average mode: "<<fsa_mode << "\n";
+    for( int j=2; j<argc-1; j++)
     {
         int timeID;
 
@@ -323,12 +356,12 @@ int main( int argc, char* argv[])
             std::cerr << "Continue with next file\n";
             continue;
         }
-        err = nc_inq_unlimdim( ncid, &timeID); //Attention: Finds first unlimited dim, which hopefully is time and not energy_time
+        err = nc_inq_unlimdim( ncid, &timeID);
         err = nc_inq_dimlen( ncid, timeID, &steps);
         //steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
         {
-            if( j > 1 && i == 0)
+            if( j > 2 && i == 0)
                 continue; // else we duplicate the first timestep
             start2d[0] = i;
             size_t start2d_out[3] = {counter, 0,0};
@@ -363,14 +396,22 @@ int main( int argc, char* argv[])
                 {
                     err = nc_get_vara_double( ncid, dataID,
                         start2d, count2d, transferH2d.data());
-                    DVec transferD2d = transferH2d;
+                    dg::DVec transferD2d = transferH2d;
                     fieldaligned.integrate_between_coarse_grid( g3d, transferD2d, transferD2d);
-                    transferH2d = transferD2d;
-                    t2d_mp = transferH2d; //save toroidal average
+                    t2d_mp = transferD2d; //save toroidal average
                     //2. Compute fsa and output fsa
-                    dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
+                    if( fsa_mode == "convoluted-toroidal-average")
+                        dg::blas2::symv( grid2gridX2d, t2d_mp, transferH2dX); //interpolate convoluted average onto X-point grid
+                    else
+                        dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate simple average onto X-point grid
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
-                    poloidal_average( transferH2dX, t1d, false); //average over eta
+                    try{
+                        poloidal_average( transferH2dX, t1d, false); //average over eta
+                    } catch( dg::Error& e)
+                    {
+                        std::cerr << "WARNING: "<<record_name<<" contains NaN or Inf\n";
+                        dg::blas1::scal( t1d, NAN);
+                    }
                     dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
                     dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
                     if( record_name[0] != 'j')
@@ -430,7 +471,7 @@ int main( int argc, char* argv[])
                     else
                     {
                         dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
-                        transfer1d = dg::integrate( t1d, g1d_out);
+                        transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
 
                         result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out); //make sure to take inner cell for interpolation
                     }
@@ -446,7 +487,7 @@ int main( int argc, char* argv[])
                         dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
                         dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
-                        transfer1d = dg::integrate( t1d, g1d_out);
+                        transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
                         result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
                         result = sqrt(result);
                     }
@@ -454,7 +495,7 @@ int main( int argc, char* argv[])
                     {
                         dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
                         dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
-                        transfer1d = dg::integrate( t1d, g1d_out);
+                        transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
 
                         result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
                         result = sqrt(result);
@@ -465,7 +506,13 @@ int main( int argc, char* argv[])
                     dg::blas1::pointwiseDot( transferH2d, transferH2d, transferH2d);
                     dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate onto X-point grid
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
-                    poloidal_average( transferH2dX, t1d, false); //average over eta
+                    try{
+                        poloidal_average( transferH2dX, t1d, false); //average over eta
+                    } catch( dg::Error& e)
+                    {
+                        std::cerr << "WARNING: "<<record_name<<" contains NaN or Inf\n";
+                        dg::blas1::scal( t1d, NAN);
+                    }
                     dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
                     dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
                     dg::blas1::transform ( fsa1d, fsa1d, dg::SQRT<double>() );

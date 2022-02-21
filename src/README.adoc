@@ -7,6 +7,8 @@ into a pdf.  Here is a short description of each:
 
 feltor::    3d gyrofluid full-F electrodynamic model in toroidal geometry
 
+navier_stokes:: 3d Navier Stokes equations along magnetic fieldlines
+
 heat::  3d parallel / perpendicular diffusion equation in tokamak geometry
 with realistic flux surfaces. Used in the paper "Three discontinuous
 Galerkin schemes for the anisotropic heat conduction equation on
@@ -17,21 +19,12 @@ conservative discontinuous Galerkin scheme for the 2D incompressible
 Navier-Stokes equations" Comput. Phys. Commun. 185, 2865-2873 (2014) (The
 very first paper resulting from this library)
 
-polar:: A version of lamb_dipole in Polar coordinates (unmaintained)
-
 toefl:: 2d local and global blobs.  This code
 reproduces results for, among others, the paper M. Wiesenberger, J. Madsen,
 and A. Kendl, "Radial convection of finite ion temperature, high amplitude
 plasma blobs" Phys. Plasmas 21, 092301 (2014).
 
-ep:: the electron positron plasma (branches off the toefl code) in the
-paper "Interchange instability and transport in matter-antimatter plasmas"
-Physical Review Letters 118, 235001 (2017)
-
-impurities:: A multi-species version of the toefl project (currently unmaintained)
-
 reco2d:: 2d reconnection model based on the feltor model
-
 
 hasegawa:: 2d Hasegawa-Wakatani and Hasegawa-Mima models
 

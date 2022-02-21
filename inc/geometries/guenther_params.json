@@ -1,8 +1,7 @@
 {
-    "equilibrium"       : "guenther",
-    "I_0"               :  20.,
-    "R_0"               :  10.
+    "equilibrium" : "guenther",
+    "description" : "square",
+    "I_0" : 10.0,
+    "R_0" : 3.0,
+    "comment" : "Sine functions; Guenter et al, J. Comput. Phys. 209 (2005) 354"
 }
-
-
-

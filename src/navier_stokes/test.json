@@ -1,0 +1,159 @@
+{
+    "FCI": {
+        "bc": "along_field",
+        "periodify": false,
+        "refine": [
+            5,
+            5
+        ],
+        "rk4eps": 1e-06,
+        "interpolation-method" : "linear"
+    },
+    "advection": {
+        "type": "velocity-staggered-fieldaligned",
+        "slope-limiter": "none"
+    },
+    "boundary": {
+        "bc": {
+            "aparallel": [
+                "NEU",
+                "NEU"
+            ],
+            "density": [
+                "NEU",
+                "NEU"
+            ],
+            "potential": [
+                "DIR",
+                "DIR"
+            ],
+            "velocity": [
+                "NEU",
+                "NEU"
+            ]
+        },
+        "sheath": {
+            "type": "none"
+        },
+        "wall": {
+            "type": "none"
+        }
+    },
+    "elliptic": {
+        "direction": "centered",
+        "eps_ampere": 1e-07,
+        "eps_gamma": 1e-07,
+        "eps_pol": [
+            1e-06,
+            10
+        ],
+        "jumpfactor": 1.0,
+        "stages": 2
+    },
+    "flags": [],
+    "grid": {
+        "Nx": 32,
+        "Ny": 32,
+        "Nz": 20,
+        "n": 3,
+        "scaleR": [
+            1.0,
+            1.0
+        ],
+        "scaleZ": [
+            1.0,
+            1.0
+        ]
+    },
+    "init": {
+        "aparallel": {
+            "type": "zero"
+        },
+        "density": {
+            "damping": {
+                "type": "none"
+            },
+            "ntilde": {
+                "amplitude": 1.0,
+                "parallel": "double-step",
+                "posX": 0.5,
+                "posY": 0.0,
+                "revolutions": 1,
+                "rk4eps": 1e-06,
+                "sigma": 0.2,
+                "sigma_z": 0.5,
+                "type": "circle"
+            },
+            "profile": {
+                "background": 0.2,
+                "type": "const"
+            },
+            "type": "ne"
+        },
+        "potential": {
+            "type": "zero_pol"
+        },
+        "type": "fields",
+        "velocity": {
+            "type": "zero"
+        }
+    },
+    "magnetic_field": {
+        "curvmode": "toroidal",
+        "input": "params",
+        "params": {
+            "I_0": 10.0,
+            "R_0": 3.0,
+            "comment": "Sine functions; Guenter et al, J. Comput. Phys. 209 (2005) 354",
+            "description": "square",
+            "equilibrium": "guenther"
+        }
+    },
+    "output": {
+        "compression": [
+            1,
+            1
+        ],
+        "inner_loop": 2,
+        "itstp": 5,
+        "maxout": 10,
+        "type": "glfw",
+        "window" :
+        {
+            "rows":  6,
+            "reduction" : 4,
+            "width" : 200,
+            "height" : 200
+        }
+    },
+    "physical": {
+        "beta": 1e-05,
+        "mu": -0.000272121,
+        "nu_parallel": [
+            0,
+            0.0
+        ],
+        "resistivity": 0.0001,
+        "tau": 1.0,
+        "viscosity": "value"
+    },
+    "regularization": {
+        "direction": "forward",
+        "nu_perp_n": 0e-09,
+        "nu_perp_u": 0e-09,
+        "order": 2
+    },
+    "source": {
+        "minne": 0.0,
+        "type": "zero"
+    },
+    "timestepper": {
+        "atol": 1e-10,
+        "rtol": 1e-07,
+        "tableau": "Bogacki-Shampine-4-2-3",
+        "type": "adaptive",
+        "output-mode" : "equidistant",
+        "reject-limit" : 10,
+        "Tend" : 10
+    }
+}

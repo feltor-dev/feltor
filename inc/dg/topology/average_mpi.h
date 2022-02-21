@@ -57,7 +57,7 @@ struct Average<MPI_Vector<container> >
      */
     Average( const aMPITopology2d& g, enum coo2d direction, std::string mode = "exact") : m_mode( mode)
     {
-        m_nx = g.local().Nx()*g.n(), m_ny = g.local().Ny()*g.n();
+        m_nx = g.local().Nx()*g.nx(), m_ny = g.local().Ny()*g.ny();
         m_w=dg::construct<MPI_Vector<container>>(dg::create::weights(g, direction));
         m_temp = m_w;
         int remain_dims[] = {false,false}; //true true false
@@ -104,7 +104,7 @@ struct Average<MPI_Vector<container> >
         m_w = dg::construct<MPI_Vector<container>>(dg::create::weights(g, direction));
         m_temp = m_w;
         m_transpose = false;
-        unsigned nx = g.n()*g.local().Nx(), ny = g.n()*g.local().Ny(), nz = g.local().Nz();
+        unsigned nx = g.nx()*g.local().Nx(), ny = g.ny()*g.local().Ny(), nz = g.nz()*g.local().Nz();
         int remain_dims[] = {false,false,false};
         m_transpose = false;
         if( direction == dg::coo3d::x) {

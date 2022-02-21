@@ -1,13 +1,6 @@
 #pragma once
 
-#include "dg/topology/grid.h"
-#include "dg/topology/functions.h"
-#include "dg/topology/interpolation.h"
-#include "dg/topology/derivatives.h"
-#include "dg/topology/geometry.h"
-#include "dg/functors.h"
-#include "dg/runge_kutta.h"
-#include "dg/nullstelle.h"
+#include "dg/algorithm.h"
 #include "generator.h"
 #include "utilities.h"
 #include "adaption.h"
@@ -36,7 +29,7 @@ struct Fpsi
         X_init = x0, Y_init = y0;
         while( fabs( psi.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psi.dfy()( X_init, Y_init)) <= 1e-10)
             X_init +=  1.;
-        firstline_ = firstline;
+        m_firstline = firstline;
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0)
@@ -49,33 +42,44 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK( "Feagin-17-8-10",  fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
-            eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
+            N*=2;
+            double psi0 = psip_.f()(X_init, Y_init);
+            using Vec = std::array<double,2>;
+            dg::SinglestepTimeloop<Vec> odeint( dg::RungeKutta<Vec>(
+                        "Feagin-17-8-10", {0,0}), fieldRZtau_);
+            odeint.integrate_steps( psi0, begin2d, psi, end2d, N);
+            eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) +
+                    (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
-        //std::cout << "In init function error: psi(R,Z)-psi0: "<<psip_(X_init, Y_init)-psi<<"\n";
     }
 
     //compute f for a given psi between psi0 and psi1
     double construct_f( double psi, double& R_0, double& Z_0)
     {
         find_initial( psi, R_0, Z_0);
-		std::array<double, 3> begin{ {0,0,0} }, end(begin), end_old(begin);
+		std::array<double, 3> begin{ {0,0,0} }, end(begin);
         begin[0] = R_0, begin[1] = Z_0;
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
         while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
-            eps_old = eps, end_old = end; N*=2;
-            if( firstline_ == 0)
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
-            if( firstline_ == 1)
-                dg::stepperRK( "Feagin-17-8-10",  fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
+            eps_old = eps; N*=2;
+            using Vec = std::array<double,3>;
+            dg::RungeKutta<Vec> rk( "Feagin-17-8-10", begin);
+            dg::SinglestepTimeloop<Vec> odeint;
+            if( m_firstline == 0)
+                odeint = dg::SinglestepTimeloop<Vec>( rk,
+                        fieldRZYTconf_);
+            if( m_firstline == 1)
+                odeint = dg::SinglestepTimeloop<Vec>( rk,
+                        fieldRZYTequl_);
+            odeint.integrate_steps( 0., begin, 2.*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
-        //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
-        double f_psi = 2.*M_PI/end_old[2];
+        double f_psi = 2.*M_PI/end[2];
+        //std::cout <<"f_psi: "<<f_psi << " end "<<end[2] <<"\n";
         return f_psi;
     }
     double operator()( double psi)
@@ -85,7 +89,7 @@ struct Fpsi
     }
 
     private:
-    int firstline_;
+    int m_firstline;
     double X_init, Y_init;
     CylindricalFunctorsLvl1 psip_;
     CylindricalSymmTensorLvl1 chi_;
@@ -110,7 +114,7 @@ void compute_rzy( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTenso
     r.resize( y_vec.size()), z.resize(y_vec.size());
     std::array<real_type,2> begin{ {0,0} }, end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
-    //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
+    //std::cout <<"f_psi "<<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi, chi);
     dg::geo::equalarc::FieldRZY fieldRZYequi(psi, chi);
     fieldRZYconf.set_f(f_psi);
@@ -121,14 +125,19 @@ void compute_rzy( const CylindricalFunctorsLvl1& psi, const CylindricalSymmTenso
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z;
-        if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, 0, begin, y_vec[0], end, steps);
-        if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, 0, begin, y_vec[0], end, steps);
+        using Vec = std::array<real_type,2>;
+        dg::RungeKutta<Vec> rk ( "Feagin-17-8-10", {0,0});
+        dg::SinglestepTimeloop<Vec> odeint;
+        if( mode == 0)
+            odeint = dg::SinglestepTimeloop<Vec>( rk, fieldRZYconf);
+        if( mode == 1)
+            odeint = dg::SinglestepTimeloop<Vec>( rk, fieldRZYequi);
+        odeint.integrate_steps( 0., begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1];
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK( "Feagin-17-8-10",  fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
-            if(mode==1)dg::stepperRK( "Feagin-17-8-10",  fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
+            odeint.integrate_steps( y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only
@@ -217,9 +226,7 @@ void construct_rz( Nemov nemov,
         const thrust::host_vector<double>& z_init, //1d intial values of the first psi surface
         thrust::host_vector<double>& r,
         thrust::host_vector<double>& z,
-        thrust::host_vector<double>& h//,
-        //thrust::host_vector<double>& hr,
-        //thrust::host_vector<double>& hz
+        thrust::host_vector<double>& h
     )
 {
     unsigned N = 1;
@@ -232,36 +239,57 @@ void construct_rz( Nemov nemov,
     std::array<thrust::host_vector<double>,3> end(begin), temp(begin);
     unsigned sizeX = x_vec.size(), sizeY = r_init.size();
     unsigned size2d = x_vec.size()*r_init.size();
-    r.resize(size2d), z.resize(size2d), h.resize(size2d); //hr.resize(size2d), hz.resize(size2d);
+    r.resize(size2d), z.resize(size2d), h.resize(size2d);
     double x0=x_0, x1 = x_vec[0];
-    thrust::host_vector<double> r_old(r), r_diff( r), z_old(z), z_diff(z);
-    while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
+    thrust::host_vector<double> r_new(r_init), z_new(z_init), h_new(r_init);
+    thrust::host_vector<double> r_old(r_init), r_diff( r_init);
+    thrust::host_vector<double> z_old(z_init), z_diff(z_init);
+    for( unsigned i=0; i<sizeX; i++)
     {
-        r_old = r, z_old = z; eps_old = eps;
-        temp = begin;
-        //////////////////////////////////////////////////
-        for( unsigned i=0; i<sizeX; i++)
+        N = 1;
+        eps = 1e10, eps_old=2e10;
+        begin = temp;
+        while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
         {
+            r_old = r_new, z_old = z_new; eps_old = eps;
+            temp = begin;
+            //////////////////////////////////////////////////
             x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
-            dg::stepperRK( "Feagin-17-8-10",  nemov, x0, temp, x1, end, N);
+            using Vec = std::array<thrust::host_vector<double>,3>;
+            dg::RungeKutta<Vec> rk( "Feagin-17-8-10", temp);
+            dg::SinglestepTimeloop<Vec>( rk, nemov).integrate_steps( x0, temp,
+                    x1, end, N);
             for( unsigned j=0; j<sizeY; j++)
             {
-                unsigned idx = j*sizeX+i;
-                 r[idx] = end[0][j],  z[idx] = end[1][j];
-                //hr[idx] = end[3][j], hz[idx] = end[4][j];
-                 h[idx] = end[2][j];
+                r_new[j] = end[0][j],  z_new[j] = end[1][j];
+                h_new[j] = end[2][j];
             }
             //////////////////////////////////////////////////
             temp = end;
+            dg::blas1::axpby( 1., r_new, -1., r_old, r_diff);
+            dg::blas1::axpby( 1., z_new, -1., z_old, z_diff);
+            dg::blas1::pointwiseDot( r_diff, r_diff, r_diff);
+            dg::blas1::pointwiseDot( 1., z_diff, z_diff, 1., r_diff);
+            try{
+                eps = sqrt( dg::blas1::dot( r_diff, r_diff)/sizeY); //should be relative to the interpoint distances
+            } catch ( dg::Error& )
+            {
+                eps = eps_old;
+                r_new = r_old , z_new = z_old;
+            }
+            //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n";
+            N*=2;
+            if( eps > eps_old && N > 1024)
+                throw dg::Error(dg::Message(_ping_) <<
+                "Grid generator encountered loss of convergence integrating from x = "
+                <<x0<<" to x = "<<x1);
         }
-        dg::blas1::axpby( 1., r, -1., r_old, r_diff);
-        dg::blas1::axpby( 1., z, -1., z_old, z_diff);
-        dg::blas1::pointwiseDot( r_diff, r_diff, r_diff);
-        dg::blas1::pointwiseDot( 1., z_diff, z_diff, 1., r_diff);
-        eps = sqrt( dg::blas1::dot( r_diff, r_diff)/sizeX/sizeY); //should be relative to the interpoint distances
-        //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n";
-        N*=2;
+        for( unsigned j=0; j<sizeY; j++)
+        {
+            unsigned idx = sizeX*j+i;
+            r[idx] = r_new[j],  z[idx] = z_new[j], h[idx] = h_new[j];
+        }
     }
 
 }
@@ -275,8 +303,18 @@ void construct_rz( Nemov nemov,
 /**
  * @brief Generate a simple orthogonal grid
  *
- * Psi is the radial coordinate and you can choose various discretizations of the first line
+ * First discretize a closed flux surface.
+ * Then each point is followed along the gradient of Psi to obtain
+ * the points on other flux surfaces.
+ * @note find more details in <a href =
+ * "https://doi.org/10.1016/j.jcp.2017.03.056"> M. Wiesenberger, M. Held, L.
+ * Einkemmer Streamline integration as a method for two-dimensional elliptic
+ * grid generation Journal of Computational Physics 340, 435-450 (2017) </a>
+ *
+ * Psi is the radial coordinate and you can choose various discretizations of
+ * the first line
  * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
 struct SimpleOrthogonal : public aGenerator2d
 {
@@ -284,13 +322,20 @@ struct SimpleOrthogonal : public aGenerator2d
      * @brief Construct a simple orthogonal grid
      *
      * @param psi \f$\psi(x,y)\f$ is the flux function and its derivatives in Cartesian coordinates (x,y)
-     * @param psi_0 first boundary
-     * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param psi_0 first boundary (can be open)
+     * @param psi_1 second boundary (can be open)
+     * @param x0 a point on or close to the contour line given by psi_firstline
+     * @param y0 a point on or close to the contour line given by psi_firstline
+     * @param psi_firstline psi value for first line discretization (must be a
+     * closed flux surface)
+     * @param mode Indicate mode used to create
+     * the first line discretization: 0 is conformal, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double
+            psi_1, double x0, double y0, double psi_firstline, int mode =0
+            ):
+        SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0,
+                psi_firstline, mode)
     {
         m_orthogonal = true;
     }
@@ -299,22 +344,29 @@ struct SimpleOrthogonal : public aGenerator2d
      *
      * @param psi \f$\psi(x,y)\f$ is the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param chi is the monitor tensor and its divergenc in Cartesian coordinates (x,y)
-     * @param psi_0 first boundary
-     * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param psi_0 first boundary (can be open)
+     * @param psi_1 second boundary (can be open)
+     * @param x0 a point on or close to the contour line given by psi_firstline
+     * @param y0 a point on or close to the contour line given by psi_firstline
+     * @param psi_firstline psi value for first line discretization (must be a
+     * closed flux surface)
+     * @param mode Indicate mode used to create
+     * the first line discretization: 0 is conformal, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
+    SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const
+            CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1,
+            double x0, double y0, double psi_firstline, int mode = 0
+            ):
         psi_(psi), chi_(chi)
     {
         assert( psi_1 != psi_0);
-        firstline_ = firstline;
-        orthogonal::detail::Fpsi fpsi(psi, chi, x0, y0, firstline);
-        f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
+        m_firstline = mode;
+        orthogonal::detail::Fpsi fpsi(psi, chi, x0, y0, mode);
+        f0_ = fabs( fpsi.construct_f( psi_firstline, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
         m_orthogonal = false;
+        m_zeta_first = f0_*(psi_firstline-psi_0);
     }
 
     /**
@@ -341,10 +393,12 @@ struct SimpleOrthogonal : public aGenerator2d
          thrust::host_vector<double>& etaY) const
     {
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        orthogonal::detail::Nemov nemov(psi_, chi_, f0_, firstline_);
+        orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init,
+                R0_, Z0_, f0_, m_firstline);
+        orthogonal::detail::Nemov nemov(psi_, chi_, f0_, m_firstline);
         thrust::host_vector<double> h;
-        orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
+        orthogonal::detail::construct_rz(nemov, m_zeta_first, zeta1d, r_init,
+                z_init, x, y, h);
         unsigned size = x.size();
         for( unsigned idx=0; idx<size; idx++)
         {
@@ -362,7 +416,8 @@ struct SimpleOrthogonal : public aGenerator2d
     CylindricalFunctorsLvl2 psi_;
     CylindricalSymmTensorLvl1 chi_;
     double f0_, lz_, R0_, Z0_;
-    int firstline_;
+    int m_firstline;
+    double m_zeta_first;
     bool m_orthogonal;
 };
 

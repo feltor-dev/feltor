@@ -1,75 +1,139 @@
 {
-    "n"  : 3,
-    "Nx" : 56,
-    "Ny" : 96,
-    "Nz" : 16,
-    "dt" : 1e-1,
-    "compression" : [2,2],
+    "grid":
+    {
+        "n"  : 3,
+        "Nx" : 56,
+        "Ny" : 96,
+        "Nz" : 16,
+        "scaleR" :  [1.3,1.10],
+        "scaleZ" :  [2.05,1.55]
+    },
+    "advection":
+    {
+        "slope-limiter" : "none"
+    },
+    "timestepper":
+    {
+        "type" : "multistep",
+        "tableau": "TVB-3-3",
+        "dt" : 1e-1
+    },
     "FCI":
     {
-        "refine": [1,1],
+        "refine": [5,5],
         "rk4eps": 1e-6,
-        "periodify": true
+        "periodify": true,
+        "bc" : "along_field",
+        "interpolation-method" : "linear"
     },
-    "inner_loop": 4,
-    "itstp": 2,
-    "maxout": 10,
-    "stages"     : 3,
-    "eps_pol"    : [1e-6,1,1],
-    "jumpfactor" : 1,
-    "eps_gamma"  : 1e-6,
-    "eps_time"   : 1e-10,
-    "mu"          : -0.000272121,
-    "tau"         : 0.0,
-    "beta"        : 1e-4,
-    "nu_perp"     : 1e-2,
-    "perp_diff"   : ["hyperviscous","explicit"],
-    "resistivity" : 3.43e-6,
-    "curvmode"   : "toroidal",
-    "symmetric"  : false,
-    "bc" :
+    "output":
     {
-        "density" : ["DIR", "DIR"],
-        "velocity": ["NEU", "NEU"],
-        "potential":["DIR", "DIR"]
+        "type" : "netcdf",
+        "inner_loop" : 2,
+        "itstp"  : 2,
+        "maxout" : 1,
+        "compression" : [1,1]
     },
-    "box" :
+    "elliptic":
     {
-        "scaleR" :  [1.3,1.10],
-        "scaleZ" :  [1.35,1.05]
+        "stages" : 3,
+        "eps_pol"    : [1e-6,10,10],
+        "eps_gamma" : 1e-6,
+        "eps_ampere" : 1e-6,
+        "direction" : "centered",
+        "jumpfactor" : 1.0
     },
-    "initne"     : "turbulence",
-    "initphi"    : "zero",
-    "amplitude" : 0.001,
-    "sigma"     : 2.0,
-    "posX"      : 0.6,
-    "posY"      : 0,
-    "sigma_z"   : 0.25,
-    "k_psi"     : 0,
-    "profile":
+    "magnetic_field":
     {
-        "amp": 0,
-        "alpha": 0.2
+        "curvmode" : "toroidal",
+        "input": "file",
+        "file" : "geometry/tcv.json"
     },
-    "source" :
+    "physical":
     {
+        "mu"          : -0.000272121,
+        "tau"         : 0.0,
+        "beta"        : 1e-4,
+        "resistivity" : 3.43e-6,
+        "viscosity" : "braginskii"
+    },
+    "regularization":
+    {
+        "order" : 2,
+        "direction": "forward",
+        "nu_perp_n" : 1e-5,
+        "nu_perp_u" : 1e-5
+    },
+    "boundary":
+    {
+        "wall":
+        {
+            "type": "sol_pfr",
+            "penalization" : 1e+0,
+            "boundary": [1.1,0.998],
+            "alpha": [0.10,0.10],
+            "modify-B" : true,
+            "penalize-rhs" : false,
+            "nwall" : 1.0,
+            "uwall" : 0.0
+        },
+        "sheath":
+        {
+            "type": "bohm",
+            "penalization" : 1e+0,
+            "boundary": 0.125,
+            "alpha": 0.0625,
+            "penalize-rhs" : false,
+            "coordinate" : "s",
+            "max_angle" : 4
+        },
+        "bc" :
+        {
+            "density" : ["DIR", "DIR"],
+            "nbc" : 1.0,
+            "velocity": ["NEU", "NEU"],
+            "potential":["DIR", "DIR"],
+            "aparallel":["NEU", "NEU"]
+        }
+    },
+    "init":
+    {
+        "type" : "fields",
+        "density" :
+        {
+            "type" : "const",
+            "background" : 1.0
+        },
+        "velocity" :
+        {
+            "type" : "zero"
+        }
+    },
+    "source":
+    {
+        "minne" : 0.0,
+        "type" : "influx",
         "rate": 1e-2,
-        "type": "influx",
-        "boundary": 0.55,
-        "alpha" : 0.2
+        "ntilde": {
+            "type" : "turbulence",
+            "amplitude"  : 0.1,
+            "revolutions" : 1,
+            "parallel" : "gaussian",
+            "sigma_z" : 0.5
+        },
+        "profile":
+        {
+            "type" : "aligned",
+            "npeak" : 1.0,
+            "nsep" : 0.1,
+            "background" : 0.0
+        },
+        "damping":
+        {
+            "type": "alignedX",
+            "alpha" : 0.2,
+            "boundary" : 0.55
+        }
     },
-    "wall":
-    {
-        "type": "sol_pfr",
-        "penalization" : 1e+0,
-        "boundary": [1.1,0.998],
-        "alpha": [0.10,0.10]
-    },
-    "sheath":
-    {
-        "bc": "bohm",
-        "penalization" : 1e+0,
-        "boundary": 0.30,
-        "alpha": 0.2
-    }
+    "flags" :  ["calibrate", "symmetric"]
 }

@@ -15,6 +15,88 @@ far away from strictly following it really.
 > Only changes in code are reported here, we do not track changes in the
 > doxygen documentation, READMEs or tex writeups.
 
+## [v6.0] More modular
+### Added
+ - Add ability to use lambdas and functors without `dg::TensorTraits` in `dg::apply`, `dg::blas2::symv` and `dg::blas2::gemv` (Extremely useful!)
+ - Add `--extended-lambda` flag in default `NVCCFLAGS`
+ - New class `dg::file::WrappedJsonValue` plus test file; allows easy bug-tracing on jsoncpp file input
+ - Allow arbitrary `nx, ny, nz` polynomial number in all grids; adapt all weights, derivatives, etc. creation accordingly
+ - New sub-project `dg/matrix/matrix.h` written by Markus and optimized by Matthias. Allows matrix-function computations in particular square roots
+ - `CONTRIBUTING.md` file (moved from homepage)
+ - `LAPACKLIB` variable in Makefile configuration
+ - new `device=cpu` configuration (enable to compile without parallelization)
+ - new file `config/version.mk` provides git hash and branch information for file output
+ - new wall and sheath generation capabilities in `inc/geometries`
+ - new `dg::aTimeloop` family of classes to help create time-stepping
+ - new explicit timesteppers Cavaglieri-3-1-3 (explicit and implicit), Fehlberg-3-2-3, Fehlberg-4-2-3, Cavaglieri-4-2-3 (explicit and implicit), Tsitouras09/11-7-4-5, Verner-9-5-6, Verner-10-6-7, Dormand-Prince-13-7-8,
+ - new implicit timesteppers SDIRK-4-2-3, Sanchez-3-3, Sanchez-3-4, Sanchez-6-5, Sanchez-7-6
+ - Add vector support for `std::map` in `blas1` functions
+ - Add UnaryOp parameter to `dg::blas1::reduce`
+ - Add DenseMatrix-Vector multiplication suppoert in `dg::blas2::symv`
+ - Add append method to `dg::Message`
+ - Add `dg::abort_program` function
+ - Add more cuda Error management in backend functions
+ - Add convenience `dg::mpi_init` function
+ - Matrix conversion from `dg::EllSparseBlockMat` to `cusp::coo_matrix` and associated `dg::tensorproduct` and `dg::create::diagonal` function to re-create elliptic operators
+ - Add convenience mpi Macro `DG_RANK0` helping to write shared/mpi programs more easily
+ - Add new multigrid implementation `dg::nested_iterations` for maximum modularity, sovlers can be separately chosen at each stage
+ - Add experimental and preliminary FEM support
+ - Add `dg::least_squares` function
+ - project `esol` Edge-SOL turbulence in Full-F models
+ - project `poet` Full-F Full-K blob simulations
+ - project `navier_stokes` 3d field-aligned Navier-Stokes equations
+
+### Changed
+ - Redesign **implicit and semi-implicit timestepper interfaces** for more modularity and the ability to use lambdas
+ - Redesign `dg::Adaptive`
+ - Unify stopping criterions for Matrix inversion classes and use of weighted scalar product
+ - `dg::apply`, `dg::blas2::symv` and `dg::blas2::gemv` are now formally the same
+ - `dg::PCG` works with **self-adjoint matrices** in weights instead of symmetric ones
+ - Renamed `dg::lr_pivot` to `dg::lu_pivot` and make it use binary reproducible dot functions, same for `dg::lu_solve`
+ - Rename `dg::create::invert` to `dg::creat::inverse`
+ - Redesign project `src/toefl`; follows standard design on user-guide
+ - Redesign project `src/reco2D`; follows standard design on user-guide
+ - Redesign project `src/lamb_dipole`; adapt to `dg::file::WrappedJsonValue`
+ - Adapt all `src` projects to new semi-implicit timestepper interface
+ - Redesign DS and all related projects
+ - Rename `inc/geometries/magnetic_field_t.cu` to `inc/geometries/solovev_t.cu`
+
+### Deprecated
+ - `dg::integrateERK` replaced by `dg::aTimeloop` functionality
+ - `dg::stepperRK` replaced by `dg::aTimeloop` functionality
+
+### Removed
+ - `dg::FilteredImplicitMultistep`; barely any theory behind that
+ - `dg::Karniadakis` was marked deprecated before
+ - "Verner-8-5-6" Timestepper tableau
+ - `dg::norm` ; **Everything is normed now**;  adapt all codes to it; specifically also makes `inv_weights` and `inv_volume` functions unnecessary; matrix inversion works with weighted scalar products
+ - class `dg::Invert`; replaced by lambda functionality
+ - file `diag/impRdiag.cu`; replaced by python diagnostics
+ - file `diag/reco2Ddiag.cu`; replaced by python diagnostics
+ - file `diag/toeflEPdiag.cu`; replaced by python diagnostics
+ - file `diag/toeflRdiag.cu`; replaced by python diagnostics
+ - file `diag/vmaxnc.cu`; replaced by python diagnostics
+ - file `diag/window_params.txt`; Useless
+ - project `src/ep`; merged and oursourced with `impurities` project
+ - project `src/polar`; Useless
+ - project `src/impurities`; outsourced to `https://github.com/mwiesenberger/impurities`
+ - `nc_enddef` and `nc_redef` calls; they are unnecessary according to netcdf documentation
+ - all files `inc/geometries/[*magnetic-geometry.js*]` These are now part of a separate magnetic field repository
+ - `hector_t.cu`, `ribeiro_t.cu`, `simple_orthogonal_t.cu` merged into `flux_t.cu`
+
+### Fixed
+ - fix bug from linking `-lhdf5` by linking `-lhdf5_serial` in default.mk
+ - fix bug nvcc did not compile `.cpp` programs now it does
+ - fix bugs in `dg::AndersonAcceleration`
+ - fix bugs in `dg::LGMRES`
+ - fix bugs in `dg::BICGSTABl`
+ - fix bug in `exblas/accumulate.cuh` and `exblas/accumulate.h`
+ - fix bug in `dg::ClonePtr` copy-constructor
+ - fix bug symv call to CooMatrix in `mpi_matrix.h`
+ - fix NaN bugs in `dg::blas2::symv` even though `beta == 0`
+ - fix nvcc compiler warnings when using host lambdas in `dg::blas1` functions
+ - fix tableau Tsitouras11-7-4-5
+
 ## [v5.2] More Multistep
 ### Added
  - M100 config file

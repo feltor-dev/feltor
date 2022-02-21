@@ -44,7 +44,7 @@ int main(int argc, char**argv)
     dg::geo::CurvilinearProductGrid3d g3d( generator, n, Nx, Ny,Nz, dg::DIR);
     std::unique_ptr<dg::aGeometry2d> g2d( g3d.perp_grid() );
 
-    dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> pol( *g2d, dg::not_normed, dg::forward);
+    dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> pol( *g2d, dg::forward);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -73,11 +73,11 @@ int main(int argc, char**argv)
     //compute error
     dg::DVec error( solution);
     const double eps = 1e-10;
-    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
+    dg::PCG<dg::DVec > pcg( x, n*n*Nx*Ny*Nz);
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    unsigned number = invert(pol, x,b);// vol3d, v3d );
+    unsigned number = pcg.solve(pol, x,b, pol.precond(), pol.weights(), eps);
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

@@ -12,13 +12,13 @@ struct TestGrid : public dg::aRealGeometry2d<double>
 {
     using real_type = double;
 
-    TestGrid( ): dg::aRealGeometry2d<real_type>(0.,1.,0.,1.,1,2,2,dg::PER,dg::PER){}
+    TestGrid( ): dg::aRealGeometry2d<real_type>({0.,1.,1,2,dg::PER}, {0.,1.,1,2,dg::PER}){}
     virtual TestGrid* clone()const override final{
         return new TestGrid(*this);
     }
     private:
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny) override final{
-        aRealTopology2d<real_type>::do_set(new_n,new_Nx,new_Ny);
+    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny) override final{
+        aRealTopology2d<real_type>::do_set(nx,Nx,ny,Ny);
     }
     virtual dg::SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
         dg::SparseTensor<thrust::host_vector<real_type> > metric(*this);

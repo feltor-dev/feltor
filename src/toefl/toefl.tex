@@ -1,7 +1,10 @@
 %%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\input{../../doc/related_pages/header.tex}
-\input{../../doc/related_pages/newcommands.tex}
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+\usepackage{minted}
+\renewcommand{\ne}{\ensuremath{{n_e} }}
+\renewcommand{\ni}{\ensuremath{{N_i} }}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
@@ -13,263 +16,436 @@
 \begin{abstract}
   This is a program for 2d isothermal blob simulations used in References~\cite{Wiesenberger2014,Kube2016,Wiesenberger2017a}.
 \end{abstract}
+\tableofcontents
 
-\section{Equations}
-Currently we implemented $5$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density and $\rho$
-the vorticity density. $\phi$ is the electric potential. We
+\section{Compilation and useage}
+The program toefl.cpp can be compiled three ways with
+\begin{verbatim}
+make <toefl toefl_hpc toefl_mpi> device = <cpu omp gpu>
+\end{verbatim}
+Run with
+\begin{verbatim}
+path/to/toefl/toefl input.json
+path/to/toefl/toefl_hpc input.json output.nc
+echo np_x np_y | mpirun -n np_x*np_y path/to/toefl/toefl_mpi\
+    input.json output.nc
+\end{verbatim}
+All programs write performance informations to std::cout.
+The first is for shared memory systems (CPU/OpenMP/GPU) and opens a terminal window with life simulation results.
+ The
+second is shared memory systems and uses serial netcdf
+to write results to a file.
+For distributed
+memory systems (MPI+CPU/OpenMP/GPU) the program expects the distribution of processes in the
+x and y directions as command line input parameters. Also there serial netcdf is used.
+
+\section{The input file}
+Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json}
+
+\subsection{Model equations}
+Currently we implemented $5$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density, $\rho$
+the vorticity density and $\phi$ is the electric potential. We
 use Cartesian coordinates $x$, $y$.
-\subsection{Models}
 
-"local"
+\subsubsection{Delta-f gyrofluid model}
 \begin{subequations}
 \begin{align}
  -\nabla^2 \phi =  \Gamma_1 N -n, \quad
 \psi = \Gamma_1 \phi \quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1} \\
- \frac{\partial n}{\partial t}     = 
-    \{ n, \phi\} 
-  + \kappa \frac{\partial \phi}{\partial y} 
+ \frac{\partial n}{\partial t}     =
+    \{ n, \phi\}
+  + \kappa \frac{\partial \phi}{\partial y}
   -\kappa \frac{\partial n}{\partial y}
   + \nu \nabla^2 n  \\
   \frac{\partial N}{\partial t} =
-  \{ N, \psi\} 
-  + \kappa \frac{\partial \psi}{\partial y} 
+  \{ N, \psi\}
+  + \kappa \frac{\partial \psi}{\partial y}
   + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla^2N
 \end{align}
 \end{subequations}
+This model is chosen in the input file via
+\begin{minted}[texcomments]{js}
+"model":
+{
+    "type"  : "local",
+    "curvature" : 0.0005, // $\kappa$
+    "tau" : 0, // $\tau$
+    "nu" : 1e-9
+}
+\end{minted}
 
-"global"
+\subsubsection{Full-F gyrofluid model}
 \begin{subequations}
 \begin{align}
 B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
  -\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right) = \Gamma_1 N-n, \quad
  \text{Boussinesq:}\quad -\nabla_\perp^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
 \psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
- \frac{\partial n}{\partial t}     = 
-    \frac{1}{B}\{ n, \phi\} 
-  + \kappa n\frac{\partial \phi}{\partial y} 
+ \frac{\partial n}{\partial t}     =
+    \frac{1}{B}\{ n, \phi\}
+  + \kappa n\frac{\partial \phi}{\partial y}
   -\kappa \frac{\partial n}{\partial y}
   + \nu \nabla_\perp^2 n  \\
   \frac{\partial N}{\partial t} =
-  \frac{1}{B}\{ N, \psi\} 
-  + \kappa N\frac{\partial \psi}{\partial y} 
+  \frac{1}{B}\{ N, \psi\}
+  + \kappa N\frac{\partial \psi}{\partial y}
   + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla_\perp^2N
 \end{align}
 \end{subequations}
+This model is chosen in the input file via
+\begin{minted}[texcomments]{js}
+"model":
+{
+    "type"  : "global",
+    "boussinesq" : false, // or true
+    "curvature" : 0.0005, // $\kappa$
+    "tau" : 0, // $\tau$
+    "nu" : 1e-9
+}
+\end{minted}
 
-"gravity local"
+\subsubsection{Gravity delta-f model}
 \begin{subequations}
 \begin{align}
  \nabla^2 \phi = \rho \\
  \frac{\partial n}{\partial t} = \{ n, \phi\} + \nu \nabla^2 n  \\
-  \frac{\partial \rho}{\partial t} = \{ \rho, \phi\} - \eta \rho - \frac{\partial n}{\partial y} + \nu \nabla^2 \rho 
+  \frac{\partial \rho}{\partial t} = \{ \rho, \phi\} - \eta \rho - \frac{\partial n}{\partial y} + \nu \nabla^2 \rho
 \end{align}
 \end{subequations}
+This model is chosen in the input file via
+\begin{minted}[texcomments]{js}
+"model":
+{
+    "type"  : "gravity-local",
+    "friction" : 0 // $\eta$
+    "nu" : 1e-9
+}
+\end{minted}
 
 
-"gravity global"
+\subsubsection{Gravity full-f model}
 \begin{subequations}
 \begin{align}
  \nabla \cdot(n \nabla \phi) = \rho \quad\text{ Boussinesq: }\quad \nabla^2 \phi = \rho/n \\
  \frac{\partial n}{\partial t} = \{ n, \phi\} +  \nu \nabla^2 n  \\
-  \frac{\partial \rho}{\partial t} = \{ \rho, \phi\} + \{n, \frac{1}{2} \nabla\phi^2\} - \eta \rho - \frac{\partial n}{\partial y} +\nu\nabla^2\rho 
+  \frac{\partial \rho}{\partial t} = \{ \rho, \phi\} + \{n, \frac{1}{2} \nabla\phi^2\} - \eta \rho - \frac{\partial n}{\partial y} +\nu\nabla^2\rho
 \end{align}
 \end{subequations}
+This model is chosen in the input file via
+\begin{minted}[texcomments]{js}
+"model":
+{
+    "type"  : "gravity-global",
+    "friction" : 0 // $\eta$
+    "nu" : 1e-9
+}
+\end{minted}
 
-"drift global"
+\subsubsection{Full-f global drift-fluid model}
 \begin{subequations}
 \begin{align}
 B(x)^{-1} = \kappa x +1-\kappa X\\
  \nabla \cdot \left(\frac{n}{B^2} \nabla \phi\right) = \rho \quad
  \text{Boussinesq:}\quad \nabla^2\phi = \rho \frac{B^2}{n} \quad
 \psi = \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
- \frac{\partial n}{\partial t}     = 
-    \frac{1}{B}\{ n, \phi\} 
-  + \kappa n\frac{\partial \phi}{\partial y} 
+ \frac{\partial n}{\partial t}     =
+    \frac{1}{B}\{ n, \phi\}
+  + \kappa n\frac{\partial \phi}{\partial y}
   + \nu \nabla^2 n  \\
   \frac{\partial \rho}{\partial t} =
-  \frac{1}{B}\{ \rho, \phi\} 
+  \frac{1}{B}\{ \rho, \phi\}
   + \frac{1}{B}\{n, \psi\}
-  + \kappa \rho\frac{\partial \phi}{\partial y} 
+  + \kappa \rho\frac{\partial \phi}{\partial y}
   + \kappa n\frac{\partial \psi}{\partial y}
   - \kappa\frac{\partial n}{\partial y} +\nu\nabla^2\rho 
 \end{align}
 \end{subequations}
+This model is chosen in the input file via
+\begin{minted}[texcomments]{js}
+"model":
+{
+    "type"  : "drift-global",
+    "boussinesq" : false, // or true
+    "curvature" : 0.0005, // $\kappa$
+    "nu" : 1e-9
+}
+\end{minted}
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Spatial grid} \label{sec:spatial}
+The spatial grid is an equidistant discontinuous Galerkin discretization of the
+2D Cartesian product-space
+$[ 0, l_x]\times [0, l_y]$,
+We use an equal number of Gaussian nodes in $x$ and $y$.
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "n"  :  3, // The number of Gaussian nodes in x and y (3 is a good value)
+    "Nx"  : 48, // Number of cells in x
+    "Ny"  : 48, // Number of cells in y
+    "lx"  : 200, // $l_x$
+    "ly"  : 200 // $l_y$
+}
+\end{minted}
 
 
 \subsection{Initialization}
-Initialization of $n$ is a Gaussian 
-\begin{align}
-    n(x,y) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
-    \label{}
+There only is one initialization type available, namely the blob initial condition.
+\begin{align} \label{eq:profile_blob}
+    \ne(x,y) &= 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right) \\
 \end{align}
-where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
+where $X = p_xl_x$ and $Y= p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
 radius of the blob.
-We initialize 
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "amplitude": 1.0, // $A$ in Eq.\eqref{eq:profile_blob}
+    "posX" : 0, // $p_x$ in Eq.\eqref{eq:profile_blob}
+    "posY" : 0, // $p_y$ in Eq.\eqref{eq:profile_blob}
+    "sigma" : 5.0, // $\sigma$ in Eq.\eqref{eq:profile_blob}
+}
+\end{minted}
+In the case of the "local" and "global" models we can choose how to initialize
+the ion density
 \begin{align}
-    N = \Gamma_1^{-1} n \quad \phi = 0 \\
-    \rho = \phi = 0
-    \label{}
+    \ni(x,y) &= \ne(x,y) \text{ no FLR correction} \\
+    \ni(x,y) &= \Gamma_{1i}^{-1} \ne(x,y) \text{ inverse FLR correction} \\
 \end{align}
-\subsection{Diagnostics}
+\begin{minted}[texcomments]{js}
+"init":
+{
+    "flr" : "none", //only needed for $\tau_i \neq 0$
+    "flr" : "gamma_inv", //only needed for $\tau_i \neq 0$
+}
+\end{minted}
+In the case of the "gravity\_local" and "gravity\_global" and "drift\_global" models
+the vorticity is initialized to zero:
 \begin{align}
-    M(t) = \int n-1 \\
-    \Lambda_n = \nu \int \Delta n  \\
-    ...
-    \label{}
+    \rho(x,y) = 0
 \end{align}
-\section{Numerical methods}
-discontinuous Galerkin on structured grid
-\rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
-\begin{longtable}{ll>{\RaggedRight}p{7cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
-coordinate system & Cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
-matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-\ExB advection & Arakawa & s.a. \cite{Einkemmer2014} \\
-curvature terms & direct & flux conserving \\
-time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
-\bottomrule
-\end{longtable}
 
-\section{Compilation and useage}
-There are two programs toeflR.cu and toefl\_hpc.cu . Compilation with
-\begin{verbatim}
-make <toeflR toefl_hpc toefl_mpi> device = <omp gpu>
-\end{verbatim}
-Run with
-\begin{verbatim}
-path/to/feltor/src/toefl/toeflR input.json
-path/to/feltor/src/toefl/toefl_hpc input.json output.nc
-echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/toefl/toefl_mpi\
-    input.json output.nc
-\end{verbatim}
-All programs write performance informations to std::cout.
-The first is for shared memory systems (OpenMP/GPU) and opens a terminal window with life simulation results.
- The
-second can be compiled for both shared and distributed memory systems and uses serial netcdf in both cases
-to write results to a file.
-For distributed
-memory systems (MPI+OpenMP/GPU) the program expects the distribution of processes in the
-x and y directions as command line input parameters.
+\subsection{Timestepper}
+We use an adaptive explicit embedded Runge Kutta timestepper to advance the equations in time
+\begin{minted}[texcomments]{js}
+"timestepper":
+{
+    "tableau" : "Bogacki-Shampine-4-2-3",
+    "rtol" : 1e-5,
+    "atol" : 1e-6
+}
+\end{minted}
+\subsection{Boundary conditions}
+The boundary conditions are the same for all fields.
+\begin{minted}[texcomments]{js}
+"bc" : ["DIR", "PER"]
+\end{minted}
 
-\subsection{Input file structure}
-Input file format: json
+\subsection{Elliptic solvers}
+We discretize all elliptic operators with a local dG method (LDG).  In order to
+solve the elliptic equations we chose a multigrid scheme (nested iterations in
+combination with conjugate gradient solves on each plane). The accuaracies for
+the polarization equation can be chosen for each stage separately, while for
+the Helmholtz type equations (the gamma operators) only
+one accuracy can be set (they typically are quite fast to solve):
+\begin{minted}[texcomments]{js}
+"elliptic":
+{
+    "stages"    : 3,  // Number of stages (3 is best in virtually all cases)
+    // $2^{\text{stages-1}}$ has to evenly divide both $N_x$ and $N_y$
+    "eps_pol"   : [1e-6,10,10],
+    // The first number is the tolerance for residual of the inversion of
+    // polarisation equation. The second number is a multiplicative
+    // factor for the accuracy on the second grid in a multigrid scheme, the
+    // third for the third grid and so on:
+    // $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$.
+    // Tuning those factors is a major performance tuning oppourtunity!!
+    // For saturated turbulence the suggested values are [1e-6, 2000, 100].
+    "eps_gamma" : [1e-10,1,1] // Accuracy requirement of Gamma operator
+    "direction" : "forward", // Direction of the Laplacian: forward or centered
+}
+\end{minted}
+\begin{tcolorbox}[title=Note]
+    We use solutions from previous time steps to extrapolate an initial guess
+    and use a diagonal preconditioner
+\end{tcolorbox}
+\section{Output}
+Our program can either write results directly to screen using the glfw library
+or write results to disc using netcdf.
+This can be controlled via
+\begin{minted}[texcomments]{js}
+"output":
+{
+    // Use glfw to display results in a window while computing (requires to
+    // compile with the glfw3 library)
+    "type"  : "glfw"
+    "itstp"  : 4, // The number of steps between refreshing field plots
 
-%%This is a booktabs table
-\begin{longtable}{llll>{\RaggedRight}p{7cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
-n      & integer & 3 & - &\# Gaussian nodes in x and y \\
-Nx     & integer &100& - &\# grid points in x \\
-Ny     & integer &100& - &\# grid points in y \\
-dt     & integer &3.0& - &time step in units of $c_s/\rho_s$ \\
-n\_out  & integer &3  & - &\# Gaussian nodes in x and y in output \\
-Nx\_out & integer &100& - &\# grid points in x in output fields \\
-Ny\_out & integer &100& - &\# grid points in y in output fields \\
-itstp  & integer &2  & - &   steps between outputs \\
-maxout & integer &100& - &      \# outputs excluding first \\
-eps\_pol   & float &1e-6    & - &  accuracy of polarisation solver \\
-eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ (only in gyrofluid model) \\
-eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
-curvature  & float &0.00015& - & magnetic curvature $\kappa$ \\
-tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
-nu\_perp    & float &5e-3   & - & pependicular viscosity $\nu$ \\
-amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
-sigma      & float &10     & - & blob radius $\sigma$ \\
-posX       & float &0.3    & - & blob x-position in units of $l_x$, i.e. $X = p_x l_x$\\
-posY       & float &0.5    & - & blob y-position in units of $l_y$, i.e. $Y = p_y l_y$ \\
-lx         & float &200    & - & $l_x$  \\
-ly         & float &200    & - & $l_y$  \\
-friction   & float & 0     & 0 & friction coefficient $\eta$ in gravity model \\
-bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-equations  & char & "global" & "global" &local, global, gravity\_local, gravity\_global, drift\_global \\
-boussinesq & bool & false    & false &boussinesq approximation in global models true or false\\
-\bottomrule
-\end{longtable}
-
-The default value is taken if the value name is not found in the input file. If there is no default and
-the value is not found,
-the program exits with an error message.
-
-\subsection{Structure of output file}
+    // Use netcdf to write results into a file (filename given on command line)
+    // (see next section for information about what is written in there)
+    "type"  : "netcdf"
+    "tend"  : 4,    // The number of steps between outputs of 2d fields
+    "maxout"  : 100, // The total number of field outputs
+    "n"  : 3 , // The number of polynomial coefficients in the output file
+    "Nx" : 48, // Number of cells in x in the output file
+    "Ny" : 48  // Number of cells in y in the output file
+}
+\end{minted}
+The number of points in the output file can be lower (or higher) than the number of
+grid points used for the calculation. The points will be interpolated from the
+computational grid.
+\subsection{Netcdf file}
 Output file format: netcdf-4/hdf5
-%
-%Name | Type | Dimensionality | Description
-%---|---|---|---|
-\begin{longtable}{lll>{\RaggedRight}p{7cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &             text attribute & 1 & verbose input file as a string \\
-energy\_time             & Dataset & 1 & timesteps at which 1d variables are written \\
-time                     & Dataset & 1 & time at which fields are written \\
-x                        & Dataset & 1 & x-coordinate  \\
-y                        & Dataset & 1 & y-coordinate \\
-electrons                & Dataset & 3 (time, y, x) & electon density $n$ \\
-ions                     & Dataset & 3 (time, y, x) & ion density $N$ or vorticity density $\rho$  \\
-potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
-vorticity                & Dataset & 3 (time, y, x) & Laplacian of potential $\nabla^2\phi$  \\
-dEdt                     & Dataset & 1 (energy\_time) & change of energy per time  \\
-dissipation              & Dataset & 1 (energy\_time) & diffusion integrals  \\
-energy                   & Dataset & 1 (energy\_time) & total energy integral  \\
-mass                     & Dataset & 1 (energy\_time) & mass integral   \\
-\bottomrule
-\end{longtable}
-\section{Diagnostics toeflRdiag.cu}
-There only is a shared memory version available
-\begin{verbatim}
-cd path/to/feltor/diag
-make toeflRdiag
-path/to/feltor/diag/toeflRdiag input.nc output.nc
-\end{verbatim}
 
-Input file format: netcdf-4/hdf5
-%
-%Name | Type | Dimensionality | Description
-%---|---|---|---|
 \begin{longtable}{lll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
-inputfile  &             text attribute & 1 & verbose input file as a string \\
-electrons                & Dataset & 3 & electon density (time, y, x) \\
-ions                     & Dataset & 3 & ion density (time, y, x) \\
-potential                & Dataset & 3 & electric potential (time, y, x) \\
+inputfile        & text attribute & 1 & verbose input file as a string \\
+time             & Coord. Var. & 1 (time) & time at which fields are written \\
+x                & Coord. Var. & 1 (x) & x-coordinate  \\
+y                & Coord. Var. & 1 (y) & y-coordinate \\
+xc               & Dataset & 2 (y,x) & Cartesian x-coordinate  \\
+yc               & Dataset & 2 (y,x) & Cartesian y-coordinate \\
+weights          & Dataset & 2 (y,x) & Gaussian integration weights \\
+X                & Dataset & 3 (time, y, x) & 2d outputs \\
 \bottomrule
 \end{longtable}
+The output fields X are determined in the file \texttt{toefl/diag.h}.
 
-Output file format: netcdf-4/hdf5
-%
-%Name | Type | Dimensionality | Description
-%---|---|---|---|
-\begin{longtable}{lll>{\RaggedRight}p{7cm}}
-\toprule
-\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
- inputfile & text attribute & 1 & copy of inputfile attribute of the input file (the json string of the simulation input file) \\
- time & Dataset & 1 & the time steps at which variables are written \\
- posX & Dataset & 1 (time) & centre of mass (COM) position x-coordinate \\
- posY & Dataset & 1 (time) &COM y-position \\
- velX & Dataset & 1 (time)& COM x-velocity \\
- velY & Dataset & 1 (time)& COM y-velocity \\
- accX & Dataset & 1 (time)& COM x-acceleration \\
- accY & Dataset & 1 (time)& COM y-acceleration \\
- velCOM & Dataset & 1 (time)&absolute value of the COM velocity \\
- posXmax& Dataset & 1 (time)&maximum amplitude x-position \\
- posYmax& Dataset & 1 (time)&maximum amplitude y-position \\
- velXmax& Dataset & 1 (time)&maximum amplitude x-velocity \\
- velYmax& Dataset & 1 (time)&maximum amplitude y-velocity \\
- maxamp & Dataset & 1 (time)&value of the maximum amplitude  \\
-  compactness\_ne& Dataset & 1 (time) &compactness of the density field \\
- Ue& Dataset&  1 (time) &entropy electrons \\
- Ui &Dataset& 1 (time) & entropy ions \\
- Uphi& Dataset& 1 (time) &  exb energy \\
- mass& Dataset & 1 (time) & mass of the blob without background \\
-\bottomrule
-\end{longtable}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Blob related quantities}
+For the blob quantities it is important that we use the physical $\ne$.
+\begin{tcolorbox}[title=Note]
+    These quantities can be easily computed in post-processing in e.g. a python script.
+\end{tcolorbox}
+
+\subsection{Center of mass}
+The first quantity of interest is the Center-of-mass position
+\begin{align}
+    M :=& \int (\ne -1 ) \dV \\
+    X :=& \frac{1}{M} \int x(\ne - 1) \dV \\
+    Y :=& \frac{1}{M} \int y(\ne - 1) \dV
+\end{align}
+\subsection{Blob compactness}
+The blobs ability to retain its initial (Gaussian) shape is quantified by the  blob compactness
+\begin{align}
+     I_c(t) &:= \frac{\int dA (\ne(\vec{x},t)-1) h(\vec{x},t)}{\int dA
+(\ne(\vec{x},0)-1) h(\vec{x},0)}
+\end{align}
+Here, we introduced the heaviside function
+\begin{align}
+     h(\vec{x},t) &:= \begin{cases}
+          1,
+        &\ \text{if} \hspace{2mm}||\vec{x} - \vec{X}_{max}||^2 < \sigma^2 \\
+0,  &\ \text{else}
+           \end{cases} \nonumber
+\end{align}
+and the position of the maximum density \( \vec{X}_{max}(t)\).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Invariants}
+\subsection{Mass}
+In all models the particles density conservation reads
+\begin{align} \label{eq:mass_theorem}
+  \frac{\partial}{\partial t} \mathcal M
+  + \nc\vec{ j_{n,e}}
+  =  \Lambda_{\ne}
+\end{align}
+with
+\begin{align}
+    \mathcal M &= \ne \\
+    \vec j_{n,s} &= \ne \vec v_E + \vec v_\kappa \\
+     \Lambda_\ne &= -\nu_\perp \Delta_\perp^2 \ne
+\end{align}
+With vanishing flux on the boundaries and zero viscosity we have
+\begin{align}
+    \frac{\partial}{\partial t} \int \dV \mathcal M_s = 0
+\end{align}
+
+\subsection{Energy}
+The energy theorem reads
+\begin{align} \label{eq:energy_theorem}
+  \frac{\partial}{\partial t} \mathcal E
+  + \nc\vec{ j_{\mathcal E}}
+  =  \Lambda_{\mathcal E}
+\end{align}
+With our choice of boundary conditions the energy flux
+vanishes on the boundary.
+In the absence of artificial viscosity the volume integrated
+ energy density is thus an exact invariant of the system.
+\begin{align}
+    \frac{\partial}{\partial t} \int \dV \mathcal E = 0
+\end{align}
+
+\subsubsection{ Full-F gyro-fluid model}
+The inherent energy density of our system is:
+\begin{align}
+ \mathcal{E} := &
+ \ne \ln{(\ne)} + \tau_i \ni\ln{(\ni)}  + \frac{1}{2} \ni u_E^2
+\end{align}
+The energy current density and diffusion are
+\begin{align}
+  \vec j_{\mathcal E} =& \left[
+  \left( \ln \ne - \phi \right)\ne\left(
+  \vec u_E + \vec u_\kappa \right) \right]
+  +\left[
+      \left(\tau_i \ln \ni + \psi_{i} \right)\ni\left(
+  \vec u_E^i + \vec u_\kappa \right) \right]
+  , \\
+    \Lambda_\mathcal{E} :=  &+ \left( ( 1+\ln \ne) - \phi\right)(\nu_\perp \Delta_\perp \ne)+ \left( ( 1+\ln \ni) + \psi\right)(\nu_\perp \Delta_\perp \ni)
+    \label{eq:energy_diffusion}
+\end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric potentials and we sum over all species.
+
+With our choice of boundary conditions the energy flux
+vanishes on the boundary.
+In the absence of artificial viscosity the volume integrated
+ energy density is thus an exact invariant of the system.
+\begin{align}
+    \frac{\partial}{\partial t} \int \dV \mathcal E = 0
+\end{align}
+\subsubsection{ Delta-F gyro-fluid model}
+The inherent energy density of our system is:
+\begin{align}
+ \mathcal{E} := &
+ \frac{1}{2}\ne^2  + \frac{1}{2}\tau_i \ni^2 + \frac{1}{2} (\nabla\phi)^2
+\end{align}
+The energy current density and diffusion are
+\begin{align}
+  \vec j_{\mathcal E} =& \sum_s a_s\left[
+  \left(\tau_s \ln \ne + \psi_s \right)\ne\left(
+  \vec u_E + \vec u_\kappa \right) \right]
+  , \\
+    \Lambda_\mathcal{E} :=  &+ \left( ( 1+\ln \ne) - \phi\right)(\nu_\perp \Delta_\perp \ne)
+    + \left( \tau_i( 1+\ln \ni) + \psi\right)(\nu_\perp \Delta_\perp \ni)
+    \label{eq:energy_diffusion}
+\end{align}
+where in the energy flux $\vec j_{\mathcal E}$
+we neglect terms  containing time derivatives
+of the eletric potentials and we sum over all species.
+
+\subsubsection{Gravity delta-f model}
+\begin{align}
+ \mathcal{E} := &
+ \frac{1}{2} \ne^2
+\end{align}
+
+\subsubsection{Gravity full-f model}
+\begin{align}
+ \mathcal{E} := &
+ \frac{1}{2} \ne^2
+\end{align}
+
+\subsubsection{Full-f global drift-fluid model}
+\begin{align}
+ \mathcal{E} := & n \ln ( n) + \frac{1}{2} n u_E^2
+\end{align}
+
 
 
 %..................................................................
-\bibliography{../../doc/related_pages/references}
+\bibliography{../common/references}
 %..................................................................
-
 
 \end{document}

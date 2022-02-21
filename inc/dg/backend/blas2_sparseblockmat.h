@@ -1,5 +1,6 @@
 #ifndef _DG_BLAS_SPARSEBLOCKMAT_
 #define _DG_BLAS_SPARSEBLOCKMAT_
+#include "exceptions.h"
 #include "tensor_traits.h"
 #include "tensor_traits.h"
 #include "sparseblockmat.h"
@@ -32,10 +33,10 @@ inline void doSymv_dispatch(
     int size_x = x.size();
     int size_y = y.size();
     if( size_x != m.total_num_cols()) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<m.total_num_cols());
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.total_num_cols());
     }
     if( size_y != m.total_num_rows()) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<m.total_num_rows());
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.total_num_rows());
     }
     const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
           value_type * y_ptr = thrust::raw_pointer_cast(y.data());
