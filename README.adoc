@@ -460,7 +460,7 @@ git checkout cuda10
 == 2. Documentation
 
 The
-http://feltor-dev.github.io/doc/dg/html/modules.html[documentation]
+https://mwiesenberger.github.io/feltor/dg/html/modules.html[documentation]
 of the dg library was generated with
 http://www.doxygen.org[Doxygen] and LateX. You can generate a local
 version directly from source code. This depends on the `doxygen`,
