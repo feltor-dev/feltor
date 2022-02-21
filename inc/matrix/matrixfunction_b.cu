@@ -12,9 +12,9 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-const double m=1.;
-const double n=1.;
-const double alpha = -1.;
+const double m=4.;
+const double n=4.;
+const double alpha = -0.5;
 const double ell_fac = -alpha*(m*m+n*n);
 const double helm_fac = 1.+ ell_fac;
 
@@ -85,7 +85,7 @@ int main(int argc, char * argv[])
         std::cout << "#   min(EV) = "<<EVmin <<"  max(EV) = "<<EVmax << "\n";
         std::cout << "#   kappa   = "<<kappa <<"\n";
         std::cout << "#   res_fac = "<<res_fac<< "\n";
-        std::cout << outs[u] << "\n";
+        std::cout << outs[u] << ":\n";
         dg::mat::UniversalLanczos<Container> krylovfunceigen( x, max_iter);
         t.tic();
         auto func = dg::mat::make_FuncEigen_Te1( funcs[u]);

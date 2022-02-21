@@ -8,8 +8,8 @@
 const double tau = 1.;
 const double alpha = -tau;
 const double beta = -tau/2.;
-const double m = 1.;
-const double n = 1.;
+const double m = 4.;
+const double n = 4.;
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -221,24 +221,15 @@ int main()
         dg::blas1::scal(temp, 0.0);
         dg::blas1::scal(x, 0.0);
         t.tic();
-        unsigned number = 0, numberCG = 0;
-        dg::Timer ti;
-        ti.tic();
+        unsigned numberCG = 0;
         //auto func = dg::mat::make_FuncEigen_Te1([](double x){return sqrt(x);});
         dg::mat::MatrixSqrt<Container> sqrtsolve( gamma0inv, +1, w2d,
                 eps_gamma);
 
         dg::apply( sqrtsolve, rho_FF, temp);
-        number = sqrtsolve.get_iter();
-        ti.toc();
-        std::cout << "# SQRT solve with "<<number<<" iterations took "<<ti.diff()<<"s\n";
         dg::blas1::scal(temp,-1.0);
         numberCG = pcg.solve( lapperp, x_gamma, temp, 1., w2d, eps_pol);
-        ti.tic();
         dg::apply( sqrtsolve, x_gamma, x);
-        number = sqrtsolve.get_iter();
-        ti.toc();
-        std::cout << "# SQRT solve with "<<number<<" iterations took "<<ti.diff()<<"s\n";
 
         t.toc();
 

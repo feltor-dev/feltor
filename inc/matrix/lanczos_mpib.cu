@@ -10,9 +10,9 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-const double alpha = -1;
-const double m = 1.;
-const double n = 1.;
+const double alpha = -0.5;
+const double m = 4.;
+const double n = 4.;
 
 double lhs( double x, double y) {return sin(m*x)*sin(n*y);}
 double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}

@@ -36,14 +36,14 @@ int main(int argc, char * argv[])
     double epsTrel = 1e-6;
     double epsTabs = 1e-8;
     std::cout << "# Type epsilon for CG (1e-8), and eps_rel (1e-9) and eps_abs (1e-12) for TimeStepper\n";
-//     std::cin >> epsCG >> epsTrel >> epsTabs;
+    std::cin >> epsCG >> epsTrel >> epsTabs;
     unsigned max_iter = 500;
     unsigned max_iterC = 40;
     std::cout << "# Type max_iter of tridiagonalization (500) and of Cauchy integral (40) ?\n";
-//     std::cin >> max_iter >> max_iterC;
+    std::cin >> max_iter >> max_iterC;
     std::cout << "# Type in eps of tridiagonalization (1e-7)\n";
     double eps = 1e-7; //# of pcg iter increases very much if
-//     std::cin >> eps;
+    std::cin >> eps;
     std::cout <<"# You typed\n"
               <<"epsCG:  "<<epsCG<<"\n"
               <<"epsTrel: "<<epsTrel<<"\n"
@@ -95,8 +95,9 @@ int main(int argc, char * argv[])
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
         double time = t.diff();
 
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
+        std::cout << "    iter: "<<std::setw(3)<<1 << "\n";
         std::cout << "    iterT: "<<std::setw(3)<<iter_arr << "\n";
 
         std::cout << "\nCauchy-Inv+A: \n";
@@ -106,35 +107,36 @@ int main(int argc, char * argv[])
         time+=t.diff();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<1 << "\n";
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr << "\n";
     }
     //////////////////Krylov solve via Lanczos method and Cauchy solve
     {
-        std::cout << "\nM-Lanczos+Cauchy-Inv:\n";
+        std::cout << "\nUniversal-M-Lanczos+Cauchy-Inv:\n";
         t.tic();
         iter_arr = lanczos.solve( x, dg::mat::make_SqrtCauchy_Te1( -1,
-                extremeEVs, max_iterC), A, b_exac, w2d, eps, 1., "residual");
+                extremeEVs, max_iterC), A, b_exac, w2d, eps, 1., "universal");
         t.toc();
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
         double time = t.diff();
 
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
         std::cout << "    iterT: "<<std::setw(3)<<max_iterC << "\n";
 
-        std::cout << "\nM-Lanczos+Cauchy:\n";
+        std::cout << "\nUniversal-M-Lanczos+Cauchy:\n";
         t.tic();
         iter_arr = lanczos.solve( bs, dg::mat::make_SqrtCauchy_Te1( +1,
-                extremeEVs, max_iterC), A, b_exac, w2d, eps, 1., "residual");
+                extremeEVs, max_iterC), A, b_exac, w2d, eps, 1., "universal");
         t.toc();
         time = t.diff();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
         std::cout << "    iterT: "<<std::setw(3)<<max_iterC << "\n";
@@ -144,7 +146,7 @@ int main(int argc, char * argv[])
     {
         std::cout << "\nM-Lanczos+ODE:\n";
         b = dg::evaluate(rhsHelmholtzsqrt, g);
-        unsigned number;
+        unsigned number = 0;
         t.tic();
         iter_arr = lanczos.solve( bs, dg::mat::make_SqrtODE_Te1( +1,
                     "Dormand-Prince-7-4-5", epsTrel, epsTabs, number), A,
@@ -154,7 +156,7 @@ int main(int argc, char * argv[])
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
         double time = t.diff();
 
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
         std::cout << "    iterT: "<<std::setw(3)<<number << "\n";
@@ -163,45 +165,47 @@ int main(int argc, char * argv[])
         t.tic();
         iter_arr = lanczos.solve( b, dg::mat::make_SqrtODE_Te1( -1,
                     "Dormand-Prince-7-4-5", epsTrel, epsTabs, number), A,
-                bs, w2d, eps, 1., "residual");
+                bs_exac, w2d, eps, 1., "residual");
         t.toc();
         time = t.diff();
         dg::blas1::axpby(1.0, b, -1.0, b_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, b_exac));
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
         std::cout << "    iterT: "<<std::setw(3)<<number << "\n";
     }
     //////////////////Krylov solve via Lanczos method and ODE sqrt solve
     {
-        std::cout << "\nUniversal-M-Lanczos-Eigen:\n";
+        std::cout << "\nUniversal-M-Lanczos+Eigen:\n";
         b = dg::evaluate(rhsHelmholtzsqrt, g);
         auto sqrt_f =  [](double x) { return sqrt(x);};
         t.tic();
         iter_arr  = lanczos.solve( bs, dg::mat::make_FuncEigen_Te1(  sqrt_f),
-                A, b_exac, A.weights(),  eps, 1., "universal", 1., 2);
+                A, b_exac, A.weights(),  eps, 1., "universal");
         t.toc();
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
         double time = t.diff();
 
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
+        std::cout << "    iterT: "<<std::setw(3)<<0 << "\n";
 
-        std::cout << "\nUniversal-M-Lanczos-Eigen-Inv:\n";
+        std::cout << "\nUniversal-M-Lanczos+Eigen-Inv:\n";
         auto inv_sqrt_f =  [](double x) { return 1./sqrt(x);};
         t.tic();
-        iter_arr  = lanczos.solve( b, dg::mat::make_FuncEigen_Te1(  inv_sqrt_f),
-                A, bs, A.weights(),  eps, 1., "universal", 1., 2);
+        iter_arr  = lanczos.solve( x, dg::mat::make_FuncEigen_Te1(  inv_sqrt_f),
+                A, b_exac, A.weights(),  eps, 1., "universal");
         t.toc();
         time = t.diff();
-        dg::blas1::axpby(1.0, b, -1.0, b_exac, error);
-        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, b_exac));
-        std::cout << "    time: "<<time<<"s \n";
+        dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
+        erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<iter_arr << "\n";
+        std::cout << "    iterT: "<<std::setw(3)<<0 << "\n";
     }
     //////////////////////Direct sqrt ODE solve
     {
@@ -216,8 +220,9 @@ int main(int argc, char * argv[])
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
         double time = t.diff();
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
+        std::cout << "    iter: "<<std::setw(3)<<1 << "\n";
         std::cout << "    iterT: "<<std::setw(3)<<iter_arr << "\n";
 
         std::cout << "\nODE-Inv+A:\n";
@@ -227,9 +232,10 @@ int main(int argc, char * argv[])
         dg::blas1::axpby(1.0, bs, -1.0, bs_exac, error);
         erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, bs_exac));
         time+=t.diff();
-        std::cout << "    time: "<<time<<"s \n";
+        std::cout << "    time: "<<time<<"s\n";
         std::cout << "    error: "<<erel  << "\n";
         std::cout << "    iter: "<<std::setw(3)<<1 << "\n";
+        std::cout << "    iterT: "<<std::setw(3)<<iter_arr << "\n";
 
     }
 

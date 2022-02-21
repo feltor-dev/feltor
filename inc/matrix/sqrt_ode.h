@@ -39,7 +39,8 @@ auto make_directODESolve( ExplicitRHS&& ode,
         std::string tableau, value_type epsTimerel, value_type epsTimeabs,
         unsigned& number, value_type t0 = 0., value_type t1 = 1.)
 {
-    return [=, cap = std::tuple<ExplicitRHS>(std::forward<ExplicitRHS>(ode)),
+    return [=, &num = number,
+            cap = std::tuple<ExplicitRHS>(std::forward<ExplicitRHS>(ode)),
             rtol = epsTimerel, atol = epsTimeabs]
             ( const auto& x, auto& b) mutable
         {
@@ -49,7 +50,7 @@ auto make_directODESolve( ExplicitRHS&& ode,
                     std::get<0>(cap), dg::pid_control, dg::l2norm, rtol, atol,
                     reject_limit);
             loop.integrate( t0, x, t1, b);
-            number = adapt.nsteps();
+            num = adapt.nsteps();
         };
 }
 

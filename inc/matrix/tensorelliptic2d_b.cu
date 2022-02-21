@@ -97,6 +97,9 @@ int main(int argc, char * argv[])
     double err_norm = dg::blas2::dot( w2d, error);
     err_norm = sqrt( err_norm/norm);
     std::cout << "error: "<<err_norm <<"\n";
+    std::cout << "iterations[0]: "<<number[0]<<"\n";
+    std::cout << "iterations[1]: "<<number[1]<<"\n";
+    std::cout << "iterations[2]: "<<number[2]<<"\n";
 
     return 0;
 }
