@@ -193,8 +193,9 @@ The spatial grid is a two-dimensional Cartesian product-grid adaptable with the 
 }
 \end{minted}
 \subsection{Time steppers}
-Possible time-steppers are the explicit and semi-implicit multistep schemes
-as well as the Shu-Osher scheme that originally incorporated limiters in the dG scheme.
+Possible time-steppers are explicit, semi-implicit and implicit multistep schemes
+as well as the Shu-Osher scheme that originally incorporated limiters in the dG scheme
+as well as explicit, semi-implicit and implicit embedded Runge-Kutta schemes.
 \begin{minted}[texcomments]{js}
 "timestepper" :
 {
@@ -220,6 +221,62 @@ as well as the Shu-Osher scheme that originally incorporated limiters in the dG 
     "type"      : "FilteredExplicitMultistep"
     "tableau"   : "eBDF-3-3" // Any explicit multistep tableau *
     "dt"        : 2e-3 // Fixed timestep
+},
+\end{minted}
+To implement an implicit timestepper we need to solve the equation (the mass matrix is the identity)
+\begin{align}\label{eq:split}
+    \begin{cases}
+        \omega - \alpha I(\omega, \phi) &= \omega^*  \\
+        \omega+\Delta\phi &= 0,
+    \end{cases}
+\end{align}
+We can solve this equation for $\omega$ by first solving
+\begin{align} \label{eq:single}
+    -\Delta\phi - \alpha I(-\Delta\phi, \phi) = \omega^*
+\end{align}
+for $\phi$ and then using $\omega = -\Delta\phi$.
+
+The solution for $\phi$ is the same for both variants but the solution for
+$\omega$ is not (numerically). This can be seen by setting $\alpha=0$. Then in
+the first version $\omega=\omega^*$ but in the second version
+$\omega=-\Delta\phi = \omega^* + \mathcal O(\epsilon)$, depends on how well the
+equation is solved. For this reason the accuracy of the implicit solver should
+be well higher than the accuracy of the timestepper.
+
+Since these equations are non-linear the solver needs to be a non-linear solver. Our idea is to use a multigrid FAS solver based on Anderson Acceleration. For this solver we need to implement both the operator as well as its inverse on multiple grids.
+\begin{minted}[texcomments]{js}
+"timestepper",
+{
+    // an implicit multistep class without the option to use a filter
+    "type"      : "ImplicitMultistep"
+    "tableau"   : "BDF-3-3" // Any implicit multistep tableau *
+    "dt"        : 2e-3 // Fixed timestep
+    "solver" : // Currently only AndersonAcceleration
+    {
+        "stages" : 3,
+        "eps_time" : [1e-9, 1, 1],
+        "damping" : 1e-5,
+        "restart" : 3,
+        "system" : "single", // solve Eq.~\eqref{eq:single}
+        "system" : "split" // solve Eq.~\eqref{eq:split}
+    }
+},
+"timestepper",
+{
+    // an implicit adaptive class without the option to use a filter
+    "type"      : "DIRK"
+    "tableau"   : "SDIRK-4-2-3" // Any implicit multistep tableau *
+    "rtol" : 1e-5,
+    "atol" : 1e-5,
+    "solver" : // Currently only AndersonAcceleration
+    {
+        "stages" : 3,
+        "eps_time" : [1e-9, 1, 1],
+        "damping" : 1e-5,
+        "restart" : 3,
+        "system" : "single", // solve Eq.~\eqref{eq:single}
+        "system" : "split" // solve Eq.~\eqref{eq:split}
+    }
 },
 \end{minted}
 *See the dg documentation for what tableaus are available.
@@ -336,9 +393,8 @@ This is regulated by the output paramters in the input file
     // Use netcdf to write results into a file
     // (see next section for information about what is written in there)
     "type"  : "netcdf"
-    "itstp"  : 4, // The number of steps between outputs of 2d fields \\
-    "maxout"  : 500 // The total number of field outputs. The endtime is
-    //T=itstp*maxout*dt
+    "tend" : 4, // end time of simulation
+    "maxout"  : 50 // The total number of field outputs.
 }
 \end{minted}
 \subsection{Structure of output file}

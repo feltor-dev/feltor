@@ -30,26 +30,26 @@
         "tableau": "ImEx-BDF-3-3",
         "dt" : 1e-3
     },
-    "regularization":
-    {
-        "type": "modal",
-        "alpha": 36,
-        "order": 8,
-        "eta_c": 0.5
-    },
     //"regularization":
     //{
-    //    "type" : "viscosity",
-    //    "order": 2,
-    //    "direction": "forward",
-    //    //"direction": "centered",
-    //    "nu": 1.0e-3  //(viscosity)
+    //    "type": "modal",
+    //    "alpha": 36,
+    //    "order": 8,
+    //    "eta_c": 0.5
     //},
+    "regularization":
+    {
+        "type" : "viscosity",
+        "order": 2,
+        "direction": "forward",
+        //"direction": "centered",
+        "nu": 1.0e-3  //(viscosity)
+    },
     "output":
     {
         "type": "glfw",
         //"type": "netcdf",
-        "itstp"   : 5,     // (steps between output)
+        "tend"   : 10,     // End Time
         "maxout"  : 100   //# of outputs (excluding first)
     },
 
@@ -57,7 +57,7 @@
     {
         "type" : "multigrid",
         "stages": 3,
-        "eps_pol" : [1e-6,10.0,10.0], // (stopping on each steage )
+        "eps_pol" : [1e-6,1.0,1.0], // (stopping on each steage )
         "direction" : "forward" //does not work with double PER
         //"direction" : "centered"
     },

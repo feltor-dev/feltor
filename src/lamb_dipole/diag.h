@@ -70,7 +70,7 @@ std::vector<Record1d> diagnostics1d_list = {
             return 0.5*dg::blas2::dot( v.y0, v.weights, v.shu.potential()) ;
         }
     },
-    {"time_per_step", "Computation time per step",
+    {"time_per_step", "Computation time between outputs",
         []( Variables& v ) {
             return v.duration;
         }
