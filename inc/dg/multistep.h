@@ -456,7 +456,7 @@ void ImplicitMultistep<ContainerType>::step(const std::tuple<ImplicitRHS, Solver
         std::map<unsigned, enum tableau_identifier> order2method{
             {1, IMPLICIT_EULER_1_1},
             {2, SDIRK_2_1_2},
-            {3, KVAERNO_4_2_3},
+            {3, SDIRK_4_2_3},
             {4, SDIRK_5_3_4},
             {5, SANCHEZ_6_5},
             {6, SANCHEZ_7_6},
