@@ -230,11 +230,16 @@ To implement an implicit timestepper we need to solve the equation (the mass mat
         \omega+\Delta\phi &= 0,
     \end{cases}
 \end{align}
-We can solve this equation for $\omega$ by first solving
+We can solve this equation either in the split way it is presented or by solving
 \begin{align} \label{eq:single}
     -\Delta\phi - \alpha I(-\Delta\phi, \phi) = \omega^*
 \end{align}
 for $\phi$ and then using $\omega = -\Delta\phi$.
+The last possibility is to solve
+\begin{align} \label{eq:omega}
+    \omega - \alpha I ( \omega, -\Delta^{-1} \omega) = \omega^*
+\end{align}
+where $-\Delta^{-1}$ represents a linear solve, in contrast to the outer nonlinear solve.
 
 The solution for $\phi$ is the same for both variants but the solution for
 $\omega$ is not (numerically). This can be seen by setting $\alpha=0$. Then in
@@ -259,6 +264,7 @@ Since these equations are non-linear the solver needs to be a non-linear solver.
         "restart" : 3,
         "system" : "single", // solve Eq.~\eqref{eq:single}
         "system" : "split" // solve Eq.~\eqref{eq:split}
+        "system" : "omega" // solve Eq.~\eqref{eq:omega}
     }
 },
 "timestepper",
@@ -276,6 +282,7 @@ Since these equations are non-linear the solver needs to be a non-linear solver.
         "restart" : 3,
         "system" : "single", // solve Eq.~\eqref{eq:single}
         "system" : "split" // solve Eq.~\eqref{eq:split}
+        "system" : "omega" // solve Eq.~\eqref{eq:omega}
     }
 },
 \end{minted}

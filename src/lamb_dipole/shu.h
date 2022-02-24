@@ -355,7 +355,7 @@ struct Implicit
         if( type == "ImplicitMultistep" || type == "DIRK")
         {
             m_system = js["timestepper"]["solver"]["system"].asString();
-            if( m_system != "single" && m_system != "split")
+            if( m_system != "single" && m_system != "split" && m_system != "omega")
                 throw dg::Error( dg::Message(_ping_) << "Solver system "<<m_system<<" not recognized!\n");
             unsigned stages = js["timestepper"]["solver"]["stages"].asUInt();
             m_nested = { grid, stages}, m_nested_split = { grid, stages};
@@ -395,6 +395,35 @@ struct Implicit
                         dg::Timer t;
                         t.tic();
                         unsigned number = acc.solve( m_imp[u], phi, omS,
+                            m_weights[u], m_eps[u], m_eps[u], 10000, damping, restart, false);
+                        t.toc();
+                        std::cout << "# Implicit stage "<<u<<" solve took "<<number<<" iterations in "<<t.diff()<<"s\n";
+                    };
+                }
+                if( m_system == "omega")
+                {
+                    m_imp[u] = [&, u, phi = m_weights[u], pcg = dg::PCG<Container>( m_weights[u], 10000)]
+                        ( const auto& omega, auto& f) mutable
+                    {
+                        auto Laplace = [eqs = m_eqs[u]]( const auto& phi, auto& omega) mutable
+                        {
+                            eqs.compute_omega( phi, omega);
+                        };
+                        dg::blas1::copy( 0, phi); // ??
+                        unsigned number = pcg.solve( Laplace, phi, omega, 1., m_weights[u], m_eps[u]);
+                        std::cout << "# Number of PCG steps "<<number<<"\n";
+                        // omega - a I(omega, phi)
+                        m_eqs[u].rhs( m_time, omega, phi, f);
+                        dg::blas1::axpby( 1., omega, -m_alpha, f);
+                    };
+                    m_inv_imp[u] = [this, u, damping, restart,
+                        acc = dg::AndersonAcceleration<Container>(m_weights[u], restart)]
+                        ( const auto& omS, auto& omega) mutable
+                    {
+                        // Solve Implicit( phi) = omS
+                        dg::Timer t;
+                        t.tic();
+                        unsigned number = acc.solve( m_imp[u], omega, omS,
                             m_weights[u], m_eps[u], m_eps[u], 10000, damping, restart, false);
                         t.toc();
                         std::cout << "# Implicit stage "<<u<<" solve took "<<number<<" iterations in "<<t.diff()<<"s\n";
@@ -445,6 +474,10 @@ struct Implicit
         {
             dg::nested_iterations( m_imp, m_phi, omS, m_inv_imp, m_nested);
             m_eqs[0].compute_omega( m_phi, omega);
+        }
+        else if ( m_system == "omega")
+        {
+            dg::nested_iterations( m_imp, omega, omS, m_inv_imp, m_nested);
         }
         else
         {
