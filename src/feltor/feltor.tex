@@ -101,7 +101,7 @@ tensor $g_{ij}$ and volume element $\sqrt{g} := \sqrt{\det g}$.
 Given a vector field $\vec B(\vec x)$ with unit vector $\bhat(\vec x) := (\vec B/B)({\vec x})$
 we can define various differential operations.
 \begin{table*}[htbp]
-\caption{Definitions of geometric operators with $b^i$ the contra-variant components of $\bhat$ and $g^{ij}$ the contra-variant elements of the metric tensor. We assume $(\vn\times\bhat)_\parallel = 0$. Note that $\vec K = \vec K_\kappa + \vec{ K_{\vn B}}$.
+\caption{Definitions of geometric operators with $b^i$ the contra-variant components of $\bhat$ and $g^{ij}$ the contra-variant elements of the metric tensor.
 % Explicit expressions of these quantities
 % depend on the choice of the magnetic field and the underlying coordinate system.
 }\label{tab:operators}
@@ -132,10 +132,10 @@ we can define various differential operations.
     = \nc( h\cdot\vn f) \equiv -\np^\dagger\cdot\np$  \\
     Curl-b Curvature Operator&
     $\mathcal K_{\vn\times\bhat}$ &
-    $\mathcal K_{\vn\times\bhat}(f) := \vec{ K_{\vn\times\bhat} }\cn f = \frac{1}{B}(\vn \times \bhat)\cn f$ \\[4pt]
+    $\mathcal K_{\vn\times\bhat}(f) := \KK\cn f = \frac{1}{B}(\vn \times \bhat)\cn f$ \\[4pt]
     Grad-B Curvature Operator &
     $\mathcal K_{\vn B} $ &
-    $\mathcal K_{\vn B}(f) := \vec{ K_{\vn B}} \cn f = \frac{1}{B}(\bhat \times\vn \ln B)\cn f$ \\[4pt]
+    $\mathcal K_{\vn B}(f) := \KB \cn f = \frac{1}{B}(\bhat \times\vn \ln B)\cn f$ \\[4pt]
     Curvature Operator&
     $\mathcal K$ &
     $\mathcal{K}(f):=\vec{ K} \cn f =
@@ -155,13 +155,11 @@ Explicit expressions for the above expressions
 depend on the choice of the magnetic field and the underlying coordinate system.
 Note that we have
 \begin{align}
-    \nc \vec{ K_{\vn\times\bhat}}
-&= -\nc \vec{ K_{\vn B}} = -\vec{K_{\vn\times\bhat}}\cn\ln B, \\
-    \vec\nc\vec{ K} &= 0, \\
-    \mathcal K(f) &=
-     \vn\times\frac{\bhat}{B}\cn f
-    = \mathcal K_{\vn\times\bhat}(f) + \mathcal K_{\vn B}(f),\\
-    \vec{ K_{\vn\times\bhat}} - \vec{ K_{\vn B}} &= \frac{1}{B^2} (\vn \times \vec B), \\
+    \nc \KK
+&= -\nc \KB = -\KK\cn\ln B, \\
+    \nc\vec{ K} &= 0, \\
+    \vec K &= \KB + \KK \\
+    \KK - \KB &= \frac{1}{B^2} (\vn \times \vec B), \\
     \npar \ln B &= -\vec\nc\bhat.
     \label{eq:curl_curvature}
 \end{align}
@@ -237,7 +235,7 @@ of $\rho_s$ and $\beta$.
 \begin{align}
     \vn\times \vec B &= \frac{R_0}{R}\left[ -\Delta^*\psi_p\ehat_\varphi + I_Z \ehat_R - I_R\ehat_Z \right]\equiv \beta \vec j\\
  \beta j_\parallel &= \beta \vec j\cdot \bhat = \beta \frac{\d p}{\d\psi_p} \frac{I(\psi_p)}{B} +
- \frac{\d I}{\d\psi_p} B \quad \text{  Pfirsch-Schl\"uter \& Bootstrap current } \\
+ \beta\frac{\d I}{\d\psi_p} B \quad \text{  Pfirsch-Schl\"uter \& Bootstrap current } \\
  \beta \vec j_\perp &= \beta \bhat\times\left(\vec j\times\bhat\right)=
  \beta \frac{\bhat \times \vn p}{B} \quad\quad\quad \text{ diamagnetic current} \\
  \beta \vec j\times\vec B &= \frac{R_0^2}{R^2}\left[ -\Delta^* \psi_p - I
@@ -365,7 +363,7 @@ for the Solov'ev equilibrium.
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
 \subsubsection{Toroidal (and negative toroidal) field line approximation}\label{sec:torfieldlineapprox}
-The toroidal/negative toroidal field line approximation applies \(\bhat\approx \pm \ehat_\varphi\) to all perpendicular operators
+The toroidal/negative toroidal field line approximation applies \(\bhat= \pm \ehat_\varphi\) to all perpendicular operators
 (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators)
 but retains the full expression for the magnetic field unit vector \(\bhat\)
 for parallel operators (\(\npar\) and \(\Delta_\parallel\)).
@@ -381,22 +379,22 @@ In cylindrical coordinates that is
 \end{align}
 The curl of $\bhat$ reduces to
 %\begin{align}
- $\vn\times\bhat \approx -  \frac{\pm 1}{R} \ehat_Z$.
+ $\vn\times\bhat = -  \frac{\pm 1}{R} \ehat_Z$.
 %end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{{K}}_{{\vn\times\bhat}}  &\approx  -  \frac{\pm 1}{B R} \ehat_Z , &
-\vec{ {K} }_{\vn  B}  &\approx  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+\vec{{K}}_{{\vn\times\bhat}}  &=  -  \frac{\pm 1}{B R} \ehat_Z , &
+\vec{ {K} }_{\vn  B}  &=  -\frac{\pm 1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{\pm 1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 %\ehat_\varphi \times \vn B, &
-\vec{ {K} } &\approx \vec{ {K} }_{\vn  B}  +\vec{ {K} }_{{\vn\times\bhat}} ,
+\vec{ {K} } &= \KB  +\KK ,
 %\\
-%\mathcal{K}_{{\vn\times\bhat}}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
+%\mathcal{K}_{{\vn\times\bhat}}(f)   &=  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
 %\mathcal{K}_{\vn  B} (f)  &= \frac{1}{B} \left[\ln B, f \right]_{RZ},&
-%\mathcal{K} (f) &\approx\frac{1}{B} \left[\ln B, f \right]_{RZ}-  \frac{1}{B R} \frac{\partial f}{\partial Z} ,
+%\mathcal{K} (f) &=\frac{1}{B} \left[\ln B, f \right]_{RZ}-  \frac{1}{B R} \frac{\partial f}{\partial Z} ,
 \end{align}
 and
 \begin{align}
- \nc \vec{{K}}_{{\vn\times\bhat}} &\approx \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z},
+    \nc \KK &= \frac{\pm 1}{R B^2} \frac{\partial B}{\partial Z} = -\nc \KB,
 \end{align}
 which results in a vanishing divergence of the curvature operators \( \nc \vec{ {K} } = 0\).
 
@@ -408,9 +406,9 @@ Note that in an actual toroidal field we have
 We then have $\bhat = \pm\ehat_\varphi$ and the curvature operators further
 simplify to
 \begin{align}
-  \vec{  K_{\vn\times\bhat}} = \vec{  K_{\vn B}} = -\frac{\pm 1}{R_0} \ehat_Z =
+  \KK = \KB = -\frac{\pm 1}{R_0} \ehat_Z =
 \vec{  K}/2\\
-  \nc\vec{ K_{{\vn\times\bhat}}}=
+  \nc\KK=
     \npar \ln B = 0
     \label{}
 \end{align}
@@ -420,7 +418,7 @@ Note: the negative sign is automatically chosen in code if $I(R_0, 0)<0$.
 In this approximation we apply the toroidal field line approximation
 as in Section
 \ref{sec:torfieldlineapprox}
-but approximate the curvature operator $ \vec K_{\vn\times\bhat} \approx \bhat\times\vec \kappa$
+but approximate the curvature operator $ \KK \approx \bhat\times\vec \kappa$
   with
   $\vec \kappa := \bhat \cn\bhat = -\bhat \times( \vn\times \bhat)$.
 For an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter
@@ -435,12 +433,12 @@ In low beta plasmas \(\beta\ll1\) the curvature reduces to:
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\vec{{K}_{{\vn\times\bhat}}} \approx
+\KK \approx
 \vec{ {K} }_{\vn  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 {K} (f) &\approx 2{K}_{\vn  B} (f) , &
-    \vn\times\bhat \cdot \vec{{K}}_{\vn  B} &= 0.
+    \vn\times\bhat \cdot \KB &= 0.
 \end{align}
-The divergence over the curvature vanishes \( \nc \vec{ {K} } = 0\) only if \( \nc \vec{ {K}}_{\vn  B}   = 0\).
+The divergence over the curvature vanishes \( \nc \vec{ {K} } = 0\) only if \( \nc \KB   = 0\).
 In general, the divergence \( \nc \vec{ {K} } \approx 0\) is only approximately vanishing.
 \subsubsection{True perpendicular terms} \label{sec:trueapprox}
 
@@ -478,8 +476,7 @@ K_{\vn\times\bhat}^\varphi &= \frac{R_0}{R^2B^2}\left(
 -R\frac{\partial}{\partial R}\left(\frac{1}{R}\frac{\partial\psi}{\partial R}\right) 
 - \frac{\partial^2 \psi}{\partial Z^2}
 \right) \\
-\vec\nc\vec{\mathcal K_{\vn\times\bhat}} &= -\vec\nc\vec{\mathcal K_{\vn B}}=
-    -\vec{\mathcal K_{\vn\times\bhat}}\cn\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
+\vec\nc\KK &= -\vec\nc\KB= -\KK\cn\ln B = \frac{R_0}{RB^3}[I,B]_{RZ}
 %contravariant phi component
 \label{}
 \end{align}
@@ -522,10 +519,10 @@ colback=yellow!10!white, colframe=red!50!black,
 with
 \begin{align}
 \vec u_E := \frac{\bhat\times\vn\psi}{B},\quad
-\vec u_{K} := \tau \left(\vec{ K_{\vn B}} + \vec{ K_{\vn\times\bhat}}\right)=\tau\vec{ K}  ,\quad  %\nonumber\\
-\vec u_C := \mu U_\parallel^2\vec{ K_{\vn\times\bhat}},\nonumber\\
-\vec u_{\vn\times\bhat} := \tau\vec{ K_{\vn\times\bhat}},\quad
-{\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B} = A_\parallel \vec{ K_{\vn\times\bhat}} + \frac{\vn A_\parallel \times \bhat}{B}.
+\vec u_{K} := \tau \left(\KB + \KK\right)=\tau\vec{ K}  ,\quad  %\nonumber\\
+\vec u_C := \mu U_\parallel^2\KK,\nonumber\\
+\vec u_{\vn\times\bhat} := \tau\KK,\quad
+{\vec b}_\perp = \frac{\vn\times A_\parallel \bhat}{B} = A_\parallel \KK + \frac{\vn A_\parallel \times \bhat}{B}.
 \label{}
 \end{align}
 
@@ -591,12 +588,12 @@ The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
  The latter essentially would entail that electron diffusion acts on $A_\parallel$.
 
  For the perpendicular terms we use ad-hoc artificial numerical diffusion (or
- order s) for numerical stabilisation and add numerical parallel diffusion
- to the density equation.
+ order s) for numerical stabilisation %and add numerical parallel diffusion
+ %to the density equation.
 \begin{align}
 \label{eq:perpdiffNU}
-\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e + \nu_{N,\parallel}\Delta_\parallel n_e&
-\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i + \nu_{N,\parallel}\Delta_\parallel n_e& \\
+\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e &%+ \nu_{N,\parallel}\Delta_\parallel n_e&
+\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i &\\%+ \nu_{N,\parallel}\Delta_\parallel n_e& \\
 \Lambda_{u_e} &=  -\nu_{U,\perp}\frac{(-\Delta_\perp)^s u_{\parallel,e}}{n_e} &
 \Lambda_{U_i} &=  -\nu_{U,\perp}\frac{(-\Delta_\perp)^s U_{\parallel,i}}{N_i}
 \end{align}
