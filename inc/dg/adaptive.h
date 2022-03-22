@@ -716,6 +716,7 @@ void AdaptiveTimeloop<ContainerType>::integrate_in_domain(
 
             // t0 and last are inside
             dg::blas1::copy( last, current);
+
             int j_max = 50;
             for(int j=0; j<j_max; j++)
             {
@@ -724,11 +725,20 @@ void AdaptiveTimeloop<ContainerType>::integrate_in_domain(
                     return;
                 }
                 dt_current = (t1-t0)/2.;
-                t_current = t0;
-                // Here we can assume that the timestepper always succeeds
+                t_current = t0; //always start integrate from inside
+                value_type failed = t_current;
+                // Naively we would assume that the timestepper always succeeds
                 // because dt_current is always smaller than the previous timestep
+                // However, there are cases when this is not true so we need to
+                // explicitly check!!
                 // t_current = t0, current = last (inside)
                 m_step( t_current, current, t_current, current, dt_current);
+                if( failed == t_current)
+                {
+                    dt_current = (t1-t0)/4.;
+                    break; // we need to get out of here
+                }
+
                 //stepper( t0, last, t_middle, u1, (t1-t0)/2.);
                 if( domain.contains( current) )
                 {
@@ -740,8 +750,9 @@ void AdaptiveTimeloop<ContainerType>::integrate_in_domain(
                     t1 = t_current;
                     dg::blas1::copy( last, current);
                 }
+                if( (j_max - 1) == j)
+                    throw dg::Error( dg::Message(_ping_)<<"integrate_in_domain: too many steps in root finding!");
             }
-            throw dg::Error( dg::Message(_ping_)<<"integrate_in_domain: too many steps in root finding!");
         }
     }
 }
