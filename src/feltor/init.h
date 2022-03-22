@@ -382,7 +382,7 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             {
                 dg::assign( density, y0[0][0]);
                 feltor.initializeni( y0[0][0], y0[0][1], ptype);
-                double minimalni = dg::blas1::reduce( y0[0][1], 1,
+                double minimalni = dg::blas1::reduce( y0[0][1], 1e10,
                         thrust::minimum<double>());
                 DG_RANK0 std::cerr << "# Minimum Ni value "<<minimalni<<std::endl;
                 if( minimalni <= 0.0)
