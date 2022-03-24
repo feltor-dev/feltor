@@ -103,11 +103,6 @@ struct DSField
     dg::ClonePtr<dg::aGeometry2d> m_g;
 };
 
-template<class real_type>
-inline real_type ds_norm( const std::array<real_type,3>& x0){
-    return sqrt( x0[0]*x0[0] +x0[1]*x0[1] + x0[2]*x0[2]);
-}
-
 //used in constructor of Fieldaligned
 template<class real_type>
 void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
@@ -292,7 +287,6 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
                     dg::pid_control, dg::fast_l2norm, m_eps, 1e-10);
             odeint.integrate_in_domain( 0., coords, phiP, coordsP, 0.,
                     m_domain, m_eps);
-            odeint.set_dt(0);
             odeint.integrate_in_domain( 0., coords, phiM, coordsM, 0.,
                     m_domain, m_eps);
         }catch (std::exception& e)
