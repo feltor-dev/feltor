@@ -16,11 +16,11 @@ namespace dg{
 * @brief A square nxn matrix
 *
 * @ingroup densematrix
-* In principle an enhanced square dynamic matrix
+* An enhanced square dynamic matrix
 * for which arithmetic operators are overloaded.
-* It is not meant for performance critical code but very convenient
+* It is not meant for performance critical code but is very convenient
 * for example for the assembly of matrices.
-* @sa \c dg::inverse and \c dg::transpose
+* @sa \c dg::create::inverse, \c dg::create::lu_pivot, \c dg::create::lu_solve
 * @tparam T value type
 */
 template< class T>
@@ -366,9 +366,13 @@ namespace create
  *
  * @tparam T value type
  * @throw std::runtime_error if the matrix is singular
+ * @param m  contains lu decomposition of input on output (inplace transformation)
+ * @param p contains the pivot elements on output
+ * @return determinant of \c m
  * @note uses extended accuracy of \c dg::exblas which makes it quite robust
  * against almost singular matrices
  * @ingroup densematrix
+ * @sa \c dg::create::lu_solve
  */
 template< class T>
 T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
@@ -433,7 +437,7 @@ T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
  *
  * @tparam T value type
  * @param lu result of \c dg::create::lu_pivot
- * @param p pivot vector
+ * @param p pivot vector from \c dg::create::lu_pivot
  * @param b right hand side (contains solution on output)
  * @ingroup densematrix
  */
