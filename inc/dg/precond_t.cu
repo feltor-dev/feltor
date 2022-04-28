@@ -1,42 +1,101 @@
 #include <iostream>
 #include <cusp/csr_matrix.h>
 #include <cusp/print.h>
+#include <cusp/transpose.h>
+#include <cusp/multiply.h>
+#include <cusp/elementwise.h>
 #include "precond.h"
+#include "topology/operator.h"
+#include "backend/timer.h"
 
 int main()
 {
     std::cout << "Test SAINV preconditioner\n";
-    unsigned num = 3;
-    cusp::csr_matrix<int, double, cusp::host_memory> a(num,num,num*num), z;
-    thrust::host_vector<double> d, weights;
-    for( unsigned i=0; i<num*num; i++)
+    // We generate the 1d Laplacian operator
+    unsigned size = 100;
+    unsigned nnz = 10;
+    double eps = 1e-3;
+    std::cout << "Type size of matrix (100), max number nnz per row (10), absolute threshold (1e-3)\n";
+    std::cin >> size >> nnz >> eps;
+    dg::Operator<double> op( size, 0.);
+    op( 0,0) = 2, op( 0, 1) = -1.;
+    for( int i=1; i<(int)size-1; i++)
     {
-        a.column_indices[i] = i%num;
+        op( i, i+1) = op( i, i-1) = -1.;
+        op(i,i) = 2.;
     }
-    for( unsigned k=0; k<num; k++)
+    op( size-1, size-1) = 2., op( size-1, size-2) = -1.;
+
+    // Here compute the inverse
+    auto inverse = dg::create::inverse( op);
+
+    // assign to a coo matrix
+    using coo_mat = cusp::coo_matrix<int, double, cusp::host_memory>;
+    using csr_mat = cusp::csr_matrix<int, double, cusp::host_memory>;
+
+    coo_mat a( size, size, 4+3*(size-2)), ainv(size,size, size*size);
+    unsigned counter = 0;
+    for( int i=0; i<(int)size; i++)
+        for( int k=0; k<(int)size; k++)
+        {
+            if( op(i,k) != 0)
+            {
+                a.row_indices[counter] = i;
+                a.column_indices[counter] = k;
+                a.values[counter] = op(i,k);
+                counter ++;
+            }
+            ainv.row_indices[i*size+k] = i;
+            ainv.column_indices[i*size+k] = k;
+            ainv.values[i*size+k] = inverse(i,k);
+        }
+    csr_mat a_csr = a, z;
+    thrust::host_vector<double> weights( size, 1.), d(weights);
+
+    //std::cout << "Matrix A\n";
+    //cusp::print( a_csr);
+    //cusp::print(a_csr.row_offsets);
+
+    std::cout << "Create preconditioner\n";
+    dg::Timer t;
+    t.tic();
+    dg::create::sainv_precond( a_csr, z, d, weights, nnz, eps);
+    t.toc();
+    std::cout <<"took "<<t.diff()<<"s"<<std::endl;
+    //std::cout << "Resulting z \n";
+    //cusp::print( z);
+
+    // Test if Z^T D^{-1} Z W = Ainv
+    //
+    coo_mat zT, zTD;
+    cusp::transpose( z, zT);
+    // create D^{-1}
+    coo_mat dinv( size, size, size);
+    for( unsigned i=0; i<size; i++)
     {
-        a.row_offsets[k] = k*num;
+        dinv.row_indices[i] = dinv.column_indices[i] = i;
+        dinv.values[i] = 1./d[i];
     }
-    a.row_offsets[num] = num*num;
-    //std::vector<double> values = {0.2, 0.0, 0.0,  0., 0.3, -3./35.,  0.0, -3./35., 8./245.};
-    //std::vector<double> values = {193./125., -87./125., 6./125.,
-    //                              -87./125, 91./250., -4./125,
-    //                              6./125,-4./125, 2./125.};
-    std::vector<double> values = {2., -4., 6./5.,
-                                  -4., 11., -18./5.,
-                                  6./5.,-18./5., 34./25.};
-    a.values = values;
-    weights.resize( 3, 1.);
+    cusp::multiply( zT, dinv, zTD);
+    cusp::multiply( zTD, z, zT);
+    zT.sort_by_row_and_column();
+    //std::cout << "Numerical inverse:\n";
+    //cusp::print( zT);
+    //std::cout << "Actual inverse:\n";
+    //cusp::print( ainv);
+    // Compute matrix norm between difference
+    cusp::subtract( ainv, zT, zTD);
+    double norm_err = 0.0;
+    double norm_ainv = 0.0;
+    for( unsigned u=0; u<zTD.values.size(); u++)
+        norm_err += zTD.values[u]*zTD.values[u];
+    for( unsigned u=0; u<ainv.values.size(); u++)
+        norm_ainv += ainv.values[u]*ainv.values[u];
 
-    std::cout << "Matrix A\n";
-    cusp::print( a);
+    std::cout << "Number of nonzeros per line in Z "<<z.values.size()/(double)size<<"\n";
+    std::cout << "Absolute error norm "<<sqrt(norm_err)<<"\n";
+    std::cout << "Relative error norm "<<sqrt(norm_err/norm_ainv)<<"\n";
 
-    dg::create::sainv_precond( a, z, d, weights, 3, 0.01);
-    std::cout << "Matrix Z\n";
-    cusp::print( z);
-    std::cout << "Diagonal\n";
-    for( unsigned u=0; u<num; u++)
-        std::cout << d[u]<<"\n";
 
     return 0;
 }
