@@ -173,6 +173,30 @@ inline void doSymv( MatrixType&& M,
             get_tensor_category<MatrixType>(),
             get_tensor_category<ContainerType1>());
 }
+template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
+inline void doFilteredSymv( get_value_type<ContainerType1> alpha,
+                  FunctorType f,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y,
+                  AnyMatrixTag)
+{
+    static_assert( std::is_same<get_execution_policy<ContainerType1>,
+                                get_execution_policy<ContainerType2>>::value,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same<get_value_type<ContainerType1>,
+                                get_value_type<MatrixType>>::value &&
+                   std::is_same<get_value_type<ContainerType2>,
+                                get_value_type<MatrixType>>::value,
+                                "Vector and Matrix types must have same value type");
+    static_assert( std::is_same<get_tensor_category<ContainerType1>,
+                                get_tensor_category<ContainerType2>>::value,
+                                "Vector types must have same data layout");
+    dg::blas2::detail::doFilteredSymv( alpha, f, std::forward<MatrixType>(M), x, beta, y,
+            get_tensor_category<MatrixType>(),
+            get_tensor_category<ContainerType1>());
+}
 
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void doSymv( get_value_type<ContainerType1> alpha,
@@ -293,6 +317,50 @@ inline void gemv( MatrixType&& M,
                   ContainerType2& y)
 {
     dg::blas2::symv( std::forward<MatrixType>(M), x, y);
+}
+/*! @brief \f$ y = \alpha F(M, x) + \beta y\f$
+ *
+ * This routine computes \f[ y_i = \alpha F(m^i, x^i, N^i) + \beta y_i \f] for every row \c i.
+ * The matrix \f$ M\f$ is a sparse matrix that provides a stencil that is for each row it gathers
+ * \f$ N^i\f$ elements of \f$ x\f$ and \f$ M\f$ into temporary vectors \f$ m^i,\ x^i\f$.
+ * Then for each row the functor \f$ F \f$ is called on pointers to the first elements
+ * and the number of elements in the two vectors. The number of elements \f$N^i\f$ in
+ * \f$ m^i,\ x^i\f$ can vary in each row.
+ * @note If F computes the dot product of its argument,
+ * then the result is the matrix-vector product between M and x and \c dg::blas2::filtered_symv computes
+ * the same as \c dg::blas2::symv
+ *
+ * @copydoc hide_code_blas2_filtered_symv
+ * @param alpha A Scalar
+ * @param f The filter function is called like \c result=f( m_ptr, x_ptr, size)
+ * @param M The Matrix.
+ * @param x input vector
+ * @param beta A Scalar
+ * @param y contains the solution on output (may not alias \p x)
+ * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag
+ * @attention If y on input contains a NaN or Inf, it may contain NaN or Inf on
+ * output as well even if beta is zero.
+ * @tparam FunctorType A type that is callable
+ *  <tt> result_type operator()( const_pointer, const_pointer, size_t) </tt>  where the first two arguments
+ *  point to two contiguous arrays of the size given in the last argument. For GPU vector the functor
+ *  must be callable on the device.
+ * @copydoc hide_matrix
+ * @attention So far only the \c cusp::ell_matrix type and its MPI variant is allowed
+ * @copydoc hide_ContainerType
+ */
+template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
+inline void filtered_symv( get_value_type<ContainerType1> alpha,
+                  FunctorType f,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y)
+{
+    if(alpha == (get_value_type<ContainerType1>)0) {
+        dg::blas1::scal( y, beta);
+        return;
+    }
+    dg::blas2::detail::doFilteredSymv( alpha, f, std::forward<MatrixType>(M), x, beta, y, get_tensor_category<MatrixType>());
 }
 /**
  * @brief \f$ y = x\f$; Generic way to copy and/or convert a Matrix type to a different Matrix type

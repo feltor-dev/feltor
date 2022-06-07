@@ -116,6 +116,128 @@ inline void doSymv( Matrix&& m,
         doSymv( std::forward<Matrix>(m), x[i], y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
 }
 
+template< class Functor, class Matrix, class Container1, class Container2>
+inline void doFilteredSymv_cusp_dispatch(
+                    get_value_type<Container1> alpha,
+                    Functor f,
+                    Matrix&& m,
+                    const Container1& x,
+                    Container2& y,
+                    get_value_type<Container1> beta,
+                    cusp::ell_format,
+                    SerialTag)
+{
+    typedef typename std::decay_t<Matrix>::index_type index_type;
+    using value_type = get_value_type<Container1>;
+    const value_type* RESTRICT val_ptr = thrust::raw_pointer_cast( &m.values[0]);
+    const index_type* RESTRICT row_ptr = thrust::raw_pointer_cast( &m.row_offsets[0]);
+    const index_type* RESTRICT col_ptr = thrust::raw_pointer_cast( &m.column_indices[0]);
+    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( x.data());
+    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( y.data());
+    int rows = m.num_rows;
+    for(int i = 0; i < rows; i++)
+    {
+        value_type temp = 0.;
+        for (index_type jj = row_ptr[i]; jj < row_ptr[i+1]; jj++)
+        {
+            index_type j = col_ptr[jj];
+            temp = DG_FMA( val_ptr[jj], x_ptr[j], temp);
+        }
+
+        y_ptr[i] = temp;
+    }
+}
+
+#ifdef _OPENMP
+template< class Functor, class Matrix, class Container1, class Container2>
+inline void doFilteredSymv_cusp_dispatch(
+                    get_value_type<Container1> alpha,
+                    Functor f,
+                    Matrix&& m,
+                    const Container1& x,
+                    Container2& y,
+                    get_value_type<Container1> beta,
+                    cusp::ell_format,
+                    SerialTag)
+{
+    typedef typename std::decay_t<Matrix>::index_type index_type;
+    using value_type = get_value_type<Container1>;
+    const value_type* RESTRICT val_ptr = thrust::raw_pointer_cast( &m.values[0]);
+    const index_type* RESTRICT row_ptr = thrust::raw_pointer_cast( &m.row_offsets[0]);
+    const index_type* RESTRICT col_ptr = thrust::raw_pointer_cast( &m.column_indices[0]);
+    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( x.data());
+    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( y.data());
+    int rows = m.num_rows;
+    #pragma omp parallel for
+    for(int i = 0; i < rows; i++)
+    {
+        value_type temp = 0.;
+        for (index_type jj = row_ptr[i]; jj < row_ptr[i+1]; jj++)
+        {
+            index_type j = col_ptr[jj];
+            temp = DG_FMA( val_ptr[jj], x_ptr[j], temp);
+        }
+
+        y_ptr[i] = temp;
+    }
+}
+#endif// _OPENMP
+
+template<class Functor, class Matrix, class Vector1, class Vector2>
+inline void doFilteredSymv(
+                    get_value_type<Vector1> alpha,
+                    Functor f,
+                    Matrix&& m,
+                    const Vector1&x,
+                    get_value_type<Vector1> beta,
+                    Vector2& y,
+                    CuspMatrixTag,
+                    ThrustVectorTag  )
+{
+    static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector2>>::value,
+        "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
+    static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value, "Execution policies must be equal!");
+    typedef typename std::decay_t<Matrix>::value_type value_type;
+    static_assert( std::is_same< get_value_type<Vector1>, value_type >::value,
+        "Value types must be equal"
+    );
+    static_assert( std::is_same< get_value_type<Vector2>, value_type >::value,
+        "Value types must be equal"
+    );
+
+    if( x.size() != m.num_cols) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols);
+    }
+    if( y.size() != m.num_rows) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows);
+    }
+    doFilteredSymv_cusp_dispatch( alpha,f,std::forward<Matrix>(m),x,beta,y,
+            typename std::decay_t<Matrix>::format(),
+            get_execution_policy<Vector1>());
+}
+template< class Functor, class Matrix, class Vector1, class Vector2>
+inline void doSymv( get_value_type<Vector1> alpha,
+                    Functor f,
+                    Matrix&& m,
+                    const Vector1&x,
+                    get_value_type<Vector1> beta,
+                    Vector2& y,
+                    CuspMatrixTag,
+                    RecursiveVectorTag  )
+{
+    static_assert( std::is_base_of<RecursiveVectorTag, get_tensor_category<Vector2>>::value,
+        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
+    if( x.size() != m.num_cols) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols);
+    }
+    if( y.size() != m.num_rows) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows);
+    }
+    using inner_container = typename std::decay_t<Vector1>::value_type;
+    for ( unsigned i=0; i<x.size(); i++)
+        doFilteredSymv( alpha,f,std::forward<Matrix>(m),x[i],beta,y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
+}
+
 } //namespace detail
 } //namespace blas2
 } //namespace dg
