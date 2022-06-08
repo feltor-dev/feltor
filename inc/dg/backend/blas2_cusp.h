@@ -118,12 +118,10 @@ inline void doSymv( Matrix&& m,
 
 template< class Functor, class Matrix, class Container1, class Container2>
 inline void doFilteredSymv_cusp_dispatch(
-                    get_value_type<Container1> alpha,
                     Functor f,
                     Matrix&& m,
                     const Container1& x,
                     Container2& y,
-                    get_value_type<Container1> beta,
                     cusp::ell_format,
                     SerialTag)
 {
@@ -151,12 +149,10 @@ inline void doFilteredSymv_cusp_dispatch(
 #ifdef _OPENMP
 template< class Functor, class Matrix, class Container1, class Container2>
 inline void doFilteredSymv_cusp_dispatch(
-                    get_value_type<Container1> alpha,
                     Functor f,
                     Matrix&& m,
                     const Container1& x,
                     Container2& y,
-                    get_value_type<Container1> beta,
                     cusp::ell_format,
                     SerialTag)
 {
@@ -185,11 +181,9 @@ inline void doFilteredSymv_cusp_dispatch(
 
 template<class Functor, class Matrix, class Vector1, class Vector2>
 inline void doFilteredSymv(
-                    get_value_type<Vector1> alpha,
                     Functor f,
                     Matrix&& m,
                     const Vector1&x,
-                    get_value_type<Vector1> beta,
                     Vector2& y,
                     CuspMatrixTag,
                     ThrustVectorTag  )
@@ -211,7 +205,7 @@ inline void doFilteredSymv(
     if( y.size() != m.num_rows) {
         throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows);
     }
-    doFilteredSymv_cusp_dispatch( alpha,f,std::forward<Matrix>(m),x,beta,y,
+    doFilteredSymv_cusp_dispatch( f,std::forward<Matrix>(m),x,y,
             typename std::decay_t<Matrix>::format(),
             get_execution_policy<Vector1>());
 }
@@ -235,7 +229,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
     }
     using inner_container = typename std::decay_t<Vector1>::value_type;
     for ( unsigned i=0; i<x.size(); i++)
-        doFilteredSymv( alpha,f,std::forward<Matrix>(m),x[i],beta,y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
+        doFilteredSymv( f,std::forward<Matrix>(m),x[i],y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
 }
 
 } //namespace detail

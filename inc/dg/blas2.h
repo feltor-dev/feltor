@@ -174,11 +174,10 @@ inline void doSymv( MatrixType&& M,
             get_tensor_category<ContainerType1>());
 }
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
-inline void doFilteredSymv( get_value_type<ContainerType1> alpha,
+inline void doFilteredSymv(
                   FunctorType f,
                   MatrixType&& M,
                   const ContainerType1& x,
-                  get_value_type<ContainerType1> beta,
                   ContainerType2& y,
                   AnyMatrixTag)
 {
@@ -193,7 +192,7 @@ inline void doFilteredSymv( get_value_type<ContainerType1> alpha,
     static_assert( std::is_same<get_tensor_category<ContainerType1>,
                                 get_tensor_category<ContainerType2>>::value,
                                 "Vector types must have same data layout");
-    dg::blas2::detail::doFilteredSymv( alpha, f, std::forward<MatrixType>(M), x, beta, y,
+    dg::blas2::detail::doFilteredSymv( f, std::forward<MatrixType>(M), x, y,
             get_tensor_category<MatrixType>(),
             get_tensor_category<ContainerType1>());
 }
@@ -318,49 +317,95 @@ inline void gemv( MatrixType&& M,
 {
     dg::blas2::symv( std::forward<MatrixType>(M), x, y);
 }
-/*! @brief \f$ y = \alpha F(M, x) + \beta y\f$
+
+/**
+ * @brief \f$ f(x_0, x_1, ...)\f$; Customizable and generic for loop
  *
- * This routine computes \f[ y_i = \alpha F(m^i, x^i, N^i) + \beta y_i \f] for every row \c i.
- * The matrix \f$ M\f$ is a sparse matrix that provides a stencil that is for each row it gathers
- * \f$ N^i\f$ elements of \f$ x\f$ and \f$ M\f$ into temporary vectors \f$ m^i,\ x^i\f$.
- * Then for each row the functor \f$ F \f$ is called on pointers to the first elements
- * and the number of elements in the two vectors. The number of elements \f$N^i\f$ in
- * \f$ m^i,\ x^i\f$ can vary in each row.
- * @note If F computes the dot product of its argument,
- * then the result is the matrix-vector product between M and x and \c dg::blas2::filtered_symv computes
- * the same as \c dg::blas2::symv
+ * This routine loops over an arbitrary user-defined stencil functor \c f (the loop body) with an arbitrary number of arguments \f$ x_s\f$ elementwise
+ * \f[ f(i, x_{0}, x_{1}, ...)  \f]
+ * where \c i iterates over all elements in the @b first given argument \c x_0. The order of iterations is undefined.
+ * It is equivalent to the following
+ * @code
+ * for(unsigned i=0; i<x_0.size(); i++)
+ *     f( i, *x_0[0], *x_1[0], ...);
+ * @endcode
+ * @note For trivially parallel operations (no neighboring points involved) use \c dg::blas1::subroutine
+ * @attention This function only works for containers with the \c dg::SharedVectorTag. The reason it cannot work for MPI is that the stencil (and thus the communication pattern) is unkown. However, it can serve as an important building block for other parallel functions.
+ * @note This is the closest function we have to <tt> kokkos::parallel_for</tt> of the Kokkos library.
  *
- * @copydoc hide_code_blas2_filtered_symv
- * @param alpha A Scalar
- * @param f The filter function is called like \c result=f( m_ptr, x_ptr, size)
+@code{.cpp}
+dg::DVec x( 100,2), y(100,4);
+unsigned N = 100;
+double hx = 1.;
+// implement forward difference
+dg::blas1::subroutine( DG_DEVICE[]( unsigned i, double* y, const double* x){
+    unsigned ip = (i+1)%N;
+    y[i] = (x[ip] - x[i])/hx;
+}, y, x);
+// y[i] now has the value 0
+@endcode
+
+ * @param f the loop body
+ * @param x the first argument
+ * @param xs other arguments
+@attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
+ * @tparam Stencil a function or functor with an arbitrary number of arguments
+ * and no return type; The first argument is an unsigned (the loop iteration),
+ * afterwards takes a \c const_pointer_type argument (const pointer to first element in vector) for each input argument in
+ * the call and a <tt> pointer_type  </tt> argument (pointer to first element in vector) for each output argument.
+ * \c Stencil must be callable on the device in use. In particular, with CUDA it must be a functor (@b not a function) and its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+  * @tparam ContainerType
+  * Any class for which a specialization of \c TensorTraits exists and which
+  * fulfills the requirements of the \c SharedVectorTag and \c AnyPolicyTag.
+  * Among others
+  *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp)</tt>
+ */
+template< class Stencil, class ContainerType, class ...ContainerTypes>
+inline void stencil( Stencil f, ContainerType&& x, ContainerTypes&&... xs)
+{
+    static_assert( all_true<
+            dg::is_vector<ContainerType>::value,
+            dg::is_vector<ContainerTypes>::value...>::value,
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
+    dg::blas2::detail::doStencil(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+}
+/*! @brief \f$ F(M, x, y)\f$
+ *
+ * This routine calls \f[ F(i, y, [M], x) \f] for every row \c i in \c y,
+ * using \c dg::blas2::stencil,
+ * where [M] depends on the matrix type:
+ *  - for a csr matrix it is [M] = m.row_offsets, m.column_indices, m.values
+ * .
+ * Other matrix types have not yet been implemented.
+ * @note Since the matrix is known, a communication pattern is available and thus the function works for MPI unlike \c dg::blas2::stencil.
+ *
+ * @param f The filter function is called like <tt> f(i, y_ptr, m.row_offsets_ptr, m.column_indices_ptr, m.values_ptr, x_ptr) </tt>
  * @param M The Matrix.
  * @param x input vector
- * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
- * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag
- * @attention If y on input contains a NaN or Inf, it may contain NaN or Inf on
- * output as well even if beta is zero.
  * @tparam FunctorType A type that is callable
- *  <tt> result_type operator()( const_pointer, const_pointer, size_t) </tt>  where the first two arguments
- *  point to two contiguous arrays of the size given in the last argument. For GPU vector the functor
+ *  <tt> void operator()( unsigned, pointer, [m_pointers], const_pointer) </tt>  For GPU vector the functor
  *  must be callable on the device.
- * @copydoc hide_matrix
- * @attention So far only the \c cusp::ell_matrix type and its MPI variant is allowed
+ *  @tparam MatrixType So far only one of the \c cusp::csr_matrix types and their MPI variants <tt> dg::MPIDistMat<cusp::csr_matrix, Comm> </tt> are allowed
+ *  @sa dg::convert
  * @copydoc hide_ContainerType
  */
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
-inline void filtered_symv( get_value_type<ContainerType1> alpha,
+inline void filtered_symv(
                   FunctorType f,
                   MatrixType&& M,
                   const ContainerType1& x,
-                  get_value_type<ContainerType1> beta,
                   ContainerType2& y)
 {
-    if(alpha == (get_value_type<ContainerType1>)0) {
-        dg::blas1::scal( y, beta);
-        return;
-    }
-    dg::blas2::detail::doFilteredSymv( alpha, f, std::forward<MatrixType>(M), x, beta, y, get_tensor_category<MatrixType>());
+    dg::blas2::detail::doFilteredSymv( f, std::forward<MatrixType>(M), x, y, get_tensor_category<MatrixType>());
 }
 /**
  * @brief \f$ y = x\f$; Generic way to copy and/or convert a Matrix type to a different Matrix type
