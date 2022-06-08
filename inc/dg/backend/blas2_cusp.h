@@ -154,7 +154,7 @@ inline void doFilteredSymv_cusp_dispatch(
                     const Container1& x,
                     Container2& y,
                     cusp::ell_format,
-                    SerialTag)
+                    OmpTag)
 {
     typedef typename std::decay_t<Matrix>::index_type index_type;
     using value_type = get_value_type<Container1>;

@@ -186,6 +186,8 @@ struct RealGrid1d
         set(n,N);
     }
     /////////////////////////////////////////convencience//////////////////////////////
+
+    /// @brief \c n()*\c N() (Total number of grid points)
     unsigned size() const { return n_*Nx_;}
     /**
      * @brief the discrete legendre transformation

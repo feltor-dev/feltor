@@ -7,6 +7,8 @@
 #include "blas1_dispatch_shared.h"
 #include "blas1_dispatch_vector.h"
 
+#include "blas2_stencil.h"
+
 ///@cond
 namespace dg{
 
