@@ -190,7 +190,7 @@ int main()
     for( int i=0; i<multi; i++)
         dg::blas2::stencil( [ysize]DG_DEVICE( unsigned i, double* x, const double* y){
                 x[i] = y[(i+1)%ysize] - y[i];
-            }, x[0], y[0]);
+            }, ysize, x[0], y[0]);
     t.toc();
     std::cout<<"Stencil forward derivative took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
 

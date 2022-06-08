@@ -34,10 +34,6 @@ template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void symv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y);
-template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
-inline void stencil( FunctorType f, MatrixType&& M,
-                  const ContainerType1& x,
-                  ContainerType2& y);
 namespace detail{
 
 template< class ContainerType1, class MatrixType, class ContainerType2>
@@ -89,7 +85,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 }
 
 template< class Stencil, class ContainerType, class ...ContainerTypes>
-inline void doStencil( SharedVectorTag, Stencil f, ContainerType&& x, ContainerTypes&&... xs)
+inline void doStencil( SharedVectorTag, Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
 {
     // a copy of doSubroutine ...
 
@@ -100,10 +96,9 @@ inline void doStencil( SharedVectorTag, Stencil f, ContainerType&& x, ContainerT
             dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
-    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
     doStencil_dispatch(
             get_execution_policy<vector_type>(),
-            get_idx<vector_idx>( std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...).size(),
+            N,
             f,
             do_get_pointer_or_reference(std::forward<ContainerType>(x),get_tensor_category<ContainerType>()) ,
             do_get_pointer_or_reference(std::forward<ContainerTypes>(xs),get_tensor_category<ContainerTypes>()) ...

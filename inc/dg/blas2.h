@@ -323,10 +323,11 @@ inline void gemv( MatrixType&& M,
  *
  * This routine loops over an arbitrary user-defined stencil functor \c f (the loop body) with an arbitrary number of arguments \f$ x_s\f$ elementwise
  * \f[ f(i, x_{0}, x_{1}, ...)  \f]
- * where \c i iterates over all elements in the @b first given argument \c x_0. The order of iterations is undefined.
+ * where \c i iterates from \c 0 to a given size \c N.
+ * The order of iterations is undefined.
  * It is equivalent to the following
  * @code
- * for(unsigned i=0; i<x_0.size(); i++)
+ * for(unsigned i=0; i<N; i++)
  *     f( i, *x_0[0], *x_1[0], ...);
  * @endcode
  * @note For trivially parallel operations (no neighboring points involved) use \c dg::blas1::subroutine
@@ -346,6 +347,7 @@ dg::blas1::subroutine( DG_DEVICE[]( unsigned i, double* y, const double* x){
 @endcode
 
  * @param f the loop body
+ * @param N the total number of iterations in the for loop
  * @param x the first argument
  * @param xs other arguments
 @attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
@@ -361,7 +363,7 @@ dg::blas1::subroutine( DG_DEVICE[]( unsigned i, double* y, const double* x){
   *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp)</tt>
  */
 template< class Stencil, class ContainerType, class ...ContainerTypes>
-inline void stencil( Stencil f, ContainerType&& x, ContainerTypes&&... xs)
+inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
 {
     static_assert( all_true<
             dg::is_vector<ContainerType>::value,
@@ -375,7 +377,7 @@ inline void stencil( Stencil f, ContainerType&& x, ContainerTypes&&... xs)
             >::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
-    dg::blas2::detail::doStencil(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+    dg::blas2::detail::doStencil(tensor_category(), f, N, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 /*! @brief \f$ F(M, x, y)\f$
  *
