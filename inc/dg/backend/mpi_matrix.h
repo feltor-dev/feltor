@@ -17,6 +17,10 @@ template< class MatrixType, class ContainerType1, class ContainerType2>
 void symv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y);
+template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
+void filtered_symv( FunctorType f, MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y);
 template< class MatrixType, class ContainerType1, class ContainerType2>
 void symv( get_value_type<ContainerType1> alpha,
                   MatrixType&& M,
@@ -333,7 +337,7 @@ struct MPIDistMat
             dg::blas2::filtered_symv( f, m_m, m_buffer.data(), y.data());
         }
         if( m_dist == col_dist){
-            throw Error( Message(_ping_)<<"filtered_symv cannot be used with a column distributed mpi matrix!";
+            throw Error( Message(_ping_)<<"filtered_symv cannot be used with a column distributed mpi matrix!");
         }
     }
 

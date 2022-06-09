@@ -2,12 +2,14 @@
 #include <iomanip>
 
 #include <thrust/host_vector.h>
-#include <thrust/device_vector.h> 
+#include <thrust/device_vector.h>
 #include "backend/timer.h"
 #include "blas.h"
+#include "filter.h"
 #include "topology/derivatives.h"
 #include "topology/evaluation.h"
 #include "topology/fast_interpolation.h"
+#include "topology/stencil.h"
 
 using value_type = double;
 using Vector     = dg::DVec;
@@ -79,6 +81,8 @@ int main()
     dg::blas2::transfer(dg::create::fast_projection( grid, 1,2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
+    dg::IDMatrix stencil = dg::create::square_stencil( {3,3}, grid,
+            grid.bcx(), grid.bcy());
     int multi=100;
     //t.tic();
     std::cout<<"\nNo communication\n";
@@ -193,6 +197,11 @@ int main()
             }, ysize, x[0], y[0]);
     t.toc();
     std::cout<<"Stencil forward derivative took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::filtered_symv( dg::CSRMedianFilter(), stencil, x[0], y[0]);
+    t.toc();
+    std::cout<<"filtered_symv Median       took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::jumpX( grid), M);
     dg::blas2::symv( M, x, y);//warm up

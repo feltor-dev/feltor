@@ -35,10 +35,10 @@ namespace dg{
 * @ingroup lowlevel
 * Takes care of correct permutation of indices.
 * @tparam T value type
-* @param lhs The left hand side (may not contain duplicate entries)
-* @param rhs The right hand side (may not contain duplicate entries)
+* @param lhs The left hand side matrix (duplicate entries lead to duplicate entries in result)
+* @param rhs The right hand side matrix (duplicate entries lead to duplicate entries in result)
 *
-* @return A newly allocated cusp matrix containing the tensor product
+* @return newly allocated cusp matrix containing the tensor product
 * @note use \c cusp::add and \c cusp::multiply to add and multiply matrices
 */
 template< class T>
@@ -65,18 +65,8 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensorproduct(
     thrust::stable_sort_by_key(J.begin(), J.end(), thrust::make_zip_iterator(thrust::make_tuple(I.begin(), V.begin())));
     thrust::stable_sort_by_key(I.begin(), I.end(), thrust::make_zip_iterator(thrust::make_tuple(J.begin(), V.begin())));
 
-    // This should not happen !?
-    // compute unique number of ( values with different (I,J) index)  in the output
-    int num_entries = thrust::inner_product(thrust::make_zip_iterator(thrust::make_tuple(I.begin(), J.begin())),
-                                            thrust::make_zip_iterator(thrust::make_tuple(I.end (),  J.end()))   - 1,
-                                            thrust::make_zip_iterator(thrust::make_tuple(I.begin(), J.begin())) + 1,
-                                            int(0),
-                                            thrust::plus<int>(),
-                                            thrust::not_equal_to< thrust::tuple<int,int> >()) + 1;
-    if( num_entries != (int)(lhs.num_entries*rhs.num_entries))
-        throw std::runtime_error( "lhs or rhs contains duplicate entries, which is not allowed in tensorproduct !\n");
-
     // allocate output matrix
+    int num_entries = lhs.num_entries* rhs.num_entries;
     cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
     A.row_indices = I;
     A.column_indices = J;

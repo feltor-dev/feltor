@@ -1,10 +1,11 @@
 #pragma once
 #include "dg/topology/functions.h"
 #include "dg/backend/config.h"
+
 namespace dg{
 
-
-
+    // Idea: maybe use if( | m - f_0| < rel*f_0 + abs)
+    // to use filter only at places where it is needed
 /**
  * @brief Compute (lower) Median of input numbers
  *
@@ -117,7 +118,7 @@ struct CSRSymvFilter
             const real_type* x, real_type* y)
     {
         y[i] = 0;
-        for( unsigned k=row_offsets[i]; k<row_offsets[i+1]; k++)
+        for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
             y[i] += values[k]*x[column_indices[k]];
     }
 };
