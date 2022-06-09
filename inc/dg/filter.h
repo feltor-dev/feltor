@@ -9,14 +9,15 @@ namespace dg{
  * @brief Compute (lower) Median of input numbers
  *
  * The (lower) median of N numbers is the N/2 (rounded up) largest number
+ * @sa dg::blas2::filtered_symv
  */
 struct CSRMedianFilter
 {
     template<class real_type>
     DG_DEVICE
-    void operator()( unsigned i, real_type* y, const int* row_offsets,
+    void operator()( unsigned i, const int* row_offsets,
             const int* column_indices, const real_type* values,
-            const real_type* x)
+            const real_type* x, real_type* y)
     {
         // http://ndevilla.free.fr/median/median/index.html
         // ignore the values array ...
@@ -103,4 +104,22 @@ struct CSRMedianFilter
         }
     }
 };
+/**
+ * @brief Test filter that computes the csr matrix-vector product
+ * @sa dg::blas2::filtered_symv
+ */
+struct CSRSymvFilter
+{
+    template<class real_type>
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        y[i] = 0;
+        for( unsigned k=row_offsets[i]; k<row_offsets[i+1]; k++)
+            y[i] += values[k]*x[column_indices[k]];
+    }
+};
+
 }//namespace dg

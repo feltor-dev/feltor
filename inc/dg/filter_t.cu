@@ -12,7 +12,7 @@ int main()
     for( unsigned i=1; i<12; i++)
     {
         row_offsets[1] = i;
-        filter( 0, &result, row_offsets, &column_indices[0], &x[0], &x[0]);
+        filter( 0, row_offsets, &column_indices[0], &x[0], &x[0], &result);
         std::cout << "Median of [";
         int k=0;
         for( k=0; k<row_offsets[1]-1; k++)

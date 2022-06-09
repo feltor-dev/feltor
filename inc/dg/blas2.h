@@ -342,7 +342,7 @@ double hx = 1.;
 dg::blas1::subroutine( DG_DEVICE[]( unsigned i, double* y, const double* x){
     unsigned ip = (i+1)%N;
     y[i] = (x[ip] - x[i])/hx;
-}, y, x);
+}, N, y, x);
 // y[i] now has the value 0
 @endcode
 
@@ -381,23 +381,27 @@ inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&.
 }
 /*! @brief \f$ F(M, x, y)\f$
  *
- * This routine calls \f[ F(i, y, [M], x) \f] for every row \c i in \c y,
+ * This routine calls \f[ F(i, [M], x, y) \f] for every row \c i in \c y,
  * using \c dg::blas2::stencil,
  * where [M] depends on the matrix type:
  *  - for a csr matrix it is [M] = m.row_offsets, m.column_indices, m.values
  * .
+ * Possible shared memory implementation
+ * @code
+ * dg::blas2::stencil( F, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
+ * @endcode
  * Other matrix types have not yet been implemented.
  * @note Since the matrix is known, a communication pattern is available and thus the function works for MPI unlike \c dg::blas2::stencil.
  *
- * @param f The filter function is called like <tt> f(i, y_ptr, m.row_offsets_ptr, m.column_indices_ptr, m.values_ptr, x_ptr) </tt>
+ * @param f The filter function is called like <tt> f(i, m.row_offsets_ptr, m.column_indices_ptr, m.values_ptr, x_ptr, y_ptr) </tt>
  * @param M The Matrix.
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
  * @tparam FunctorType A type that is callable
  *  <tt> void operator()( unsigned, pointer, [m_pointers], const_pointer) </tt>  For GPU vector the functor
  *  must be callable on the device.
- *  @tparam MatrixType So far only one of the \c cusp::csr_matrix types and their MPI variants <tt> dg::MPIDistMat<cusp::csr_matrix, Comm> </tt> are allowed
- *  @sa dg::convert
+ * @tparam MatrixType So far only one of the \c cusp::csr_matrix types and their MPI variants <tt> dg::MPIDistMat<cusp::csr_matrix, Comm> </tt> are allowed
+ * @sa dg::convert
  * @copydoc hide_ContainerType
  */
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>

@@ -312,6 +312,30 @@ struct MPIDistMat
             m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
         }
     }
+    template<class Functor, class ContainerType1, class ContainerType2>
+    void filtered_symv( const Functor f, const ContainerType1& x, ContainerType2& y) const
+    {
+        //the blas2 functions should make enough static assertions on tpyes
+        if( !m_c->isCommunicating()) //no communication needed
+        {
+            dg::blas2::filtered_symv( f, m_m, x.data(), y.data());
+            return;
+
+        }
+        int result;
+        MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+        if( m_dist == row_dist){
+            const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
+            m_c->global_gather( x_ptr, m_buffer.data());
+            dg::blas2::filtered_symv( f, m_m, m_buffer.data(), y.data());
+        }
+        if( m_dist == col_dist){
+            throw Error( Message(_ping_)<<"filtered_symv cannot be used with a column distributed mpi matrix!";
+        }
+    }
 
     private:
     LocalMatrix m_m;

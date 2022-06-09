@@ -9,6 +9,8 @@ namespace dg
 {
 namespace blas2
 {
+template< class Stencil, class ContainerType, class ...ContainerTypes>
+inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs);
 namespace detail
 {
 
@@ -173,6 +175,18 @@ inline void doSymv( get_value_type<Vector1> alpha,
 {
     for( auto el : y)
         dg::blas2::symv( alpha, std::forward<Matrix>(m), do_get_vector_element(x,el.first,get_tensor_category<Vector1>()), beta, do_get_vector_element(y,el.first,get_tensor_category<Vector2>()));
+}
+
+template<class Functor, class Matrix, class Vector1, class Vector2>
+inline void doFilteredSymv(
+                    Functor f,
+                    Matrix&& m,
+                    const Vector1&x,
+                    Vector2& y,
+                    MPIMatrixTag,
+                    MPIVectorTag  )
+{
+    m.filtered_symv( f, x,y);
 }
 
 
