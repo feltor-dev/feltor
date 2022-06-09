@@ -27,39 +27,16 @@
   */
 
 namespace dg{
-///@cond
-namespace detail{
-
-struct AddIndex2d{
-    AddIndex2d( size_t M ):M(M), number(0) {}
-
-    void operator() ( cusp::array1d< int, cusp::host_memory>& Idx,
-                      unsigned i, unsigned k)
-    {
-        Idx[ number] = M*i + k ;
-        number ++;
-    }
-    template<class T>
-    void operator() ( cusp::array1d< T, cusp::host_memory>& Val, T value)
-    {
-        Val[ number] = value;
-        number ++;
-    }
-  private:
-    size_t M;
-    unsigned number;
-};
-
-} //namespace detail
-///@endcond
 /**
 * @brief \f$ L\otimes R\f$ Form the tensor (Kronecker) product between two matrices
 *
+* The Kronecker product is formed by the triplets
+* \f$I = k n_r+l\f$, \f$ J = i N_r +j \f$,  \f$ M_{IJ} = L_{ki}R_{lj}\f$
 * @ingroup lowlevel
 * Takes care of correct permutation of indices.
 * @tparam T value type
-* @param lhs The left hand side (1D )
-* @param rhs The right hand side (1D )
+* @param lhs The left hand side (may not contain duplicate entries)
+* @param rhs The right hand side (may not contain duplicate entries)
 *
 * @return A newly allocated cusp matrix containing the tensor product
 * @note use \c cusp::add and \c cusp::multiply to add and multiply matrices
@@ -69,56 +46,41 @@ cusp::coo_matrix< int, T, cusp::host_memory> tensorproduct(
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
         const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
 {
-    //assert quadratic matrices
-    assert( lhs.num_rows == lhs.num_cols);
-    assert( rhs.num_rows == rhs.num_cols);
-    //assert dg matrices
-    unsigned Nx = rhs.num_rows;
-    //taken from the cusp examples:
     //dimensions of the matrix
     int num_rows     = lhs.num_rows*rhs.num_rows;
-    int num_cols     = num_rows;
-    int num_triplets = lhs.num_entries*rhs.num_entries;
+    int num_cols     = lhs.num_cols*rhs.num_cols;
     // allocate storage for unordered triplets
-    cusp::array1d< int,     cusp::host_memory> I( num_triplets); // row indices
-    cusp::array1d< int,     cusp::host_memory> J( num_triplets); // column indices
-    cusp::array1d< T,  cusp::host_memory> V( num_triplets); // values
-    //fill triplet arrays
-    detail::AddIndex2d addIndexRow( Nx);
-    detail::AddIndex2d addIndexCol( Nx);
-    detail::AddIndex2d addIndexVal( Nx);
+    cusp::array1d< int,     cusp::host_memory> I; // row indices
+    cusp::array1d< int,     cusp::host_memory> J; // column indices
+    cusp::array1d< T,  cusp::host_memory> V; // values
     //LHS x RHS
     for( unsigned i=0; i<lhs.num_entries; i++)
         for( unsigned j=0; j<rhs.num_entries; j++)
         {
-            addIndexRow( I, lhs.row_indices[i], rhs.row_indices[j]);
-            addIndexCol( J, lhs.column_indices[i], rhs.column_indices[j]);
-            addIndexVal( V, lhs.values[i]*rhs.values[j]);
+            I.push_back( lhs.row_indices[i]*rhs.num_rows + rhs.row_indices[j]);
+            J.push_back( lhs.column_indices[i]*rhs.num_cols +  rhs.column_indices[j]);
+            V.push_back( lhs.values[i]*rhs.values[j]);
         }
-    cusp::array1d< int, cusp::host_memory> dI( I); // row indices
-    cusp::array1d< int, cusp::host_memory> dJ( J); // column indices
-    cusp::array1d< T,   cusp::host_memory> dV( V); // values
-    // sort triplets by (i,j) index using two stable sorts (first by J, then by I)
-    thrust::stable_sort_by_key(dJ.begin(), dJ.end(), thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dV.begin())));
-    thrust::stable_sort_by_key(dI.begin(), dI.end(), thrust::make_zip_iterator(thrust::make_tuple(dJ.begin(), dV.begin())));
-    // compute unique number of ( values with different (i,j) index)  in the output
-    int num_entries = thrust::inner_product(thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dJ.begin())),
-                                            thrust::make_zip_iterator(thrust::make_tuple(dI.end (),  dJ.end()))   - 1,
-                                            thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dJ.begin())) + 1,
+    // sort triplets by (I,J) index using two stable sorts (first by J, then by I)
+    thrust::stable_sort_by_key(J.begin(), J.end(), thrust::make_zip_iterator(thrust::make_tuple(I.begin(), V.begin())));
+    thrust::stable_sort_by_key(I.begin(), I.end(), thrust::make_zip_iterator(thrust::make_tuple(J.begin(), V.begin())));
+
+    // This should not happen !?
+    // compute unique number of ( values with different (I,J) index)  in the output
+    int num_entries = thrust::inner_product(thrust::make_zip_iterator(thrust::make_tuple(I.begin(), J.begin())),
+                                            thrust::make_zip_iterator(thrust::make_tuple(I.end (),  J.end()))   - 1,
+                                            thrust::make_zip_iterator(thrust::make_tuple(I.begin(), J.begin())) + 1,
                                             int(0),
                                             thrust::plus<int>(),
                                             thrust::not_equal_to< thrust::tuple<int,int> >()) + 1;
+    if( num_entries != (int)(lhs.num_entries*rhs.num_entries))
+        throw std::runtime_error( "lhs or rhs contains duplicate entries, which is not allowed in tensorproduct !\n");
 
     // allocate output matrix
     cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
-    // sum values with the same (i,j) index
-    thrust::reduce_by_key(thrust::make_zip_iterator(thrust::make_tuple(dI.begin(), dJ.begin())),
-                          thrust::make_zip_iterator(thrust::make_tuple(dI.end(),   dJ.end())),
-                          dV.begin(),
-                          thrust::make_zip_iterator(thrust::make_tuple(A.row_indices.begin(), A.column_indices.begin())),
-                          A.values.begin(),
-                          thrust::equal_to< thrust::tuple<int,int> >(),
-                          thrust::plus<T>());
+    A.row_indices = I;
+    A.column_indices = J;
+    A.values = V;
     return A;
 }
 

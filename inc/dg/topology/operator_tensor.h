@@ -81,7 +81,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Oper
 
 
 /**
- * @brief Multiply 1d matrices by diagonal block batrices from left and right
+ * @brief Multiply 1d matrices by diagonal block matrices from left and right
  *
  * computes (1xleft)m(1xright)
  * @tparam T value type
