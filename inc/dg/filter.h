@@ -106,10 +106,10 @@ struct CSRMedianFilter
     }
 };
 /**
- * @brief Test filter that computes the csr matrix-vector product
+ * @brief Average filter that computes the average of all points in the stencil
  * @sa dg::blas2::filtered_symv
  */
-struct CSRSymvFilter
+struct CSRAverageFilter
 {
     template<class real_type>
     DG_DEVICE
@@ -118,8 +118,9 @@ struct CSRSymvFilter
             const real_type* x, real_type* y)
     {
         y[i] = 0;
+        int n = row_offsets[i+1]-row_offsets[i];
         for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
-            y[i] += values[k]*x[column_indices[k]];
+            y[i] += x[column_indices[k]]/(real_type)n;
     }
 };
 
