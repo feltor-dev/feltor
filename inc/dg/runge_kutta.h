@@ -127,7 +127,7 @@ struct IdentityFilter
      * @param out (copied version of in)
      */
     template<class ContainerType0, class ContainerType1>
-    void apply( const ContainerType0& in, ContainerType1& out) const{
+    void operator()( const ContainerType0& in, ContainerType1& out) const{
         dg::blas1::copy( in, out);
     }
 
@@ -303,6 +303,170 @@ void ERKStep<ContainerType>::step( ExplicitRHS& f, value_type t0, const Containe
     m_t1 = t1 = t0 + dt;
     if(!m_rk.isFsal() )
         f(t1,u1,m_k[0]);
+    else
+    {
+        using std::swap;
+        swap( m_k[0], m_k[s-1]); //enable free swap functions
+    }
+}
+///@endcond
+
+// Filter should be stable and converging, i.e. for rhs = 0 the solution should converge to a minimum TV solution
+// if rhs = 0 the next solution is u_{n+1} = PI[u_n]
+template< class ContainerType>
+struct FilteredERKStep
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc RungeKutta::RungeKutta()
+    FilteredERKStep() { m_k.resize(1); }
+    /**
+    * @brief Reserve internal workspace for the integration
+    *
+    * @param tableau Tableau, name or identifier that \c ConvertsToButcherTableau
+    * @param copyable vector of the size that is later used in \c step (
+     it does not matter what values \c copyable contains, but its size is important;
+     the \c step method can only be called with vectors of the same size)
+    */
+    FilteredERKStep( ConvertsToButcherTableau<value_type> tableau, const ContainerType&
+        copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable), m_u(copyable)
+    {
+        m_rkbt.resize( m_k.size()), m_rkb.resize(m_k.size());
+        for( unsigned i=0; i<m_k.size(); i++)
+        {
+            m_rkb[i] = m_rk.b(i);
+            m_rkbt[i] = m_rk.bt(i);
+        }
+    }
+
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = FilteredERKStep( std::forward<Params>( ps)...);
+    }
+    ///@copydoc hide_copyable
+    const ContainerType& copyable()const{ return m_k[0];}
+
+    ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
+    void ignore_fsal(){ m_ignore_fsal = true;}
+    ///All subsequent calls to \c step method will enable the check for the first same as last property
+    void enable_fsal(){ m_ignore_fsal = false;}
+
+    template<class ExplicitRHS, class Limiter>
+    void step( std::tuple<ExplicitRHS,Limiter>& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+    {
+        step ( rhs, t0, u0, t1, u1, dt, delta, true);
+    }
+    /**
+    * @brief Advance one step ignoring error estimate and embedded method
+    *
+    * @copydoc hide_explicit_rhs
+    * @param rhs right hand side subroutine
+    * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 (write only) end time ( equals \c t0+dt on return, may alias \c t0)
+    * @param u1 (write only) contains result on return (may alias u0)
+    * @param dt timestep
+    * @note on return \c rhs(t1, u1) will be the last call to \c rhs (this is
+    * useful if \c ExplicitRHS holds state, which is then updated to the current
+    * timestep)
+    * @note About the first same as last property (fsal): Some Butcher tableaus
+    * (e.g. Dormand-Prince or Bogacki-Shampine) have the property that the last
+    * value k_s of a timestep is the same as the first value k_0 of the next
+    * timestep. This means that we can save one call to the right hand side.
+    * This property is automatically activated if \c tableau.isFsal() returns
+    * \c true and \c t0 equals \c t1 of the last call to \c step. You can
+    * deactivate it by calling the \c ignore_fsal() method, which is useful for
+    * splitting methods but increases the number of rhs calls by 1.
+    * @attention On the rare occasion where you want to change the type of \c ExplicitRHS
+    * from one step to the next the fsal property is interpreted wrongly and will
+    * lead to wrong results. You will need to either re-construct the object or
+    * set the ignore_fsal property before the next step.
+    */
+    template<class ExplicitRHS, class Limiter>
+    void step( std::tuple<ExplicitRHS, Limiter>& rhs, value_type t0, const ContainerType& u0, value_type&
+            t1, ContainerType& u1, value_type dt)
+    {
+        if( !m_tmp_allocated)
+        {
+            dg::assign( m_k[0], m_tmp);
+            m_tmp_allocated = true;
+        }
+        step ( rhs, t0, u0, t1, u1, dt, m_tmp, false);
+    }
+    ///global order of the method given by the current Butcher Tableau
+    unsigned order() const {
+        return m_rk.order();
+    }
+    ///global order of the embedding given by the current Butcher Tableau
+    unsigned embedded_order() const {
+        return m_rk.embedded_order();
+    }
+    ///number of stages of the method given by the current Butcher Tableau
+    unsigned num_stages() const{
+        return m_rk.num_stages();
+    }
+  private:
+    template<class ExplicitRHS, class Limiter>
+    void step( const std::tuple<ExplicitRHS, Limiter>& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool);
+    ButcherTableau<value_type> m_rk;
+    std::vector<value_type> m_rkb, m_rkbt, m_rkd;
+    std::vector<ContainerType> m_k;
+    ContainerType m_u;
+    value_type m_t1 = 1e300;//remember the last timestep at which ERK is called
+    bool m_ignore_fsal = false;
+    ContainerType m_tmp; //  only conditionally allocated
+    bool m_tmp_allocated = false;
+};
+
+///@cond
+
+template< class ContainerType>
+template<class ExplicitRHS, class Limiter>
+void FilteredERKStep<ContainerType>::step( const std::tuple<ExplicitRHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
+{
+    unsigned s = m_rk.num_stages();
+    std::vector<const ContainerType*> k_ptrs = dg::asPointers( m_k);
+    //0 stage: probe
+    value_type tu = t0;
+    if( t0 != m_t1 || m_ignore_fsal)
+        std::get<0>(ode)(t0, u0, m_k[0]); //freshly compute k_0
+    //else take from last call
+    for ( unsigned i=1; i<s; i++)
+    {
+        std::vector<value_type> rka( i);
+        for( unsigned l=0; l<i; l++)
+            rka[l] = m_rk.a(i,l);
+
+        tu = DG_FMA( dt,m_rk.c(i),t0); //l=0
+        dg::blas1::copy( u0, m_u); // can't use u1 here cause u0 can alias
+        dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, i), rka, 1., m_u);
+
+        dg::apply( std::get<1>(ode), m_u, delta);
+        std::get<0>(ode)( tu, delta, m_k[i]);
+    }
+    //Now add everything up to get solution and error estimate
+    dg::blas1::copy( u0, m_u);
+    if( compute_delta)
+    {
+        dg::blas1::copy( u0, delta);
+        detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkbt},
+            {1.,1.}, {&m_u, &delta});
+        dg::apply( std::get<1>(ode), m_u, u1);
+        dg::apply( std::get<1>(ode), delta, m_u);
+        dg::blas1::axpby( 1., m_u, -1., u1, delta);
+    }
+    else
+    {
+        blas2::gemv( dt, dg::asDenseMatrix(k_ptrs), m_rkb, 1., m_u);
+        dg::apply( std::get<1>(ode), m_u, u1);
+    }
+    //make sure (t1,u1) is the last call to f
+    m_t1 = t1 = t0 + dt;
+    if(!m_rk.isFsal() )
+        std::get<0>(ode)( t1, u1, m_k[0]);
     else
     {
         using std::swap;
@@ -704,6 +868,9 @@ the harmonic oscillator:
 template<class ContainerType>
 using RungeKutta = ERKStep<ContainerType>;
 
+template<class ContainerType>
+using FilteredRungeKutta = FilteredERKStep<ContainerType>;
+
 /**
 * @brief Shu-Osher fixed-step explicit time-integration with Slope Limiter / Filter
 * \f[
@@ -784,7 +951,7 @@ struct ShuOsher
         ts[0] = t0;
         if( t0 != m_t1 ) //this is the first time we call step
         {
-            std::get<1>(ode).apply( u0, m_u[0]);
+            dg::apply( std::get<1>(ode), u0, m_u[0]);
             std::get<0>(ode)(ts[0], m_u[0], m_k[0]); //freshly compute k_0
         }
         else
@@ -803,11 +970,11 @@ struct ShuOsher
             }
             if(i!=s)
             {
-                std::get<1>(ode).apply( m_temp, m_u[i]);
+                dg::apply( std::get<1>(ode), m_temp, m_u[i]);
                 std::get<0>(ode)(ts[i], m_u[i], m_k[i]);
             }
             else{
-                std::get<1>(ode).apply( m_temp, u1);
+                dg::apply( std::get<1>(ode), m_temp, u1);
                 //make sure (t1,u1) is the last call to f
                 std::get<0>(ode)(ts[i], u1, m_k[0]);
             }

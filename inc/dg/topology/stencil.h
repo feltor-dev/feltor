@@ -72,6 +72,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> stencil(
     return A;
 }
 
+// maybe call it window?
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> square_stencil(
         std::array<int,2> size,

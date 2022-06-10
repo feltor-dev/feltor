@@ -610,7 +610,7 @@ void FilteredExplicitMultistep<ContainerType>::init( const std::tuple<ExplicitRH
 {
     m_tu = t0, m_dt = dt;
     unsigned s = m_t.steps();
-    std::get<1>(ode).apply( u0, m_u[s-1]);
+    dg::apply(std::get<1>(ode), u0, m_u[s-1]);
     std::get<0>(ode)(m_tu, m_u[s-1], m_f[s-1]); //call f on new point
     m_counter = 0;
 }
@@ -649,7 +649,7 @@ void FilteredExplicitMultistep<ContainerType>::step(const std::tuple<ExplicitRHS
     std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
     std::rotate( m_u.rbegin(), m_u.rbegin()+1, m_u.rend());
     //apply limiter
-    std::get<1>(ode).apply( u, m_u[0]);
+    dg::apply(std::get<1>(ode), u, m_u[0]);
     blas1::copy( m_u[0], u); //store result
     std::get<0>(ode)(m_tu, m_u[0], m_f[0]); //call f on new point
 }
