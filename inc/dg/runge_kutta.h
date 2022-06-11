@@ -355,7 +355,7 @@ struct FilteredERKStep
     void enable_fsal(){ m_ignore_fsal = false;}
 
     template<class ExplicitRHS, class Limiter>
-    void step( std::tuple<ExplicitRHS,Limiter>& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+    void step( const std::tuple<ExplicitRHS,Limiter>& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
     {
         step ( rhs, t0, u0, t1, u1, dt, delta, true);
     }
@@ -386,7 +386,7 @@ struct FilteredERKStep
     * set the ignore_fsal property before the next step.
     */
     template<class ExplicitRHS, class Limiter>
-    void step( std::tuple<ExplicitRHS, Limiter>& rhs, value_type t0, const ContainerType& u0, value_type&
+    void step( const std::tuple<ExplicitRHS, Limiter>& rhs, value_type t0, const ContainerType& u0, value_type&
             t1, ContainerType& u1, value_type dt)
     {
         if( !m_tmp_allocated)
