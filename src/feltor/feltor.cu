@@ -139,6 +139,7 @@ int main( int argc, char* argv[])
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
     feltor::Implicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec> implicit( feltor);
+    feltor::Filter<dg::x::IDMatrix> filter( grid, p);
     DG_RANK0 std::cout << "# Done!\n";
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
@@ -247,7 +248,7 @@ int main( int argc, char* argv[])
     dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
     feltor::ImplicitSolver<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> solver;
     dg::ImExMultistep< std::array<std::array<dg::x::DVec,2>,2> > multistep_imex;
-    dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
+    dg::Adaptive< dg::FilteredERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
     dg::Adaptive< dg::ARKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt_ark;
     double rtol = 0., atol = 0., dt = 0., reject_limit = 2;
     if( p.timestepper == "multistep")
@@ -265,7 +266,7 @@ int main( int argc, char* argv[])
     else if (p.timestepper == "adaptive")
     {
         adapt = {p.tableau, y0};
-        adapt.stepper().ignore_fsal();
+        //adapt.stepper().ignore_fsal();
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         dt = 1e-5; //that should be a small enough initial guess
@@ -590,7 +591,7 @@ int main( int argc, char* argv[])
                         if( p.timestepper == "adaptive")
                         {
                             do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
+                                adapt.step( std::tie(feltor, filter), time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol,
                                         atol, reject_limit);
                                 if( adapt.failed())
@@ -621,7 +622,7 @@ int main( int argc, char* argv[])
                         if( p.timestepper == "adaptive")
                         {
                             do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
+                                adapt.step( std::tie( feltor, filter), time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol,
                                         atol, reject_limit);
                                 if( adapt.failed())
@@ -890,7 +891,7 @@ int main( int argc, char* argv[])
                         if( p.timestepper == "adaptive")
                         {
                             do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
+                                adapt.step( std::tie( feltor, filter), time, y0, time, y0, dt,
                                         dg::pid_control, dg::l2norm, rtol,
                                         atol);
                                 if( adapt.failed())

@@ -22,6 +22,26 @@ struct ImplicitDensityMatrix;
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct ImplicitVelocityMatrix;
 
+template<class IMatrix>
+struct Filter
+{
+    template<class Geometry>
+    Filter( const Geometry& g, feltor::Parameters p) :
+        m_stencil( dg::create::square_stencil( {3,3}, g)) {}
+    template < class Container>
+    void operator()(
+        const std::array<std::array<Container,2>,2>& y,
+        std::array<std::array<Container,2>,2>& yp)
+    {
+        for( unsigned i=0; i<2; i++)
+            for( unsigned j=0; j<2; j++)
+                dg::blas2::filtered_symv( dg::CSRMedianFilter(), m_stencil, y[i][j], yp[i][j]);
+    }
+
+    private:
+    IMatrix m_stencil;
+};
+
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
@@ -1774,25 +1794,6 @@ struct Implicit
     private:
     Explicit<Geometry,IMatrix,Matrix,Container>* m_ex; // does not own anything
 };
-
-}//namespace feltor
-namespace dg
-{
-template< class Geometry, class IMatrix, class Matrix, class Container >
-struct TensorTraits<feltor::ImplicitDensityMatrix< Geometry, IMatrix, Matrix, Container >>
-{
-    using value_type      = get_value_type<Container>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-template< class Geometry, class IMatrix, class Matrix, class Container >
-struct TensorTraits<feltor::ImplicitVelocityMatrix< Geometry, IMatrix, Matrix, Container >>
-{
-    using value_type      = get_value_type<Container>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-}//namespace dg
-
-namespace feltor{
 
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct ImplicitDensityMatrix
