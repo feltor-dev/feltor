@@ -99,8 +99,8 @@ int main()
         norm_ainv += ainv.values[u]*ainv.values[u];
 
     std::cout << "Number of nonzeros per line in Z "<<z.values.size()/(double)size<<"\n";
-    std::cout << "Absolute error norm "<<sqrt(norm_err)<<"\n";
-    std::cout << "Relative error norm "<<sqrt(norm_err/norm_ainv)<<"\n";
+    std::cout << "Absolute error norm (not small) "<<sqrt(norm_err)<<"\n";
+    std::cout << "Relative error norm (not small) "<<sqrt(norm_err/norm_ainv)<<"\n";
 
 
     return 0;

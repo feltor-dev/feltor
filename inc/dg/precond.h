@@ -72,22 +72,27 @@ void sparsify( cusp::array1d<int, cusp::host_memory>& row_offsets,
  * \f[ A^{-1} = S^T D^{-1} S W \f]
  *
  * where S is a lower triangular matrix, D is a diagonal matrix and W are the weights
- * @note S is the transpose of Z with respect to the original algorithm proposed in Bertaccini and Filippone "Sparse approximate inverse preconditioners on high performance GPU platforms" (2016)
+ * @note Implements <a href="https://doi.org/10.1016/j.camwa.2015.12.008" target="_blank">Bertaccini and Filippone "Sparse approximate inverse preconditioners on high performance GPU platforms" (2016)</a>. S is the transpose of Z with respect to the original algorithm.
  * @param a input matrix in csr format (self-adjoint in weights), must be sorted by columns
- * @param z output matrix S
+ * @param s output matrix S
  * @param d diagonal output
  * @param weights weights in which the input matrix \c a is self-adjoint
- * @param nnzmax maximum number of non-zeroes in a row in \c z
- * @param threshold absolute limit under which entries are dropped from \c z and entries in \c d are strictly greater than
+ * @param nnzmax maximum number of non-zeroes in a row in \c s
+ * @param threshold absolute limit under which entries are dropped from \c s and entries in \c d are strictly greater than
  * @note Sparse inverse preconditioners can be applied directly like any other
  * sparse matrix and do not need a linear system solve like in sparse LU
  * factorization type methods
+ * @attention Use \c dg::nested_iterations if you have a geometry available,
+ * which is the faster method. Tests on the \c dg::Elliptic matrix show no
+ * significant speedup that could justify the additional costs to build and
+ * apply the preconditioner. (So we did not bother to implement an MPI version)
+ * @ingroup invert
  * @tparam T real type
  */
 template<class T>
 void sainv_precond(
         const cusp::csr_matrix<int, T, cusp::host_memory>& a,
-        cusp::csr_matrix<int, T, cusp::host_memory>& z,
+        cusp::csr_matrix<int, T, cusp::host_memory>& s,
         thrust::host_vector<T>& d,
         const thrust::host_vector<T>& weights,
         unsigned nnzmax,
@@ -185,10 +190,10 @@ void sainv_precond(
         // Apply drop rule to zw:
         detail::sparsify( row_offsets, column_indices, values, i, zw, iz_zw, nnzmax, threshold);
     }
-    z.resize( n, n, values.size());
-    z.column_indices = column_indices;
-    z.row_offsets = row_offsets;
-    z.values = values;
+    s.resize( n, n, values.size());
+    s.column_indices = column_indices;
+    s.row_offsets = row_offsets;
+    s.values = values;
 
 
 }
