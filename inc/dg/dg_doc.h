@@ -87,6 +87,7 @@
  *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  *             High level matrix creation functions
+ *         @defgroup stencil create stencils
  *         @defgroup interpolation Interpolation and projection
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
@@ -123,7 +124,7 @@
  * @{
  *     @defgroup timer Timer class
  *     @brief  t.tic(); t.toc(); t.diff();
- *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
+ *     @defgroup blas1_helpers Functions and functors
  *     @{
  *          @defgroup basics Simple
  *          @brief   For the dg::evaluate and dg::blas1::evaluate functions
@@ -133,14 +134,17 @@
  *
  *          @defgroup composition Composition of two or more functors
  *
- *          @defgroup binary_operators blas1::evaluate binary operators
+ *          @defgroup binary_operators dg::blas1::evaluate binary operators
  *          @brief   Binary subroutines for the dg::blas1::evaluate function
  *
- *          @defgroup variadic_evaluates blas1::evaluate variadic functors
+ *          @defgroup variadic_evaluates dg::blas1::evaluate variadic functors
  *          @brief   Functors to use in the dg::blas1::evaluate function
  *
- *          @defgroup variadic_subroutines blas1::subroutine subroutines
+ *          @defgroup variadic_subroutines dg::blas1::subroutine subroutines
  *          @brief   Functors to use in the dg::blas1::subroutine functions
+ *
+ *          @defgroup filters dg::blas2::filtered_symv subroutines
+ *          @brief Functors to use in dg::blas2::filtered_symv function
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *

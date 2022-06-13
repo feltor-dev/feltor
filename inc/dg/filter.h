@@ -4,8 +4,10 @@
 
 namespace dg{
 
-    // Idea: maybe use if( | m - f_0| < rel*f_0 + abs)
+    // Idea: maybe use if( | m - f_0| < rel*|f_0| + abs)
     // to use filter only at places where it is needed
+///@addtogroup filters
+///@{
 /**
  * @brief Compute (lower) Median of input numbers
  *
@@ -106,7 +108,7 @@ struct CSRMedianFilter
     }
 };
 /**
- * @brief Average filter that computes the average of all points in the stencil
+ * @brief %Average filter that computes the average of all points in the stencil
  * @sa dg::blas2::filtered_symv
  */
 struct CSRAverageFilter
@@ -123,5 +125,23 @@ struct CSRAverageFilter
             y[i] += x[column_indices[k]]/(real_type)n;
     }
 };
+/**
+ * @brief Test filter that computes the symv csr matrix-vector product if used
+ * @sa dg::blas2::filtered_symv
+ */
+struct CSRSymvFilter
+{
+    template<class real_type>
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        y[i] = 0;
+        for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
+            y[i] += x[column_indices[k]]*values[k];
+    }
+};
+///@}
 
 }//namespace dg

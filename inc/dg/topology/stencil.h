@@ -7,9 +7,15 @@
 #include "mpi_projection.h" // for convert function
 #endif // MPI_VERSION
 
+/*! @file
+  @brief Stencil generation
+  */
 namespace dg
 {
 namespace create
+{
+///@cond
+namespace detail
 {
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> stencil(
@@ -71,27 +77,92 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> stencil(
     A.values = values;
     return A;
 }
+} //namespace detail
+///@endcond
 
-// maybe call it window?
+///@addtogroup stencil
+///@{
+
+/*!
+ * @brief A 1d centered window stencil
+ *
+ * Create a CSR Matrix containing a centered fixed sized window on each row.
+ * @param window_size The number of points involved in the window. If even, the
+ * number of points left is 1 higher than right.
+ * @param g the grid
+ * @param bcx Determine what to do at the boundary. For Neumann conditions the
+ * boundary points are simply duplicated, For Dirichlet they are duplicated
+ * as well and the values are set to -1 instead of 1.
+ * @return A sparse matrix with \c window_size entries per row, each with value 1
+ * @tparam real_type The value type of the matrix
+ * @sa \c dg::blas2::filtered_symv
+ */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> square_stencil(
-        std::array<int,2> size,
+dg::IHMatrix_t<real_type> window_stencil(
+        unsigned window_size,
+        const RealGrid1d<real_type>& g,
+        dg::bc bcx = dg::NEU)
+{
+    return stencil( window_size, g, g, bcx);
+}
+
+/*!
+ * @brief A 2d centered window stencil
+ *
+ * Create a CSR Matrix containing a centered fixed sized window on each row
+ * as the tensor product of two 1d stencils.
+ * @param window_size The number of points involved in the window in each dimension.
+ * First entry is x-dimension, 2nd is y-dimension.
+ * If even, the number of points left is 1 higher than right.
+ * @param g the grid
+ * @param bcx Determine what to do at the x-boundary. For Neumann conditions the
+ * boundary points are simply duplicated, For Dirichlet they are duplicated
+ * as well and the values are set to -1 instead of 1.
+ * @param bcy Determine what to do at the y-boundary. For Neumann conditions the
+ * boundary points are simply duplicated, For Dirichlet they are duplicated
+ * as well and the values are set to -1 instead of 1.
+ * @return A sparse matrix with <tt> window_size[0]*window_size[1] </tt> entries per row, each with value 1
+ * @tparam real_type The value type of the matrix
+ * @sa \c dg::blas2::filtered_symv
+ */
+template<class real_type>
+dg::IHMatrix_t<real_type> window_stencil(
+        std::array<int,2> window_size,
         const aRealTopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(size[0], g.gx(), g.gx(), bcx);
-    auto my = stencil(size[1], g.gy(), g.gy(), bcy);
+    auto mx = stencil(window_size[0], g.gx(), g.gx(), bcx);
+    auto my = stencil(window_size[1], g.gy(), g.gy(), bcy);
     return dg::tensorproduct( my, mx);
 }
 
+/*!
+ * @brief A 2d centered window stencil
+ *
+ * Create a CSR Matrix containing a centered fixed sized window on each row
+ * as the tensor product of two 1d stencils and the identity in the third dimension
+ * @param window_size The number of points involved in the window in each dimension.
+ * First entry is x-dimension, 2nd is y-dimension.
+ * If even, the number of points left is 1 higher than right.
+ * @param g the grid
+ * @param bcx Determine what to do at the x-boundary. For Neumann conditions the
+ * boundary points are simply duplicated, For Dirichlet they are duplicated
+ * as well and the values are set to -1 instead of 1.
+ * @param bcy Determine what to do at the y-boundary. For Neumann conditions the
+ * boundary points are simply duplicated, For Dirichlet they are duplicated
+ * as well and the values are set to -1 instead of 1.
+ * @return A sparse matrix with <tt> window_size[0]*window_size[1] </tt> entries per row, each with value 1
+ * @tparam real_type The value type of the matrix
+ * @sa \c dg::blas2::filtered_symv
+ */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> square_stencil(
-        std::array<int,2> size,
+dg::IHMatrix_t<real_type> window_stencil(
+        std::array<int,2> window_size,
         const aRealTopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(size[0], g.gx(), g.gx(), bcx);
-    auto my = stencil(size[1], g.gy(), g.gy(), bcy);
+    auto mx = stencil(window_size[0], g.gx(), g.gx(), bcx);
+    auto my = stencil(window_size[1], g.gy(), g.gy(), bcy);
     unsigned Nz = g.gz().size();
     cusp::coo_matrix<int,real_type,cusp::host_memory> mz( Nz, Nz, Nz);
     for( unsigned i=0; i<Nz; i++)
@@ -103,27 +174,30 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> square_stencil(
     auto two =  dg::tensorproduct( my, mx);
     return dg::tensorproduct( mz, two);
 }
+
 #ifdef MPI_VERSION
+///@copydoc dg::create::window_stencil(std::array<int,2>,const aRealTopology2d<real_type>&,dg::bc,dg::bc)
 template<class real_type>
-dg::MIHMatrix_t<real_type> square_stencil(
-        std::array<int,2> size,
+dg::MIHMatrix_t<real_type> window_stencil(
+        std::array<int,2> window_size,
         const aRealMPITopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(size[0], g.local().gx(), g.global().gx(), bcx);
-    auto my = stencil(size[1], g.local().gy(), g.global().gy(), bcy);
+    auto mx = stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
+    auto my = stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
     auto local = dg::tensorproduct( my, mx);
     return dg::convert( (dg::IHMatrix)local, g);
 }
 
+///@copydoc window_stencil(std::array<int,2>,const aRealTopology3d<real_type>&,dg::bc,dg::bc)
 template<class real_type>
-dg::MIHMatrix_t<real_type> square_stencil(
-        std::array<int,2> size,
+dg::MIHMatrix_t<real_type> window_stencil(
+        std::array<int,2> window_size,
         const aRealMPITopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(size[0], g.local().gx(), g.global().gx(), bcx);
-    auto my = stencil(size[1], g.local().gy(), g.global().gy(), bcy);
+    auto mx = stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
+    auto my = stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
     auto local = dg::tensorproduct( my, mx);
     unsigned localNz = g.local().Nz()*g.nz();
     unsigned globalNz = g.global().Nz()*g.nz();
@@ -140,7 +214,8 @@ dg::MIHMatrix_t<real_type> square_stencil(
     return dg::convert( (dg::IHMatrix)three, g);
 }
 
-#endif
+#endif // MPI_VERSION
 
+///@}
 } // namespace create
 } // namespace dg
