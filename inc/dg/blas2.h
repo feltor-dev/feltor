@@ -321,6 +321,9 @@ inline void gemv( MatrixType&& M,
 /**
  * @brief \f$ f(x_0, x_1, ...)\f$; Customizable and generic for loop
  *
+ * @attention Only works for shared memory vectors (or scalars): no MPI, no Recursive (find reasons below).
+ * @attention For trivially parallel operations (no neighboring points involved) use \c dg::blas1::subroutine
+ *
  * This routine loops over an arbitrary user-defined stencil functor \c f (the loop body) with an arbitrary number of arguments \f$ x_s\f$ elementwise
  * \f[ f(i, x_{0}, x_{1}, ...)  \f]
  * where \c i iterates from \c 0 to a given size \c N.
@@ -330,37 +333,46 @@ inline void gemv( MatrixType&& M,
  * for(unsigned i=0; i<N; i++)
  *     f( i, *x_0[0], *x_1[0], ...);
  * @endcode
- * @note For trivially parallel operations (no neighboring points involved) use \c dg::blas1::subroutine
- * @attention This function only works for containers with the \c dg::SharedVectorTag. The reason it cannot work for MPI is that the stencil (and thus the communication pattern) is unkown. However, it can serve as an important building block for other parallel functions.
- * @note This is the closest function we have to <tt> kokkos::parallel_for</tt> of the Kokkos library.
- *
+ * With this function very general for-loops can be parallelized like for example a forward finite difference:
 @code{.cpp}
 dg::DVec x( 100,2), y(100,4);
 unsigned N = 100;
 double hx = 1.;
 // implement forward difference
-dg::blas1::subroutine( DG_DEVICE[]( unsigned i, double* y, const double* x){
+dg::blas1::subroutine( [&]DG_DEVICE( unsigned i, const double* x, double* y){
     unsigned ip = (i+1)%N;
     y[i] = (x[ip] - x[i])/hx;
-}, N, y, x);
+}, N, x, y);
 // y[i] now has the value 0
 @endcode
 
+ * @note In a way this function is a generalization of \c dg::blas1::subroutine
+ * to non-trivial parallelization tasks. However, this comes at a price:
+ * this function only works for containers with the \c dg::SharedVectorTag and sclar types.
+ * The reason it cannot work for MPI is that the stencil (and thus the
+ * communication pattern) is unkown. However, it can serve as an important
+ * building block for other parallel functions like \c dg::blas2::filtered_symv.
+ * @note This is the closest function we have to <tt> kokkos::parallel_for</tt> of the <a href="https://github.com/kokkos/kokkos">Kokkos library</a>.
+ *
  * @param f the loop body
  * @param N the total number of iterations in the for loop
  * @param x the first argument
  * @param xs other arguments
-@attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
+ * @attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
  * @tparam Stencil a function or functor with an arbitrary number of arguments
  * and no return type; The first argument is an unsigned (the loop iteration),
  * afterwards takes a \c const_pointer_type argument (const pointer to first element in vector) for each input argument in
  * the call and a <tt> pointer_type  </tt> argument (pointer to first element in vector) for each output argument.
- * \c Stencil must be callable on the device in use. In particular, with CUDA it must be a functor (@b not a function) and its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * Scalars are forwarded "as is" <tt> scalar_type </tt>.
+ * \c Stencil must be callable on the device in use. In particular, with CUDA
+ * it must be a functor (@b not a function) and its signature must contain the
+ * \__device__ specifier. (s.a. \ref DG_DEVICE)
   * @tparam ContainerType
   * Any class for which a specialization of \c TensorTraits exists and which
   * fulfills the requirements of the \c SharedVectorTag and \c AnyPolicyTag.
   * Among others
   *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp)</tt>
+  *  - \c int,  \c double and other primitive types ...
  */
 template< class Stencil, class ContainerType, class ...ContainerTypes>
 inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
@@ -381,7 +393,7 @@ inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&.
 }
 /*! @brief \f$ F(M, x, y)\f$
  *
- * This routine calls \f[ F(i, [M], x, y) \f] for every row \c i in \c y,
+ * This routine calls \f[ F(i, [M], x, y) \f] for all \f$ i \in [0,N[\f$, where N is the number of rows in M,
  * using \c dg::blas2::stencil,
  * where [M] depends on the matrix type:
  *  - for a csr matrix it is [M] = m.row_offsets, m.column_indices, m.values
@@ -391,7 +403,7 @@ inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&.
  * dg::blas2::stencil( F, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
  * @endcode
  * Other matrix types have not yet been implemented.
- * @note Since the matrix is known, a communication pattern is available and thus the function works for MPI unlike \c dg::blas2::stencil.
+ * @note Since the matrix is known, a communication pattern is available and thus the function works in parallel for MPI (unlike \c dg::blas2::stencil).
  *
  * @param f The filter function is called like <tt> f(i, m.row_offsets_ptr, m.column_indices_ptr, m.values_ptr, x_ptr, y_ptr) </tt>
  * @param M The Matrix.
@@ -401,7 +413,7 @@ inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&.
  *  <tt> void operator()( unsigned, pointer, [m_pointers], const_pointer) </tt>  For GPU vector the functor
  *  must be callable on the device.
  * @tparam MatrixType So far only one of the \c cusp::csr_matrix types and their MPI variants <tt> dg::MPIDistMat<cusp::csr_matrix, Comm> </tt> are allowed
- * @sa dg::convert
+ * @sa dg::convert, dg::CSRMedianFilter, dg::create::square_stencil
  * @copydoc hide_ContainerType
  */
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>

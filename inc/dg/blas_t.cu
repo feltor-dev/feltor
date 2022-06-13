@@ -103,9 +103,9 @@ int main()
     std::cout << "Test Stencil function:\n";
     dg::DVec dvec2 = dvec1;
     dvec1[1] = 53., dvec1[2] = 50.;
-    dg::blas2::stencil( []DG_DEVICE( unsigned i, double* x, const double* y){
-            x[i] = y[(i+1)%3] - y[i];
-        }, 3, dvec2, dvec1);
+    dg::blas2::stencil( []DG_DEVICE( unsigned i, const double* x, double* y, int mod){
+            y[i] = x[(i+1)%mod] - x[i];
+        }, 3, dvec1, dvec2, 3);
     std::cout << "Stencil forward difference      "<<(dvec2[0] == 1)<<" "<<(dvec2[1] == -3)<<" "<<(dvec2[2] == 2)<<std::endl;
 
     return 0;
