@@ -139,7 +139,7 @@ int main( int argc, char* argv[])
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
     feltor::Implicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec> implicit( feltor);
-    feltor::Filter<dg::x::IDMatrix> filter( grid, p);
+    feltor::Filter<dg::x::IDMatrix, dg::x::DVec> filter( grid, p);
     DG_RANK0 std::cout << "# Done!\n";
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(

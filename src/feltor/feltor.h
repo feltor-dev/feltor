@@ -22,24 +22,26 @@ struct ImplicitDensityMatrix;
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct ImplicitVelocityMatrix;
 
-template<class IMatrix>
+template<class IMatrix, class Container>
 struct Filter
 {
     template<class Geometry>
     Filter( const Geometry& g, feltor::Parameters p) :
-        m_stencil( dg::create::square_stencil( {3,3}, g)) {}
-    template < class Container>
+        m_stencil( dg::create::window_stencil( {3,3}, g)), m_tmp( dg::evaluate( dg::one, g)) {}
     void operator()(
-        const std::array<std::array<Container,2>,2>& y,
-        std::array<std::array<Container,2>,2>& yp)
+        std::array<std::array<Container,2>,2>& y)
     {
         for( unsigned i=0; i<2; i++)
             for( unsigned j=0; j<2; j++)
-                dg::blas2::filtered_symv( dg::CSRMedianFilter(), m_stencil, y[i][j], yp[i][j]);
+            {
+                dg::blas2::filtered_symv( dg::CSRMedianFilter(), m_stencil, y[i][j], m_tmp);
+                m_tmp.swap( y[i][j]);
+            }
     }
 
     private:
     IMatrix m_stencil;
+    Container m_tmp;
 };
 
 template< class Geometry, class IMatrix, class Matrix, class Container >
@@ -1800,7 +1802,7 @@ struct ImplicitDensityMatrix
 {
     ImplicitDensityMatrix() {}
     ImplicitDensityMatrix( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
-    void symv ( const std::array<Container,2> & density,
+    void operator()( const std::array<Container,2> & density,
             std::array<Container,2>& yp)
     {
         if( m_alpha != 0)
@@ -1821,7 +1823,7 @@ struct ImplicitVelocityMatrix
 {
     ImplicitVelocityMatrix() {}
     ImplicitVelocityMatrix( Explicit<Geometry,IMatrix,Matrix,Container>& ex) : m_ex(&ex){}
-    void symv( const std::array<Container,3>& w, std::array<Container,3>& wp)
+    void operator()( const std::array<Container,3>& w, std::array<Container,3>& wp)
     {
         // w[0] := w_e^dagger
         // w[1] := W_i^dagger

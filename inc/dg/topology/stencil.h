@@ -103,7 +103,7 @@ dg::IHMatrix_t<real_type> window_stencil(
         const RealGrid1d<real_type>& g,
         dg::bc bcx = dg::NEU)
 {
-    return stencil( window_size, g, g, bcx);
+    return detail::stencil( window_size, g, g, bcx);
 }
 
 /*!
@@ -131,8 +131,8 @@ dg::IHMatrix_t<real_type> window_stencil(
         const aRealTopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(window_size[0], g.gx(), g.gx(), bcx);
-    auto my = stencil(window_size[1], g.gy(), g.gy(), bcy);
+    auto mx = detail::stencil(window_size[0], g.gx(), g.gx(), bcx);
+    auto my = detail::stencil(window_size[1], g.gy(), g.gy(), bcy);
     return dg::tensorproduct( my, mx);
 }
 
@@ -161,8 +161,8 @@ dg::IHMatrix_t<real_type> window_stencil(
         const aRealTopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(window_size[0], g.gx(), g.gx(), bcx);
-    auto my = stencil(window_size[1], g.gy(), g.gy(), bcy);
+    auto mx = detail::stencil(window_size[0], g.gx(), g.gx(), bcx);
+    auto my = detail::stencil(window_size[1], g.gy(), g.gy(), bcy);
     unsigned Nz = g.gz().size();
     cusp::coo_matrix<int,real_type,cusp::host_memory> mz( Nz, Nz, Nz);
     for( unsigned i=0; i<Nz; i++)
@@ -183,8 +183,8 @@ dg::MIHMatrix_t<real_type> window_stencil(
         const aRealMPITopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
-    auto my = stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
+    auto mx = detail::stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
+    auto my = detail::stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
     auto local = dg::tensorproduct( my, mx);
     return dg::convert( (dg::IHMatrix)local, g);
 }
@@ -196,8 +196,8 @@ dg::MIHMatrix_t<real_type> window_stencil(
         const aRealMPITopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
-    auto my = stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
+    auto mx = detail::stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
+    auto my = detail::stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
     auto local = dg::tensorproduct( my, mx);
     unsigned localNz = g.local().Nz()*g.nz();
     unsigned globalNz = g.global().Nz()*g.nz();

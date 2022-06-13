@@ -32,11 +32,11 @@ struct FilteredExplicitMultistep;
 
 /**
 * @brief General explicit linear multistep time-integration
-* \f[
+* \f$
 * \begin{align}
     v^{n+1} = \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
     \end{align}
-    \f]
+    \f$
 
     which discretizes
     \f[
@@ -116,11 +116,11 @@ struct ExplicitMultistep
 
 /**
  * @brief Semi-implicit multistep time-integration
- * \f[
+ * \f$
  * \begin{align}
      v^{n+1} = \sum_{q=0}^{s-1} a_q v^{n-q} + \Delta t\left[\left(\sum_{q=0}^{s-1}b_q  \hat E(t^{n}-q\Delta t, v^{n-q}) + \sum_{q=1}^{s} c_q \hat I( t^n - q\Delta t, v^{n-q})\right) + c_0\hat I(t^{n}+\Delta t, v^{n+1})\right]
      \end{align}
-     \f]
+     \f$
      which discretizes
      \f[
      \frac{\partial v}{\partial t} = \hat E(t,v) + \hat I(t,v)
@@ -313,11 +313,11 @@ void ImExMultistep<ContainerType>::step( const std::tuple<RHS, Diffusion, Solver
 
 /**
 * @brief Implicit multistep time-integration
-* \f[
+* \f$
 * \begin{align}
     v^{n+1} &= \sum_{i=0}^{s-1} a_i v^{n-i} + \Delta t \sum_{i=1}^{s} c_i\hat I(t^{n+1-i}, v^{n+1-i}) + \Delta t c_{0} \hat I (t + \Delta t, v^{n+1}) \\
     \end{align}
-    \f]
+    \f$
 
     which discretizes
     \f[
@@ -498,31 +498,13 @@ void ImplicitMultistep<ContainerType>::step(const std::tuple<ImplicitRHS, Solver
 
 /**
 * @brief EXPERIMENTAL: General explicit linear multistep time-integration with Limiter / Filter
-* \f[
+* \f$
 * \begin{align}
     \tilde v &= \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right) \\
     v^{n+1} &= \Lambda\Pi \left( \tilde v\right)
     \end{align}
-    \f]
-
-    where \f$ \Lambda\Pi\f$ is the limiter, which discretizes
-    \f[
-    \frac{\partial v}{\partial t} = \hat f(t,v)
-    \f]
-    where \f$ f \f$ contains the equations.
-    The coefficients for an order 3 "eBDF" scheme are given as an example:
-    \f[
-    a_0 = \frac{18}{11}\ a_1 = -\frac{9}{11}\ a_2 = \frac{2}{11} \\
-    b_0 = \frac{18}{11}\ b_1 = -\frac{18}{11}\ b_2 = \frac{6}{11}
-\f]
-    You can use your own coefficients defined as a \c dg::MultistepTableau
-    or use one of the predefined coefficients in
-    @copydoc hide_explicit_multistep_tableaus
-
-@note This scheme is the same as ExplicitMultistep with the additional option to use a filter
-*
-* @copydoc hide_note_multistep
-* @copydoc hide_ContainerType
+    \f$
+    @copydoc ExplicitMultistep
 * @attention The filter function inside the Explicit Multistep method is a
 * somewhat experimental feature, so use this class over
 * \c dg::ExplicitMultistep at your own risk
@@ -610,7 +592,8 @@ void FilteredExplicitMultistep<ContainerType>::init( const std::tuple<ExplicitRH
 {
     m_tu = t0, m_dt = dt;
     unsigned s = m_t.steps();
-    dg::apply(std::get<1>(ode), u0, m_u[s-1]);
+    dg::blas1::copy( u0, m_u[s-1]);
+    std::get<1>(ode)( m_u[s-1]);
     std::get<0>(ode)(m_tu, m_u[s-1], m_f[s-1]); //call f on new point
     m_counter = 0;
 }
@@ -645,12 +628,12 @@ void FilteredExplicitMultistep<ContainerType>::step(const std::tuple<ExplicitRHS
     for (unsigned i = 1; i < s; i++){
         dg::blas1::axpbypgz( m_t.a(i), m_u[i], m_dt*m_t.ex(i), m_f[i], 1., u);
     }
+    //apply limiter
+    std::get<1>(ode)( u);
     //permute m_f[s-1], m_u[s-1]  to be the new m_f[0], m_u[0]
     std::rotate( m_f.rbegin(), m_f.rbegin()+1, m_f.rend());
     std::rotate( m_u.rbegin(), m_u.rbegin()+1, m_u.rend());
-    //apply limiter
-    dg::apply(std::get<1>(ode), u, m_u[0]);
-    blas1::copy( m_u[0], u); //store result
+    blas1::copy( u, m_u[0]); //store result
     std::get<0>(ode)(m_tu, m_u[0], m_f[0]); //call f on new point
 }
 ///@endcond

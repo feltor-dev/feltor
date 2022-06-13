@@ -229,14 +229,14 @@ inline void doSymv( MatrixType&& M,
  *
  * This routine computes \f[ y = \alpha M x + \beta y \f]
  * where \f$ M\f$ is a matrix (or functor that is called like \c M(alpha,x,beta,y)).
- * @copydoc hide_code_blas2_symv
- * @param alpha A Scalar
- * @param M The Matrix.
  * There is nothing that prevents you from making the matrix \c M non-symmetric or even
  * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
  * multiplication) is misleading.  For better code readability we introduce
  * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
  * \c dg::apply (general, possibly non-linear functor application).
+ * @copydoc hide_code_blas2_symv
+ * @param alpha A Scalar
+ * @param M The Matrix.
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
@@ -266,13 +266,13 @@ inline void symv( get_value_type<ContainerType1> alpha,
  *
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix (or functor that is called like \c M(x,y)).
- * @copydoc hide_code_blas2_symv
- * @param M The Matrix.
  * There is nothing that prevents you from making the matrix \c M non-symmetric or even
  * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
  * multiplication) is misleading.  For better code readability we introduce
  * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
  * \c dg::apply (general, possibly non-linear functor application)
+ * @copydoc hide_code_blas2_symv
+ * @param M The Matrix.
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2

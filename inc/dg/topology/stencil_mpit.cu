@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
 
-    if(rank==0)std::cout << "Test square stencil\n";
+    if(rank==0)std::cout << "Test window stencil\n";
     std::vector<dg::bc> bcs = {dg::DIR, dg::NEU, dg::PER};
     for( auto bc : bcs)
     {
@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
         dg::MPIGrid2d g2d( 0,1, 0,2, 3, 4, 2, bc, bc, comm2d);
         auto x = dg::evaluate( [](double x, double y){return 1;}, g2d), y(x);
         if(rank==0)std::cout << "Test "<<dg::bc2str( bc)<<" boundary:\n";
-        auto stencil = dg::create::square_stencil( {3,3}, g2d, bc, bc);
+        auto stencil = dg::create::window_stencil( {3,3}, g2d, bc, bc);
         dg::blas2::symv( stencil, x, y);
         auto l2d = g2d.local();
         for( int r = 0; r<size; r++)
