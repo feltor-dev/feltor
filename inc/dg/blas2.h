@@ -319,7 +319,7 @@ inline void gemv( MatrixType&& M,
 }
 
 /**
- * @brief \f$ f(x_0, x_1, ...)\f$; Customizable and generic for loop
+ * @brief \f$ f(i, x_0, x_1, ...)\ \forall i\f$; Customizable and generic for loop
  *
  * @attention Only works for shared memory vectors (or scalars): no MPI, no Recursive (find reasons below).
  * @attention For trivially parallel operations (no neighboring points involved) use \c dg::blas1::subroutine
@@ -338,7 +338,7 @@ inline void gemv( MatrixType&& M,
 dg::DVec x( 100,2), y(100,4);
 unsigned N = 100;
 double hx = 1.;
-// implement forward difference
+// implement forward difference with periodic boundaries
 dg::blas1::subroutine( [&]DG_DEVICE( unsigned i, const double* x, double* y){
     unsigned ip = (i+1)%N;
     y[i] = (x[ip] - x[i])/hx;

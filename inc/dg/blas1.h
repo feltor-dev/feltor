@@ -196,7 +196,7 @@ inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
 
 @code{.cpp}
 dg::DVec two( 100,2);
-dg::blas1::plus( two,  2. )); // result[i] = 4.
+dg::blas1::plus( two,  3. )); // two[i] = 5.
 @endcode
  * @param alpha Scalar
  * @param x (read/write) x
