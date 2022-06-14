@@ -93,3 +93,7 @@ html.dark-mode{
     background-color: var(--menu-focus-background);
     border-radius: var(--border-radius-small) !important;
 }
+
+#projectname{
+    white-space: normal;
+}
