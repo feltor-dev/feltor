@@ -107,6 +107,62 @@ struct CSRMedianFilter
         }
     }
 };
+
+
+// Adaptive Switching Median Filter from Akkoul " A New Adaptive Switching Median Filter" IEEE Signal processing letters (2010)
+template<class real_type>
+struct CSRASWMFilter
+{
+    CSRASWMFilter( real_type alpha, real_type eps = 0.01,
+        real_type delta = 0.1) :
+        m_eps(eps), m_delta( delta), m_alpha( alpha) {}
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        real_type m_old = 1e10, m_new = 0;
+
+        m_new = 0.;
+        for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
+            m_new += x[column_indices[k]];
+        m_new /= (real_type)(row_offsets[i+1]-row_offsets[i]);
+        // compute weighted mean until converged
+        while ( fabs(m_old -  m_new) > m_eps*fabs(x[i])+m_eps)
+        {
+            m_old = m_new;
+            m_new = 0.;
+            real_type sum = 0.;
+            for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
+            {
+                sum += 1./(fabs( x[column_indices[k]] - m_old) + m_delta);
+                m_new += x[column_indices[k]]/
+                    (fabs( x[column_indices[k]] - m_old) + m_delta);
+            }
+            m_new /= sum;
+        }
+
+        // compute weighted standard deviation
+        real_type sigma = 0;
+        real_type sum = 0.;
+        for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
+        {
+            sum += 1./(fabs( x[column_indices[k]] - m_new) + m_delta);
+            sigma += ( x[column_indices[k]] - m_new)*(x[column_indices[k]] - m_new)/
+                (fabs( x[column_indices[k]] - m_old) + m_delta);
+        }
+        sigma = sqrt( sigma/sum);
+        if( fabs( x[i] - m_new) > m_alpha*sigma)
+        {
+            dg::CSRMedianFilter()( i, row_offsets, column_indices, values, x, y);
+        }
+        else
+            y[i] =x[i];
+    }
+    private:
+    real_type m_eps, m_delta, m_alpha ;
+};
+
 /**
  * @brief %Average filter that computes the average of all points in the stencil
  * @sa dg::blas2::filtered_symv
