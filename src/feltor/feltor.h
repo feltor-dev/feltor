@@ -22,28 +22,6 @@ struct ImplicitDensityMatrix;
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct ImplicitVelocityMatrix;
 
-template<class IMatrix, class Container>
-struct Filter
-{
-    template<class Geometry>
-    Filter( const Geometry& g, feltor::Parameters p) :
-        m_stencil( dg::create::window_stencil( {3,3}, g)), m_tmp( dg::evaluate( dg::one, g)) {}
-    void operator()(
-        std::array<std::array<Container,2>,2>& y)
-    {
-        for( unsigned i=0; i<2; i++)
-            for( unsigned j=0; j<2; j++)
-            {
-                dg::blas2::filtered_symv( dg::CSRMedianFilter(), m_stencil, y[i][j], m_tmp);
-                m_tmp.swap( y[i][j]);
-            }
-    }
-
-    private:
-    IMatrix m_stencil;
-    Container m_tmp;
-};
-
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
@@ -481,6 +459,7 @@ struct Explicit
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
         m_multi_invgammaN, m_multi_ampere;
+    IMatrix m_stencil;
 
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar;
@@ -700,6 +679,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_s[0] = m_s[1] = m_potential ;
 
     //--------------------------Construct-------------------------//
+    m_stencil = dg::create::window_stencil( {3,3}, g);
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);

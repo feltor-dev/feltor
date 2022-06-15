@@ -43,6 +43,9 @@ struct Parameters
     double boxscaleRm, boxscaleRp;
     double boxscaleZm, boxscaleZp;
 
+    double alpha0; // temp data for Filter (lacks docu)
+    unsigned iter; // temp data for Filter (lacks docu)
+
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP, bcxA, bcyA;
     enum dg::direction pol_dir;
     std::string curvmode;
@@ -109,6 +112,8 @@ struct Parameters
         fci_bc      = js["FCI"].get( "bc", "along_field").asString();
 
         diff_order  = js["regularization"].get( "order", 2).asUInt();
+        alpha0  = js["regularization"].get( "alpha0", 10).asUInt();
+        iter  = js["regularization"].get( "iter", 4).asUInt();
         diff_dir    = dg::str2direction(
                 js["regularization"].get( "direction", "centered").asString() );
         nu_perp_n   = js["regularization"].get( "nu_perp_n", 0.).asDouble();
