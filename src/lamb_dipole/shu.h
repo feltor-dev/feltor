@@ -2,7 +2,6 @@
 #define _DG_SHU_CUH
 
 #include <exception>
-#include <cusp/ell_matrix.h>
 
 #include "json/json.h"
 #include "dg/file/json_utilities.h"
@@ -11,6 +10,71 @@
 
 namespace shu
 {
+
+template< class IMatrix, class Container>
+struct Filter
+{
+    using value_type = dg::get_value_type<Container>;
+    Filter() = default;
+    template<class Geometry>
+    Filter( const Geometry& grid, dg::file::WrappedJsonValue& js) {
+        m_type = js[ "regularization"].get( "type", "none").asString();
+        if( m_type == "modal")
+        {
+            double alpha = js[ "regularization"].get( "alpha", 36).asDouble();
+            double order = js[ "regularization"].get( "order", 8).asDouble();
+            double eta_c = js[ "regularization"].get( "eta_c", 0.5).asDouble();
+            m_filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
+        }
+        else if( m_type == "swm")
+        {
+            m_alpha0 = js["regularization"].get("alpha", 20).asDouble();
+            m_iter = js["regularization"].get("iter", 4).asDouble();
+        }
+        if( m_type == "swm" || m_type == "median")
+        {
+            m_stencil = dg::create::window_stencil( {3,3}, grid);
+            m_tmp = dg::evaluate( dg::zero, grid);
+        }
+    }
+
+    void operator()( Container& y){
+        dg::Timer t;
+        t.tic();
+        if( m_type == "modal")
+        {
+            m_filter(y);
+        }
+        else if( m_type == "median")
+        {
+            dg::blas2::filtered_symv( dg::CSRMedianFilter(), m_stencil, y, m_tmp);
+            using std::swap;
+            swap( m_tmp, y);
+        }
+        else if( m_type == "swm")
+        {
+            value_type alpha = m_alpha0;
+            for( unsigned i=0; i<m_iter; i++)
+            {
+                dg::blas2::filtered_symv( dg::CSRSWMFilter<value_type>(alpha), m_stencil, y, m_tmp);
+                using std::swap;
+                swap( m_tmp, y);
+                alpha*=0.8;
+            }
+        }
+        t.toc();
+        std::cout << "Application of filter took "<<t.diff()<<"s\n";
+
+        return;
+    }
+    private:
+    std::string m_type;
+    dg::ModalFilter<dg::DMatrix, dg::DVec> m_filter;
+    unsigned m_iter;
+    value_type m_alpha0;
+    IMatrix m_stencil;
+    Container m_tmp;
+};
 
 // Improvement: make Diffusion a friend to Shu to save memory and duplicate code
 template< class Geometry, class Matrix, class Container>

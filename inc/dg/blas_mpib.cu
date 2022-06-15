@@ -192,7 +192,7 @@ int main( int argc, char* argv[])
         t.toc();
         if(rank==0)std::cout<<"centered z derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     }
-    dg::MIDMatrix stencil = dg::create::square_stencil( {3,3}, grid,
+    dg::MIDMatrix stencil = dg::create::window_stencil( {3,3}, grid,
             grid.bcx(), grid.bcy());
     t.tic();
     for( int i=0; i<multi; i++)

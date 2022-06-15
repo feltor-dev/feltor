@@ -413,7 +413,7 @@ inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&.
  *  <tt> void operator()( unsigned, pointer, [m_pointers], const_pointer) </tt>  For GPU vector the functor
  *  must be callable on the device.
  * @tparam MatrixType So far only one of the \c cusp::csr_matrix types and their MPI variants <tt> dg::MPIDistMat<cusp::csr_matrix, Comm> </tt> are allowed
- * @sa dg::convert, dg::CSRMedianFilter, dg::create::square_stencil
+ * @sa dg::convert, dg::CSRMedianFilter, dg::create::window_stencil
  * @copydoc hide_ContainerType
  */
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>

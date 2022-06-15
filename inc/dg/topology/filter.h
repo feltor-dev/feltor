@@ -144,7 +144,8 @@ struct ModalFilter
      * @param ps parameters that are forwarded to the creation of a ContainerType (e.g. when a std::vector is to be created it is the vector size)
      */
     template<class UnaryOp, class Topology, class ...Params>
-    ModalFilter( UnaryOp sigma, const Topology& t, Params&& ...ps) : m_filter (
+    ModalFilter( UnaryOp sigma, const Topology& t, Params&& ...ps) :
+        m_tmp( dg::evaluate( dg::zero, t)), m_filter (
             dg::create::modal_filter( sigma, t), std::forward<Params>(ps)...) { }
 
     /**
@@ -160,22 +161,19 @@ struct ModalFilter
         *this = ModalFilter( std::forward<Params>( ps)...);
     }
 
-    void apply( const ContainerType& x, ContainerType& y) const{ symv( 1., x, 0., y);}
-    void symv( const ContainerType& x, ContainerType& y) const{ symv( 1., x,0,y);}
-    void symv(real_type alpha, const ContainerType& x, real_type beta, ContainerType& y) const
+    void operator()( ContainerType& y) {
+        operator()( 1., y, 0., m_tmp);
+        using std::swap;
+        swap( y, m_tmp);
+    }
+    void operator()( const ContainerType& x, ContainerType& y) const{ operator()( 1., x,0,y);}
+    void operator()(real_type alpha, const ContainerType& x, real_type beta, ContainerType& y) const
     {
         m_filter.symv( alpha, x, beta, y);
     }
     private:
+    ContainerType m_tmp;
     MultiMatrix<MatrixType, ContainerType> m_filter;
 };
 
-///@cond
-template <class M, class V>
-struct TensorTraits<ModalFilter<M, V> >
-{
-    using value_type  = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
-///@endcond
 }//namespace dg

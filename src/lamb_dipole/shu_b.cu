@@ -53,6 +53,7 @@ int main( int argc, char* argv[])
         shu( grid, ws);
     shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( shu);
     shu::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> shu_implicit( grid, ws);
+    shu::Filter<dg::IDMatrix, dg::DVec> shu_filter( grid, ws) ;
     if( "mms" == ws["init"]["type"].asString())
     {
         double sigma = ws["init"].get( "sigma", 0.2).asDouble();
@@ -78,31 +79,23 @@ int main( int argc, char* argv[])
     std::string stepper = ws[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
     std::string tableau = ws[ "timestepper"].get( "tableau", "ImEx-BDF-3-3").asString();
     std::string regularization = ws[ "regularization"].get( "type", "modal").asString();
-    dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
-    dg::IdentityFilter identity;
-    bool apply_filter = false;
     dg::DefaultSolver<dg::DVec> solver;
     dg::ImExMultistep<dg::DVec> imex;
     dg::ImplicitMultistep<dg::DVec> implicit;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
-    dg::Adaptive<dg::ERKStep<dg::DVec> > adaptive;
+    dg::Adaptive<dg::FilteredERKStep<dg::DVec> > adaptive;
     dg::Adaptive<dg::ARKStep<dg::DVec> > adaptive_imex;
     dg::Adaptive<dg::DIRKStep<dg::DVec> > adaptive_implicit;
-    if( regularization == "modal")
+    if( regularization == "modal" || regularization == "swm" || regularization == "median")
     {
-        double alpha = ws[ "regularization"].get( "alpha", 36).asDouble();
-        double order = ws[ "regularization"].get( "order", 8).asDouble();
-        double eta_c = ws[ "regularization"].get( "eta_c", 0.5).asDouble();
-        filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
-        apply_filter = true;
-        if( stepper != "FilteredExplicitMultistep" && stepper != "Shu-Osher" )
+        if( stepper != "FilteredExplicitMultistep" && stepper != "Shu-Osher" && stepper != "ERK" )
         {
-            throw std::runtime_error( "Error: modal regularization only works with either FilteredExplicitMultistep or Shu-Osher!");
+            throw std::runtime_error( "Error: Limiter regularization only works with either FilteredExplicitMultistep or Shu-Osher or ERK!");
             return -1;
         }
     }
-    else if( regularization != "viscosity")
+    else if( regularization != "viscosity" && regularization != "none")
         throw std::runtime_error( "ERROR: Unkown regularization type "+regularization);
 
     double dt = 0.;
@@ -128,23 +121,15 @@ int main( int argc, char* argv[])
     {
         dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
         shu_osher.construct( tableau, y0);
-        if( apply_filter)
-            odeint = std::make_unique<dg::SinglestepTimeloop<dg::DVec>>( shu_osher,
-                std::tie( shu, filter), dt);
-        else
-            odeint = std::make_unique<dg::SinglestepTimeloop<dg::DVec>>( shu_osher,
-                std::tie( shu, identity), dt);
+        odeint = std::make_unique<dg::SinglestepTimeloop<dg::DVec>>( shu_osher,
+            std::tie( shu, shu_filter), dt);
     }
     else if( "FilteredExplicitMultistep" == stepper)
     {
         dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
         multistep.construct( tableau, y0);
-        if( apply_filter)
-            odeint = std::make_unique<dg::MultistepTimeloop<dg::DVec>>( multistep,
-                std::tie( shu, filter), time, y0, dt);
-        else
-            odeint = std::make_unique<dg::MultistepTimeloop<dg::DVec>>( multistep,
-                std::tie( shu, identity), time, y0, dt);
+        odeint = std::make_unique<dg::MultistepTimeloop<dg::DVec>>( multistep,
+            std::tie( shu, shu_filter), time, y0, dt);
     }
     else if( "ERK" == stepper)
     {
@@ -152,7 +137,7 @@ int main( int argc, char* argv[])
         atol = ws["timestepper"].get("atol", 1e-5).asDouble();
         adaptive.construct( tableau, y0);
         odeint = std::make_unique<dg::AdaptiveTimeloop<dg::DVec>>( adaptive,
-            shu, dg::pid_control, dg::l2norm, rtol, atol);
+            std::tie( shu, shu_filter), dg::pid_control, dg::l2norm, rtol, atol);
     }
     else if( "ARK" == stepper)
     {

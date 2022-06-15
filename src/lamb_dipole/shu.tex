@@ -197,6 +197,14 @@ Possible time-steppers are explicit, semi-implicit and implicit multistep scheme
 as well as the Shu-Osher scheme that originally incorporated limiters in the dG scheme
 as well as explicit, semi-implicit and implicit embedded Runge-Kutta schemes.
 \begin{minted}[texcomments]{js}
+"timestepper",
+{
+    // an explicit multistep class with optional filter
+    // (viscosity is treated explicitly)
+    "type"      : "FilteredExplicitMultistep"
+    "tableau"   : "eBDF-3-3" // Any explicit multistep tableau *
+    "dt"        : 2e-3 // Fixed timestep
+},
 "timestepper" :
 {
     // The semi-implicit multistep scheme (only in combination with
@@ -214,13 +222,23 @@ as well as explicit, semi-implicit and implicit embedded Runge-Kutta schemes.
     "tableau"   : "SSPRK-3-3", // Any Shu-Osher tableau *
     "dt"        : 1e-3 // Fixed Time-step
 },
-"timestepper",
+"timestepper":
 {
-    // an explicit multistep class with the option to use a filter (viscosity
-    // is treated explicitly)
-    "type"      : "FilteredExplicitMultistep"
-    "tableau"   : "eBDF-3-3" // Any explicit multistep tableau *
-    "dt"        : 2e-3 // Fixed timestep
+    // An adaptive embedded explicit Runge Kutta method with optional filter
+    // (viscosity is treated explicitly)
+    "type"      : "ERK",
+    "tableau"   : "Bogacki-Shampine-4-2-3", // Any explicit embedded tableau *
+    "rtol"        : 1e-5, // The relative tolerance in the timestep
+    "atol"        : 1e-5, // The absolute tolerance in the timestep
+},
+"timestepper":
+{
+    // An adaptive embedded additive Runge Kutta method with no filter
+    // (viscosity is treated implicitly)
+    "type"      : "ARK",
+    "tableau"   : "ARK-4-2-3", // Any additive embedded tableau *
+    "rtol"        : 1e-5, // The relative tolerance in the timestep
+    "atol"        : 1e-5, // The absolute tolerance in the timestep
 },
 \end{minted}
 To implement an implicit timestepper we need to solve the equation (the mass matrix is the identity)
@@ -339,6 +357,25 @@ and is choosable with the following parameters
     //wavenumber
 }
 \end{minted}
+An alternative to modal filters are noise filters/limiters, in particular the
+switching modal filter that acts on a 3x3 window around each pixel
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type"  : "swm", // Not choosable for \textbf{ImExMultistep} timestepper
+    "alpha0" : 20,  // Threshold in units of local median absolute deviation
+    "iter"  : 4 // number of times the filter is iterated, each time alpha0 is
+    // lowered by a factor 0.8
+}
+\end{minted}
+or a simple Median filter
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type"  : "median", // Not choosable for \textbf{ImExMultistep} timestepper
+}
+\end{minted}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Elliptic solver}
 Currently, the multigrid solver is the only one choosable

@@ -81,7 +81,7 @@ int main()
     dg::blas2::transfer(dg::create::fast_projection( grid, 1,2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
-    dg::IDMatrix stencil = dg::create::square_stencil( {3,3}, grid,
+    dg::IDMatrix stencil = dg::create::window_stencil( {3,3}, grid,
             grid.bcx(), grid.bcy());
     int multi=100;
     //t.tic();
@@ -287,7 +287,10 @@ int main()
     std::cout<<"Rotation        took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        std::swap( x[0], y[0]); //does not call free swap functions but uses move assignments which is just as fast
+    {
+        using std::swap;
+        swap( x[0], y[0]); //call free swap functions
+    }
     t.toc();
     std::cout<<"std::sawp       took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
