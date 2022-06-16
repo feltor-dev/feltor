@@ -28,7 +28,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     if( "velocity-staggered" == advection ||
         "velocity-staggered-implicit" == advection)
     {
-        // compute fluxes on staggered grid
+        // Compute transformations in two steps
+        // compute fluxes on staggered grid, transform afterwards
         dg::blas1::copy( y[0][1], m_density[0]);
         dg::blas1::copy( y[0][1], m_density[1]);
 
@@ -99,7 +100,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     else if( "velocity-staggered-fieldaligned" == advection ||
         "velocity-staggered-fieldaligned-implicit" == advection)
     {
-        // compute fluxes and its derivatives completely fieldaligned grid
+        // compute fluxes and derivatives on locally fieldaligned grid centered on plane k (for n) and k+1/2 (for u)
+        // i.e. do all trafos first and compute fluxes in one go
         dg::blas1::copy( y[0][1], m_density[0]);
         dg::blas1::copy( y[0][1], m_density[1]);
 
@@ -337,6 +339,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     }
     else if( "staggered" == advection || "staggered-implicit" == advection)
     {
+        // Compute transformations in two steps
+        // compute fluxes on staggered grid
         dg::blas1::copy( y[0][1], m_density[0]);
         dg::blas1::copy( y[0][1], m_density[1]);
 
@@ -383,6 +387,82 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
         // Add density gradient
         if( advection == "staggered")
+            dg::geo::ds_centered(m_faST, -m_p.tau[1] /m_p.mu[1], m_minusSTN[1], m_plusSTN[1], 1., yp[1][1]);
+        // Add parallel viscosity
+        if( m_p.nu_parallel_u[1] > 0)
+        {
+            m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
+            m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
+            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
+                    m_plus, m_p.bcxU, 0.);
+            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+                    m_minus, m_velocityST[1], m_plus, 1., yp[1][1]);
+        }
+    }
+    else if( "staggered-fieldaligned" == advection || "staggered-fieldaligned-implicit" == advection)
+    {
+        // compute fluxes and derivatives on locally fieldaligned grid centered on plane k (for n) and k+1/2 (for u)
+        // i.e. do all trafos first and compute fluxes in one go
+        dg::blas1::copy( y[0][1], m_density[0]);
+        dg::blas1::copy( y[0][1], m_density[1]);
+
+
+        dg::blas1::copy( 0., m_velocity[0]);
+        dg::blas1::copy( 0., yp);
+
+        {
+        // Compute transformed fieldaligned ADJOINT grid
+        m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
+        m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
+        update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1],
+                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+        dg::blas1::axpby( 0.5, m_minusSTN[1], 0.5, m_plusSTN[1], m_densityST[1]);
+        }
+        dg::blas1::pointwiseDivide( y[1][1], m_densityST[1], m_velocityST[0]); //NU^st
+        dg::blas1::pointwiseDivide( y[1][1], m_densityST[1], m_velocityST[1]); //NU^st
+
+        // Compute transformed fieldaligned grid
+        {
+        m_faST( dg::geo::einsMinus, m_velocityST[1], m_minusSTU[1]);
+        m_faST( dg::geo::zeroPlus,  m_velocityST[1], m_plusSTU[1]);
+        update_parallel_bc_1st( m_minusSTU[1], m_plusSTU[1], m_p.bcxU, 0.);
+        dg::blas1::axpby( 0.5, m_minusSTU[1], 0.5, m_plusSTU[1], m_velocity[1]);
+        }
+        m_fa( dg::geo::einsMinus, m_density[1], m_minusN[1]);
+        m_fa( dg::geo::einsPlus,  m_density[1], m_plusN[1]);
+        update_parallel_bc_2nd( m_fa, m_minusN[1], m_density[1], m_plusN[1],
+                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+
+        // compute qhat
+        compute_parallel_flux( m_minusSTU[1], m_plusSTU[1],
+                m_minusN[1], m_density[1], m_plusN[1],
+                m_fluxM, m_fluxP, m_p.slope_limiter);
+        // Now compute divNUb
+        dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
+                m_divNUb[1]);
+        dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
+
+        // Compute transformed fieldaligned ADJOINT grid
+        dg::blas1::axpby( 0.5, m_fluxM, 0.5, m_fluxP, m_temp0); // qhat
+        m_faST( dg::geo::zeroMinus, m_temp0, m_fluxM);
+        m_faST( dg::geo::einsPlus,  m_temp0, m_fluxP);
+        update_parallel_bc_1st( m_fluxM, m_fluxP,
+                m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
+
+        m_fa( dg::geo::einsMinus, m_velocityST[1], m_minusU[1]);
+        m_fa( dg::geo::einsPlus,  m_velocityST[1], m_plusU[1]);
+        update_parallel_bc_2nd( m_fa, m_minusU[1], m_velocityST[1],
+                m_plusU[1], m_p.bcxU, 0.);
+
+        // compute fhat
+        compute_parallel_flux( m_fluxM, m_fluxP,
+                m_minusU[1], m_velocityST[1], m_plusU[1],
+                m_minus, m_plus,
+                m_p.slope_limiter);
+        dg::geo::ds_divCentered( m_faST, -1., m_minus, m_plus, 1, yp[1][1]);
+
+        // Add density gradient
+        if( advection == "staggered-fieldaligned")
             dg::geo::ds_centered(m_faST, -m_p.tau[1] /m_p.mu[1], m_minusSTN[1], m_plusSTN[1], 1., yp[1][1]);
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
@@ -507,10 +587,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::implicit(
     dg::blas1::copy( 0., yp);
     std::string advection = m_js["advection"].get("type",
         "velocity-staggered").asString();
-    // ghost cells are shifted by 2
-    if( advection == "staggered-implicit")
+    if( advection == "staggered-implicit" ||
+        advection == "staggered-fieldaligned-implicit")
     {
-        std::cout << "Staggered-implicit\n";
         dg::blas1::copy( y[0], m_density),
         // Compute dsN and staggered density
         m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
@@ -548,7 +627,7 @@ template< class Geometry, class IMatrix, class Matrix, class Container >
 struct ImplicitSolver
 {
     ImplicitSolver() {}
-    ImplicitSolver( Explicit<Geometry,IMatrix,Matrix,Container>& ex, double eps_time)    {
+    ImplicitSolver( Explicit<Geometry,IMatrix,Matrix,Container>& ex, double eps_time): m_ex(&ex)    {
         dg::assign( dg::evaluate( dg::zero, ex.grid()), m_tmp[0][0] );
         m_tmp[0][1] = m_tmp[0][0];
         m_tmp[1] = m_tmp[0];
