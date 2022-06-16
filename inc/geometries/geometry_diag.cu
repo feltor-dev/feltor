@@ -345,6 +345,8 @@ int main( int argc, char* argv[])
         qprofile = dg::evaluate( qprof, g1d_fine);
         dg::HVec w1d = dg::create::weights( g1d_fine);
         double psit_tot = dg::blas1::dot( w1d, qprofile);
+        if( integration_dir == dg::backward)
+            psit_tot*=-1;
         //std::cout << "psit tot "<<psit_tot<<"\n";
         dg::blas1::scal ( psit, 1./psit_tot);
         dg::blas1::transform( psit, psit, dg::SQRT<double>());

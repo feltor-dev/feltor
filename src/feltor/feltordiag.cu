@@ -170,13 +170,14 @@ int main( int argc, char* argv[])
                psi = psipO/2.; // just use a random value
         }, psi_vals);
     dg::HVec qprofile( psi_vals);
-    for( unsigned i=0; i<qprofile.size(); i++)
-        qprofile[i] = qprof( psi_vals[i]);
+    dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
     map1d.emplace_back("q-profile", qprofile,
         "q-profile (Safety factor) using direct integration");
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
         "Poloidal flux label psi (same as coordinate)");
     dg::HVec psit = dg::integrate( qprofile, g1d_out, integration_dir);
+    std::cout << "q-pfo "<<qprofile[10]<<"\n";
+    std::cout << "Psi_t "<<psit[10]<<"\n";
     map1d.emplace_back("psit1d", psit,
         "Toroidal flux label psi_t integrated using q-profile");
     //we need to avoid integrating >=0 for total psi_t
@@ -185,6 +186,11 @@ int main( int argc, char* argv[])
     qprofile = dg::evaluate( qprof, g1d_fine);
     dg::HVec w1d = dg::create::weights( g1d_fine);
     double psit_tot = dg::blas1::dot( w1d, qprofile);
+    if( integration_dir == dg::backward)
+        psit_tot *= -1;
+    std::cout << "q-pfo "<<qprofile[10]<<"\n";
+    std::cout << "Psi_t "<<psit[10]<<"\n";
+    std::cout << "total "<<psit_tot<<"\n";
     dg::blas1::scal ( psit, 1./psit_tot);
     dg::blas1::transform( psit, psit, dg::SQRT<double>());
     map1d.emplace_back("rho_t", psit,
