@@ -191,15 +191,12 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > fast_projection( 
 }
 
 template<class real_type>
-dg::HMatrix_t<real_type> fast_transform( enum direction dir, const RealGrid1d<real_type>& t)
+dg::HMatrix_t<real_type> fast_transform( dg::Operator<real_type> op, const RealGrid1d<real_type>& t)
 {
     EllSparseBlockMat<real_type> pX( t.N(), t.N(), 1, 1, t.n());
-    if( dir == dg::forward)
-        dg::assign( t.dlt().forward(), pX.data());
-    else if( dir == dg::backward)
-        dg::assign( t.dlt().backward(), pX.data());
-    else
-        throw Error( Message(_ping_)<< "Centered direction not acceptable in fast_transform!");
+    if( op.size() != t.n())
+        throw Error( Message(_ping_)<< "Operator must have same n as grid!");
+    dg::assign( op.data(), pX.data());
     for( unsigned i=0; i<t.N(); i++)
     {
         pX.cols_idx[i] = i;
