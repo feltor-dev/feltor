@@ -49,9 +49,15 @@ struct EllSparseBlockMat
     /**
     * @brief Allocate storage
     *
+    * Initializes <tt> left_size = right_size = 1</tt>,
+    * <tt> right_range[0] = 0</tt> and <tt> right_range[1] = 1</tt>,
+    * <tt> data(num_different_blocks*n*n),
+        cols_idx( num_block_rows*num_blocks_per_line),
+        data_idx(cols_idx.size()) </tt>
+    *
     * @param num_block_rows number of rows \c num_rows. Each row contains blocks.
     * @param num_block_cols number of columns \c num_cols.
-    * @param num_blocks_per_line number of blocks in each line
+    * @param num_blocks_per_line number of blocks in each line \c blocks_per_line
     * @param num_different_blocks number of nonrecurrent blocks
     * @param n each block is of size nxn
     */
@@ -95,7 +101,7 @@ struct EllSparseBlockMat
     */
     void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const;
 
-    ///@brief Sets right_range from 0 to right_size
+    ///@brief Set <tt> right_range[0] = 0, right_range[1] = right_size</tt>
     void set_default_range(){
         right_range[0]=0;
         right_range[1]=right_size;
@@ -111,7 +117,7 @@ struct EllSparseBlockMat
     thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
     thrust::host_vector<int> cols_idx; //!< is of size num_rows*num_blocks_per_line and contains the column indices % n into the vector
     thrust::host_vector<int> data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number
-    thrust::host_vector<int> right_range; //!< range, [0,right_size] per default (can be used to apply the matrix to only part of the right rows
+    thrust::host_vector<int> right_range; //!< range (can be used to apply the matrix to only part of the right rows
     int num_rows; //!< number of block rows, each row contains blocks
     int num_cols; //!< number of block columns
     int blocks_per_line; //!< number of blocks in each line
