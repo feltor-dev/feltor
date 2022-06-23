@@ -43,6 +43,9 @@ static inline void mpi_init( int argc, char* argv[])
 #endif
 }
 
+/** @class hide_cart_warning
+* @attention Before creating a second Cartesian communicator consider freeing existing ones with \c MPI_Comm_free. (Using \c mpi_init2d and \c mpi_init3d in the same program has sometimes led to Segmentation faults in the past)
+  */
 /**
 * @brief Read in number of processses and create Cartesian MPI communicator
 *
@@ -53,6 +56,7 @@ static inline void mpi_init( int argc, char* argv[])
 * @param is Input stream rank 0 reads parameters (\c npx, \c npy)
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
+* @copydoc hide_cart_warning
 */
 static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
@@ -139,6 +143,7 @@ static inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm 
 * @param is Input stream rank 0 reads parameters (\c npx, \c npy, \c n, \c Nx, \c Ny)
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
+* @copydoc hide_cart_warning
 */
 static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
@@ -158,6 +163,7 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx
 * @param is Input stream rank 0 reads parameters (\c npx, \c npy, \c npz)
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
+* @copydoc hide_cart_warning
 */
 static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
@@ -247,6 +253,7 @@ static inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned&
 * @param is Input stream rank 0 reads parameters (\c npx, \c npy, \c npz, \c n, \c Nx, \c Ny, \c Nz)
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
+* @copydoc hide_cart_warning
 */
 static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {

@@ -106,6 +106,15 @@ struct EllSparseBlockMat
         right_range[0]=0;
         right_range[1]=right_size;
     }
+    ///@brief Set <tt> right_size = new_right_size; set_default_range();</tt>
+    void set_right_size( int new_right_size ){
+        right_size = new_right_size;
+        set_default_range();
+    }
+    ///@brief Set <tt> left_size = new_left_size;</tt>
+    void set_left_size( int new_left_size ){
+        left_size = new_left_size;
+    }
     /**
     * @brief Display internal data to a stream
     *

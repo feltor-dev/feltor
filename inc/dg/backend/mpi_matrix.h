@@ -92,23 +92,15 @@ struct RowColDistMat
     template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
     RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):
         m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_c(src.collective()), m_buffer( m_c.allocate_buffer()) { }
-    /**
-    * @brief Read access to the inner matrix
-    *
-    * @return
-    */
+    ///@brief Read access to the inner matrix
     const LocalMatrixInner& inner_matrix() const{return m_i;}
-    /**
-    * @brief Read access to the outer matrix
-    *
-    * @return
-    */
+    ///@brief Write access to the inner matrix
+    LocalMatrixInner& inner_matrix(){return m_i;}
+    ///@brief Read access to the outer matrix
     const LocalMatrixOuter& outer_matrix() const{return m_o;}
-    /**
-    * @brief Read access to the communication object
-    *
-    * @return
-    */
+    ///@brief Write access to the outer matrix
+    LocalMatrixOuter& outer_matrix(){return m_o;}
+    ///@brief Read access to the communication object
     const Collective& collective() const{return m_c;}
 
     /**

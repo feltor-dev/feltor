@@ -87,8 +87,7 @@ Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX2d<real_type>& 
 {
     EllSparseBlockMat<real_type>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left_size = g.n()*g.Ny();
-    dx.set_default_range();
+    dx.set_left_size( g.n()*g.Ny());
     return dx;
 }
 
@@ -155,8 +154,7 @@ Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX2d<real_type
 {
     EllSparseBlockMat<real_type>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left_size = g.n()*g.Ny();
-    jx.set_default_range();
+    jx.set_left_size( g.n()*g.Ny());
     return jx;
 }
 
@@ -228,8 +226,7 @@ Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX3d<real_type
 {
     EllSparseBlockMat<real_type>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left_size = g.n()*g.Ny()*g.Nz();
-    jx.set_default_range();
+    jx.set_left_size( g.n()*g.Ny()*g.Nz());
     return jx;
 }
 
@@ -275,8 +272,7 @@ Composite<EllSparseBlockMat<real_type> > jumpZ( const aRealTopologyX3d<real_type
 {
     EllSparseBlockMat<real_type>  jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
-    jz.right_size = g.n()*g.Nx()*g.n()*g.Ny();
-    jz.set_default_range();
+    jz.set_right_size( g.n()*g.Nx()*g.n()*g.Ny());
     return jz;
 }
 
@@ -334,8 +330,7 @@ Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX3d<real_type>& 
 {
     EllSparseBlockMat<real_type>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left_size = g.n()*g.Ny()*g.Nz();
-    dx.set_default_range();
+    dx.set_left_size( g.n()*g.Ny()*g.Nz());
     return dx;
 }
 
@@ -405,8 +400,7 @@ Composite<EllSparseBlockMat<real_type> > dz( const aRealTopologyX3d<real_type>& 
 {
     EllSparseBlockMat<real_type>  dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
-    dz.right_size = g.n()*g.n()*g.Nx()*g.Ny();
-    dz.set_default_range();
+    dz.set_right_size( g.n()*g.n()*g.Nx()*g.Ny());
     return dz;
 
 }

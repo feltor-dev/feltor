@@ -91,16 +91,15 @@ EllSparseBlockMat<real_type> distribute_rows( const EllSparseBlockMat<real_type>
     if( howmany[1] == 1)
     {
         EllSparseBlockMat<real_type> temp(src);
-        temp.left_size = temp.left_size/howmany[0];
-        temp.right_size = temp.right_size/howmany[2];
-        temp.set_default_range();
+        temp.set_left_size( temp.left_size/howmany[0]);
+        temp.set_right_size( temp.right_size/howmany[2]);
         return temp;
     }
     assert( src.num_rows == src.num_cols);
     int chunk_size = src.num_rows/howmany[1];
     EllSparseBlockMat<real_type> temp(chunk_size, chunk_size, src.blocks_per_line, src.data.size()/(src.n*src.n), src.n);
-    temp.left_size = src.left_size/howmany[0];
-    temp.right_size = src.right_size/howmany[2];
+    temp.set_left_size( src.left_size/howmany[0]);
+    temp.set_right_size( src.right_size/howmany[2]);
     //first copy data elements (even though not all might be needed it doesn't slow down things either)
     for( unsigned  i=0; i<src.data.size(); i++)
         temp.data[i] = src.data[i];
@@ -118,7 +117,6 @@ EllSparseBlockMat<real_type> distribute_rows( const EllSparseBlockMat<real_type>
         //now shift this range to chunk range -1,..,chunk_size
         temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size );
     }
-    temp.set_default_range();
     return temp;
 }
 

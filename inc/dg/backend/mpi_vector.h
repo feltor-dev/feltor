@@ -184,8 +184,9 @@ struct NearestNeighborComm
     using pointer_type = get_value_type<Vector>*;
     using const_pointer_type = get_value_type<Vector> const *;
     ///@brief no communication
-    NearestNeighborComm(){
-        m_comm = MPI_COMM_NULL;
+    ///@param comm optional MPI communicator: the purpose is to be able to store MPI communicator even if no communication is involved in order to construct MPI_Vector with it
+    NearestNeighborComm( MPI_Comm comm = MPI_COMM_NULL){
+        m_comm = comm;
         m_silent = true;
     }
     /**
