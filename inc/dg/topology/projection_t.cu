@@ -25,8 +25,8 @@ int main()
         std::cout << "Coarse Grid "<< n_new << " x "<<N_new <<"\n";
         dg::Grid1d go ( 0, M_PI/2., n_old, N_old);
         dg::Grid1d gn ( 0, M_PI/2., n_new, N_new);
-        dg::MultiMatrix< dg::DMatrix, dg::DVec > proj = dg::create::fast_projection( go, n_old/n_new,  N_old/N_new);
-        dg::MultiMatrix< dg::DMatrix, dg::DVec > inte = dg::create::fast_interpolation( gn, n_old/n_new, N_old/N_new);
+        dg::DMatrix proj = dg::create::fast_projection( go, n_old/n_new,  N_old/N_new);
+        dg::DMatrix inte = dg::create::fast_interpolation( gn, n_old/n_new, N_old/N_new);
         dg::DVec v = dg::evaluate( sine, go);
         dg::DVec w1do = dg::create::weights( go);
         dg::DVec w1dn = dg::create::weights( gn);
@@ -61,13 +61,15 @@ int main()
         dg::Grid3d g2o (0, M_PI, 0, M_PI, 0,1, n_old, N_old, N_old, 4);
         dg::Grid3d g2n (0, M_PI, 0, M_PI, 0,1, n_new, N_new, N_new, 4);
         cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
-        dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > proj2d = dg::create::fast_projection( g2o, n_old/n_new, N_old/N_new, N_old/N_new);
-        dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > fast_inte2d = dg::create::fast_interpolation( g2n, n_old/n_new, N_old/N_new, N_old/N_new);
+        auto proj2d = dg::create::fast_projection( g2o, n_old/n_new, N_old/N_new, N_old/N_new);
+        auto fast_inte2d = dg::create::fast_interpolation( g2n, n_old/n_new, N_old/N_new, N_old/N_new);
+        auto forward = dg::create::fast_transform( g2o.dltx().forward(), g2o.dlty().forward(), g2o);
+        auto backward = dg::create::fast_transform( g2o.dltx().backward(), g2o.dlty().backward(), g2o);
         const dg::HVec sinO( dg::evaluate( sine, g2o)),
                                     sinN( dg::evaluate( sine, g2n));
         dg::HVec w2do = dg::create::weights( g2o);
         dg::HVec w2dn = dg::create::weights( g2n);
-        dg::HVec sinP( sinN), sinI(sinO);
+        dg::HVec sinP( sinN), sinI(sinO), sinF(sinO);
         dg::blas2::gemv( proj2d, sinO, sinP); //FAST PROJECTION
         double value0 = sqrt(dg::blas2::dot( sinO, w2do, sinO));
         std::cout << "Original vector     "<<value0 << "\n";
@@ -87,6 +89,11 @@ int main()
         std::cout << "Fast Interpolated vec "<< value2 << "\n";
         double value3 = sqrt(dg::blas2::dot( sinN, w2dn, sinN));
         std::cout << "Difference in Norms   "<<value2 - value3  << "\n" << std::endl;
+        dg::blas2::gemv( forward, sinO, sinF);
+        dg::blas2::gemv( backward, sinF, sinI);
+        dg::blas1::axpby( 1., sinO, -1., sinI);
+        value2 = sqrt(dg::blas2::dot( sinI, w2do, sinI));
+        std::cout << "Forward-Backward Error   "<<value2 << " (Must be zero)\n" << std::endl;
     }
 
     return 0;

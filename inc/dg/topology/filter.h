@@ -12,107 +12,18 @@ namespace dg
 ///@cond
 namespace create
 {
-    //op is evaluated at eta and returns a double
+
 template<class UnaryOp, class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-modal_filter( UnaryOp op, const RealGrid1d<real_type>& g )
+dg::Operator<real_type> modal_op( UnaryOp op, const DLT<real_type>& dlt )
 {
-    Operator<real_type> backward=g.dlt().backward();
-    Operator<real_type> forward=g.dlt().forward();
-    Operator<real_type> filter( g.n(), 0);
-    for( unsigned i=0; i<g.n(); i++)
+    Operator<real_type> backward=dlt.backward();
+    Operator<real_type> forward=dlt.forward();
+    Operator<real_type> filter( dlt.n(), 0);
+    for( unsigned i=0; i<dlt.n(); i++)
         filter(i,i) = op( i);
     filter = backward*filter*forward;
-    //Assemble the matrix
-    EllSparseBlockMat<real_type> A(g.N(), g.N(), 1, 1, g.n());
-    A.data = filter.data();
-    for( unsigned i=0; i<g.N(); i++)
-    {
-        A.data_idx[i] = 0;
-        A.cols_idx[i] = i;
-    }
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filter_matrix(1);
-    filter_matrix.get_matrices()[0] = A;
-    return filter_matrix;
-}
-template<class UnaryOp, class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-modal_filter( UnaryOp op, const aRealTopology2d<real_type>& t)
-{
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.nx(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.ny(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterX = dg::create::modal_filter( op, gx);
-    filterX.get_matrices()[0].left_size = t.ny()*t.Ny();
-    filterX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterY = dg::create::modal_filter( op, gy);
-    filterY.get_matrices()[0].right_size = t.nx()*t.Nx();
-    filterY.get_matrices()[0].set_default_range();
-
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > filter(2);
-    filter.get_matrices()[0] = filterX.get_matrices()[0];
-    filter.get_matrices()[1] = filterY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size());
-    filter.get_temp()[0] = Buffer<thrust::host_vector<real_type > >(vec);
     return filter;
 }
-template<class UnaryOp, class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-modal_filter( UnaryOp op, const aRealTopology3d<real_type>& t)
-{
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.nx(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.ny(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterX = dg::create::modal_filter( op, gx);
-    filterX.get_matrices()[0].left_size = t.ny()*t.Ny()*t.nz()*t.Nz();
-    filterX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterY = dg::create::modal_filter( op, gy);
-    filterY.get_matrices()[0].right_size = t.nx()*t.Nx();
-    filterY.get_matrices()[0].left_size = t.nz()*t.Nz();
-    filterY.get_matrices()[0].set_default_range();
-
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > filter(2);
-    filter.get_matrices()[0] = filterX.get_matrices()[0];
-    filter.get_matrices()[1] = filterY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size());
-    filter.get_temp()[0] = Buffer<thrust::host_vector<real_type > >(vec);
-    return filter;
-}
-
-#ifdef MPI_VERSION
-//very elaborate way of telling the compiler to just apply the local matrix to the local vector
-template<class UnaryOp, class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > >
-modal_filter( UnaryOp op, const aRealMPITopology2d<real_type>& t)
-{
-    typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
-    typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::modal_filter( op, t.local());
-    MultiMatrix< Matrix, Vector > filter(2);
-    filter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
-    return filter;
-}
-
-template<class UnaryOp, class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > >
-modal_filter( UnaryOp op, const aRealMPITopology3d<real_type>& t)
-{
-    typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
-    typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::modal_filter( op, t.local());
-    MultiMatrix< Matrix, Vector > filter(2);
-    filter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
-    return filter;
-}
-
-#endif //MPI_VERSION
 
 } //namespace create
 ///@endcond
@@ -145,8 +56,11 @@ struct ModalFilter
      */
     template<class UnaryOp, class Topology, class ...Params>
     ModalFilter( UnaryOp sigma, const Topology& t, Params&& ...ps) :
-        m_tmp( dg::evaluate( dg::zero, t)), m_filter (
-            dg::create::modal_filter( sigma, t), std::forward<Params>(ps)...) { }
+        m_tmp( dg::construct<ContainerType>(dg::evaluate( dg::zero, t),
+        std::forward<Params>(ps)...)), m_filter ( dg::create::fast_transform(
+        create::modal_op(sigma, t.dltx()), create::modal_op(sigma, t.dlty()),
+        t), std::forward<Params>(ps)...)
+            { }
 
     /**
     * @brief Perfect forward parameters to one of the constructors
