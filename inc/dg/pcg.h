@@ -59,7 +59,7 @@ class PCG
     using container_type = ContainerType;
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
-    PCG(){}
+    PCG() = default;
     /**
      * @brief Allocate memory for the pcg method
      *

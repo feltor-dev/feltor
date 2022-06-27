@@ -62,7 +62,7 @@ struct AndersonAcceleration
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
     ///@brief Allocate nothing, Call \c construct method before usage
-    AndersonAcceleration(){}
+    AndersonAcceleration() = default;
     /*! @brief Allocate memory for Fixed point iteration
      *
      * This version sets mMax to zero reducing the solve method to Fixed Point

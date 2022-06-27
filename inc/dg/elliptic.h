@@ -70,7 +70,7 @@ class Elliptic1d
     using container_type = Container;
     using value_type = get_value_type<Container>;
     ///@brief empty object ( no memory allocation)
-    Elliptic1d(){}
+    Elliptic1d() = default;
     /**
      * @brief Construct from Grid
      *
@@ -233,7 +233,7 @@ class Elliptic2d
     using container_type = Container;
     using value_type = get_value_type<Container>;
     ///@brief empty object ( no memory allocation)
-    Elliptic2d(){}
+    Elliptic2d() = default;
     /**
      * @brief Construct from Grid
      *
@@ -545,7 +545,7 @@ class Elliptic3d
     using container_type = Container;
     using value_type = get_value_type<Container>;
     ///@brief empty object ( no memory allocation)
-    Elliptic3d(){}
+    Elliptic3d() = default;
     /**
      * @brief Construct from Grid
      *

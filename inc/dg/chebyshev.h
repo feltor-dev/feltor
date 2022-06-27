@@ -59,7 +59,7 @@ class ChebyshevIteration
     using container_type = ContainerType;
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
-    ChebyshevIteration(){}
+    ChebyshevIteration() = default;
     ///@copydoc construct()
     ChebyshevIteration( const ContainerType& copyable):
         m_ax(copyable), m_z( m_ax), m_xm1(m_ax){}

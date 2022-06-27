@@ -49,6 +49,7 @@ Operator<T> tensorproduct( const Operator<T>& op1, const Operator<T>& op2)
 * @tparam T value type
 * @param N Size of the delta operator
 * @param op The Operator
+* @sa fast_transform
 *
 * @return A newly allocated cusp matrix
 */
@@ -98,8 +99,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     unsigned n = left.size();
     unsigned N = m.num_rows/n;
-    Matrix r = tensorproduc( N, right);
-    Matrix l = tensorproduc( N, left);
+    Matrix r = tensorproduct( N, right);
+    Matrix l = tensorproduct( N, left);
     Matrix mr(m ), lmr(m);
 
     cusp::multiply( m, r, mr);

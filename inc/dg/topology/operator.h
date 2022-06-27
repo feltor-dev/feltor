@@ -31,7 +31,7 @@ class Operator
     /**
     * @brief Construct empty Operator
     */
-    Operator(){}
+    Operator() = default;
     /**
      * @brief allocate storage for nxn matrix
      *

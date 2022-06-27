@@ -86,7 +86,7 @@ struct RealGrid1d
      * @brief construct an empty grid
      * this leaves the access functions undefined
      */
-    RealGrid1d(){}
+    RealGrid1d() = default;
     /**
      * @brief 1D grid
      *

@@ -234,7 +234,7 @@ struct Adaptive
     using stepper_type = Stepper;
     using container_type = typename Stepper::container_type; //!< the type of the vector class in use by \c Stepper
     using value_type = typename Stepper::value_type; //!< the value type of the time variable defined by \c Stepper (float or double)
-    Adaptive(){}
+    Adaptive() = default;
     /*!@brief Allocate workspace and construct stepper
      * @param ps All parameters are forwarded to the constructor of \c Stepper
      * @tparam StepperParams Type of parameters (deduced by the compiler)
@@ -501,7 +501,7 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
     using value_type = dg::get_value_type<ContainerType>;
     using container_type = ContainerType;
     /// no allocation
-    AdaptiveTimeloop( ) {}
+    AdaptiveTimeloop( ) = default;
 
 
     /**

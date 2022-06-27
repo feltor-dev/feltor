@@ -33,7 +33,7 @@ template<class real_type>
 struct ButcherTableau{
     using value_type = real_type;
     ///No memory allocation
-    ButcherTableau(){}
+    ButcherTableau() = default;
     /*! @brief Construct a classic non-embedded tableau
      * @param s number of stages
      * @param order (global) order of the resulting method
@@ -181,7 +181,7 @@ struct ShuOsherTableau
 {
     using value_type = real_type;
     ///No memory allocation
-    ShuOsherTableau(){}
+    ShuOsherTableau() = default;
     /*! @brief Construct a non-embedded explicit tableau
      * @param stages number of stages
      * @param order (global) order of the resulting method

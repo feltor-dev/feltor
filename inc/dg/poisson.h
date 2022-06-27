@@ -36,6 +36,7 @@ struct Poisson
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = get_value_type<Container>;
+    Poisson() = default;
     /**
      * @brief Create Poisson on a grid
      * @param g The grid

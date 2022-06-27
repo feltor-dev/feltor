@@ -504,7 +504,7 @@ struct MultigridCG2d
     using container_type = Container;
     using value_type = get_value_type<Container>;
     ///@brief Allocate nothing, Call \c construct method before usage
-    MultigridCG2d(){}
+    MultigridCG2d() = default;
     /**
      * @brief Construct the grids and the interpolation/projection operators
      *

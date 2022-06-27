@@ -37,7 +37,7 @@ struct GeneralHelmholtz
     using value_type = get_value_type<Container>;
 
     ///@brief empty object ( no memory allocation)
-    GeneralHelmholtz() {}
+    GeneralHelmholtz() = default;
 
     /**
      * @brief Construct from given Matrix object
