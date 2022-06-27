@@ -159,7 +159,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> identity_matrix( const Real
  * as well and the values are set to -1 instead of 1.
  * @return A sparse matrix with \c window_size entries per row, each with value 1
  * @tparam real_type The value type of the matrix
- * @sa \c dg::blas2::filtered_symv
+ * @sa \c dg::blas2::stencil
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> window_stencil(
@@ -180,7 +180,7 @@ dg::IHMatrix_t<real_type> window_stencil(
  * as well and the values are set to -n instead of n.
  * @return A sparse matrix with 0 or 4 entries per row (the zero coefficient has 4 entries, the remaining coefficients have 4), each with value g.n()
  * @tparam real_type The value type of the matrix
- * @sa \c dg::blas2::filtered_symv \c dg::CSRSlopeLimiter
+ * @sa \c dg::blas2::stencil \c dg::CSRSlopeLimiter
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> limiter_stencil(
@@ -209,7 +209,7 @@ dg::IHMatrix_t<real_type> limiter_stencil(
  * as well and the values are set to -1 instead of 1.
  * @return A sparse matrix with <tt> window_size[0]*window_size[1] </tt> entries per row, each with value 1
  * @tparam real_type The value type of the matrix
- * @sa \c dg::blas2::filtered_symv
+ * @sa \c dg::blas2::stencil
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> window_stencil(
@@ -289,7 +289,7 @@ dg::IHMatrix_t<real_type> limiter_stencil(
  * as well and the values are set to -1 instead of 1.
  * @return A sparse matrix with <tt> window_size[0]*window_size[1] </tt> entries per row, each with value 1
  * @tparam real_type The value type of the matrix
- * @sa \c dg::blas2::filtered_symv
+ * @sa \c dg::blas2::stencil
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> window_stencil(

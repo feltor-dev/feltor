@@ -18,7 +18,7 @@ void symv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y);
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
-void filtered_symv( FunctorType f, MatrixType&& M,
+void stencil( FunctorType f, MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y);
 template< class MatrixType, class ContainerType1, class ContainerType2>
@@ -309,12 +309,12 @@ struct MPIDistMat
         }
     }
     template<class Functor, class ContainerType1, class ContainerType2>
-    void filtered_symv( const Functor f, const ContainerType1& x, ContainerType2& y) const
+    void stencil( const Functor f, const ContainerType1& x, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
         if( !m_c->isCommunicating()) //no communication needed
         {
-            dg::blas2::filtered_symv( f, m_m, x.data(), y.data());
+            dg::blas2::stencil( f, m_m, x.data(), y.data());
             return;
 
         }
@@ -326,10 +326,10 @@ struct MPIDistMat
         if( m_dist == row_dist){
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
             m_c->global_gather( x_ptr, m_buffer.data());
-            dg::blas2::filtered_symv( f, m_m, m_buffer.data(), y.data());
+            dg::blas2::stencil( f, m_m, m_buffer.data(), y.data());
         }
         if( m_dist == col_dist){
-            throw Error( Message(_ping_)<<"filtered_symv cannot be used with a column distributed mpi matrix!");
+            throw Error( Message(_ping_)<<"stencil cannot be used with a column distributed mpi matrix!");
         }
     }
 

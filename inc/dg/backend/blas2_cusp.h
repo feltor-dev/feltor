@@ -15,7 +15,7 @@
 namespace dg{
 namespace blas2{
 template< class Stencil, class ContainerType, class ...ContainerTypes>
-inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs);
+inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs);
 namespace detail{
 
 template<class Matrix1, class Matrix2>
@@ -119,7 +119,7 @@ inline void doSymv( Matrix&& m,
 }
 
 template<class Functor, class Matrix, class Vector1, class Vector2>
-inline void doFilteredSymv(
+inline void doStencil(
                     Functor f,
                     Matrix&& m,
                     const Vector1&x,
@@ -144,7 +144,7 @@ inline void doFilteredSymv(
     if( y.size() != m.num_rows) {
         throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows);
     }
-    dg::blas2::stencil( f, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
+    dg::blas2::parallel_for( f, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
 }
 template< class Functor, class Matrix, class Vector1, class Vector2>
 inline void doSymv( get_value_type<Vector1> alpha,
@@ -166,7 +166,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
     }
     using inner_container = typename std::decay_t<Vector1>::value_type;
     for ( unsigned i=0; i<x.size(); i++)
-        doFilteredSymv( f,std::forward<Matrix>(m),x[i],y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
+        doStencil( f,std::forward<Matrix>(m),x[i],y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
 }
 
 } //namespace detail

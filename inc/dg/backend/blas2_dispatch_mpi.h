@@ -10,7 +10,7 @@ namespace dg
 namespace blas2
 {
 template< class Stencil, class ContainerType, class ...ContainerTypes>
-inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs);
+inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs);
 namespace detail
 {
 
@@ -178,7 +178,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
 }
 
 template<class Functor, class Matrix, class Vector1, class Vector2>
-inline void doFilteredSymv(
+inline void doStencil(
                     Functor f,
                     Matrix&& m,
                     const Vector1&x,
@@ -186,7 +186,7 @@ inline void doFilteredSymv(
                     MPIMatrixTag,
                     MPIVectorTag  )
 {
-    m.filtered_symv( f, x,y);
+    m.stencil( f, x,y);
 }
 
 

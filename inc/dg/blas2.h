@@ -174,7 +174,7 @@ inline void doSymv( MatrixType&& M,
             get_tensor_category<ContainerType1>());
 }
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
-inline void doFilteredSymv(
+inline void doStencil(
                   FunctorType f,
                   MatrixType&& M,
                   const ContainerType1& x,
@@ -192,7 +192,7 @@ inline void doFilteredSymv(
     static_assert( std::is_same<get_tensor_category<ContainerType1>,
                                 get_tensor_category<ContainerType2>>::value,
                                 "Vector types must have same data layout");
-    dg::blas2::detail::doFilteredSymv( f, std::forward<MatrixType>(M), x, y,
+    dg::blas2::detail::doStencil( f, std::forward<MatrixType>(M), x, y,
             get_tensor_category<MatrixType>(),
             get_tensor_category<ContainerType1>());
 }
@@ -324,7 +324,7 @@ inline void gemv( MatrixType&& M,
  * @attention Only works for shared memory vectors (or scalars): no MPI, no Recursive (find reasons below).
  * @attention For trivially parallel operations (no neighboring points involved) use \c dg::blas1::subroutine
  *
- * This routine loops over an arbitrary user-defined stencil functor \c f (the loop body) with an arbitrary number of arguments \f$ x_s\f$ elementwise
+ * This routine loops over an arbitrary user-defined "loop body" functor \c f with an arbitrary number of arguments \f$ x_s\f$ elementwise
  * \f[ f(i, x_{0}, x_{1}, ...)  \f]
  * where \c i iterates from \c 0 to a given size \c N.
  * The order of iterations is undefined.
@@ -351,7 +351,7 @@ dg::blas1::subroutine( [&]DG_DEVICE( unsigned i, const double* x, double* y){
  * this function only works for containers with the \c dg::SharedVectorTag and sclar types.
  * The reason it cannot work for MPI is that the stencil (and thus the
  * communication pattern) is unkown. However, it can serve as an important
- * building block for other parallel functions like \c dg::blas2::filtered_symv.
+ * building block for other parallel functions like \c dg::blas2::parallel_for.
  * @note This is the closest function we have to <tt> kokkos::parallel_for</tt> of the <a href="https://github.com/kokkos/kokkos">Kokkos library</a>.
  *
  * @param f the loop body
@@ -375,7 +375,7 @@ dg::blas1::subroutine( [&]DG_DEVICE( unsigned i, const double* x, double* y){
   *  - \c int,  \c double and other primitive types ...
  */
 template< class Stencil, class ContainerType, class ...ContainerTypes>
-inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
+inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
 {
     static_assert( all_true<
             dg::is_vector<ContainerType>::value,
@@ -389,21 +389,21 @@ inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&.
             >::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
-    dg::blas2::detail::doStencil(tensor_category(), f, N, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+    dg::blas2::detail::doParallelFor(tensor_category(), f, N, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 /*! @brief \f$ F(M, x, y)\f$
  *
  * This routine calls \f[ F(i, [M], x, y) \f] for all \f$ i \in [0,N[\f$, where N is the number of rows in M,
- * using \c dg::blas2::stencil,
+ * using \c dg::blas2::parallel_for,
  * where [M] depends on the matrix type:
  *  - for a csr matrix it is [M] = m.row_offsets, m.column_indices, m.values
  * .
  * Possible shared memory implementation
  * @code
- * dg::blas2::stencil( F, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
+ * dg::blas2::parallel_for( F, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
  * @endcode
  * Other matrix types have not yet been implemented.
- * @note Since the matrix is known, a communication pattern is available and thus the function works in parallel for MPI (unlike \c dg::blas2::stencil).
+ * @note Since the matrix is known, a communication pattern is available and thus the function works in parallel for MPI (unlike \c dg::blas2::parallel_for).
  *
  * @param f The filter function is called like <tt> f(i, m.row_offsets_ptr, m.column_indices_ptr, m.values_ptr, x_ptr, y_ptr) </tt>
  * @param M The Matrix.
@@ -417,13 +417,13 @@ inline void stencil( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&.
  * @copydoc hide_ContainerType
  */
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
-inline void filtered_symv(
+inline void stencil(
                   FunctorType f,
                   MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y)
 {
-    dg::blas2::detail::doFilteredSymv( f, std::forward<MatrixType>(M), x, y, get_tensor_category<MatrixType>());
+    dg::blas2::detail::doStencil( f, std::forward<MatrixType>(M), x, y, get_tensor_category<MatrixType>());
 }
 /**
  * @brief \f$ y = x\f$; Generic way to copy and/or convert a Matrix type to a different Matrix type

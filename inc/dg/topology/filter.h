@@ -208,7 +208,7 @@ DG_DEVICE real_type median( unsigned i, const int* row_offsets,
  * \f$ \text{Median}(x) := \{ m : \sum_i \text{sgn}(x_i - m) = 0\} \f$
  * The Median is taken over all points contained
  * in the stencil given by the row and column indices. The matrix values are ignored.
- * @sa dg::blas2::filtered_symv dg::create::window_stencil
+ * @sa dg::blas2::stencil dg::create::window_stencil
  */
 struct CSRMedianFilter
 {
@@ -241,7 +241,7 @@ struct CSRMedianFilter
  The Median is taken over all points contained
  in the stencil given by the row and column indices. The matrix values are ignored.
  @note Adaptive Switching Median Filter from Akkoul "A New Adaptive Switching Median Filter" IEEE Signal processing letters (2010)
- * @sa dg::blas2::filtered_symv dg::create::window_stencil
+ * @sa dg::blas2::stencil dg::create::window_stencil
  */
 template<class real_type>
 struct CSRSWMFilter
@@ -270,7 +270,7 @@ struct CSRSWMFilter
 
 /**
  * @brief %Average filter that computes the average of all points in the stencil
- * @sa dg::blas2::filtered_symv dg::create::window_stencil
+ * @sa dg::blas2::stencil dg::create::window_stencil
  */
 struct CSRAverageFilter
 {
@@ -288,7 +288,7 @@ struct CSRAverageFilter
 };
 /**
  * @brief Test filter that computes the symv csr matrix-vector product if used
- * @sa dg::blas2::filtered_symv dg::create::window_stencil
+ * @sa dg::blas2::stencil dg::create::window_stencil
  */
 struct CSRSymvFilter
 {
@@ -316,7 +316,7 @@ struct CSRSymvFilter
  * If the result of the minmod function is \f$ u_{n1}\f$, then \f$ \Lambda\Pi( u_h)|_n = u_h|_n\f$, else \f$ \Lambda\Pi(u_h)|_n = \Lambda\Pi(u_h^1)|_n\f$
  * Must be applied to coefficients transformed to L-space in combination with \c limiter_stencil
  *
- * @sa dg::blas2::filtered_symv dg::create::fast_transform dg::create::limiter_stencil
+ * @sa dg::blas2::stencil dg::create::fast_transform dg::create::limiter_stencil
  */
 template<class real_type>
 struct CSRSlopeLimiter
@@ -350,7 +350,7 @@ struct CSRSlopeLimiter
 
     private:
     real_type m_mod;
-
 };
+
 ///@}
 }//namespace dg

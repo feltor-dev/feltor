@@ -143,8 +143,8 @@
  *          @defgroup variadic_subroutines dg::blas1::subroutine subroutines
  *          @brief   Functors to use in the dg::blas1::subroutine functions
  *
- *          @defgroup filters dg::blas2::filtered_symv subroutines
- *          @brief Functors to use in dg::blas2::filtered_symv function
+ *          @defgroup filters dg::blas2::stencil subroutines
+ *          @brief Functors to use in dg::blas2::stencil function
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *

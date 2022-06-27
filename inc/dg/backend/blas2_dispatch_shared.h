@@ -85,7 +85,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 }
 
 template< class Stencil, class ContainerType, class ...ContainerTypes>
-inline void doStencil( SharedVectorTag, Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
+inline void doParallelFor( SharedVectorTag, Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
 {
     // a copy of doSubroutine ...
 
@@ -96,7 +96,7 @@ inline void doStencil( SharedVectorTag, Stencil f, unsigned N, ContainerType&& x
             dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
-    doStencil_dispatch(
+    doParallelFor_dispatch(
             get_execution_policy<vector_type>(),
             N,
             f,

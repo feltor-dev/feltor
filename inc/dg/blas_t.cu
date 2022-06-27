@@ -100,13 +100,13 @@ int main()
     }
     std::cout << "axpby "<< testmap2["a"][0] << " "<<testmap2["b"][0] << std::endl;
 
-    std::cout << "Test Stencil function:\n";
+    std::cout << "Test parallel_for function:\n";
     dg::DVec dvec2 = dvec1;
     dvec1[1] = 53., dvec1[2] = 50.;
-    dg::blas2::stencil( []DG_DEVICE( unsigned i, const double* x, double* y, int mod){
+    dg::blas2::parallel_for( []DG_DEVICE( unsigned i, const double* x, double* y, int mod){
             y[i] = x[(i+1)%mod] - x[i];
         }, 3, dvec1, dvec2, 3);
-    std::cout << "Stencil forward difference      "<<(dvec2[0] == 1)<<" "<<(dvec2[1] == -3)<<" "<<(dvec2[2] == 2)<<std::endl;
+    std::cout << "parallel_for forward difference      "<<(dvec2[0] == 1)<<" "<<(dvec2[1] == -3)<<" "<<(dvec2[2] == 2)<<std::endl;
 
     return 0;
 }

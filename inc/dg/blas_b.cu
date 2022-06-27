@@ -5,7 +5,7 @@
 #include <thrust/device_vector.h>
 #include "backend/timer.h"
 #include "blas.h"
-#include "filter.h"
+#include "topology/filter.h"
 #include "topology/derivatives.h"
 #include "topology/evaluation.h"
 #include "topology/fast_interpolation.h"
@@ -192,16 +192,21 @@ int main()
     t.tic();
     unsigned ysize = y[0].size();
     for( int i=0; i<multi; i++)
-        dg::blas2::stencil( [ysize]DG_DEVICE( unsigned i, double* x, const double* y){
+        dg::blas2::parallel_for( [ysize]DG_DEVICE( unsigned i, double* x, const double* y){
                 x[i] = y[(i+1)%ysize] - y[i];
             }, ysize, x[0], y[0]);
     t.toc();
     std::cout<<"Stencil forward derivative took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas2::filtered_symv( dg::CSRMedianFilter(), stencil, x[0], y[0]);
+        dg::blas2::stencil( dg::CSRMedianFilter(), stencil, x[0], y[0]);
     t.toc();
-    std::cout<<"filtered_symv Median       took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+    std::cout<<"stencil Median             took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::stencil( dg::CSRSlopeLimiter<double>(), stencil, x[0], y[0]);
+    t.toc();
+    std::cout<<"stencil Slope Limiter      took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::jumpX( grid), M);
     dg::blas2::symv( M, x, y);//warm up

@@ -1,7 +1,7 @@
 #include <iostream>
 #include "stencil.h"
+#include "filter.h"
 #include "../blas2.h"
-#include "../filter.h"
 
 
 int main()
@@ -22,7 +22,7 @@ int main()
             std::cout<< std::endl;
         }
         std::cout << "Test filtered symv\n";
-        dg::blas2::filtered_symv( dg::CSRSymvFilter(), (dg::IHMatrix)stencil, x, y);
+        dg::blas2::stencil( dg::CSRSymvFilter(), (dg::IHMatrix)stencil, x, y);
         for( unsigned i=0; i<g2d.gy().size(); i++)
         {
             for( unsigned k=0; k<g2d.gx().size(); k++)

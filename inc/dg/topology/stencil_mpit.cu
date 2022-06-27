@@ -4,8 +4,8 @@
 #include "dg/backend/mpi_init.h"
 #include "mpi_evaluation.h"
 #include "stencil.h"
+#include "filter.h"
 #include "../blas2.h"
-#include "../filter.h"
 
 
 int main(int argc, char* argv[])
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
             MPI_Barrier(MPI_COMM_WORLD);
         }
         if(rank==0)std::cout << "Test filtered symv\n";
-        dg::blas2::filtered_symv( dg::CSRSymvFilter(), stencil, x, y);
+        dg::blas2::stencil( dg::CSRSymvFilter(), stencil, x, y);
         for( int r = 0; r<size; r++)
         {
             for( unsigned i=0; i<l2d.Ny()*l2d.ny(); i++)

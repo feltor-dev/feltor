@@ -11,7 +11,7 @@ namespace detail
 {
 
 template< class Stencil, class PointerOrValue, class ...PointerOrValues>
-inline void doStencil_dispatch( SerialTag, unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
+inline void doParallelFor_dispatch( SerialTag, unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
 {
     for( unsigned i=0; i<size; i++)
         f(i, x, xs...);
@@ -28,7 +28,7 @@ template<class Stencil, class PointerOrValue, class ...PointerOrValues>
 }
 
 template< class Stencil, class PointerOrValue, class ...PointerOrValues>
-inline void doStencil_dispatch( CudaTag, unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
+inline void doParallelFor_dispatch( CudaTag, unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
 {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
@@ -40,7 +40,7 @@ inline void doStencil_dispatch( CudaTag, unsigned size, Stencil f, PointerOrValu
 constexpr int MIN_SIZE=100;//don't parallelize if work is too small
 
 template< class Stencil, class PointerOrValue, class ...PointerOrValues>
-inline void doStencil_omp( unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
+inline void doParallelFor_omp( unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
 {
 #pragma omp for nowait
     for( unsigned i=0; i<size; i++)
@@ -48,22 +48,22 @@ inline void doStencil_omp( unsigned size, Stencil f, PointerOrValue x, PointerOr
 }
 
 template< class Stencil, class PointerOrValue, class ...PointerOrValues>
-inline void doStencil_dispatch( OmpTag, unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
+inline void doParallelFor_dispatch( OmpTag, unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
 {
     if(omp_in_parallel())
     {
-        doStencil_omp( size, f, x, xs... );
+        doParallelFor_omp( size, f, x, xs... );
         return;
     }
     if(size>MIN_SIZE)
     {
         #pragma omp parallel
         {
-            doStencil_omp( size, f, x, xs...);
+            doParallelFor_omp( size, f, x, xs...);
         }
     }
     else
-        doStencil_dispatch( SerialTag(), size, f, x, xs...);
+        doParallelFor_dispatch( SerialTag(), size, f, x, xs...);
 }
 #endif
 

@@ -130,7 +130,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         double alpha = m_p.alpha0;
         for( unsigned i=0; i<m_p.iter; i++)
         {
-            dg::blas2::filtered_symv( dg::CSRSWMFilter<double>(alpha), m_stencil, m_divNUb[1], m_temp0);
+            dg::blas2::stencil( dg::CSRSWMFilter<double>(alpha), m_stencil, m_divNUb[1], m_temp0);
             using std::swap;
             swap( m_temp0, m_divNUb[1]);
             alpha*=0.8;
@@ -184,7 +184,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         alpha = m_p.alpha0;
         for( unsigned i=0; i<m_p.iter; i++)
         {
-            dg::blas2::filtered_symv( dg::CSRSWMFilter<double>(alpha), m_stencil, m_temp0, m_temp1);
+            dg::blas2::stencil( dg::CSRSWMFilter<double>(alpha), m_stencil, m_temp0, m_temp1);
             using std::swap;
             swap( m_temp0, m_temp1);
             alpha*=0.8;
