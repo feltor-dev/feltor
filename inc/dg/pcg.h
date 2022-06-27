@@ -20,7 +20,7 @@ namespace dg{
 
 /**
 * @brief Preconditioned conjugate gradient method to solve
-* \f[ Ax=b\f]
+* \f$ Ax=b\f$
 *
 * where \f$ A\f$ is positive definite and self-adjoint in the weighted scalar product (defined by the diagonal weights matrix \f$W\f$)
 * \f[ A^\dagger := \frac{1}{W} A^T W = A\f].

@@ -19,7 +19,7 @@ namespace dg{
 
 /**
 * @brief Functor class for the right preconditioned LGMRES method to solve
-* \f[ Ax=b\f]
+* \f$ Ax=b\f$
 *
 * @ingroup invert
 *

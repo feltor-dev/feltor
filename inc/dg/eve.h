@@ -14,7 +14,7 @@
 namespace dg
 {
 
-/*! @brief The Eigen-Value-Estimator (EVE) finds largest Eigenvalue of \f[ M^{-1}Ax = \lambda_\max x\f]
+/*! @brief The Eigen-Value-Estimator (EVE) finds largest Eigenvalue of \f$ M^{-1}Ax = \lambda_\max x\f$
  *
  * Estimate largest Eigenvalue
  * of a symmetric positive definite matrix \f$ A\f$ with possible preconditioner \f$ M^{-1}\f$ using the conjugate gradient (CG) method.

@@ -45,7 +45,7 @@ void QRdelete1( std::vector<ContainerType>& Q, dg::Operator<value_type>& R, unsi
 
 
 
-/*!@brief Anderson Acceleration of Fixed Point/Richardson Iteration for the nonlinear equation \f[ f(x) = b\f]
+/*!@brief Anderson Acceleration of Fixed Point/Richardson Iteration for the nonlinear equation \f$ f(x) = b\f$
  *
  * This class implements the Anderson acceleration of the fixed point iteration algorithm
  *  described by https://users.wpi.edu/~walker/Papers/Walker-Ni,SINUM,V49,1715-1735.pdf

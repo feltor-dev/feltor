@@ -14,7 +14,7 @@ namespace dg
 
 /**
 * @brief Preconditioned Chebyshev iteration for solving
-* \f[ PAx=Pb\f]
+* \f$ PAx=Pb\f$
 *
 * Chebyshev iteration is not well-suited for solving matrix equations
 * on its own. Rather, it is suited as a smoother for a multigrid algorithm
@@ -212,7 +212,7 @@ class ChebyshevIteration
   */
 
 /**
- * @brief Chebyshev Polynomial Preconditioner \f[ C( A)\f]
+ * @brief Chebyshev Polynomial Preconditioner \f$ C( A)\f$
  *
  * @copydoc hide_polynomial
  * @sa ChebyshevIteration
@@ -254,7 +254,7 @@ struct ChebyshevPreconditioner
 };
 
 /**
- * @brief Approximate inverse Chebyshev Polynomial Preconditioner \f[ A^{-1} = \frac{c_0}{2} I + \sum_{k=1}^{r}c_kT_k( Z)\f]
+ * @brief Approximate inverse Chebyshev Polynomial Preconditioner \f$ A^{-1} = \frac{c_0}{2} I + \sum_{k=1}^{r}c_kT_k( Z)\f$
  *
  * This is the polynomial preconditioner as proposed by <a href="https://ieeexplore.ieee.org/document/1245544">Dag and Semlyen, A New Preconditioned Conjugate Gradient Power Flow, IEEE Transactions on power Systems, 18, (2003)</a>
  * We have \f$ c_k = \sqrt{\lambda_\min\lambda_\max}^{-1} (\sqrt{\lambda_\min/\lambda_\max}-1)^k / (\sqrt{\lambda_\min/\lambda_\max }+ 1)^k\f$ and \f$ Z = 2 ( A - (\lambda_\max + \lambda_\min)I/2)/(\lambda_\max-\lambda_\min)\f$
@@ -320,7 +320,7 @@ struct ModifiedChebyshevPreconditioner
 };
 
 /**
- * @brief Least Squares Polynomial Preconditioner \f[ M^{-1} s( AM^{-1})\f]
+ * @brief Least Squares Polynomial Preconditioner \f$ M^{-1} s( AM^{-1})\f$
  *
  * Implements the least squares polynomial preconditioner as suggested by
  * <a href= "https://doi.org/10.1137/0906059"> Youcef Saad, Practical Use of Polynomial Preconditionings for the Conjugate Gradient Method,SIAM J. Sci. and Stat. Comput., 6(4), 865–881 (1985) </a>

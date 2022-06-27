@@ -20,7 +20,7 @@ namespace dg{
 
 /**
 * @brief Preconditioned BICGSTAB(l) method to solve
-* \f[ Ax=b\f]
+* \f$ Ax=b\f$
 *
 * @ingroup invert
 *
