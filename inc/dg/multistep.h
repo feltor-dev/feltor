@@ -60,8 +60,8 @@ struct ExplicitMultistep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    ExplicitMultistep(){}
+    ///@copydoc ERKStep::ERKStep()
+    ExplicitMultistep() = default;
     ///@copydoc FilteredExplicitMultistep::FilteredExplicitMultistep(ConvertsToMultistepTableau<value_type>,const ContainerType&)
     ExplicitMultistep( ConvertsToMultistepTableau<value_type> tableau, const ContainerType& copyable): m_fem( tableau, copyable){ }
     ///@copydoc hide_construct
@@ -121,6 +121,7 @@ struct ExplicitMultistep
      v^{n+1} = \sum_{q=0}^{s-1} a_q v^{n-q} + \Delta t\left[\left(\sum_{q=0}^{s-1}b_q  \hat E(t^{n}-q\Delta t, v^{n-q}) + \sum_{q=1}^{s} c_q \hat I( t^n - q\Delta t, v^{n-q})\right) + c_0\hat I(t^{n}+\Delta t, v^{n+1})\right]
      \end{align}
      \f$
+
      which discretizes
      \f[
      \frac{\partial v}{\partial t} = \hat E(t,v) + \hat I(t,v)
@@ -155,8 +156,8 @@ struct ImExMultistep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    ImExMultistep(){}
+    ///@copydoc ERKStep::ERKStep()
+    ImExMultistep() = default;
 
     /*! @brief Reserve memory for integration and construct Solver
      *
@@ -346,8 +347,8 @@ struct ImplicitMultistep
 
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    ImplicitMultistep(){}
+    ///@copydoc ERKStep::ERKStep()
+    ImplicitMultistep() = default;
 
     /*! @brief Reserve memory for integration
      *
@@ -514,7 +515,7 @@ struct FilteredExplicitMultistep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
+    ///@copydoc ERKStep::ERKStep()
     FilteredExplicitMultistep(){ m_u.resize(1); //this makes the copyable function work
     }
 
@@ -663,7 +664,7 @@ struct MultistepTimeloop : public aTimeloop<ContainerType>
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>;
     /// no allocation
-    MultistepTimeloop( ){}
+    MultistepTimeloop( ) = default;
     // We cannot reset dt because that would require access to the Stepper to re-init
     /**
      * @brief Construct using a \c std::function

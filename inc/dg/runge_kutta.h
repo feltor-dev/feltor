@@ -130,6 +130,7 @@ struct IdentityFilter
 template<class ContainerType>
 struct FilteredERKStep;
 ///@endcond
+//Should we try if filters inside RHS are equally usable?
 
 ///@addtogroup time
 ///@{
@@ -139,9 +140,10 @@ struct FilteredERKStep;
 * @brief Embedded Runge Kutta explicit time-step with error estimate
 * \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
-    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j \\
+    \delta^{n+1} = u^{n+1} - \tilde u^{n+1} = \Delta t\sum_{j=1}^s (b_j - \tilde b_j) k_j
  \end{align}
 \f$
 
@@ -161,8 +163,8 @@ struct ERKStep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    ERKStep() {}
+    ///@brief No memory allocation
+    ERKStep() = default;
     /**
     * @brief Reserve internal workspace for the integration
     *
@@ -253,11 +255,19 @@ struct ERKStep
 * @brief Filtered Embedded Runge Kutta explicit time-step with error estimate
 * \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right]\right) \\
+    k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right]\right) \\
     u^{n+1} = \Lambda\Pi\left[u^{n} + \Delta t\sum_{j=1}^s b_j k_j\right] \\
-    \tilde u^{n+1} = \Lambda\Pi\left[u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j\right]
+    \delta^{n+1} = \Delta t\sum_{j=1}^s (\tilde b_j  - b_j) k_j
  \end{align}
 \f$
+
+@note
+We compute \f$ \delta^{n+1} \f$ with the
+unfiltered sum since with non-linear filters in the filtered sum, some error
+components might not vanish and the timestepper crash. No filter is applied for
+\f$ k_0\f$ since \f$ u^n\f$ is already filtered.
+Even though it may look like it the filter **cannot** be absorbed into the
+right hand side function f analytically.
 
 @copydetails ERKStep
 */
@@ -266,17 +276,18 @@ struct FilteredERKStep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
+    ///@copydoc ERKStep::ERKStep()
     FilteredERKStep() { m_k.resize(1); }
     ///@copydoc ERKStep::ERKStep(ConvertsToButcherTableau<value_type>,const ContainerType&)
-    FilteredERKStep( ConvertsToButcherTableau<value_type> tableau, const ContainerType&
-        copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
+    FilteredERKStep( ConvertsToButcherTableau<value_type> tableau, const
+            ContainerType& copyable): m_rk(tableau), m_k(m_rk.num_stages(),
+                copyable)
     {
-        m_rkbt.resize( m_k.size()), m_rkb.resize(m_k.size());
+        m_rkb.resize(m_k.size()), m_rkd.resize( m_k.size());
         for( unsigned i=0; i<m_k.size(); i++)
         {
             m_rkb[i] = m_rk.b(i);
-            m_rkbt[i] = m_rk.bt(i);
+            m_rkd[i] = m_rk.d(i);
         }
     }
 
@@ -333,7 +344,7 @@ struct FilteredERKStep
     template<class ExplicitRHS, class Limiter>
     void step( const std::tuple<ExplicitRHS, Limiter>& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool);
     ButcherTableau<value_type> m_rk;
-    std::vector<value_type> m_rkb, m_rkbt, m_rkd;
+    std::vector<value_type> m_rkb, m_rkd;
     std::vector<ContainerType> m_k;
     value_type m_t1 = 1e300;//remember the last timestep at which ERK is called
     bool m_ignore_fsal = false;
@@ -370,19 +381,11 @@ void FilteredERKStep<ContainerType>::step( const std::tuple<ExplicitRHS, Limiter
     //Now add everything up to get solution and error estimate
     dg::blas1::copy( u0, u1);
     if( compute_delta)
-    {
-        dg::blas1::copy( u0, delta);
-        detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkbt},
-            {1.,1.}, {&u1, &delta});
-        std::get<1>(ode)( u1);
-        std::get<1>(ode)( delta);
-        dg::blas1::axpby( 1., u1, -1., delta);
-    }
+        detail::gemm( {dt,dt}, dg::asDenseMatrix(k_ptrs), {&m_rkb, &m_rkd},
+            {1.,0.}, {&u1, &delta});
     else
-    {
         blas2::gemv( dt, dg::asDenseMatrix(k_ptrs), m_rkb, 1., u1);
-        std::get<1>(ode)( u1);
-    }
+    std::get<1>(ode)( u1);
     //make sure (t1,u1) is the last call to f
     m_t1 = t1 = t0 + dt;
     if(!m_rk.isFsal() )
@@ -425,7 +428,7 @@ struct ARKStep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
+    ///@copydoc ERKStep::ERKStep()
     ARKStep(){ m_kI.resize(1); }
     /*!@brief Construct with given name
      * @param name Currently, one of "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" or "ARK-8-4-5"
@@ -593,9 +596,10 @@ void ARKStep<ContainerType>::step( const std::tuple<Explicit,Implicit,Solver>& o
  * @brief Embedded diagonally implicit Runge Kutta time-step with error estimate
 * \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
-    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j \\
+    \delta^{n+1} = u^{n+1} - \tilde u^{n+1} = \Delta t\sum_{j=1}^s (b_j-\tilde b_j) k_j
  \end{align}
 \f$
  *
@@ -611,7 +615,7 @@ struct DIRKStep
     //MW Dirk methods cannot have stage order greater than 1
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
+    ///@copydoc ERKStep::ERKStep()
     DIRKStep(){ m_kI.resize(1); }
 
     /*!@brief Construct with a diagonally implicit Butcher Tableau
@@ -765,7 +769,7 @@ void DIRKStep<ContainerType>::step( const std::tuple<ImplicitRHS,Solver>& ode,  
 * @brief Runge-Kutta fixed-step explicit time-integration
 * \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j
  \end{align}
 \f$
@@ -792,7 +796,7 @@ using RungeKutta = ERKStep<ContainerType>;
 * @brief Filtered Runge-Kutta fixed-step explicit time-integration
 * \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right]\right) \\
+    k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right]\right) \\
     u^{n+1} = \Lambda\Pi\left[u^{n} + \Delta t\sum_{j=1}^s b_j k_j\right]
  \end{align}
 \f$
@@ -838,7 +842,7 @@ struct ShuOsher
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
+    ///@copydoc ERKStep::ERKStep()
     ShuOsher(){m_u.resize(1);}
     /**
     * @brief Reserve internal workspace for the integration
@@ -986,7 +990,7 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>;
     /// no allocation
-    SinglestepTimeloop( ){}
+    SinglestepTimeloop( ) = default;
 
     /**
      * @brief Construct using a \c std::function
