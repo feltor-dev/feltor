@@ -18,7 +18,6 @@
 #include "topology/geometry.h"
 #include "topology/stencil.h"
 #include "blas.h"
-#include "filter.h"
 #include "helmholtz.h"
 #include "pcg.h"
 #include "precond.h"

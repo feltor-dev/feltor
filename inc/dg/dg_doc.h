@@ -88,7 +88,7 @@
  *
  *             High level matrix creation functions
  *         @defgroup stencil create stencils
- *         @defgroup interpolation Interpolation and projection
+ *         @defgroup interpolation Interpolation, Projection, Transformation
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather

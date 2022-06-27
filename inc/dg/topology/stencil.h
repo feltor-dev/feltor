@@ -18,20 +18,56 @@ namespace create
 namespace detail
 {
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> stencil(
+    void set_boundary(
+        cusp::array1d<real_type, cusp::host_memory>& values,
+        cusp::array1d<int, cusp::host_memory>& column_indices,
+        dg::bc bcx,
+        int num_cols)
+{
+    for( unsigned k=0; k<values.size(); k++)
+    {
+        if( column_indices[k] < 0 )
+        {
+            if( bcx == dg::NEU || bcx == dg::NEU_DIR)
+                column_indices[k] = -(column_indices[k]+1);
+            else if( bcx == dg::DIR || bcx == dg::DIR_NEU)
+            {
+                column_indices[k] = -(column_indices[k]+1);
+                values[k] *= -1;
+            }
+            else if( bcx == dg::PER)
+                column_indices[k] += num_cols;
+        }
+        else if( column_indices[k] >= num_cols)
+        {
+            if( bcx == dg::NEU || bcx == dg::DIR_NEU)
+                column_indices[k] = 2*num_cols-1-column_indices[k];
+            else if( bcx == dg::DIR || bcx == dg::NEU_DIR)
+            {
+                column_indices[k] = 2*num_cols-1-column_indices[k];
+                values[k] *= -1;
+            }
+            else if( bcx == dg::PER)
+                column_indices[k] -= num_cols;
+        }
+    }
+}
+
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> window_stencil(
         unsigned stencil_size,
-        const RealGrid1d<real_type>& stencil_area,
-        const RealGrid1d<real_type>& g,
+        const RealGrid1d<real_type>& local,
+        const RealGrid1d<real_type>& global,
         dg::bc bcx = dg::NEU)
 {
     cusp::array1d<real_type, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
     cusp::array1d<int, cusp::host_memory> column_indices;
 
-    unsigned num_rows = stencil_area.size();
-    unsigned num_cols = g.size();
+    unsigned num_rows = local.size();
+    unsigned num_cols = global.size();
     unsigned radius = stencil_size/2;
-    int L0 = round((stencil_area.x0() - g.x0())/g.h())*g.n();
+    int L0 = round((local.x0() - global.x0())/global.h())*global.n();
 
     for( unsigned k=0; k<num_rows; k++)
     {
@@ -42,41 +78,69 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> stencil(
             values.push_back( 1.0);
         }
     }
-    for( unsigned k=0; k<values.size(); k++)
+    set_boundary( values, column_indices, bcx, num_cols);
+
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
+            num_rows, num_cols, values.size());
+
+    A.row_indices = row_indices;
+    A.column_indices = column_indices;
+    A.values = values;
+    return A;
+}
+
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> limiter_stencil(
+        const RealGrid1d<real_type>& local,
+        const RealGrid1d<real_type>& global,
+        dg::bc bcx = dg::NEU)
+{
+    cusp::array1d<real_type, cusp::host_memory> values;
+    cusp::array1d<int, cusp::host_memory> row_indices;
+    cusp::array1d<int, cusp::host_memory> column_indices;
+
+    unsigned num_rows = local.size();
+    unsigned num_cols = global.size();
+    int L0 = round((local.x0() - global.x0())/global.h())*global.n();
+
+    for( unsigned k=0; k<local.N(); k++)
     {
-        if( column_indices[k] < 0 )
+        column_indices.push_back( L0 + (int)(k*global.n()) - (int)global.n());
+        column_indices.push_back( L0 + (int)(k*global.n()) );
+        column_indices.push_back( L0 + (int)(k*global.n()+1) );
+        column_indices.push_back( L0 + (int)(k*global.n()) + (int)global.n());
+        for( unsigned j=0; j<4; j++)
         {
-            if( bcx == dg::NEU || bcx == dg::NEU_DIR)
-                column_indices[k] = -(column_indices[k]+1);
-            else if( bcx == dg::DIR || bcx == dg::DIR_NEU)
-            {
-                column_indices[k] = -(column_indices[k]+1);
-                values[k] = -1;
-            }
-            else if( bcx == dg::PER)
-                column_indices[k] += num_cols;
-        }
-        else if( column_indices[k] >= (int)num_cols)
-        {
-            if( bcx == dg::NEU || bcx == dg::DIR_NEU)
-                column_indices[k] = 2*num_cols-1-column_indices[k];
-            else if( bcx == dg::DIR || bcx == dg::NEU_DIR)
-            {
-                column_indices[k] = 2*num_cols-1-column_indices[k];
-                values[k] = -1;
-            }
-            else if( bcx == dg::PER)
-                column_indices[k] -= num_cols;
+            values.push_back( global.n()); // encode n into values array
+            row_indices.push_back( k*global.n());
         }
     }
+    set_boundary( values, column_indices, bcx, num_cols);
 
     cusp::coo_matrix<int, real_type, cusp::host_memory> A(
             num_rows, num_cols, values.size());
     A.row_indices = row_indices;
     A.column_indices = column_indices;
     A.values = values;
+    A.sort_by_row_and_column();
     return A;
 }
+
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> identity_matrix( const RealGrid1d<real_type>& local, const RealGrid1d<real_type>& global)
+{
+    cusp::coo_matrix<int,real_type,cusp::host_memory> A( local.N(),
+            global.N(), local.N());
+    int L0 = round((local.x0() - global.x0())/global.h())*global.n();
+    for( unsigned i=0; i<local.N(); i++)
+    {
+        A.row_indices[i] = i;
+        A.column_indices[i] = L0 + i;
+        A.values[i] = 1.;
+    }
+    return A;
+}
+
 } //namespace detail
 ///@endcond
 
@@ -103,8 +167,30 @@ dg::IHMatrix_t<real_type> window_stencil(
         const RealGrid1d<real_type>& g,
         dg::bc bcx = dg::NEU)
 {
-    return detail::stencil( window_size, g, g, bcx);
+    return detail::window_stencil( window_size, g, g, bcx);
 }
+
+/*!
+ * @brief A 1d stencil for the dg Slope limiter
+ *
+ * This stencil is specifically made to implement a dg slope limiter
+ * @param g the grid
+ * @param bound Determine what to do at the boundary. For Neumann conditions the
+ * boundary points are simply duplicated, For Dirichlet they are duplicated
+ * as well and the values are set to -n instead of n.
+ * @return A sparse matrix with 0 or 4 entries per row (the zero coefficient has 4 entries, the remaining coefficients have 4), each with value g.n()
+ * @tparam real_type The value type of the matrix
+ * @sa \c dg::blas2::filtered_symv \c dg::CSRSlopeLimiter
+ */
+template<class real_type>
+dg::IHMatrix_t<real_type> limiter_stencil(
+        const RealGrid1d<real_type>& g,
+        dg::bc bound = dg::NEU)
+{
+    return detail::limiter_stencil( g, g, bound);
+}
+
+
 
 /*!
  * @brief A 2d centered window stencil
@@ -131,9 +217,59 @@ dg::IHMatrix_t<real_type> window_stencil(
         const aRealTopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = detail::stencil(window_size[0], g.gx(), g.gx(), bcx);
-    auto my = detail::stencil(window_size[1], g.gy(), g.gy(), bcy);
+    auto mx = detail::window_stencil(window_size[0], g.gx(), g.gx(), bcx);
+    auto my = detail::window_stencil(window_size[1], g.gy(), g.gy(), bcy);
     return dg::tensorproduct( my, mx);
+}
+
+///@copydoc limiter_stencil(const RealGrid1d<real_type>&,dg::bc)
+///@param direction The limiter acts on only 1 direction at a time
+template<class real_type>
+dg::IHMatrix_t<real_type> limiter_stencil(
+        enum coo3d direction,
+        const aRealTopology2d<real_type>& g,
+        dg::bc bound = dg::NEU)
+{
+    if( direction == dg::coo3d::x)
+    {
+        auto mx = detail::limiter_stencil(g.gx(), g.gx(), bound);
+        auto einsy = detail::identity_matrix( g.gy(), g.gy());
+        return dg::tensorproduct( einsy, mx);
+    }
+    auto my = detail::limiter_stencil(g.gy(), g.gy(), bound);
+    auto einsx = detail::identity_matrix( g.gx(), g.gx());
+    return dg::tensorproduct( my, einsx);
+}
+
+///@copydoc limiter_stencil(const RealGrid1d<real_type>&,dg::bc)
+///@param direction The limiter acts on only 1 direction at a time
+template<class real_type>
+dg::IHMatrix_t<real_type> limiter_stencil(
+        enum coo3d direction,
+        const aRealTopology3d<real_type>& g,
+        dg::bc bound = dg::NEU)
+{
+    if( direction == dg::coo3d::x)
+    {
+        auto mx = detail::limiter_stencil(g.gx(), g.gx(), bound);
+        auto einsy = detail::identity_matrix( g.gy(), g.gy());
+        auto einsz = detail::identity_matrix( g.gz(), g.gz());
+        auto temp = dg::tensorproduct( einsy, mx);
+        return dg::tensorproduct( einsz, temp);
+    }
+    if( direction == dg::coo3d::y)
+    {
+        auto einsx = identity_matrix( g.gx(), g.gx());
+        auto my = detail::limiter_stencil(g.gy(), g.gy(), bound);
+        auto einsz = identity_matrix( g.gz(), g.gz());
+        auto temp =  dg::tensorproduct( my, einsx);
+        return dg::tensorproduct( einsz, temp);
+    }
+    auto mz = detail::limiter_stencil(g.gz(), g.gz(), bound);
+    auto einsy = identity_matrix( g.gy(), g.gy());
+    auto einsx = identity_matrix( g.gx(), g.gx());
+    auto temp =  dg::tensorproduct( einsy, einsx);
+    return dg::tensorproduct( mz, temp);
 }
 
 /*!
@@ -161,8 +297,8 @@ dg::IHMatrix_t<real_type> window_stencil(
         const aRealTopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = detail::stencil(window_size[0], g.gx(), g.gx(), bcx);
-    auto my = detail::stencil(window_size[1], g.gy(), g.gy(), bcy);
+    auto mx = detail::window_stencil(window_size[0], g.gx(), g.gx(), bcx);
+    auto my = detail::window_stencil(window_size[1], g.gy(), g.gy(), bcy);
     unsigned Nz = g.gz().size();
     cusp::coo_matrix<int,real_type,cusp::host_memory> mz( Nz, Nz, Nz);
     for( unsigned i=0; i<Nz; i++)
@@ -183,8 +319,8 @@ dg::MIHMatrix_t<real_type> window_stencil(
         const aRealMPITopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = detail::stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
-    auto my = detail::stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
+    auto mx = detail::window_stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
+    auto my = detail::window_stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
     auto local = dg::tensorproduct( my, mx);
     return dg::convert( (dg::IHMatrix)local, g);
 }
@@ -196,22 +332,67 @@ dg::MIHMatrix_t<real_type> window_stencil(
         const aRealMPITopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    auto mx = detail::stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
-    auto my = detail::stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
-    auto local = dg::tensorproduct( my, mx);
-    unsigned localNz = g.local().Nz()*g.nz();
-    unsigned globalNz = g.global().Nz()*g.nz();
-    cusp::coo_matrix<int,real_type,cusp::host_memory> mz( localNz, globalNz, localNz);
-    int L0 = round((g.local().z0() - g.z0())/g.hz())*g.nz();
-    for( unsigned i=0; i<localNz; i++)
-    {
-        mz.row_indices[i] = i;
-        mz.column_indices[i] = L0 + i;
-        mz.values[i] = 1.;
-    }
+    auto mx = detail::window_stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
+    auto my = detail::window_stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
+    auto mz = detail::identity_matrix( g.local().gz(), g.global().gz());
     auto two =  dg::tensorproduct( my, mx);
     auto three = dg::tensorproduct( mz, two);
     return dg::convert( (dg::IHMatrix)three, g);
+}
+
+///@copydoc limiter_stencil(const RealGrid1d<real_type>&,dg::bc)
+///@param direction The limiter acts on only 1 direction at a time
+template<class real_type>
+dg::IHMatrix_t<real_type> limiter_stencil(
+        enum coo3d direction,
+        const aRealMPITopology2d<real_type>& g,
+        dg::bc bound = dg::NEU)
+{
+    if( direction == dg::coo3d::x)
+    {
+        auto mx = detail::limiter_stencil(g.local().gx(), g.global().gx(), bound);
+        auto einsy = detail::identity_matrix( g.local().gy(), g.global().gy());
+        auto local = dg::tensorproduct( einsy, mx);
+        return dg::convert( (dg::IHMatrix)local, g);
+    }
+    auto my = detail::limiter_stencil(g.local().gy(), g.global().gy(), bound);
+    auto einsx = detail::identity_matrix( g.local().gx(), g.global().gx());
+    auto local = dg::tensorproduct( my, einsx);
+    return dg::convert( (dg::IHMatrix)local, g);
+}
+
+///@copydoc limiter_stencil(const RealGrid1d<real_type>&,dg::bc)
+///@param direction The limiter acts on only 1 direction at a time
+template<class real_type>
+dg::IHMatrix_t<real_type> limiter_stencil(
+        enum coo3d direction,
+        const aRealMPITopology3d<real_type>& g,
+        dg::bc bound = dg::NEU)
+{
+    if( direction == dg::coo3d::x)
+    {
+        auto mx = detail::limiter_stencil(g.local().gx(), g.global().gx(), bound);
+        auto einsy = detail::identity_matrix( g.local().gy(), g.global().gy());
+        auto einsz = detail::identity_matrix( g.local().gz(), g.global().gz());
+        auto temp = dg::tensorproduct( einsy, mx);
+        auto local = dg::tensorproduct( einsz, temp);
+        return dg::convert( (dg::IHMatrix)local, g);
+    }
+    if( direction == dg::coo3d::y)
+    {
+        auto einsx = identity_matrix( g.local().gx(), g.global().gx());
+        auto my = detail::limiter_stencil(g.local().gy(), g.global().gy(), bound);
+        auto einsz = identity_matrix( g.local().gz(), g.global().gz());
+        auto temp =  dg::tensorproduct( my, einsx);
+        auto local = dg::tensorproduct( einsz, temp);
+        return dg::convert( (dg::IHMatrix)local, g);
+    }
+    auto mz = detail::limiter_stencil(g.local().gz(), g.global().gz(), bound);
+    auto einsy = identity_matrix( g.local().gy(), g.global().gy());
+    auto einsx = identity_matrix( g.local().gx(), g.global().gx());
+    auto temp =  dg::tensorproduct( einsy, einsx);
+    auto local = dg::tensorproduct( mz, temp);
+    return dg::convert( (dg::IHMatrix)local, g);
 }
 
 #endif // MPI_VERSION
