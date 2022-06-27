@@ -27,6 +27,7 @@
   */
 
 namespace dg{
+
 /**
 * @brief \f$ L\otimes R\f$ Form the tensor (Kronecker) product between two matrices
 *
@@ -78,6 +79,7 @@ namespace create{
 ///@addtogroup scatter
 ///@{
 
+
 /**
  * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
  *
@@ -88,7 +90,7 @@ namespace create{
  * @note this matrix has ~n^4 N^2 entries
  */
 template<class real_type>
-dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
+dg::IHMatrix_t<real_type> backscatter( const aRealTopology2d<real_type>& g)
 {
     typedef cusp::coo_matrix<int, real_type, cusp::host_memory> Matrix;
     //create equidistant backward transformation
@@ -104,11 +106,11 @@ dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
     Matrix backward = dg::tensorproduct( transformY, transformX);
 
     return (dg::IHMatrix)backward;
-
 }
+
 ///@copydoc backscatter(const aRealTopology2d&)
 template<class real_type>
-dg::IHMatrix backscatter( const RealGrid1d<real_type>& g)
+dg::IHMatrix_t<real_type> backscatter( const RealGrid1d<real_type>& g)
 {
     typedef cusp::coo_matrix<int, real_type, cusp::host_memory> Matrix;
     //create equidistant backward transformation
@@ -123,65 +125,13 @@ dg::IHMatrix backscatter( const RealGrid1d<real_type>& g)
 
 ///@copydoc backscatter(const aRealTopology2d&)
 template<class real_type>
-dg::IHMatrix backscatter( const aRealTopology3d<real_type>& g)
+dg::IHMatrix_t<real_type> backscatter( const aRealTopology3d<real_type>& g)
 {
     Grid2d g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
     cusp::coo_matrix<int,real_type, cusp::host_memory> back2d = backscatter( g2d);
     return (dg::IHMatrix)tensorproduct<real_type>( tensorproduct<real_type>( g.Nz(), delta<real_type>(1)), back2d);
 }
 ///@}
-
-///@cond
-/**
- * @brief Index map for scatter operation on dg - formatted vectors
- *
- * Use in thrust::scatter function on a dg-formatted vector. We obtain a vector
- where the y direction is contiguous in memory.
- * @param n # of polynomial coefficients
- * @param Nx # of points in x
- * @param Ny # of points in y
- *
- * @return map of indices
- */
-static inline thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned Ny)
-{
-    unsigned Nx_ = n*Nx, Ny_ = n*Ny;
-    //thrust::host_vector<int> reorder = scatterMap( n, Nx, Ny);
-    thrust::host_vector<int> map( n*n*Nx*Ny);
-    thrust::host_vector<int> map2( map);
-    for( unsigned i=0; i<map.size(); i++)
-    {
-        int row = i/Nx_;
-        int col = i%Nx_;
-
-        map[i] =  col*Ny_+row;
-    }
-    //for( unsigned i=0; i<map.size(); i++)
-        //map2[i] = map[reorder[i]];
-    //return map2;
-    return map;
-}
-
-/**
- * @brief write a matrix containing it's line number as elements
- *
- * Useful in a reduce_by_key computation
- * @param rows # of rows of the matrix
- * @param cols # of cols of the matrix
- *
- * @return a vector of size rows*cols containing line numbers
- */
-static inline thrust::host_vector<int> contiguousLineNumbers( unsigned rows, unsigned cols)
-{
-    thrust::host_vector<int> map( rows*cols);
-    for( unsigned i=0; i<map.size(); i++)
-    {
-        map[i] = i/cols;
-    }
-    return map;
-}
-///@endcond
-
 
 } //namespace create
 }//namespace dg
