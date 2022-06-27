@@ -882,32 +882,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
 
 }//namespace create
 
-/**
- * @brief Transform a vector from dg::xspace (nodal values) to dg::lspace (modal values)
- *
- * @param in input
- * @param g grid
- *
- * @ingroup misc
- * @return the vector in LSPACE
- */
-template<class real_type>
-thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real_type>& in, const aRealTopology2d<real_type>& g)
-{
-    thrust::host_vector<real_type> out(in.size(), 0);
-    dg::Operator<real_type> forwardx( g.dltx().forward());
-    dg::Operator<real_type> forwardy( g.dlty().forward());
-    for( unsigned i=0; i<g.Ny(); i++)
-    for( unsigned k=0; k<g.ny(); k++)
-    for( unsigned j=0; j<g.Nx(); j++)
-    for( unsigned l=0; l<g.nx(); l++)
-    for( unsigned o=0; o<g.ny(); o++)
-    for( unsigned m=0; m<g.nx(); m++)
-        out[((i*g.ny() + k)*g.Nx() + j)*g.nx() + l] +=
-            forwardy(k,o)*forwardx( l, m)*in[((i*g.ny() + o)*g.Nx() + j)*g.nx() + m];
-    return out;
-}
-
 
 /**
  * @brief Interpolate a vector on a single point on a 1d Grid
@@ -985,7 +959,7 @@ real_type interpolate(
  *      It is faster to interpolate in dg::lspace so consider
  *      transforming v using dg::forward_transform( )
  *      if you do it very many times)
- * @param v The vector to interpolate in dg::xspace, or dg::lspace s.a. dg::forward_transform( )
+ * @param v The vector to interpolate in dg::xspace, or dg::lspace s.a. \c dg::forward_transform( )
  * @param x X-coordinate of interpolation point
  * @param y Y-coordinate of interpolation point
  * @param g The Grid on which to operate

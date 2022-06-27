@@ -3,6 +3,7 @@
 #include <cusp/print.h>
 #include "xspacelib.h"
 #include "interpolation.h"
+#include "fast_interpolation.h"
 #include "../blas.h"
 #include "evaluation.h"
 

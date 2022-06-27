@@ -482,4 +482,24 @@ auto fast_transform( dg::Operator<typename Topology::value_type> opx, dg::Operat
 
 }//namespace create
 
+/**
+ * @brief Transform a vector from dg::xspace (nodal values) to dg::lspace (modal values)
+ *
+ * @param in input
+ * @param g grid
+ *
+ * @ingroup misc
+ * @return the vector in LSPACE
+ * @sa fast_transform
+ */
+template<class real_type>
+thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real_type>& in, const aRealTopology2d<real_type>& g)
+{
+    thrust::host_vector<real_type> out(in.size(), 0);
+    auto forward = create::fast_transform( g.dltx().forward(),
+            g.dlty().forward(), g);
+    dg::blas2::symv( forward, in, out);
+    return out;
+}
+
 }//namespace dg
