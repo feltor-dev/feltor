@@ -66,7 +66,7 @@ int main()
     dg::blas1::scal(x,0.); //x=0
     //![doxygen]
     std::cout << "Alternative test with two Helmholtz operators\n";
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d, alpha ,dg::centered);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(alpha, {grid2d, dg::centered});
     gamma1inv.set_chi( chi);
     dg::PCG<dg::DVec> pcgO(  x, grid2d.size());
     dg::PCG<dg::DVec> pcgOO( x, grid2d.size());

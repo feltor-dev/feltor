@@ -36,7 +36,7 @@ int main()
     const dg::DVec sol = dg::evaluate( lhs, grid);
     dg::DVec x(rho.size(), 0.);
 
-    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv( grid, alpha);
+    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv( alpha, {grid});
 
     std::cout << "FIRST METHOD:\n";
     dg::PCG< dg::DVec > pcg(x, x.size());
@@ -44,7 +44,7 @@ int main()
 
     std::cout << "SECOND METHOD:\n";
     dg::DVec x_(rho.size(), 0.);
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > maxwell( grid, alpha);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > maxwell( alpha, {grid});
     pcg.solve( maxwell, x_, rho, 1., w2d, eps);
 
     //std::cout << "THIRD METHOD:\n";
@@ -74,7 +74,7 @@ int main()
     dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
     dg::DVec temp_(fct_);
     dg::Elliptic< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > laplaceM( g3d);
-    dg::Helmholtz< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
+    dg::Helmholtz< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > helmholtz( alpha, {g3d});
     dg::blas2::symv( laplaceM, fct_, temp_);
     dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
     dg::DVec w3d =  laplaceM.weights();
