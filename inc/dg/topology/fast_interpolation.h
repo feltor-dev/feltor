@@ -93,9 +93,9 @@ struct TensorTraits<MultiMatrix<M, V> >
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
-///@endcond
 
-
+namespace detail
+{
 //pay attention that left and right must have correct sizes
 template<class real_type>
 MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const dg::HMatrix_t<real_type>& left, const dg::HMatrix_t<real_type>& right)
@@ -135,9 +135,17 @@ void set_right_size( dg::MHMatrix_t<real_type>& left, const dg::MHMatrix_t<real_
     left.outer_matrix().right_size = right_size;
 }
 #endif
+} //namespace detail
+
+///@endcond
 
 namespace create
 {
+/*!
+ * @class hide_coo3d_param
+ * @param direction The direction inside the structured grid to which to apply
+ * the sparse block matrix.
+ */
 ///@addtogroup interpolation
 ///@{
 
@@ -226,13 +234,36 @@ dg::HMatrix_t<real_type> fast_projection( const RealGrid1d<real_type>& t, unsign
     return pX;
 }
 
+/**
+ * @brief Create a block-diagonal matrix
+ *
+ * i.e. a matrix that has an \f$ n \times n \f$ block on its diagonal
+\f[ M = \begin{pmatrix}
+B &   &   &   &   & \\
+  & B &   &   &   & \\
+  &   & B &   &   & \\
+  &   &   & B &   & \\
+  &   &   &...&   &
+  \end{pmatrix}
+  \f]
+ * Block diagonal matrices fit into our \c dg::EllSparseBlockMat format,
+ * which is much faster to apply than a general sparse matrix, especially since it requires
+ * no communication from neighboring cells
+ * @note The idea is to use this function in combination with \c dg::DLT::forward() and \c dg::DLT::backward()
+ * to create a forward/backward transformation from configuration to Legendre space (or from nodal to modal values)
+ * @tparam real_type a floating point type
+ * @return a block diagonal matrix
+ * @param opx the block B
+ * @param t The grid determines the number of rows and columns
+ * @sa dg::DLT
+ */
 template<class real_type>
-dg::HMatrix_t<real_type> fast_transform( dg::Operator<real_type> op, const RealGrid1d<real_type>& t)
+dg::HMatrix_t<real_type> fast_transform( dg::Operator<real_type> opx, const RealGrid1d<real_type>& t)
 {
     EllSparseBlockMat<real_type> A( t.N(), t.N(), 1, 1, t.n());
-    if( op.size() != t.n())
+    if( opx.size() != t.n())
         throw Error( Message(_ping_)<< "Operator must have same n as grid!");
-    dg::assign( op.data(), A.data);
+    dg::assign( opx.data(), A.data);
     for( unsigned i=0; i<t.N(); i++)
     {
         A.cols_idx[i] = i;
@@ -241,104 +272,119 @@ dg::HMatrix_t<real_type> fast_transform( dg::Operator<real_type> op, const RealG
     return A;
 }
 
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::HMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealTopology2d<real_type>& t, unsigned multiplyn, unsigned multiplyN)
+dg::HMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealTopology2d<real_type>& t, unsigned multiplyn, unsigned multiplyNx)
 {
     if( direction == dg::coo3d::x)
     {
-        auto trafo = dg::create::fast_interpolation( t.gx(), multiplyn,multiplyN);
+        auto trafo = dg::create::fast_interpolation( t.gx(), multiplyn,multiplyNx);
         trafo.set_left_size ( t.ny()*t.Ny());
         return trafo;
     }
-    auto trafo = dg::create::fast_interpolation( t.gy(), multiplyn,multiplyN);
-    trafo.set_right_size ( t.nx()*t.Nx());
-    return trafo;
-}
-template<class real_type>
-dg::HMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealTopology2d<real_type>& t, unsigned dividen, unsigned divideN)
-{
-    if( direction == dg::coo3d::x)
-    {
-        auto trafo = dg::create::fast_projection( t.gx(), dividen,divideN);
-        trafo.set_left_size ( t.ny()*t.Ny());
-        return trafo;
-    }
-    auto trafo = dg::create::fast_projection( t.gy(), dividen,divideN);
-    trafo.set_right_size ( t.nx()*t.Nx());
-    return trafo;
-}
-template<class real_type>
-dg::HMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> op, const aRealTopology2d<real_type>& t)
-{
-    if( direction == dg::coo3d::x)
-    {
-        auto trafo = fast_transform( op, t.gx());
-        trafo.set_left_size ( t.ny()*t.Ny());
-        return trafo;
-    }
-    auto trafo = fast_transform( op, t.gy());
+    auto trafo = dg::create::fast_interpolation( t.gy(), multiplyn,multiplyNx);
     trafo.set_right_size ( t.nx()*t.Nx());
     return trafo;
 }
 
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::HMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealTopology3d<real_type>& t, unsigned multiplyn, unsigned multiplyN)
+dg::HMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealTopology2d<real_type>& t, unsigned dividen, unsigned divideNx)
 {
     if( direction == dg::coo3d::x)
     {
-        auto trafo = fast_interpolation( t.gx(), multiplyn, multiplyN);
-        trafo.set_left_size ( t.ny()*t.Ny()*t.nz()*t.Nz());
+        auto trafo = dg::create::fast_projection( t.gx(), dividen,divideNx);
+        trafo.set_left_size ( t.ny()*t.Ny());
         return trafo;
     }
-    if( direction == dg::coo3d::y)
-    {
-        auto trafo = fast_interpolation( t.gy(), multiplyn, multiplyN);
-        trafo.set_left_size ( t.nz()*t.Nz());
-        trafo.set_right_size ( t.nx()*t.Nx());
-        return trafo;
-    }
-    auto trafo = fast_interpolation( t.gz(), multiplyn, multiplyN);
-    trafo.set_right_size ( t.nx()*t.Nx()*t.ny()*t.Ny());
+    auto trafo = dg::create::fast_projection( t.gy(), dividen,divideNx);
+    trafo.set_right_size ( t.nx()*t.Nx());
     return trafo;
 }
+
+///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::HMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealTopology3d<real_type>& t, unsigned dividen, unsigned divideN)
+dg::HMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> opx, const aRealTopology2d<real_type>& t)
 {
     if( direction == dg::coo3d::x)
     {
-        auto trafo = fast_projection( t.gx(), dividen, divideN);
+        auto trafo = fast_transform( opx, t.gx());
+        trafo.set_left_size ( t.ny()*t.Ny());
+        return trafo;
+    }
+    auto trafo = fast_transform( opx, t.gy());
+    trafo.set_right_size ( t.nx()*t.Nx());
+    return trafo;
+}
+
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
+template<class real_type>
+dg::HMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealTopology3d<real_type>& t, unsigned multiplyn, unsigned multiplyNx)
+{
+    if( direction == dg::coo3d::x)
+    {
+        auto trafo = fast_interpolation( t.gx(), multiplyn, multiplyNx);
         trafo.set_left_size ( t.ny()*t.Ny()*t.nz()*t.Nz());
         return trafo;
     }
     if( direction == dg::coo3d::y)
     {
-        auto trafo = fast_projection( t.gy(), dividen, divideN);
+        auto trafo = fast_interpolation( t.gy(), multiplyn, multiplyNx);
         trafo.set_left_size ( t.nz()*t.Nz());
         trafo.set_right_size ( t.nx()*t.Nx());
         return trafo;
     }
-    auto trafo = fast_projection( t.gz(), dividen, divideN);
+    auto trafo = fast_interpolation( t.gz(), multiplyn, multiplyNx);
     trafo.set_right_size ( t.nx()*t.Nx()*t.ny()*t.Ny());
     return trafo;
 }
 
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::HMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> op, const aRealTopology3d<real_type>& t)
+dg::HMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealTopology3d<real_type>& t, unsigned dividen, unsigned divideNx)
 {
     if( direction == dg::coo3d::x)
     {
-        auto trafo = fast_transform( op, t.gx());
+        auto trafo = fast_projection( t.gx(), dividen, divideNx);
         trafo.set_left_size ( t.ny()*t.Ny()*t.nz()*t.Nz());
         return trafo;
     }
     if( direction == dg::coo3d::y)
     {
-        auto trafo = fast_transform( op, t.gy());
+        auto trafo = fast_projection( t.gy(), dividen, divideNx);
         trafo.set_left_size ( t.nz()*t.Nz());
         trafo.set_right_size ( t.nx()*t.Nx());
         return trafo;
     }
-    auto trafo = fast_transform( op, t.gz());
+    auto trafo = fast_projection( t.gz(), dividen, divideNx);
+    trafo.set_right_size ( t.nx()*t.Nx()*t.ny()*t.Ny());
+    return trafo;
+}
+
+///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@copydoc hide_coo3d_param
+template<class real_type>
+dg::HMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> opx, const aRealTopology3d<real_type>& t)
+{
+    if( direction == dg::coo3d::x)
+    {
+        auto trafo = fast_transform( opx, t.gx());
+        trafo.set_left_size ( t.ny()*t.Ny()*t.nz()*t.Nz());
+        return trafo;
+    }
+    if( direction == dg::coo3d::y)
+    {
+        auto trafo = fast_transform( opx, t.gy());
+        trafo.set_left_size ( t.nz()*t.Nz());
+        trafo.set_right_size ( t.nx()*t.Nx());
+        return trafo;
+    }
+    auto trafo = fast_transform( opx, t.gz());
     trafo.set_right_size ( t.nx()*t.Nx()*t.ny()*t.Ny());
     return trafo;
 }
@@ -357,36 +403,48 @@ MHMatrix_t<real_type> elevate_no_comm( const HMatrix_t<real_type>& local, MPI_Co
 }//namespace detail
 ///@endcond
 
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::MHMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealMPITopology2d<real_type>& t, unsigned multiplyn, unsigned multiplyN)
+dg::MHMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealMPITopology2d<real_type>& t, unsigned multiplyn, unsigned multiplyNx)
 {
-    return detail::elevate_no_comm( dg::create::fast_interpolation( direction, t.local(), multiplyn, multiplyN), t.communicator());
+    return detail::elevate_no_comm( dg::create::fast_interpolation( direction, t.local(), multiplyn, multiplyNx), t.communicator());
 }
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::MHMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealMPITopology2d<real_type>& t, unsigned dividen, unsigned divideN)
+dg::MHMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealMPITopology2d<real_type>& t, unsigned dividen, unsigned divideNx)
 {
-    return detail::elevate_no_comm( dg::create::fast_projection( direction, t.local(), dividen, divideN), t.communicator());
+    return detail::elevate_no_comm( dg::create::fast_projection( direction, t.local(), dividen, divideNx), t.communicator());
 }
+///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@copydoc hide_coo3d_param
 template<class real_type>
-MHMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> op, const aRealMPITopology2d<real_type>& t)
+MHMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> opx, const aRealMPITopology2d<real_type>& t)
 {
-    return detail::elevate_no_comm( dg::create::fast_transform( direction, op, t.local()), t.communicator());
+    return detail::elevate_no_comm( dg::create::fast_transform( direction, opx, t.local()), t.communicator());
 }
 
+///@copydoc fast_interpolation(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::MHMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealMPITopology3d<real_type>& t, unsigned multiplyn, unsigned multiplyN)
+dg::MHMatrix_t<real_type> fast_interpolation( enum coo3d direction, const aRealMPITopology3d<real_type>& t, unsigned multiplyn, unsigned multiplyNx)
 {
-    return detail::elevate_no_comm( dg::create::fast_interpolation( direction, t.local(), multiplyn, multiplyN), t.communicator());
+    return detail::elevate_no_comm( dg::create::fast_interpolation( direction, t.local(), multiplyn, multiplyNx), t.communicator());
 }
+///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned)
+///@copydoc hide_coo3d_param
 template<class real_type>
-dg::MHMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealMPITopology3d<real_type>& t, unsigned dividen, unsigned divideN)
+dg::MHMatrix_t<real_type> fast_projection( enum coo3d direction, const aRealMPITopology3d<real_type>& t, unsigned dividen, unsigned divideNx)
 {
-    return detail::elevate_no_comm( dg::create::fast_projection( direction, t.local(), dividen, divideN), t.communicator());
+    return detail::elevate_no_comm( dg::create::fast_projection( direction, t.local(), dividen, divideNx), t.communicator());
 }
+///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@copydoc hide_coo3d_param
 template<class real_type>
-MHMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> op, const aRealMPITopology3d<real_type>& t)
+MHMatrix_t<real_type> fast_transform( enum coo3d direction, dg::Operator<real_type> opx, const aRealMPITopology3d<real_type>& t)
 {
-    return detail::elevate_no_comm( dg::create::fast_transform( direction, op, t.local()), t.communicator());
+    return detail::elevate_no_comm( dg::create::fast_transform( direction, opx, t.local()), t.communicator());
 }
 #endif //MPI_VERSION
 
@@ -397,8 +455,8 @@ auto fast_interpolation( const Topology& t, unsigned multiplyn, unsigned multipl
 {
     auto interX = dg::create::fast_interpolation( dg::coo3d::x, t, multiplyn,multiplyNx);
     auto interY = dg::create::fast_interpolation( dg::coo3d::y, t, multiplyn,multiplyNy);
-    set_right_size( interY, interX);
-    return dg::multiply( interY, interX);
+    dg::detail::set_right_size( interY, interX);
+    return dg::detail::multiply( interY, interX);
 }
 
 ///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned)
@@ -408,15 +466,17 @@ auto fast_projection( const Topology& t, unsigned dividen, unsigned divideNx, un
 {
     auto interX = dg::create::fast_projection( dg::coo3d::x, t, dividen, divideNx);
     auto interY = dg::create::fast_projection( dg::coo3d::y, t, dividen, divideNy);
-    set_right_size( interY, interX);
-    return dg::multiply( interY, interX);
+    dg::detail::set_right_size( interY, interX);
+    return dg::detail::multiply( interY, interX);
 }
+///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@param opy the block B for the y transform
 template<class Topology>
 auto fast_transform( dg::Operator<typename Topology::value_type> opx, dg::Operator<typename Topology::value_type> opy, const Topology& t)
 {
     auto interX = dg::create::fast_transform( dg::coo3d::x, opx, t);
     auto interY = dg::create::fast_transform( dg::coo3d::y, opy, t);
-    return dg::multiply( interY, interX);
+    return dg::detail::multiply( interY, interX);
 }
 ///@}
 
