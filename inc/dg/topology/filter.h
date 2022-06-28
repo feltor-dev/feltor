@@ -9,12 +9,35 @@
 namespace dg
 {
 
-///@cond
 namespace create
 {
 
+/**
+ * @brief Create a modal filter block \f$ V D V^{-1}\f$
+ *
+ * where \f$ V\f$ is the Vandermonde matrix (the backward transformation matrix)
+ * and \f$ D \f$ is a diagonal matrix with \f$ D_{ii} = \sigma(i)\f$
+ * @sa A discussion of the effects of the modal filter on advection schemes can be found here https://mwiesenberger.github.io/advection
+ * @note basically the result is that it is usually not advantageous to use a modal filter
+ * @tparam UnaryOp Model of Unary Function \c real_type \c sigma(unsigned) The input will be the modal number \c i where \f$ i=0,...,n-1\f$ and \c n is the number of polynomial coefficients in use. The output is the filter strength for the given mode number
+ * @param op the unary function
+ * @param dlt provide the forward, backward transformation and number of coefficients \c n
+ * @return The product \f$ V D V^{-1}\f$
+
+ * @note The idea is to use the result in connection with \c dg::create::fast_transform() to create a matrix that applies the filter to vectors. For example
+ * to create a modal filter that acts in two dimensions:
+ * @code{.cpp}
+ * // create filter:
+ * auto filter = dg::create::fast_transform(
+ *      dg::create::modal_filter( op, grid.dltx()),
+ *      dg::create::modal_filter( op, grid.dlty()), grid);
+ * //apply filter:
+ * dg::blas2::symv( filter, x, y);
+ * @endcode
+ * @ingroup misc
+ */
 template<class UnaryOp, class real_type>
-dg::Operator<real_type> modal_op( UnaryOp op, const DLT<real_type>& dlt )
+dg::Operator<real_type> modal_filter( UnaryOp op, const DLT<real_type>& dlt )
 {
     Operator<real_type> backward=dlt.backward();
     Operator<real_type> forward=dlt.forward();
@@ -26,69 +49,6 @@ dg::Operator<real_type> modal_op( UnaryOp op, const DLT<real_type>& dlt )
 }
 
 } //namespace create
-///@endcond
-
-/**
- * @brief Struct that applies a given modal filter to a vector
- *
- * \f[ y = V D V^{-1}\f]
- * where \f$ V\f$ is the Vandermonde matrix (the backward transformation matrix)
- * and \f$ D \f$ is a diagonal matrix with \f$ D_{ii} = \sigma(i)\f$
- * @sa A discussion of the effects of the modal filter on advection schemes can be found here https://mwiesenberger.github.io/advection
- * @note basically the result is that it is usually not advantageous to use a modal filter
- * @copydoc hide_matrix
- * @copydoc hide_ContainerType
- * @ingroup misc
- */
-template<class MatrixType, class ContainerType>
-struct ModalFilter
-{
-    using real_type = get_value_type<ContainerType>;
-    ModalFilter() = default;
-    /**
-     * @brief Create arbitrary filter
-     *
-     * @tparam Topology Any grid
-     * @tparam UnaryOp Model of Unary Function \c real_type \c sigma(unsigned) The input will be the modal number \c i where \f$ i=0,...,n-1\f$ and \c n is the number of polynomial coefficients in use. The output is the filter strength for the given mode number
-     * @param sigma The filter to evaluate on the normalized modal coefficients
-     * @param t The topology to apply the modal filter on
-     * @param ps parameters that are forwarded to the creation of a ContainerType (e.g. when a std::vector is to be created it is the vector size)
-     */
-    template<class UnaryOp, class Topology, class ...Params>
-    ModalFilter( UnaryOp sigma, const Topology& t, Params&& ...ps) :
-        m_tmp( dg::construct<ContainerType>(dg::evaluate( dg::zero, t),
-        std::forward<Params>(ps)...)), m_filter ( dg::create::fast_transform(
-        create::modal_op(sigma, t.dltx()), create::modal_op(sigma, t.dlty()),
-        t), std::forward<Params>(ps)...)
-            { }
-
-    /**
-    * @brief Perfect forward parameters to one of the constructors
-    *
-    * @tparam Params deduced by the compiler
-    * @param ps parameters forwarded to constructors
-    */
-    template<class ...Params>
-    void construct( Params&& ...ps)
-    {
-        //construct and swap
-        *this = ModalFilter( std::forward<Params>( ps)...);
-    }
-
-    void operator()( ContainerType& y) {
-        operator()( 1., y, 0., m_tmp);
-        using std::swap;
-        swap( y, m_tmp);
-    }
-    void operator()( const ContainerType& x, ContainerType& y) const{ operator()( 1., x,0,y);}
-    void operator()(real_type alpha, const ContainerType& x, real_type beta, ContainerType& y) const
-    {
-        m_filter.symv( alpha, x, beta, y);
-    }
-    private:
-    ContainerType m_tmp;
-    MultiMatrix<MatrixType, ContainerType> m_filter;
-};
 
 ///@cond
 namespace detail{
@@ -307,16 +267,19 @@ struct CSRSymvFilter
 /**
  * @brief Generalized slope limiter for dG methods
  *
- * Consider the one-dimensional case and further assume that the
- * modal coefficients are given. (Else use \c dg::create::fast_transform
- * to convert to L-space). The linear part is given by \f$ u_h^1(x) = u_{n0}p_{n0}(x) + u_{n1}p_{n1}(x)\f$ with \f$p_{n0}(x) = 1\f$ and \f$ p_{n1}(x) = 2(x-x_n)/h\f$. Then the limiter is defined via
+ * Consider the one-dimensional case. The first step is to transform the given
+ * values to compute modal coefficients.
+ * The linear part is given by
+ * \f$ u_h^1(x) = u_{n0}p_{n0}(x) + u_{n1}p_{n1}(x)\f$ with \f$p_{n0}(x) = 1\f$
+ * and \f$ p_{n1}(x) = 2(x-x_n)/h\f$.
+ * Then the limiter is defined via
  * \f[
  * \Lambda\Pi ( u_h^1)|_n = u_{n0} + \textrm{minmod}\left( u_{n1}, ( u_{(n+1)0} - u_{n0}), (u_{(n)0} - u_{(n-1)0})\right)p_{n1}(x)
  * \f]
  * If the result of the minmod function is \f$ u_{n1}\f$, then \f$ \Lambda\Pi( u_h)|_n = u_h|_n\f$, else \f$ \Lambda\Pi(u_h)|_n = \Lambda\Pi(u_h^1)|_n\f$
- * Must be applied to coefficients transformed to L-space in combination with \c limiter_stencil
+ * Must be applied in combination with \c limiter_stencil
  *
- * @sa dg::blas2::stencil dg::create::fast_transform dg::create::limiter_stencil
+ * @sa dg::blas2::stencil dg::create::limiter_stencil
  */
 template<class real_type>
 struct CSRSlopeLimiter
@@ -329,28 +292,39 @@ struct CSRSlopeLimiter
             const real_type* x, real_type* y)
     {
         int k = row_offsets[i];
-        if( (row_offsets[i+1] - row_offsets[i]) == 0) //only every n-th thread does something
+        int n = (row_offsets[i+1] - row_offsets[i])/3;
+        if( n == 0) //only every n-th thread does something
             return;
-        int n = abs((int)values[0]);
         for( int u=0; u<n; u++)
             y[i+u] = x[i+u]; // copy input
-        dg::MinMod minmod;
-        real_type dx = x[column_indices[k+2]];
-        if( fabs( dx) <= m_mod)
-            return;
-        real_type m = minmod( dx,
-            (x[column_indices[k+1]] - x[column_indices[k]]),
-            (x[column_indices[k+3]] - x[column_indices[k+1]]));
-        if( m == dx)
-            return;
-        y[i+1] = m;
-        for( int u=2; u<n; u++)
-            y[i+u] = (real_type)0;
-    }
+        // Transform
+        real_type uM = 0, u0 = 0, uP = 0, u1 = 0;
+        for( int u=0; u<n; u++)
+        {
+            uM += x[column_indices[k+0*n + u]]*fabs(values[k+u]);
+            u0 += x[column_indices[k+1*n + u]]*fabs(values[k+u]);
+            u1 += x[column_indices[k+1*n + u]]*values[k+n+u];
+            uP += x[column_indices[k+2*n + u]]*fabs(values[k+u]);
+        }
+        if( values[k]<0) //DIR boundary condition
+            uM *= -1;
+        if( values[k+2*n]>0) //DIR boundary condition
+            uP *= -1;
 
+        dg::MinMod minmod;
+        if( fabs( u1) <= m_mod)
+            return;
+        real_type m = minmod( u1, uP - u0, u0 - uM);
+        if( m == u1)
+            return;
+        // Else transform back
+        for( int u=0; u<n; u++)
+            y[i+u] = values[k+2*n]>0 ? u0 - m*values[k+2*n+u] : u0 + m*values[k+2*n+u];
+    }
     private:
     real_type m_mod;
 };
+
 
 ///@}
 }//namespace dg

@@ -83,6 +83,8 @@ int main()
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
     dg::IDMatrix stencil = dg::create::window_stencil( {3,3}, grid,
             grid.bcx(), grid.bcy());
+    dg::IDMatrix limiter_stencil = dg::create::limiter_stencil( dg::coo3d::x, grid,
+            grid.bcx());
     int multi=100;
     //t.tic();
     std::cout<<"\nNo communication\n";
@@ -204,7 +206,7 @@ int main()
     std::cout<<"stencil Median             took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas2::stencil( dg::CSRSlopeLimiter<double>(), stencil, x[0], y[0]);
+        dg::blas2::stencil( dg::CSRSlopeLimiter<double>(), limiter_stencil, x[0], y[0]);
     t.toc();
     std::cout<<"stencil Slope Limiter      took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
 

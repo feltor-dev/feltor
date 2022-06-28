@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cusp/print.h>
 #include "stencil.h"
 #include "filter.h"
 #include "../blas2.h"
@@ -31,5 +32,21 @@ int main()
         }
     }
 
+    std::cout << "Test dg slope limiter stencil\n";
+    dg::Grid1d g1d( 0,1, 3, 3);
+    for( auto bc : bcs)
+    {
+        auto stencil = dg::create::limiter_stencil( g1d, bc);
+        std::cout << "Test "<<dg::bc2str( bc)<<" boundary:\n";
+        for( unsigned i=0; i<stencil.row_offsets.size(); i++)
+            std::cout << stencil.row_offsets[i]<<" ";
+        std::cout << "\n";
+        for( unsigned i=0; i<stencil.column_indices.size(); i++)
+            std::cout << stencil.column_indices[i]<<" ";
+        std::cout << "\n";
+        for( unsigned i=0; i<stencil.column_indices.size(); i++)
+            std::cout << stencil.values[i]<<" ";
+        std::cout << "\n";
+    }
     return 0;
 }

@@ -199,9 +199,11 @@ int main( int argc, char* argv[])
         dg::blas2::stencil( dg::CSRMedianFilter(), stencil, x[0], y[0]);
     t.toc();
     if(rank==0)std::cout<<"stencil Median             took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+    dg::MIDMatrix limiter_stencil = dg::create::limiter_stencil( dg::coo3d::x, grid,
+            grid.bcx());
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas2::stencil( dg::CSRSlopeLimiter<double>(), stencil, x[0], y[0]);
+        dg::blas2::stencil( dg::CSRSlopeLimiter<double>(), limiter_stencil, x[0], y[0]);
     t.toc();
     if(rank==0)std::cout<<"stencil Slope Limiter      took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
 
