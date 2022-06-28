@@ -15,6 +15,7 @@
   This is a program to test various advection schemes on the 2d incompressible Euler
   equation used in Reference~\cite{Einkemmer2014}.
 \end{abstract}
+\tableofcontents
 
 \section{Equations}
 We implement the 2d incompressible Euler equation
@@ -305,8 +306,8 @@ Since these equations are non-linear the solver needs to be a non-linear solver.
 },
 \end{minted}
 *See the dg documentation for what tableaus are available.
-\subsection{Regularization technique}
-Choose either no regularization or artificial viscosity or modal filtering by the following
+\subsection{Regularization techniques}
+Choose either no regularization or artificial viscosity or (modal) filtering by the following
 parameters in the input file.
 
 For no regularization choose
@@ -375,6 +376,14 @@ or a simple Median filter
     "type"  : "median", // Not choosable for \textbf{ImExMultistep} timestepper
 }
 \end{minted}
+or a standard dg slope limiter
+\begin{minted}[texcomments]{js}
+"regularization",
+{
+    "type"  : "dg-limiter", // Not choosable for \textbf{ImExMultistep} timestepper
+    "alpha" : 40
+}
+\end{minted}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Elliptic solver}
@@ -385,7 +394,7 @@ to solve Eq.~\eqref{eq:euler_poisson_elliptic}
 {
     "type"      : "multigrid", // Actually a nested iterations method
     "stages"    : 3,  // Number of stages (3 is best in virtually all cases)
-    "eps_pol"   : [1e-6,10,10],
+    "eps_pol"   : [1e-6,1,1],
     // Accuracy requirement on each stage of the
     // multigrid scheme. $\eps_0 = \eps_{pol,0}$, $\eps_i = \eps_{pol,i} \eps_{pol,0}$  for $i>1$. \\
     "direction" : "centered" // Direction of the Laplacian: forward or centered

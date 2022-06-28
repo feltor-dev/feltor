@@ -11,25 +11,25 @@
         "y": [0, 1], //6.283185307179586],
         "bc" : ["DIR", "PER"]
     },
-    //"timestepper":
-    //{
-    //    "type": "ImExMultistep",
-    //    "tableau": "ImEx-BDF-3-3",
-    //    "dt" : 5e-3,
-    //    "eps_time" : 1e-9 // (stopping for implicit part)
-    //},
+    "timestepper":
+    {
+        "type": "ImExMultistep",
+        "tableau": "ImEx-BDF-3-3",
+        "dt" : 1e-3,
+        "eps_time" : 1e-9 // (stopping for implicit part)
+    },
     //"timestepper":
     //{
     //    "type": "Shu-Osher",
     //    "tableau": "SSPRK-3-3",
     //    "dt" : 1.5e-2
     //},
-    "timestepper":
-    {
-        "type": "FilteredExplicitMultistep",
-        "tableau": "ImEx-BDF-3-3",
-        "dt" : 1e-3
-    },
+    //"timestepper":
+    //{
+    //    "type": "FilteredExplicitMultistep",
+    //    "tableau": "ImEx-BDF-3-3",
+    //    "dt" : 1e-3
+    //},
     //"regularization":
     //{
     //    "type": "modal",
@@ -43,7 +43,7 @@
         "order": 2,
         "direction": "forward",
         //"direction": "centered",
-        "nu": 1.0e-3  //(viscosity)
+        "nu": 1.0e-4  //(viscosity)
     },
     "output":
     {
@@ -65,7 +65,7 @@
     {
         //"type": "arakawa",
         "multiplication": "pointwise",
-        "type": "upwind"
+        "type": "upwind-advection"
         //"multiplication": "projection"
     },
 

@@ -87,7 +87,7 @@ int main( int argc, char* argv[])
     dg::Adaptive<dg::FilteredERKStep<dg::DVec> > adaptive;
     dg::Adaptive<dg::ARKStep<dg::DVec> > adaptive_imex;
     dg::Adaptive<dg::DIRKStep<dg::DVec> > adaptive_implicit;
-    if( regularization == "modal" || regularization == "swm" || regularization == "median")
+    if( regularization == "modal" || regularization == "swm" || regularization == "median" || regularization == "dg-limiter")
     {
         if( stepper != "FilteredExplicitMultistep" && stepper != "Shu-Osher" && stepper != "ERK" )
         {

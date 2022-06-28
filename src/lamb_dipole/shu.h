@@ -24,30 +24,46 @@ struct Filter
             double alpha = js[ "regularization"].get( "alpha", 36).asDouble();
             double order = js[ "regularization"].get( "order", 8).asDouble();
             double eta_c = js[ "regularization"].get( "eta_c", 0.5).asDouble();
-            m_filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
+            auto op = dg::ExponentialFilter(alpha, eta_c, order, grid.n());
+            m_filter = dg::create::fast_transform(
+                    dg::create::modal_filter(op, grid.dltx()),
+                    dg::create::modal_filter(op, grid.dlty()),
+                    grid);
         }
         else if( m_type == "swm")
         {
             m_alpha0 = js["regularization"].get("alpha", 20).asDouble();
             m_iter = js["regularization"].get("iter", 4).asDouble();
         }
+        else if( m_type == "dg-limiter")
+        {
+            m_alpha0 = js["regularization"].get("alpha", 10).asDouble();
+        }
         if( m_type == "swm" || m_type == "median")
         {
-            m_stencil = dg::create::window_stencil( {3,3}, grid);
-            m_tmp = dg::evaluate( dg::zero, grid);
+            m_stencil = dg::create::window_stencil( {3,3}, grid, grid.bcx(), grid.bcy());
         }
+        else if( m_type == "dg-limiter")
+        {
+            m_stencil = dg::create::limiter_stencil( dg::coo3d::x, grid, grid.bcx());
+            m_stencilY = dg::create::limiter_stencil( dg::coo3d::y, grid, grid.bcy());
+        }
+        m_tmp = dg::evaluate( dg::zero, grid);
     }
 
     void operator()( Container& y){
+        if( m_type == "none" || m_type == "viscosity") return;
         dg::Timer t;
         t.tic();
         if( m_type == "modal")
         {
-            m_filter(y);
+            dg::blas2::symv( m_filter, y, m_tmp);
+            using std::swap;
+            swap( m_tmp, y);
         }
         else if( m_type == "median")
         {
-            dg::blas2::filtered_symv( dg::CSRMedianFilter(), m_stencil, y, m_tmp);
+            dg::blas2::stencil( dg::CSRMedianFilter(), m_stencil, y, m_tmp);
             using std::swap;
             swap( m_tmp, y);
         }
@@ -56,11 +72,16 @@ struct Filter
             value_type alpha = m_alpha0;
             for( unsigned i=0; i<m_iter; i++)
             {
-                dg::blas2::filtered_symv( dg::CSRSWMFilter<value_type>(alpha), m_stencil, y, m_tmp);
+                dg::blas2::stencil( dg::CSRSWMFilter<value_type>(alpha), m_stencil, y, m_tmp);
                 using std::swap;
                 swap( m_tmp, y);
                 alpha*=0.8;
             }
+        }
+        else if ( m_type == "dg-limiter")
+        {
+            dg::blas2::stencil( dg::CSRSlopeLimiter<value_type>(m_alpha0), m_stencil, y, m_tmp);
+            dg::blas2::stencil( dg::CSRSlopeLimiter<value_type>(m_alpha0), m_stencilY, m_tmp, y);
         }
         t.toc();
         std::cout << "Application of filter took "<<t.diff()<<"s\n";
@@ -69,10 +90,10 @@ struct Filter
     }
     private:
     std::string m_type;
-    dg::ModalFilter<dg::DMatrix, dg::DVec> m_filter;
+    dg::MultiMatrix<dg::DMatrix, dg::DVec> m_filter;
     unsigned m_iter;
     value_type m_alpha0;
-    IMatrix m_stencil;
+    IMatrix m_stencil, m_stencilY;
     Container m_tmp;
 };
 
