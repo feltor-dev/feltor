@@ -675,9 +675,9 @@ struct MultistepTimeloop : public aTimeloop<ContainerType>
     MultistepTimeloop( std::function<void ( value_type&, ContainerType&)>
             step, value_type dt ) : m_step(step), m_dt(dt){}
     /**
-     * @brief Bind the step function of a Multistep stepper
+     * @brief Initialize and bind the step function of a Multistep stepper
      *
-     * First calls the init function of \c stepper.
+     * First call \c stepper.init().
      * Then construct a lambda function that calls the step function of \c stepper
      * with given parameters and stores it internally in a \c std::function
      * @tparam Stepper possible steppers are for example dg::ExplicitMultistep,

@@ -42,16 +42,22 @@ Operator<T> tensorproduct( const Operator<T>& op1, const Operator<T>& op2)
 
 
 /**
-* @brief Tensor product between Delta and an operator
+* @brief Tensor product between Identity matrix and an operator
 *
+\f[ M = \begin{pmatrix}
+op &   &   &   &   & \\
+  & op &   &   &   & \\
+  &   & op &   &   & \\
+  &   &   & op &   & \\
+  &   &   &...&   &
+  \end{pmatrix}
+  \f]
 * Can be used to create tensors that operate on each dg-vector entry
-* The DG Tensor Product 1 x op
 * @tparam T value type
-* @param N Size of the delta operator
+* @param N Size of the identity (=number of times op is repeated in the matrix)
 * @param op The Operator
+* @return A newly allocated cusp matrix (of size  <tt> N*op.size()</tt> )
 * @sa fast_transform
-*
-* @return A newly allocated cusp matrix
 */
 template< class T>
 cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Operator<T>& op)

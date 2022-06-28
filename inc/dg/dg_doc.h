@@ -103,7 +103,7 @@
  *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
  *         @defgroup metric create volume
  *         @brief \f$ \sqrt{g} \f$
- *         @defgroup generators Grid Generator classes
+ *         @defgroup generators Grid Refinement classes
  *     @}
  *     @defgroup fem Finite Element Method
  *     @defgroup gridtypes Useful Typedefs
