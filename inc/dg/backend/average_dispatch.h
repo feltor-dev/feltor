@@ -13,6 +13,8 @@ namespace dg{
 
 /*!@brief Transpose vector
 
+The equivalent of
+    <tt> out[j*ny+i] = in[i*nx+j];</tt>
  * @copydoc hide_ContainerType
  * @param nx number of columns in input vector (size of contiguous chunks) /rows in output vector
  * @param ny number of rows in input vector /columns in output vector

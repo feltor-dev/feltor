@@ -281,8 +281,7 @@ dg::IHMatrix_t<real_type> limiter_stencil(
         auto einsx = detail::identity_matrix( g.gx(), g.gx());
         auto my = detail::limiter_stencil(g.gy(), g.gy(), bound);
         auto einsz = detail::identity_matrix( g.gz(), g.gz());
-        auto temp =  dg::tensorproduct( my, einsx);
-        return dg::tensorproduct( einsz, temp);
+        return dg::tensorproduct( einsz, dg::tensorproduct( my, einsx));
     }
     auto mz = detail::limiter_stencil(g.gz(), g.gz(), bound);
     auto einsy = detail::identity_matrix( g.gy(), g.gy());

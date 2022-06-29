@@ -137,6 +137,7 @@ int main( int argc, char* argv[])
         mag = unmod_mag;
 
     DG_RANK0 std::cout << "# Constructing Feltor...\n";
+    //feltor::Filter<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DVec> filter( grid, js);
     feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
     feltor::Implicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
@@ -278,6 +279,7 @@ int main( int argc, char* argv[])
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
         reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
         odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>( adapt,
+            //std::tie(feltor, filter), dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
             feltor, dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
         var.nfailed = &adapt.nfailed();
     }
@@ -301,6 +303,21 @@ int main( int argc, char* argv[])
     }
     DG_RANK0 std::cout << "Done!\n";
     double t_output = time, deltaT = p.inner_loop*dt;
+    unsigned maxout = js["output"].get( "maxout", 0).asUInt();
+    double Tend = 0;
+    std::string output_mode = "free";
+    if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
+    {
+        output_mode = js["timestepper"].get(
+                "output-mode", "equidistant").asString();
+        if( output_mode == "equidistant")
+        {
+            double Tend = js["timestepper"].get( "Tend", 1).asDouble();
+            deltaT = Tend/(double)(maxout*p.itstp);
+        }
+        else if( !(output_mode == "free"))
+            throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
+    }
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
     {
@@ -563,23 +580,8 @@ int main( int argc, char* argv[])
 
         t.tic();
         unsigned step = 0;
-        unsigned maxout = js["output"].get( "maxout", 0).asUInt();
-        double Tend = 0;
-        std::string output_mode = "free";
-        if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
-        {
-            output_mode = js["timestepper"].get(
-                    "output-mode", "equidistant").asString();
-            if( output_mode == "equidistant")
-            {
-                double Tend = js["timestepper"].get( "Tend", 1).asDouble();
-                deltaT = Tend/(double)(maxout*p.itstp);
-            }
-            else if( !(output_mode == "free"))
-                throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
-        }
         bool abort = false;
-        for( unsigned i=0; i<maxout; i++)
+        for( unsigned i=1; i<=maxout; i++)
         {
             dg::Timer ti;
             ti.tic();
@@ -825,6 +827,8 @@ int main( int argc, char* argv[])
             {
                 odeint->integrate( time, y0, t_output + i*deltaT, y0,
                          i<p.itstp ? dg::to::at_least :  dg::to::exact);
+                std::cout << "Time "<<time<<" t_out "<<t_output<<" deltaT "<<deltaT<<" i "<<i<<" itstp "<<p.itstp<<"\n";
+
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";

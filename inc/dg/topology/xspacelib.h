@@ -110,7 +110,7 @@ dg::IHMatrix_t<real_type> backscatter( const aRealTopology3d<real_type>& g)
 {
     auto transformX = backscatter( g.gx());
     auto transformY = backscatter( g.gy());
-    auto transformZ = backscatter( g.gy());
+    auto transformZ = backscatter( g.gz());
     return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
 }
 ///@}
