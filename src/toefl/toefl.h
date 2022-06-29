@@ -74,7 +74,7 @@ Explicit< Geometry, M, Container>::Explicit( const Geometry& grid, const Paramet
     for( unsigned u=0; u<p.num_stages; u++)
     {
         m_multi_pol.push_back({ m_multigrid.grid(u),  p.pol_dir, 1.});
-        m_multi_gamma1.push_back({ m_multigrid.grid(u), -0.5*p.tau, p.pol_dir});
+        m_multi_gamma1.push_back({-0.5*p.tau, { m_multigrid.grid(u), p.pol_dir}});
     }
     m_centered = {dg::create::dx( grid, m_p.bcx),
                   dg::create::dy( grid, m_p.bcy)};

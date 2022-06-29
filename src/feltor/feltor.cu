@@ -32,6 +32,8 @@ void sigterm_handler(int signal)
 }
 #endif //WITH_MPI
 
+using Vector = std::array<std::array<dg::x::DVec, 2>,2>;
+
 int main( int argc, char* argv[])
 {
 #ifdef WITH_MPI
@@ -193,16 +195,17 @@ int main( int argc, char* argv[])
     }
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
-    std::array<std::array<dg::x::DVec,2>,2> y0;
+    Vector y0;
     std::array<dg::x::DVec, 3> gradPsip;
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
+    unsigned failed = 0;
     feltor::Variables var{
         feltor, y0, p, mag, gradPsip, gradPsip,
         dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid)),
         0., // duration
-        0 // nfailed
+        &failed // nfailed
     };
     DG_RANK0 std::cout << "# Set Initial conditions ... \n";
     t.tic();
@@ -244,16 +247,19 @@ int main( int argc, char* argv[])
 
     ///////////////////////////////////////////////////////////////////////////
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
-    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
     feltor::ImplicitSolver<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> solver;
-    dg::ImExMultistep< std::array<std::array<dg::x::DVec,2>,2> > multistep_imex;
-    dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
-    dg::Adaptive< dg::ARKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt_ark;
+    dg::ExplicitMultistep< Vector> multistep;
+    dg::ImExMultistep< Vector > multistep_imex;
+    dg::Adaptive< dg::ERKStep< Vector>> adapt;
+    dg::Adaptive< dg::ARKStep< Vector>> adapt_ark;
+    auto odeint = std::unique_ptr<dg::aTimeloop<Vector>>();
     double rtol = 0., atol = 0., dt = 0., reject_limit = 2;
     if( p.timestepper == "multistep")
     {
         multistep = { p.tableau, y0};
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
+        odeint = std::make_unique<dg::MultistepTimeloop<Vector>>( multistep,
+            feltor, time, y0, dt);
     }
     else if( p.timestepper == "multistep-imex")
     {
@@ -261,6 +267,8 @@ int main( int argc, char* argv[])
         solver = { feltor, eps_time};
         multistep_imex = { p.tableau, y0};
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
+        odeint = std::make_unique<dg::MultistepTimeloop<Vector>>( multistep_imex,
+            std::tie(feltor, implicit, solver), time, y0, dt);
     }
     else if (p.timestepper == "adaptive")
     {
@@ -268,8 +276,10 @@ int main( int argc, char* argv[])
         //adapt.stepper().ignore_fsal();
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
-        dt = 1e-5; //that should be a small enough initial guess
         reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
+        odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>( adapt,
+            feltor, dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
+        var.nfailed = &adapt.nfailed();
     }
     else if (p.timestepper == "adaptive-imex")
     {
@@ -278,8 +288,10 @@ int main( int argc, char* argv[])
         adapt_ark = { p.tableau, y0};
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
-        dt = 1e-5; //that should be a small enough initial guess
         reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
+        odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>( adapt_ark,
+            std::tie(feltor, implicit, solver), dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
+        var.nfailed = &adapt_ark.nfailed();
     }
     else
     {
@@ -288,7 +300,7 @@ int main( int argc, char* argv[])
         dg::abort_program();
     }
     DG_RANK0 std::cout << "Done!\n";
-
+    double t_output = time, deltaT = p.inner_loop*dt;
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
     {
@@ -552,102 +564,33 @@ int main( int argc, char* argv[])
         t.tic();
         unsigned step = 0;
         unsigned maxout = js["output"].get( "maxout", 0).asUInt();
-        double Tend = 0, deltaT = 0, t_output = 0;
+        double Tend = 0;
         std::string output_mode = "free";
-        if( p.timestepper == "multistep")
-            multistep.init( feltor, time, y0, dt);
-        if( p.timestepper == "multistep-imex")
-            multistep_imex.init( std::tie( feltor, implicit, solver), time, y0,
-                    dt);
-        else if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
+        if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
         {
             output_mode = js["timestepper"].get(
                     "output-mode", "equidistant").asString();
             if( output_mode == "equidistant")
             {
-                Tend = js["timestepper"].get( "Tend", 1).asDouble();
+                double Tend = js["timestepper"].get( "Tend", 1).asDouble();
                 deltaT = Tend/(double)(maxout*p.itstp);
-                t_output = time + deltaT;
             }
             else if( !(output_mode == "free"))
                 throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
-
         }
         bool abort = false;
-        for( unsigned i=1; i<=maxout; i++)
+        for( unsigned i=0; i<maxout; i++)
         {
             dg::Timer ti;
             ti.tic();
-            for( unsigned j=0; j<p.itstp; j++)
+            for( unsigned j=1; j<=p.itstp; j++)
             {
                 try{
                 if( output_mode == "equidistant")
-                {
-                    while( time < t_output)
-                    {
-                        if( time + dt > t_output)
-                            dt = t_output-time;
-                        if( p.timestepper == "adaptive")
-                        {
-                            do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt.failed());
-                        }
-                        else if ( p.timestepper == "adaptive-imex")
-                            do{
-                                adapt_ark.step( std::tie( feltor, implicit,
-                                            solver), time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt_ark.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt_ark.failed());
-                        DG_RANK0 std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
-                        step++;
-                    }
-                    t_output += deltaT;
-                }
+                    odeint->integrate( time, y0, time+deltaT, y0, dg::to::exact);
                 else
-                    for( unsigned k=0; k<p.inner_loop; k++)
-                    {
-                        if( p.timestepper == "adaptive")
-                        {
-                            do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt.failed());
-                        }
-                        else if( p.timestepper == "adaptive-imex")
-                            do{
-                                adapt_ark.step( std::tie( feltor, implicit,
-                                            solver), time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt_ark.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt_ark.failed());
-                        else if ( p.timestepper == "multistep")
-                            multistep.step( feltor, time, y0);
-                        else if ( p.timestepper == "multistep-imex")
-                            multistep_imex.step( std::tie( feltor, implicit,
-                                        solver), time, y0);
-                        step++;
-                    }
+                    odeint->integrate( time, y0, t_output + j*deltaT, y0,
+                         j<p.itstp ? dg::to::at_least :  dg::to::exact);
                 }
                 catch( dg::Fail& fail){ // a specific exception
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
@@ -691,7 +634,7 @@ int main( int argc, char* argv[])
                 if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
                 {
                     DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
-                    DG_RANK0 std::cout << "\tfailed "<<var.nfailed<<"\n";
+                    DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
                 }
 
                 tti.toc();
@@ -700,6 +643,7 @@ int main( int argc, char* argv[])
             }
             ti.toc();
             var.duration = ti.diff();
+            t_output += p.itstp*deltaT;
             // Does not work due to direct application of Laplace
             // The Laplacian of Aparallel looks smooth in paraview
             ////----------------Test if ampere equation holds
@@ -877,62 +821,17 @@ int main( int argc, char* argv[])
 
             //step
             t.tic();
-            if( p.timestepper == "multistep")
-                multistep.init( feltor, time, y0, dt);
-            if( p.timestepper == "multistep-imex")
-                multistep_imex.init( std::tie( feltor, implicit, solver), time,
-                        y0, dt);
-            for( unsigned i=0; i<p.itstp; i++)
+            for( unsigned i=1; i<=p.itstp; i++)
             {
-                for( unsigned k=0; k<p.inner_loop; k++)
-                {
-                    try{
-                        if( p.timestepper == "adaptive")
-                        {
-                            do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol);
-                                if( adapt.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt.failed());
-                        }
-                        else if( p.timestepper == "adaptive-imex")
-                            do{
-                                adapt_ark.step( std::tie( feltor, implicit,
-                                            solver), time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol);
-                                if( adapt_ark.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt_ark.failed());
-                        else if ( p.timestepper == "multistep")
-                            multistep.step( feltor, time, y0);
-                        else if ( p.timestepper == "multistep-imex")
-                            multistep_imex.step( std::tie( feltor, implicit,
-                                        solver), time, y0);
-                    }
-                    catch( dg::Fail& fail) {
-                        std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                        std::cerr << "Does Simulation respect CFL condition?\n";
-                        glfwSetWindowShouldClose( w, GL_TRUE);
-                        break;
-                    }
-                    step++;
-                }
-
-                std::cout << "\tTime "<<time<<"\n";
+                odeint->integrate( time, y0, t_output + i*deltaT, y0,
+                         i<p.itstp ? dg::to::at_least :  dg::to::exact);
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";
                 if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
                 {
-                    std::cout << "\tdt "<<dt<<"\n";
-                    std::cout << "\tfailed "<<var.nfailed<<"\n";
+                    std::cout << "\tdt "<<odeint->get_dt()<<"\n";
+                    std::cout << "\tfailed "<<*var.nfailed<<"\n";
                 }
                 //----------------Test if ampere equation holds
                 // Does not work due to direct application of Laplace
@@ -947,8 +846,8 @@ int main( int argc, char* argv[])
                 //    double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
                 //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
                 //}
-
             }
+            t_output += p.itstp*deltaT;
             t.toc();
             std::cout << "\n\t Step "<<step << " at time  "<<time;
             std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop<<"\n\n";

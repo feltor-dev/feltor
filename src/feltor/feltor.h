@@ -602,26 +602,26 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
     for( unsigned u=0; u<p.stages; u++)
     {
         m_multi_pol[u].construct( m_multigrid.grid(u),
-            p.bcxP, p.bcyP, dg::PER, 
+            p.bcxP, p.bcyP, dg::PER,
             p.pol_dir, p.jfactor);
-        m_multi_invgammaP[u].construct(  m_multigrid.grid(u),
-            p.bcxP, p.bcyP, dg::PER, -0.5*p.tau[1]*p.mu[1], p.pol_dir);
-        m_multi_invgammaN[u].construct(  m_multigrid.grid(u),
-            p.bcxN, p.bcyN, dg::PER, -0.5*p.tau[1]*p.mu[1], p.pol_dir);
-        m_multi_ampere[u].construct(  m_multigrid.grid(u),
-            p.bcxA, p.bcyA, dg::PER, -1., p.pol_dir);
+        m_multi_invgammaP[u] = { -0.5*p.tau[1]*p.mu[1],
+                {m_multigrid.grid(u), p.bcxP, p.bcyP, dg::PER, p.pol_dir}};
+        m_multi_invgammaN[u] = { -0.5*p.tau[1]*p.mu[1],
+                {m_multigrid.grid(u), p.bcxN, p.bcyN, dg::PER, p.pol_dir}};
+        m_multi_ampere[u] = {  -1.,
+                {m_multigrid.grid(u), p.bcxA, p.bcyA, dg::PER, p.pol_dir}};
 
         dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
             bhat, m_multigrid.grid(u));
         m_multi_pol[u].set_chi( hh);
-        m_multi_invgammaP[u].elliptic().set_chi( hh);
-        m_multi_invgammaN[u].elliptic().set_chi( hh);
-        m_multi_ampere[u].elliptic().set_chi( hh);
+        m_multi_invgammaP[u].matrix().set_chi( hh);
+        m_multi_invgammaN[u].matrix().set_chi( hh);
+        m_multi_ampere[u].matrix().set_chi( hh);
         if(p.curvmode != "true"){
             m_multi_pol[u].set_compute_in_2d( true);
-            m_multi_invgammaP[u].elliptic().set_compute_in_2d( true);
-            m_multi_invgammaN[u].elliptic().set_compute_in_2d( true);
-            m_multi_ampere[u].elliptic().set_compute_in_2d( true);
+            m_multi_invgammaP[u].matrix().set_compute_in_2d( true);
+            m_multi_invgammaN[u].matrix().set_compute_in_2d( true);
+            m_multi_ampere[u].matrix().set_compute_in_2d( true);
         }
     }
 }
@@ -679,7 +679,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_s[0] = m_s[1] = m_potential ;
 
     //--------------------------Construct-------------------------//
-    m_stencil = dg::create::window_stencil( {3,3}, g);
+    m_stencil = dg::create::window_stencil( {3,3}, g, g.bcx(), g.bcy() );
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);
@@ -1529,6 +1529,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif
+    //DG_RANK0 std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
+    DG_RANK0 std::cout << "## time "<<t<<"\n";
     /* y[0][0] := n_e
        y[0][1] := N_i
        y[1][0] := w_e^dagger

@@ -183,7 +183,7 @@ struct Variables{
     std::array<dg::x::DVec, 3> tmp;
     dg::x::DVec hoo; //keep hoo there to avoid pullback
     double duration;
-    unsigned nfailed;
+    const unsigned* nfailed;
 };
 
 struct Record{
@@ -1353,7 +1353,7 @@ std::vector<Record> diagnostics2d_list = {
 std::vector<Record1d> diagnostics1d_list = {
     {"failed", "Accumulated Number of failed steps",
         []( Variables& v ) {
-            return v.nfailed;
+            return *v.nfailed;
         }
     },
     {"duration", "Computation time between the latest 3d outputs (without the output time itself)",
