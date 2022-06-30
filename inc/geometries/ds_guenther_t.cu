@@ -104,7 +104,7 @@ int main( )
     dg::DVec variation(fun);
     elliptic.variation( fun, variation);
     dg::blas1::transform( variation, variation, []DG_DEVICE( double var){
-            return var/sqrt(var);});
+            return sqrt(var);});
     double var_before = dg::blas1::dot( vol3d, variation);
     std::cout << "# variation before: "<<var_before<<"\n";
     dg::DVec var0 = dg::evaluate( dg::geo::Variation<dg::geo::TestFunctionPsi2>(mag), g3d);
@@ -115,7 +115,7 @@ int main( )
     elliptic.construct(g3dP);
     elliptic.variation( derivative, variation);
     dg::blas1::transform( variation, variation, []DG_DEVICE( double var){
-            return var/sqrt(var);});
+            return sqrt(var);});
     double var_after = dg::blas1::dot( vol3dP, variation);
     std::cout << "# variation after   "<<var_after<<"\n";
     var0 = dg::pullback( dg::geo::Variation<dg::geo::TestFunctionPsi2>(mag), g3dP);
