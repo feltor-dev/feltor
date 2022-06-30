@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../blas2.h"
 #include "average_cpu.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "average_gpu.cuh"
@@ -25,9 +26,12 @@ template<class ContainerType>
 void transpose( unsigned nx, unsigned ny, const ContainerType& in, ContainerType& out)
 {
     assert(&in != &out);
-    const get_value_type<ContainerType>* in_ptr = thrust::raw_pointer_cast( in.data());
-    get_value_type<ContainerType>* out_ptr = thrust::raw_pointer_cast( out.data());
-    return transpose_dispatch( get_execution_policy<ContainerType>(), nx, ny, in_ptr, out_ptr);
+    using value_type = get_value_type<ContainerType>;
+    dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
+        {
+            unsigned i = k/nx, j =  k%nx;
+            oo[j*ny+i] = ii[i*nx+j];
+        }, nx*ny, in, out);
 }
 
 /*!@brief Copy a line into rows of output vector
@@ -43,9 +47,12 @@ template<class ContainerType>
 void extend_line( unsigned nx, unsigned ny, const ContainerType& in, ContainerType& out)
 {
     assert(&in != &out);
-    const get_value_type<ContainerType>* in_ptr = thrust::raw_pointer_cast( in.data());
-    get_value_type<ContainerType>* out_ptr = thrust::raw_pointer_cast( out.data());
-    return extend_line( get_execution_policy<ContainerType>(), nx, ny, in_ptr, out_ptr);
+    using value_type = get_value_type<ContainerType>;
+    dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
+        {
+            unsigned i = k/nx, j =  k%nx;
+            oo[i*nx+j] = ii[j];
+        }, nx*ny, in, out);
 }
 /*!@brief Copy a line into columns of output vector
 
@@ -60,9 +67,12 @@ template<class ContainerType>
 void extend_column( unsigned nx, unsigned ny, const ContainerType& in, ContainerType& out)
 {
     assert(&in != &out);
-    const get_value_type<ContainerType>* in_ptr = thrust::raw_pointer_cast( in.data());
-    get_value_type<ContainerType>* out_ptr = thrust::raw_pointer_cast( out.data());
-    return extend_column( get_execution_policy<ContainerType>(), nx, ny, in_ptr, out_ptr);
+    using value_type = get_value_type<ContainerType>;
+    dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
+        {
+            unsigned i = k/nx, j =  k%nx;
+            oo[i*nx+j] = ii[i];
+        }, nx*ny, in, out);
 }
 ///@}
 

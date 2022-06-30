@@ -8,62 +8,6 @@
 namespace dg
 {
 
-template<class value_type>
-__global__ void transpose_gpu_kernel( unsigned nx, unsigned ny, const value_type* __restrict__ in, value_type* __restrict__ out)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    const int size = nx*ny;
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        int i=row/nx, j = row%nx;
-        out[j*ny+i] = in[i*nx+j];
-    }
-}
-template<class value_type>
-void transpose_dispatch( CudaTag, unsigned nx, unsigned ny, const value_type* in, value_type* out){
-    const size_t BLOCK_SIZE = 256;
-    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
-    transpose_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
-}
-
-template<class value_type>
-__global__ void extend_line_kernel( unsigned nx, unsigned ny, const value_type* __restrict__ in, value_type* __restrict__ out)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    const int size = nx*ny;
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        int i=row/nx, j = row%nx;
-        out[i*nx+j] = in[j];
-    }
-}
-template<class value_type>
-void extend_line( CudaTag, unsigned nx, unsigned ny, const value_type* in, value_type* out){
-    const size_t BLOCK_SIZE = 256;
-    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
-    extend_line_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
-}
-
-template<class value_type>
-__global__ void extend_column_kernel( unsigned nx, unsigned ny, const value_type* __restrict__ in, value_type* __restrict__ out)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    const int size = nx*ny;
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        int i=row/nx, j = row%nx;
-        out[i*nx+j] = in[i];
-    }
-}
-template<class value_type>
-void extend_column( CudaTag, unsigned nx, unsigned ny, const value_type* in, value_type* out){
-    const size_t BLOCK_SIZE = 256;
-    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
-    extend_column_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
-}
 
 template<class value_type>
 void average( CudaTag, unsigned nx, unsigned ny, const value_type* in0, const value_type* in1, value_type* out)
