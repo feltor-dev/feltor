@@ -195,7 +195,7 @@ dg::HMatrix_t<real_type> fast_interpolation( const RealGrid1d<real_type>& t, uns
  * which is much faster to apply than the full sparse matrix format from
  * the general purpose projection function, especially since it requires
  * no communication from neighboring cells
- * @sa dg::create::projection dg::create::interpolationT
+ * @sa dg::create::projection
  * @sa For a derivation of the coefficients consult the %dg manual <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @tparam real_type a floating point type
  * @return a matrix that when applied to vectors on the old grid produces a vector on the new grid
@@ -215,7 +215,7 @@ dg::HMatrix_t<real_type> fast_projection( const RealGrid1d<real_type>& t, unsign
     dg::HVec v1d = dg::create::inv_weights( g_new);
     cusp::coo_matrix<int, real_type, cusp::host_memory> projectX;
     //Here, we cannot use create::projection because that would remove explicit zeros!!
-    projectX = dg::create::interpolationT( g_new, g_old);
+    projectX = dg::create::detail::interpolationT( g_new, g_old);
     EllSparseBlockMat<real_type> pX( t.N()/divideNx, t.N()*dividen, divideNx*dividen, divideNx*dividen, n);
     for( unsigned k=0; k<divideNx; k++)
     for( unsigned l=0; l<dividen; l++)

@@ -5,7 +5,6 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/multiply.h>
 #include "operator.h"
-#include "grid.h"
 
 namespace dg
 {
@@ -65,11 +64,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Oper
     assert( N>0);
     unsigned n = op.size();
     //compute number of nonzeroes in op
-    unsigned number =0;
-    for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
-            //if( op(i,j) != 0)
-                number++;
+    unsigned number = n*n;
     // allocate output matrix
     cusp::coo_matrix<int, T, cusp::host_memory> A(n*N, n*N, N*number);
     number = 0;

@@ -54,6 +54,8 @@ T lcm( T a, T b)
 
 namespace create{
 
+namespace detail{
+///@cond
 /**
  * @brief Create the transpose of the interpolation matrix from new to old
  *
@@ -76,22 +78,8 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const RealGr
     cusp::transpose( temp, A);
     return A;
 }
-///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
-template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
-{
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
-///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
-template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
-{
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
+///@endcond
+}//namespace detail
 
 /**
  * @brief Create a diagonal matrix
@@ -135,17 +123,19 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
  * @note also check \c dg::create::transformation, which is the more general solution
  * @attention Projection only works if the number of cells in the
  * fine grid is a multiple of the number of cells in the coarse grid
+ * and if the number of polynomial coefficients is lower or the same in the new grid
  */
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
 {
     if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
+    if( g_old.n() < g_new.n()) std::cerr << "ATTENTION: you project between incompatible grids!! old n: "<<g_old.n()<<" new n: "<<g_new.n()<<"\n";
     //form the adjoint
     cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
         dg::create::diagonal( dg::create::weights( g_old));
     cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
         dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A = detail::interpolationT( g_new, g_old), temp;
     //!!! cusp::multiply removes explicit zeros in the output
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
@@ -158,36 +148,19 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
-    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
-    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
-    //form the adjoint
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
-        dg::create::diagonal( dg::create::weights( g_old));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
-        dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
-    return A;
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx());
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy());
+    return dg::tensorproduct( projectY, projectX);
 }
 
 ///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
-    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
-    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
-    //form the adjoint
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
-        dg::create::diagonal( dg::create::weights( g_old));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
-        dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
-    return A;
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx());
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy());
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectZ = projection( g_new.gz(), g_old.gz());
+    return dg::tensorproduct( projectZ, dg::tensorproduct( projectY, projectX));
 }
 
 /**
