@@ -6,11 +6,11 @@
 #include <cusp/coo_matrix.h>
 #include <cassert>
 
+#include "dg/backend/typedefs.h"
 #include "grid.h"
 #include "dlt.h"
 #include "operator.h"
 #include "operator_tensor.h"
-#include "interpolation.h" //makes typedefs available
 
 
 /*! @file
@@ -111,6 +111,45 @@ dg::IHMatrix_t<real_type> backscatter( const aRealTopology3d<real_type>& g)
     auto transformX = backscatter( g.gx());
     auto transformY = backscatter( g.gy());
     auto transformZ = backscatter( g.gz());
+    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
+}
+
+/**
+ * @brief Create a matrix that transforms values from an equidistant grid back to a dg grid
+ *
+ * The inverse of \c dg::create::backscatter
+ * @param g The grid on which to operate
+ *
+ * @return transformation matrix (block diagonal)
+ * @sa dg::blas2::symv dg::create::backscatter
+ */
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backscatter( const RealGrid1d<real_type>& g)
+{
+    //create equidistant backward transformation
+    dg::Operator<real_type> backwardeq( g.dlt().backwardEQ());
+    dg::Operator<real_type> backward( g.dlt().backward());
+    dg::Operator<real_type> forward1d = backward*dg::invert(backwardeq);
+
+    return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), forward1d);
+}
+///@copydoc inv_backscatter(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backscatter( const aRealTopology2d<real_type>& g)
+{
+    //create equidistant backward transformation
+    auto transformX = inv_backscatter( g.gx());
+    auto transformY = inv_backscatter( g.gy());
+    return dg::tensorproduct( transformY, transformX);
+}
+
+///@copydoc inv_backscatter(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backscatter( const aRealTopology3d<real_type>& g)
+{
+    auto transformX = inv_backscatter( g.gx());
+    auto transformY = inv_backscatter( g.gy());
+    auto transformZ = inv_backscatter( g.gz());
     return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
 }
 ///@}

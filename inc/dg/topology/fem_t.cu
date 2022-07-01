@@ -51,12 +51,11 @@ int main ()
     dg::blas2::symv( project, func_f, barfunc);
     // test now should contain Sf
     Vector test( barfunc);
-    dg::blas1::pointwiseDot( barfunc, v2d, test);
     dg::PCG<Vector> cg( test, 1000);
     Matrix fem_mass = dg::create::fem_mass( gDIR);
     //std::cout << "S matrix\n";
     //cusp::print( fem_mass);
-    unsigned number = cg.solve( fem_mass, test, barfunc, v2d, eps);
+    unsigned number = cg.solve( fem_mass, test, barfunc, v2d, w2d, eps);
     dg::blas1::axpby( 1., func, -1., test);
     double norm = sqrt(dg::blas2::dot( w2d, test) );
     double func_norm = sqrt(dg::blas2::dot( w2d, func) );

@@ -209,7 +209,7 @@ template< class Index, class Vector>
 struct BijectiveComm : public aCommunicator<Vector>
 {
     ///@copydoc GeneralComm::GeneralComm()
-    BijectiveComm( ){ }
+    BijectiveComm( ) = default;
     /**
      * @brief Construct from a given scatter map with respect to the source/data vector
      *
@@ -465,7 +465,7 @@ template< class Index, class Vector>
 struct GeneralComm : public aCommunicator<Vector>
 {
     /// no memory allocation; size 0
-    GeneralComm(){}
+    GeneralComm() = default;
     /**
     * @brief Construct from local indices and PIDs gather map
     *

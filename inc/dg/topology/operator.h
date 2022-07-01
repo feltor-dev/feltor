@@ -688,6 +688,14 @@ Operator<real_type> precond( const DLT<real_type>& dlt)
 }//namespace create
 
 
+///@brief Alias for \c dg::create::inverse. Compute inverse of square matrix
+///@copydetails dg::create::inverse(const dg::Operator<T>&)
+///@ingroup densematrix
+template<class T>
+dg::Operator<T> invert( const dg::Operator<T>& in)
+{
+    return dg::create::inverse(in);
+}
 
 } //namespace dg
 
