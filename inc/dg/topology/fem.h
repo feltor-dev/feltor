@@ -5,6 +5,257 @@
 #include "fem_weights.h"
 
 namespace dg{
+
+template<class Container>
+struct TriDiagonal
+{
+    using value_type = dg::get_value_type<Container>;
+    TriDiagonal() = default;
+    TriDiagonal( unsigned size) : M(size), O(size), P(size){}
+    TriDiagonal( Container M, Container O, Container P)
+        : M(M), O(O), P(P){}
+    template<class Container2>
+    TriDiagonal( const TriDiagonal<Container2>& other){
+        dg::assign( other.M, this->M);
+        dg::assign( other.O, this->O);
+        dg::assign( other.P, this->P);
+    }
+    unsigned size()const {return O.size();}
+    void operator()( const Container& x, Container& y) const
+    {
+        unsigned size = M.size();
+        dg::blas2::parallel_for( [size] DG_DEVICE(
+                    unsigned i,
+                    const value_type* M,
+                    const value_type* O,
+                    const value_type* P,
+                    const value_type* x, value_type* y)
+            {
+                if(i==0)
+                    y[i] = O[i]*x[i] + P[i]*x[i+1];
+                else if ( i == size -1 )
+                    y[i] = M[i]*x[i-1] + O[i] * x[i];
+                else
+                    y[i] = M[i]*x[i-1] + O[i] * x[i] + P[i] *x[i+1];
+            }, M.size(), M, O, P, x, y);
+    }
+
+    Container M, O, P;
+};
+template<class value_type>
+struct InverseTriDiagonal
+{
+    InverseTriDiagonal() = default;
+    InverseTriDiagonal( const TriDiagonal<thrust::host_vector<value_type>>& tri)
+    {
+        dg::assign( tri.M, this->M);
+        dg::assign( tri.O, this->O);
+        dg::assign( tri.P, this->P);
+    }
+
+    void operator()( const thrust::host_vector<value_type>& y, thrust::host_vector<value_type>& x) const
+    {
+        unsigned size = M.size();
+        thrust::host_vector<value_type> ci(size), di(size);
+        x.resize(size);
+        ci[0] = P[0]/O[0];
+        di[0] = y[0]/O[0];
+        for( unsigned i=1; i<size; i++)
+        {
+            ci[i] = P[i]/ ( O[i] -M[i]*ci[i-1]);
+            di[i] = (y[i]-M[i]*di[i-1])/(O[i] -M[i]*ci[i-1]);
+        }
+        x[size-1] = di[size-1];
+        for( int i=size-2; i>=0; i--)
+            x[i] = di[i] - ci[i]*x[i+1];
+    }
+    private:
+    thrust::host_vector<value_type> M, O, P;
+};
+
+template<class Container>
+struct KroneckerTriDiagonal2d
+{
+    using value_type = dg::get_value_type<Container>;
+    KroneckerTriDiagonal2d() = default;
+    KroneckerTriDiagonal2d( TriDiagonal<Container> my, TriDiagonal<Container> mx): m_y(my), m_x(mx){}
+    template<class Container2>
+    KroneckerTriDiagonal2d( const KroneckerTriDiagonal2d<Container2>& other){
+        m_x = other.x();
+        m_y = other.y();
+    }
+    const TriDiagonal<Container>& x() const {return m_x;}
+    const TriDiagonal<Container>& y() const {return m_y;}
+    void operator()( const Container& x, Container& y) const
+    {
+        unsigned size = m_y.size()*m_x.size();
+        unsigned Nx = m_x.size(), Ny = m_y.size();
+        dg::blas2::parallel_for( [Nx, Ny] DG_DEVICE(
+                    unsigned i,
+                    const value_type* yM,
+                    const value_type* yO,
+                    const value_type* yP,
+                    const value_type* xM,
+                    const value_type* xO,
+                    const value_type* xP,
+                    const value_type* x, value_type* y){
+                unsigned k = i/Nx, l = i%Nx;
+                value_type a, b, c;
+                if(l==0)
+                {
+                    if( k==0)
+                    {
+                        b = xO[l]*x[k*Nx+l] + xP[l]*x[k*Nx+l+1];
+                        c = xO[l]*x[(k+1)*Nx+l] + xP[l]*x[(k+1)*Nx+l+1];
+                        y[i] = yO[k]*b + yP[k]*c;
+                    }
+                    else if( k == Ny-1)
+                    {
+                        a = xO[l]*x[(k-1)*Nx+l] + xP[l]*x[(k-1)*Nx+l+1];
+                        b = xO[l]*x[k*Nx+l] + xP[l]*x[k*Nx+l+1];
+                        y[i] = yM[k]*a + yO[k]*b;
+                    }
+                    else
+                    {
+                        a = xO[l]*x[(k-1)*Nx+l] + xP[l]*x[(k-1)*Nx+l+1];
+                        b = xO[l]*x[k*Nx+l] + xP[l]*x[k*Nx+l+1];
+                        c = xO[l]*x[(k+1)*Nx+l] + xP[l]*x[(k+1)*Nx+l+1];
+                        y[i] = yM[k]*a + yO[k]*b + yP[k]*c;
+                    }
+                }
+                else if ( l == Nx -1 )
+                {
+                    if( k==0)
+                    {
+                        b = xM[l]*x[k*Nx+l-1] + xO[l]*x[k*Nx+l];
+                        c = xM[l]*x[(k+1)*Nx+l-1] + xO[l]*x[(k+1)*Nx+l];
+                        y[i] = yO[k]*b + yP[k]*c;
+                    }
+                    else if ( k == Ny -1)
+                    {
+                        a = xM[l]*x[(k-1)*Nx+l-1] + xO[l]*x[(k-1)*Nx+l];
+                        b = xM[l]*x[k*Nx+l-1] + xO[l]*x[k*Nx+l];
+                        y[i] = yM[k]*a + yO[k]*b;
+                    }
+                    else
+                    {
+                        a = xM[l]*x[(k-1)*Nx+l-1] + xO[l]*x[(k-1)*Nx+l];
+                        b = xM[l]*x[k*Nx+l-1] + xO[l]*x[k*Nx+l];
+                        c = xM[l]*x[(k+1)*Nx+l-1] + xO[l]*x[(k+1)*Nx+l];
+                        y[i] = yM[k]*a + yO[k]*b + yP[k]*c;
+                    }
+                }
+                else
+                {
+                    if( k==0)
+                    {
+                        b = xM[l]*x[k*Nx+l-1] + xO[l]*x[k*Nx+l] +
+                            xP[l]*x[k*Nx+l+1];
+                        c = xM[l]*x[(k+1)*Nx+l-1] + xO[l]*x[(k+1)*Nx+l] +
+                            xP[l]*x[(k+1)*Nx+l+1];
+                        y[i] = yO[k]*b + yP[k]*c;
+                    }
+                    else if ( k == Ny -1)
+                    {
+                        a = xM[l]*x[(k-1)*Nx+l-1] + xO[l]*x[(k-1)*Nx+l] +
+                            xP[l]*x[(k-1)*Nx+l+1];
+                        b = xM[l]*x[k*Nx+l-1] + xO[l]*x[k*Nx+l] +
+                            xP[l]*x[k*Nx+l+1];
+                        y[i] = yM[k]*a + yO[k]*b;
+                    }
+                    else
+                    {
+                        a = xM[l]*x[(k-1)*Nx+l-1] + xO[l]*x[(k-1)*Nx+l] +
+                            xP[l]*x[(k-1)*Nx+l+1];
+                        b = xM[l]*x[k*Nx+l-1] + xO[l]*x[k*Nx+l] +
+                            xP[l]*x[k*Nx+l+1];
+                        c = xM[l]*x[(k+1)*Nx+l-1] + xO[l]*x[(k+1)*Nx+l] +
+                            xP[l]*x[(k+1)*Nx+l+1];
+                        y[i] = yM[k]*a + yO[k]*b + yP[k]*c;
+                    }
+                }
+            }, size, m_y.M, m_y.O, m_y.P, m_x.M, m_x.O, m_x.P, x, y);
+    }
+    private:
+    dg::TriDiagonal<Container> m_y, m_x;
+};
+
+template<class Container>
+struct InverseKroneckerTriDiagonal2d
+{
+    using value_type = dg::get_value_type<Container>;
+    InverseKroneckerTriDiagonal2d() = default;
+    InverseKroneckerTriDiagonal2d( const KroneckerTriDiagonal2d<Container>& tri)
+    {
+        m_t = tri;
+        unsigned size = m_t.x().size()*m_t.y().size();
+        m_ci.resize( size);
+        m_di.resize( size);
+        m_tmp.resize( size);
+    }
+    template<class Container2>
+    InverseKroneckerTriDiagonal2d( const InverseKroneckerTriDiagonal2d<Container2>& tri)
+    {
+        m_t = tri.tri();
+        unsigned size = m_t.x().size()*m_t.y().size();
+        m_ci.resize( size);
+        m_di.resize( size);
+        m_tmp.resize( size);
+    }
+    const KroneckerTriDiagonal2d<Container>& tri() const {return m_t;}
+    void operator()( const Container& y, Container& x)
+    {
+        unsigned Nx = m_t.x().size(), Ny = m_t.y().size();
+        // solve in two passes, first x then y
+        dg::blas2::parallel_for( [ this, Nx] DG_DEVICE(
+                    unsigned k,
+                    const value_type* M,
+                    const value_type* O,
+                    const value_type* P,
+                    value_type* ci,
+                    value_type* di,
+                    const value_type* y, value_type* x){
+        ci[k*Nx + 0] = P[0]/O[0];
+        di[k*Nx + 0] = y[k*Nx + 0]/O[0];
+        for( unsigned i=1; i<Nx; i++)
+        {
+            ci[k*Nx+i] = P[i]/ ( O[i] -M[i]*ci[k*Nx+i-1]);
+            di[k*Nx+i] = (y[k*Nx+i]-M[i]*di[k*Nx+i-1])/(O[i] -M[i]*ci[k*Nx+i-1]);
+        }
+        x[k*Nx + Nx-1] = di[k*Nx + Nx-1];
+        for( int i=Nx-2; i>=0; i--)
+            x[k*Nx+i] = di[k*Nx+i] - ci[k*Nx+i]*x[k*Nx +i+1];
+
+        }, m_t.y().size(), m_t.x().M, m_t.x().O, m_t.x().P, m_ci, m_di, y, m_tmp);
+
+        dg::blas2::parallel_for( [ this, Nx, Ny] DG_DEVICE(
+                    unsigned i,
+                    const value_type* M,
+                    const value_type* O,
+                    const value_type* P,
+                    value_type* ci,
+                    value_type* di,
+                    const value_type* y, value_type* x){
+        ci[0*Nx + i] = P[0]/O[0];
+        di[0*Nx + i] = y[0*Nx + i]/O[0];
+        for( unsigned k=1; k<Ny; k++)
+        {
+            ci[k*Nx+i] = P[k]/ ( O[k] -M[k]*ci[(k-1)*Nx+i]);
+            di[k*Nx+i] = (y[k*Nx+i]-M[k]*di[(k-1)*Nx+i])/(O[k] -M[k]*ci[(k-1)*Nx+i]);
+        }
+        x[(Ny-1)*Nx + i] = di[(Ny-1)*Nx + i];
+        for( int k=Ny-2; k>=0; k--)
+            x[k*Nx+i] = di[k*Nx+i] - ci[k*Nx+i]*x[(k+1)*Nx +i];
+
+        }, m_t.x().size(), m_t.y().M, m_t.y().O, m_t.y().P, m_ci, m_di,m_tmp, x);
+    }
+
+    private:
+    KroneckerTriDiagonal2d<Container> m_t;
+    Container m_ci, m_di, m_tmp;
+
+};
+
 namespace create{
 
 ///@addtogroup fem
@@ -22,11 +273,10 @@ namespace create{
 
 ///@copydoc hide_fem_mass_doc
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> fem_mass(
+dg::TriDiagonal<dg::HVec_t<real_type>> fem_mass(
     const RealGrid1d<real_type>& g)
 {
-    unsigned num_entries = 3*g.size();
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A(g.size(), g.size(), num_entries);
+    dg::TriDiagonal<dg::HVec_t<real_type>> A(g.size());
     std::vector<real_type> xx = g.dlt().abscissas();
     std::vector<real_type> xa( g.n()+2);
     for( unsigned i=0; i<g.n(); i++)
@@ -39,58 +289,42 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> fem_mass(
         {
             if( i==0 && k == 0)
             {
-                A.row_indices[0] = 0;
-                A.column_indices[0] = 0;
-                A.values[0] = g.h()/12*(4*x[0]+6+2*x[1]);
-                //A.values[0] = g.h()/6*(x[1]-x[-1]);
-                A.row_indices[1] = 0;
-                A.column_indices[1] = 1;
-                A.values[1] = g.h()/12*(x[1]-x[0]);
-                A.row_indices[2] = 0;
-                //A.column_indices[2] = g.size()-1;
-                A.column_indices[2] = 2; // dummy entry to simplify assembly
-                A.values[2] = 0.;
-                //A.values[2] = g.h()/12.*(x[0]-x[-1]);
+                A.O[0] = g.h()/12*(4*x[0]+6+2*x[1]);
+                A.P[0] = g.h()/12*(x[1]-x[0]);
+                A.M[0] = 0.;
                 continue;
             }
-            int I = 3*(i*g.n()+k);
+            int I = (i*g.n()+k);
             if( (i==g.N()-1) && (k == (int)g.n()-1))
             {
-                A.row_indices[I] = g.size()-1;
-                A.column_indices[I] = g.size()-2;
-                A.values[I] = g.h()/12.*(x[k]-x[k-1]);
-                A.row_indices[I+1] = g.size()-1;
-                A.column_indices[I+1] = g.size()-1;
-                A.values[I+1] = g.h()/12*(-4*x[k]+6-2*x[k-1]);
-                //A.values[I+1] = g.h()/6*(x[k+1]-x[k-1]);
-                A.row_indices[I+2] = g.size()-1;
-                //A.column_indices[I+2] = 0;
-                A.column_indices[I+2] = g.size()-3; // dummy entry to simplify assembly
-                A.values[I+2] = 0.;
-                //A.values[I+2] = g.h()/12.*(x[k+1]-x[k]);
+                A.M[I] = g.h()/12.*(x[k]-x[k-1]);
+                A.O[I] = g.h()/12*(-4*x[k]+6-2*x[k-1]);
+                A.P[I] = 0.;
                 continue;
             }
-            A.row_indices[I] = i*g.n()+k;
-            A.column_indices[I] = i*g.n()+k-1;
-            A.values[I] = g.h()/12.*(x[k]-x[k-1]);
-            A.row_indices[I+1] = i*g.n()+k;
-            A.column_indices[I+1] = i*g.n()+k;
-            A.values[I+1] = g.h()/6.*(x[k+1]-x[k-1]);
-            A.row_indices[I+2] = i*g.n()+k;
-            A.column_indices[I+2] = i*g.n()+k+1;
-            A.values[I+2] = g.h()/12.*(x[k+1]-x[k]);
+            A.M[I] = g.h()/12.*(x[k]-x[k-1]);
+            A.O[I] = g.h()/6.*(x[k+1]-x[k-1]);
+            A.P[I] = g.h()/12.*(x[k+1]-x[k]);
         }
     return A;
 }
 
 ///@copydoc hide_fem_mass_doc
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> fem_mass(
+dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_mass(
     const aRealTopology2d<real_type>& g)
 {
-    cusp::csr_matrix<int,real_type,cusp::host_memory> mx = fem_mass(g.gx());
-    cusp::csr_matrix<int,real_type,cusp::host_memory> my = fem_mass(g.gy());
-    return dg::tensorproduct( my, mx);
+    auto mx = fem_mass(g.gx());
+    auto my = fem_mass(g.gy());
+    return {my, mx};
+}
+
+template<class real_type>
+dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_mass(
+    const aRealTopology2d<real_type>& g)
+{
+    auto tri = fem_mass( g);
+    return {tri};
 }
 
 ///@}

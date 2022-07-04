@@ -7,12 +7,14 @@
 
 double function( double x, double y){return sin(x)*cos(y);}
 
-typedef dg::HVec Vector;
-typedef cusp::coo_matrix<int,double,cusp::host_memory> Matrix;
+using Vector = dg::DVec;
+using Matrix = cusp::coo_matrix<int,double,cusp::device_memory>;
+using MassMatrix = dg::KroneckerTriDiagonal2d<Vector>;
+using InvMassMatrix = dg::InverseKroneckerTriDiagonal2d<Vector>;
 
 int main ()
 {
-    unsigned n = 3, Nx = 20, Ny = 20, mx = 3;
+    unsigned n = 3, Nx = 18, Ny = 24, mx = 3;
     double eps = 1e-10;
     //std::cout << "# Type in n Nx Ny mx eps!\n";
     std::cout << "# on grid " << n <<" x "<<Nx<<" x "<<Ny<<"\n";
@@ -29,11 +31,11 @@ int main ()
     double integral = dg::blas2::dot( func, w2d, func);
     std::cout << "error of integral is "
               <<(integral-M_PI*M_PI)/M_PI/M_PI<<std::endl;
-    Vector Xf = dg::pullback( dg::cooX2d, gDIR_f);
-    Vector Yf = dg::pullback( dg::cooY2d, gDIR_f);
+    dg::HVec Xf = dg::pullback( dg::cooX2d, gDIR_f);
+    dg::HVec Yf = dg::pullback( dg::cooY2d, gDIR_f);
     Matrix inter = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU, dg::NEU, "linear");
     Matrix interT = dg::transpose( inter);
-    Matrix Wf = dg::create::diagonal( wf2d), project;
+    Matrix Wf = dg::create::diagonal( (dg::HVec)wf2d), project;
     cusp::multiply( interT, Wf, project);
     //cusp::multiply( project, inter, interT);
     //project = interT;
@@ -52,14 +54,20 @@ int main ()
     // test now should contain Sf
     Vector test( barfunc);
     dg::PCG<Vector> cg( test, 1000);
-    Matrix fem_mass = dg::create::fem_mass( gDIR);
+    MassMatrix fem_mass = dg::create::fem_mass( gDIR);
     //std::cout << "S matrix\n";
     //cusp::print( fem_mass);
     unsigned number = cg.solve( fem_mass, test, barfunc, v2d, w2d, eps);
     dg::blas1::axpby( 1., func, -1., test);
     double norm = sqrt(dg::blas2::dot( w2d, test) );
     double func_norm = sqrt(dg::blas2::dot( w2d, func) );
-    std::cout <<"Distance to true solution: "<<norm/func_norm<<"\n";
+    std::cout <<"PCG Distance to true solution: "<<norm/func_norm<<"\n";
     std::cout << "using "<<number<<" iterations\n";
+    InvMassMatrix inv_fem_mass = dg::create::inv_fem_mass( gDIR);
+    dg::blas2::symv( inv_fem_mass, barfunc, test);
+    dg::blas1::axpby( 1., func, -1., test);
+    norm = sqrt(dg::blas2::dot( w2d, test) );
+    std::cout <<"Thomas Distance to true solution: "<<norm/func_norm<<"\n";
+
     return 0;
 }

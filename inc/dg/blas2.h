@@ -377,6 +377,8 @@ dg::blas1::subroutine( [&]DG_DEVICE( unsigned i, const double* x, double* y){
 template< class Stencil, class ContainerType, class ...ContainerTypes>
 inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
 {
+    // Is the assumption that results are automatically ready on return still true?
+    // Do we have to introduce barriers around this function?
     static_assert( all_true<
             dg::is_vector<ContainerType>::value,
             dg::is_vector<ContainerTypes>::value...>::value,
