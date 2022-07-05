@@ -36,9 +36,9 @@ int main ()
     Matrix inter = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU, dg::NEU, "linear");
     Matrix interT = dg::transpose( inter);
     Matrix Wf = dg::create::diagonal( (dg::HVec)wf2d), project;
-    cusp::multiply( interT, Wf, project);
-    //cusp::multiply( project, inter, interT);
-    //project = interT;
+    Matrix Vf = dg::create::diagonal( (dg::HVec)v2d), tmp;
+    cusp::multiply( interT, Wf, tmp);
+    cusp::multiply( Vf, tmp, project);
     project.sort_by_row_and_column();
     //std::cout << "Project matrix\n";
     //cusp::print( project);
@@ -54,16 +54,38 @@ int main ()
     // test now should contain Sf
     Vector test( barfunc);
     dg::PCG<Vector> cg( test, 1000);
+    // PCG tests fem-mass
     MassMatrix fem_mass = dg::create::fem_mass( gDIR);
     //std::cout << "S matrix\n";
     //cusp::print( fem_mass);
-    unsigned number = cg.solve( fem_mass, test, barfunc, v2d, w2d, eps);
+    unsigned number = cg.solve( fem_mass, test, barfunc, 1., w2d, eps);
     dg::blas1::axpby( 1., func, -1., test);
     double norm = sqrt(dg::blas2::dot( w2d, test) );
     double func_norm = sqrt(dg::blas2::dot( w2d, func) );
     std::cout <<"PCG Distance to true solution: "<<norm/func_norm<<"\n";
     std::cout << "using "<<number<<" iterations\n";
     InvMassMatrix inv_fem_mass = dg::create::inv_fem_mass( gDIR);
+    dg::blas2::symv( inv_fem_mass, barfunc, test);
+    dg::blas1::axpby( 1., func, -1., test);
+    norm = sqrt(dg::blas2::dot( w2d, test) );
+    std::cout <<"Thomas Distance to true solution: "<<norm/func_norm<<"\n";
+
+
+    std::cout << "TEST L2C projection\n";
+    Matrix interC = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU, dg::NEU, "nearest");
+    interT = dg::transpose( interC);
+    cusp::multiply( interT, Wf, tmp);
+    cusp::multiply( Vf, tmp, project);
+    project.sort_by_row_and_column();
+    dg::blas2::symv( project, func_f, barfunc);
+    fem_mass = dg::create::fem_linear2const( gDIR);
+
+    number = cg.solve( fem_mass, test, barfunc, 1., w2d, eps);
+    dg::blas1::axpby( 1., func, -1., test);
+    norm = sqrt(dg::blas2::dot( w2d, test) );
+    std::cout <<"PCG Distance to true solution: "<<norm/func_norm<<"\n";
+    std::cout << "using "<<number<<" iterations\n";
+    inv_fem_mass = dg::create::inv_fem_linear2const( gDIR);
     dg::blas2::symv( inv_fem_mass, barfunc, test);
     dg::blas1::axpby( 1., func, -1., test);
     norm = sqrt(dg::blas2::dot( w2d, test) );
