@@ -103,7 +103,7 @@ dg::MIHMatrix_t<real_type> interpolation( const aRealMPITopology2d<real_type>&
 {
     dg::IHMatrix_t<real_type> mat = dg::create::interpolation(
         g_new.local(), g_old.local(), method);
-    return convert(  mat, g);
+    return convert(  mat, g_old);
 }
 ///@copydoc dg::create::interpolation(const RealGrid1d&,const RealGrid1d&,std::string)
 template<class real_type>
@@ -112,7 +112,7 @@ dg::MIHMatrix_t<real_type> interpolation( const aRealMPITopology3d<real_type>&
 {
     dg::IHMatrix_t<real_type> mat = dg::create::interpolation(
         g_new.local(), g_old.local(), method);
-    return convert(  mat, g);
+    return convert(  mat, g_old);
 }
 
 ///@copydoc dg::create::projection(const RealGrid1d&,const RealGrid1d&)

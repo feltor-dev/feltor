@@ -200,6 +200,7 @@ dg::IHMatrix_t<real_type> window_stencil(
  * @tparam real_type The value type of the matrix
  * @sa \c dg::blas2::stencil \c dg::CSRSlopeLimiter
  * @attention Do not sort the matrix as then the ordering is destroyed
+ * @note Does unfortunately not work very well in more than 1 dimension
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> limiter_stencil(
@@ -396,7 +397,7 @@ dg::MIHMatrix_t<real_type> limiter_stencil(
     auto mz = detail::limiter_stencil(g.local().gz(), g.global().gz(), bound);
     auto einsy = detail::identity_matrix( g.local().gy(), g.global().gy());
     auto einsx = detail::identity_matrix( g.local().gx(), g.global().gx());
-    auto local = dg::tensorproduct( mz, dg::tensorproduct( einsy, einsx);
+    auto local = dg::tensorproduct( mz, dg::tensorproduct( einsy, einsx));
     return dg::convert( local, g);
 }
 

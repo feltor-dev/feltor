@@ -53,6 +53,7 @@ using IDMatrix = IDMatrix_t<double>;
 #ifdef MPI_VERSION
 #include "mpi_vector.h"
 #include "mpi_matrix.h"
+#include "mpi_collective.h"
 
 namespace dg{
 ///@addtogroup typedefs
