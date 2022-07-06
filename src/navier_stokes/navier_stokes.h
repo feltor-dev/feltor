@@ -127,14 +127,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Now compute divNUb
         dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
                 m_divNUb[1]);
-        double alpha = m_p.alpha0;
-        for( unsigned i=0; i<m_p.iter; i++)
-        {
-            dg::blas2::stencil( dg::CSRSWMFilter<double>(alpha), m_stencil, m_divNUb[1], m_temp0);
-            using std::swap;
-            swap( m_temp0, m_divNUb[1]);
-            alpha*=0.8;
-        }
         dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
 
 
@@ -180,14 +172,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
                     m_minus, m_velocityST[1], m_plus, 0., m_temp1);
             dg::blas1::pointwiseDivide( 1., m_temp1, m_densityST[1], 1., m_temp0);
-        }
-        alpha = m_p.alpha0;
-        for( unsigned i=0; i<m_p.iter; i++)
-        {
-            dg::blas2::stencil( dg::CSRSWMFilter<double>(alpha), m_stencil, m_temp0, m_temp1);
-            using std::swap;
-            swap( m_temp0, m_temp1);
-            alpha*=0.8;
         }
         dg::blas1::axpby( 1., m_temp0, 1., yp[1][1]);
     }
