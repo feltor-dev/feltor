@@ -78,7 +78,7 @@ struct KroneckerTriDiagonal2d
 {
     using value_type = dg::get_value_type<Container>;
     KroneckerTriDiagonal2d() = default;
-    KroneckerTriDiagonal2d( TriDiagonal<Container> my, TriDiagonal<Container> mx): m_y(my), m_x(mx){}
+    KroneckerTriDiagonal2d( TriDiagonal<Container> my, TriDiagonal<Container> mx): m_nz(1), m_y(my), m_x(mx){}
     KroneckerTriDiagonal2d( unsigned nz, TriDiagonal<Container> my, TriDiagonal<Container> mx): m_nz(nz), m_y(my), m_x(mx){}
 
     unsigned& nz() { return m_nz;}
@@ -87,10 +87,12 @@ struct KroneckerTriDiagonal2d
     KroneckerTriDiagonal2d( const KroneckerTriDiagonal2d<Container2>& other){
         m_x = other.x();
         m_y = other.y();
+        m_nz = other.nz();
     }
     const TriDiagonal<Container>& x() const {return m_x;}
     const TriDiagonal<Container>& y() const {return m_y;}
-    void operator()( const Container& x, Container& y) const
+    template<class ContainerType0, class ContainerType1>
+    void operator()( const ContainerType0& x, ContainerType1& y) const
     {
         unsigned size = m_y.size()*m_x.size()*m_nz;
         unsigned Nx = m_x.size(), Ny = m_y.size();
@@ -103,8 +105,8 @@ struct KroneckerTriDiagonal2d
                     const value_type* xO,
                     const value_type* xP,
                     const value_type* x, value_type* y){
-            unsigned j = i/(Nx*Ny);
-            unsigned k = (i%(Nx*Ny))/Nx, l = i%Nx;
+            unsigned j = (i/Nx)/Ny;
+            unsigned k = (i/Nx)%Ny, l = i%Nx;
             value_type a, b, c;
             if(l==0)
             {
@@ -156,8 +158,8 @@ struct KroneckerTriDiagonal2d
                 {
                     b = xM[l]*x[(j*Ny+k)*Nx+l-1] + xO[l]*x[(j*Ny+k)*Nx+l] +
                         xP[l]*x[(j*Ny+k)*Nx+l+1];
-                    c = xM[l]*x[(k+1)*Nx+l-1] + xO[l]*x[(k+1)*Nx+l] +
-                        xP[l]*x[(k+1)*Nx+l+1];
+                    c = xM[l]*x[(j*Ny+k+1)*Nx+l-1] + xO[l]*x[(j*Ny+k+1)*Nx+l] +
+                        xP[l]*x[(j*Ny+k+1)*Nx+l+1];
                     y[i] = yO[k]*b + yP[k]*c;
                 }
                 else if ( k == Ny -1)
@@ -182,7 +184,7 @@ struct KroneckerTriDiagonal2d
         }, size, m_y.M, m_y.O, m_y.P, m_x.M, m_x.O, m_x.P, x, y);
     }
     private:
-    unsigned m_nz = 1;
+    unsigned m_nz;
     dg::TriDiagonal<Container> m_y, m_x;
 };
 
@@ -194,7 +196,7 @@ struct InverseKroneckerTriDiagonal2d
     InverseKroneckerTriDiagonal2d( const KroneckerTriDiagonal2d<Container>& tri)
     {
         m_t = tri;
-        unsigned size = m_t.x().size()*m_t.y().size();
+        unsigned size = m_t.x().size()*m_t.y().size()*m_t.nz();
         m_ci.resize( size);
         m_di.resize( size);
         m_tmp.resize( size);
@@ -203,13 +205,14 @@ struct InverseKroneckerTriDiagonal2d
     InverseKroneckerTriDiagonal2d( const InverseKroneckerTriDiagonal2d<Container2>& inv_tri)
     {
         m_t = inv_tri.tri();
-        unsigned size = m_t.x().size()*m_t.y().size();
+        unsigned size = m_t.x().size()*m_t.y().size()*m_t.nz();
         m_ci.resize( size);
         m_di.resize( size);
         m_tmp.resize( size);
     }
     const KroneckerTriDiagonal2d<Container>& tri() const {return m_t;}
-    void operator()( const Container& y, Container& x)
+    template<class ContainerType0, class ContainerType1>
+    void operator()( const ContainerType0& y, ContainerType1& x)
     {
         unsigned Nx = m_t.x().size(), Ny = m_t.y().size();
         // solve in two passes, first x then y
