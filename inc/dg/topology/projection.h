@@ -221,6 +221,67 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const RealG
     Y.sort_by_row_and_column();
     return Y;
 }
+
+template<class real_type>
+dg::IHMatrix_t<real_type> backproject( const RealGrid1d<real_type>& g)
+{
+    unsigned n=g.n();
+    dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
+    dg::RealGrid1d<real_type> g_new( -1., 1., 1, n);
+    auto block = dg::create::transformation( g_new, g_old);
+    dg::Operator<real_type> op(n, 0.);
+    for( unsigned i=0; i<block.num_entries; i++)
+        op( block.row_indices[i], block.column_indices[i]) = block.values[i];
+
+    return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), op);
+}
+
+template<class real_type>
+dg::IHMatrix_t<real_type> backproject( const aRealTopology2d<real_type>& g)
+{
+    auto transformX = backproject( g.gx());
+    auto transformY = backproject( g.gy());
+    return dg::tensorproduct( transformY, transformX);
+}
+
+template<class real_type>
+dg::IHMatrix_t<real_type> backproject( const aRealTopology3d<real_type>& g)
+{
+    auto transformX = backproject( g.gx());
+    auto transformY = backproject( g.gy());
+    auto transformZ = backproject( g.gz());
+    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
+}
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backproject( const RealGrid1d<real_type>& g)
+{
+    unsigned n=g.n();
+    dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
+    dg::RealGrid1d<real_type> g_new( -1., 1., 1, n);
+    auto block = dg::create::transformation( g_new, g_old);
+    dg::Operator<real_type> op(n, 0.);
+    for( unsigned i=0; i<block.num_entries; i++)
+        op( block.row_indices[i], block.column_indices[i]) = block.values[i];
+
+    return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), dg::invert(op));
+}
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology2d<real_type>& g)
+{
+    //create equidistant backward transformation
+    auto transformX = inv_backproject( g.gx());
+    auto transformY = inv_backproject( g.gy());
+    return dg::tensorproduct( transformY, transformX);
+}
+
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology3d<real_type>& g)
+{
+    auto transformX = inv_backproject( g.gx());
+    auto transformY = inv_backproject( g.gy());
+    auto transformZ = inv_backproject( g.gz());
+    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
+}
 ///@}
 
 }//namespace create

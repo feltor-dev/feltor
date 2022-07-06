@@ -95,6 +95,17 @@ int main()
         value2 = sqrt(dg::blas2::dot( sinI, w2do, sinI));
         std::cout << "Forward-Backward Error   "<<value2 << " (Must be zero)\n" << std::endl;
     }
+    std::cout << "Test backproject\n";
+    unsigned n=3, N = 20;
+    dg::Grid1d g1d( 0.1, 7., n, N);
+    auto proj = dg::create::backproject( g1d);
+    auto inv_proj = dg::create::inv_backproject( g1d);
+    auto v = dg::evaluate( sine, g1d), w(v), x(v);
+    dg::blas2::symv( proj, v, w);
+    dg::blas2::symv( inv_proj, w, x);
+    dg::blas1::axpby( 1., v, -1., x);
+    double err = dg::blas1::dot( x, x);
+    std::cout << "Error is "<<sqrt(err)<<" (Must be zero)\n";
 
     return 0;
 }
