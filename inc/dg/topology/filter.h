@@ -296,7 +296,7 @@ struct CSRSlopeLimiter
         if( n == 0) //only every n-th thread does something
             return;
         for( int u=0; u<n; u++)
-            y[i+u] = x[i+u]; // copy input
+            y[column_indices[k+1*n+u]] = x[column_indices[k+1*n + u]]; // copy input
         // Transform
         real_type uM = 0, u0 = 0, uP = 0, u1 = 0;
         for( int u=0; u<n; u++)
@@ -319,7 +319,8 @@ struct CSRSlopeLimiter
             return;
         // Else transform back
         for( int u=0; u<n; u++)
-            y[i+u] = values[k+2*n]>0 ? u0 - m*values[k+2*n+u] : u0 + m*values[k+2*n+u];
+            y[column_indices[k+1*n+u]] =
+             values[k+2*n]>0 ? u0 - m*values[k+2*n+u] : u0 + m*values[k+2*n+u];
     }
     private:
     real_type m_mod;
