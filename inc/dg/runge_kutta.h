@@ -252,7 +252,7 @@ struct ERKStep
 };
 
 /**
-* @brief Filtered Embedded Runge Kutta explicit time-step with error estimate
+* @brief EXPERIMENTAL: Filtered Embedded Runge Kutta explicit time-step with error estimate
 * \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right]\right) \\
@@ -267,7 +267,8 @@ unfiltered sum since with non-linear filters in the filtered sum, some error
 components might not vanish and the timestepper crash. No filter is applied for
 \f$ k_0\f$ since \f$ u^n\f$ is already filtered.
 Even though it may look like it the filter **cannot** be absorbed into the
-right hand side function f analytically.
+right hand side function f analytically. Also, the formulation is **not** equivalent
+to that of the \c dg::ShuOsher class.
 
 @copydetails ERKStep
 */

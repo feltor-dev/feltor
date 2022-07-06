@@ -278,6 +278,8 @@ struct CSRSymvFilter
  * \f]
  * If the result of the minmod function is \f$ u_{n1}\f$, then \f$ \Lambda\Pi( u_h)|_n = u_h|_n\f$, else \f$ \Lambda\Pi(u_h)|_n = \Lambda\Pi(u_h^1)|_n\f$
  * Must be applied in combination with \c limiter_stencil
+ * @note This limiter in a dG advection scheme has mixed success, generally
+ * maybe because we use it as a Kronecker product of two 1d filters?
  *
  * @sa dg::blas2::stencil dg::create::limiter_stencil
  */
