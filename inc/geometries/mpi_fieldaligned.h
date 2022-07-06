@@ -236,7 +236,7 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if( benchmark) t.tic();
     std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
-    grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
+    grid_magnetic->set( grid_coarse->n() == 1 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
     dg::ClonePtr<dg::aGeometry2d> global_grid_magnetic =
         grid_magnetic->global_geometry();
     dg::MPIGrid2d grid_fine( *grid_coarse);//FINE GRID
@@ -258,14 +258,16 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic,
             grid_coarse->local(), ym_coarse, vol2d0.data(), hbm, in_boxm,
             -deltaPhi, eps);
+    {
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(),
-            grid_coarse->local());  //INTERPOLATE TO FINE GRID
+            grid_coarse->local(), grid_coarse->n() < 3 ? "cubic" : "dg");  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine.local())); ym = yp;
     for( int i=0; i<2; i++)
     {
         dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
         dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
     }
+    } // release memory for interpolate matrix
     if(benchmark)
     {
         t.toc();

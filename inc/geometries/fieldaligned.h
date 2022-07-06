@@ -668,7 +668,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     if( benchmark) t.tic();
     std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
     dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
-    grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
+    grid_magnetic->set( grid_coarse->n() == 1 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
     dg::Grid2d grid_fine( *grid_coarse );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
     if( benchmark)
@@ -686,8 +686,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
             yp_coarse, vol2d0, hbp, in_boxp, deltaPhi, eps);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
             ym_coarse, vol2d0, hbm, in_boxm, -deltaPhi, eps);
+    {
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine,
-            *grid_coarse);  //INTERPOLATE TO FINE GRID
+            *grid_coarse, grid_coarse->n() < 3 ? "cubic" : "dg");  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, grid_fine));
     ym = yp;
     for( int i=0; i<2; i++) //only R and Z get interpolated
@@ -695,6 +696,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
         dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
     }
+    } // release memory for interpolate matrix
     if( benchmark)
     {
         t.toc();
