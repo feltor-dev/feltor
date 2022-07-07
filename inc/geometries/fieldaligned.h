@@ -22,7 +22,9 @@ enum whichMatrix
     zeroPlus,  //!< plus interpolation in the current plane
     zeroMinus, //!< minus interpolation in the current plane
     zeroPlusT, //!< transposed plus interpolation in the current plane
-    zeroMinusT //!< transposed minus interpolation in the current plane
+    zeroMinusT, //!< transposed minus interpolation in the current plane
+    zeroBack, //!< from transfomred back to dg coordinates
+    zeroForw  //!< from dg to transformed coordinates
 };
 
 ///@brief Full Limiter means there is a limiter everywhere
@@ -607,6 +609,7 @@ struct Fieldaligned
     container evaluate( BinaryOp binary, UnaryOp unary,
             unsigned p0, unsigned rounds) const;
 
+    std::string method() const{return m_interpolation_method;}
 
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
@@ -614,12 +617,13 @@ struct Fieldaligned
     void zero( enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
     container m_tmp; // 3d size
+    IMatrix m_back, m_forw;
     container m_hbm, m_hbp;         //3d size
     container m_G, m_Gm, m_Gp; // 3d size
     container m_bphi, m_bphiM, m_bphiP; // 3d size
     container m_bbm, m_bbp, m_bbo;  //3d size masks
 
-    container m_left, m_right;      //perp_size
+    container m_left, m_right, m_temp2d;      //perp_size
     container m_limiter;            //perp_size
     container m_ghostM, m_ghostP;   //perp_size
     unsigned m_Nz, m_perp_size;
@@ -659,37 +663,45 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     m_Nz=grid.Nz(), m_bcx = bcx, m_bcy = bcy, m_bcz=grid.bcz();
     m_g.reset(grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
-    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
-    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    m_perp_size = grid_coarse->size();
-    dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
-    dg::assign( dg::evaluate(dg::zero, *grid_coarse), m_left);
-    m_ghostM = m_ghostP = m_right = m_left;
-    ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
+    if( interpolation_method == "dg-const")
+    {
+        m_back = dg::create::inv_backproject( grid); //from equidist to dg
+        m_forw = dg::create::backproject( grid); // from dg to equidist
+    }
+    ///%%%%%%%%%%%%%%%%%%%%%Setup grids%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     dg::Timer t;
     if( benchmark) t.tic();
-    std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
-    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
-    grid_magnetic->set( grid_coarse->n() == 1 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
-    dg::ClonePtr<dg::aGeometry2d> grid_fine;
-    if( interpolation_method == "linear")
+    dg::ClonePtr<dg::aGeometry2d> grid_original( grid.perp_grid()) ;
+    dg::ClonePtr<dg::aGeometry2d> grid_transform( grid_original) ;
+    dg::ClonePtr<dg::aGeometry3d> grid_transform3d( grid) ;
+    if( interpolation_method == "dg-const")
     {
-        dg::FemRefinement fem_refX(mx), fem_refY(my);
-        dg::Grid2d tmp( *grid_coarse );//FINE GRID
+        grid_transform->set( 1, grid.gx().size(), grid.gy().size());
+        grid_transform3d->set( 1, grid.gx().size(), grid.gy().size(), grid.gz().size());
+    }
+    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_original;//INTEGRATE HIGH ORDER GRID
+    grid_magnetic->set( grid_original->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
+    dg::ClonePtr<dg::aGeometry2d> grid_fine;
+    if( interpolation_method == "dg-const" || interpolation_method == "dg")
+    {
+        grid_fine = grid_original;
+        if( interpolation_method == "dg-const")
+            mx *= grid.n(), my *= grid.n();
+        grid_fine->multiplyCellNumbers((double)mx, (double)my);
+    }
+    else
+    {
+        dg::FemRefinement fem_refX( mx), fem_refY(my);
+        dg::Grid2d tmp( *grid_transform);
         dg::CartesianRefinedGrid2d ref( fem_refX, fem_refY, tmp.x0(), tmp.x1(),
                 tmp.y0(), tmp.y1(), tmp.n(), tmp.Nx(), tmp.Ny(),
                 tmp.bcx(), tmp.bcy());
         grid_fine = ref;
-        m_inv_linear = dg::create::inv_fem_mass2d( grid);
-    }
-    else
-    {
-        dg::Grid2d tmp( *grid_coarse );//FINE GRID
-        dg::CartesianGrid2d grid_tmp( tmp.x0(), tmp.x1(), tmp.y0(), tmp.y1(),
-                tmp.n(), tmp.Nx(), tmp.Ny(), tmp.bcx(), tmp.bcy());
-        grid_tmp.multiplyCellNumbers((double)mx, (double)my);
-        grid_fine = grid_tmp;
+        //grid_fine = grid_transform;
+        if( interpolation_method == "linear")
+            m_inv_linear = dg::create::inv_fem_mass2d( grid);
+        if ( interpolation_method == "linear-const")
+            m_inv_linear = dg::create::inv_fem_linear2const2d( grid);
     }
     if( benchmark)
     {
@@ -697,26 +709,28 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
         t.tic();
     }
+    ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
+    std::array<thrust::host_vector<double>,3> yp_trafo, ym_trafo, yp, ym;
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
-    thrust::host_vector<double> vol = dg::tensor::volume(grid.metric()), vol2d0;
+    thrust::host_vector<double> vol = dg::tensor::volume(grid_transform3d->metric()), vol2d0;
     auto vol2d = dg::split( vol, grid);
     dg::assign( vol2d[0], vol2d0);
-    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
-            yp_coarse, vol2d0, hbp, in_boxp, deltaPhi, eps);
-    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
-            ym_coarse, vol2d0, hbm, in_boxm, -deltaPhi, eps);
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
+            yp_trafo, vol2d0, hbp, in_boxp, deltaPhi, eps);
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
+            ym_trafo, vol2d0, hbm, in_boxm, -deltaPhi, eps);
     dg::HVec Xf = dg::pullback(  dg::cooX2d, *grid_fine);
     dg::HVec Yf = dg::pullback(  dg::cooY2d, *grid_fine);
     {
     dg::IHMatrix interpolate = dg::create::interpolation( Xf, Yf,
-            *grid_coarse, dg::NEU, dg::NEU, grid_coarse->n() < 3 ? "cubic" : "dg");  //INTERPOLATE TO FINE GRID
+            *grid_original, dg::NEU, dg::NEU, grid_original->n() < 3 ? "cubic" : "dg");  //INTERPOLATE TO FINE GRID
     yp.fill(dg::evaluate( dg::zero, *grid_fine));
     ym = yp;
     for( int i=0; i<2; i++) //only R and Z get interpolated
     {
-        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
-        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
+        dg::blas2::symv( interpolate, yp_trafo[i], yp[i]);
+        dg::blas2::symv( interpolate, ym_trafo[i], ym[i]);
     }
     } // release memory for interpolate matrix
     if( benchmark)
@@ -726,27 +740,49 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         t.tic();
     }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
-            *grid_coarse, bcx, bcy, interpolation_method), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1],
-            *grid_coarse, bcx, bcy, interpolation_method), minus, minusT;
-    if( mx == my && mx == 1)
+    dg::IHMatrix plusFine, minusFine, plus, minus;
+    if( interpolation_method == "dg-const" || interpolation_method == "dg")
+    {
+        plusFine = dg::create::interpolation( yp[0], yp[1],
+                *grid_original, bcx, bcy, "dg");
+        minusFine = dg::create::interpolation( ym[0], ym[1],
+                *grid_original, bcx, bcy, "dg");
+    }
+    else
+    {
+        plusFine = dg::create::interpolation( yp[0], yp[1],
+                *grid_transform, bcx, bcy, "linear");
+        minusFine = dg::create::interpolation( ym[0], ym[1],
+                *grid_transform, bcx, bcy, "linear");
+        //dg::IHMatrix forw = dg::create::backproject( *grid_original); // from dg to equidist
+        //cusp::multiply( plusFineTmp, forw, plusFine);
+        //cusp::multiply( minusFineTmp, forw, minusFine);
+    }
+    if( mx == 1 && my == 1)
     {
         plus = plusFine;
         minus = minusFine;
     }
     else
     {
-        dg::IHMatrix projection = dg::transpose(dg::create::interpolation( Xf,
-                    Yf, *grid_coarse, dg::NEU, dg::NEU, interpolation_method));
-        dg::IHMatrix Wf = dg::create::diagonal( dg::create::volume( *grid_fine));
-        dg::IHMatrix Vf = dg::create::diagonal( dg::create::inv_weights( *grid_coarse));
-        if( interpolation_method == "linear")
-            Vf = dg::create::diagonal( dg::create::fem_inv_weights( *grid_coarse));
-
-        dg::IHMatrix tmp;
-        cusp::multiply( projection, Wf, tmp);
-        cusp::multiply( Vf, tmp, projection);
+        dg::IHMatrix projection;
+        if( interpolation_method == "dg-const" || interpolation_method == "dg")
+        {
+            projection = dg::create::transformation( *grid_transform, *grid_fine);
+        }
+        else
+        {
+            std::string method = "linear";
+            if( interpolation_method == "linear-const")
+                method = "nearest";
+            projection = dg::transpose(dg::create::interpolation( Xf,
+                    Yf, *grid_transform, dg::NEU, dg::NEU, method));
+            dg::IHMatrix Wf = dg::create::diagonal( dg::create::volume( *grid_fine));
+            dg::IHMatrix Vf = dg::create::diagonal( dg::create::fem_inv_weights( *grid_transform));
+            dg::IHMatrix tmp;
+            cusp::multiply( projection, Wf, tmp);
+            cusp::multiply( Vf, tmp, projection);
+        }
         cusp::multiply( projection, plusFine, plus);
         cusp::multiply( projection, minusFine, minus);
     }
@@ -758,37 +794,37 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::blas2::transfer( plus, m_plus);
     dg::blas2::transfer( minus, m_minus);
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
-    dg::HVec hbphi( yp_coarse[2]), hbphiP(hbphi), hbphiM(hbphi);
-    hbphi = dg::pullback( vec.z(), *grid_coarse);
+    dg::HVec hbphi( yp_trafo[2]), hbphiP(hbphi), hbphiM(hbphi);
+    hbphi = dg::pullback( vec.z(), *grid_transform);
     //this is a pullback bphi( R(zeta, eta), Z(zeta, eta)):
-    if( dynamic_cast<const dg::CartesianGrid2d*>( grid_coarse.get()))
+    if( dynamic_cast<const dg::CartesianGrid2d*>( grid_transform.get()))
     {
         for( unsigned i=0; i<hbphiP.size(); i++)
         {
-            hbphiP[i] = vec.z()(yp_coarse[0][i], yp_coarse[1][i]);
-            hbphiM[i] = vec.z()(ym_coarse[0][i], ym_coarse[1][i]);
+            hbphiP[i] = vec.z()(yp_trafo[0][i], yp_trafo[1][i]);
+            hbphiM[i] = vec.z()(ym_trafo[0][i], ym_trafo[1][i]);
         }
     }
     else
     {
         dg::HVec Ihbphi = dg::pullback( vec.z(), *grid_magnetic);
         dg::HVec Lhbphi = dg::forward_transform( Ihbphi, *grid_magnetic);
-        for( unsigned i=0; i<yp_coarse[0].size(); i++)
+        for( unsigned i=0; i<yp_trafo[0].size(); i++)
         {
-            hbphiP[i] = dg::interpolate( dg::lspace, Lhbphi, yp_coarse[0][i],
-                    yp_coarse[1][i], *grid_magnetic);
-            hbphiM[i] = dg::interpolate( dg::lspace, Lhbphi, ym_coarse[0][i],
-                    ym_coarse[1][i], *grid_magnetic);
+            hbphiP[i] = dg::interpolate( dg::lspace, Lhbphi, yp_trafo[0][i],
+                    yp_trafo[1][i], *grid_magnetic);
+            hbphiM[i] = dg::interpolate( dg::lspace, Lhbphi, ym_trafo[0][i],
+                    ym_trafo[1][i], *grid_magnetic);
         }
     }
     dg::assign3dfrom2d( hbphi,  m_bphi,  grid);
     dg::assign3dfrom2d( hbphiM, m_bphiM, grid);
     dg::assign3dfrom2d( hbphiP, m_bphiP, grid);
 
-    dg::assign3dfrom2d( yp_coarse[2], m_Gp, grid);
-    dg::assign3dfrom2d( ym_coarse[2], m_Gm, grid);
-    m_G = dg::create::volume(grid);
-    container weights = dg::create::weights( grid);
+    dg::assign3dfrom2d( yp_trafo[2], m_Gp, grid);
+    dg::assign3dfrom2d( ym_trafo[2], m_Gm, grid);
+    m_G = dg::create::volume(*grid_transform3d);
+    container weights = dg::create::weights( *grid_transform3d);
     dg::blas1::pointwiseDot( m_Gp, weights, m_Gp);
     dg::blas1::pointwiseDot( m_Gm, weights, m_Gm);
 
@@ -818,6 +854,12 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     m_deltaPhi = deltaPhi; // store for evaluate
     m_tmp = m_bbm;
     m_interpolation_method = interpolation_method;
+    ///%%%%%%%%%%%%%%%%%%%%%Assign Limiter%%%%%%%%%%%%%%%%%%%%%%%%%//
+
+    m_perp_size = grid_transform->size();
+    dg::assign( dg::pullback(limit, *grid_transform), m_limiter);
+    dg::assign( dg::evaluate(dg::zero, *grid_transform), m_left);
+    m_temp2d = m_ghostM = m_ghostP = m_right = m_left;
 }
 
 
@@ -896,8 +938,9 @@ void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const co
     if(     which == einsPlus  || which == einsMinusT ) ePlus(  which, f, fe);
     else if(which == einsMinus || which == einsPlusT  ) eMinus( which, f, fe);
     else if(which == zeroMinus || which == zeroPlus ||
-            which == zeroMinusT|| which == zeroPlusT  ) zero(   which, f, fe);
-    if( m_interpolation_method == "linear")
+            which == zeroMinusT|| which == zeroPlusT ||
+            which == zeroForw || which == zeroBack  ) zero(   which, f, fe);
+    if( (m_interpolation_method == "linear" || m_interpolation_method == "linear-const") && which != zeroForw && which != zeroBack)
     {
         dg::blas2::symv( m_inv_linear, fe, m_tmp);
         m_tmp.swap( fe);
@@ -927,6 +970,32 @@ void Fieldaligned<G, I, container>::zero( enum whichMatrix which,
             if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_minusT, m_f[i0], m_temp[i0]);
         }
+    }
+    if( which == zeroForw)
+    {
+        if( m_interpolation_method == "dg-const")
+        {
+            dg::blas2::symv( m_forw, f, f0);
+        }
+        //else if ( m_interpolation_method == "linear-const" )
+        //{
+        //    dg::blas2::symv( m_inv_linear.tri(), f, f0);
+        //}
+        else
+            dg::blas1::copy( f, f0);
+    }
+    if( which == zeroBack)
+    {
+        if( m_interpolation_method == "dg-const")
+        {
+            dg::blas2::symv( m_back, f, f0);
+        }
+        //else if ( m_interpolation_method == "linear-const")
+        //{
+        //    dg::blas2::symv( m_inv_linear, f, f0);
+        //}
+        else
+            dg::blas1::copy( f, f0);
     }
 }
 template< class G, class I, class container>
