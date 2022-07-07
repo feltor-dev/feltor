@@ -98,10 +98,16 @@ int main()
     std::cout << "Test backproject\n";
     unsigned n=3, N = 20;
     dg::Grid1d g1d( 0.1, 7., n, N);
+    dg::Grid1d g1dequi( 0.1, 7., 1, n*N);
+    auto w1d = dg::create::weights( g1d);
+    auto w1dequi = dg::create::weights( g1dequi);
     auto proj = dg::create::backproject( g1d);
     auto inv_proj = dg::create::inv_backproject( g1d);
     auto v = dg::evaluate( sine, g1d), w(v), x(v);
     dg::blas2::symv( proj, v, w);
+    double integral = dg::blas1::dot( v, w1d);
+    double integralequi = dg::blas1::dot( w, w1dequi);
+    std::cout << "Error Integral is "<<(integral-integralequi)<<" (Must be zero)\n";
     dg::blas2::symv( inv_proj, w, x);
     dg::blas1::axpby( 1., v, -1., x);
     double err = dg::blas1::dot( x, x);
