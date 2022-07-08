@@ -447,7 +447,7 @@ struct Explicit
     std::array<Container,2> m_dssU, m_lapParU;
 
     // Helper variables
-    Container m_temp0, m_temp1;
+    Container m_temp0, m_temp1, m_temp2;
     Container m_minus, m_plus;
     Container m_fluxM, m_fluxP;
 
@@ -665,6 +665,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_apar = m_aparST = m_profne = m_wall = m_sheath = m_temp0;
     m_plus = m_minus = m_temp0;
     m_fluxM = m_fluxP = m_temp0;
+    m_temp2 = m_temp1;
 
     m_potential[0] = m_potential[1] = m_temp0;
     m_plusSTN = m_minusSTN = m_minusSTU = m_plusSTU = m_potential;
@@ -1204,22 +1205,24 @@ void Explicit<Geometry, IMatrix, Matrix,
              std::string slope_limiter
              )
 {
+    m_fa( dg::geo::zeroForw, density, m_temp2);
+    //dg::blas1::copy( density, m_temp2);
     dg::blas1::evaluate( fluxM, dg::equals(), dg::Upwind(),
-            velocityKM, densityM, density);
+            velocityKM, densityM, m_temp2);
     dg::blas1::evaluate( fluxP, dg::equals(), dg::Upwind(),
-            velocityKP, density, densityP);
+            velocityKP, m_temp2, densityP);
     if(slope_limiter != "none" )
     {
         m_fa( dg::geo::einsMinus, densityM, m_minus);
         m_fa( dg::geo::einsPlus, densityP, m_plus);
         // Let's keep the default boundaries of NEU
         // boundary values are (probably?) never used in the slope limiter branches
-        dg::blas1::copy(density, m_temp0);
+        dg::blas1::copy(m_temp2, m_temp0);
         update_parallel_bc_2nd( m_fa, m_temp0, densityP, m_plus, dg::NEU, 0.);
-        dg::blas1::copy(density, m_temp0);
+        dg::blas1::copy(m_temp2, m_temp0);
         update_parallel_bc_2nd( m_fa, m_minus, densityM, m_temp0, dg::NEU, 0.);
-        dg::blas1::axpby( 1., densityP, -1., density, m_temp0);
-        dg::blas1::axpby( 1., density, -1., densityM, m_temp1);
+        dg::blas1::axpby( 1., densityP, -1., m_temp2, m_temp0);
+        dg::blas1::axpby( 1., m_temp2, -1., densityM, m_temp1);
         dg::blas1::axpby( 1., densityM, -1., densityM, m_temp1);
         if( slope_limiter == "minmod")
         {
@@ -1238,7 +1241,7 @@ void Explicit<Geometry, IMatrix, Matrix,
                             fluxM -= 0.5*minmod( dKP-dK, dK-dKM);
 
                     }, fluxM, fluxP, velocityKM, velocityKP, m_minus, densityM,
-                    density, densityP, m_plus);
+                    m_temp2, densityP, m_plus);
         }
         else if( slope_limiter == "vanLeer")
         {
@@ -1257,7 +1260,7 @@ void Explicit<Geometry, IMatrix, Matrix,
                             fluxM -= 0.5*vanLeer( dKP-dK, dK-dKM);
 
                     }, fluxM, fluxP, velocityKM, velocityKP, m_minus, densityM,
-                    density, densityP, m_plus);
+                    m_temp2, densityP, m_plus);
         }
     }
 }
@@ -1288,8 +1291,10 @@ void Explicit<Geometry, IMatrix, Matrix,
              std::string slope_limiter
              )
 {
+    m_fa( dg::geo::zeroForw, velocity, m_temp2);
+    //dg::blas1::copy( velocity, m_temp2);
     dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
-            velocity, minusST, plusST);
+            m_temp2, minusST, plusST);
     if(slope_limiter != "none" )
     {
         dg::blas1::axpby( 1., plusST, -1., minusST, m_temp0);
@@ -1301,13 +1306,13 @@ void Explicit<Geometry, IMatrix, Matrix,
         if( slope_limiter == "minmod")
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::MinMod>(), velocity,
+                dg::SlopeLimiter<dg::MinMod>(), m_temp2,
                 m_minus, m_temp0, m_plus, 0.5, 0.5);
         }
         else if( slope_limiter == "vanLeer")
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::VanLeer>(), velocity,
+                dg::SlopeLimiter<dg::VanLeer>(), m_temp2,
                 m_minus, m_temp0, m_plus, 0.5, 0.5);
         }
     }

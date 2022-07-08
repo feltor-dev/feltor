@@ -175,7 +175,7 @@ dg::IHMatrix_t<real_type> adjoint_backscatter( const RealGrid1d<real_type>& g)
     dg::Operator<real_type> backward1d = backwardeq*forward;
 
     auto inv_weights = dg::create::inv_weights( g.dlt());
-    dg::Operator<real_type> weights_eq(n,0);
+    dg::Operator<real_type> weights_eq(g.n(),0);
     for( unsigned i=0; i<g.n(); i++)
         weights_eq(i,i) = 2./(real_type)g.n();
 
