@@ -676,7 +676,7 @@ Operator<real_type> weights( const DLT<real_type>& dlt)
  * @return new operator
  */
 template<class real_type>
-Operator<real_type> precond( const DLT<real_type>& dlt)
+Operator<real_type> inv_weights( const DLT<real_type>& dlt)
 {
     unsigned n = dlt.weights().size();
     Operator<real_type> op( n, 0);

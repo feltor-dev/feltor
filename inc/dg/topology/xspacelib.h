@@ -75,7 +75,7 @@ namespace create{
 ///@{
 
 /**
- * @brief Create a matrix that transforms values to an equidistant grid ready for visualisation
+ * @brief Create a matrix \f$ B_{eq} F\f$ that transforms values to an equidistant grid ready for visualisation
  *
  * Useful if you want to visualize a dg-formatted vector.
  * @param g The grid on which to operate
@@ -115,9 +115,11 @@ dg::IHMatrix_t<real_type> backscatter( const aRealTopology3d<real_type>& g)
 }
 
 /**
- * @brief Create a matrix that transforms values from an equidistant grid back to a dg grid
+ * @brief Create a matrix \f$ (B_{eq} F)^{-1}\f$ that transforms values from an equidistant grid back to a dg grid
  *
  * The inverse of \c dg::create::backscatter
+ * @note The inverse of the backscatter matrix is **not** its adjoint! The adjoint \f$ (B_{eq}F)^\dagger\f$
+ * is the matrix that computes the (inexact) projection integral on an equidistant grid.
  * @param g The grid on which to operate
  *
  * @return transformation matrix (block diagonal)
