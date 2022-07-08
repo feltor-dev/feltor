@@ -282,6 +282,46 @@ dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology3d<real_type>& g)
     auto transformZ = inv_backproject( g.gz());
     return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
 }
+
+template<class real_type>
+dg::IHMatrix_t<real_type> adjoint_backproject( const RealGrid1d<real_type>& g)
+{
+    // Is this the same as interpolating the Newton polynomial at the dG points?
+    // No probably only projecting onto the equidistant Newton polynomial will give that
+    unsigned n=g.n();
+    dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
+    dg::RealGrid1d<real_type> g_new( -1., 1., 1, n);
+    auto block = dg::create::transformation( g_new, g_old);
+    dg::Operator<real_type> op(n, 0.);
+    for( unsigned i=0; i<block.num_entries; i++)
+        op( block.row_indices[i], block.column_indices[i]) = block.values[i];
+
+    auto inv_weights = dg::create::inv_weights( g.dlt());
+    dg::Operator<real_type> weights_eq(n,0);
+    for( unsigned i=0; i<g.n(); i++)
+        weights_eq(i,i) = 2./(real_type)g.n();
+
+    auto adjoint = inv_weights*op.transpose()*weights_eq;
+
+    return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), adjoint);
+}
+template<class real_type>
+dg::IHMatrix_t<real_type> adjoint_backproject( const aRealTopology2d<real_type>& g)
+{
+    //create equidistant backward transformation
+    auto transformX = adjoint_backproject( g.gx());
+    auto transformY = adjoint_backproject( g.gy());
+    return dg::tensorproduct( transformY, transformX);
+}
+
+template<class real_type>
+dg::IHMatrix_t<real_type> adjoint_backproject( const aRealTopology3d<real_type>& g)
+{
+    auto transformX = adjoint_backproject( g.gx());
+    auto transformY = adjoint_backproject( g.gy());
+    auto transformZ = adjoint_backproject( g.gz());
+    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
+}
 ///@}
 
 }//namespace create
