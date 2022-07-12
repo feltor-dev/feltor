@@ -665,8 +665,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     if( deltaPhi <=0) deltaPhi = grid.hz();
     if( interpolation_method != "dg")
     {
-        m_back = dg::create::inv_backscatter( grid); //from equidist to dg
-        m_forw = dg::create::backscatter( grid); // from dg to equidist
+        m_back = dg::create::inv_backproject( grid); //from equidist to dg
+        m_forw = dg::create::backproject( grid); // from dg to equidist
     }
     ///%%%%%%%%%%%%%%%%%%%%%Setup grids%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     dg::Timer t;
@@ -760,7 +760,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
                 *grid_original, bcx, bcy, "linear");
         dg::IHMatrix minusFineTmp = dg::create::interpolation( ym[0], ym[1],
                 *grid_original, bcx, bcy, "linear");
-        dg::IHMatrix forw = dg::create::backscatter( *grid_transform); // from dg to equidist
+        dg::IHMatrix forw = dg::create::backproject( *grid_transform); // from dg to equidist
         cusp::multiply( plusFineTmp, forw, plusFine);
         cusp::multiply( minusFineTmp, forw, minusFine);
     }
@@ -789,7 +789,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
             //cusp::multiply( projection, Wf, tmp);
             //cusp::multiply( Vf, tmp, projection);
             dg::IHMatrix proj = dg::create::projection( *grid_original, *grid_fine);
-            auto back = dg::create::inv_backscatter( *grid_transform);
+            auto back = dg::create::inv_backproject( *grid_transform);
             cusp::multiply( back, proj, projection);
         }
         cusp::multiply( projection, plusFine, plus);
