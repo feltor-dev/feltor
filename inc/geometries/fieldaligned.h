@@ -663,7 +663,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     m_Nz=grid.Nz(), m_bcx = bcx, m_bcy = bcy, m_bcz=grid.bcz();
     m_g.reset(grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
-    if( interpolation_method != "dg")
+    //if( interpolation_method != "dg")
     {
         m_back = dg::create::inv_backproject( grid); //from equidist to dg
         m_forw = dg::create::backproject( grid); // from dg to equidist
@@ -675,11 +675,11 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::ClonePtr<dg::aGeometry3d> grid_original3d( grid) ;
     dg::ClonePtr<dg::aGeometry2d> grid_transform( grid_original) ;
     dg::ClonePtr<dg::aGeometry3d> grid_transform3d( grid) ;
-    if( interpolation_method == "dg-const")
-    {
-        grid_transform->set( 1, grid.gx().size(), grid.gy().size());
-        grid_transform3d->set( 1, grid.gx().size(), grid.gy().size(), grid.gz().size());
-    }
+    //if( interpolation_method == "dg-const")
+    //{
+    //    grid_transform->set( 1, grid.gx().size(), grid.gy().size());
+    //    grid_transform3d->set( 1, grid.gx().size(), grid.gy().size(), grid.gz().size());
+    //}
     dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_original;//INTEGRATE HIGH ORDER GRID
     grid_magnetic->set( grid_original->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
     dg::ClonePtr<dg::aGeometry2d> grid_fine;
@@ -687,7 +687,12 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     {
         grid_fine = grid_original;
         if( interpolation_method == "dg-const")
+        {
             mx *= grid.n(), my *= grid.n();
+            grid_original->set( 1, grid.gx().size(), grid.gy().size());
+            grid_original3d->set( 1, grid.gx().size(), grid.gy().size(), grid.gz().size());
+            m_inv_linear = dg::create::inv_fem_linear2const2d( *grid_original3d);
+        }
         grid_fine->multiplyCellNumbers((double)mx, (double)my);
     }
     else
@@ -750,9 +755,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     if( interpolation_method == "dg-const" || interpolation_method == "dg")
     {
         plusFine = dg::create::interpolation( yp[0], yp[1],
-                *grid_original, bcx, bcy, "dg");
+                *grid_transform, bcx, bcy, "dg");
         minusFine = dg::create::interpolation( ym[0], ym[1],
-                *grid_original, bcx, bcy, "dg");
+                *grid_transform, bcx, bcy, "dg");
     }
     else
     {
@@ -772,10 +777,14 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     else
     {
         dg::IHMatrix projection;
-        if( interpolation_method == "dg-const" || interpolation_method == "dg")
+        if( interpolation_method == "dg-const")
         {
-            projection = dg::create::transformation( *grid_transform, *grid_fine);
+            dg::IHMatrix proj = dg::create::transformation( *grid_original, *grid_fine);
+            auto back = dg::create::inv_backproject( *grid_transform);
+            cusp::multiply( back, proj, projection);
         }
+        else if( interpolation_method == "dg")
+            projection = dg::create::projection( *grid_original, *grid_fine);
         else
         {
             std::string method = "linear";
@@ -957,6 +966,13 @@ void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const co
     //    dg::blas2::symv( m_inv_linear, fe, m_tmp);
     //    m_tmp.swap( fe);
     //}
+    if( m_interpolation_method == "dg-const")
+    {
+        dg::blas2::symv( m_forw, fe, m_tmp);
+        dg::blas2::symv( m_inv_linear.tri(), m_tmp, fe);
+        dg::blas2::symv( m_back, fe, m_tmp);
+        m_tmp.swap(fe);
+    }
 }
 
 template< class G, class I, class container>
@@ -985,11 +1001,11 @@ void Fieldaligned<G, I, container>::zero( enum whichMatrix which,
     }
     if( which == zeroForw)
     {
-        if( m_interpolation_method == "dg-const")
-        {
-            dg::blas2::symv( m_forw, f, f0);
-        }
-        else if ( m_interpolation_method == "linear-const" )
+        //if( m_interpolation_method == "dg-const")
+        //{
+        //    //dg::blas2::symv( m_forw, f, f0);
+        //}
+        if ( m_interpolation_method == "linear-const" )
         {
             dg::blas2::symv( m_forw, f, f0);
             dg::blas2::symv( m_inv_linear.tri(), f0, m_tmp);
