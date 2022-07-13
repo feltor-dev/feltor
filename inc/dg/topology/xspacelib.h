@@ -75,7 +75,7 @@ namespace create{
 ///@{
 
 /**
- * @brief Create a matrix \f$ B_{eq} F\f$ that transforms values to an equidistant grid ready for visualisation
+ * @brief Create a matrix \f$ B_{eq} F\f$ that interpolates values to an equidistant grid ready for visualisation
  *
  * Useful if you want to visualize a dg-formatted vector.
  * @param g The grid on which to operate
@@ -155,52 +155,6 @@ dg::IHMatrix_t<real_type> inv_backscatter( const aRealTopology3d<real_type>& g)
     return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
 }
 
-/**
- * @brief Create a matrix \f$ (B_{eq} F)^\dagger \f$ that transforms values from an equidistant grid back to a dg grid
- *
- * The adjoint of \c dg::create::backscatter
- * @note The inverse of the backscatter matrix is **not** its adjoint! The adjoint \f$ (B_{eq}F)^\dagger\f$
- * is the matrix that computes the (inexact) projection integral on an equidistant grid.
- * @param g The grid on which to operate
- *
- * @return transformation matrix (block diagonal)
- * @sa dg::blas2::symv dg::create::backscatter
- */
-template<class real_type>
-dg::IHMatrix_t<real_type> adjoint_backscatter( const RealGrid1d<real_type>& g)
-{
-    //create equidistant backward transformation
-    dg::Operator<real_type> backwardeq( g.dlt().backwardEQ());
-    dg::Operator<real_type> forward( g.dlt().forward());
-    dg::Operator<real_type> backward1d = backwardeq*forward;
-
-    auto inv_weights = dg::create::inv_weights( g.dlt());
-    dg::Operator<real_type> weights_eq(g.n(),0);
-    for( unsigned i=0; i<g.n(); i++)
-        weights_eq(i,i) = 2./(real_type)g.n();
-
-    auto adjoint = inv_weights*backward1d.transpose()*weights_eq;
-    return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), adjoint);
-}
-///@copydoc adjoint_backscatter(const RealGrid1d<real_type>&)
-template<class real_type>
-dg::IHMatrix_t<real_type> adjoint_backscatter( const aRealTopology2d<real_type>& g)
-{
-    //create equidistant backward transformation
-    auto transformX = adjoint_backscatter( g.gx());
-    auto transformY = adjoint_backscatter( g.gy());
-    return dg::tensorproduct( transformY, transformX);
-}
-
-///@copydoc adjoint_backscatter(const RealGrid1d<real_type>&)
-template<class real_type>
-dg::IHMatrix_t<real_type> adjoint_backscatter( const aRealTopology3d<real_type>& g)
-{
-    auto transformX = adjoint_backscatter( g.gx());
-    auto transformY = adjoint_backscatter( g.gy());
-    auto transformZ = adjoint_backscatter( g.gz());
-    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
-}
 ///@}
 
 } //namespace create
