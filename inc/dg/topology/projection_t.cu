@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cusp/print.h>
 #include "dg/blas.h"
+#include "derivatives.h"
 #include "projection.h"
 #include "evaluation.h"
 #include "fast_interpolation.h"
@@ -97,7 +98,7 @@ int main()
     }
     std::cout << "Test backproject\n";
     unsigned n=3, N = 20;
-    dg::Grid1d g1d( 0.1, 7., n, N);
+    dg::Grid1d g1d( 0.0, M_PI+0.0, n, N, dg::DIR);
     dg::Grid1d g1dequi( 0.1, 7., 1, n*N);
     auto w1d = dg::create::weights( g1d);
     auto w1dequi = dg::create::weights( g1dequi);
@@ -112,6 +113,22 @@ int main()
     dg::blas1::axpby( 1., v, -1., x);
     double err = dg::blas1::dot( x, x);
     std::cout << "Error is "<<sqrt(err)<<" (Must be zero)\n";
+
+    std::cout << "Test smoother\n";
+    proj = dg::create::smoothing( g1d);
+    dg::blas2::symv( proj, v, w);
+    integral = dg::blas1::dot( w1d, v);
+    integralequi = dg::blas1::dot( w1d, w);
+    std::cout << "Error Integral is "<<(integral-integralequi)<<" (Must be zero)\n";
+    auto dx = dg::create::dx( g1d, dg::centered);
+    auto dxv = v, dxw = w;
+    dg::blas2::symv( dx, v, dxv);
+    dg::blas2::symv( dx, w, dxw);
+    dg::blas1::transform (dxv, dxv, [](double x){ return fabs(x);});
+    dg::blas1::transform (dxw, dxw, [](double x){ return fabs(x);});
+    integral = dg::blas1::dot( w1d, dxv);
+    integralequi = dg::blas1::dot( w1d, dxw);
+    std::cout << "Rel Decrease in Variation is "<<(integralequi-integral)/integral<<" (Must be negative)\n";
 
     return 0;
 }

@@ -6,6 +6,10 @@
 
 namespace dg{
 
+///@addtogroup sparsematrix
+///@{
+/*!@brief Fast tridiagonal sparse matrix
+ */
 template<class Container>
 struct TriDiagonal
 {
@@ -40,8 +44,45 @@ struct TriDiagonal
             }, M.size(), M, O, P, x, y);
     }
 
+    dg::IHMatrix_t<value_type> asIMatrix() const{
+        unsigned size = M.size();
+        cusp::coo_matrix<int,value_type,cusp::host_memory>  A( size, size, 3*size-2);
+        A.row_indices[0] = 0;
+        A.column_indices[0] = 0;
+        A.values[0] = O[0];
+
+        A.row_indices[1] = 0;
+        A.column_indices[1] = 1;
+        A.values[1] = P[0];
+
+        for( unsigned i=1;i<size; i++)
+        {
+            A.row_indices[3*i-1+0] = i;
+            A.column_indices[3*i-1+0] = i-1;
+            A.values[3*i-1+0] = M[i];
+
+            A.row_indices[3*i-1+1] = i;
+            A.column_indices[3*i-1+1] = i;
+            A.values[3*i-1+1] = O[i];
+
+            if( i != (size-1))
+            {
+                A.row_indices[3*i-1+2] = i;
+                A.column_indices[3*i-1+2] = i+1;
+                A.values[3*i-1+2] = P[i];
+            }
+        }
+        return dg::IHMatrix_t<value_type>(A);
+    }
+
     Container M, O, P;
 };
+
+/*!@brief Fast inverse tridiagonal sparse matrix
+ *
+ * When applied to a vector, uses Thomas algorithm to compute \f$ T^{-1} v\f$
+ * @attention Only for shared memory vectors
+ */
 template<class value_type>
 struct InverseTriDiagonal
 {
@@ -73,6 +114,8 @@ struct InverseTriDiagonal
     thrust::host_vector<value_type> M, O, P;
 };
 
+/*!@brief Fast tridiagonal sparse matrix in 2d \f$ T_y\otimes T_x\f$
+ */
 template<class Container>
 struct KroneckerTriDiagonal2d
 {
@@ -188,6 +231,12 @@ struct KroneckerTriDiagonal2d
     dg::TriDiagonal<Container> m_y, m_x;
 };
 
+/*!@brief Fast inverse tridiagonal sparse matrix in 2d \f$ T_y^{-1}\otimes T_x^{-1}\f$
+ *
+ * When applied to a vector, uses Thomas algorithm to compute \f$ T^{-1} v\f$ first
+ * row-wise in x and then column-wise in y
+ * @attention Only for shared memory vectors
+ */
 template<class Container>
 struct InverseKroneckerTriDiagonal2d
 {
@@ -265,16 +314,34 @@ struct InverseKroneckerTriDiagonal2d
     Container m_ci, m_di, m_tmp;
 
 };
+///@}
 
 namespace create{
 
 ///@addtogroup fem
 ///@{
-//
+
 /*!@class hide_fem_mass_doc
-* @brief \f$ S_{ij} = \int v_i(x) v_j(x) \f$ finite element mass matrix
+* @brief \f$ S_{ij} = \frac{1}{w_i}\int v_i(x) v_j(x) \f$ finite element projection matrix
 *
-* Or in other words the matrix of projection integrals \f$ \int v_i(x) v_j(x)\f$
+* where \f$ v_j\f$ are triangle finite elements
+* @tparam real_type The value type
+* @param g The grid
+* @return Host Matrix
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+*/
+/*!@class hide_fem_inv_mass_doc
+* @brief Inverse finite element mass matrix \f$ S^{-1} \f$
+*
+* @tparam real_type The value type
+* @param g The grid
+* @return Host Matrix
+* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+*/
+/*!@class hide_fem_linear2const_doc
+* @brief \f$ S_{ij} = \frac{1}{w_i}\int c_i(x) v_j(x) \f$ finite element projection matrix
+*
+* where \f$ c_i\f$ are the constant finite elements and \f$ v_j\f$ are triangles
 * @tparam real_type The value type
 * @param g The grid
 * @return Host Matrix
@@ -321,10 +388,12 @@ dg::TriDiagonal<dg::HVec_t<real_type>> fem_mass(
     return A;
 }
 
+///@copydoc hide_fem_linear2const_doc
 template<class real_type>
 dg::TriDiagonal<dg::HVec_t<real_type>> fem_linear2const(
     const RealGrid1d<real_type>& g)
 {
+    //bug! periodic boundary conditions
     dg::TriDiagonal<dg::HVec_t<real_type>> A(g.size());
     std::vector<real_type> xx = g.dlt().abscissas();
     std::vector<real_type> xa( g.n()+2);
@@ -371,6 +440,7 @@ dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_mass(
     return {my, mx};
 }
 
+///@copydoc hide_fem_inv_mass_doc
 template<class real_type>
 dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_mass(
     const aRealTopology2d<real_type>& g)
@@ -379,6 +449,7 @@ dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_mass(
     return {tri};
 }
 
+///@copydoc hide_fem_linear2const_doc
 template<class real_type>
 dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_linear2const(
     const aRealTopology2d<real_type>& g)
@@ -388,6 +459,7 @@ dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_linear2const(
     return {my, mx};
 }
 
+///@copydoc hide_fem_inv_mass_doc
 template<class real_type>
 dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_linear2const(
     const aRealTopology2d<real_type>& g)
@@ -396,6 +468,7 @@ dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_linear2const(
     return {tri};
 }
 
+///@copydoc hide_fem_mass_doc
 template<class real_type>
 dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_mass2d(
     const aRealTopology3d<real_type>& g)
@@ -405,6 +478,7 @@ dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_mass2d(
     return {g.gz().size(), my, mx};
 }
 
+///@copydoc hide_fem_inv_mass_doc
 template<class real_type>
 dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_mass2d(
     const aRealTopology3d<real_type>& g)
@@ -413,6 +487,7 @@ dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_mass2d(
     return {tri};
 }
 
+///@copydoc hide_fem_linear2const_doc
 template<class real_type>
 dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_linear2const2d(
     const aRealTopology3d<real_type>& g)
@@ -422,6 +497,7 @@ dg::KroneckerTriDiagonal2d<dg::HVec_t<real_type>> fem_linear2const2d(
     return {g.gz().size(), my, mx};
 }
 
+///@copydoc hide_fem_inv_mass_doc
 template<class real_type>
 dg::InverseKroneckerTriDiagonal2d<dg::HVec_t<real_type>> inv_fem_linear2const2d(
     const aRealTopology3d<real_type>& g)

@@ -5,6 +5,7 @@
 #include "grid.h"
 #include "interpolation.h"
 #include "weights.h"
+#include "fem.h"
 
 /*!@file
 
@@ -306,6 +307,46 @@ dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology3d<real_type>& g)
     auto transformX = inv_backproject( g.gx());
     auto transformY = inv_backproject( g.gy());
     auto transformZ = inv_backproject( g.gz());
+    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
+}
+
+/**
+ * @brief Create a matrix \f$ T^{-1} S T\f$ that smoothes a dg discretized function
+ *
+ * We first \c backproject to an equidistant grid where we apply the \c fem_linear2const
+ * tridiagonal smoother after which we transform back to the equidistant grid with \c inv_backproject
+ * @param g The grid on which to operate
+ *
+ * @return smoothing matrix
+ * @sa dg::create::fem_linear2const
+ */
+template<class real_type>
+dg::IHMatrix_t<real_type> smoothing( const RealGrid1d<real_type>& g)
+{
+    auto trafo = backproject( g), inv_trafo = inv_backproject(g), tmp(trafo);
+    RealGrid1d<real_type> g1(g);
+    g1.set( 1, g.size());
+    auto smooth = fem_linear2const(g1).asIMatrix();
+    cusp::multiply( smooth, trafo, tmp);
+    cusp::multiply( inv_trafo, tmp, trafo);
+    return dg::IHMatrix_t<real_type> (trafo);
+}
+///@copydoc smoothing(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> smoothing( const aRealTopology2d<real_type>& g)
+{
+    auto transformX = smoothing( g.gx());
+    auto transformY = smoothing( g.gy());
+    return dg::tensorproduct( transformY, transformX);
+}
+
+///@copydoc smoothing(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> smoothing( const aRealTopology3d<real_type>& g)
+{
+    auto transformX = smoothing( g.gx());
+    auto transformY = smoothing( g.gy());
+    auto transformZ = smoothing( g.gz());
     return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
 }
 
