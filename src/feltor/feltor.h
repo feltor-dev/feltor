@@ -256,13 +256,14 @@ struct Explicit
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0., m_dsP[i]);
                 // velocity m_dssU, m_lapParU
                 m_fa( dg::geo::einsMinus, m_velocity[i], m_minus);
+                m_fa( dg::geo::zeroForw,  m_velocity[i], m_zero);
                 m_fa( dg::geo::einsPlus,  m_velocity[i], m_plus);
                 update_parallel_bc_2nd( m_fa, m_minus, m_velocity[i], m_plus,
                         m_p.bcxU, 0.);
                 dg::geo::dssd_centered( m_fa, 1.,
-                        m_minus, m_velocity[i], m_plus, 0., m_lapParU[i]);
+                        m_minus, m_zero, m_plus, 0., m_lapParU[i]);
                 dg::geo::dss_centered( m_fa, 1., m_minus,
-                    m_velocity[i], m_plus, 0., m_dssU[i]);
+                    m_zero, m_plus, 0., m_dssU[i]);
                 // velocity m_dsU
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0.,
                         m_dsU[i]);
@@ -437,7 +438,7 @@ struct Explicit
     std::array<Container,2> m_plusSTN, m_minusSTN, m_plusSTU, m_minusSTU;
     std::vector<Container> m_multi_chi;
 
-    // overwritten by diag_update and set once by operator()
+    // overwritten by diag_update and/or set once by operator()
     std::array<Container,3> m_dA;
     std::array<std::array<Container,3>,2> m_dP, m_dFN, m_dBN, m_dFU, m_dBU;
     std::array<Container,2> m_dsN, m_dsP, m_dsU;
@@ -446,10 +447,12 @@ struct Explicit
     // Set by diag_update
     std::array<Container,2> m_dssU, m_lapParU;
 
-    // Helper variables
-    Container m_temp0, m_temp1, m_temp2;
-    Container m_minus, m_plus;
+    // Helper variables can be overwritten any time (except by compute_parallel)!!
+    Container m_temp0, m_temp1;
+    Container m_minus, m_zero, m_plus;
     Container m_fluxM, m_fluxP;
+    // Helper variables for compute_parallel_flux
+    Container m_dN, m_dNMM, m_dNM, m_dNZ, m_dNP, m_dNPP;
 
     //matrices and solvers
     Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
@@ -658,9 +661,9 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_source = m_sheath_coordinate = m_UE2 = m_temp1 = m_temp0;
     m_apar = m_aparST = m_profne = m_wall = m_sheath = m_temp0;
-    m_plus = m_minus = m_temp0;
+    m_plus = m_zero = m_minus = m_temp0;
     m_fluxM = m_fluxP = m_temp0;
-    m_temp2 = m_temp1;
+    m_dN = m_dNMM = m_dNM = m_dNZ = m_dNP = m_dNPP = m_temp1;
 
     m_potential[0] = m_potential[1] = m_temp0;
     m_plusSTN = m_minusSTN = m_minusSTU = m_plusSTU = m_potential;
@@ -1200,62 +1203,48 @@ void Explicit<Geometry, IMatrix, Matrix,
              std::string slope_limiter
              )
 {
-    m_fa( dg::geo::zeroForw, density, m_temp2);
-    //dg::blas1::copy( density, m_temp2);
     dg::blas1::evaluate( fluxM, dg::equals(), dg::Upwind(),
-            velocityKM, densityM, m_temp2);
+            velocityKM, densityM, density);
     dg::blas1::evaluate( fluxP, dg::equals(), dg::Upwind(),
-            velocityKP, m_temp2, densityP);
+            velocityKP, density, densityP);
     if(slope_limiter != "none" )
     {
-        m_fa( dg::geo::einsMinus, densityM, m_minus);
-        m_fa( dg::geo::einsPlus, densityP, m_plus);
+        // compute dn_k-1, dn_k, dn_k+1
+        // By transforming dn to plus and minus planes
+        dg::blas1::axpby( 1., densityP, -1., density, m_dNZ);
+
+        m_fa( dg::geo::zeroForw, m_dNZ, m_dNP);
+        m_fa( dg::geo::einsPlus, m_dNZ, m_dNPP);
+
+        dg::blas1::axpby( 1., density, -1., densityM, m_dNZ);
+
+        m_fa( dg::geo::zeroForw, m_dNZ, m_dNM);
+        m_fa( dg::geo::einsMinus, m_dNZ, m_dNMM);
+
         // Let's keep the default boundaries of NEU
         // boundary values are (probably?) never used in the slope limiter branches
-        dg::blas1::copy(m_temp2, m_temp0);
-        update_parallel_bc_2nd( m_fa, m_temp0, densityP, m_plus, dg::NEU, 0.);
-        dg::blas1::copy(m_temp2, m_temp0);
-        update_parallel_bc_2nd( m_fa, m_minus, densityM, m_temp0, dg::NEU, 0.);
-        dg::blas1::axpby( 1., densityP, -1., m_temp2, m_temp0);
-        dg::blas1::axpby( 1., m_temp2, -1., densityM, m_temp1);
-        dg::blas1::axpby( 1., densityM, -1., densityM, m_temp1);
+        //dg::blas1::copy(density, m_temp0); // save density
+        //update_parallel_bc_2nd( m_fa, m_temp0, densityP, m_plus, dg::NEU, 0.);
+        //dg::blas1::copy(density, m_temp0);
+        //update_parallel_bc_2nd( m_fa, m_minus, densityM, m_temp0, dg::NEU, 0.);
+        // dn is computed inside the limiter
         if( slope_limiter == "minmod")
         {
-            dg::MinMod minmod;
-            dg::blas1::subroutine( [minmod] DG_DEVICE(
-                        double& fluxM, double& fluxP, double vKM, double vKP,
-                        double dKMM, double dKM, double dK, double dKP, double dKPP)
-                    {
-                        if( vKP >= 0.)
-                            fluxP += 0.5*minmod( dKP-dK, dK-dKM);
-                        else
-                            fluxP -= 0.5*minmod( dKPP-dKP, dKP-dK);
-                        if( vKM >= 0.)
-                            fluxM += 0.5*minmod( dK-dKM, dKM-dKMM);
-                        else
-                            fluxM -= 0.5*minmod( dKP-dK, dK-dKM);
-
-                    }, fluxM, fluxP, velocityKM, velocityKP, m_minus, densityM,
-                    m_temp2, densityP, m_plus);
+            dg::blas1::evaluate( fluxM, dg::plus_equals(),
+                dg::SlopeLimiter<dg::MinMod>(), velocityKM,
+                m_dNMM, m_dNM, m_dNP, 0.5, 0.5);
+            dg::blas1::evaluate( fluxP, dg::plus_equals(),
+                dg::SlopeLimiter<dg::MinMod>(), velocityKP,
+                m_dNM, m_dNP, m_dNPP, 0.5, 0.5);
         }
         else if( slope_limiter == "vanLeer")
         {
-            dg::VanLeer vanLeer;
-            dg::blas1::subroutine( [vanLeer] DG_DEVICE(
-                        double& fluxM, double& fluxP, double vKM, double vKP,
-                        double dKMM, double dKM, double dK, double dKP, double dKPP)
-                    {
-                        if( vKP >= 0.)
-                            fluxP += 0.5*vanLeer( dKP-dK, dK-dKM);
-                        else
-                            fluxP -= 0.5*vanLeer( dKPP-dKP, dKP-dK);
-                        if( vKM >= 0.)
-                            fluxM += 0.5*vanLeer( dK-dKM, dKM-dKMM);
-                        else
-                            fluxM -= 0.5*vanLeer( dKP-dK, dK-dKM);
-
-                    }, fluxM, fluxP, velocityKM, velocityKP, m_minus, densityM,
-                    m_temp2, densityP, m_plus);
+            dg::blas1::evaluate( fluxM, dg::plus_equals(),
+                dg::SlopeLimiter<dg::VanLeer>(), velocityKM,
+                m_dNMM, m_dNM, m_dNP, 0.5, 0.5);
+            dg::blas1::evaluate( fluxP, dg::plus_equals(),
+                dg::SlopeLimiter<dg::VanLeer>(), velocityKP,
+                m_dNM, m_dNP, m_dNPP, 0.5, 0.5);
         }
     }
 }
@@ -1286,29 +1275,30 @@ void Explicit<Geometry, IMatrix, Matrix,
              std::string slope_limiter
              )
 {
-    m_fa( dg::geo::zeroForw, velocity, m_temp2);
-    //dg::blas1::copy( velocity, m_temp2);
     dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
-            m_temp2, minusST, plusST);
+            velocity, minusST, plusST);
     if(slope_limiter != "none" )
     {
-        dg::blas1::axpby( 1., plusST, -1., minusST, m_temp0);
-        m_fa( dg::geo::einsMinus, m_temp0, m_minus);
-        m_fa( dg::geo::einsPlus, m_temp0, m_plus);
+        // compute dn_k-1, dn_k, dn_k+1
+        // By transforming dn to plus and minus planes
+        dg::blas1::axpby( 1., plusST, -1., minusST, m_dN);
+        m_fa( dg::geo::einsMinus, m_dN, m_dNM);
+        m_fa( dg::geo::zeroForw,  m_dN, m_dNZ);
+        m_fa( dg::geo::einsPlus,  m_dN, m_dNP);
         // Let's keep the default boundaries of NEU
         // boundary values are (probably?) never used in the slope limiter branches
-        update_parallel_bc_2nd( m_fa, m_minus, m_temp0, m_plus, dg::NEU, 0.);
+        //update_parallel_bc_2nd( m_fa, m_minus, m_temp0, m_plus, dg::NEU, 0.);
         if( slope_limiter == "minmod")
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::MinMod>(), m_temp2,
-                m_minus, m_temp0, m_plus, 0.5, 0.5);
+                dg::SlopeLimiter<dg::MinMod>(), velocity,
+                m_dNM, m_dNZ, m_dNP, 0.5, 0.5);
         }
         else if( slope_limiter == "vanLeer")
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::VanLeer>(), m_temp2,
-                m_minus, m_temp0, m_plus, 0.5, 0.5);
+                dg::SlopeLimiter<dg::VanLeer>(), velocity,
+                m_dNM, m_dNZ, m_dNP, 0.5, 0.5);
         }
     }
 }
@@ -1737,11 +1727,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         if( m_p.nu_parallel_u[i] > 0)
         {
             m_fa( dg::geo::einsMinus, velocityST[i], m_minus);
-            m_fa( dg::geo::einsPlus, velocityST[i], m_plus);
+            m_fa( dg::geo::zeroForw,  velocityST[i], m_zero);
+            m_fa( dg::geo::einsPlus,  velocityST[i], m_plus);
             update_parallel_bc_2nd( m_fa, m_minus, velocityST[i],
                     m_plus, m_p.bcxU, 0.);
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[i],
-                    m_minus, velocityST[i], m_plus, 0., m_temp0);
+                    m_minus, m_zero, m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
         }
     }
