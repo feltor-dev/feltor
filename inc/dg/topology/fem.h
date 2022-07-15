@@ -329,6 +329,7 @@ namespace create{
 * @param g The grid
 * @return Host Matrix
 * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+* @attention No periodic boundary conditions
 */
 /*!@class hide_fem_inv_mass_doc
 * @brief Inverse finite element mass matrix \f$ S^{-1} \f$
@@ -337,6 +338,7 @@ namespace create{
 * @param g The grid
 * @return Host Matrix
 * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+* @attention No periodic boundary conditions
 */
 /*!@class hide_fem_linear2const_doc
 * @brief \f$ S_{ij} = \frac{1}{w_i}\int c_i(x) v_j(x) \f$ finite element projection matrix
@@ -346,6 +348,7 @@ namespace create{
 * @param g The grid
 * @return Host Matrix
 * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+* @attention No periodic boundary conditions
 */
 
 ///@copydoc hide_fem_mass_doc
