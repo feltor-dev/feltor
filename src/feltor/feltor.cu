@@ -140,8 +140,6 @@ int main( int argc, char* argv[])
     //feltor::Filter<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DVec> filter( grid, js);
     feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
-    feltor::Implicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
-        dg::x::DMatrix, dg::x::DVec> implicit( feltor);
     DG_RANK0 std::cout << "# Done!\n";
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
@@ -248,9 +246,7 @@ int main( int argc, char* argv[])
 
     ///////////////////////////////////////////////////////////////////////////
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
-    feltor::ImplicitSolver<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> solver;
     dg::ExplicitMultistep< Vector> multistep;
-    dg::ImExMultistep< Vector > multistep_imex;
     dg::Adaptive< dg::ERKStep< Vector>> adapt;
     dg::Adaptive< dg::ARKStep< Vector>> adapt_ark;
     auto odeint = std::unique_ptr<dg::aTimeloop<Vector>>();
@@ -261,15 +257,6 @@ int main( int argc, char* argv[])
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
         odeint = std::make_unique<dg::MultistepTimeloop<Vector>>( multistep,
             feltor, time, y0, dt);
-    }
-    else if( p.timestepper == "multistep-imex")
-    {
-        double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
-        solver = { feltor, eps_time};
-        multistep_imex = { p.tableau, y0};
-        dt = js[ "timestepper"]["dt"].asDouble( 0.01);
-        odeint = std::make_unique<dg::MultistepTimeloop<Vector>>( multistep_imex,
-            std::tie(feltor, implicit, solver), time, y0, dt);
     }
     else if (p.timestepper == "adaptive")
     {
@@ -283,18 +270,6 @@ int main( int argc, char* argv[])
             feltor, dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
         var.nfailed = &adapt.nfailed();
     }
-    else if (p.timestepper == "adaptive-imex")
-    {
-        double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
-        solver = { feltor, eps_time};
-        adapt_ark = { p.tableau, y0};
-        rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
-        atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
-        reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
-        odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>( adapt_ark,
-            std::tie(feltor, implicit, solver), dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
-        var.nfailed = &adapt_ark.nfailed();
-    }
     else
     {
         DG_RANK0 std::cerr << "Error: Unrecognized timestepper: '"
@@ -306,7 +281,7 @@ int main( int argc, char* argv[])
     unsigned maxout = js["output"].get( "maxout", 0).asUInt();
     double Tend = 0;
     std::string output_mode = "free";
-    if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
+    if( p.timestepper == "adaptive" )
     {
         output_mode = js["timestepper"].get(
                 "output-mode", "equidistant").asString();
@@ -633,7 +608,7 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
+                if( p.timestepper == "adaptive" )
                 {
                     DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
                     DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
@@ -832,7 +807,7 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
+                if( p.timestepper == "adaptive" )
                 {
                     std::cout << "\tdt "<<odeint->get_dt()<<"\n";
                     std::cout << "\tfailed "<<*var.nfailed<<"\n";

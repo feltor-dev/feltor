@@ -1840,71 +1840,72 @@ The explicit parallel electron viscosity term leads to a CFL condition of the
 form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 \end{tcolorbox}
 
- In every iteration of the implicit inversion we need to solve an equation of the form
- \begin{align}
-     n_e + a \hat L_{n_e} n_e = \hat n_e \\
-     N_i + a \hat L_{N_e} N_i = \hat N_i \\
-     w_e + a \hat L_{u_e} u_e = \hat w_e \\
-     W_i + a \hat L_{U_i} U_i = \hat W_i
- \end{align}
- for given right hand side and unkown $n_e$, $N_i$, $w_e$ and $W_i$ with $W_\parallel=U_\parallel+A_\parallel/\mu$ and $-\Delta_\perp A_\parallel = \beta (N_i U_i -n_e u_e)$ and $\hat L$ the linear implicit part of the equations.
- We solve the system by first isolating and solving the two density equations for $n_e$ and $N_i$. These can then be inserted into the Ampere equation as
- fixed solutions, which makes this equation linear in the velocities.
- We solve the velocity equations by artificially introducing $A_\parallel$ as
- an additional unkown
- \begin{align}
-     \begin{pmatrix}
-         1  + a\hat L_{u_e} & 0 & \frac{1}{\mu_e} \\
-         0 & 1  + a \hat L_{U_i} &  \frac{1}{\mu_i} \\
-     n_e & -N_i &  -\frac{1}{\beta}\Delta_\perp \\
-     \end{pmatrix}
-     \begin{pmatrix}
-         u_e\\ U_i \\ A_\parallel
-     \end{pmatrix}
-     =
-     \begin{pmatrix}
-         \hat w_e\\ \hat W_i \\ 0
-     \end{pmatrix}
- \end{align}
-We can show that $\det M  > 0$ and thus $M$ is invertible.
- We can make the matrix equation symmetric
- \begin{align}
-     \begin{pmatrix}
-     -\mu_e n_e  - a\mu_e n_e \hat L_{u_e} & 0 & -n_e \\
-     0 & \mu_i N_i  + a\mu_i N_i \hat L_{U_i} &  N_i \\
-     -n_e & N_i &  \frac{1}{\beta}\Delta_\perp \\
-     \end{pmatrix}
-     \begin{pmatrix}
-         u_e\\ U_i \\ A_\parallel
-     \end{pmatrix}
-     =
-     \begin{pmatrix}
-         -\mu_e n_e \hat w_e\\ \mu_i N_i \hat W_i \\ 0
-     \end{pmatrix}
- \end{align}
- If both $\hat L$ are symmetric positive definite, this matrix $M'$ is symmetric but unfortunately in-definite
- (insert $(0,0,A_\parallel)$ to get $\vec z^T M' \vec z < 0$ but
- $(u_e, U_i, 0)$ yields $\vec z^T M' \vec z > 0$)
-   and thus cannot be solved via a conjugate gradient solve.
-
-Since the CG cannot be used it is also worth considering an iteration on $w_e$
-and $W_i$
- \begin{align}
-     \begin{pmatrix}
-         1  + a\hat L_{u_e} & 0 & -\frac{1}{\mu_e}a\hat L_{u_e} \\
-         0 & 1  + a \hat L_{U_i} &  -\frac{1}{\mu_i}a \hat L_{U_i} \\
-         \beta n_e & -\beta N_i &  - \frac{\beta}{\mu_e}n_e + \frac{\beta}{\mu_i}N_i -\Delta_\perp \\
-     \end{pmatrix}
-     \begin{pmatrix}
-         w_e\\ W_i \\ A_\parallel
-     \end{pmatrix}
-     =
-     \begin{pmatrix}
-         \hat w_e\\ \hat W_i \\ 0
-     \end{pmatrix}
- \end{align}
- which may be better conditioned because it becomes diagonally dominant for
- small $a$ and large $\beta$.
+% In every iteration of the implicit inversion we need to solve an equation of the form
+% \begin{align}
+%     n_e + a \hat L_{n_e} n_e = \hat n_e \\
+%     N_i + a \hat L_{N_e} N_i = \hat N_i \\
+%     w_e + a \hat L_{u_e} u_e = \hat w_e \\
+%     W_i + a \hat L_{U_i} U_i = \hat W_i
+% \end{align}
+% for given right hand side and unkown $n_e$, $N_i$, $w_e$ and $W_i$ with $W_\parallel=U_\parallel+A_\parallel/\mu$ and $-\Delta_\perp A_\parallel = \beta (N_i U_i -n_e u_e)$ and $\hat L$ the linear implicit part of the equations.
+% We solve the system by first isolating and solving the two density equations for $n_e$ and $N_i$. These can then be inserted into the Ampere equation as
+% fixed solutions, which makes this equation linear in the velocities.
+% We solve the velocity equations by artificially introducing $A_\parallel$ as
+% an additional unkown
+% \begin{align}
+%     \begin{pmatrix}
+%         1  + a\hat L_{u_e} & 0 & \frac{1}{\mu_e} \\
+%         0 & 1  + a \hat L_{U_i} &  \frac{1}{\mu_i} \\
+%     n_e & -N_i &  -\frac{1}{\beta}\Delta_\perp \\
+%     \end{pmatrix}
+%     \begin{pmatrix}
+%         u_e\\ U_i \\ A_\parallel
+%     \end{pmatrix}
+%     =
+%     \begin{pmatrix}
+%         \hat w_e\\ \hat W_i \\ 0
+%     \end{pmatrix}
+% \end{align}
+%We can show that $\det M  > 0$ and thus $M$ is invertible.
+% We can make the matrix equation symmetric
+% \begin{align}
+%     \begin{pmatrix}
+%     -\mu_e n_e  - a\mu_e n_e \hat L_{u_e} & 0 & -n_e \\
+%     0 & \mu_i N_i  + a\mu_i N_i \hat L_{U_i} &  N_i \\
+%     -n_e & N_i &  \frac{1}{\beta}\Delta_\perp \\
+%     \end{pmatrix}
+%     \begin{pmatrix}
+%         u_e\\ U_i \\ A_\parallel
+%     \end{pmatrix}
+%     =
+%     \begin{pmatrix}
+%         -\mu_e n_e \hat w_e\\ \mu_i N_i \hat W_i \\ 0
+%     \end{pmatrix}
+% \end{align}
+% If both $\hat L$ are symmetric positive definite, this matrix $M'$ is symmetric but unfortunately in-definite
+% (insert $(0,0,A_\parallel)$ to get $\vec z^T M' \vec z < 0$ but
+% $(u_e, U_i, 0)$ yields $\vec z^T M' \vec z > 0$)
+%   and thus cannot be solved via a conjugate gradient solve.
+%
+%Since the CG cannot be used it is also worth considering an iteration on $w_e$
+%and $W_i$
+% \begin{align}
+%     \begin{pmatrix}
+%         1  + a\hat L_{u_e} & 0 & -\frac{1}{\mu_e}a\hat L_{u_e} \\
+%         0 & 1  + a \hat L_{U_i} &  -\frac{1}{\mu_i}a \hat L_{U_i} \\
+%         \beta n_e & -\beta N_i &  - \frac{\beta}{\mu_e}n_e + \frac{\beta}{\mu_i}N_i -\Delta_\perp \\
+%     \end{pmatrix}
+%     \begin{pmatrix}
+%         w_e\\ W_i \\ A_\parallel
+%     \end{pmatrix}
+%     =
+%     \begin{pmatrix}
+%         \hat w_e\\ \hat W_i \\ 0
+%     \end{pmatrix}
+% \end{align}
+% which may be better conditioned because it becomes diagonally dominant for
+% small $a$ and large $\beta$.
+%%MW: unfortunately even though the idea is to decouple the outer and inner inversions, this does not really work
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Steering the file output} \label{sec:output}

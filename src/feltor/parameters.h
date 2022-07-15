@@ -70,11 +70,11 @@ struct Parameters
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
         solver_type = "lgmres";
-        if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
-        {
-            partitioned = true;
-            solver_type = js["timestepper"]["solver"].get( "type", "lgmres").asString();
-        }
+        //if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
+        //{
+        //    partitioned = true;
+        //    solver_type = js["timestepper"]["solver"].get( "type", "lgmres").asString();
+        //}
 
         inner_loop  = js["output"].get("inner_loop",1).asUInt();
         itstp       = js["output"].get("itstp", 0).asUInt();
