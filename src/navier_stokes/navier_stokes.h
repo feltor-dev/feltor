@@ -88,11 +88,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
+            m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
+            m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_velocityST[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_velocityST[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
@@ -165,11 +165,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
+            m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
+            m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_velocityST[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_velocityST[1], m_plus, 0., m_temp1);
             dg::blas1::pointwiseDivide( 1., m_temp1, m_densityST[1], 1., m_temp0);
         }
@@ -227,11 +227,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, m_velocity[1], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocity[1], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocity[1],
+            m_fa( dg::geo::einsMinus, m_velocity[1], m_minus);
+            m_fa( dg::geo::einsPlus, m_velocity[1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_velocity[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_velocity[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_density[1], 1., yp[1][1]);
         }
@@ -312,11 +312,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1], m_p.bcxN, m_p.bcxN ==
                     dg::DIR ? m_p.nbc : 0.);
             dg::blas1::axpby( 0.5, m_minusSTN[1], 0.5, m_plusSTN[1], m_densityST[1]);
-            m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
+            m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
+            m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_velocityST[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_velocityST[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
@@ -375,11 +375,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
+            m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
+            m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_velocityST[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_velocityST[1], m_plus, 1., yp[1][1]);
         }
     }
@@ -451,11 +451,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, m_velocityST[1], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocityST[1], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocityST[1],
+            m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
+            m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_velocityST[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_velocityST[1], m_plus, 1., yp[1][1]);
         }
     }
@@ -516,11 +516,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, m_velocity[1], m_minus);
-            m_fa_diff( dg::geo::einsPlus, m_velocity[1], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocity[1],
+            m_fa( dg::geo::einsMinus, m_velocity[1], m_minus);
+            m_fa( dg::geo::einsPlus, m_velocity[1], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, m_velocity[1],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_velocity[1], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_density[1], 1., yp[1][1]);
         }

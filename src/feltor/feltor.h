@@ -255,16 +255,16 @@ struct Explicit
                         m_p.bcxP, 0.);
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0., m_dsP[i]);
                 // velocity m_dssU, m_lapParU
-                m_fa_diff( dg::geo::einsMinus, m_velocity[i], m_minus);
-                m_fa_diff( dg::geo::einsPlus,  m_velocity[i], m_plus);
-                update_parallel_bc_2nd( m_fa_diff, m_minus, m_velocity[i], m_plus,
+                m_fa( dg::geo::einsMinus, m_velocity[i], m_minus);
+                m_fa( dg::geo::einsPlus,  m_velocity[i], m_plus);
+                update_parallel_bc_2nd( m_fa, m_minus, m_velocity[i], m_plus,
                         m_p.bcxU, 0.);
-                dg::geo::dssd_centered( m_fa_diff, 1.,
+                dg::geo::dssd_centered( m_fa, 1.,
                         m_minus, m_velocity[i], m_plus, 0., m_lapParU[i]);
-                dg::geo::dss_centered( m_fa_diff, 1., m_minus,
+                dg::geo::dss_centered( m_fa, 1., m_minus,
                     m_velocity[i], m_plus, 0., m_dssU[i]);
                 // velocity m_dsU
-                dg::geo::ds_centered( m_fa_diff, 1., m_minus, m_plus, 0.,
+                dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0.,
                         m_dsU[i]);
                 // velocity source
                 dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
@@ -454,7 +454,7 @@ struct Explicit
     //matrices and solvers
     Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
     Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_P, m_dy_A, m_dz;
-    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST, m_fa_diff;
+    dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
@@ -544,11 +544,6 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz, p.interpolation_method);
         m_faST.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
-        if( !(p.interpolation_method == "dg"))
-            m_fa_diff.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
-                p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz, "dg");
-        else
-            m_fa_diff = m_fa;
     }
 
     // in Poisson we take EPhi except for the true curvmode
@@ -1741,11 +1736,11 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[i] > 0)
         {
-            m_fa_diff( dg::geo::einsMinus, velocityST[i], m_minus);
-            m_fa_diff( dg::geo::einsPlus, velocityST[i], m_plus);
-            update_parallel_bc_2nd( m_fa_diff, m_minus, velocityST[i],
+            m_fa( dg::geo::einsMinus, velocityST[i], m_minus);
+            m_fa( dg::geo::einsPlus, velocityST[i], m_plus);
+            update_parallel_bc_2nd( m_fa, m_minus, velocityST[i],
                     m_plus, m_p.bcxU, 0.);
-            dg::geo::dssd_centered( m_fa_diff, m_p.nu_parallel_u[i],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[i],
                     m_minus, velocityST[i], m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
         }
