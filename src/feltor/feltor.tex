@@ -1787,8 +1787,8 @@ of physical parameters.
 \end{tcolorbox}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Timestepper}
-The time stepper is an explicit multistep method where you can chose the
-tableau to use
+The first option for the time stepper is an explicit fixed-stepsize multistep method
+where you can chose the tableau to use
 \begin{minted}[texcomments]{js}
 "timestepper" :
 {
@@ -1805,33 +1805,13 @@ The second option is an adaptive explicit embedded Runge-Kutta scheme
 {
     "type"    : "adaptive", //Choose an explicit adaptive RK scheme
     "tableau" : "Bogacki-Shampine-4-2-3", // Any explicit embedded RK tableau *
-    "rtol"    : 1e-7, // The relative tolerance in the timestep
-    "atol"    : 1e-10, // The absolute tolerance in the timestep
+    "rtol"    : 1e-5, // The relative tolerance in the timestep
+    "atol"    : 1e-6, // The absolute tolerance in the timestep
     "reject-limit" : 2 // factor over tolarance by which a timestep is rejected
     // if the timestepper fails very often you might want to increase this limit
 }
 \end{minted}
 *See the \href{https://feltor-dev.github.io/doc/dg/html/structdg_1_1_e_r_k_step.html}{dg documentation} for what tableaus are available.
-
-For the adaptive scheme there are two options of when the output files should be
-written. The default one is to treat the adaptive stepper the same as the
-multistepper and simply output after a given number of timsteps (as explained
-    in Section~\ref{sec:output}.
-\begin{minted}[texcomments]{js}
-"timestepper":
-{
-    "output-mode" : "free"
-}
-\end{minted}
-The second option is to provide an end-time $T_{\text{end}}$ which replaces the
-"inner\_loop" parameter in the "output" field.
-\begin{minted}[texcomments]{js}
-"timestepper":
-{
-    "output-mode" : "equidistant",
-    "Tend" : 1 // give an absolute end time where the simulation ends
-}
-\end{minted}
 
 \begin{tcolorbox}[title=Note]
 The explicit resistive term leads to an absolute (CFL) restriction
@@ -1839,6 +1819,28 @@ on the timestep according to $\partial_t u_e \propto \frac{\eta}{\mu_e} u_e \Rig
 The explicit parallel electron viscosity term leads to a CFL condition of the
 form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 \end{tcolorbox}
+
+
+There are two options on how to compute the time-interval between major file-outputs,
+either give the interval directly
+\begin{minted}[texcomments]{js}
+"timestepper":
+{
+    "output-mode" : "deltaT",
+    "deltaT" : 1 // give the time between major outputs
+    //(for a multistep scheme "dt" must divide "deltaT")
+}
+\end{minted}
+The second option is to provide an end-time $T_{\text{end}}$
+until which the simulation runs. The output interval is then determined by the "maxout" parameter in the "output" field.
+\begin{minted}[texcomments]{js}
+"timestepper":
+{
+    "output-mode" : "Tend",
+    "Tend" : 1 // give an absolute end time where the simulation ends
+    //(for a multistep scheme "dt" must divide "Tend"/"maxout")
+}
+\end{minted}
 
 % In every iteration of the implicit inversion we need to solve an equation of the form
 % \begin{align}
@@ -1909,41 +1911,22 @@ form $\Delta t < (2\pi (R_0 - a))^2/(N_z^2 \nu_{\parallel,e})$.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Steering the file output} \label{sec:output}
-\subsubsection{ Fixed number of steps}
-The time-difference between netcdf/glfw outputs depends on what timestepper was
-chosen.  For a multistep scheme it is
+The netcdf/glfw outputs happen at equidistant time-intervals
 \begin{align}
-    \Delta T_\text{int} &= l_\text{inner} \d t \\
-    \Delta T_\text{out} &= l_\text{inner}s_\text{itstp} \d t
+    \Delta T_\text{out} = \text{either given by "deltaT" or } \frac{T_{\text{end}}}{m_{\max}}
 \end{align}
-with $l_\text{inner}$ the inner loop, $s_\text{itstp}$ the itstp variable (determines how often the integration
-is updated)
-while for an adaptive scheme (in free output-mode) it is
+where $m_{\max}$ stands for the "maxout" parameter in the "output" field.
+
+There is a second time-interval
 \begin{align}
-    \Delta T_\text{int} &= l_\text{inner} \sum_{i=0}^{l_\text{inner}} \d t_i \\
-    \Delta T_\text{out} &= l_\text{inner}s_\text{itstp}\sum_{i=0}^{l_\text{inner}s_\text{itstp}} \d t_i
+    \Delta T_\text{int} &= \frac{\Delta T_\text{out} }{ s_\text{itstp}}
 \end{align}
 The integration time $\Delta T_\text{int}$ determines how often the diagnostics integration is updated
-while the output time $\Delta T_\text{out}$  determines how often 2d/3d fields are written to file.
+while the output time $\Delta T_\text{out}$ determines how often 2d/3d fields are written to file.
 \begin{tcolorbox}[title=Note]
-    The multistep method uses one function evaluation per time-step while the
-    adaptive method uses several. This means that the inner-loop variable can
-    be chosen smaller for the adaptive method than for the multistep method.
+    The timesteppers do not necessarily exactly manage timesteps to match
+    $\Delta T_\text{int}$ but they do match $\Delta T_\text{out}$.
 \end{tcolorbox}
-The multistep timestepper produces equidistant outputs while the adaptive one
-produces non-equidistant outputs.
-\subsubsection{ Fixed end-time/ equidistant output in adaptive timestepper}
-If the adaptive timestepper runs in "equidistant" output mode then the time-
-difference between outputs is
-\begin{align}
-    \Delta T_\text{int} &= \frac{T_\text{end} }{ m_\text{max} s_\text{itstp}} \\
-    \Delta T_\text{out} &= \frac{T_\text{end} }{ m_\text{max}}
-\end{align}
-where $m_{\max}$ is the maximum number of outputs,
-i.e. the $l_\text{inner}$ parameter is ignored.
-In this mode the timestep is adapted such that the output always lands on an
-equidistant timestep.
-
 \begin{minted}[texcomments]{js}
 "output":
 {
@@ -1960,22 +1943,16 @@ equidistant timestep.
     // Use netcdf to write results into a file (filename given on command line)
     // (see section\ref{sec:output_file} for information about what is written in there)
     "type" : "netcdf",
-    "inner_loop"  : 4, // $l_\text{inner}$ Number of time steps between updates to the
-    // time integrated quantities. (Although the diagnostics is quite fast
-    // sometimes you need to amortize the time spent on it). Note that
-    // integrating selected quantities in time during the simulation is how we
-    // maintain the time-resolution in the file output (cf.\ref{sec:output_file}).
-    // Choose as low as you can get away with (between 1 and 10).
-    "itstp"  : 4, // $s_\text{itstp}$ the number of inner loops
-    // between file outputs (2d and 3d quantities); Note that 1d and
+    "itstp"  : 4, // $s_\text{itstp}$ the number of discretization steps
+    // between file outputs (2d and 3d quantities);
+    // Note that 1d and
     // 0d quantities can only be computed post-simulation since we can't
     // compute flux-integrals in parallel in MPI.
     "maxout" : 100 // Total Number of fields outputs excluding first
-    // The total number of time steps is
-    // $m_{\max} s_\text{itstp} l_\text{inner}$
-    // If you want to let the simulation run for a certain time instead just
-    // choose this parameter very large and let the simulation hit the
-    // time-limit. ONLY NETCDF
+    // If you want to let the simulation run for a long time
+    // choose this parameter very large and either manually kill the simulation
+    // or let the simulation hit the time-limit (on a cluster for example).
+    // ONLY NETCDF
     "compression" : [2,2] // Compress output file by reducing points in x and y
     // (pojecting the polynomials onto a coarser grid): output contains
     // n*Nx/c[0] points in x, (has to divde Nx evenly), and n*Ny/c[1] points in
@@ -1983,6 +1960,12 @@ equidistant timestep.
     // ONLY NETCDF
 }
 \end{minted}
+\begin{tcolorbox}[title=Note]
+    The multistep method uses one function evaluation per time-step while the
+    adaptive method uses several. This means that the itstp variable can
+    be chosen larger for the adaptive method than for the multistep method.
+\end{tcolorbox}
+
 
 \subsection{[Optional] Computational flags}
 We can simplify the full simulation in a few ways:
