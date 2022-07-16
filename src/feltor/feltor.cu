@@ -277,22 +277,24 @@ int main( int argc, char* argv[])
         dg::abort_program();
     }
     DG_RANK0 std::cout << "Done!\n";
-    double t_output = time, deltaT = p.inner_loop*dt;
+    double t_output = time;
+
     unsigned maxout = js["output"].get( "maxout", 0).asUInt();
-    double Tend = 0;
-    std::string output_mode = "free";
-    if( p.timestepper == "adaptive" )
+    std::string output_mode = js["timestepper"].get(
+            "output-mode", "Tend").asString();
+    double Tend = 0, deltaT = 0.;
+    if( output_mode == "Tend")
     {
-        output_mode = js["timestepper"].get(
-                "output-mode", "equidistant").asString();
-        if( output_mode == "equidistant")
-        {
-            double Tend = js["timestepper"].get( "Tend", 1).asDouble();
-            deltaT = Tend/(double)(maxout*p.itstp);
-        }
-        else if( !(output_mode == "free"))
-            throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
+        Tend = js["timestepper"].get( "Tend", 1).asDouble();
+        deltaT = Tend/(double)(maxout*p.itstp);
     }
+    else if( output_mode == "deltaT")
+    {
+        deltaT = js["timestepper"].get( "deltaT", 1).asDouble()/(double)(p.itstp);
+        Tend = deltaT*(double)(maxout*p.itstp);
+    }
+    else
+        throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
     {
@@ -554,7 +556,6 @@ int main( int argc, char* argv[])
         ///////////////////////////////Timeloop/////////////////////////////////
 
         t.tic();
-        unsigned step = 0;
         bool abort = false;
         for( unsigned i=1; i<=maxout; i++)
         {
@@ -563,9 +564,6 @@ int main( int argc, char* argv[])
             for( unsigned j=1; j<=p.itstp; j++)
             {
                 try{
-                if( output_mode == "equidistant")
-                    odeint->integrate( time, y0, time+deltaT, y0, dg::to::exact);
-                else
                     odeint->integrate( time, y0, t_output + j*deltaT, y0,
                          j<p.itstp ? dg::to::at_least :  dg::to::exact);
                 }
@@ -634,17 +632,9 @@ int main( int argc, char* argv[])
             //    double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
             //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
             //}
-            if( output_mode == "free")
-            {
-                DG_RANK0 std::cout << "\n\t Step "<<step <<" of "
-                            << p.inner_loop*p.itstp*maxout << " at time "<<time;
-                DG_RANK0 std::cout << "\n\t Average time for one step: "
-                            << var.duration/(double)p.itstp/(double)p.inner_loop<<"s";
-            }
-            else
-                DG_RANK0 std::cout << "\n\t Step: Time "<<time <<" of " << Tend;
-                DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
-                            << var.duration/(double)p.itstp<<"s";
+            DG_RANK0 std::cout << "\n\t Step: Time "<<time <<" of " << Tend;
+            DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
+                        << var.duration/(double)p.itstp<<"s";
 
             ti.tic();
             //////////////////////////write fields////////////////////////
@@ -723,7 +713,6 @@ int main( int argc, char* argv[])
     if( p.output == "glfw")
     {
         dg::Timer t;
-        unsigned step = 0;
 
         std::map<std::string, const dg::x::DVec* > v4d;
         v4d["ne-1 / "] = &feltor.density(0),  v4d["ni-1 / "] = &feltor.density(1);
@@ -828,8 +817,8 @@ int main( int argc, char* argv[])
             }
             t_output += p.itstp*deltaT;
             t.toc();
-            std::cout << "\n\t Step "<<step << " at time  "<<time;
-            std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop<<"\n\n";
+            std::cout << "\n\t Time  "<<time<<" of "<<Tend;
+            std::cout << "\n\t Average time for one inner loop: "<<t.diff()/(double)p.itstp<<"\n\n";
         }
         glfwTerminate();
     }

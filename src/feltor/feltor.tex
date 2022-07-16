@@ -1924,8 +1924,8 @@ There is a second time-interval
 The integration time $\Delta T_\text{int}$ determines how often the diagnostics integration is updated
 while the output time $\Delta T_\text{out}$ determines how often 2d/3d fields are written to file.
 \begin{tcolorbox}[title=Note]
-    The timesteppers do not necessarily exactly manage timesteps to match
-    $\Delta T_\text{int}$ but they do match $\Delta T_\text{out}$.
+    The timesteppers do not necessarily exactly match
+    $\Delta T_\text{int}$ but they will match $\Delta T_\text{out}$.
 \end{tcolorbox}
 \begin{minted}[texcomments]{js}
 "output":
@@ -2079,10 +2079,10 @@ X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\PA{ X }$
 Eq.~\eqref{eq:phi_average} \\
 Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time integrated (between two outputs, Simpson's rule) selected plane
 $\int_{t_0}^{t_1}\d t Y(\varphi=0) $
-where $t_1 - t_0 = $ \mintinline{c}{\tt dt*inner_loop*itstp} and {\tt itstp} is the number of discretization points\\
+where $t_1 - t_0 = \Delta T_{\text{out}}$ \\
 Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time integrated (between two outputs, Simpson's rule) toroidal average (Eq.~\eqref{eq:phi_average})
 $\int_{t_0}^{t_1}\d t \PA{ Y }$
-where $t_1 - t_0 = $ \mintinline{c}{\tt dt*inner_loop*itstp} and {\tt itstp} is the number of discretization points\\
+where $t_1 - t_0 = \Delta T_{\text{out}}$ \\
 \bottomrule
 \end{longtable}
 where
@@ -2112,8 +2112,8 @@ X and Y\_tt represent the quantities described in the tables in this section sta
     nephi & $n_e\phi$ \\
 \bottomrule
 \end{longtable}
-The computation time spent on diagnostics is negligible if {\tt inner\_loop}
-parameter is greater than 1. Also remember that the X and Y fields are all
+The computation time spent on diagnostics is usually negligible unless {\tt itstp}
+is unreasonably high. Also remember that the X and Y fields are all
 two-dimensional, which takes up much less disk-space than three-dimensional
 fields.
 

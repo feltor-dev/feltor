@@ -12,9 +12,8 @@ namespace feltor{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
-    std::string tableau, timestepper, solver_type;
+    std::string tableau, timestepper;
 
-    unsigned inner_loop;
     unsigned itstp;
 
     std::vector<double> eps_pol;
@@ -69,14 +68,13 @@ struct Parameters
         tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
-        solver_type = "lgmres";
+        //solver_type = "lgmres";
         //if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
         //{
         //    partitioned = true;
         //    solver_type = js["timestepper"]["solver"].get( "type", "lgmres").asString();
         //}
 
-        inner_loop  = js["output"].get("inner_loop",1).asUInt();
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
