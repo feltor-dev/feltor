@@ -42,6 +42,11 @@ std::vector<Record> diagnostics2d_list = {
 };
 
 std::vector<Record> diagnostics2d_static_list = {
+    { "weights", "integration weights in Cartesian coordinate system",
+        []( dg::DVec& result, Variables& v ) {
+            result = dg::create::weights( v.grid);
+        }
+    },
     { "xc", "x-coordinate in Cartesian coordinate system",
         []( dg::DVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.grid);

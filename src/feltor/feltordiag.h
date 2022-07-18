@@ -234,6 +234,11 @@ std::vector<Record_static> diagnostics3d_static_list = {
              result = dg::pullback( v.mag.psip(), grid);
         }
     },
+    { "vol3d", "Volume form in 3d",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid){
+             result = dg::create::volume( grid);
+        }
+    },
     { "xc", "x-coordinate in Cartesian coordinate system",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
             result = dg::evaluate( dg::cooRZP2X, grid);
@@ -473,6 +478,11 @@ std::vector<Record_static> diagnostics2d_static_list = {
     { "wiinit", "Initial condition for ion canonical velocity",
         []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
             dg::assign( v.y0[1][1], result);
+        }
+    },
+    { "vol2d", "Volume form (including R) in 2d",
+        []( dg::x::HVec& result, Variables& v, dg::x::CylindricalGrid3d& grid ){
+            result = dg::create::volume(grid);
         }
     },
 };
@@ -1361,7 +1371,7 @@ std::vector<Record1d> diagnostics1d_list = {
             return v.duration;
         }
     },
-    {"nsteps", "Accumulated Number of calls to the timestepper (including failed steps)",
+    {"nsteps", "Accumulated Number of calls to the right-hand-side (including failed steps)",
         [](Variables& v) {
             return v.f.called();
         }
