@@ -640,23 +640,35 @@ struct Fieldaligned
         m_minusT = dg::transpose( m_minus);
         m_have_adjoint = true;
     }
-    void parse_method( std::string method, std::string& interpolation, std::string& projection)
+    void parse_method( std::string method, std::string& i, std::string& p, std::string& f)
     {
-        projection = "dg";
-        if( method == "dg") interpolation = "dg";
-        else if( method == "linear") interpolation = "linear";
-        else if( method == "cubic") interpolation = "cubic";
-        else if( method == "nearest") interpolation = "nearest";
+        f = "dg";
+        if( method == "dg")                 i = "dg",       p = "dg";
+        else if( method == "linear")        i = "linear",   p = "dg";
+        else if( method == "cubic")         i = "cubic",    p = "dg";
+        else if( method == "nearest")       i = "nearest",  p = "dg";
+        else if( method == "dg-nearest")      i = "dg",      p = "nearest";
+        else if( method == "linear-nearest")  i = "linear",  p = "nearest";
+        else if( method == "cubic-nearest")   i = "cubic",   p = "nearest";
+        else if( method == "nearest-nearest") i = "nearest",  p = "nearest";
+        else if( method == "dg-linear")      i = "dg",       p = "linear";
+        else if( method == "linear-linear")  i = "linear",   p = "linear";
+        else if( method == "cubic-linear")   i = "cubic",    p = "linear";
+        else if( method == "nearest-linear") i = "nearest",  p = "linear";
+        else if( method == "dg-equi")       i = "dg",       p = "dg", f = "equi";
+        else if( method == "linear-equi")   i = "linear",   p = "dg", f = "equi";
+        else if( method == "cubic-equi")    i = "cubic",    p = "dg", f = "equi";
+        else if( method == "nearest-equi")  i = "nearest",  p = "dg", f = "equi";
+        else if( method == "dg-equi-nearest")      i = "dg",      p = "nearest", f = "equi";
+        else if( method == "linear-equi-nearest")  i = "linear",  p = "nearest", f = "equi";
+        else if( method == "cubic-equi-nearest")   i = "cubic",   p = "nearest", f = "equi";
+        else if( method == "nearest-equi-nearest") i = "nearest", p = "nearest", f = "equi";
+        else if( method == "dg-equi-linear")      i = "dg",       p = "linear", f = "equi";
+        else if( method == "linear-equi-linear")  i = "linear",   p = "linear", f = "equi";
+        else if( method == "cubic-equi-linear")   i = "cubic",    p = "linear", f = "equi";
+        else if( method == "nearest-equi-linear") i = "nearest",  p = "linear", f = "equi";
         else
-        {
-            projection = "const";
-            if( method == "dg-const") interpolation = "dg";
-            else if( method == "linear-const") interpolation = "linear";
-            else if( method == "cubic-const") interpolation = "cubic";
-            else if( method == "nearest-const") interpolation = "nearest";
-            else
-                throw Error( Message(_ping_) << "The method "<< method << " is not recognized\n");
-        }
+            throw Error( Message(_ping_) << "The method "<< method << " is not recognized\n");
     }
 };
 
@@ -673,9 +685,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         m_interpolation_method(interpolation_method)
 {
 
-    std::string inter_m, project_m;
-    parse_method( interpolation_method, inter_m, project_m);
-    if( benchmark) std::cout << "# Interpolation method: \""<<inter_m << "\" projection method: \""<<project_m<<"\"\n";
+    std::string inter_m, project_m, fine_m;
+    parse_method( interpolation_method, inter_m, project_m, fine_m);
+    if( benchmark) std::cout << "# Interpolation method: \""<<inter_m << "\" projection method: \""<<project_m<<"\" fine grid \""<<fine_m<<"\"\n";
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
@@ -695,7 +707,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     grid_magnetic->set( grid_transform->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
     dg::ClonePtr<dg::aGeometry2d> grid_fine = grid_transform;
     // For project method "const" we round up to the nearest multiple of n
-    if( project_m == "const")
+    if( project_m != "dg" && fine_m == "dg")
     {
         unsigned rx = mx % grid.nx(), ry = my % grid.ny();
         if( 0 != rx || 0 != ry)
@@ -705,6 +717,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
             my = my + grid.ny() - ry;
         }
     }
+    if( fine_m == "equi")
+        grid_fine = grid_equidist;
     grid_fine->multiplyCellNumbers((double)mx, (double)my);
     if( benchmark)
     {
@@ -775,7 +789,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     }
     else // const
     {
-        dg::IHMatrix proj = dg::create::projection( *grid_equidist, *grid_fine);
+        dg::IHMatrix proj = dg::create::projection( *grid_equidist, *grid_fine, project_m);
         auto back = dg::create::inv_backproject( *grid_transform);
         cusp::multiply( back, proj, projection);
     }

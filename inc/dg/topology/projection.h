@@ -55,33 +55,6 @@ T lcm( T a, T b)
 
 namespace create{
 
-namespace detail{
-///@cond
-/**
- * @brief Create the transpose of the interpolation matrix from new to old
- *
- * Does the equivalent of the following
- * @code
-   Matrix A = dg::create::interpolation( g_old, g_new);
-   return A.transpose();
-   @endcode
- * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
- * @param g_new The new grid
- * @param g_old The old grid
- *
- * @return transposed interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
-{
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
-///@endcond
-}//namespace detail
-
 /**
  * @brief Create a diagonal matrix
  *
@@ -127,7 +100,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
  * and if the number of polynomial coefficients is lower or the same in the new grid
  */
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old, std::string method = "dg")
 {
     if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
     if( g_old.n() < g_new.n()) std::cerr << "ATTENTION: you project between incompatible grids!! old n: "<<g_old.n()<<" new n: "<<g_new.n()<<"\n";
@@ -136,7 +109,8 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
         dg::create::diagonal( dg::create::weights( g_old));
     cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
         dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = detail::interpolationT( g_new, g_old), temp;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new, method), A;
+    cusp::transpose( temp, A);
     //!!! cusp::multiply removes explicit zeros in the output
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
@@ -147,20 +121,20 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
 
 ///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old, std::string method = "dg")
 {
-    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx());
-    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy());
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx(), method);
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy(), method);
     return dg::tensorproduct( projectY, projectX);
 }
 
 ///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old, std::string method = "dg")
 {
-    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx());
-    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy());
-    cusp::csr_matrix<int, real_type, cusp::host_memory> projectZ = projection( g_new.gz(), g_old.gz());
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx(), method);
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy(), method);
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectZ = projection( g_new.gz(), g_old.gz(), method);
     return dg::tensorproduct( projectZ, dg::tensorproduct( projectY, projectX));
 }
 
@@ -307,46 +281,6 @@ dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology3d<real_type>& g)
     auto transformX = inv_backproject( g.gx());
     auto transformY = inv_backproject( g.gy());
     auto transformZ = inv_backproject( g.gz());
-    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
-}
-
-/**
- * @brief Create a matrix \f$ T^{-1} S T\f$ that smoothes a dg discretized function
- *
- * We first \c backproject to an equidistant grid where we apply the \c fem_linear2const
- * tridiagonal smoother after which we transform back to the equidistant grid with \c inv_backproject
- * @param g The grid on which to operate
- *
- * @return smoothing matrix
- * @sa dg::create::fem_linear2const
- */
-template<class real_type>
-dg::IHMatrix_t<real_type> smoothing( const RealGrid1d<real_type>& g)
-{
-    auto trafo = backproject( g), inv_trafo = inv_backproject(g), tmp(trafo);
-    RealGrid1d<real_type> g1(g);
-    g1.set( 1, g.size());
-    auto smooth = fem_linear2const(g1).asIMatrix();
-    cusp::multiply( smooth, trafo, tmp);
-    cusp::multiply( inv_trafo, tmp, trafo);
-    return dg::IHMatrix_t<real_type> (trafo);
-}
-///@copydoc smoothing(const RealGrid1d<real_type>&)
-template<class real_type>
-dg::IHMatrix_t<real_type> smoothing( const aRealTopology2d<real_type>& g)
-{
-    auto transformX = smoothing( g.gx());
-    auto transformY = smoothing( g.gy());
-    return dg::tensorproduct( transformY, transformX);
-}
-
-///@copydoc smoothing(const RealGrid1d<real_type>&)
-template<class real_type>
-dg::IHMatrix_t<real_type> smoothing( const aRealTopology3d<real_type>& g)
-{
-    auto transformX = smoothing( g.gx());
-    auto transformY = smoothing( g.gy());
-    auto transformZ = smoothing( g.gz());
     return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
 }
 

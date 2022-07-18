@@ -213,9 +213,10 @@ dg::HMatrix_t<real_type> fast_projection( const RealGrid1d<real_type>& t, unsign
     dg::RealGrid1d<real_type> g_new( -1., 1., n, 1);
     dg::HVec w1d = dg::create::weights( g_old);
     dg::HVec v1d = dg::create::inv_weights( g_new);
-    cusp::coo_matrix<int, real_type, cusp::host_memory> projectX;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> projectX, tmp;
     //Here, we cannot use create::projection because that would remove explicit zeros!!
-    projectX = dg::create::detail::interpolationT( g_new, g_old);
+    tmp = dg::create::interpolation( g_old, g_new);
+    cusp::transpose( tmp, projectX);
     EllSparseBlockMat<real_type> pX( t.N()/divideNx, t.N()*dividen, divideNx*dividen, divideNx*dividen, n);
     for( unsigned k=0; k<divideNx; k++)
     for( unsigned l=0; l<dividen; l++)
