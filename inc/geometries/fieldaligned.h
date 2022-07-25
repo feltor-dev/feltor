@@ -36,6 +36,36 @@ typedef ZERO NoLimiter;
 ///@cond
 namespace detail{
 
+void parse_method( std::string method, std::string& i, std::string& p, std::string& f)
+{
+    f = "dg";
+    if( method == "dg")                 i = "dg",       p = "dg";
+    else if( method == "linear")        i = "linear",   p = "dg";
+    else if( method == "cubic")         i = "cubic",    p = "dg";
+    else if( method == "nearest")       i = "nearest",  p = "dg";
+    else if( method == "dg-nearest")      i = "dg",      p = "nearest";
+    else if( method == "linear-nearest")  i = "linear",  p = "nearest";
+    else if( method == "cubic-nearest")   i = "cubic",   p = "nearest";
+    else if( method == "nearest-nearest") i = "nearest",  p = "nearest";
+    else if( method == "dg-linear")      i = "dg",       p = "linear";
+    else if( method == "linear-linear")  i = "linear",   p = "linear";
+    else if( method == "cubic-linear")   i = "cubic",    p = "linear";
+    else if( method == "nearest-linear") i = "nearest",  p = "linear";
+    else if( method == "dg-equi")       i = "dg",       p = "dg", f = "equi";
+    else if( method == "linear-equi")   i = "linear",   p = "dg", f = "equi";
+    else if( method == "cubic-equi")    i = "cubic",    p = "dg", f = "equi";
+    else if( method == "nearest-equi")  i = "nearest",  p = "dg", f = "equi";
+    else if( method == "dg-equi-nearest")      i = "dg",      p = "nearest", f = "equi";
+    else if( method == "linear-equi-nearest")  i = "linear",  p = "nearest", f = "equi";
+    else if( method == "cubic-equi-nearest")   i = "cubic",   p = "nearest", f = "equi";
+    else if( method == "nearest-equi-nearest") i = "nearest", p = "nearest", f = "equi";
+    else if( method == "dg-equi-linear")      i = "dg",       p = "linear", f = "equi";
+    else if( method == "linear-equi-linear")  i = "linear",   p = "linear", f = "equi";
+    else if( method == "cubic-equi-linear")   i = "cubic",    p = "linear", f = "equi";
+    else if( method == "nearest-equi-linear") i = "nearest",  p = "linear", f = "equi";
+    else
+        throw Error( Message(_ping_) << "The method "<< method << " is not recognized\n");
+}
 
 struct DSFieldCylindrical3
 {
@@ -615,13 +645,12 @@ struct Fieldaligned
     void eMinus(enum whichMatrix which, const container& in, container& out);
     void zero( enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_zero, m_minus, m_plusT, m_minusT; //2d interpolation matrices
-    container m_tmp; // 3d size
     container m_hbm, m_hbp;         //3d size
     container m_G, m_Gm, m_Gp; // 3d size
     container m_bphi, m_bphiM, m_bphiP; // 3d size
     container m_bbm, m_bbp, m_bbo;  //3d size masks
 
-    container m_left, m_right, m_temp2d;      //perp_size
+    container m_left, m_right;      //perp_size
     container m_limiter;            //perp_size
     container m_ghostM, m_ghostP;   //perp_size
     unsigned m_Nz, m_perp_size;
@@ -640,36 +669,6 @@ struct Fieldaligned
         m_minusT = dg::transpose( m_minus);
         m_have_adjoint = true;
     }
-    void parse_method( std::string method, std::string& i, std::string& p, std::string& f)
-    {
-        f = "dg";
-        if( method == "dg")                 i = "dg",       p = "dg";
-        else if( method == "linear")        i = "linear",   p = "dg";
-        else if( method == "cubic")         i = "cubic",    p = "dg";
-        else if( method == "nearest")       i = "nearest",  p = "dg";
-        else if( method == "dg-nearest")      i = "dg",      p = "nearest";
-        else if( method == "linear-nearest")  i = "linear",  p = "nearest";
-        else if( method == "cubic-nearest")   i = "cubic",   p = "nearest";
-        else if( method == "nearest-nearest") i = "nearest",  p = "nearest";
-        else if( method == "dg-linear")      i = "dg",       p = "linear";
-        else if( method == "linear-linear")  i = "linear",   p = "linear";
-        else if( method == "cubic-linear")   i = "cubic",    p = "linear";
-        else if( method == "nearest-linear") i = "nearest",  p = "linear";
-        else if( method == "dg-equi")       i = "dg",       p = "dg", f = "equi";
-        else if( method == "linear-equi")   i = "linear",   p = "dg", f = "equi";
-        else if( method == "cubic-equi")    i = "cubic",    p = "dg", f = "equi";
-        else if( method == "nearest-equi")  i = "nearest",  p = "dg", f = "equi";
-        else if( method == "dg-equi-nearest")      i = "dg",      p = "nearest", f = "equi";
-        else if( method == "linear-equi-nearest")  i = "linear",  p = "nearest", f = "equi";
-        else if( method == "cubic-equi-nearest")   i = "cubic",   p = "nearest", f = "equi";
-        else if( method == "nearest-equi-nearest") i = "nearest", p = "nearest", f = "equi";
-        else if( method == "dg-equi-linear")      i = "dg",       p = "linear", f = "equi";
-        else if( method == "linear-equi-linear")  i = "linear",   p = "linear", f = "equi";
-        else if( method == "cubic-equi-linear")   i = "cubic",    p = "linear", f = "equi";
-        else if( method == "nearest-equi-linear") i = "nearest",  p = "linear", f = "equi";
-        else
-            throw Error( Message(_ping_) << "The method "<< method << " is not recognized\n");
-    }
 };
 
 ///@cond
@@ -682,11 +681,12 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
     unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method, bool benchmark) :
+        m_g(grid),
         m_interpolation_method(interpolation_method)
 {
 
     std::string inter_m, project_m, fine_m;
-    parse_method( interpolation_method, inter_m, project_m, fine_m);
+    detail::parse_method( interpolation_method, inter_m, project_m, fine_m);
     if( benchmark) std::cout << "# Interpolation method: \""<<inter_m << "\" projection method: \""<<project_m<<"\" fine grid \""<<fine_m<<"\"\n";
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
@@ -694,18 +694,18 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
     m_Nz=grid.Nz(), m_bcx = bcx, m_bcy = bcy, m_bcz=grid.bcz();
-    m_g.reset(grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     ///%%%%%%%%%%%%%%%%%%%%%Setup grids%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     //  grid_trafo -> grid_equi -> grid_fine -> grid_equi -> grid_trafo
     dg::Timer t;
     if( benchmark) t.tic();
     dg::ClonePtr<dg::aGeometry2d> grid_transform( grid.perp_grid()) ;
-    dg::ClonePtr<dg::aGeometry2d> grid_equidist( grid_transform) ;
-    grid_equidist->set( 1, grid.gx().size(), grid.gy().size());
+    // We do not need metric of grid_equidist or or grid_fine
+    dg::RealGrid2d<double> grid_equidist( *grid_transform) ;
+    dg::RealGrid2d<double> grid_fine( *grid_transform);
+    grid_equidist.set( 1, grid.gx().size(), grid.gy().size());
     dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_transform;//INTEGRATE HIGH ORDER GRID
     grid_magnetic->set( grid_transform->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
-    dg::ClonePtr<dg::aGeometry2d> grid_fine = grid_transform;
     // For project method "const" we round up to the nearest multiple of n
     if( project_m != "dg" && fine_m == "dg")
     {
@@ -719,7 +719,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     }
     if( fine_m == "equi")
         grid_fine = grid_equidist;
-    grid_fine->multiplyCellNumbers((double)mx, (double)my);
+    grid_fine.multiplyCellNumbers((double)mx, (double)my);
     if( benchmark)
     {
         t.toc();
@@ -737,12 +737,12 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
             yp_trafo, vol2d0, hbp, in_boxp, deltaPhi, eps);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
             ym_trafo, vol2d0, hbm, in_boxm, -deltaPhi, eps);
-    dg::HVec Xf = dg::evaluate(  dg::cooX2d, *grid_fine);
-    dg::HVec Yf = dg::evaluate(  dg::cooY2d, *grid_fine);
+    dg::HVec Xf = dg::evaluate(  dg::cooX2d, grid_fine);
+    dg::HVec Yf = dg::evaluate(  dg::cooY2d, grid_fine);
     {
     dg::IHMatrix interpolate = dg::create::interpolation( Xf, Yf,
-            *grid_transform, dg::NEU, dg::NEU, grid_transform->n() < 3 ? "cubic" : "dg");  //INTERPOLATE TO FINE GRID
-    yp.fill(dg::evaluate( dg::zero, *grid_fine));
+            *grid_transform, dg::NEU, dg::NEU, grid_transform->n() < 3 ? "cubic" : "dg");
+    yp.fill(dg::evaluate( dg::zero, grid_fine));
     ym = yp;
     for( int i=0; i<2; i++) //only R and Z get interpolated
     {
@@ -771,11 +771,11 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     else
     {
         dg::IHMatrix plusFineTmp = dg::create::interpolation( yp[0], yp[1],
-                *grid_equidist, bcx, bcy, inter_m);
+                grid_equidist, bcx, bcy, inter_m);
         dg::IHMatrix zeroFineTmp = dg::create::interpolation( Xf, Yf,
-                *grid_equidist, bcx, bcy, inter_m);
+                grid_equidist, bcx, bcy, inter_m);
         dg::IHMatrix minusFineTmp = dg::create::interpolation( ym[0], ym[1],
-                *grid_equidist, bcx, bcy, inter_m);
+                grid_equidist, bcx, bcy, inter_m);
         dg::IHMatrix forw = dg::create::backproject( *grid_transform); // from dg to equidist
         cusp::multiply( plusFineTmp, forw, plusFine);
         cusp::multiply( zeroFineTmp, forw, zeroFine);
@@ -785,11 +785,11 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     // Now project
     if ( project_m == "dg")
     {
-        projection = dg::create::projection( *grid_transform, *grid_fine);
+        projection = dg::create::projection( *grid_transform, grid_fine);
     }
     else // const
     {
-        dg::IHMatrix proj = dg::create::projection( *grid_equidist, *grid_fine, project_m);
+        dg::IHMatrix proj = dg::create::projection( grid_equidist, grid_fine, project_m);
         auto back = dg::create::inv_backproject( *grid_transform);
         cusp::multiply( back, proj, projection);
     }
@@ -868,13 +868,12 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::assign3dfrom2d( bbp, m_bbp, grid);
 
     m_deltaPhi = deltaPhi; // store for evaluate
-    m_tmp = m_bbm;
-    ///%%%%%%%%%%%%%%%%%%%%%Assign Limiter%%%%%%%%%%%%%%%%%%%%%%%%%//
 
+    ///%%%%%%%%%%%%%%%%%%%%%Assign Limiter%%%%%%%%%%%%%%%%%%%%%%%%%//
     m_perp_size = grid_transform->size();
     dg::assign( dg::pullback(limit, *grid_transform), m_limiter);
     dg::assign( dg::evaluate(dg::zero, *grid_transform), m_left);
-    m_temp2d = m_ghostM = m_ghostP = m_right = m_left;
+    m_ghostM = m_ghostP = m_right = m_left;
 }
 
 
