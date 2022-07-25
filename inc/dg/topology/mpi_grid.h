@@ -142,7 +142,7 @@ struct aRealMPITopology2d
     const DLT<real_type>& dlty() const{return g.dlty();}
     /**
      * @brief The total global number of points
-     * @return equivalent to \c nx()*ny()*Nx()*Ny()
+     * @return equivalent to <tt> nx()*ny()*Nx()*Ny() </tt>
      */
     unsigned size() const { return g.size();}
     /**
@@ -270,9 +270,9 @@ struct aRealMPITopology2d
         check_division( gx.N(), gy.N(), gx.bcx(), gy.bcx());
         update_local();
     }
-    ///copydoc aTopology2d::aTopology2d(const aTopology2d&)
+    ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
     aRealMPITopology2d(const aRealMPITopology2d& src) = default;
-    ///copydoc aTopology2d::operator()(const aTopology2d&)
+    ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
     aRealMPITopology2d& operator=(const aRealMPITopology2d& src) = default;
     ///This function has an implementation
     virtual void do_set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny)=0;
@@ -473,7 +473,7 @@ struct aRealMPITopology3d
     const DLT<real_type>& dltz() const{return g.dltz();}
     /**
      * @brief The total global number of points
-     * @return equivalent to \c nx()*ny()*nz()*Nx()*Ny()*Nz()
+     * @return equivalent to <tt> nx()*ny()*nz()*Nx()*Ny()*Nz() </tt>
      */
     unsigned size() const { return g.size();}
     /**

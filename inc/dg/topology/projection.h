@@ -91,6 +91,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
  *
  * @param g_new The new (coarse) grid
  * @param g_old The old (fine) grid
+ * @copydoc hide_method
  *
  * @return Projection matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
@@ -119,7 +120,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
 }
 
 
-///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&,std::string)
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old, std::string method = "dg")
 {
@@ -128,7 +129,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
     return dg::tensorproduct( projectY, projectX);
 }
 
-///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&,std::string)
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old, std::string method = "dg")
 {
