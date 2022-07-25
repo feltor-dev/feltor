@@ -167,6 +167,16 @@ int main( )
               <<" "<<sqrt(norm/sol)<<"\n"
               <<"    "<<name+"_vol:"<<std::setw(30-name.size())
               <<" "<<vol<<"\n";
+
+    std::cout << "# TEST Inverse of I^+ is I^-\n";
+    ds.fieldaligned()(dg::geo::einsPlus, fun, ePlus);
+    ds.fieldaligned()(dg::geo::einsMinus, ePlus, eMinus);
+    dg::blas1::axpby( 1., eMinus, -1., fun, eMinus);
+    vol = sqrt( dg::blas2::dot( vol3d, eMinus)/dg::blas2::dot( vol3d, fun));
+    name  = "IpIm"; // works as well as directLap
+    std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+              <<" "<<vol<<"\n";
+
     ///##########################################################///
     std::cout << "# TEST VOLUME FORMS\n";
     double volume = dg::blas1::dot( 1., dsFAST.sqrtG());
