@@ -712,7 +712,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         unsigned rx = mx % grid.nx(), ry = my % grid.ny();
         if( 0 != rx || 0 != ry)
         {
-            std::cerr << "Warning: for projection method \"const\" mx and my must be multiples of nx and ny! Rounding up for you ...\n";
+            std::cerr << "#Warning: for projection method \"const\" mx and my must be multiples of nx and ny! Rounding up for you ...\n";
             mx = mx + grid.nx() - rx;
             my = my + grid.ny() - ry;
         }
@@ -737,8 +737,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
             yp_trafo, vol2d0, hbp, in_boxp, deltaPhi, eps);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
             ym_trafo, vol2d0, hbm, in_boxm, -deltaPhi, eps);
-    dg::HVec Xf = dg::pullback(  dg::cooX2d, *grid_fine);
-    dg::HVec Yf = dg::pullback(  dg::cooY2d, *grid_fine);
+    dg::HVec Xf = dg::evaluate(  dg::cooX2d, *grid_fine);
+    dg::HVec Yf = dg::evaluate(  dg::cooY2d, *grid_fine);
     {
     dg::IHMatrix interpolate = dg::create::interpolation( Xf, Yf,
             *grid_transform, dg::NEU, dg::NEU, grid_transform->n() < 3 ? "cubic" : "dg");  //INTERPOLATE TO FINE GRID
