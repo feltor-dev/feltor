@@ -472,8 +472,8 @@ struct GeneralComm : public aCommunicator<Vector>
     * The indices in the gather map are written with respect to the buffer vector.
     * Each location in the source vector is uniquely specified by a local vector index and the process rank.
     * @param local_size local size of a \c dg::MPI_Vector (same for all processes)
-    * @param localGatherMap Each element \c localGatherMap[i] represents a local vector index from where to gather the value. There are "local buffer size" elements.
-    * @param pidGatherMap Each element \c pidGatherMap[i] represents the pid/rank from where to gather the corresponding local index \c localGatherMap[i].  Same size as localGatherMap.
+    * @param localGatherMap Each element <tt>localGatherMap[i]</tt> represents a local vector index from where to gather the value. There are "local buffer size" elements.
+    * @param pidGatherMap Each element <tt>pidGatherMap[i]</tt> represents the pid/rank from where to gather the corresponding local index <tt>localGatherMap[i]</tt>.  Same size as localGatherMap.
      *   The pid/rank needs to be element of the given communicator.
     * @param comm The MPI communicator participating in the scatter/gather operations
     */
@@ -492,13 +492,13 @@ struct GeneralComm : public aCommunicator<Vector>
      *
      * Uses the \c global2localIdx() member of MPITopology to generate localGatherMap and pidGatherMap
      * @tparam ConversionPolicy has to have the members:
-     *  - \c bool\c global2localIdx(unsigned,unsigned&,unsigned&) \c const;
+     *  - <tt> bool global2localIdx(unsigned,unsigned&,unsigned&) const;</tt>
      * where the first parameter is the global index and the
      * other two are the output pair (localIdx, rank).
        return true if successful, false if global index is not part of the grid
-     *  - \c MPI_Comm \c %communicator() \c const;  returns the communicator to use in the gather/scatter
-     *  - \c local_size(); return the local vector size
-     * @param globalGatherMap Each element \c globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size == size()" elements.
+     *  - <tt> MPI_Comm %communicator() const;</tt>  returns the communicator to use in the gather/scatter
+     *  - <tt> local_size(); </tt> return the local vector size
+     * @param globalGatherMap Each element <tt> globalGatherMap[i] </tt> represents a global vector index from where to take the value. There are <tt> local buffer size == size() </tt> elements.
      * @param p the conversion object
      * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
      */

@@ -30,7 +30,7 @@ inline MPI_Datatype getMPIDataType<unsigned>(){ return MPI_UNSIGNED;}
  of memory buffers. The buffer needs to be filled wih values (gather) or these
  values need to be written back into the original place (scatter).
 
- @b Gather: imagine a buffer vector w and a map that gives to every element in this vector w
+ @b Gather: imagine a buffer vector w and a map (the "gather map") that gives to every element in this vector w
  an index into a source vector v where the value of this element should be taken from
  i.e. \f$ w[i] = v[\text{idx}[i]] \f$
  Note that an index into the source vector v can appear several times or not at all.
@@ -41,19 +41,29 @@ inline MPI_Datatype getMPIDataType<unsigned>(){ return MPI_UNSIGNED;}
  Note again that an index into v can appear several times or never at all.
  If the index appears more than once, we perform a reduction operation  (we sum up all elements)
  on these indices initializing the sum with 0.
- Note that \f$ v[\text{idx}[i]] = w[i] \f$ is INCORRECT definition of this, because
+ Note that \f$ v[\text{idx}[i]] = w[i] \f$ is an INCORRECT definition of this, because
  it does not show the reduction.
 
 It is more accurate to represent the gather and scatter operation
 by a matrix. The gather matrix \f$ G\f$ is just a
 (permutation) matrix of 1's and 0's with exactly one "1" in each line.
 In a "coo" formatted sparse matrix format the values array would consist only of "1"s,
-row array is just the index and column array is the gather map.
-We uniquely define the corresponding <b> scatter matrix as the transpose of the gather matrix</b>
-\f[ S\equiv G^\mathrm{T}\f].
-This means that a simple consistency test is given by \f$ (Gv)\cdot (Gv) = S(Gv)\cdot v\f$.
+the row array is just the index and the column array is the gather map.
+\f[ \vec w = G \vec v \f]
+where \f$ G \in \mathbb{R}^{N_w \times N_v}\f$  and \f$N_w\f$ and \f$ N_v\f$ can have
+any sizes. We have \f$ G_{ij} = \delta_{\text{idx}_ij}\f$
+The above definition uniquely identifies the <b> scatter matrix as the transpose of the gather matrix
+of the same index map</b>
+\f[ S\equiv G^\mathrm{T}\f]
+We have \f$ S_{ij} = \delta_{\text{idx}_j i}\f$ and \f$ \vec v = S \vec w\f$.
+A simple consistency test is given by \f$ (Gv)\cdot (Gv) = S(Gv)\cdot v\f$.
 
 The scatter matrix can thus have zero, one or more "1"s in each line.
+
+@note There is no "scatter map" or "gather map", there is just an integer index map idx\f$(i)\f$
+that maps each index \f$ i \f$ in \f$ w\f$ to an index \f$ \text{idx}(i)\f$ in \f$ v\f$.
+In code this is represented by the vector "idx" with elements idx[i] = idx\f$(i)\f$
+
 We distinguish between
 
 @b bijective: If the gather map idx[i] is bijective, each element of the source vector v maps
@@ -68,13 +78,16 @@ can have more than one 1's in each line and w has at least the size of v.
 the source vector v. This means that the scatter matrix S can have one or more
 empty lines and w may be smaller than v.
 
+@note If v is filled with its indices, i.e. \f$ v[i] = i \f$, then
+the gather operation will reproduce the index map in the buffer w or
+\f[ \vec{\text{idx}} = G \vec i\f]
+In case the index map is bijective the index map can be inverted and we have
+\f[ \vec{\text{idx}^{-1}} = S \vec i\f]
+
 This class performs these operations for the case that v and w are distributed across processes.
 We always assume that the source vector v is distributed equally among processes, i.e.
 each process holds a chunk of v of equal size. On the other hand the local size
 of w may vary among processes depending on the gather/scatter map.
-
-@note If v is filled with its indices, i.e. \f$ v[i] = i \f$, then
-the gather operation will reproduce the index map in the buffer w \f$ w[i] = \text{idx}[i]\f$ .
 
  * @tparam LocalContainer a container on a shared memory system (must be default constructible)
  * @ingroup mpi_structures
@@ -88,9 +101,9 @@ struct aCommunicator
 
     /**
      * @brief Allocate a buffer object of size
-     * \c buffer_size()
+     * <tt> buffer_size() </tt>
      * @return a buffer object on the stack
-     * @note if \c buffer_size()==0 the default constructor of \c LocalContainer is called
+     * @note if <tt> buffer_size()==0 </tt> the default constructor of \c LocalContainer is called
      */
     LocalContainer allocate_buffer( )const{
         if( do_size() == 0 ) return LocalContainer();
@@ -100,10 +113,10 @@ struct aCommunicator
     /**
      * @brief \f$ w = G v\f$. Globally (across processes) gather data into a buffer
      *
-     * The transpose operation is \c global_scatter_reduce()
+     * The transpose operation is <tt> global_scatter_reduce() </tt>
      * @param values source vector v; data is collected from this vector
-     * @param buffer on output holds the gathered data ( must be of size \c buffer_size())
-     * @note if \c buffer_size()==0 nothing happens
+     * @param buffer on output holds the gathered data ( must be of size <tt> buffer_size() </tt>)
+     * @note if <tt> buffer_size()==0 </tt>nothing happens
      */
     void global_gather( const value_type* values, LocalContainer& buffer)const
     {
@@ -114,10 +127,10 @@ struct aCommunicator
     /**
      * @brief \f$ w = G v\f$. Globally (across processes) gather data into a buffer (memory allocating version)
      *
-     * The transpose operation is \c global_scatter_reduce()
-     * @param values source vector v; data is collected from this vector (must have \c local_size() elements)
-     * @return object of size \c buffer_size() that holds the gathered data
-     * @note if \c buffer_size()==0 the default constructor of \c LocalContainer is called
+     * The transpose operation is <tt> global_scatter_reduce() </tt>
+     * @param values source vector v; data is collected from this vector (must have <tt> local_size() </tt> elements)
+     * @return object of size <tt> buffer_size() </tt> that holds the gathered data
+     * @note if <tt> buffer_size()==0 </tt> the default constructor of \c LocalContainer is called
      */
     LocalContainer global_gather( const value_type* values) const
     {
@@ -129,10 +142,10 @@ struct aCommunicator
     /**
      * @brief \f$ v = G^\mathrm{T} w\f$. Globally (across processes) scatter data accross processes and reduce on multiple indices
      *
-     * This is the transpose operation of \c global_gather()
-     * @param toScatter buffer vector w; (has to be of size given by \c buffer_size())
-     * @param values target vector v; on output contains values from other processes sent back to the origin (must have \c local_size() elements)
-     * @note if \c buffer_size()==0 nothing happens
+     * This is the transpose operation of <tt> global_gather() </tt>
+     * @param toScatter buffer vector w; (has to be of size given by <tt> buffer_size() </tt>)
+     * @param values target vector v; on output contains values from other processes sent back to the origin (must have <tt> local_size() </tt> elements)
+     * @note if <tt> buffer_size()==0 </tt> nothing happens
      */
     void global_scatter_reduce( const LocalContainer& toScatter, value_type* values) const{
         if( do_size() == 0 ) return;
@@ -148,13 +161,13 @@ struct aCommunicator
     * @return buffer size (may be different for each process)
     * @note may return 0
     * @attention it is NOT enough to check for zero buffer size if you want to find out whether a given process
-    * needs to send MPI messages or not. See \c isCommunicating() for an explanation
+    * needs to send MPI messages or not. See <tt> isCommunicating() </tt> for an explanation
     * @sa local_size() isCommunicating()
     */
     unsigned buffer_size() const{return do_size();}
     /**
     * @brief The local size of the source vector v = local size of the
-    * \c dg::MPI_Vector
+    * <tt> dg::MPI_Vector </tt>
     *
     * Consider that both the source vector v and the buffer w are distributed across processes.
     * In Feltor the vector v is distributed equally among processes and the local size

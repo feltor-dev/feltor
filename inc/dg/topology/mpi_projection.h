@@ -45,15 +45,15 @@ static void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& globa
 ///@endcond
 
 /**
- * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix
+ * @brief Convert a (row-distributed) matrix with local row and global column indices to a row distributed MPI matrix
  *
  * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
- *  - \c bool\c global2localIdx(unsigned,unsigned&,unsigned&) \c const;
+ *  - <tt> bool global2localIdx(unsigned,unsigned&,unsigned&) const; </tt>
  * where the first parameter is the global index and the
  * other two are the output pair (localIdx, rank).
    return true if successful, false if global index is not part of the grid
- *  - \c MPI_Comm \c %communicator() \c const;  returns the communicator to use in the gather/scatter
- *  - \c local_size(); return the local vector size
+ *  - <tt> MPI_Comm %communicator() const; </tt>  returns the communicator to use in the gather/scatter
+ *  - <tt> local_size(); </tt> return the local vector size
  * @param global the column indices and num_cols need to be global, the row indices and num_rows local
  * @param policy the conversion object
  *
