@@ -323,19 +323,34 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     // Now project
     if ( project_m == "dg")
     {
-        projection = dg::create::projection( grid_transform->local(), grid_fine.local());
+        projection = dg::create::projection( grid_transform->global(), grid_fine.local());
     }
     else // const
     {
         /// ATTENTION project_m may incur communication!!
-        dg::IHMatrix proj = dg::create::projection( grid_equidist.local(), grid_fine.local(), project_m);
-        auto back = dg::create::inv_backproject( grid_transform->local());
-        cusp::multiply( back, proj, projection);
+        projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
     }
     dg::IHMatrix plus, minus, zero;
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, zeroFine, zero);
     cusp::multiply( projection, minusFine, minus);
+    // Now convert to row dist matrix
+    auto plusL = dg::convertGlobal2LocalRows( plus, *grid_transform);
+    auto zeroL = dg::convertGlobal2LocalRows( zero, *grid_transform);
+    auto minusL = dg::convertGlobal2LocalRows( minus, *grid_transform);
+    if( !(project_m == "dg"))
+    {
+        auto back = dg::create::inv_backproject( grid_transform->local());
+        cusp::multiply( back, plusL, plus);
+        cusp::multiply( back, zeroL, zero);
+        cusp::multiply( back, minusL, minus);
+    }
+    else
+    {
+        plus = plusL;
+        zero = zeroL;
+        minus = minusL;
+    }
     if( benchmark)
     {
         t.toc();
