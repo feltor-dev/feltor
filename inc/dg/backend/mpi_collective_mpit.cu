@@ -111,6 +111,28 @@ int main( int argc, char * argv[])
             std::cerr <<"Rank "<<rank<<" FAILED "<<std::endl;
     }
     if(fabs(norm1-norm2)>1e-14 && rank==0)std::cout << norm1 << " "<<norm2<< " "<<norm1-norm2<<std::endl;
+    if(rank==0) std::cout << "Test non-communicating versions\n";
+    for( unsigned i=0; i<N+rank; i++)
+        pids[i] = rank;
+    dg::GeneralComm<thrust::host_vector<int>, thrust::host_vector<double>> s3( N, idx, pids, MPI_COMM_WORLD);
+    /// Test if global_scatter_reduce is in fact the transpose of global_gather
+    receive = s3.global_gather( thrust::raw_pointer_cast(vec.data()));
+    dg::MPI_Vector<thrust::host_vector<double>> mpi_receive2( receive, MPI_COMM_WORLD);
+    norm1 = dg::blas1::dot( mpi_receive2, mpi_receive2);
+    s3.global_scatter_reduce( receive, thrust::raw_pointer_cast(vec2.data()));
+    dg::MPI_Vector<thrust::host_vector<double>> mpi_vec3( vec2, MPI_COMM_WORLD);
+    std::cout << "Rank "<<rank<<" is communicating? "<<s3.isCommunicating()<<" (false)\n";
+    // Just to show that even if not communciating the size is not zero
+    if(rank==0)std::cout << "Rank "<<rank<<" buffer size "<<s3.buffer_size()<<" \n";
+    if(rank==0)std::cout << "Rank "<<rank<<" local  size "<<s3.local_size()<<" \n";
+    norm2 = dg::blas1::dot( mpi_vec, mpi_vec3);
+    {
+        if( fabs(norm1-norm2)<1e-14)
+            std::cout <<"Rank "<<rank<<" PASSED "<<std::endl;
+        else
+            std::cerr <<"Rank "<<rank<<" FAILED "<<std::endl;
+    }
+    if(fabs(norm1-norm2)>1e-14 && rank==0)std::cout << norm1 << " "<<norm2<< " "<<norm1-norm2<<std::endl;
 
     MPI_Finalize();
 

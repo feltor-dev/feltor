@@ -117,11 +117,12 @@ struct aCommunicator
      * The transpose operation is <tt> global_scatter_reduce() </tt>
      * @param values source vector v; data is collected from this vector
      * @param buffer on output holds the gathered data ( must be of size <tt> buffer_size() </tt>)
-     * @note if <tt> buffer_size()==0 </tt>nothing happens
+     * @note If <tt> !isCommunicating() </tt> then this call will not involve
+     * MPI communication but will still gather values according to the given
+     * index map
      */
     void global_gather( const value_type* values, LocalContainer& buffer)const
     {
-        if( do_size() == 0 ) return;
         do_global_gather( values, buffer);
     }
 
@@ -129,9 +130,12 @@ struct aCommunicator
      * @brief \f$ w = G v\f$. Globally (across processes) gather data into a buffer (memory allocating version)
      *
      * The transpose operation is <tt> global_scatter_reduce() </tt>
-     * @param values source vector v; data is collected from this vector (must have <tt> local_size() </tt> elements)
+     * @param values source vector v; data is collected from this vector (must
+     * have <tt> local_size() </tt> elements)
      * @return object of size <tt> buffer_size() </tt> that holds the gathered data
-     * @note if <tt> buffer_size()==0 </tt> the default constructor of \c LocalContainer is called
+     * @note If <tt> !isCommunicating() </tt> then this call will not involve
+     * MPI communication but will still gather values according to the given
+     * index map
      */
     LocalContainer global_gather( const value_type* values) const
     {
@@ -145,11 +149,14 @@ struct aCommunicator
      *
      * This is the transpose operation of <tt> global_gather() </tt>
      * @param toScatter buffer vector w; (has to be of size given by <tt> buffer_size() </tt>)
-     * @param values target vector v; on output contains values from other processes sent back to the origin (must have <tt> local_size() </tt> elements)
-     * @note if <tt> buffer_size()==0 </tt> nothing happens
+     * @param values target vector v; on output contains values from other
+     * processes sent back to the origin (must have <tt> local_size() </tt>
+     * elements)
+     * @note If <tt> !isCommunicating() </tt> then this call will not involve
+     * MPI communication but will still scatter and reduce values according to
+     * the given index map
      */
     void global_scatter_reduce( const LocalContainer& toScatter, value_type* values) const{
-        if( do_size() == 0 ) return;
         do_global_scatter_reduce(toScatter, values);
     }
 
@@ -157,12 +164,15 @@ struct aCommunicator
     * @brief The local size of the buffer vector w = local map size
     *
     * Consider that both the source vector v and the buffer w are distributed across processes.
-    * In Feltor the vector v is distributed equally among processes and the local size
+    * In Feltor the vector v is (usually) distributed equally among processes and the local size
     * of v is the same for all processes. However, the buffer size might be different for each process.
     * @return buffer size (may be different for each process)
     * @note may return 0
-    * @attention it is NOT enough to check for zero buffer size if you want to find out whether a given process
-    * needs to send MPI messages or not. See <tt> isCommunicating() </tt> for an explanation
+    * @attention it is NOT a good idea to check for zero buffer size if you
+    * want to find out whether a given process needs to send MPI messages or
+    * not. The first reason is that even if no communication is happening the
+    * buffer_size is not zero as there may still be local gather/scatter
+    * operations. The right way to do it is to call <tt> isCommunicating() </tt>
     * @sa local_size() isCommunicating()
     */
     unsigned buffer_size() const{return do_size();}
@@ -171,7 +181,7 @@ struct aCommunicator
     * <tt> dg::MPI_Vector </tt>
     *
     * Consider that both the source vector v and the buffer w are distributed across processes.
-    * In Feltor the vector v is distributed equally among processes and the local size
+    * In Feltor the vector v is (usually) distributed equally among processes and the local size
     * of v is the same for all processes.
     * @return local size of v (same for all processes)
     * @note Important only for general scatter operations where some elements of v might have to be set to zero
@@ -181,16 +191,21 @@ struct aCommunicator
     /**
      * @brief True if the gather/scatter operation involves actual MPI communication
      *
-     * This is more than just a test for zero message size.
-     * This is because even if a process has zero message size indicating that it
-     * technically does not need to send any data at all it might still need to participate in an MPI communication (sending an empty message to
-     * indicate that a certain point in execution has been reached). Only if NONE of the processes in the process group has anything to send will
-     * this function return false.
-     * This test can be used to avoid the gather operation alltogether in e.g. the construction of a MPI distributed matrix.
-     * @note this check involves MPI communication itself, because a process needs to check if itself or any other process in its
-     * group is communicating.
+     * This is more than just a test for zero message size.  This is because
+     * even if a process has zero message size indicating that it technically
+     * does not need to send any data at all it might still need to participate
+     * in an MPI communication (sending an empty message to indicate that a
+     * certain point in execution has been reached). Only if NONE of the
+     * processes in the process group has anything to send will this function
+     * return false.  This test can be used to avoid the gather operation
+     * alltogether in e.g. the construction of a MPI distributed matrix.
+     * @note this check may involve MPI communication itself, because a process
+     * needs to check if itself or any other process in its group is
+     * communicating.
      *
-     * @return False, if the global gather can be done without MPI communication (i.e. the indices are all local to each calling process), or if the communicator is \c MPI_COMM_NULL. True else.
+     * @return False, if the global gather can be done without MPI
+     * communication (i.e. the indices are all local to each calling process),
+     * or if the communicator is \c MPI_COMM_NULL. True else.
      * @sa buffer_size()
      */
     bool isCommunicating() const{

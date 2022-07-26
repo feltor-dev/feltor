@@ -58,7 +58,6 @@ struct Collective
         thrust::exclusive_scan( sendTo.begin(),   sendTo.end(),   accS.begin());
         thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
         m_sendTo=sendTo, m_recvFrom=recvFrom, m_accS=accS, m_accR=accR;
-    
     }
     /**
      * @brief Number of processes in the communicator
@@ -263,8 +262,11 @@ struct BijectiveComm : public aCommunicator<Vector>
     const thrust::host_vector<int>& get_pids()const{return m_pids;}
     virtual BijectiveComm* clone() const override final {return new BijectiveComm(*this);}
     private:
-    virtual bool do_isCommunicating() const override final{
-        if( m_p.communicator()  == MPI_COMM_NULL) return false;
+    void compute_global_comm(){
+        if( m_p.communicator()  == MPI_COMM_NULL){
+            m_global_comm = false;
+            return;
+        }
         int rank;
         MPI_Comm_rank( m_p.communicator(), &rank);
         bool local_communicating = false, global_communicating=false;
@@ -273,8 +275,9 @@ struct BijectiveComm : public aCommunicator<Vector>
                 local_communicating = true;
         MPI_Allreduce( &local_communicating, &global_communicating, 1,
                        MPI_C_BOOL, MPI_LOR, m_p.communicator());
-        return global_communicating;
+        m_global_comm = global_communicating;
     }
+    virtual bool do_isCommunicating() const override final{ return m_global_comm;}
     virtual MPI_Comm do_communicator() const override final {return m_p.communicator();}
     virtual unsigned do_size() const override final { return m_p.store_size();}
     virtual Vector do_make_buffer()const override final{
@@ -309,6 +312,7 @@ struct BijectiveComm : public aCommunicator<Vector>
             sendTo[keys[i]] = number[i];
         m_p.construct( sendTo, comm);
         m_values.data().resize( m_idx.size());
+        compute_global_comm();
     }
     virtual void do_global_gather( const get_value_type<Vector>* values, Vector& store)const override final
     {
@@ -317,23 +321,36 @@ struct BijectiveComm : public aCommunicator<Vector>
         //assert( values.size() == m_idx.size());
         //nach PID ordnen
         typename Vector::const_pointer values_ptr(values);
-        thrust::gather( m_idx.begin(), m_idx.end(), values_ptr, m_values.data().begin());
         //senden
-        m_p.scatter( m_values.data(), store);
+        if( m_global_comm)
+        {
+            thrust::gather( m_idx.begin(), m_idx.end(), values_ptr, m_values.data().begin());
+            m_p.scatter( m_values.data(), store);
+        }
+        else
+            thrust::gather( m_idx.begin(), m_idx.end(), values_ptr, store.begin());
     }
 
     virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values) const override final
     {
         //actually this is a gather but we constructed it invertedly
-        m_p.gather( toScatter, m_values.data());
         typename Vector::pointer values_ptr(values);
-        //nach PID geordnete Werte wieder umsortieren
-        thrust::scatter( m_values.data().begin(), m_values.data().end(), m_idx.begin(), values_ptr);
+        if( m_global_comm)
+        {
+            m_p.gather( toScatter, m_values.data());
+            //nach PID geordnete Werte wieder umsortieren
+            thrust::scatter( m_values.data().begin(), m_values.data().end(), m_idx.begin(), values_ptr);
+        }
+        else
+        {
+            thrust::scatter( toScatter.begin(), toScatter.end(), m_idx.begin(), values_ptr);
+        }
     }
     Buffer<Vector> m_values;
     Index m_idx;
     Collective<Index, Vector> m_p;
     thrust::host_vector<int> m_pids;
+    bool m_global_comm = false;
 };
 
 /**
