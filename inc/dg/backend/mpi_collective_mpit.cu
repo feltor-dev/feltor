@@ -42,6 +42,42 @@ int main( int argc, char * argv[])
             std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
     }
     MPI_Barrier(MPI_COMM_WORLD);
+    {
+    if(rank==0)std::cout << "Test bijective branch of SurjectiveComm:"<<std::endl;
+    // First get localIndexMap of Bijective
+    thrust::host_vector<double> seq( c.local_size()), pids(c.local_size(), rank);
+    thrust::sequence( seq.begin(), seq.end());
+    auto idx_map = dg::construct<thrust::host_vector<int>>(c.global_gather( &seq[0]));
+    auto pid_map = dg::construct<thrust::host_vector<int>>(c.global_gather( &pids[0]));
+    dg::SurjectiveComm<thrust::host_vector<int>, thrust::host_vector<double>> sur( seq.size(), idx_map, pid_map, MPI_COMM_WORLD);
+    std::cout << "Rank "<<rank<<" Surjective is bijective? "<<std::boolalpha<<sur.isLocalBijective()<<" (true)\n";
+    MPI_Barrier(MPI_COMM_WORLD);
+    auto rec_bi = c.global_gather( thrust::raw_pointer_cast(v.data()));
+    auto rec_su = sur.global_gather( thrust::raw_pointer_cast(v.data()));
+    equal = true;
+    if(rank==0)std::cout << "Bijective and Surjective do the same?"<<std::endl;
+    for( unsigned i=0; i<rec_bi.size(); i++)
+        if( rec_bi[i] != rec_su[i]) { equal = false; }
+    {
+        if( equal)
+            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
+        else
+            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(rank==0)std::cout << "Surjective w/o reduce workds?"<<std::endl;
+    sur.global_scatter_reduce( rec_su, thrust::raw_pointer_cast(v.data()));
+    equal = true;
+    for( unsigned i=0; i<m.size(); i++)
+        if( v[i] != w[i]) { equal = false; }
+    {
+        if( equal)
+            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
+        else
+            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    }
     if(rank==0)std::cout << "Test GeneralComm and SurjectiveComm:"<<std::endl;
     if(rank==0)std::cout << "Test Norm Gv*Gv vs G^T(Gv)*v: "<<std::endl;
     N = 20;
@@ -56,6 +92,8 @@ int main( int argc, char * argv[])
         pids[i] = rank;
         if( i>=N) pids[i] = (rank+1)%size;
     }
+    dg::SurjectiveComm<thrust::host_vector<int>, thrust::host_vector<double>> sur( N, idx, pids, MPI_COMM_WORLD);
+    std::cout << "Rank "<<rank<<" Surjective is bijective? "<<std::boolalpha<<sur.isLocalBijective()<<" (false)\n";
     dg::GeneralComm<thrust::host_vector<int>, thrust::host_vector<double> > s2( N, idx, pids, MPI_COMM_WORLD), s(s2);
     receive = s.global_gather( thrust::raw_pointer_cast(vec.data()));
     /// Test if global_scatter_reduce is in fact the transpose of global_gather

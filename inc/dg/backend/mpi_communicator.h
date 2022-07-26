@@ -62,7 +62,8 @@ The scatter matrix can thus have zero, one or more "1"s in each line.
 
 @note There is no "scatter map" or "gather map", there is just an integer index map idx\f$(i)\f$
 that maps each index \f$ i \f$ in \f$ w\f$ to an index \f$ \text{idx}(i)\f$ in \f$ v\f$.
-In code this is represented by the vector "idx" with elements idx[i] = idx\f$(i)\f$
+Think of it more in terms of a "connector".
+In code this is represented by the vector "idx" with elements idx[i] = idx\f$(i)\f$.
 
 We distinguish between
 
