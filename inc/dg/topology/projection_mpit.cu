@@ -47,8 +47,8 @@ int main(int argc, char* argv[])
     auto backward = dg::create::fast_transform( g2o.dltx().backward(), g2o.dlty().backward(), g2o);
     const dg::MHVec sinO( dg::evaluate( sine, g2o)),
                                 sinN( dg::evaluate( sine, g2n));
-    dg::MHVec w2do = dg::create::weights( g2o);
-    dg::MHVec w2dn = dg::create::weights( g2n);
+    const dg::MHVec w2do = dg::create::weights( g2o);
+    const dg::MHVec w2dn = dg::create::weights( g2n);
     dg::MHVec sinP( sinN), sinI(sinO), sinF(sinO);
     dg::blas2::gemv( proj2d, sinO, sinP); //FAST PROJECTION
     double value0 = sqrt(dg::blas2::dot( sinO, w2do, sinO));
@@ -74,6 +74,29 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., sinO, -1., sinI);
     value2 = sqrt(dg::blas2::dot( sinI, w2do, sinI));
     if(rank==0)std::cout << "Forward-Backward Error   "<<value2 << " (Must be zero)\n" << std::endl;
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
+    if(rank==0)std::cout << "TEST correct mpi matrix conversion \n";
+    inte2d = dg::create::interpolation( g2o, g2n, "linear");
+    dg::IHMatrix inte2dg = dg::create::interpolation( g2o.global(), g2n.global(), "linear");
+    sinP = dg::evaluate( sine, g2n);
+    dg::blas2::gemv( inte2d, sinP, sinI);
+    value0 = sqrt(dg::blas2::dot( sinI, w2do, sinI));
+    dg::HVec sinNg = dg::evaluate( sine, g2n.global()), sinOg(dg::evaluate( sine,g2o.global()));
+    const dg::HVec w2dog = dg::create::weights( g2o.global());
+    dg::blas2::gemv( inte2dg, sinNg, sinOg);
+    value1 = sqrt( dg::blas2::dot( sinOg, w2dog, sinOg));
+    if(rank==0)std::cout << "MPI Interpolation: difference in Norms "<<value0 - value1 << "\n" << std::endl;
+
+    dg::MIHMatrix project2d = dg::create::projection( g2n, g2o, "linear");
+    dg::IHMatrix project2dg = dg::create::projection( g2n.global(), g2o.global(), "linear");
+    sinI = dg::evaluate( sine, g2o);
+    dg::blas2::gemv( project2d, sinI, sinP);
+    value0 = sqrt(dg::blas2::dot( sinP, w2dn, sinP));
+    sinOg = dg::evaluate( sine, g2o.global());
+    const dg::HVec w2dng = dg::create::weights( g2n.global());
+    dg::blas2::gemv( project2dg, sinOg, sinNg);
+    value1 = sqrt( dg::blas2::dot( sinNg, w2dng, sinNg));
+    if(rank==0)std::cout << "MPI Projection   : difference in Norms "<<value0 - value1 << "\n" << std::endl;
 
     MPI_Finalize();
     return 0;
