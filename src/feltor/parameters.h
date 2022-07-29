@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 #include <cmath>
-#include "dg/enums.h"
+
 #include "json/json.h"
 #include "dg/file/json_utilities.h"
 
