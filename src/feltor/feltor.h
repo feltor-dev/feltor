@@ -422,7 +422,7 @@ struct Explicit
 
     Container m_UE2;
     std::array<Container,2> m_divNUb;
-    std::array<Container,2> m_plusN, m_minusN, m_plusU, m_minusU;
+    std::array<Container,2> m_plusN, m_zeroN, m_minusN, m_plusU, m_zeroU, m_minusU;
     std::array<Container,2> m_plusSTN, m_minusSTN, m_plusSTU, m_minusSTU;
     std::vector<Container> m_multi_chi;
 
@@ -655,7 +655,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
 
     m_potential[0] = m_potential[1] = m_temp0;
     m_plusSTN = m_minusSTN = m_minusSTU = m_plusSTU = m_potential;
-    m_plusN = m_minusN = m_minusU = m_plusU = m_potential;
+    m_plusN = m_zeroN = m_minusN = m_minusU = m_zeroU = m_plusU = m_potential;
     m_divNUb = m_density = m_densityST = m_velocity = m_potential;
     m_velocityST = m_potentialST = m_potential;
     m_dsN = m_dsP = m_dsU = m_dssU = m_lapParU = m_potential;
@@ -933,8 +933,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_staggered_density_an
     {
 
         m_fa( dg::geo::einsMinus, density[i], m_minusN[i]);
+        m_fa( dg::geo::zeroForw,  density[i], m_zeroN[i]);
         m_fa( dg::geo::einsPlus,  density[i], m_plusN[i]);
-        update_parallel_bc_2nd( m_fa, m_minusN[i], density[i], m_plusN[i],
+        update_parallel_bc_2nd( m_fa, m_minusN[i], m_zeroN[i], m_plusN[i],
                 m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
 
         m_faST( dg::geo::zeroMinus, potential[i], m_minus);
@@ -983,8 +984,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_velocity_and_apar(
         dg::blas1::axpby( 0.5, m_minusSTU[i], 0.5, m_plusSTU[i], m_velocity[i]);
 
         m_fa( dg::geo::einsMinus, velocityST[i], m_minusU[i]);
+        m_fa( dg::geo::zeroForw,  velocityST[i], m_zeroU[i]);
         m_fa( dg::geo::einsPlus,  velocityST[i], m_plusU[i]);
-        update_parallel_bc_2nd( m_fa, m_minusU[i], velocityST[i],
+        update_parallel_bc_2nd( m_fa, m_minusU[i], m_zeroU[i],
                 m_plusU[i], m_p.bcxU, 0.);
     }
     // Compute apar
@@ -1312,7 +1314,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
     {
         // compute qhat
         compute_parallel_flux( m_minusSTU[i], m_plusSTU[i],
-                m_minusN[i], m_density[i], m_plusN[i],
+                m_minusN[i], m_zeroN[i], m_plusN[i],
                 m_fluxM, m_fluxP, m_p.slope_limiter);
         // Now compute divNUb
         dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
@@ -1320,10 +1322,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
 
         // compute grad U2/2
-        dg::blas1::axpby( 0.25, m_minusU[i], 0.25, m_velocityST[i], m_minusSTU[i]);
-        dg::blas1::axpby( 0.25, m_velocityST[i], 0.25, m_plusU[i], m_plusSTU[i]);
+        dg::blas1::axpby( 0.25, m_minusU[i], 0.25, m_zeroU[i], m_minusSTU[i]);
+        dg::blas1::axpby( 0.25, m_zeroU[i],  0.25, m_plusU[i], m_plusSTU[i]);
         compute_parallel_flux( m_minusSTU[i], m_plusSTU[i],
-                m_minusU[i], m_velocityST[i], m_plusU[i],
+                m_minusU[i], m_zeroU[i], m_plusU[i],
                 m_fluxM, m_fluxP,
                 m_p.slope_limiter);
         dg::geo::ds_centered( m_faST, -1., m_fluxM, m_fluxP, 1., yp[1][i]);
@@ -1714,13 +1716,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         // Add parallel viscosity
         if( m_p.nu_parallel_u[i] > 0)
         {
-            m_fa( dg::geo::einsMinus, velocityST[i], m_minus);
-            m_fa( dg::geo::zeroForw,  velocityST[i], m_zero);
-            m_fa( dg::geo::einsPlus,  velocityST[i], m_plus);
-            update_parallel_bc_2nd( m_fa, m_minus, velocityST[i],
-                    m_plus, m_p.bcxU, 0.);
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[i],
-                    m_minus, m_zero, m_plus, 0., m_temp0);
+                    m_minusU[i], m_zeroU[i], m_plusU[i], 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
         }
     }
