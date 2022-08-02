@@ -9,8 +9,8 @@
 #include "testfunctors.h"
 #include "ds_generator.h"
 
-const double R_0 = 10;
-const double I_0 = 20; //q factor at r=1 is I_0/R_0
+const double R_0 = 3;
+const double I_0 = 10; //q factor at r=1 is I_0/R_0
 const double a  = 1; //small radius
 
 int main( )
@@ -127,7 +127,7 @@ int main( )
     std::cout << "    Tp_TV_err: "<<(var_after-var_before)/var_before<<"\n";
     ///##########################################################///
     std::cout << "# TEST STAGGERED GRID DERIVATIVE\n";
-    dg::DVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun);
+    dg::DVec zMinus(fun), eMinus(fun), zPlus(fun), ePlus(fun), eZero(fun);
     dg::DVec funST(fun);
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFAST(
             mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my,
@@ -150,19 +150,20 @@ int main( )
               <<" "<<vol<<"\n";
 
     ds.fieldaligned()(dg::geo::einsPlus, fun, ePlus);
+    ds.fieldaligned()(dg::geo::zeroForw, fun, eZero);
     ds.fieldaligned()(dg::geo::einsMinus, fun, eMinus);
     dg::blas1::pointwiseDot ( 1./2./dsFAST.deltaPhi(), dsFAST.bphiM(),
-            fun, -1./2./dsFAST.deltaPhi(), dsFAST.bphiM(),
+            eZero, -1./2./dsFAST.deltaPhi(), dsFAST.bphiM(),
             eMinus, 0., eMinus);
     dg::blas1::pointwiseDot( 1./2./dsFAST.deltaPhi(), ePlus,
-            dsFAST.bphiP(), -1./2./dsFAST.deltaPhi(), fun,
+            dsFAST.bphiP(), -1./2./dsFAST.deltaPhi(), eZero,
             dsFAST.bphiP(), 0., ePlus);
     dg::geo::ds_divCentered( dsFAST, 1., eMinus, ePlus, 0., derivative);
     sol = dg::blas2::dot( vol3d, sol3);
     vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, fun));
     dg::blas1::axpby( 1., sol3, -1., derivative);
     norm = dg::blas2::dot( derivative, vol3d, derivative);
-    name  = "directLapST"; // works as well as directLap
+    name  = "directLapST"; // works as well as directLap (MW: actually works almost exactly the same, also in diffusion equation test, it seems that the volume element can be well interpolated along the fieldlines)
     std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
               <<" "<<sqrt(norm/sol)<<"\n"
               <<"    "<<name+"_vol:"<<std::setw(30-name.size())

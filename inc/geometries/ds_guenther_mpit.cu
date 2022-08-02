@@ -10,8 +10,8 @@
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
-const double R_0 = 10;
-const double I_0 = 20; //q factor at r=1 is I_0/R_0
+const double R_0 = 3;
+const double I_0 = 10; //q factor at r=1 is I_0/R_0
 const double a  = 1; //small radius
 
 int main(int argc, char * argv[])
