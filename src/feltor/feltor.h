@@ -450,7 +450,6 @@ struct Explicit
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
     std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
         m_multi_invgammaN, m_multi_ampere;
-    IMatrix m_stencil;
 
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar;
@@ -666,7 +665,6 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_s[0] = m_s[1] = m_potential ;
 
     //--------------------------Construct-------------------------//
-    m_stencil = dg::create::window_stencil( {3,3}, g, g.bcx(), g.bcy() );
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);

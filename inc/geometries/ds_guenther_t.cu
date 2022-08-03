@@ -169,6 +169,22 @@ int main( )
               <<"    "<<name+"_vol:"<<std::setw(30-name.size())
               <<" "<<vol<<"\n";
 
+    dsFAST( dg::geo::zeroMinus, fun, zMinus);
+    dsFAST( dg::geo::einsPlus,  fun, ePlus);
+    dg::geo::ds_centered( dsFAST, 1., zMinus, ePlus, 0., funST);
+    dsFAST( dg::geo::einsMinus, funST, zMinus);
+    dsFAST( dg::geo::zeroPlus,  funST, ePlus);
+    dg::geo::ds_divCentered( dsFAST, 1., zMinus, ePlus, 0., derivative);
+    sol = dg::blas2::dot( vol3d, sol3);
+    vol = dg::blas1::dot( vol3d, derivative)/sqrt( dg::blas2::dot( vol3d, fun));
+    dg::blas1::axpby( 1., sol3, -1., derivative);
+    norm = dg::blas2::dot( derivative, vol3d, derivative);
+    name  = "staggeredLapST";
+    std::cout <<"    "<<name<<":" <<std::setw(18-name.size())
+              <<" "<<sqrt(norm/sol)<<"\n"
+              <<"    "<<name+"_vol:"<<std::setw(30-name.size())
+              <<" "<<vol<<"\n";
+
     std::cout << "# TEST Inverse of I^+ is I^-\n";
     ds.fieldaligned()(dg::geo::einsPlus, fun, ePlus);
     ds.fieldaligned()(dg::geo::einsMinus, ePlus, eMinus);
