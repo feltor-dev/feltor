@@ -760,7 +760,14 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     if( inter_m == "dg")
     {
         dg::IHMatrix fine, projection, multi;
-        projection = dg::create::projection( *grid_transform, grid_fine);
+        if( project_m == "dg")
+            projection = dg::create::projection( *grid_transform, grid_fine);
+        else
+        {
+            multi = dg::create::projection( grid_equidist, grid_fine, project_m);
+            fine = dg::create::inv_backproject( *grid_transform);
+            cusp::multiply( fine, multi, projection);
+        }
         fine = dg::create::interpolation( yp[0], yp[1],
             *grid_transform, bcx, bcy, "dg");
         cusp::multiply( projection, fine, multi);
@@ -777,9 +784,14 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     else
     {
         dg::IHMatrix fine, projection, multi, temp;
-        multi = dg::create::projection( grid_equidist, grid_fine, project_m);
-        fine = dg::create::inv_backproject( *grid_transform);
-        cusp::multiply( fine, multi, projection);
+        if( project_m == "dg")
+            projection = dg::create::projection( *grid_transform, grid_fine);
+        else
+        {
+            multi = dg::create::projection( grid_equidist, grid_fine, project_m);
+            fine = dg::create::inv_backproject( *grid_transform);
+            cusp::multiply( fine, multi, projection);
+        }
 
         fine = dg::create::backproject( *grid_transform); // from dg to equidist
 

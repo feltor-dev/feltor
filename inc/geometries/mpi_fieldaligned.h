@@ -302,43 +302,71 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     if( inter_m == "dg")
     {
-        dg::IHMatrix fine, projection, multi;
-        projection = dg::create::projection( grid_transform->global(), grid_fine.local());
+        dg::IHMatrix fine, projection, multi, temp;
+        if( project_m ==  "dg")
+            projection = dg::create::projection( grid_transform->global(), grid_fine.local());
+        else
+            projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
 
         fine = dg::create::interpolation( yp[0], yp[1],
             grid_transform->global(), bcx, bcy, "dg");
         cusp::multiply( projection, fine, multi);
         multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        dg::MIHMatrix temp = dg::convert( multi, *grid_transform); //, tempT;
-        dg::blas2::transfer( temp, m_plus);
+        if( project_m != "dg")
+        {
+            fine = dg::create::inv_backproject( grid_transform->local());
+            cusp::multiply( fine, multi, temp);
+            temp.swap(multi);
+        }
+        dg::MIHMatrix mpi = dg::convert( multi, *grid_transform); //, tempT;
+        dg::blas2::transfer( mpi, m_plus);
 
         fine = dg::create::interpolation( Xf, Yf,
             grid_transform->global(), bcx, bcy, "dg");
         cusp::multiply( projection, fine, multi);
         multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        temp = dg::convert( multi, *grid_transform); //, tempT;
-        dg::blas2::transfer( temp, m_zero);
+        if( project_m != "dg")
+        {
+            fine = dg::create::inv_backproject( grid_transform->local());
+            cusp::multiply( fine, multi, temp);
+            temp.swap(multi);
+        }
+        mpi = dg::convert( multi, *grid_transform); //, tempT;
+        dg::blas2::transfer( mpi, m_zero);
 
         fine = dg::create::interpolation( ym[0], ym[1],
             grid_transform->global(), bcx, bcy, "dg");
         cusp::multiply( projection, fine, multi);
         multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        temp = dg::convert( multi, *grid_transform); //, tempT;
-        dg::blas2::transfer( temp, m_minus);
+        if( project_m != "dg")
+        {
+            fine = dg::create::inv_backproject( grid_transform->local());
+            cusp::multiply( fine, multi, temp);
+            temp.swap(multi);
+        }
+        mpi = dg::convert( multi, *grid_transform); //, tempT;
+        dg::blas2::transfer( mpi, m_minus);
     }
     else
     {
         dg::IHMatrix fine, projection, multi, temp;
-        projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
+        if( project_m ==  "dg")
+            projection = dg::create::projection( grid_transform->global(), grid_fine.local());
+        else
+            projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
 
         fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
         multi = dg::create::interpolation( yp[0], yp[1],
             grid_equidist.global(), bcx, bcy, inter_m);
         cusp::multiply( multi, fine, temp);
         cusp::multiply( projection, temp, multi);
-        temp = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        fine = dg::create::inv_backproject( grid_transform->local());
-        cusp::multiply( fine, temp, multi);
+        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        if( project_m != "dg")
+        {
+            fine = dg::create::inv_backproject( grid_transform->local());
+            cusp::multiply( fine, multi, temp);
+            temp.swap(multi);
+        }
         dg::MIHMatrix mpi = dg::convert( multi, *grid_transform);
         dg::blas2::transfer( mpi, m_plus);
 
@@ -347,9 +375,13 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
                 grid_equidist.global(), bcx, bcy, inter_m);
         cusp::multiply( multi, fine, temp);
         cusp::multiply( projection, temp, multi);
-        temp = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        fine = dg::create::inv_backproject( grid_transform->local());
-        cusp::multiply( fine, temp, multi);
+        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        if( project_m != "dg")
+        {
+            fine = dg::create::inv_backproject( grid_transform->local());
+            cusp::multiply( fine, multi, temp);
+            temp.swap(multi);
+        }
         mpi = dg::convert( multi, *grid_transform);
         dg::blas2::transfer( mpi, m_zero);
 
@@ -358,9 +390,13 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
             grid_equidist.global(), bcx, bcy, inter_m);
         cusp::multiply( multi, fine, temp);
         cusp::multiply( projection, temp, multi);
-        temp = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        fine = dg::create::inv_backproject( grid_transform->local());
-        cusp::multiply( fine, temp, multi);
+        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        if( project_m != "dg")
+        {
+            fine = dg::create::inv_backproject( grid_transform->local());
+            cusp::multiply( fine, multi, temp);
+            temp.swap(multi);
+        }
         mpi = dg::convert( multi, *grid_transform);
         dg::blas2::transfer( mpi, m_minus);
     }

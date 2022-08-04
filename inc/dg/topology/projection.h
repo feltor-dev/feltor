@@ -103,8 +103,8 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old, std::string method = "dg")
 {
-    if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
-    if( g_old.n() < g_new.n()) std::cerr << "ATTENTION: you project between incompatible grids!! old n: "<<g_old.n()<<" new n: "<<g_new.n()<<"\n";
+    if( g_old.N() % g_new.N() != 0) std::cerr << "# ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
+    if( g_old.n() < g_new.n()) std::cerr << "# ATTENTION: you project between incompatible grids!! old n: "<<g_old.n()<<" new n: "<<g_new.n()<<"\n";
     //form the adjoint
     cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
         dg::create::diagonal( dg::create::weights( g_old));
