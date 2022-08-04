@@ -232,7 +232,7 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     ///%%%%%%%%%%%%%%%%%%%%%Setup grids%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     //  grid_trafo -> grid_equi -> grid_fine -> grid_equi -> grid_trafo
     dg::Timer t;
-    if( benchmark) t.tic();
+    if( benchmark) t.tic(grid.get_perp_comm());
     dg::ClonePtr<dg::aMPIGeometry2d> grid_transform( grid.perp_grid()) ;
     // We do not need metric of grid_equidist or or grid_fine
     dg::RealMPIGrid2d<double> grid_equidist( *grid_transform) ;
@@ -258,9 +258,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
     if( benchmark)
     {
-        t.toc();
+        t.toc(grid.get_perp_comm());
         if(rank==0) std::cout << "# DS: High order grid gen   took: "<<t.diff()<<"\n";
-        t.tic();
+        t.tic(grid.get_perp_comm());
     }
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
     std::array<thrust::host_vector<double>,3> yp_trafo, ym_trafo, yp, ym;
@@ -269,6 +269,11 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     auto vol = dg::tensor::volume(grid.metric()), vol2d0(vol);
     auto vol2d = dg::split( vol, grid);
     dg::assign( vol2d[0], vol2d0);
+    for( unsigned coord = 0; coord < m_sizeZ; coord++)
+    {
+    // The aim of this construct is to avoid "out-of-memory" if some processes lie on the same node
+    if( coord == m_coords2)
+    {
     detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic,
             grid_transform->local(), yp_trafo, vol2d0.data(), hbp, in_boxp,
             deltaPhi, eps);
@@ -290,9 +295,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     } // release memory for interpolate matrix
     if(benchmark)
     {
-        t.toc();
+        t.toc(grid.get_perp_comm());
         if(rank==0) std::cout << "# DS: Fieldline integration took: "<<t.diff()<<"\n";
-        t.tic();
+        t.tic(grid.get_perp_comm());
     }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
     {
@@ -353,9 +358,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     }
     if( benchmark)
     {
-        t.toc();
+        t.toc(grid.get_perp_comm());
         if(rank==0) std::cout << "# DS: Multiplication PI     took: "<<t.diff()<<"\n";
-        t.tic();
+        t.tic(grid.get_perp_comm());
     }
     dg::MIHMatrix temp = dg::convert( plus, *grid_transform); //, tempT;
     dg::blas2::transfer( temp, m_plus);
@@ -366,8 +371,11 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     }
     if( benchmark)
     {
-        t.toc();
+        t.toc(grid.get_perp_comm());
         if(rank==0) std::cout << "# DS: Conversion            took: "<<t.diff()<<"\n";
+    }
+    }
+    MPI_Barrier( grid.communicator());
     }
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
     dg::HVec hbphi( yp_trafo[2]), hbphiP(hbphi), hbphiM(hbphi);
