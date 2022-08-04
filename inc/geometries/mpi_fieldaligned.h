@@ -300,79 +300,74 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         t.tic(grid.get_perp_comm());
     }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    {
-    dg::IHMatrix plusFine, minusFine, zeroFine;
     if( inter_m == "dg")
     {
-        plusFine = dg::create::interpolation( yp[0], yp[1],
-                grid_transform->global(), bcx, bcy, "dg");
-        zeroFine = dg::create::interpolation( Xf, Yf,
-                grid_transform->global(), bcx, bcy, "dg");
-        minusFine = dg::create::interpolation( ym[0], ym[1],
-                grid_transform->global(), bcx, bcy, "dg");
-    }
-    else
-    {
-        dg::IHMatrix plusFineTmp = dg::create::interpolation( yp[0], yp[1],
-                grid_equidist.global(), bcx, bcy, inter_m);
-        dg::IHMatrix zeroFineTmp = dg::create::interpolation( Xf, Yf,
-                grid_equidist.global(), bcx, bcy, inter_m);
-        dg::IHMatrix minusFineTmp = dg::create::interpolation( ym[0], ym[1],
-                grid_equidist.global(), bcx, bcy, inter_m);
-        dg::IHMatrix forw = dg::create::backproject( grid_transform->global()); // from dg to equidist
-        cusp::multiply( plusFineTmp, forw, plusFine);
-        cusp::multiply( zeroFineTmp, forw, zeroFine);
-        cusp::multiply( minusFineTmp, forw, minusFine);
-    }
-    dg::IHMatrix projection;
-    // Now project
-    if ( project_m == "dg")
-    {
+        dg::IHMatrix fine, projection, multi;
         projection = dg::create::projection( grid_transform->global(), grid_fine.local());
-    }
-    else // const
-    {
-        /// ATTENTION project_m may incur communication!!
-        projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
-    }
-    dg::IHMatrix plus, minus, zero;
-    cusp::multiply( projection, plusFine, plus);
-    cusp::multiply( projection, zeroFine, zero);
-    cusp::multiply( projection, minusFine, minus);
-    // Now convert to row dist matrix
-    auto plusL = dg::convertGlobal2LocalRows( plus, *grid_transform);
-    auto zeroL = dg::convertGlobal2LocalRows( zero, *grid_transform);
-    auto minusL = dg::convertGlobal2LocalRows( minus, *grid_transform);
-    if( !(project_m == "dg"))
-    {
-        auto back = dg::create::inv_backproject( grid_transform->local());
-        cusp::multiply( back, plusL, plus);
-        cusp::multiply( back, zeroL, zero);
-        cusp::multiply( back, minusL, minus);
+
+        fine = dg::create::interpolation( yp[0], yp[1],
+            grid_transform->global(), bcx, bcy, "dg");
+        cusp::multiply( projection, fine, multi);
+        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        dg::MIHMatrix temp = dg::convert( multi, *grid_transform); //, tempT;
+        dg::blas2::transfer( temp, m_plus);
+
+        fine = dg::create::interpolation( Xf, Yf,
+            grid_transform->global(), bcx, bcy, "dg");
+        cusp::multiply( projection, fine, multi);
+        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        temp = dg::convert( multi, *grid_transform); //, tempT;
+        dg::blas2::transfer( temp, m_zero);
+
+        fine = dg::create::interpolation( ym[0], ym[1],
+            grid_transform->global(), bcx, bcy, "dg");
+        cusp::multiply( projection, fine, multi);
+        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        temp = dg::convert( multi, *grid_transform); //, tempT;
+        dg::blas2::transfer( temp, m_minus);
     }
     else
     {
-        plus = plusL;
-        zero = zeroL;
-        minus = minusL;
+        dg::IHMatrix fine, projection, multi, temp;
+        projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
+
+        fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
+        multi = dg::create::interpolation( yp[0], yp[1],
+            grid_equidist.global(), bcx, bcy, inter_m);
+        cusp::multiply( multi, fine, temp);
+        cusp::multiply( projection, temp, multi);
+        temp = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        fine = dg::create::inv_backproject( grid_transform->local());
+        cusp::multiply( fine, temp, multi);
+        dg::MIHMatrix mpi = dg::convert( multi, *grid_transform);
+        dg::blas2::transfer( mpi, m_plus);
+
+        fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
+        multi = dg::create::interpolation( Xf, Yf,
+                grid_equidist.global(), bcx, bcy, inter_m);
+        cusp::multiply( multi, fine, temp);
+        cusp::multiply( projection, temp, multi);
+        temp = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        fine = dg::create::inv_backproject( grid_transform->local());
+        cusp::multiply( fine, temp, multi);
+        mpi = dg::convert( multi, *grid_transform);
+        dg::blas2::transfer( mpi, m_zero);
+
+        fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
+        multi = dg::create::interpolation( ym[0], ym[1],
+            grid_equidist.global(), bcx, bcy, inter_m);
+        cusp::multiply( multi, fine, temp);
+        cusp::multiply( projection, temp, multi);
+        temp = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        fine = dg::create::inv_backproject( grid_transform->local());
+        cusp::multiply( fine, temp, multi);
+        mpi = dg::convert( multi, *grid_transform);
+        dg::blas2::transfer( mpi, m_minus);
     }
     if( benchmark)
     {
         t.toc(grid.get_perp_comm());
         if(rank==0) std::cout << "# DS: Multiplication PI     took: "<<t.diff()<<"\n";
-        t.tic(grid.get_perp_comm());
-    }
-    dg::MIHMatrix temp = dg::convert( plus, *grid_transform); //, tempT;
-    dg::blas2::transfer( temp, m_plus);
-    temp = dg::convert( zero, *grid_transform);
-    dg::blas2::transfer( temp, m_zero);
-    temp = dg::convert( minus, *grid_transform);
-    dg::blas2::transfer( temp, m_minus);
-    }
-    if( benchmark)
-    {
-        t.toc(grid.get_perp_comm());
-        if(rank==0) std::cout << "# DS: Conversion            took: "<<t.diff()<<"\n";
     }
     }
     MPI_Barrier( grid.communicator());
