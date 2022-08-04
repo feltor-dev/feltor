@@ -51,7 +51,7 @@ int main(int argc, char * argv[])
     MPI_Bcast( &method[0], letters, MPI_CHAR, 0, MPI_COMM_WORLD);
     ////////////////////////////////initialze fields /////////////////////
     const dg::CylindricalMPIGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
-    const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
+    const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField(R_0, I_0);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix,
         dg::MDVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
                 1e-8, mx[0], mx[1], -1., method);
@@ -74,8 +74,8 @@ int main(int argc, char * argv[])
          {"invCenteredLap",{&sol4,&fun}}
     };
     ///##########################################################///
-    if(rank==0)std::cout << "# TEST Guenther (No Boundary conditions)!\n";
-    if(rank==0)std::cout <<"Guenther:\n";
+    if(rank==0)std::cout << "# TEST Guenter (No Boundary conditions)!\n";
+    if(rank==0)std::cout <<"Guenter:\n";
     const dg::MDVec vol3d = dg::create::volume( g3d);
     for( const auto& tuple :  names)
     {

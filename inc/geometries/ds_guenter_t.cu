@@ -38,7 +38,7 @@ int main( )
     std::cout << "# Create parallel Derivative!\n";
     ////////////////////////////////initialze fields /////////////////////
     const dg::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
-    const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
+    const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField(R_0, I_0);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds(
         mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
         1e-8, mx, my, -1, method);
@@ -57,13 +57,13 @@ int main( )
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
          {"centered_bc_along",{&fun,&sol0}},{"dss_bc_along",{&fun,&sol1}},
          {"divForward",{&fun,&sol2}},       {"divBackward",{&fun,&sol2}},
-         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}},
-         {"invCenteredLap",{&sol4,&fun}}
+         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}}//,
+         //{"invCenteredLap",{&sol4,&fun}}
     };
 
     ///##########################################################///
-    std::cout << "# TEST Guenther (No Boundary conditions)!\n";
-    std::cout <<"Guenther : #rel_Error rel_Volume_integral(should be zero for div and Lap)\n";
+    std::cout << "# TEST Guenter (No Boundary conditions)!\n";
+    std::cout <<"Guenter : #rel_Error rel_Volume_integral(should be zero for div and Lap)\n";
     const dg::DVec vol3d = dg::create::volume( g3d);
     for( const auto& tuple :  names)
     {

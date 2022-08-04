@@ -29,7 +29,7 @@ int main()
     dg::DVec w3d = dg::create::volume( g3d);
 
     dg::Elliptic3d<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> elliptic(g3d, dg::centered);
-    const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField( R_0, I_0);
+    const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField( R_0, I_0);
     const dg::geo::CylindricalVectorLvl0 bhat = dg::geo::createBHat(mag);
     dg::SparseTensor<dg::DVec> bb = dg::geo::createAlignmentTensor( bhat, g3d);
     elliptic.set_chi( bb);

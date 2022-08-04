@@ -90,7 +90,7 @@ static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonVal
         {
             double I0 = gs.get( "I_0", 20.0).asDouble();
             double R0 = gs.get( "R_0", 10.0).asDouble();
-            return createGuentherField( R0, I0);
+            return createGuenterField( R0, I0);
         }
         case equilibrium::circular:
         {

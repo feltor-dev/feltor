@@ -19,7 +19,7 @@
         @defgroup solovev The solovev expansion
         @defgroup polynomial The polynomial expansion
         @defgroup taylor The Taylor state expansion
-        @defgroup guenter The Guenther expansion
+        @defgroup guenter The Guenter expansion
         @defgroup toroidal The Purely Toroidal expansion
         @defgroup circular The Circular expansion
         @defgroup mod  Modification of any expansion
