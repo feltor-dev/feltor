@@ -1680,6 +1680,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
 #else
     dg::blas1::scal( yp, beta);
 #endif
+#if FELTORPARALLEL == 1
+    for( unsigned i=0; i<2; i++)
+    {
+        if( m_p.nu_parallel_n[i] > 0)
+        {
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[i],
+                    m_minusN[i], m_zeroN[i], m_plusN[i], 1., yp[i]);
+        }
+    }
+#endif
     for( unsigned i=0; i<2; i++)
     {
         multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
