@@ -5,7 +5,7 @@
 #include <thrust/device_vector.h>
 
 #include "dg/algorithm.h"
-#include "guenther.h"
+#include "guenter.h"
 #include "fluxfunctions.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"

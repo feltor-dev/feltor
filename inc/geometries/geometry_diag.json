@@ -31,7 +31,7 @@
     "magnetic_field":
     {
         "input" : "file",
-        "file": "guenther_params.json"
+        "file": "guenter_params.json"
     },
     "width-factor" : 0.03
 }

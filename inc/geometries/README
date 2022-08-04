@@ -28,7 +28,7 @@
     polynomial.h
     polynomial_parameters.h
     taylor.h
-    guenther.h
+    guenter.h
     toroidal.h
     modified.h
 

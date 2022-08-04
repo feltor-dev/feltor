@@ -6,7 +6,7 @@
 #undef DG_DEBUG
 #include "dg/algorithm.h"
 #include "ds.h"
-#include "guenther.h"
+#include "guenter.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
@@ -23,7 +23,7 @@ int main(int argc, char * argv[])
     unsigned letters = 0;
     MPI_Comm comm;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if(rank==0)std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
+    if(rank==0)std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenter flux surfaces. Fieldlines do not cross boundaries.\n";
     dg::mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     if( rank == 0)
     {

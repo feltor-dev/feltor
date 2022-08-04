@@ -1,7 +1,7 @@
 #ifdef JSONCPP_VERSION_STRING
 #include "magnetic_field.h"
 #include "solovev.h"
-#include "guenther.h"
+#include "guenter.h"
 #include "polynomial.h"
 #include "toroidal.h"
 #include "fieldaligned.h"
@@ -50,9 +50,9 @@ namespace geo{
 // triangularity : 0.0
  * @endcode
  * @code
-// The guenther magnetic field
+// The guenter magnetic field
 {
-    "equilibrium" : "guenther",
+    "equilibrium" : "guenter",
     "I_0" : 20,
     "R_0" : 10
 }
@@ -86,7 +86,7 @@ static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonVal
             double R0 = gs.get( "R_0", 10.0).asDouble();
             return createToroidalField( R0);
         }
-        case equilibrium::guenther:
+        case equilibrium::guenter:
         {
             double I0 = gs.get( "I_0", 20.0).asDouble();
             double R0 = gs.get( "R_0", 10.0).asDouble();

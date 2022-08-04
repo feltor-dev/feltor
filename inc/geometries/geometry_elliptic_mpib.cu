@@ -9,7 +9,7 @@
 #include "dg/algorithm.h"
 
 #include "solovev.h"
-//#include "guenther.h"
+//#include "guenter.h"
 #include "mpi_curvilinear.h"
 #include "simple_orthogonal.h"
 #include "flux.h"

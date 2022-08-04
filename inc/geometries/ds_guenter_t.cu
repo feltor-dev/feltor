@@ -4,7 +4,7 @@
 #define DG_BENCHMARK
 #include "dg/algorithm.h"
 #include "ds.h"
-#include "guenther.h"
+#include "guenter.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 #include "ds_generator.h"
@@ -15,7 +15,7 @@ const double a  = 1; //small radius
 
 int main( )
 {
-    std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
+    std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenter flux surfaces. Fieldlines do not cross boundaries.\n";
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
     unsigned n, Nx, Ny, Nz, mx, my, max_iter = 1e4;
     std::string method = "cubic";

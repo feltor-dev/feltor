@@ -27,7 +27,7 @@ enum class equilibrium
     solovev, //!< dg::geo::solovev::Psip
     taylor, //!< dg::geo::taylor::Psip
     polynomial, //!< dg::geo::polynomial::Psip
-    guenther, //!< dg::geo::guenther::Psip
+    guenter, //!< dg::geo::guenter::Psip
     toroidal, //!< dg::geo::createToroidalField
     circular //!< dg::geo::circular::Psip
 };
@@ -58,7 +58,7 @@ static const std::map<std::string, equilibrium> str2equilibrium{
     {"solovev", equilibrium::solovev},
     {"taylor", equilibrium::taylor},
     {"polynomial", equilibrium::polynomial},
-    {"guenther", equilibrium::guenther},
+    {"guenter", equilibrium::guenter},
     {"toroidal", equilibrium::toroidal},
     {"circular", equilibrium::circular}
 };

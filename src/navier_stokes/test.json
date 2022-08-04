@@ -106,7 +106,7 @@
             "R_0": 3.0,
             "comment": "Sine functions; Guenter et al, J. Comput. Phys. 209 (2005) 354",
             "description": "square",
-            "equilibrium": "guenther"
+            "equilibrium": "guenter"
         }
     },
     "output": {

@@ -10,7 +10,7 @@
 
 #include "dg/algorithm.h"
 #include "mpi_curvilinear.h"
-//#include "guenther.h"
+//#include "guenter.h"
 #include "solovev.h"
 #include "ribeiro.h"
 #include "simple_orthogonal.h"
