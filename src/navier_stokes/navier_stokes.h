@@ -134,9 +134,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // compute qhat
         compute_parallel_flux( m_minusSTU[1], m_plusSTU[1],
                 m_minusN[1], m_zeroN[1], m_plusN[1],
-                m_fluxM, m_fluxP, m_p.slope_limiter);
+                m_minus, m_plus, m_p.slope_limiter);
         // Now compute divNUb
-        dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
+        dg::geo::ds_divCentered( m_faST, 1., m_minus, m_plus, 0.,
                 m_divNUb[1]);
         dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
 
@@ -158,9 +158,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::axpby( 0.25, m_zeroU[1],  0.25, m_plusU[1], m_plusSTU[1]);
         compute_parallel_flux( m_minusSTU[1], m_plusSTU[1],
                 m_minusU[1], m_zeroU[1], m_plusU[1],
-                m_fluxM, m_fluxP,
+                m_minus, m_plus,
                 m_p.slope_limiter);
-        dg::geo::ds_centered( m_faST, -1., m_fluxM, m_fluxP, 1., yp[1][1] );
+        dg::geo::ds_centered( m_faST, -1., m_minus, m_plus, 1., yp[1][1] );
         // Add density gradient
         if( advection == "velocity-staggered-fieldaligned")
         {
@@ -410,14 +410,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
         // Now compute divNUb
         dg::geo::ds_divCentered( m_faST, 1., m_minus, m_plus, 0, m_divNUb[1]);
-        dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_fluxM); // qhat
+        dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_temp0); // qhat
         dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
 
         // compute fhat
-        compute_parallel_flux( m_fluxM, m_minusSTU[1], m_plusSTU[1],
-                m_fluxP, m_p.slope_limiter);
-        m_faST( dg::geo::einsPlus, m_fluxP, m_plus);
-        m_faST( dg::geo::zeroMinus, m_fluxP, m_minus);
+        compute_parallel_flux( m_temp0, m_minusSTU[1], m_plusSTU[1],
+                m_temp1, m_p.slope_limiter);
+        m_faST( dg::geo::einsPlus, m_temp1, m_plus);
+        m_faST( dg::geo::zeroMinus, m_temp1, m_minus);
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
         dg::geo::ds_centered( m_faST, -1., m_minus, m_plus, 1, yp[1][1]);
 
@@ -483,17 +483,17 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // compute qhat
         compute_parallel_flux( m_minusSTU[1], m_plusSTU[1],
                 m_minusN[1], m_zeroN[1], m_plusN[1],
-                m_fluxM, m_fluxP, m_p.slope_limiter);
+                m_minus, m_plus, m_p.slope_limiter);
         // Now compute divNUb
-        dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
+        dg::geo::ds_divCentered( m_faST, 1., m_minus, m_plus, 0.,
                 m_divNUb[1]);
         dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
 
         // Compute transformed fieldaligned ADJOINT grid
-        dg::blas1::axpby( 0.5, m_fluxM, 0.5, m_fluxP, m_temp0); // qhat
-        m_faST( dg::geo::zeroMinus, m_temp0, m_fluxM);
-        m_faST( dg::geo::einsPlus,  m_temp0, m_fluxP);
-        update_parallel_bc_1st( m_fluxM, m_fluxP,
+        dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_temp0); // qhat
+        m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
+        m_faST( dg::geo::einsPlus,  m_temp0, m_plus);
+        update_parallel_bc_1st( m_minus, m_plus,
                 m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
 
         m_fa( dg::geo::einsMinus, m_velocityST[1], m_minusU[1]);
@@ -503,7 +503,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                 m_plusU[1], m_p.bcxU, 0.);
 
         // compute fhat
-        compute_parallel_flux( m_fluxM, m_fluxP,
+        compute_parallel_flux( m_minus, m_plus,
                 m_minusU[1], m_zeroU[1], m_plusU[1],
                 m_minus, m_plus,
                 m_p.slope_limiter);
@@ -563,9 +563,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
         // compute fhat
         compute_parallel_flux( m_velocityST[1], m_minusSTU[1], m_plusSTU[1],
-                m_fluxM, m_p.slope_limiter);
-        m_faST( dg::geo::zeroPlus, m_fluxM, m_plus);
-        m_faST( dg::geo::einsMinus, m_fluxM, m_minus);
+                m_temp0, m_p.slope_limiter);
+        m_faST( dg::geo::zeroPlus, m_temp0, m_plus);
+        m_faST( dg::geo::einsMinus, m_temp0, m_minus);
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
         dg::geo::ds_centered( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
 

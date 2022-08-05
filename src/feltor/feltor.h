@@ -438,9 +438,8 @@ struct Explicit
     // Helper variables can be overwritten any time (except by compute_parallel)!!
     Container m_temp0, m_temp1;
     Container m_minus, m_zero, m_plus;
-    Container m_fluxM, m_fluxP;
     // Helper variables for compute_parallel_flux
-    Container m_dN, m_dNMM, m_dNM, m_dNZ, m_dNP, m_dNPP;
+    Container m_vbm, m_vbp, m_dN, m_dNMM, m_dNM, m_dNZ, m_dNP, m_dNPP;
 
     //matrices and solvers
     Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
@@ -649,8 +648,9 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_source = m_sheath_coordinate = m_UE2 = m_temp1 = m_temp0;
     m_apar = m_aparST = m_profne = m_wall = m_sheath = m_temp0;
     m_plus = m_zero = m_minus = m_temp0;
-    m_fluxM = m_fluxP = m_temp0;
-    m_dN = m_dNMM = m_dNM = m_dNZ = m_dNP = m_dNPP = m_temp1;
+    m_vbm = m_vbp = m_temp0;
+    if( m_p.slope_limiter != "none")
+        m_dN = m_dNMM = m_dNM = m_dNZ = m_dNP = m_dNPP = m_temp1;
 
     m_potential[0] = m_potential[1] = m_temp0;
     m_plusSTN = m_minusSTN = m_minusSTU = m_plusSTU = m_potential;
@@ -1191,10 +1191,22 @@ void Explicit<Geometry, IMatrix, Matrix,
              std::string slope_limiter
              )
 {
+    // positive and negative velocities are defined wrt to the coordinate system
+    // but we need it wrt to the b-field
+    if( m_reversed_field)
+    {
+        dg::blas1::pointwiseDot( -1., velocityKM, m_vbm);
+        dg::blas1::pointwiseDot( -1., velocityKP, m_vbp);
+    }
+    else
+    {
+        dg::blas1::copy( velocityKM, m_vbm);
+        dg::blas1::copy( velocityKP, m_vbp);
+    }
     dg::blas1::evaluate( fluxM, dg::equals(), dg::Upwind(),
-            velocityKM, densityM, density);
+            m_vbm, densityM, density);
     dg::blas1::evaluate( fluxP, dg::equals(), dg::Upwind(),
-            velocityKP, density, densityP);
+            m_vbp, density, densityP);
     if(slope_limiter != "none" )
     {
         // compute dn_k-1, dn_k, dn_k+1
@@ -1219,19 +1231,19 @@ void Explicit<Geometry, IMatrix, Matrix,
         if( slope_limiter == "minmod")
         {
             dg::blas1::evaluate( fluxM, dg::plus_equals(),
-                dg::SlopeLimiter<dg::MinMod>(), velocityKM,
+                dg::SlopeLimiter<dg::MinMod>(), m_vbm,
                 m_dNMM, m_dNM, m_dNP, 0.5, 0.5);
             dg::blas1::evaluate( fluxP, dg::plus_equals(),
-                dg::SlopeLimiter<dg::MinMod>(), velocityKP,
+                dg::SlopeLimiter<dg::MinMod>(), m_vbp,
                 m_dNM, m_dNP, m_dNPP, 0.5, 0.5);
         }
         else if( slope_limiter == "vanLeer")
         {
             dg::blas1::evaluate( fluxM, dg::plus_equals(),
-                dg::SlopeLimiter<dg::VanLeer>(), velocityKM,
+                dg::SlopeLimiter<dg::VanLeer>(), m_vbm,
                 m_dNMM, m_dNM, m_dNP, 0.5, 0.5);
             dg::blas1::evaluate( fluxP, dg::plus_equals(),
-                dg::SlopeLimiter<dg::VanLeer>(), velocityKP,
+                dg::SlopeLimiter<dg::VanLeer>(), m_vbp,
                 m_dNM, m_dNP, m_dNPP, 0.5, 0.5);
         }
     }
@@ -1263,8 +1275,16 @@ void Explicit<Geometry, IMatrix, Matrix,
              std::string slope_limiter
              )
 {
+    if( m_reversed_field)
+    {
+        dg::blas1::pointwiseDot( -1., velocity, m_vbp);
+    }
+    else
+    {
+        dg::blas1::copy( velocity, m_vbp);
+    }
     dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
-            velocity, minusST, plusST);
+            m_vbp, minusST, plusST);
     if(slope_limiter != "none" )
     {
         // compute dn_k-1, dn_k, dn_k+1
@@ -1279,13 +1299,13 @@ void Explicit<Geometry, IMatrix, Matrix,
         if( slope_limiter == "minmod")
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::MinMod>(), velocity,
+                dg::SlopeLimiter<dg::MinMod>(), m_vbp,
                 m_dNM, m_dNZ, m_dNP, 0.5, 0.5);
         }
         else if( slope_limiter == "vanLeer")
         {
             dg::blas1::evaluate( flux, dg::plus_equals(),
-                dg::SlopeLimiter<dg::VanLeer>(), velocity,
+                dg::SlopeLimiter<dg::VanLeer>(), m_vbp,
                 m_dNM, m_dNZ, m_dNP, 0.5, 0.5);
         }
     }
@@ -1313,9 +1333,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         // compute qhat
         compute_parallel_flux( m_minusSTU[i], m_plusSTU[i],
                 m_minusN[i], m_zeroN[i], m_plusN[i],
-                m_fluxM, m_fluxP, m_p.slope_limiter);
+                m_minus, m_plus, m_p.slope_limiter);
         // Now compute divNUb
-        dg::geo::ds_divCentered( m_faST, 1., m_fluxM, m_fluxP, 0.,
+        dg::geo::ds_divCentered( m_faST, 1., m_minus, m_plus, 0.,
                 m_divNUb[i]);
         dg::blas1::axpby( -1., m_divNUb[i], 1., yp[0][i]);
 
@@ -1324,9 +1344,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_parallel(
         dg::blas1::axpby( 0.25, m_zeroU[i],  0.25, m_plusU[i], m_plusSTU[i]);
         compute_parallel_flux( m_minusSTU[i], m_plusSTU[i],
                 m_minusU[i], m_zeroU[i], m_plusU[i],
-                m_fluxM, m_fluxP,
+                m_minus, m_plus,
                 m_p.slope_limiter);
-        dg::geo::ds_centered( m_faST, -1., m_fluxM, m_fluxP, 1., yp[1][i]);
+        dg::geo::ds_centered( m_faST, -1., m_minus, m_plus, 1., yp[1][i]);
 
         // Add density gradient and electric field
         double tau = m_p.tau[i], mu = m_p.mu[i], delta = m_fa.deltaPhi();
