@@ -121,6 +121,10 @@ struct Explicit
         update_diag();
         return m_lapParU[i];
     }
+    const Container& lapParN( unsigned i) {
+        update_diag();
+        return m_lapParN[i];
+    }
     void compute_gradSN( int i, std::array<Container,3>& gradS) const{
         // MW: don't like this function, if we need more gradients we might
         // want a more flexible solution
@@ -230,29 +234,31 @@ struct Explicit
             update_perp_derivatives( m_density, m_velocity, m_potential, m_apar);
             for( unsigned i=0; i<2; i++)
             {
-                // density m_dsN
+                // density m_dsN, m_lapParN
                 m_fa( dg::geo::einsMinus, m_density[i], m_minus);
+                m_fa( dg::geo::zeroForw,  m_density[i], m_zero);
                 m_fa( dg::geo::einsPlus,  m_density[i], m_plus);
-                update_parallel_bc_2nd( m_fa, m_minus, m_density[i], m_plus,
+                update_parallel_bc_2nd( m_fa, m_minus, m_zero, m_plus,
                         m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0., m_dsN[i]);
+                dg::geo::dssd_centered( m_fa, 1.,
+                        m_minus, m_zero, m_plus, 0., m_lapParN[i]);
                 // potential m_dsP
                 m_fa( dg::geo::einsMinus, m_potential[i], m_minus);
                 m_fa( dg::geo::einsPlus,  m_potential[i], m_plus);
                 update_parallel_bc_2nd( m_fa, m_minus, m_potential[i], m_plus,
                         m_p.bcxP, 0.);
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0., m_dsP[i]);
-                // velocity m_dssU, m_lapParU
+                // velocity m_dssU, m_lapParU m_dsU
                 m_fa( dg::geo::einsMinus, m_velocity[i], m_minus);
                 m_fa( dg::geo::zeroForw,  m_velocity[i], m_zero);
                 m_fa( dg::geo::einsPlus,  m_velocity[i], m_plus);
-                update_parallel_bc_2nd( m_fa, m_minus, m_velocity[i], m_plus,
+                update_parallel_bc_2nd( m_fa, m_minus, m_zero, m_plus,
                         m_p.bcxU, 0.);
                 dg::geo::dssd_centered( m_fa, 1.,
                         m_minus, m_zero, m_plus, 0., m_lapParU[i]);
                 dg::geo::dss_centered( m_fa, 1., m_minus,
                     m_zero, m_plus, 0., m_dssU[i]);
-                // velocity m_dsU
                 dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0.,
                         m_dsU[i]);
                 // velocity source
@@ -433,7 +439,7 @@ struct Explicit
     std::array<std::array<Container,2>,2> m_s;
 
     // Set by diag_update
-    std::array<Container,2> m_dssU, m_lapParU;
+    std::array<Container,2> m_dssU, m_lapParU, m_lapParN;
 
     // Helper variables can be overwritten any time (except by compute_parallel)!!
     Container m_temp0, m_temp1;
@@ -657,7 +663,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_plusN = m_zeroN = m_minusN = m_minusU = m_zeroU = m_plusU = m_potential;
     m_divNUb = m_density = m_densityST = m_velocity = m_potential;
     m_velocityST = m_potentialST = m_potential;
-    m_dsN = m_dsP = m_dsU = m_dssU = m_lapParU = m_potential;
+    m_dsN = m_dsP = m_dsU = m_dssU = m_lapParU = m_lapParN = m_potential;
 
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dP[0] = m_dP[1] = m_dA;
@@ -1703,9 +1709,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
 #if FELTORPARALLEL == 1
     for( unsigned i=0; i<2; i++)
     {
-        if( m_p.nu_parallel_n[i] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[i],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minusN[i], m_zeroN[i], m_plusN[i], 1., yp[i]);
         }
     }

@@ -592,8 +592,8 @@ The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
  %to the density equation.
 \begin{align}
 \label{eq:perpdiffNU}
-\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e &%+ \nu_{N,\parallel}\Delta_\parallel n_e&
-\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i &\\%+ \nu_{N,\parallel}\Delta_\parallel n_e& \\
+\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e + \nu_{N,\parallel}\Delta_\parallel n_e&
+\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i + \nu_{N,\parallel}\Delta_\parallel n_e& \\
 \Lambda_{u_e} &=  -\nu_{U,\perp}\frac{(-\Delta_\perp)^s u_{\parallel,e}}{n_e} &
 \Lambda_{U_i} &=  -\nu_{U,\perp}\frac{(-\Delta_\perp)^s U_{\parallel,i}}{N_i}
 \end{align}
@@ -641,7 +641,7 @@ used to implement and divergences.
 %\left.
     \vphantom{\frac{\vec b\times\vn \psi}{B}} %PHANTOM
     - N\npar U_\parallel - U_\parallel \npar N - NU_\parallel \nc \bhat
-    - \nu_{N,\perp}(-\Delta_\perp)^s N + S_N
+    - \nu_{N,\perp}(-\Delta_\perp)^s N + \nu_{N,\parallel}\Delta_\parallel N + S_N
 %\right] (1-\chi_s - \chi_w)
 % \nonumber \\&
 %    + \omega_s\chi_s( N_{sh} - N) + \omega_w \chi_w (1-N)
@@ -675,7 +675,7 @@ used to implement and divergences.
 %\left.
 \vphantom{\frac{\vec b\times\vn \psi}{B}} %PHANTOM
         - \frac{\eta}{\mu} \frac{n_e}{N}(N_iU_{\parallel,i} - n_eu_{\parallel,e})
-        + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \nu_{U,\perp}(-\Delta_\perp)^s U_\parallel
+        + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \frac{\nu_{U,\perp}}{N}(-\Delta_\perp)^s U_\parallel
     + S_U
 %\right] (1-\chi_s - \chi_w)
  %\nonumber \\&
@@ -2160,7 +2160,6 @@ We here also derive the particle flux \eqref{eq:particle_flux} through a flux su
  &+ NU_\parallel\frac{\d v}{\d \psi_p}\left [\left( A_\parallel \mathcal
  K_{\vn\times\bhat}(\psi_p) + \frac{1}{B}[\psi_p, A_\parallel]_\perp\right) \right]
 \end{align}
-
 The relevant terms in the output file are
 \begin{longtable}{llll}
 \toprule
@@ -2171,8 +2170,7 @@ The relevant terms in the output file are
     jsneA\_tt &$ n_e u_{\parallel,e} \vec{ b}_\perp  \cn \psi_p$ &
     jsneE\_tt & $ n_e \vec u_E\cn\psi_p$ \\
     lneperp\_tt &$ \Lambda_{\perp,n_e} = -\nu_{n,\perp} (-\Delta_\perp)^s n_e$&
-    & \\
-    %lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_{N\parallel} \Delta_\parallel n_e$ \\
+    lneparallel\_tt &$ \Lambda_{\parallel,n_e} = \nu_{N\parallel} \Delta_\parallel n_e$ \\
     sne\_tt & $S_{n_e}$ &
     jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
     divjnepar\_tt & $\nc (\bhat n_e u_{e,\parallel}$) &
@@ -2182,16 +2180,13 @@ The relevant terms in the output file are
     jsniA\_tt &$ N_i U_{\parallel,i} \vec{ b}_\perp  \cn \psi_p$ &
     jsniE\_tt & $ N_i \vec u^i_E\cn\psi_p$ \\
     lniperp\_tt &$ \Lambda_{\perp,N_i} = -\nu_{n,\perp} (-\Delta_\perp)^s N_i$&
-    & \\
-    %lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_{N,\parallel} \Delta_\parallel N_i$ \\
+    lniparallel\_tt &$ \Lambda_{\parallel,N_i} = \nu_{N,\parallel} \Delta_\parallel N_i$ \\
     sni\_tt & $S_{N_i}$ &
     jsdiai\_tt & $\tau_i \bhat \times \vn N_i \cn \psi_p /B$\\
     divjnipar\_tt & $\nc (\bhat N_i U_{i,\parallel}$) &
       & \\
 \bottomrule
 \end{longtable}
-
-
 
 Note that the parallel divergences vanish exactly under a flux-surface average. This can serve as a numerical test of our implementation.
 \subsection{Energy theorem}
@@ -2265,13 +2260,12 @@ The relevant terms in the output file are
         + z_i \tau_i N_i U_{\parallel,i} \vec{ b}_\perp \cn \psi_p $ \\
     leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e} + z_e\mu_e n_e u_{\parallel,e} \Lambda_{u_e}$ \\
     leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \Lambda_{N_i} + z_i\mu_i N_i U_{\parallel,i} \Lambda_{U_i}$ \\
-    %leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_{N,\parallel} \Delta_\parallel n_e +
-    %z_e\mu_e n_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
-    %leiparallel\_tt & $z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_{N,\parallel} \Delta_\parallel N_i +
-    %z_i\mu_i N_i
-    %U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
-    leeparallel\_tt & $ z_e\mu_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
-    leiparallel\_tt & $ z_i\mu_i U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
+    leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_{N,\parallel} \Delta_\parallel n_e +
+                         z_e\mu_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
+    leiparallel\_tt & $z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_{N,\parallel} \Delta_\parallel N_i +
+                         z_i\mu_i U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
+    %leeparallel\_tt & $ z_e\mu_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
+    %leiparallel\_tt & $ z_i\mu_i U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
     divjeepar\_tt &$ z_e\nc \left( (\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) n_eu_{\parallel,e}\bhat\right)$ \\
     divjeipar\_tt &$ z_i\nc \left( (\tau_i(1+\ln N_i) + \psi + \mu_iU_{\parallel,i}^2/2) N_iU_{\parallel,i}\bhat\right)$ \\
 \bottomrule
@@ -2368,7 +2362,7 @@ The relevant terms in the output file are (the Lorentz force term is described i
     sparmirrori\_tt & $-z_i\tau_iN_i\npar \ln B$ \\
     sparsni\_tt & $\mu_i S_{N_i} U_{\parallel,i} + \mu_i S_{U_i} N_i $ &
     sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi + \mu_i S_{U,i} N_i b_\varphi $ \\
-    lparpar\_tt   & $\nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ &
+    lparpar\_tt   & $\nu_{\parallel,i} \Delta_\parallel U_{\parallel,i} + U_{\parallel,i} \Lambda_{N_i,\parallel}$ &
     lparperp\_tt & $U_{\parallel,i} \Lambda_{N_i} + N_i\Lambda_{U_i} $ \\
     divjpare\_tt & $ \nc( -\mu_e n_e u_{\parallel,e}^2 \bhat)$ &
     divjpari\_tt & $ \nc( +\mu_i N_i U_{\parallel,i}^2 \bhat)$ \\

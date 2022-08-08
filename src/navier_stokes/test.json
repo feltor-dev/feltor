@@ -129,10 +129,7 @@
     "physical": {
         "beta": 1e-05,
         "mu": -0.000272121,
-        "nu_parallel": [
-            0,
-            0.0
-        ],
+        "nu_parallel": 0,
         "resistivity": 0.0001,
         "tau": 1.0,
         "viscosity": "value"

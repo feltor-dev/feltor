@@ -98,12 +98,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                     m_minus, m_zero, m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
             m_fa( dg::geo::einsMinus, m_density[1], m_minus);
             m_fa( dg::geo::einsPlus, m_density[1], m_plus);
             m_fa( dg::geo::zeroForw, m_density[1], m_zero);
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minus, m_zero, m_plus, 1., yp[0][1]);
         }
     }
@@ -181,9 +181,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                     m_minusU[1], m_zeroU[1], m_plusU[1], 0., m_temp1);
             dg::blas1::pointwiseDivide( 1., m_temp1, m_densityST[1], 1., yp[1][1]);
         }
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minusN[1], m_zeroN[1], m_plusN[1], 1., yp[0][1]);
         }
     }
@@ -206,9 +206,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         m_fa( dg::geo::einsMinus, m_density[1], m_minus);
         update_parallel_bc_2nd( m_fa, m_minus, m_zero, m_plus, m_p.bcxN,
                 m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minus, m_zero, m_plus, 1., yp[0][1]);
         }
         dg::geo::ds_centered( m_fa, 1., m_minus, m_plus, 0., m_dsN[1]);
@@ -259,7 +259,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::copy( y[0], m_densityST);
         dg::blas1::copy( 0., yp);
         // Add parallel viscosity
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
             // here we can try out difference between linear and cubic
             m_fa( dg::geo::einsMinus, y[0][1], m_minus);
@@ -267,7 +267,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             m_fa( dg::geo::einsPlus, y[0][1], m_plus);
             update_parallel_bc_2nd( m_fa, m_minus, m_zero, m_plus,
                     m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minus, m_zero, m_plus, 1., yp[0][1]);
         }
     }
@@ -278,7 +278,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::copy( y[0], m_densityST);
         dg::blas1::copy( 0., yp);
         // Add parallel viscosity
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
             // here we can try out difference between linear and cubic
             m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
@@ -288,7 +288,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             dg::geo::ds_centered( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_temp0);
             m_faST( dg::geo::einsMinus, m_temp0, m_minus);
             m_faST( dg::geo::zeroPlus,  m_temp0, m_plus);
-            dg::geo::ds_divCentered( m_faST, m_p.nu_parallel_n[1], m_minus, m_plus, 1., yp[0][1]);
+            dg::geo::ds_divCentered( m_faST, m_p.nu_parallel_n, m_minus, m_plus, 1., yp[0][1]);
         }
     }
     else if( "log-staggered" == advection)
@@ -361,12 +361,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                     m_minus, m_zero, m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
             m_fa( dg::geo::einsMinus, m_density[1], m_minus);
             m_fa( dg::geo::einsPlus, m_density[1], m_plus);
             m_fa( dg::geo::zeroForw, m_density[1], m_zero);
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minus, m_zero, m_plus, 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_density[1], 1., yp[0][1]);
         }
@@ -435,12 +435,12 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_zero, m_plus, 1., yp[1][1]);
         }
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
             m_fa( dg::geo::einsMinus, m_density[1], m_minus);
             m_fa( dg::geo::einsPlus, m_density[1], m_plus);
             m_fa( dg::geo::zeroForw, m_density[1], m_zero);
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minus, m_zero, m_plus, 1., yp[0][1]);
         }
     }
@@ -518,9 +518,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minusU[1], m_zeroU[1], m_plusU[1], 1., yp[1][1]);
         }
-        if( m_p.nu_parallel_n[1] > 0)
+        if( m_p.nu_parallel_n > 0)
         {
-            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n[1],
+            dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minusN[1], m_zeroN[1], m_plusN[1], 1., yp[0][1]);
         }
     }

@@ -27,11 +27,11 @@ struct Parameters
 
     std::array<double,2> mu; // mu[0] = mu_e, m[1] = mu_i
     std::array<double,2> tau; // tau[0] = -1, tau[1] = tau_i
-    std::array<double,2> nu_parallel_u, nu_parallel_n;
+    std::array<double,2> nu_parallel_u;
     double eta, beta;
 
     unsigned diff_order;
-    double nu_perp_n, nu_perp_u;
+    double nu_perp_n, nu_perp_u, nu_parallel_n;
     enum dg::direction diff_dir;
     std::string slope_limiter;
 
@@ -111,9 +111,7 @@ struct Parameters
                 js["regularization"].get( "direction", "centered").asString() );
         nu_perp_n   = js["regularization"].get( "nu_perp_n", 0.).asDouble();
         nu_perp_u   = js["regularization"].get( "nu_perp_u", 0.).asDouble();
-        //nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
-        nu_parallel_n[0] = js["regularization"]["nu_parallel_n"].get(0u, 1.0).asDouble();
-        nu_parallel_n[1] = js["regularization"]["nu_parallel_n"].get(1u, 1.0).asDouble();
+        nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
         slope_limiter = js["advection"].get("slope-limiter", "none").asString();
         if( (slope_limiter != "none") && (slope_limiter != "minmod")
              && (slope_limiter != "vanLeer")
