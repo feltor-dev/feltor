@@ -57,9 +57,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // compute qhat
         m_fa( dg::geo::zeroForw, m_velocityST[1], m_zero);
         compute_parallel_flux( m_zero, m_minusSTN[1], m_plusSTN[1],
-                m_divNUb[1], m_p.slope_limiter);
-        m_faST( dg::geo::zeroPlus, m_divNUb[1], m_plus);
-        m_faST( dg::geo::einsMinus, m_divNUb[1], m_minus);
+                m_temp0, m_p.slope_limiter);
+        m_faST( dg::geo::zeroPlus,  m_temp0, m_plus);
+        m_faST( dg::geo::einsMinus, m_temp0, m_minus);
         // We always use NEU for the fluxes for now
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
         // Now compute divNUb
@@ -92,7 +92,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
             m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
             m_fa( dg::geo::zeroForw, m_velocityST[1], m_zero);
-            update_parallel_bc_2nd( m_fa, m_minus, m_velocityST[1],
+            update_parallel_bc_2nd( m_fa, m_minus, m_zero,
                     m_plus, m_p.bcxU, 0.);
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
                     m_minus, m_zero, m_plus, 0., m_temp0);
