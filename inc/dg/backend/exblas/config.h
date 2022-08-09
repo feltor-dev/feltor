@@ -14,6 +14,9 @@
 //nvcc does not compile the avx512 instruction set, so do not include it
 #ifdef __NVCC__
 #define _WITHOUT_VCL
+#endif
+#ifdef __APPLE__
+#define _WITHOUT_VCL
 #endif//__NVCC__
 #ifdef WITHOUT_VCL
 #define _WITHOUT_VCL
