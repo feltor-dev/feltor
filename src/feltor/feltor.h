@@ -813,26 +813,22 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         dg::x::HVec transferH;
         int vecID;
-        DG_RANK0 err_pol = nc_def_var( ncid_pol, "chi", NC_DOUBLE, 3,
-                    dim_ids_pol, &vecID);
-        dg::assign (m_multi_chi[0], transferH);
-        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
-
+        std::string names [6] = {"chi", "sol", "rhs", "ne", "Ni", "phiH"};
+        const Container* vecs [6] = {&m_multi_chi[0], &phi, &m_temp0, &density[0], &density[1], &m_old_phi.head()};
+        for ( unsigned i=0; i<6; i++)
+        {
+            DG_RANK0 err_pol = nc_def_var( ncid_pol, names[i].data(), NC_DOUBLE, 3,
+                        dim_ids_pol, &vecID);
+            dg::assign (*(vecs[i]), transferH);
+            dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+        }
         DG_RANK0 err_pol = nc_def_var( ncid_pol, "phi0", NC_DOUBLE, 3,
                     dim_ids_pol, &vecID);
         m_old_phi.extrapolate( time, phi);
         dg::assign ( phi, transferH);
         dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
-
-        DG_RANK0 err_pol = nc_def_var( ncid_pol, "rhs", NC_DOUBLE, 3,
-                    dim_ids_pol, &vecID);
-        dg::assign ( m_temp0, transferH);
-        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
-
-        DG_RANK0 err_pol = nc_def_var( ncid_pol, "phiH", NC_DOUBLE, 3,
-                    dim_ids_pol, &vecID);
-        dg::assign ( m_old_phi.head(), transferH);
-        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+        DG_RANK0 err_pol = nc_close(ncid_pol);
+        MPI_Barrier( MPI_COMM_WORLD);
         dg::abort_program();
     }
 #endif // WRITE_POL_FILE
