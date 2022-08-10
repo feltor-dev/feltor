@@ -352,7 +352,7 @@ struct Extrapolation
         extrapolate( t, new_x);
     }
     /**
-    * @brief Derive value (equidistant version)
+    * @brief %Evaluate first derivative of interpolating polynomial (equidistant version)
     * @param dot_x (write only) contains derived value on output
     * @note Assumes that time equals t0 such that a backward difference formula will be evaluated
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
