@@ -1,7 +1,6 @@
 #include <iostream>
 #include <iomanip>
 
-#define DG_BENCHMARK
 #include "dg/algorithm.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"

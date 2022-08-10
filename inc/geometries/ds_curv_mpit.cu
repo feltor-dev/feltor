@@ -3,7 +3,6 @@
 #include "json/json.h"
 
 #include "mpi.h"
-#undef DG_DEBUG
 #include "dg/algorithm.h"
 #include "testfunctors.h"
 #include "ds.h"

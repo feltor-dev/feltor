@@ -2,8 +2,6 @@
 #include <iomanip>
 
 #include <mpi.h>
-#define DG_BENCHMARK
-#undef DG_DEBUG
 #include "dg/algorithm.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
