@@ -273,7 +273,7 @@ int main( int argc, char* argv[])
     else
     {
         DG_RANK0 std::cerr << "Error: Unrecognized timestepper: '"
-                           << p.timestepper << "'! Exit now!";
+                           << p.timestepper << "'! Exit now!\n";
         dg::abort_program();
     }
     DG_RANK0 std::cout << "Done!\n";

@@ -689,7 +689,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
             // ne-nbc = Gamma (ni-nbc)
             dg::blas1::transform(src, m_temp0, dg::PLUS<double>(-m_p.nbc));
             dg::blas1::plus(target, -m_p.nbc);
-            m_multigrid.set_benchmark( true, "Gamma N");
+            m_multigrid.set_benchmark( true, "Gamma N     ");
             std::vector<unsigned> number = m_multigrid.solve(
                 m_multi_invgammaN, target, m_temp0, m_p.eps_gamma);
             dg::blas1::plus(target, +m_p.nbc);
@@ -773,7 +773,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
             m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
             m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
-        m_multigrid.set_benchmark( true, "Gamma N");
+        m_multigrid.set_benchmark( true, "Gamma N     ");
         std::vector<unsigned> numberG = m_multigrid.solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
         //if( staggered)
@@ -794,7 +794,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     //    m_old_phiST.extrapolate( time, phi);
     //else
         m_old_phi.extrapolate( time, phi);
-    m_multigrid.set_benchmark( true, "Polaristion");
+    m_multigrid.set_benchmark( true, "Polarisation");
     std::vector<unsigned> number = m_multigrid.solve(
         m_multi_pol, phi, m_temp0, m_p.eps_pol);
     //if( staggered)
@@ -816,7 +816,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
         //    m_old_psiST.extrapolate( time, psi);
         //else
             m_old_psi.extrapolate( time, psi);
-        m_multigrid.set_benchmark( true, "Gamma Phi");
+        m_multigrid.set_benchmark( true, "Gamma Phi   ");
 #ifdef DG_MANUFACTURED
         dg::blas1::copy( phi, m_temp0);
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
@@ -872,7 +872,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     //----------Invert Induction Eq----------------------------//
     if( update)
         m_old_aparST.extrapolate( time, aparST);
-    m_multigrid.set_benchmark( true, "Apar");
+    m_multigrid.set_benchmark( true, "Apar        ");
     std::vector<unsigned> number = m_multigrid.solve(
         m_multi_ampere, aparST, m_temp0, m_p.eps_ampere);
     if( update)
