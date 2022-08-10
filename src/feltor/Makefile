@@ -37,6 +37,8 @@ manufactured_perp: manufactured.cu manufactured.h feltor.h
 
 manufactured_para: manufactured.cu manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=1 -DFELTORPERP=0
+multigrid_b: multigrid_b.cu parameters.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
 .PHONY: clean doc
 
