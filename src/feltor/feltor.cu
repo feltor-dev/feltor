@@ -341,6 +341,10 @@ int main( int argc, char* argv[])
         int ncid=-1;
         try{
             DG_RANK0 err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+#ifdef WRITE_POL_FILE
+            DG_RANK0 err_pol = nc_create( "polarisation.nc", NC_NETCDF4|NC_CLOBBER, &ncid_pol);
+#endif
+
         }catch( std::exception& e)
         {
             DG_RANK0 std::cerr << "ERROR creating file "<<file_name<<std::endl;
@@ -366,8 +370,14 @@ int main( int argc, char* argv[])
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = inputfile;
         for( auto pair : att)
+        {
             DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
                 pair.first.data(), pair.second.size(), pair.second.data());
+#ifdef WRITE_POL_FILE
+            DG_RANK0 err_pol = nc_put_att_text( ncid_pol, NC_GLOBAL,
+                pair.first.data(), pair.second.size(), pair.second.data());
+#endif
+        }
 
         // Define dimensions (t,z,y,x)
         int dim_ids[4], restart_dim_ids[3], tvarID;
@@ -377,6 +387,10 @@ int main( int argc, char* argv[])
             DG_RANK0 err = dg::file::define_time( ncid, "time", dim_ids, &tvarID);
         DG_RANK0 err = dg::file::define_dimensions( ncid, restart_dim_ids, grid,
                 {"zr", "yr", "xr"});
+#ifdef WRITE_POL_FILE
+        DG_RANK0 err_pol = dg::file::define_dimensions( ncid_pol, dim_ids_pol, grid,
+                {"z", "y", "x"});
+#endif
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
         bool write2d = true;
 #ifdef WITH_MPI

@@ -8,6 +8,13 @@
 #define FELTORPERP 1
 #endif
 
+#ifdef WRITE_POL_FILE
+int ncid_pol;
+int dim_ids_pol[3];
+int counter = 0;
+dg::file::NC_Error_Handle err_pol;
+#endif // WRITE_POL_FILE
+
 
 //Latest measurement: m = 10.000 per step
 
@@ -797,6 +804,38 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     m_multigrid.set_benchmark( true, "Polarisation");
     std::vector<unsigned> number = m_multigrid.solve(
         m_multi_pol, phi, m_temp0, m_p.eps_pol);
+#ifdef WRITE_POL_FILE
+    if( number[0] > 1000)
+        counter++;
+    if( counter == 10)
+    {
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        dg::x::HVec transferH;
+        int vecID;
+        DG_RANK0 err_pol = nc_def_var( ncid_pol, "chi", NC_DOUBLE, 3,
+                    dim_ids_pol, &vecID);
+        dg::assign (m_multi_chi[0], transferH);
+        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+
+        DG_RANK0 err_pol = nc_def_var( ncid_pol, "phi0", NC_DOUBLE, 3,
+                    dim_ids_pol, &vecID);
+        m_old_phi.extrapolate( time, phi);
+        dg::assign ( phi, transferH);
+        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+
+        DG_RANK0 err_pol = nc_def_var( ncid_pol, "rhs", NC_DOUBLE, 3,
+                    dim_ids_pol, &vecID);
+        dg::assign ( m_temp0, transferH);
+        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+
+        DG_RANK0 err_pol = nc_def_var( ncid_pol, "phiH", NC_DOUBLE, 3,
+                    dim_ids_pol, &vecID);
+        dg::assign ( m_old_phi.head(), transferH);
+        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+        dg::abort_program();
+    }
+#endif // WRITE_POL_FILE
     //if( staggered)
     //    m_old_phiST.update( time, phi);
     //else
