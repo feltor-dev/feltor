@@ -3,14 +3,14 @@
         "bc": "along_field",
         "periodify": false,
         "refine": [
-            5,
-            5
+            6,
+            6
         ],
         "rk4eps": 1e-06,
-        "interpolation-method" : "linear"
+        "interpolation-method" : "linear-nearest"
     },
     "advection": {
-        "type": "velocity-staggered-fieldaligned",
+        "type": "staggered",
         "slope-limiter": "none"
     },
     "boundary": {
@@ -82,7 +82,7 @@
                 "rk4eps": 1e-06,
                 "sigma": 0.2,
                 "sigma_z": 0.5,
-                "type": "circle"
+                "type": "blob"
             },
             "profile": {
                 "background": 0.2,
@@ -129,15 +129,16 @@
     "physical": {
         "beta": 1e-05,
         "mu": -0.000272121,
-        "nu_parallel": 0,
+        "nu_parallel": [0.0,0.0],
         "resistivity": 0.0001,
         "tau": 1.0,
         "viscosity": "value"
     },
     "regularization": {
         "direction": "forward",
-        "nu_perp_n": 0e-09,
-        "nu_perp_u": 0e-09,
+        "nu_perp_n": 0.0,
+        "nu_perp_u": 0.0,
+        "nu_parallel_n" : 0.0,
         "order": 2
     },
     "source": {
@@ -145,12 +146,12 @@
         "type": "zero"
     },
     "timestepper": {
-        "atol": 1e-10,
-        "rtol": 1e-07,
+        "atol": 1e-6,
+        "rtol": 1e-5,
         "tableau": "Bogacki-Shampine-4-2-3",
         "type": "adaptive",
-        "output-mode" : "equidistant",
-        "reject-limit" : 10,
+        "output-mode" : "Tend",
+        "reject-limit" : 2,
         "Tend" : 10
     }
 }

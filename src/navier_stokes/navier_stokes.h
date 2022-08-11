@@ -382,27 +382,26 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::copy( 0., m_velocity[0]);
         dg::blas1::copy( 0., yp);
 
-        { // Compute dsN and staggered density
+        {
         m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
         m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
         update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1], m_p.bcxN, m_p.bcxN ==
                 dg::DIR ? m_p.nbc : 0.);
         dg::blas1::axpby( 0.5, m_minusSTN[1], 0.5, m_plusSTN[1], m_densityST[1]);
         }
-        m_faST( dg::geo::zeroForw,  y[1][1], m_zero);
-        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[0]); //NU^st
-        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[1]); //NU^st
+        m_faST( dg::geo::zeroForw,  y[1][1], m_zero); //NU^st
+        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[0]);
+        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[1]);
 
-        { // Compute dsU and velocity
+        {
         m_faST( dg::geo::einsMinus, m_velocityST[1], m_minusSTU[1]);
-        m_faST( dg::geo::zeroForw,  m_velocityST[1], m_zero);
         m_faST( dg::geo::zeroPlus,  m_velocityST[1], m_plusSTU[1]);
         update_parallel_bc_1st( m_minusSTU[1], m_plusSTU[1], m_p.bcxU, 0.);
         dg::blas1::axpby( 0.5, m_minusSTU[1], 0.5, m_plusSTU[1], m_velocity[1]);
         }
 
         // compute qhat
-        compute_parallel_flux( m_zero, m_minusSTN[1], m_plusSTN[1],
+        compute_parallel_flux( m_velocityST[1], m_minusSTN[1], m_plusSTN[1],
                 m_divNUb[1], m_p.slope_limiter);
         m_faST( dg::geo::zeroPlus,  m_divNUb[1], m_plus);
         m_faST( dg::geo::einsMinus, m_divNUb[1], m_minus);
@@ -410,16 +409,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
         // Now compute divNUb
         dg::geo::ds_divCentered( m_faST, 1., m_minus, m_plus, 0, m_divNUb[1]);
-        dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_temp0); // qhat
         dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
 
         // compute fhat
+        dg::blas1::axpby( 0.5, m_minus, 0.5, m_plus, m_temp0); // qhat
         compute_parallel_flux( m_temp0, m_minusSTU[1], m_plusSTU[1],
                 m_temp1, m_p.slope_limiter);
         m_faST( dg::geo::einsPlus, m_temp1, m_plus);
         m_faST( dg::geo::zeroMinus, m_temp1, m_minus);
         update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::geo::ds_centered( m_faST, -1., m_minus, m_plus, 1, yp[1][1]);
+        dg::geo::ds_divCentered( m_faST, -1., m_minus, m_plus, 1, yp[1][1]);
 
         // Add density gradient
         if( advection == "staggered")
@@ -456,24 +455,23 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::copy( 0., yp);
 
         {
-        // Compute transformed fieldaligned ADJOINT grid
         m_faST( dg::geo::zeroMinus, m_density[1], m_minusSTN[1]);
         m_faST( dg::geo::einsPlus,  m_density[1], m_plusSTN[1]);
         update_parallel_bc_1st( m_minusSTN[1], m_plusSTN[1],
                 m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
         dg::blas1::axpby( 0.5, m_minusSTN[1], 0.5, m_plusSTN[1], m_densityST[1]);
         }
-        m_faST( dg::geo::zeroForw,  y[1][1], m_zero);
-        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[0]); //NU^st
-        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[1]); //NU^st
+        m_faST( dg::geo::zeroForw,  y[1][1], m_zero); //NU^st
+        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[0]);
+        dg::blas1::pointwiseDivide( m_zero, m_densityST[1], m_velocityST[1]);
 
-        // Compute transformed fieldaligned grid
         {
         m_faST( dg::geo::einsMinus, m_velocityST[1], m_minusSTU[1]);
         m_faST( dg::geo::zeroPlus,  m_velocityST[1], m_plusSTU[1]);
         update_parallel_bc_1st( m_minusSTU[1], m_plusSTU[1], m_p.bcxU, 0.);
         dg::blas1::axpby( 0.5, m_minusSTU[1], 0.5, m_plusSTU[1], m_velocity[1]);
         }
+
         m_fa( dg::geo::einsMinus, m_density[1], m_minusN[1]);
         m_fa( dg::geo::zeroForw,  m_density[1], m_zeroN[1]);
         m_fa( dg::geo::einsPlus,  m_density[1], m_plusN[1]);
@@ -505,9 +503,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         // compute fhat
         compute_parallel_flux( m_minus, m_plus,
                 m_minusU[1], m_zeroU[1], m_plusU[1],
-                m_minus, m_plus,
+                m_temp0, m_temp1,
                 m_p.slope_limiter);
-        dg::geo::ds_divCentered( m_faST, -1., m_minus, m_plus, 1, yp[1][1]);
+        dg::geo::ds_divCentered( m_faST, -1., m_temp0, m_temp1, 1, yp[1][1]);
 
         // Add density gradient
         if( advection == "staggered-fieldaligned")
