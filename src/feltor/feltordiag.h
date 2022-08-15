@@ -118,6 +118,28 @@ void dot( const std::array<Container, 3>& v,
     dg::blas1::evaluate( result, dg::equals(), dg::PairSum(),
         v[0], w[0], v[1], w[1], v[2], w[2]);
 }
+
+
+struct Dot{
+    DG_DEVICE void operator()(
+            double lambda,
+        double d0P, double d1P, double d2P,
+        double& c_0, double& c_1, double& c_2)
+    {
+        c_0 = lambda*(d0P);
+        c_1 = lambda*(d1P);
+        c_2 = lambda*(d2P);
+    }
+};
+template<class Container>
+void scal( const Container& lambda,
+          const std::array<Container, 3>& a,
+          std::array<Container, 3>& c)
+{
+    dg::blas1::subroutine( Dot(), lambda,
+        a[0], a[1], a[2], c[0], c[1], c[2]);
+}
+
 struct Times{
     DG_DEVICE void operator()(
             double lambda,
@@ -179,8 +201,11 @@ struct Variables{
     std::array<std::array<dg::x::DVec,2>,2>& y0;
     feltor::Parameters p;
     dg::geo::TokamakMagneticField mag;
+    dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DVec, dg::x::DMatrix> nabla;
     const std::array<dg::x::DVec, 3>& gradPsip;
     std::array<dg::x::DVec, 3> tmp;
+    std::array<dg::x::DVec, 3> tmp2;
+    std::array<dg::x::DVec, 3> tmp3;
     dg::x::DVec hoo; //keep hoo there to avoid pullback
     double duration;
     const unsigned* nfailed;

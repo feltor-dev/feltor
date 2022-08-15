@@ -38,3 +38,5 @@
 #include "average.h"
 //include ds and fieldaligned
 #include "ds.h"
+//include the grid cutter for partial fsa and divergence diagnostics
+#include "Grid_cutter.h"
