@@ -119,6 +119,7 @@ int main( int argc, char* argv[])
     dg::Grid1d g1d_out(psipO<psipmax ? psipO : psipmax,
                        psipO<psipmax ? psipmax : psipO,
                        npsi, Npsi, psipO < psipmax ? dg::DIR_NEU : dg::NEU_DIR);
+    dg::Grid1d g1d_out_eta(gridX2d.y0(), gridX2d.y1(), npsi, Neta, dg::DIR_NEU); ////NEW 1D grid for the eta (poloidal) directions instead of psi for the radial cut
     //O-point fsa value is always 0 (hence the DIR boundary condition)
     //f0 makes a - sign if psipmax < psipO
     const double f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
@@ -135,7 +136,7 @@ int main( int argc, char* argv[])
     dg::SparseTensor<dg::HVec> metricX = gridX2d.metric();
     std::vector<dg::HVec > coordsX = gridX2d.map();
     dg::HVec volX2d = dg::tensor::volume2d( metricX);
-    dg::HVec transferH2dX(volX2d);
+    dg::HVec transferH2dX(volX2d), realtransferH2dX(volX2d); //NEW: definitions
     dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
     poloidal_average( volX2d, dvdpsip, false);
     dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
@@ -260,15 +261,34 @@ int main( int argc, char* argv[])
     int dim_ids[3], tvarID;
     err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
     int dim_ids2d[2] = {dim_ids[0], dim_id1d}; //time,  psi
+    int dim_ids2dX[3]= {dim_ids[0], 0, dim_id1d}; //NEW: time,  eta, psip
+    err = dg::file::define_dimension( ncid_out, &dim_ids2dX[1], g1d_out_eta, {"eta"} ); //NEW: Name of the new 1d DIRECTION
+    //int dim_ids1dX[3]= {dim_ids1d_pol[1], dim_id1d}; //NEW: eta, psip. In case we want static in 2dX grid
     //Write long description
     std::string long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
             long_name.data());
-    std::map<std::string, int> id0d, id1d, id2d;
+    std::map<std::string, int> id0d, id1d, id2d, id2dX; // NEW: Added poloidal and 2dX grids. If static 2dX, add id1dX
 
     size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
     size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
+    size_t count2dX[3] = {1, g1d_out_eta.n()*g1d_out_eta.N(), g1d_out.n()*g1d_out.N()};//NEW: Definition of count2dX
     size_t start2d[3] = {0, 0, 0};
+   
+   /* If 2dX statics, activate this
+   
+    for( auto& record : feltor::diagnostics2d_static_list)
+    {std::string record_name = record.name;
+    name = record_name + "_2dX"; //NEW: The variables on X_grid
+    long_name = record.long_name + " (in X grid)";
+    err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids2dX,
+    &id2dX[name]);
+    err = nc_put_att_text( ncid_out, id2dX[name], "long_name", long_name.size(),
+    long_name.data());
+    }
+   */
+   
+   
 
     for( auto& record : feltor::diagnostics2d_list)
     {
@@ -288,6 +308,24 @@ int main( int argc, char* argv[])
             &id2d[name]);
         err = nc_put_att_text( ncid_out, id2d[name], "long_name", long_name.size(),
             long_name.data());
+        
+        if( record_name[0] == 'j')
+            { record_name[1] = 's';
+        name = record_name + "_2dX"; //NEW: The variables on X_grid //NEW: Definitions of the magnetic coordinates variables.
+        long_name = record.long_name + " (in X grid)";
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids2dX,
+            &id2dX[name]);
+        err = nc_put_att_text( ncid_out, id2dX[name], "long_name", long_name.size(),
+            long_name.data());
+        record_name[1] = 'v';}
+        else
+        {name = record_name + "_2dX"; //NEW: The variables on X_grid //NEW: Definitions of the magnetic coordinates variables.
+        long_name = record.long_name + " (in X grid)";
+        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 3, dim_ids2dX,
+            &id2dX[name]);
+        err = nc_put_att_text( ncid_out, id2dX[name], "long_name", long_name.size(),
+            long_name.data());
+}
 
         name = record_name + "_fsa2d";
         long_name = record.long_name + " (Flux surface average interpolated to 2d plane.)";
@@ -308,6 +346,7 @@ int main( int argc, char* argv[])
             &id1d[name]);
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
+            
 
         name = record_name + "_ifs";
         long_name = record.long_name + " (wrt. vol integrated flux surface average)";
@@ -378,6 +417,19 @@ int main( int argc, char* argv[])
             std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
             counter++;
             err = nc_put_vara_double( ncid_out, tvarID, start2d_out, count2d, &time);
+    
+    /* NEW: LOOP for static 2dX if wanted
+    for( auto& record : feltor::diagnostics2d_static_list)
+    { int dataID =0;
+        std::string record_name = record.name;
+        err = nc_inq_varid(ncid, record.name.data(), &dataID);
+    err = nc_get_vara_double( ncid, dataID, start2d, count2d, transferH2d.data());
+    dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate simple average onto X-point grid
+    //dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
+    err = nc_put_vara_double( ncid_out, id2dX.at(record_name+"_2dX"), start2d_out, count2dX, transferH2dX.data() );
+    }
+    */
+            
             for( auto& record : feltor::diagnostics2d_list)
             {
                 std::string record_name = record.name;
@@ -410,6 +462,7 @@ int main( int argc, char* argv[])
                         dg::blas2::symv( grid2gridX2d, t2d_mp, transferH2dX); //interpolate convoluted average onto X-point grid
                     else
                         dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate simple average onto X-point grid
+                    realtransferH2dX=transferH2dX; //NEW: Define the 2dX grid data
                     dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
                     try{
                         poloidal_average( transferH2dX, t1d, false); //average over eta
@@ -441,6 +494,17 @@ int main( int argc, char* argv[])
                     dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );//make it jv
                 err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_cta2d"),
                     start2d_out, count2d, t2d_mp.data() );
+                if( record_name[0] == 'j')
+                    {record_name[1] = 's';
+                err = nc_put_vara_double( ncid_out, id2dX.at(record_name+"_2dX"),
+                    start2d_out, count2dX, realtransferH2dX.data() ); //NEW: saving de X_grid data
+                   record_name[1] = 'v';
+                    }
+                    else
+        {err = nc_put_vara_double( ncid_out, id2dX.at(record_name+"_2dX"),
+                    start2d_out, count2dX, realtransferH2dX.data() ); //NEW: saving de X_grid data
+}
+
                 //4. Read 2d variable and compute fluctuations
                 available = true;
                 try{
