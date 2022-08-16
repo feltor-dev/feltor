@@ -790,6 +790,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         dg::blas1::transform( density[0], m_temp1, dg::PLUS<double>(-m_p.nbc));
         dg::blas1::axpby( -1., m_temp1, 1., m_temp0, m_temp0);
     }
+    // Add penalization method
+    multiply_rhs_penalization( m_temp0);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SPhie{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
@@ -805,7 +807,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     std::vector<unsigned> number = m_multigrid.solve(
         m_multi_pol, phi, m_temp0, m_p.eps_pol);
 #ifdef WRITE_POL_FILE
-    if( number[0] > 1000)
+    //if( number[0] > 1000)
         counter++;
     if( counter == 10)
     {
