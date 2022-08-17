@@ -55,13 +55,14 @@ int main(int argc, char * argv[])
                 1e-8, mx[0], mx[1], -1., method);
 
     ///##########################################################///
-    const dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
+    auto ff = dg::geo::TestFunctionPsi2(mag,a);
+    const dg::MDVec fun = dg::evaluate( ff, g3d);
     dg::MDVec derivative(fun);
-    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
     std::vector<std::pair<std::string, std::array<const dg::MDVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},

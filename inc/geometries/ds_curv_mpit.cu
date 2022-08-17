@@ -79,13 +79,14 @@ int main(int argc, char * argv[])
     if(rank==0)std::cout << "# Construction took "<<t.diff()<<"s\n";
     ///##########################################################///
     //(MIND THE PULLBACK!)
-    const dg::MDVec fun = dg::pullback( dg::geo::TestFunctionPsi2(mag), g3d);
+    auto ff = dg::geo::TestFunctionPsi2(mag,gp.a);
+    const dg::MDVec fun = dg::pullback( ff, g3d);
     dg::MDVec derivative(fun);
-    dg::MDVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol4 = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::MDVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol4 = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
     std::vector<std::pair<std::string, std::array<const dg::MDVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},

@@ -43,13 +43,14 @@ int main( )
         1e-8, mx, my, -1, method);
 
     ///##########################################################///
-    const dg::DVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
+    auto ff = dg::geo::TestFunctionPsi2(mag,a);
+    const dg::DVec fun = dg::evaluate( ff, g3d);
     dg::DVec derivative(fun);
-    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::DVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::DVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::DVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::DVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::DVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
     std::vector<std::pair<std::string, std::array<const dg::DVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},
@@ -106,7 +107,7 @@ int main( )
             return sqrt(var);});
     double var_before = dg::blas1::dot( vol3d, variation);
     std::cout << "# variation before: "<<var_before<<"\n";
-    dg::DVec var0 = dg::evaluate( dg::geo::Variation<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::DVec var0 = dg::evaluate( dg::geo::Variation<dg::geo::TestFunctionPsi2>(ff), g3d);
     dg::blas1::axpby( 1., variation, -1., var0);
     double errVar0 = dg::blas2::dot( vol3d, var0)/ dg::blas2::dot( vol3d, variation);
     std::cout << "# error variation before: "<<sqrt(errVar0)<<"\n";
@@ -117,7 +118,7 @@ int main( )
             return sqrt(var);});
     double var_after = dg::blas1::dot( vol3dP, variation);
     std::cout << "# variation after   "<<var_after<<"\n";
-    var0 = dg::pullback( dg::geo::Variation<dg::geo::TestFunctionPsi2>(mag), g3dP);
+    var0 = dg::pullback( dg::geo::Variation<dg::geo::TestFunctionPsi2>(ff), g3dP);
     dg::blas1::axpby( 1., variation, -1., var0);
     errVar0 = dg::blas2::dot( vol3dP, var0)/dg::blas2::dot( vol3dP, variation);
     std::cout << "# error variation after : "<<sqrt(errVar0)<<"\n";
