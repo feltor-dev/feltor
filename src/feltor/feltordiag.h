@@ -1468,7 +1468,6 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::scal( result, v.p.mu[1]);
         }
     },
-    /*
     {"v_adv_E_main_tt", "Main electric advective term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
              routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
@@ -1480,7 +1479,7 @@ std::vector<Record> diagnostics2d_list = {
              v.nabla.div(v.tmp[0], v.tmp[1], result);//Div(Div(n_e Grad_phi/B^2 )*u_E)
         }
     },
-     */
+     
     {"v_adv_D_tt", "Diamagnetic advective term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) { //CHECKED
              routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
@@ -1510,7 +1509,6 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
         }
     },
-    /*
     {"v_adv_D_main_tt", "Main diamagnetic term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
              routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
@@ -1522,7 +1520,7 @@ std::vector<Record> diagnostics2d_list = {
              dg::blas1::scal(result, v.p.tau[1]);
         }
     },
-     */
+
     ///---------------- J_b_perp components --------//
     {"v_M_em_tt", "Magnetization term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) { //CHECKED
