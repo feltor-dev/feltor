@@ -1,0 +1,18 @@
+{"Neta" : 100,
+"Npsi" : 180,
+"n" : 3,
+"X" : true,
+"DIAG_OUTPUTS":{
+    "1dStatics": true,
+    "fsa1d": false,
+    "fsa2d": false,
+    "cta2d": false,
+    "cta2dX": true,
+    "fluc2d": false,
+    "ifs": false,
+    "std_fsa": false,
+    "ifs_lcfs": false,
+    "ifs_norm": false
+    }
+}
+}

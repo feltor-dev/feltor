@@ -285,7 +285,7 @@ int main( int argc, char* argv[])
         std::string record_name = record.name;
         if( record_name[0] == 'j')
             record_name[1] = 'v';
-        if(config["DIAG_OUTPUTS"].get( "fluct2d", false).asBool())
+        if(config["DIAG_OUTPUTS"].get( "fluc2d", false).asBool())
         {
          name = record_name + "_fluc2d";
         long_name = record.long_name + " (Fluctuations wrt fsa on phi = 0 plane.)";
@@ -341,7 +341,7 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
         }
-        if(config["DIAG_OUTPUTS"].get( "stdfsa", false).asBool())
+        if(config["DIAG_OUTPUTS"].get( "std_fsa", false).asBool())
         {
         name = record_name + "_std_fsa";
         long_name = record.long_name + " (Flux surface average standard deviation on outboard midplane.)";
@@ -361,7 +361,7 @@ int main( int argc, char* argv[])
         err = nc_put_att_text( ncid_out, id1d[name], "long_name", long_name.size(),
             long_name.data());
         }
-        if(config["DIAG_OUTPUTS"].get( "ifs_LCFS", false).asBool())
+        if(config["DIAG_OUTPUTS"].get( "ifs_lcfs", false).asBool())
         {
         name = record_name + "_ifs_lcfs";
         long_name = record.long_name + " (wrt. vol integrated flux surface average evaluated on last closed flux surface)";
@@ -505,12 +505,12 @@ int main( int argc, char* argv[])
                 {
                 if( record_name[0] == 'j')
                     {record_name[1] = 's';
-                err = nc_put_vara_double( ncid_out, id2dX.at(record_name+"_2dX"),
+                err = nc_put_vara_double( ncid_out, id2dX.at(record_name+"_cta2dX"),
                     start2d_out, count2dX, realtransferH2dX.data() ); //NEW: saving de X_grid data
                    record_name[1] = 'v';
                     }
                     else
-                {err = nc_put_vara_double( ncid_out, id2dX.at(record_name+"_2dX"),
+                {err = nc_put_vara_double( ncid_out, id2dX.at(record_name+"_cta2dX"),
                     start2d_out, count2dX, realtransferH2dX.data() ); //NEW: saving de X_grid data
                 }
                 }
@@ -536,7 +536,7 @@ int main( int argc, char* argv[])
                     if( record_name[0] == 'j')
                         dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );
                     dg::blas1::axpby( 1.0, t2d_mp, -1.0, transferH2d);
-                    if(config["DIAG_OUTPUTS"].get("fluct2d", false).asBool())
+                    if(config["DIAG_OUTPUTS"].get("fluc2d", false).asBool())
                     {
                     err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
                         start2d_out, count2d, transferH2d.data() );
@@ -620,7 +620,7 @@ int main( int argc, char* argv[])
                     dg::blas1::scal( transferH2d, 0.);
                     dg::blas1::scal( transfer1d, 0.);
                     double result = 0.;
-                    if(config["DIAG_OUTPUTS"].get( "fluct2d", false).asBool())
+                    if(config["DIAG_OUTPUTS"].get( "fluc2d", false).asBool())
                     {
                     err = nc_put_vara_double( ncid_out, id2d.at(record_name+"_fluc2d"),
                         start2d_out, count2d, transferH2d.data() );
