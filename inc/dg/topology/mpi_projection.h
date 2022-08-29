@@ -263,7 +263,7 @@ dg::MIHMatrix_t<real_type> interpolation(
         const thrust::host_vector<real_type>& x,
         const thrust::host_vector<real_type>& y,
         const thrust::host_vector<real_type>& z,
-        const aRealMPITopology2d<real_type>& g,
+        const aRealMPITopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, dg::bc bcz = dg::PER,
         std::string method = "linear")
 {
