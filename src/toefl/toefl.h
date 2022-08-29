@@ -93,7 +93,7 @@ void Explicit<G, M, Container>::compute_psi( double t)
         }
         else {
             m_old_psi.extrapolate( t, m_phi[1]);
-            m_multigrid.set_benchmark( true, "Gamma Phi");
+            m_multigrid.set_benchmark( true, "Gamma Phi   ");
             m_multigrid.solve( m_multi_gamma1, m_phi[1], m_phi[0], m_p.eps_gamma);
             m_old_psi.update( t, m_phi[1]);
         }
@@ -167,7 +167,7 @@ void Explicit<G, M, Container>::polarisation( double t,
         }
         else {
             m_old_gammaN.extrapolate(t, m_gamma_n);
-            m_multigrid.set_benchmark( true, "Gamma N");
+            m_multigrid.set_benchmark( true, "Gamma N     ");
             m_multigrid.solve( m_multi_gamma1, m_gamma_n, y[1], m_p.eps_gamma);
             m_old_gammaN.update(t, m_gamma_n);
         }

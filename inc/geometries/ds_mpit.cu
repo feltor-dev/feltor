@@ -2,8 +2,6 @@
 #include <iomanip>
 
 #include <mpi.h>
-#define DG_BENCHMARK
-#undef DG_DEBUG
 #include "dg/algorithm.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
@@ -61,14 +59,15 @@ int main(int argc, char* argv[])
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix,
         dg::MDVec> ds( dsFA);
     ///##########################################################///
-    dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionDirNeu(mag), g3d);
+    auto ff = dg::geo::TestFunctionDirNeu(mag);
+    dg::MDVec fun = dg::evaluate( ff, g3d);
     dg::MDVec derivative(fun);
     dg::MDVec divb = dg::evaluate( dg::geo::Divb(mag), g3d);
-    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    dg::MDVec sol4 =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    dg::MDVec sol4 =dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
     std::vector<std::pair<std::string, std::array<const dg::MDVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},

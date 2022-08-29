@@ -8,6 +8,13 @@
 #define FELTORPERP 1
 #endif
 
+#ifdef WRITE_POL_FILE
+int ncid_pol;
+int dim_ids_pol[3];
+int counter = 0;
+dg::file::NC_Error_Handle err_pol;
+#endif // WRITE_POL_FILE
+
 
 //Latest measurement: m = 10.000 per step
 
@@ -335,8 +342,8 @@ struct Explicit
     }
     void compute_aparST( double t, const std::array<Container,2>&,
             std::array<Container,2>&, Container&, bool);
-    void compute_phi( double t, const std::array<Container,2>&, Container&, bool);
-    void compute_psi( double t, const Container& phi, Container& psi, bool);
+    void compute_phi( double t, const std::array<Container,2>&, Container&);//, bool);
+    void compute_psi( double t, const Container& phi, Container& psi);//, bool);
     void update_staggered_density_and_phi( double t,
         const std::array<Container,2>& density,
         const std::array<Container,2>& potential);
@@ -457,8 +464,8 @@ struct Explicit
         m_multi_invgammaN, m_multi_ampere;
 
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
-    dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar;
-    dg::Extrapolation<Container> m_old_phiST, m_old_psiST, m_old_gammaNST, m_old_aparST;
+    dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar, m_old_aparST;
+    //dg::Extrapolation<Container> m_old_phiST, m_old_psiST, m_old_gammaNST;
 
     dg::SparseTensor<Container> m_hh;
 
@@ -641,9 +648,10 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dz( dg::create::dz( g, dg::PER) ),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
-    m_old_psi( m_old_phi), m_old_gammaN( m_old_phi), m_old_apar( m_old_phi),
-    m_old_phiST( 2, dg::evaluate( dg::zero, g)),
-    m_old_psiST( m_old_phi), m_old_gammaNST( m_old_phi), m_old_aparST( m_old_phi),
+    m_old_psi( m_old_phi), m_old_gammaN( m_old_phi),
+    m_old_apar( m_old_phi), m_old_aparST( m_old_phi),
+    //m_old_phiST( 2, dg::evaluate( dg::zero, g)),
+    //m_old_psiST( m_old_phi), m_old_gammaNST( m_old_phi),
     m_p(p), m_js(js)
 {
 #ifdef DG_MANUFACTURED
@@ -688,10 +696,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
             // ne-nbc = Gamma (ni-nbc)
             dg::blas1::transform(src, m_temp0, dg::PLUS<double>(-m_p.nbc));
             dg::blas1::plus(target, -m_p.nbc);
+            m_multigrid.set_benchmark( true, "Gamma N     ");
             std::vector<unsigned> number = m_multigrid.solve(
                 m_multi_invgammaN, target, m_temp0, m_p.eps_gamma);
-            if(  number[0] == m_multigrid.max_iter())
-                throw dg::Fail( m_p.eps_gamma);
             dg::blas1::plus(target, +m_p.nbc);
         }
         else if( initphi == "balance")
@@ -743,7 +750,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     double time, const std::array<Container,2>& density,
-    Container& phi, bool staggered
+    Container& phi//, bool staggered
     )
 {
     //density[0]:= n_e
@@ -763,9 +770,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     {
         dg::blas1::transform( density[1], m_temp1, dg::PLUS<double>(-m_p.nbc));
         //compute Gamma N_i - n_e
-        if( staggered)
-            m_old_gammaNST.extrapolate( time, m_temp0);
-        else
+        //if( staggered)
+        //    m_old_gammaNST.extrapolate( time, m_temp0);
+        //else
             m_old_gammaN.extrapolate( time, m_temp0);
 #ifdef DG_MANUFACTURED
         dg::blas1::evaluate( m_temp1, dg::plus_equals(), manufactured::SGammaNi{
@@ -773,17 +780,18 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
             m_p.beta,m_p.nu_perp_n,m_p.nu_parallel_u[0],m_p.nu_parallel_u[1]},
             m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
+        m_multigrid.set_benchmark( true, "Gamma N     ");
         std::vector<unsigned> numberG = m_multigrid.solve(
             m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
-        if( staggered)
-            m_old_gammaNST.update( time, m_temp0); // store N - nbc
-        else
+        //if( staggered)
+        //    m_old_gammaNST.update( time, m_temp0); // store N - nbc
+        //else
             m_old_gammaN.update( time, m_temp0); // store N - nbc
-        if(  numberG[0] == m_multigrid.max_iter())
-            throw dg::Fail( m_p.eps_gamma);
         dg::blas1::transform( density[0], m_temp1, dg::PLUS<double>(-m_p.nbc));
         dg::blas1::axpby( -1., m_temp1, 1., m_temp0, m_temp0);
     }
+    // Add penalization method
+    multiply_rhs_penalization( m_temp0);
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SPhie{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
@@ -791,32 +799,61 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         m_R,m_Z,m_P,time);
 #endif //DG_MANUFACTURED
     //----------Invert polarisation----------------------------//
-    if( staggered)
-        m_old_phiST.extrapolate( time, phi);
-    else
+    //if( staggered)
+    //    m_old_phiST.extrapolate( time, phi);
+    //else
         m_old_phi.extrapolate( time, phi);
+    m_multigrid.set_benchmark( true, "Polarisation");
     std::vector<unsigned> number = m_multigrid.solve(
         m_multi_pol, phi, m_temp0, m_p.eps_pol);
-    if( staggered)
-        m_old_phiST.update( time, phi);
-    else
+#ifdef WRITE_POL_FILE
+    //if( number[0] > 1000)
+        counter++;
+    if( counter == 10)
+    {
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        dg::x::HVec transferH;
+        int vecID;
+        std::string names [6] = {"chi", "sol", "rhs", "ne", "Ni", "phiH"};
+        const Container* vecs [6] = {&m_multi_chi[0], &phi, &m_temp0, &density[0], &density[1], &m_old_phi.head()};
+        for ( unsigned i=0; i<6; i++)
+        {
+            DG_RANK0 err_pol = nc_def_var( ncid_pol, names[i].data(), NC_DOUBLE, 3,
+                        dim_ids_pol, &vecID);
+            dg::assign (*(vecs[i]), transferH);
+            dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+        }
+        DG_RANK0 err_pol = nc_def_var( ncid_pol, "phi0", NC_DOUBLE, 3,
+                    dim_ids_pol, &vecID);
+        m_old_phi.extrapolate( time, phi);
+        dg::assign ( phi, transferH);
+        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+        DG_RANK0 err_pol = nc_close(ncid_pol);
+        MPI_Barrier( MPI_COMM_WORLD);
+        dg::abort_program();
+    }
+#endif // WRITE_POL_FILE
+    //if( staggered)
+    //    m_old_phiST.update( time, phi);
+    //else
         m_old_phi.update( time, phi);
-    if(  number[0] == m_multigrid.max_iter())
-        throw dg::Fail( m_p.eps_pol[0]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
-    double time, const Container& phi, Container& psi, bool staggered)
+    double time, const Container& phi, Container& psi//, bool staggered
+    )
 {
     //-----------Solve for Gamma Phi---------------------------//
     if (m_p.tau[1] == 0.) {
         dg::blas1::copy( phi, psi);
     } else {
-        if( staggered)
-            m_old_psiST.extrapolate( time, psi);
-        else
+        //if( staggered)
+        //    m_old_psiST.extrapolate( time, psi);
+        //else
             m_old_psi.extrapolate( time, psi);
+        m_multigrid.set_benchmark( true, "Gamma Phi   ");
 #ifdef DG_MANUFACTURED
         dg::blas1::copy( phi, m_temp0);
         dg::blas1::evaluate( m_temp0, dg::plus_equals(), manufactured::SGammaPhie{
@@ -828,29 +865,27 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
         std::vector<unsigned> number = m_multigrid.solve(
             m_multi_invgammaP, psi, phi, m_p.eps_gamma);
 #endif //DG_MANUFACTURED
-        if( staggered)
-            m_old_psiST.update( time, psi);
-        else
+        //if( staggered)
+        //    m_old_psiST.update( time, psi);
+        //else
             m_old_psi.update( time, psi);
-        if(  number[0] == m_multigrid.max_iter())
-            throw dg::Fail( m_p.eps_gamma);
     }
     //-------Compute Psi and derivatives
     dg::blas2::symv( m_dx_P, phi, m_dP[0][0]);
     dg::blas2::symv( m_dy_P, phi, m_dP[0][1]);
     if( !m_p.symmetric) dg::blas2::symv( m_dz, phi, m_dP[0][2]);
-    if( staggered)
-        dg::tensor::scalar_product3d( 1., m_binv,
-            m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
-            m_dP[0][0], m_dP[0][1], m_dP[0][2], 1., psi);
-    else
-    {
+    //if( staggered)
+    //    dg::tensor::scalar_product3d( 1., m_binv,
+    //        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
+    //        m_dP[0][0], m_dP[0][1], m_dP[0][2], 1., psi);
+    //else
+    //{
         dg::tensor::scalar_product3d( 1., m_binv,
             m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
             m_dP[0][0], m_dP[0][1], m_dP[0][2], 0., m_UE2);
         //m_UE2 now contains u_E^2
         dg::blas1::axpby( -0.5, m_UE2, 1., psi);
-    }
+    //}
 #ifdef DG_MANUFACTURED
     dg::blas1::evaluate( psi, dg::plus_equals(), manufactured::SPhii{
         m_p.mu[0],m_p.mu[1],m_p.tau[0],m_p.tau[1],m_p.eta,
@@ -874,6 +909,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
     //----------Invert Induction Eq----------------------------//
     if( update)
         m_old_aparST.extrapolate( time, aparST);
+    m_multigrid.set_benchmark( true, "Apar        ");
     std::vector<unsigned> number = m_multigrid.solve(
         m_multi_ampere, aparST, m_temp0, m_p.eps_ampere);
     if( update)
@@ -1568,9 +1604,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #if FELTORPERP == 1
 
     // set m_potential[0]
-    compute_phi( t, m_density, m_potential[0], false);
+    compute_phi( t, m_density, m_potential[0]);//, false);
     // set m_potential[1] and m_UE2 --- needs m_potential[0]
-    compute_psi( t, m_potential[0], m_potential[1], false);
+    compute_psi( t, m_potential[0], m_potential[1]);//, false);
 
 #else
 

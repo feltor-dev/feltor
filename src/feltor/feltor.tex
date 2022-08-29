@@ -957,6 +957,11 @@ as in
 \partial_t W_\parallel &= F_U ( 1 - \chi_w) -\omega_w\chi_w (U_\parallel-U_{\parallel,w})
 \end{align}
 \end{subequations}
+The polarization equation is penalized according to the immersed boundary method
+\begin{align}
+    -\nc\left( \frac{N_i}{B^2}\np \phi \right) = (\Gamma_{1,i} N_i - n_e)(1-\chi_w)
+\end{align}
+
 
 \begin{tcolorbox}[title=Note]
     Computing on a box and cutting away the parts that are the wall,
@@ -1073,6 +1078,10 @@ as in
     In this case the perpendicular boundary
     conditions "bc" for $N$ and $U_\parallel$ and the FCI implementation for the
     boundary for $N$ and $U_\parallel$ become irrelevant.
+The polarization equation is penalized according to the immersed boundary method
+\begin{align}
+    -\nc\left( \frac{N_i}{B^2}\np \phi \right) = (\Gamma_{1,i} N_i - n_e)(1-\chi_w -\chi_s)
+\end{align}
 \end{tcolorbox}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

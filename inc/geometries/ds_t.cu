@@ -1,7 +1,6 @@
 #include <iostream>
 #include <iomanip>
 
-#define DG_BENCHMARK
 #include "dg/algorithm.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
@@ -49,14 +48,15 @@ int main(int argc, char * argv[])
         ds( dsFA );
     //![doxygen]
     ///##########################################################///
-    const dg::DVec fun = dg::pullback( dg::geo::TestFunctionDirNeu(mag), g3d);
+    auto ff = dg::geo::TestFunctionDirNeu(mag);
+    const dg::DVec fun = dg::pullback( ff, g3d);
     dg::DVec derivative(fun);
     const dg::DVec divb = dg::pullback( dg::geo::Divb(mag), g3d);
-    const dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    const dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    const dg::DVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    const dg::DVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
-    const dg::DVec sol4 = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    const dg::DVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    const dg::DVec sol1 = dg::pullback( dg::geo::DssFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    const dg::DVec sol2 = dg::pullback( dg::geo::DsDivFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    const dg::DVec sol3 = dg::pullback( dg::geo::DsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
+    const dg::DVec sol4 = dg::pullback( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
     std::vector<std::pair<std::string, std::array<const dg::DVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},
