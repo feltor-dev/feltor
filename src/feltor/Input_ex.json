@@ -240,14 +240,13 @@
 		"maxout" : 200,
 		"type" : "netcdf",
         "equations":
-            { "Mass-conserv": true,
+            { "Basic": true,
+              "Mass-conserv": true,
               "Energy-theorem": false,
               "Toroidal-momentum": true,
               "Parallel-momentum": false,
-              "Parallel-e-force": false,
-              "Zonal-flow": false,
-              "COCE_GF": true,
-              "COCE_fluid": true
+              "RS": false,
+              "COCE": true
             }
 	},
 	"timestepper" : 

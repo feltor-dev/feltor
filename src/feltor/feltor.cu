@@ -475,6 +475,8 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name),
                     "long_name", long_name.size(), long_name.data());
         }
+    if(js["output"]["equations"].get( "Basic", true).asBool())
+    {
         for( auto& record : feltor::basicDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
@@ -493,7 +495,9 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        
+      }
+    if(js["output"]["equations"].get( "Mass-conserv", true).asBool())
+    {
         for( auto& record : feltor::MassConsDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
@@ -512,7 +516,9 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        
+      }
+          if(js["output"]["equations"].get( "Energy-theorem", true).asBool())
+    {
         for( auto& record : feltor::EnergyDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
@@ -531,7 +537,9 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        
+    }
+        if(js["output"]["equations"].get( "Toroidal-momentum", true).asBool())
+    {
         for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
@@ -550,7 +558,9 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        
+     }
+    if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
+    {
         for( auto& record : feltor::ParallelMomDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
@@ -569,7 +579,9 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        
+      }
+    if(js["output"]["equations"].get( "RS", true).asBool())
+    {
         for( auto& record : feltor::RSDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
@@ -588,7 +600,9 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
-        
+    }
+    if(js["output"]["equations"].get( "COCE", true).asBool())
+    {
         for( auto& record : feltor::COCEDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
@@ -607,6 +621,8 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
+    }
+    
         for( auto& record : feltor::diagnostics1d_list)
         {
             std::string name = record.name;
@@ -647,6 +663,8 @@ int main( int argc, char* argv[])
             dg::assign( resultD, resultH);
             dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
+            if(js["output"]["equations"].get( "Basic", true).asBool())
+    {
         for( auto& record : feltor::basicDiagnostics2d_list)
         {
             dg::Timer tti;
@@ -677,7 +695,9 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
-        
+     }
+    if(js["output"]["equations"].get( "Mass-conserv", true).asBool())
+    {
         for( auto& record : feltor::MassConsDiagnostics2d_list)
         {
             dg::Timer tti;
@@ -708,7 +728,9 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
-        
+      }
+    if(js["output"]["equations"].get( "Energy", true).asBool())
+    {
         for( auto& record : feltor::EnergyDiagnostics2d_list)
         {
             dg::Timer tti;
@@ -739,7 +761,9 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
-        
+      }
+    if(js["output"]["equations"].get( "Toroidal-momentum", true).asBool())
+    {
         for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
         {
             dg::Timer tti;
@@ -770,7 +794,9 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
-        
+     }
+         if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
+    {
         for( auto& record : feltor::ParallelMomDiagnostics2d_list)
         {
             dg::Timer tti;
@@ -801,7 +827,9 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
-        
+     }
+    if(js["output"]["equations"].get( "RS", true).asBool())
+    {
         for( auto& record : feltor::RSDiagnostics2d_list)
         {
             dg::Timer tti;
@@ -832,7 +860,9 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
-        
+      }
+    if(js["output"]["equations"].get( "COCE", true).asBool())
+    {
         for( auto& record : feltor::COCEDiagnostics2d_list)
         {
             dg::Timer tti;
@@ -863,6 +893,7 @@ int main( int argc, char* argv[])
             tti.toc();
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
+    }
         for( auto& record : feltor::diagnostics1d_list)
         {
             double result = record.function( var);
@@ -898,7 +929,8 @@ int main( int argc, char* argv[])
                 }
                 dg::Timer tti;
                 tti.tic();
-                
+            if(js["output"]["equations"].get( "Basic", true).asBool())
+            {
                 for( auto& record : feltor::basicDiagnostics2d_list)
                 {
                     if( record.integral)
@@ -919,7 +951,9 @@ int main( int argc, char* argv[])
                                 transferH2d);
                     }
                 }
-                
+              }
+            if(js["output"]["equations"].get( "Mass-conserv", true).asBool())
+            {
                 for( auto& record : feltor::MassConsDiagnostics2d_list)
                 {
                     if( record.integral)
@@ -940,7 +974,9 @@ int main( int argc, char* argv[])
                                 transferH2d);
                     }
                 }
-                
+              }
+            if(js["output"]["equations"].get( "Energy-theorem", true).asBool())
+            {
                 for( auto& record : feltor::EnergyDiagnostics2d_list)
                 {
                     if( record.integral)
@@ -961,7 +997,9 @@ int main( int argc, char* argv[])
                                 transferH2d);
                     }
                 }
-                
+              }
+             if(js["output"]["equations"].get( "Toroidal-momentum", true).asBool())
+            {
                 for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
                 {
                     if( record.integral)
@@ -982,7 +1020,9 @@ int main( int argc, char* argv[])
                                 transferH2d);
                     }
                 }
-                
+               }
+             if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
+            {
                for( auto& record : feltor::ParallelMomDiagnostics2d_list)
                 {
                     if( record.integral)
@@ -1003,7 +1043,9 @@ int main( int argc, char* argv[])
                                 transferH2d);
                     }
                 }
-                
+            }
+            if(js["output"]["equations"].get( "RS", true).asBool())
+            {
                 for( auto& record : feltor::RSDiagnostics2d_list)
                 {
                     if( record.integral)
@@ -1024,7 +1066,9 @@ int main( int argc, char* argv[])
                                 transferH2d);
                     }
                 }
-                
+                }
+             if(js["output"]["equations"].get( "COCE", true).asBool())
+            {
                 for( auto& record : feltor::COCEDiagnostics2d_list)
                 {
                     if( record.integral)
@@ -1045,7 +1089,7 @@ int main( int argc, char* argv[])
                                 transferH2d);
                     }
                 }
-
+                }
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
@@ -1100,7 +1144,8 @@ int main( int argc, char* argv[])
                 dg::file::put_var_double( ncid, restart_ids.at(record.name),
                         grid, resultH);
             }
-            
+            if(js["output"]["equations"].get( "Basic", true).asBool())
+            {
             for( auto& record : feltor::basicDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
@@ -1136,7 +1181,9 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
-            
+           }
+            if(js["output"]["equations"].get( "Mass-conserv", true).asBool())
+            {
             for( auto& record : feltor::MassConsDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
@@ -1172,7 +1219,9 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
-            
+            }
+            if(js["output"]["equations"].get( "Energy-theorem", true).asBool())
+            {
             for( auto& record : feltor::EnergyDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
@@ -1208,7 +1257,9 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
-            
+            }
+            if(js["output"]["equations"].get( "Toroidal-momentum", true).asBool())
+            {
             for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
@@ -1244,7 +1295,9 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
-            
+            }
+            if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
+            {
             for( auto& record : feltor::ParallelMomDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
@@ -1280,7 +1333,9 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
-            
+            }
+            if(js["output"]["equations"].get( "RS", true).asBool())
+            {
             for( auto& record : feltor::RSDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
@@ -1316,7 +1371,9 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
-            
+            }
+            if(js["output"]["equations"].get( "COCE", true).asBool())
+            {
             for( auto& record : feltor::COCEDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
@@ -1351,6 +1408,7 @@ int main( int argc, char* argv[])
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
                             start, *g2d_out_ptr, transferH2d);
                 }
+            }
             }
             for( auto& record : feltor::diagnostics1d_list)
             {
