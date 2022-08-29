@@ -520,7 +520,7 @@ std::vector<Record_static> diagnostics2d_static_list = {
     },
 };
 // and here are all the 2d outputs we want to produce (currently ~ 100)
-std::vector<Record> diagnostics2d_list = {
+std::vector<Record> basicDiagnostics2d_list = {
     {"electrons", "Electron density", false,
         []( dg::x::DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.density(0), result);
@@ -626,7 +626,10 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot(
                 v.f.potential(0), v.f.density(0), result);
         }
-    },
+    }
+};
+
+std::vector<Record> MassConsDiagnostics2d_list = {
     /// ------------------ Density terms ------------------------//
     {"jsneE_tt", "Radial electron particle flux: ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
@@ -743,7 +746,10 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::copy( v.f.divNUb(1), result);
         }
-    },
+    }
+};
+
+std::vector<Record> EnergyDiagnostics2d_list = {
     /// ------------------- Energy terms ------------------------//
     {"nelnne", "Entropy electrons", false,
         []( dg::x::DVec& result, Variables& v ) {
@@ -960,7 +966,10 @@ std::vector<Record> diagnostics2d_list = {
                     v.f.velocity(1), 0., v.tmp[1]);
             dg::blas1::pointwiseDot( z*v.p.mu[1], v.tmp[1], v.f.dsU(1), 1., result);
         }
-    },
+    }
+};
+
+std::vector<Record> ToroidalExBDiagnostics2d_list = {
     /// ------------------------ Vorticity terms ---------------------------//
     {"oexbi", "ExB vorticity term with ion density", false,
         []( dg::x::DVec& result, Variables& v){
@@ -1137,7 +1146,10 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[1], result,
                 v.p.mu[1], v.tmp[2], result, 0., result);
         }
-    },
+    }
+};
+
+std::vector<Record> ParallelMomDiagnostics2d_list = {
     ///-----------------------Parallel momentum terms ------------------------//
     {"neue", "Product of electron density and velocity", false,
         []( dg::x::DVec& result, Variables& v ) {
@@ -1393,7 +1405,10 @@ std::vector<Record> diagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.velocity(1), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], result, 0., result);
         }
-    },
+    }
+};
+
+std::vector<Record> RSDiagnostics2d_list = {
     /// --------------------- Zonal flow energy terms------------------------//
     {"nei0", "inertial factor", false,
         []( dg::x::DVec& result, Variables& v ) {
@@ -1404,8 +1419,10 @@ std::vector<Record> diagnostics2d_list = {
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.f.density_source(0), v.hoo, result);
         }
-    },
-    
+    }
+};
+
+std::vector<Record> COCEDiagnostics2d_list = {
     /// ----------------- COCE EQUATION ----------------//
     /// ---------- Polarization charge densities -----------///
 

@@ -77,7 +77,7 @@ struct Parameters
         parallel_e_force=js["output"]["equations"].get( "Parallel-e-force", true).asBool();
         zonal_flow=js["output"]["equations"].get( "Zonal-flow", true).asBool();
         COCE_GF=js["output"]["equations"].get( "COCE_GF", true).asBool();
-        COCE_fluid=js["output"]["equations"].get( "COCE_fluid", true).asBool()
+        COCE_fluid=js["output"]["equations"].get( "COCE_fluid", true).asBool();
         //solver_type = "lgmres";
         //if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
         //{

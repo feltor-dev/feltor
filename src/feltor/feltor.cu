@@ -196,15 +196,18 @@ int main( int argc, char* argv[])
     double time = 0.;
     Vector y0;
     std::array<dg::x::DVec, 3> gradPsip;
+    dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DVec, dg::x::DMatrix> nabla(grid, p, mag);
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
     unsigned failed = 0;
     feltor::Variables var{
-        feltor, y0, p, mag, gradPsip, gradPsip,
+        feltor, y0, p, mag, nabla, gradPsip, gradPsip, gradPsip, gradPsip,
         dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid)),
         0., // duration
-        &failed // nfailed
+        0 // nfailed
+        //0., // duration
+        //&failed // nfailed
     };
     DG_RANK0 std::cout << "# Set Initial conditions ... \n";
     t.tic();
@@ -472,7 +475,121 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name),
                     "long_name", long_name.size(), long_name.data());
         }
-        for( auto& record : feltor::diagnostics2d_list)
+        for( auto& record : feltor::basicDiagnostics2d_list)
+        {
+            std::string name = record.name + "_ta2d";
+            std::string long_name = record.long_name + " (Toroidal average)";
+            id3d[name] = 0;//creates a new id3d entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+
+            name = record.name + "_2d";
+            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        
+        for( auto& record : feltor::MassConsDiagnostics2d_list)
+        {
+            std::string name = record.name + "_ta2d";
+            std::string long_name = record.long_name + " (Toroidal average)";
+            id3d[name] = 0;//creates a new id3d entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+
+            name = record.name + "_2d";
+            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        
+        for( auto& record : feltor::EnergyDiagnostics2d_list)
+        {
+            std::string name = record.name + "_ta2d";
+            std::string long_name = record.long_name + " (Toroidal average)";
+            id3d[name] = 0;//creates a new id3d entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+
+            name = record.name + "_2d";
+            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        
+        for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
+        {
+            std::string name = record.name + "_ta2d";
+            std::string long_name = record.long_name + " (Toroidal average)";
+            id3d[name] = 0;//creates a new id3d entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+
+            name = record.name + "_2d";
+            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        
+        for( auto& record : feltor::ParallelMomDiagnostics2d_list)
+        {
+            std::string name = record.name + "_ta2d";
+            std::string long_name = record.long_name + " (Toroidal average)";
+            id3d[name] = 0;//creates a new id3d entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+
+            name = record.name + "_2d";
+            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        
+        for( auto& record : feltor::RSDiagnostics2d_list)
+        {
+            std::string name = record.name + "_ta2d";
+            std::string long_name = record.long_name + " (Toroidal average)";
+            id3d[name] = 0;//creates a new id3d entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+
+            name = record.name + "_2d";
+            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+            id3d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &id3d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+        }
+        
+        for( auto& record : feltor::COCEDiagnostics2d_list)
         {
             std::string name = record.name + "_ta2d";
             std::string long_name = record.long_name + " (Toroidal average)";
@@ -530,7 +647,193 @@ int main( int argc, char* argv[])
             dg::assign( resultD, resultH);
             dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
-        for( auto& record : feltor::diagnostics2d_list)
+        for( auto& record : feltor::basicDiagnostics2d_list)
+        {
+            dg::Timer tti;
+            tti.tic();
+            record.function( resultD, var);
+            dg::blas2::symv( projectD, resultD, transferD);
+
+            //toroidal average
+            std::string name = record.name + "_ta2d";
+            dg::assign( transferD, transferH);
+            toroidal_average( transferH, transferH2d, false);
+            //create and init Simpsons for time integrals
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+            tti.tic();
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            tti.tic();
+
+            // and a slice
+            name = record.name + "_2d";
+            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+            dg::assign( transferD2d, transferH2d);
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+        }
+        
+        for( auto& record : feltor::MassConsDiagnostics2d_list)
+        {
+            dg::Timer tti;
+            tti.tic();
+            record.function( resultD, var);
+            dg::blas2::symv( projectD, resultD, transferD);
+
+            //toroidal average
+            std::string name = record.name + "_ta2d";
+            dg::assign( transferD, transferH);
+            toroidal_average( transferH, transferH2d, false);
+            //create and init Simpsons for time integrals
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+            tti.tic();
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            tti.tic();
+
+            // and a slice
+            name = record.name + "_2d";
+            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+            dg::assign( transferD2d, transferH2d);
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+        }
+        
+        for( auto& record : feltor::EnergyDiagnostics2d_list)
+        {
+            dg::Timer tti;
+            tti.tic();
+            record.function( resultD, var);
+            dg::blas2::symv( projectD, resultD, transferD);
+
+            //toroidal average
+            std::string name = record.name + "_ta2d";
+            dg::assign( transferD, transferH);
+            toroidal_average( transferH, transferH2d, false);
+            //create and init Simpsons for time integrals
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+            tti.tic();
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            tti.tic();
+
+            // and a slice
+            name = record.name + "_2d";
+            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+            dg::assign( transferD2d, transferH2d);
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+        }
+        
+        for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
+        {
+            dg::Timer tti;
+            tti.tic();
+            record.function( resultD, var);
+            dg::blas2::symv( projectD, resultD, transferD);
+
+            //toroidal average
+            std::string name = record.name + "_ta2d";
+            dg::assign( transferD, transferH);
+            toroidal_average( transferH, transferH2d, false);
+            //create and init Simpsons for time integrals
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+            tti.tic();
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            tti.tic();
+
+            // and a slice
+            name = record.name + "_2d";
+            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+            dg::assign( transferD2d, transferH2d);
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+        }
+        
+        for( auto& record : feltor::ParallelMomDiagnostics2d_list)
+        {
+            dg::Timer tti;
+            tti.tic();
+            record.function( resultD, var);
+            dg::blas2::symv( projectD, resultD, transferD);
+
+            //toroidal average
+            std::string name = record.name + "_ta2d";
+            dg::assign( transferD, transferH);
+            toroidal_average( transferH, transferH2d, false);
+            //create and init Simpsons for time integrals
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+            tti.tic();
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            tti.tic();
+
+            // and a slice
+            name = record.name + "_2d";
+            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+            dg::assign( transferD2d, transferH2d);
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+        }
+        
+        for( auto& record : feltor::RSDiagnostics2d_list)
+        {
+            dg::Timer tti;
+            tti.tic();
+            record.function( resultD, var);
+            dg::blas2::symv( projectD, resultD, transferD);
+
+            //toroidal average
+            std::string name = record.name + "_ta2d";
+            dg::assign( transferD, transferH);
+            toroidal_average( transferH, transferH2d, false);
+            //create and init Simpsons for time integrals
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+            tti.tic();
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            tti.tic();
+
+            // and a slice
+            name = record.name + "_2d";
+            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+            dg::assign( transferD2d, transferH2d);
+            if( record.integral) time_integrals[name].init( time, transferH2d);
+            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+            tti.toc();
+            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+        }
+        
+        for( auto& record : feltor::COCEDiagnostics2d_list)
         {
             dg::Timer tti;
             tti.tic();
@@ -595,7 +898,134 @@ int main( int argc, char* argv[])
                 }
                 dg::Timer tti;
                 tti.tic();
-                for( auto& record : feltor::diagnostics2d_list)
+                
+                for( auto& record : feltor::basicDiagnostics2d_list)
+                {
+                    if( record.integral)
+                    {
+                        record.function( resultD, var);
+                        dg::blas2::symv( projectD, resultD, transferD);
+                        //toroidal average and add to time integral
+                        dg::assign( transferD, transferH);
+                        toroidal_average( transferH, transferH2d, false);
+                        time_integrals.at(record.name+"_ta2d").add( time,
+                                transferH2d);
+
+                        // 2d data of plane varphi = 0
+                        feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                        dg::assign( transferD2d, transferH2d);
+                        time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                    }
+                }
+                
+                for( auto& record : feltor::MassConsDiagnostics2d_list)
+                {
+                    if( record.integral)
+                    {
+                        record.function( resultD, var);
+                        dg::blas2::symv( projectD, resultD, transferD);
+                        //toroidal average and add to time integral
+                        dg::assign( transferD, transferH);
+                        toroidal_average( transferH, transferH2d, false);
+                        time_integrals.at(record.name+"_ta2d").add( time,
+                                transferH2d);
+
+                        // 2d data of plane varphi = 0
+                        feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                        dg::assign( transferD2d, transferH2d);
+                        time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                    }
+                }
+                
+                for( auto& record : feltor::EnergyDiagnostics2d_list)
+                {
+                    if( record.integral)
+                    {
+                        record.function( resultD, var);
+                        dg::blas2::symv( projectD, resultD, transferD);
+                        //toroidal average and add to time integral
+                        dg::assign( transferD, transferH);
+                        toroidal_average( transferH, transferH2d, false);
+                        time_integrals.at(record.name+"_ta2d").add( time,
+                                transferH2d);
+
+                        // 2d data of plane varphi = 0
+                        feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                        dg::assign( transferD2d, transferH2d);
+                        time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                    }
+                }
+                
+                for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
+                {
+                    if( record.integral)
+                    {
+                        record.function( resultD, var);
+                        dg::blas2::symv( projectD, resultD, transferD);
+                        //toroidal average and add to time integral
+                        dg::assign( transferD, transferH);
+                        toroidal_average( transferH, transferH2d, false);
+                        time_integrals.at(record.name+"_ta2d").add( time,
+                                transferH2d);
+
+                        // 2d data of plane varphi = 0
+                        feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                        dg::assign( transferD2d, transferH2d);
+                        time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                    }
+                }
+                
+               for( auto& record : feltor::ParallelMomDiagnostics2d_list)
+                {
+                    if( record.integral)
+                    {
+                        record.function( resultD, var);
+                        dg::blas2::symv( projectD, resultD, transferD);
+                        //toroidal average and add to time integral
+                        dg::assign( transferD, transferH);
+                        toroidal_average( transferH, transferH2d, false);
+                        time_integrals.at(record.name+"_ta2d").add( time,
+                                transferH2d);
+
+                        // 2d data of plane varphi = 0
+                        feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                        dg::assign( transferD2d, transferH2d);
+                        time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                    }
+                }
+                
+                for( auto& record : feltor::RSDiagnostics2d_list)
+                {
+                    if( record.integral)
+                    {
+                        record.function( resultD, var);
+                        dg::blas2::symv( projectD, resultD, transferD);
+                        //toroidal average and add to time integral
+                        dg::assign( transferD, transferH);
+                        toroidal_average( transferH, transferH2d, false);
+                        time_integrals.at(record.name+"_ta2d").add( time,
+                                transferH2d);
+
+                        // 2d data of plane varphi = 0
+                        feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                        dg::assign( transferD2d, transferH2d);
+                        time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                    }
+                }
+                
+                for( auto& record : feltor::COCEDiagnostics2d_list)
                 {
                     if( record.integral)
                     {
@@ -670,7 +1100,224 @@ int main( int argc, char* argv[])
                 dg::file::put_var_double( ncid, restart_ids.at(record.name),
                         grid, resultH);
             }
-            for( auto& record : feltor::diagnostics2d_list)
+            
+            for( auto& record : feltor::basicDiagnostics2d_list)
+            {
+                if(record.integral) // we already computed the output...
+                {
+                    std::string name = record.name+"_ta2d";
+                    transferH2d = time_integrals.at(name).get_integral();
+                    time_integrals.at(name).flush();
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    name = record.name+"_2d";
+                    transferH2d = time_integrals.at(name).get_integral( );
+                    time_integrals.at(name).flush( );
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+                else // compute from scratch
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+
+                    std::string name = record.name+"_ta2d";
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    // 2d data of plane varphi = 0
+                    name = record.name+"_2d";
+                    feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+            }
+            
+            for( auto& record : feltor::MassConsDiagnostics2d_list)
+            {
+                if(record.integral) // we already computed the output...
+                {
+                    std::string name = record.name+"_ta2d";
+                    transferH2d = time_integrals.at(name).get_integral();
+                    time_integrals.at(name).flush();
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    name = record.name+"_2d";
+                    transferH2d = time_integrals.at(name).get_integral( );
+                    time_integrals.at(name).flush( );
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+                else // compute from scratch
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+
+                    std::string name = record.name+"_ta2d";
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    // 2d data of plane varphi = 0
+                    name = record.name+"_2d";
+                    feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+            }
+            
+            for( auto& record : feltor::EnergyDiagnostics2d_list)
+            {
+                if(record.integral) // we already computed the output...
+                {
+                    std::string name = record.name+"_ta2d";
+                    transferH2d = time_integrals.at(name).get_integral();
+                    time_integrals.at(name).flush();
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    name = record.name+"_2d";
+                    transferH2d = time_integrals.at(name).get_integral( );
+                    time_integrals.at(name).flush( );
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+                else // compute from scratch
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+
+                    std::string name = record.name+"_ta2d";
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    // 2d data of plane varphi = 0
+                    name = record.name+"_2d";
+                    feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+            }
+            
+            for( auto& record : feltor::ToroidalExBDiagnostics2d_list)
+            {
+                if(record.integral) // we already computed the output...
+                {
+                    std::string name = record.name+"_ta2d";
+                    transferH2d = time_integrals.at(name).get_integral();
+                    time_integrals.at(name).flush();
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    name = record.name+"_2d";
+                    transferH2d = time_integrals.at(name).get_integral( );
+                    time_integrals.at(name).flush( );
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+                else // compute from scratch
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+
+                    std::string name = record.name+"_ta2d";
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    // 2d data of plane varphi = 0
+                    name = record.name+"_2d";
+                    feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+            }
+            
+            for( auto& record : feltor::ParallelMomDiagnostics2d_list)
+            {
+                if(record.integral) // we already computed the output...
+                {
+                    std::string name = record.name+"_ta2d";
+                    transferH2d = time_integrals.at(name).get_integral();
+                    time_integrals.at(name).flush();
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    name = record.name+"_2d";
+                    transferH2d = time_integrals.at(name).get_integral( );
+                    time_integrals.at(name).flush( );
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+                else // compute from scratch
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+
+                    std::string name = record.name+"_ta2d";
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    // 2d data of plane varphi = 0
+                    name = record.name+"_2d";
+                    feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+            }
+            
+            for( auto& record : feltor::RSDiagnostics2d_list)
+            {
+                if(record.integral) // we already computed the output...
+                {
+                    std::string name = record.name+"_ta2d";
+                    transferH2d = time_integrals.at(name).get_integral();
+                    time_integrals.at(name).flush();
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    name = record.name+"_2d";
+                    transferH2d = time_integrals.at(name).get_integral( );
+                    time_integrals.at(name).flush( );
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+                else // compute from scratch
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+
+                    std::string name = record.name+"_ta2d";
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+
+                    // 2d data of plane varphi = 0
+                    name = record.name+"_2d";
+                    feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
+                            start, *g2d_out_ptr, transferH2d);
+                }
+            }
+            
+            for( auto& record : feltor::COCEDiagnostics2d_list)
             {
                 if(record.integral) // we already computed the output...
                 {
