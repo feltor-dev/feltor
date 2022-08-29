@@ -76,7 +76,7 @@ struct RadialEnergyFlux{
             + ne * PS
             + ne * m_mu*ue*ue*curvKappaS
             + ne * m_tau*curvS;
-        double Je = m_z*(m_tau * log(ne) + 0.5*m_mu*ue*ue + P)*JN
+        double Je = m_z*(m_tau * log(ne <=0 ? 1e-16 : ne) + 0.5*m_mu*ue*ue + P)*JN
             + m_z*m_mu*m_tau*ne*ue*ue*curvKappaS;
         return Je;
     }
@@ -91,23 +91,31 @@ struct RadialEnergyFlux{
                     b_1 * ( d2S * d0A - d0S * d2A )+
                     b_2 * ( d0S * d1A - d1S * d0A );
         double JN = m_z*ne*ue* (A*curvKappaS + SA );
-        double Je = m_z*( m_tau * log(ne) + 0.5*m_mu*ue*ue + P )*JN
+        double Je = m_z*( m_tau * log(ne <= 0 ? 1e-16 : ne) + 0.5*m_mu*ue*ue + P )*JN
                     + m_z*m_tau*ne*ue* (A*curvKappaS + SA );
         return Je;
     }
     //energy dissipation
     DG_DEVICE double operator()( double ne, double ue, double P,
         double lambdaN, double lambdaU){
-        return m_z*(m_tau*(1+log(ne))+P+0.5*m_mu*ue*ue)*lambdaN
+        return m_z*(m_tau*(1+log(ne <= 0 ? 1e-16 : ne))+P+0.5*m_mu*ue*ue)*lambdaN
                 + m_z*m_mu*ne*ue*lambdaU;
     }
     //energy source
     DG_DEVICE double operator()( double ne, double ue, double P,
         double source){
-        return m_z*(m_tau*(1+log(ne))+P+0.5*m_mu*ue*ue)*source;
+        return m_z*(m_tau*(1+log(ne <= 0 ? 1e-16 : ne))+P+0.5*m_mu*ue*ue)*source;
     }
     private:
     double m_tau, m_mu, m_z;
+};
+struct PositiveLN
+{
+    DG_DEVICE double operator()(double x)
+    {
+        if( x > 0) return log(x);
+        return log(1e-16); // avoid nans in output
+    }
 };
 
 template<class Container>
@@ -739,13 +747,13 @@ std::vector<Record> diagnostics2d_list = {
     /// ------------------- Energy terms ------------------------//
     {"nelnne", "Entropy electrons", false,
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::transform( v.f.density(0), result, dg::LN<double>());
+            dg::blas1::transform( v.f.density(0), result, routines::PositiveLN());
             dg::blas1::pointwiseDot( result, v.f.density(0), result);
         }
     },
     {"nilnni", "Entropy ions", false,
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::transform( v.f.density(1), result, dg::LN<double>());
+            dg::blas1::transform( v.f.density(1), result, routines::PositiveLN());
             dg::blas1::pointwiseDot( v.p.tau[1], result, v.f.density(1), 0., result);
         }
     },

@@ -18,13 +18,16 @@ interpolate_in_3d: interpolate_in_3d.cu feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
 feltor: feltor.cu feltor.h init.h parameters.h init_from_file.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -g -DDG_BENCHMARK $(VERSION_FLAGS)
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
 feltor_hpc: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
-	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK -DWITHOUT_GLFW $(VERSION_FLAGS)
+	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITHOUT_GLFW $(VERSION_FLAGS)
 
 feltor_mpi: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DDG_BENCHMARK -DWITHOUT_GLFW $(VERSION_FLAGS)
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DWITHOUT_GLFW $(VERSION_FLAGS)
+
+feltor_pol: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DWRITE_POL_FILE -DWITHOUT_GLFW $(VERSION_FLAGS)
 
 manufactured: manufactured.cu manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=1 -DFELTORPERP=1
@@ -34,6 +37,9 @@ manufactured_perp: manufactured.cu manufactured.h feltor.h
 
 manufactured_para: manufactured.cu manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=1 -DFELTORPERP=0
+
+multigrid_b: multigrid_b.cu parameters.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
 .PHONY: clean doc
 
