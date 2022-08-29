@@ -245,6 +245,27 @@ int main( int argc, char* argv[])
     }
     t.toc();
     DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
+    
+    
+    ///PROBE ADDITIONS!!!
+     dg::x::HVec R_probe(p.num_pins), Z_probe(p.num_pins), phi_probe(p.num_pins);
+
+     //Example input
+     if(p.probes){
+         for(unsigned i = 0 ; i < p.num_pins; i++){
+             R_probe[i] = js["probes"]["R_probe"][i].asDouble();
+             Z_probe[i] = js["probes"]["Z_probe"][i].asDouble();
+             phi_probe[i] = js["probes"]["phi_probe"][i].asDouble();
+         }
+     }
+     //Change to device matrix!
+     //IHMatrix probe_interpolate_h = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.local());
+     //IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
+     //dg::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.global());
+     dg::x::DVec simple_probes_device(p.num_pins);
+     dg::x::HVec simple_probes(p.num_pins);
+     dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
+
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -633,6 +654,30 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
                     long_name.size(), long_name.data());
         }
+        
+    //Probes:
+         int probe_grp_id;
+         DG_RANK0 err = nc_def_grp(ncid,"probes",&probe_grp_id);
+         int probe_dim_ids[2];
+         int probe_timevarID;
+         int R_pin_id, Z_pin_id, phi_pin_id;
+         DG_RANK0 err = dg::file::define_time( probe_grp_id, "probe_time", &probe_dim_ids[0], &probe_timevarID);
+         DG_RANK0 err = nc_def_dim(probe_grp_id,"pins",p.num_pins,&probe_dim_ids[1]);
+         DG_RANK0 err = nc_def_var(probe_grp_id, "R_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &R_pin_id);
+         DG_RANK0 err = nc_def_var(probe_grp_id, "Z_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &Z_pin_id);
+         DG_RANK0 err = nc_def_var(probe_grp_id, "phi_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &phi_pin_id);
+
+
+         std::map<std::string, int> probe_id_field;
+         for( auto& record : feltor::probe_list)
+         {
+             std::string name = record.name;
+             std::string long_name = record.long_name;
+             probe_id_field[name] = 0;//creates a new id4d entry for all processes
+             DG_RANK0 err = nc_def_var( probe_grp_id, name.data(), NC_DOUBLE, 2, probe_dim_ids,  &probe_id_field.at(name));
+             DG_RANK0 err = nc_put_att_text( probe_grp_id, probe_id_field.at(name), "long_name", long_name.size(), long_name.data());
+         }
+        
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "First output ... \n";
         //first, update feltor (to get potential etc.)
@@ -899,6 +944,27 @@ int main( int argc, char* argv[])
             double result = record.function( var);
             DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
         }
+        
+    
+     /// Probes output ///
+         size_t probe_start[] = {0, 0};
+         size_t probe_count[] = {1, p.num_pins};
+         DG_RANK0 err = nc_put_vara_double( probe_grp_id, R_pin_id, &probe_start[1], &probe_count[1], R_probe.data());
+         DG_RANK0 err = nc_put_vara_double( probe_grp_id, Z_pin_id, &probe_start[1], &probe_count[1], Z_probe.data());
+         DG_RANK0 err = nc_put_vara_double( probe_grp_id, phi_pin_id, &probe_start[1], &probe_count[1], phi_probe.data());
+         DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &probe_count[0], &time);
+
+         if(p.probes){
+         for( auto& record : feltor::probe_list)
+         {
+             record.function( resultD, var);
+             dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+             dg::assign(simple_probes_device,simple_probes);
+             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+         }
+         }
+         /// End probes output ///
+         
         DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
@@ -1415,6 +1481,20 @@ int main( int argc, char* argv[])
                 double result = record.function( var);
                 DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
+            
+            
+             probe_start[0] += 1;
+             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &probe_count[0], &time);
+             if(p.probes){
+             for( auto& record : feltor::probe_list)
+             {
+                 record.function( resultD, var);
+                 dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+                 dg::assign(simple_probes_device,simple_probes);
+                 DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+             }
+             }
+
             DG_RANK0 err = nc_close(ncid);
             ti.toc();
             DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;

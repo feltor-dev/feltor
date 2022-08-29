@@ -137,6 +137,10 @@ struct WrappedJsonValue
         return m_js.size();
     }
     /// Wrap the corresponding Json::Value function with error handling
+    unsigned isMember(const char *     key) const{
+             return m_js.isMember(key);
+         }
+    /// Wrap the corresponding Json::Value function with error handling
     double asDouble( double value = 0) const{
         if( m_js.isDouble())
             return m_js.asDouble();

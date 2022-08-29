@@ -1753,6 +1753,39 @@ std::vector<Record> COCEDiagnostics2d_list = {
     
 };
 
+std::vector<Record> probe_list = {
+     {"electrons_probe", "probe measurement of electron density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.density(0), result);
+         }
+     },
+     {"ions_probe", "probe measurement of ion density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.density(1), result);
+         }
+     },
+     {"Ue_probe", "probe measurement of parallel electron velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.velocity(0), result);
+         }
+     },
+     {"Ui_probe", "probe measurement of parallel ion velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.velocity(1), result);
+         }
+     },
+     {"potential_probe", "probe measurement of electric potential", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.potential(0), result);
+         }
+     },
+     {"aparallel_probe", "probe measurement of parallel magnetic potential", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.aparallel(), result);
+         }
+     }
+ };
+
 // Here is a list of useful 1d variables of general interest
 std::vector<Record1d> diagnostics1d_list = {
     {"failed", "Accumulated Number of failed steps",

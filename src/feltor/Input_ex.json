@@ -187,6 +187,14 @@
 			"triangularity" : 0.29999999999999999
 		}
 	},
+    "probes":
+    {
+        "num_pins": 3,
+        "R_probe": [90, 95, 100],
+        "Z_probe": [0, 0, 0],
+        "phi_probe": [0, 0, 3]
+    },
+         
 	"physical" : 
 	{
 		"beta" : 0.000295,
