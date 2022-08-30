@@ -780,7 +780,7 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
         }
       }
-    if(js["output"]["equations"].get( "Energy", true).asBool())
+    if(js["output"]["equations"].get( "Energy-theorem", true).asBool())
     {
         for( auto& record : feltor::EnergyDiagnostics2d_list)
         {
