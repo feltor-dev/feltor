@@ -248,11 +248,11 @@ int main( int argc, char* argv[])
     
     
     ///PROBE ADDITIONS!!!
-     dg::x::HVec R_probe(p.num_pins), Z_probe(p.num_pins), phi_probe(p.num_pins);
+     dg::HVec R_probe(p.num_pins), Z_probe(p.num_pins), phi_probe(p.num_pins);
 
      //Example input
      if(p.probes){
-         for(unsigned i = 0 ; i < p.num_pins; i++){
+	 for(unsigned i = 0 ; i < p.num_pins; i++){
              R_probe[i] = js["probes"]["R_probe"][i].asDouble();
              Z_probe[i] = js["probes"]["Z_probe"][i].asDouble();
              phi_probe[i] = js["probes"]["phi_probe"][i].asDouble();
@@ -262,8 +262,14 @@ int main( int argc, char* argv[])
      //IHMatrix probe_interpolate_h = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.local());
      //IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
      //dg::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.global());
-     dg::x::DVec simple_probes_device(p.num_pins);
-     dg::x::HVec simple_probes(p.num_pins);
+#ifdef WITH_MPI
+     dg::MDVec simple_probes_device((dg::DVec)R_probe,grid.communicator());
+     dg::MHVec simple_probes(R_probe, grid.communicator());
+#else //WITH_MPI
+     dg::DVec simple_probes_device(p.num_pins);
+     dg::HVec simple_probes(p.num_pins);
+#endif 
+    
      dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
 
 
@@ -960,8 +966,12 @@ int main( int argc, char* argv[])
              record.function( resultD, var);
              dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
              dg::assign(simple_probes_device,simple_probes);
-             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
-         }
+#ifdef WITH_MPI
+	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
+#else	     
+	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+#endif
+	 }
          }
          /// End probes output ///
          
@@ -1491,7 +1501,13 @@ int main( int argc, char* argv[])
                  record.function( resultD, var);
                  dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
                  dg::assign(simple_probes_device,simple_probes);
-                 DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+           
+#ifdef WITH_MPI
+             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
+#else
+             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+#endif		 
+	  
              }
              }
 

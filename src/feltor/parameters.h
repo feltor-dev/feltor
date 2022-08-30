@@ -51,7 +51,7 @@ struct Parameters
     bool symmetric, calibrate, periodify;
     bool penalize_wall, penalize_sheath, modify_B;
     bool partitioned;
-    bool mass_conserv, energy_theorem, toroidal_mom, parallel_mom, parallel_e_force, zonal_flow, COCE_GF, COCE_fluid; //To define which variable to be saved in the output (from input)
+    //bool mass_conserv, energy_theorem, toroidal_mom, parallel_mom, parallel_e_force, zonal_flow, COCE_GF, COCE_fluid; //To define which variable to be saved in the output (from input)
     bool probes;
     unsigned num_pins;
     //
@@ -71,13 +71,13 @@ struct Parameters
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
         
-        basic=js["output"]["equations"].get( "Basic", true).asBool();
-        mass_conserv=js["output"]["equations"].get( "Mass-conserv", true).asBool();
-        energy_theorem=js["output"]["equations"].get( "Energy-theorem", true).asBool();
-        toroidal_mom=js["output"]["equations"].get( "Toroidal-momentum", true).asBool();
-        parallel_mom=js["output"]["equations"].get( "Parallel-momentum", true).asBool();
-        zonal_flow=js["output"]["equations"].get( "RS", true).asBool();
-        COCE_GF=js["output"]["equations"].get( "COCE", true).asBool();
+       // basic=js["output"]["equations"].get( "Basic", true).asBool();
+       // mass_conserv=js["output"]["equations"].get( "Mass-conserv", true).asBool();
+       // energy_theorem=js["output"]["equations"].get( "Energy-theorem", true).asBool();
+       // toroidal_mom=js["output"]["equations"].get( "Toroidal-momentum", true).asBool();
+       // parallel_mom=js["output"]["equations"].get( "Parallel-momentum", true).asBool();
+       // zonal_flow=js["output"]["equations"].get( "RS", true).asBool();
+       // COCE_GF=js["output"]["equations"].get( "COCE", true).asBool();
         //solver_type = "lgmres";
         //if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
         //{
