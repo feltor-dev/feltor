@@ -71,14 +71,13 @@ struct Parameters
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
         
+        basic=js["output"]["equations"].get( "Basic", true).asBool();
         mass_conserv=js["output"]["equations"].get( "Mass-conserv", true).asBool();
         energy_theorem=js["output"]["equations"].get( "Energy-theorem", true).asBool();
         toroidal_mom=js["output"]["equations"].get( "Toroidal-momentum", true).asBool();
         parallel_mom=js["output"]["equations"].get( "Parallel-momentum", true).asBool();
-        parallel_e_force=js["output"]["equations"].get( "Parallel-e-force", true).asBool();
-        zonal_flow=js["output"]["equations"].get( "Zonal-flow", true).asBool();
-        COCE_GF=js["output"]["equations"].get( "COCE_GF", true).asBool();
-        COCE_fluid=js["output"]["equations"].get( "COCE_fluid", true).asBool();
+        zonal_flow=js["output"]["equations"].get( "RS", true).asBool();
+        COCE_GF=js["output"]["equations"].get( "COCE", true).asBool();
         //solver_type = "lgmres";
         //if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
         //{
