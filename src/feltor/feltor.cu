@@ -194,6 +194,7 @@ int main( int argc, char* argv[])
     }
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
+    std::vector<double> time_intern(p.itstp);
     Vector y0;
     std::array<dg::x::DVec, 3> gradPsip;
     dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DVec, dg::x::DMatrix> nabla(grid, p, mag);
@@ -265,11 +266,13 @@ int main( int argc, char* argv[])
 #ifdef WITH_MPI
      dg::MDVec simple_probes_device((dg::DVec)R_probe,grid.communicator());
      dg::MHVec simple_probes(R_probe, grid.communicator());
+     std::vector<dg::x::MHVec> simple_probes_intern(p.itstp, simple_probes,  grid.communicator());
 #else //WITH_MPI
      dg::DVec simple_probes_device(p.num_pins);
      dg::HVec simple_probes(p.num_pins);
+     std::vector<dg::x::HVec> simple_probes_intern(p.itstp, simple_probes);
 #endif 
-    
+
      dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
 
 
@@ -312,16 +315,18 @@ int main( int argc, char* argv[])
     unsigned maxout = js["output"].get( "maxout", 0).asUInt();
     std::string output_mode = js["timestepper"].get(
             "output-mode", "Tend").asString();
-    double Tend = 0, deltaT = 0.;
+    double Tend = 0, deltaT = 0., deltaT_probe=0.;
     if( output_mode == "Tend")
     {
         Tend = js["timestepper"].get( "Tend", 1).asDouble();
         deltaT = Tend/(double)(maxout*p.itstp);
+        deltaT_probe = deltaT/p.itstp;
     }
     else if( output_mode == "deltaT")
     {
         deltaT = js["timestepper"].get( "deltaT", 1).asDouble()/(double)(p.itstp);
         Tend = deltaT*(double)(maxout*p.itstp);
+        deltaT_probe = deltaT/p.itstp;
     }
     else
         throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
@@ -668,6 +673,7 @@ int main( int argc, char* argv[])
          int probe_timevarID;
          int R_pin_id, Z_pin_id, phi_pin_id;
          DG_RANK0 err = dg::file::define_time( probe_grp_id, "probe_time", &probe_dim_ids[0], &probe_timevarID);
+         //DG_RANK0 err = nc_def_dim(probe_grp_id, "probe_time", 1, &probe_dim_ids[0], &probe_timevarID);
          DG_RANK0 err = nc_def_dim(probe_grp_id,"pins",p.num_pins,&probe_dim_ids[1]);
          DG_RANK0 err = nc_def_var(probe_grp_id, "R_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &R_pin_id);
          DG_RANK0 err = nc_def_var(probe_grp_id, "Z_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &Z_pin_id);
@@ -952,13 +958,15 @@ int main( int argc, char* argv[])
         }
         
     
-     /// Probes output ///
+     /// Probes FIRST output ///
          size_t probe_start[] = {0, 0};
+         //size_t probe_count_intern[] = {p.itstp, p.num_pins};
          size_t probe_count[] = {1, p.num_pins};
+         time_intern[0]=time;
          DG_RANK0 err = nc_put_vara_double( probe_grp_id, R_pin_id, &probe_start[1], &probe_count[1], R_probe.data());
          DG_RANK0 err = nc_put_vara_double( probe_grp_id, Z_pin_id, &probe_start[1], &probe_count[1], Z_probe.data());
          DG_RANK0 err = nc_put_vara_double( probe_grp_id, phi_pin_id, &probe_start[1], &probe_count[1], phi_probe.data());
-         DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &probe_count[0], &time);
+         DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &count, &time_intern[0]);
 
          if(p.probes){
          for( auto& record : feltor::probe_list)
@@ -966,11 +974,12 @@ int main( int argc, char* argv[])
              record.function( resultD, var);
              dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
              dg::assign(simple_probes_device,simple_probes);
-#ifdef WITH_MPI
-	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
-#else	     
-	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
-#endif
+             simple_probes_intern[0]=simple_probes;
+//#ifdef WITH_MPI
+//	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
+//#else
+//	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+//#endif
 	 }
          }
          /// End probes output ///
@@ -1005,6 +1014,17 @@ int main( int argc, char* argv[])
                 }
                 dg::Timer tti;
                 tti.tic();
+        
+        
+        if(p.probes){
+         for( auto& record : feltor::probe_list)
+         {   record.function( resultD, var);
+             dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+             dg::assign(simple_probes_device,simple_probes);
+             simple_probes_intern[j]=simple_probes;
+             time_intern[j]=time;
+         }
+        }
             if(js["output"]["equations"].get( "Basic", true).asBool())
             {
                 for( auto& record : feltor::basicDiagnostics2d_list)
@@ -1175,7 +1195,6 @@ int main( int argc, char* argv[])
                     DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
                     DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
                 }
-
                 tti.toc();
                 DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
                 if( abort) break;
@@ -1492,22 +1511,18 @@ int main( int argc, char* argv[])
                 DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
             
-            
-             probe_start[0] += 1;
-             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &probe_count[0], &time);
+            //OUTPUT OF PROBES
              if(p.probes){
+            probe_start[0] = (start-1)*p.itstp+1;
+            //DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern);
+             
+            for( unsigned j=1; j<=p.itstp; j++) //PROBLEM: IT DOES NOT ALLOW TO INTRODUCE A VECTOR, IT ONLY ACCEPTS ONE BY ONE
+            {
+             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern[j]);
              for( auto& record : feltor::probe_list)
-             {
-                 record.function( resultD, var);
-                 dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
-                 dg::assign(simple_probes_device,simple_probes);
-           
-#ifdef WITH_MPI
-             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
-#else
-             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
-#endif		 
-	  
+                {
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[j].data());
+                }
              }
              }
 
