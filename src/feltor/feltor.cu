@@ -1521,7 +1521,12 @@ int main( int argc, char* argv[])
              DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern[j]);
              for( auto& record : feltor::probe_list)
                 {
+#ifdef WITH_MPI
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[j].data().data());
+#else
                 DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[j].data());
+#endif
+
                 }
              }
              }
