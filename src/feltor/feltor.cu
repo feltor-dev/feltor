@@ -266,13 +266,12 @@ int main( int argc, char* argv[])
 #ifdef WITH_MPI
      dg::MDVec simple_probes_device((dg::DVec)R_probe,grid.communicator());
      dg::MHVec simple_probes(R_probe, grid.communicator());
-     std::vector<dg::x::MHVec> simple_probes_intern(p.itstp, simple_probes,  grid.communicator());
+    // std::vector<dg::x::MHVec> simple_probes_intern(p.itstp, simple_probes,  grid.communicator());
 #else //WITH_MPI
      dg::DVec simple_probes_device(p.num_pins);
      dg::HVec simple_probes(p.num_pins);
-     std::vector<dg::x::HVec> simple_probes_intern(p.itstp, simple_probes);
 #endif 
-
+     std::vector<dg::x::HVec> simple_probes_intern(p.itstp, simple_probes);
      dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
 
 
@@ -315,18 +314,16 @@ int main( int argc, char* argv[])
     unsigned maxout = js["output"].get( "maxout", 0).asUInt();
     std::string output_mode = js["timestepper"].get(
             "output-mode", "Tend").asString();
-    double Tend = 0, deltaT = 0., deltaT_probe=0.;
+    double Tend = 0, deltaT = 0.;
     if( output_mode == "Tend")
     {
         Tend = js["timestepper"].get( "Tend", 1).asDouble();
         deltaT = Tend/(double)(maxout*p.itstp);
-        deltaT_probe = deltaT/p.itstp;
     }
     else if( output_mode == "deltaT")
     {
         deltaT = js["timestepper"].get( "deltaT", 1).asDouble()/(double)(p.itstp);
         Tend = deltaT*(double)(maxout*p.itstp);
-        deltaT_probe = deltaT/p.itstp;
     }
     else
         throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
@@ -975,11 +972,11 @@ int main( int argc, char* argv[])
              dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
              dg::assign(simple_probes_device,simple_probes);
              simple_probes_intern[0]=simple_probes;
-//#ifdef WITH_MPI
-//	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
-//#else
-//	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
-//#endif
+#ifdef WITH_MPI
+	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
+#else
+	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+#endif
 	 }
          }
          /// End probes output ///
