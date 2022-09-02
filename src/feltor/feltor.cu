@@ -266,12 +266,13 @@ int main( int argc, char* argv[])
 #ifdef WITH_MPI
      dg::MDVec simple_probes_device((dg::DVec)R_probe,grid.communicator());
      dg::MHVec simple_probes(R_probe, grid.communicator());
-    // std::vector<dg::x::MHVec> simple_probes_intern(p.itstp, simple_probes,  grid.communicator());
 #else //WITH_MPI
      dg::DVec simple_probes_device(p.num_pins);
      dg::HVec simple_probes(p.num_pins);
-#endif 
-     std::vector<dg::x::HVec> simple_probes_intern(p.itstp, simple_probes);
+#endif
+    int probe_length=(feltor::probe_list).size(); 
+     std::vector<std::vector<dg::x::HVec>> simple_probes_intern(probe_length, std::vector<dg::x::HVec>(p.itstp+1, simple_probes));
+     //std::vector<dg::x::HVec> simple_probes_intern(probe_length, simple_probes_1);
      dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
 
 
@@ -957,7 +958,6 @@ int main( int argc, char* argv[])
     
      /// Probes FIRST output ///
          size_t probe_start[] = {0, 0};
-         //size_t probe_count_intern[] = {p.itstp, p.num_pins};
          size_t probe_count[] = {1, p.num_pins};
          time_intern[0]=time;
          DG_RANK0 err = nc_put_vara_double( probe_grp_id, R_pin_id, &probe_start[1], &probe_count[1], R_probe.data());
@@ -966,17 +966,19 @@ int main( int argc, char* argv[])
          DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &count, &time_intern[0]);
 
          if(p.probes){
-         for( auto& record : feltor::probe_list)
-         {
+         int probe_counter=0;
+	 for( auto& record : feltor::probe_list)
+         {  
              record.function( resultD, var);
              dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
              dg::assign(simple_probes_device,simple_probes);
-             simple_probes_intern[0]=simple_probes;
+             simple_probes_intern[probe_counter][0]=simple_probes;
 #ifdef WITH_MPI
 	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
 #else
 	     DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
 #endif
+	     probe_counter+=1;
 	 }
          }
          /// End probes output ///
@@ -1014,12 +1016,15 @@ int main( int argc, char* argv[])
         
         
         if(p.probes){
+	int probe_counter=0;
          for( auto& record : feltor::probe_list)
-         {   record.function( resultD, var);
+         { 
+	     record.function( resultD, var);
              dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
              dg::assign(simple_probes_device,simple_probes);
-             simple_probes_intern[j]=simple_probes;
+             simple_probes_intern[probe_counter][j]=simple_probes;
              time_intern[j]=time;
+	     probe_counter+=1;
          }
         }
             if(js["output"]["equations"].get( "Basic", true).asBool())
@@ -1507,23 +1512,21 @@ int main( int argc, char* argv[])
                 double result = record.function( var);
                 DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
-            
             //OUTPUT OF PROBES
              if(p.probes){
-            probe_start[0] = (start-1)*p.itstp+1;
-            //DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern);
-             
-            for( unsigned j=1; j<=p.itstp; j++) //PROBLEM: IT DOES NOT ALLOW TO INTRODUCE A VECTOR, IT ONLY ACCEPTS ONE BY ONE
-            {
+            
+            for( unsigned j=1; j<=p.itstp; j++)
+            {probe_start[0] += 1;
              DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern[j]);
-             for( auto& record : feltor::probe_list)
+             int probe_counter=0;
+	     for( auto& record : feltor::probe_list)
                 {
 #ifdef WITH_MPI
-                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[j].data().data());
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[probe_counter][j].data().data());
 #else
-                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[j].data());
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[probe_counter][j].data());
 #endif
-
+		probe_counter+=1;
                 }
              }
              }
