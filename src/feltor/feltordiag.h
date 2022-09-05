@@ -1712,28 +1712,6 @@ std::vector<Record> COCEDiagnostics2d_list = {
              dg::blas1::scal(result, v.p.tau[1]*v.p.mu[1]);
         }
     },
-    {"v_L_E_perp_tt", "Electric perp electrons Diffusion source vorticity (time integrated)", true, //FINAL
-        []( dg::x::DVec& result, Variables& v) {
-            v.f.compute_perp_diffusiveN( 1., v.f.density(0), v.tmp[0],
-                    v.tmp[1], 0., result);
-            routines::scal(result, v.f.gradP(0), v.tmp);
-            routines::scal(v.f.binv(), v.tmp, v.tmp2);
-            routines::scal(v.f.binv(), v.tmp2, v.tmp);
-            v.nabla.div(v.tmp[0], v.tmp[1], result);
-            dg::blas1::scal( result, v.p.mu[1]);
-        }
-    },
-    {"v_L_i_perp_tt", "Electric perp Diffusion ions gyrocenter source vorticity (time integrated)", true, //FINAL
-        []( dg::x::DVec& result, Variables& v) {
-            v.f.compute_perp_diffusiveN( 1., v.f.density(1), v.tmp[0],
-                    v.tmp[1], 0., result);
-            routines::scal(result, v.f.gradP(0), v.tmp);
-            routines::scal(v.f.binv(), v.tmp, v.tmp2);
-            routines::scal(v.f.binv(), v.tmp2, v.tmp);
-            v.nabla.div(v.tmp[0], v.tmp[1], result);
-            dg::blas1::scal( result, v.p.mu[1]);
-        }
-    },
     
     /// ------------- Radial Force Balance terms ---------///
     {"RFB_E_r_GradPsip_tt", "Radial electric field in RFB (time integrated)", true,

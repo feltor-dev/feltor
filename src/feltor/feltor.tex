@@ -1919,6 +1919,8 @@ until which the simulation runs. The output interval is then determined by the "
 %%MW: unfortunately even though the idea is to decouple the outer and inner inversions, this does not really work
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 \subsection{Steering the file output} \label{sec:output}
 The netcdf/glfw outputs happen at equidistant time-intervals
 \begin{align}
@@ -1976,6 +1978,32 @@ while the output time $\Delta T_\text{out}$ determines how often 2d/3d fields ar
 \end{tcolorbox}
 
 
+\subsection{Output equations flags}\label{sec:output_flags}
+In the input file, inside of the "output" input parameters, a new variable defined "equations" allows to turn on and off the different variables that correspond to the different equations that can be studied with FELTOR at the moment. These equations are described in section \ref{sec:output}, and the definitions are in the equations titles.
+\begin{minted}[texcomments]{js}
+"output":
+{"equations" :
+{ "Basic": true,
+  "Mass-conserv": true,
+  "Energy-theorem": true,
+  "Toroidal-momentum": true,
+  "Parallel-momentum": true,
+  "RS": true,
+  "COCE": true
+}
+}
+\end{minted}
+
+\subsection{Probes}
+FELTOR has the possibility of getting the output of the computational fields in time at any grid location, as if a probe measurement was done. This output is defined with time outputs at the integration time intervals $\Delta T_{int}$. In the input file, it is required to define the number of pins "num\_pins", and the R, Z and plane position "R\_probe", "Z\_probe" and "phi\_probe" arrays, for each of the probes included. The R and Z values are introduced in $\rho_s$ units, while the plane is defined by the integer number of the plane we want to position the probe.
+\begin{minted}[texcomments]{js}
+"probes":
+{       "num_pins": 3,
+        "R_probe": [90, 95, 100],
+        "Z_probe": [0, 0, 0],
+        "phi_probe": [0, 0, 3]
+}
+\end{minted}
 \subsection{[Optional] Computational flags}
 We can simplify the full simulation in a few ways:
 \begin{minted}[texcomments]{js}
@@ -2125,11 +2153,11 @@ X and Y\_tt represent the quantities described in the tables in this section sta
 The computation time spent on diagnostics is usually negligible unless {\tt itstp}
 is unreasonably high. Also remember that the X and Y fields are all
 two-dimensional, which takes up much less disk-space than three-dimensional
-fields.
+fields. This outputs are saved if the flag "output":"equations":"Basic" is true.
 
 %\subsection{Conservation laws} \label{sec:conservation}
 %In the output file we have
-\subsection{Mass conservation}
+\subsection{Mass conservation, "Mass-conserv": true}
 The density equations directly yield the particle conservation
 \begin{align} \label{eq:mass_theorem}
   \frac{\partial}{\partial t} N
@@ -2198,7 +2226,7 @@ The relevant terms in the output file are
 \end{longtable}
 
 Note that the parallel divergences vanish exactly under a flux-surface average. This can serve as a numerical test of our implementation.
-\subsection{Energy theorem}
+\subsection{Energy theorem, "Energy-theorem": true}
 The terms of the energy theorem are
 \begin{align} \label{eq:energy_theorem}
 \partial_t \mathcal E +
@@ -2280,7 +2308,7 @@ The relevant terms in the output file are
 \bottomrule
 \end{longtable}
 
-\subsection{Toroidal ExB angular momentum equation} \label{sec:vorticity_eq}
+\subsection{Toroidal ExB angular momentum equation, "Toroidal-momentum": true} \label{sec:vorticity_eq}
 We integrate the polarisation equation over volume, multiply by $\d \psi_p/\d v$ and derive by time. In the drift-ordering up to order $\mathcal O(\delta^3)$ we get
 \begin{align}
     &\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} + \RA{\mathcal S_\Omega} \label{eq:vorticity_average} \\
@@ -2331,7 +2359,56 @@ In the output file we have
 \end{longtable}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Parallel momentum balance}
+\subsection{Conservation of Currents (COCE), "COCE": true}\label{sec:COCE}
+If we want to study the electric field locally, without the flux surface average implemented in the equation at section \ref{sec:vorticity_eq}, the COCE diagnostic is necessary. The equation implemented is 
+\begin{equation}
+    \partial_t\Omega-\nc\nc(\boldsymbol{\omega u_E})=\nc(j_\parallel\bhat+\boldsymbol{j_{curv}}+\boldsymbol{j_{b_\perp}})+\Omega_S,
+    \label{eq:COCE_diagnostic}
+\end{equation}   
+with the following definitions:
+\begin{equation}
+\Omega=\Omega_E+\Omega_D=-\nc\boldsymbol{\omega}=-\nc(\boldsymbol{\omega_D}+\boldsymbol{\omega_E})=\nc\left[\frac{m_i}{B^2}\left(\frac{\nabla_\perp p_i}{q_i}+n_i\nabla_\perp\phi\right)\right],
+\end{equation}
+\begin{equation}
+    \Omega_S=\nc\left[\frac{m_i}{B^2}\left(\frac{\nabla_\perp S_{p_i}}{q_i}+S_{n_i}\nabla_\perp\phi\right)\right],
+\end{equation}
+\begin{equation}
+     \boldsymbol{j_{curv}}\approx\frac{\bhat\times\nabla(p_e+p_i)}{B}+(j_\parallel A_{1,\parallel}+\sumsp m_s n_s u_{\parallel,s}^2) \frac{\nabla\times\bhat}{B}=\boldsymbol{j_{d}}+\boldsymbol{j_A}+\boldsymbol{j_\kappa},
+    \label{eq:J_curv_fluid}
+\end{equation}
+\begin{equation}
+      \boldsymbol{j_{b_\perp}}=(j_\parallel+j_{mag})\boldsymbol{b_\perp}-\nc(\boldsymbol{M^{em}}\boldsymbol{b_\perp})=j_\parallel\boldsymbol{b_\perp}+\boldsymbol{j_{M^{em}}}.
+\end{equation}
+
+The implemented terms are defined as follows:
+\begin{longtable}{ll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
+\midrule
+    v\_Omega\_E\_gf &$ \mu_i\nc(\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2})$ \\
+    v\_Omega\_D\_gf &$ \mu_i\tau_i \nc(\boldsymbol{\nabla_\perp} N_i)$ \\
+    v\_adv\_E\_gf\_tt &$ -\nc\nc(\boldsymbol{\omega_E u_E})=\mu_i\nc(\nc (\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2})\boldsymbol{u_E}+\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2}\cdot\nabla \boldsymbol{u_E})  $\\
+    v\_adv\_E\_main\_tt &$ -\nc(\nc\boldsymbol{\omega_E u_E})=\mu_i\nc(\nc (\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2})\boldsymbol{u_E})   $\\
+    v\_adv\_D\_gf\_tt &$  -\nc\nc(\boldsymbol{\omega_D u_E})=\mu_i\tau_i \nc(\nc (\boldsymbol{\nabla_\perp} N_i)\boldsymbol{u_E}+\boldsymbol{\nabla_\perp} N_i\cdot\nabla \boldsymbol{u_E})  $\\
+    v\_adv\_D\_main\_tt &$  -\nc(\nc\boldsymbol{\omega_D u_E})=\mu_i\tau_i \nc(\nc (\boldsymbol{\nabla_\perp} N_i)\boldsymbol{u_E})   $\\
+    v\_M\_em\_gf\_tt &$  -\nc\nc(\boldsymbol{M^{em}}\boldsymbol{b_\perp})=-\nc\nc(\frac{\boldsymbol{\nabla_\perp} N_i U_{i,\parallel}+ N_i\boldsymbol{\nabla_\perp} U_{i,\parallel}}{B^2} \boldsymbol{b_\perp}) $\\
+    v\_J\_mag\_gf\_tt &$ \tau_i\nc((\nc\frac{\boldsymbol{M^{em}}}{2})\boldsymbol{b_\perp})=\tau_i\nc((\nc\frac{\boldsymbol{\nabla_\perp} N_i U_{i,\parallel}+ N_i\boldsymbol{\nabla_\perp} U_{i,\parallel}}{2B^2})\boldsymbol{b_\perp})  $\\
+    v\_J\_bperp\_tt &$ \boldsymbol{\nabla_\perp} J_{||}\cdot\boldsymbol{b_\perp}+J_{||}\nc\boldsymbol{b_\perp}  $\\
+    v\_J\_D\_gf\_tt &$  \nc\left(\frac{\bhat\times(\tau_i\boldsymbol{\nabla_\perp} N_i-\tau_e\boldsymbol{\nabla_\perp} n_e)}{B}\right) $\\
+    v\_J\_par\_tt &$ \nc(N_i U_{i,\parallel}\bhat)-\nc(n_e u_{e,\parallel}\bhat)  $\\
+    v\_J\_JAK\_gf\_tt &$ \nc(J_\parallel A_{1,\parallel}\boldsymbol{\kappa}_{\nabla\times\bhat})  $\\
+    v\_J\_NUK\_gf\_tt &$ \nc((\mu_iN_iU_{i,\parallel}^2-\mu_en_eu_{e,\parallel}^2)\boldsymbol{\kappa}_{\boldsymbol{\nabla}\times\bhat})  $\\
+    v\_S\_E\_tt &$ \mu_i\nc(\frac{S_N\boldsymbol{\nabla_\perp}\phi}{B^2})  $\\
+    v\_S\_D\_tt &$ \mu_i\tau_i\nc(\boldsymbol{\nabla_\perp} S_{N})  $\\
+    RFB\_E\_r\_GradPsip\_tt &$ -\boldsymbol{\nabla}\phi\cdot\boldsymbol{\nabla}\psi_p  $\\
+    RFB\_GradPi\_GradPsip\_tt &$ \tau_i\boldsymbol{\nabla} N_i/N_i\cdot\boldsymbol{\nabla}\psi_p  $\\
+    
+\bottomrule
+\end{longtable}
+Some of these definitions have "\_gf" in their definitions, as they are defined with the gyro-fluid ion density. This quantities are also saved without this label, when using the electron fluid density $n_e$ instead of $N_i$.
+
+
+\subsection{Parallel momentum balance, "Parallel-momentum": true}
 The flux surface average over the parallel momentum equation under species summation  yields up to order $\mathcal O(\delta^3)$ in the drift-ordering
 \begin{align}
   \frac{\partial}{\partial t}\RA{\mu_iN_iU_{\parallel,i} }
@@ -2379,7 +2456,7 @@ The relevant terms in the output file are (the Lorentz force term is described i
 \end{longtable}
 Note that the parallel viscosity term vanishes exactly under the flux-surface average. This can serve as a numerical test.
 
-\subsection{Parallel electron force balance}
+\subsection{Parallel electron force balance, "Parallel-momentum": true}
 We gather the dominant terms in the electron momentum equation (neglecting all terms as $\mu_e=0$). This leaves the parallel force balance
 \begin{align}
     -(\bhat + \vec b_\perp) \cn n_e +n_e\left( \left( \bhat + \vec b_\perp \right) \cn \phi + \frac{\partial A_\parallel}{\partial t} \right) +\eta n_e \left( N_iU_{\parallel,i} - n_eu_{\parallel,e}\right) = 0
@@ -2402,7 +2479,8 @@ We gather the dominant terms in the electron momentum equation (neglecting all t
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\subsection{Zonal flow energy}
+\subsection{Zonal flow energy, "RS": true}
+
 \begin{align}
     E_\mathrm{zonal} = \frac{1}{2}\RA{\rho_M}\FA{ \iota^{-2}\mathcal I^{\vartheta\vartheta} + 2\iota^{-1}\mathcal I^{\vartheta\varphi} + \mathcal I^{\varphi\varphi}} \FA{u_{E,\varphi}}^2
     \equiv \frac{1}{2} \RA{\rho_M} \FA{u_{E,\varphi}}^2  \FA{\mathcal I_0}
