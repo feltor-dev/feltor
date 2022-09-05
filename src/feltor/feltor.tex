@@ -2521,8 +2521,8 @@ reads one or more previously generated simulation file(s) \mintinline{bash}{inpu
 Compilation
 \mint{bash}{make feltordiag device={gpu,omp}}
 \noindent Usage
-\mint{bash}{./feltordiag input0.nc ... inputN.nc output.nc}
-
+\mint{bash}{./feltordiag configuration.json input0.nc ... inputN.nc output.nc}
+The usage requires a \mintinline{bash}{configuration.json} where parameters for the diagnostic can be introduced. Some of this inputs are "Neta", "Npsi" and "n" for the dimensions and DG method order for the transformation to the magnetic coordinate system. 
 \begin{tcolorbox}[title=Note]
 \mintinline{bash}{feltordiag} refuses to overwrite existing files in order to protect against data loss in case of accidental spelling
 errors or other careless mistakes.
@@ -2562,7 +2562,9 @@ Z\_std\_fsa      & Dataset & 2 (time, psi) & Standard deviation of flux surface 
 Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\RA{ Z}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \RA{ Z}$ \\
 Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\RA{ Z}$ unless Z is a current, then it is the fsa evaluated $\RA{ j_v}(0)$ \\
 Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average $\sqrt{\int \d v \RA{Z}^2}$, unless Z is a current, then it is the square derivative of the flux surface average $\sqrt{\int\d v (\partial_v \RA{j^v})^2}$\\
+Z\_2dX  & Dataset & 3 (time, psi, theta) & Convoluted toroidal average Eq.~\eqref{eq:cta} in the magnetic plane \\
 \bottomrule
+\label{table:diag}
 \end{longtable}
 where Z $\in$ \{X, Y\_tt\}
 \begin{tcolorbox}[title=Note]
@@ -2573,7 +2575,21 @@ in the sense that $\vec j\cn v  = \vec j \cn \psi_p \d v/\d\psi_p$.
 The parameters used for the X-point
 \href{https://feltor-dev.github.io/doc/geometries/html/structdg_1_1geo_1_1_separatrix_orthogonal.html}{separatrix-orthogonal Grid}
 construction are $f_x = 1/8$, $f_y = 0$, $n_\psi = 3$, $N_\zeta = 64$ and
-$N_\eta = 640$ and the constant monitor metric~\cite{Wiesenberger2018}.
+$N_\eta = 640$ and the constant monitor metric~\cite{Wiesenberger2018}, but can be specified in the \mintinline{bash}{configuration.json} file.
+
+There are also "DIAG\_OUTPUTS" flags in \mintinline{bash}{configuration.json} to specify which kind of diagnosed quantities are wanted:
+\begin{itemize}
+\item "1dStatics": If true, save variables that only depend on psi in table \ref{table:diag}.
+\item "fsa1d": If true, save \_fsa in table \ref{table:diag}.
+\item "fsa2d":  If true, save \_fsa2d in table \ref{table:diag}.
+\item "cta2d":  If true, save \_cta in table \ref{table:diag}.
+\item "cta2dX":  If true, save \_2dX in table \ref{table:diag}.
+\item "fluc2d":  If true, save \_fluc2d in table \ref{table:diag}.
+\item "ifs":  If true, save \_ifs in table \ref{table:diag}.
+\item "std\_fsa":  If true, save \_std_fsa in table \ref{table:diag}.
+\item "ifs\_lcfs":  If true, save \_ifs_lcfs in table \ref{table:diag}.
+\item "ifs\_norm":  If true, save \_ifs_norm in table \ref{table:diag}.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Flux surface averaging and safety factor}
