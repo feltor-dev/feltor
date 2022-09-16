@@ -505,6 +505,31 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name),
                     "long_name", long_name.size(), long_name.data());
         }
+        
+    std::vector<std::vector<feltor::Record>> LISTS;
+    if(js["output"]["equations"].get( "Basic", true).asBool())
+        LISTS.push_back(feltor::basicDiagnostics2d_list);
+    if(js["output"]["equations"].get( "Mass-conserv", true).asBool())
+       LISTS.push_back(feltor::MassConsDiagnostics2d_list);
+    if(js["output"]["equations"].get( "Energy-theorem", true).asBool())
+       LISTS.push_back(feltor::EnergyDiagnostics2d_list);
+    if(js["output"]["equations"].get( "Toroidal-momentum", true).asBool())
+       LISTS.push_back(feltor::ToroidalExBDiagnostics2d_list);
+    if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
+       LISTS.push_back(feltor::ParallelMomDiagnostics2d_list);
+    if(js["output"]["equations"].get( "RS", true).asBool())
+       LISTS.push_back(feltor::RSDiagnostics2d_list);
+    if(js["output"]["equations"].get( "COCE", true).asBool())
+       LISTS.push_back(feltor::COCEDiagnostics2d_list);
+    
+
+    
+    std::string m_list;
+    for(auto& m_list : LISTS)
+    { for( auto& record : m_list)
+        {std::cout << "record \n"; }
+    }
+        
     if(js["output"]["equations"].get( "Basic", true).asBool())
     {
         for( auto& record : feltor::basicDiagnostics2d_list)

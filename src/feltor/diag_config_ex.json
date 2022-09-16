@@ -3,9 +3,9 @@
 "n" : 3,
 "DIAG_OUTPUTS":{
     "1dStatics": true,
-    "fsa1d": false,
-    "fsa2d": false,
-    "cta2d": false,
+    "fsa1d": true,
+    "fsa2d": true,
+    "cta2d": true,
     "cta2dX": true,
     "fluc2d": false,
     "ifs": false,
