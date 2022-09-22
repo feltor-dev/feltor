@@ -52,9 +52,12 @@ Apache-2.0 license. Also, we need Agner Fog's https://github.com/vectorclass/ver
 
 [source,sh]
 ----
-git clone https://www.github.com/thrust/thrust
+git clone https://www.github.com/nvidia/thrust
 git clone https://www.github.com/cusplibrary/cusplibrary
 git clone https://www.github.com/vectorclass/version1 vcl
+# We need to checkout an older version of thrust compatible with cusp
+cd thrust
+git checkout 1.9.3
 ----
 
 ____
