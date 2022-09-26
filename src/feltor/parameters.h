@@ -70,21 +70,6 @@ struct Parameters
         tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
-        
-       // basic=js["output"]["equations"].get( "Basic", true).asBool();
-       // mass_conserv=js["output"]["equations"].get( "Mass-conserv", true).asBool();
-       // energy_theorem=js["output"]["equations"].get( "Energy-theorem", true).asBool();
-       // toroidal_mom=js["output"]["equations"].get( "Toroidal-momentum", true).asBool();
-       // parallel_mom=js["output"]["equations"].get( "Parallel-momentum", true).asBool();
-       // zonal_flow=js["output"]["equations"].get( "RS", true).asBool();
-       // COCE_GF=js["output"]["equations"].get( "COCE", true).asBool();
-        //solver_type = "lgmres";
-        //if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
-        //{
-        //    partitioned = true;
-        //    solver_type = js["timestepper"]["solver"].get( "type", "lgmres").asString();
-        //}
-
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
@@ -229,7 +214,7 @@ struct Parameters
         }
         
         //Probes
-        probes = js.isMember("probes");
+        probes = js.asJson().isMember("probes");
         if(probes){
                     num_pins = js["probes"]["num_pins"].asUInt();
         }

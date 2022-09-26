@@ -1983,13 +1983,14 @@ In the input file, inside of the "output" input parameters, a new variable defin
 \begin{minted}[texcomments]{js}
 "output":
 {"equations" :
-{ "Basic": true,
-  "Mass-conserv": true,
-  "Energy-theorem": true,
-  "Toroidal-momentum": true,
-  "Parallel-momentum": true,
-  "RS": true,
-  "COCE": true
+{
+    "Basic": true,
+    "Mass-conserv": true,
+    "Energy-theorem": true,
+    "Toroidal-momentum": true,
+    "Parallel-momentum": true,
+    "Zonal-Flow-Energy": true,
+    "COCE": true
 }
 }
 \end{minted}
@@ -1998,10 +1999,11 @@ In the input file, inside of the "output" input parameters, a new variable defin
 FELTOR has the possibility of getting the output of the computational fields in time at any grid location, as if a probe measurement was done. This output is defined with time outputs at the integration time intervals $\Delta T_{int}$. In the input file, it is required to define the number of pins "num\_pins", and the R, Z and plane position "R\_probe", "Z\_probe" and "phi\_probe" arrays, for each of the probes included. The R and Z values are introduced in $\rho_s$ units, while the plane is defined by the integer number of the plane we want to position the probe.
 \begin{minted}[texcomments]{js}
 "probes":
-{       "num_pins": 3,
-        "R_probe": [90, 95, 100],
-        "Z_probe": [0, 0, 0],
-        "phi_probe": [0, 0, 3]
+{
+    "num_pins": 3,
+    "R_probe": [90, 95, 100],
+    "Z_probe": [0, 0, 0],
+    "phi_probe": [0, 0, 3]
 }
 \end{minted}
 \subsection{[Optional] Computational flags}
@@ -2405,7 +2407,7 @@ The implemented terms are defined as follows:
     
 \bottomrule
 \end{longtable}
-Some of these definitions have "\_gf" in their definitions, as they are defined with the gyro-fluid ion density. This quantities are also saved without this label, when using the electron fluid density $n_e$ instead of $N_i$.
+Some of these definitions have "\_gf" in their definitions, as they are defined with the gyro-fluid ion density $N_i$. These quantities are also saved without this label, when using the electron fluid density $n_e$ instead of $N_i$. At the same time, all the gradients and divergences in the perpendicular direction are implemented with the toroidal field approximation.
 
 
 \subsection{Parallel momentum balance, "Parallel-momentum": true}
@@ -2479,7 +2481,7 @@ We gather the dominant terms in the electron momentum equation (neglecting all t
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\subsection{Zonal flow energy, "RS": true}
+\subsection{Zonal flow energy, "Zonal-Flow-Energy": true}
 
 \begin{align}
     E_\mathrm{zonal} = \frac{1}{2}\RA{\rho_M}\FA{ \iota^{-2}\mathcal I^{\vartheta\vartheta} + 2\iota^{-1}\mathcal I^{\vartheta\varphi} + \mathcal I^{\varphi\varphi}} \FA{u_{E,\varphi}}^2

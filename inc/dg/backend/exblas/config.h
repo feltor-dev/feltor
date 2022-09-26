@@ -15,9 +15,9 @@
 #ifdef __NVCC__
 #define _WITHOUT_VCL
 #endif
-#ifdef __APPLE__
+#ifdef __APPLE__ //Condition for mac users to define without VCL
 #define _WITHOUT_VCL
-#endif//__NVCC__
+#endif//MAC without __NVCC__
 #ifdef WITHOUT_VCL
 #define _WITHOUT_VCL
 #endif

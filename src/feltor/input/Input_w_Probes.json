@@ -253,7 +253,7 @@
               "Energy-theorem": false,
               "Toroidal-momentum": true,
               "Parallel-momentum": false,
-              "RS": false,
+              "Zonal-Flow-Energy": false,
               "COCE": true
             }
 	},
