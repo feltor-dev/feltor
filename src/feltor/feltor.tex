@@ -2564,7 +2564,7 @@ Z\_std\_fsa      & Dataset & 2 (time, psi) & Standard deviation of flux surface 
 Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\RA{ Z}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \RA{ Z}$ \\
 Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\RA{ Z}$ unless Z is a current, then it is the fsa evaluated $\RA{ j_v}(0)$ \\
 Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average $\sqrt{\int \d v \RA{Z}^2}$, unless Z is a current, then it is the square derivative of the flux surface average $\sqrt{\int\d v (\partial_v \RA{j^v})^2}$\\
-Z\_2dX  & Dataset & 3 (time, psi, theta) & Convoluted toroidal average Eq.~\eqref{eq:cta} in the magnetic plane. \\
+Z\_cta2dX  & Dataset & 3 (time, psi, theta) & Convoluted toroidal average Eq.~\eqref{eq:cta} in the magnetic plane. \\
 \bottomrule
 \label{table:diag}
 \end{longtable}
@@ -2585,7 +2585,7 @@ There are also "DIAG\_OUTPUTS" flags in \mintinline{bash}{configuration.json} to
 \item "fsa1d": If true, save \_fsa in table \ref{table:diag}.
 \item "fsa2d":  If true, save \_fsa2d in table \ref{table:diag}.
 \item "cta2d":  If true, save \_cta in table \ref{table:diag}.
-\item "cta2dX":  If true, save \_2dX in table \ref{table:diag}.
+\item "cta2dX":  If true, save \_cta2dX in table \ref{table:diag}.
 \item "fluc2d":  If true, save \_fluc2d in table \ref{table:diag}.
 \item "ifs":  If true, save \_ifs in table \ref{table:diag}.
 \item "std\_fsa":  If true, save \_std_fsa in table \ref{table:diag}.

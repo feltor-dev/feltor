@@ -51,19 +51,6 @@
      }
 
     /**
-      * @brief Perpendicular gradient of function f (output contravariant): \f[( \boldsymbol{\nabla_\perp)f)^i = h^{ij}\partial_j f \f]
-      * @param f the container containing the scalar
-      * @param grad_R container containing the R component of the perpendicular gradient
-      * @param grad_Z container containing the Z component of the perpendicular gradient
-      */
-      
-    template<class Container1>
-    void Grad_perp_f(const Container1& f, Container1& grad_R, Container1& grad_Z) {
-        dg::blas2::symv( m_dR, f, grad_R);
-        dg::blas2::symv( m_dZ, f, grad_Z); //OUTPUT: COVARIANT
-        dg::tensor::multiply2d(m_metric, grad_R, grad_Z, grad_R, grad_Z); //IF ACTIVE OUTPUT: CONTRAVARIANT
- 	}
- 	/**
       * @brief Divergence of a perpendicular vector field (input contravariant): \f[ \boldsymbol(\nabla)\cdot\boldsymbol{v}=\frac{1}{\sqrt{g}}\partial_i(\sqrt{g}v^i) \f] only in the perpendicular plane.
       * @param v_R container containing the R component of the perpendicular gradient
       * @param v_Z container containing the Z component of the perpendicular gradient
@@ -98,7 +85,13 @@
         dg::tensor::multiply2d(m_hh, m_tmp, m_tmp2, m_tmp3, F); //WE MAKE THE GRADIENT CONTRAVARIANT
         dg::blas1::pointwiseDot(1.0, v_R, m_tmp3, 1.0,  v_Z, F, 1.0, F);
     }
-
+ /**
+   * @brief Perpendicular gradient of function f (output contravariant): \f[( \boldsymbol{\nabla_\perp)f)^i = h^{ij}\partial_j f \f]
+   * @param f the container containing the scalar
+   * @param grad_R container containing the R component of the perpendicular gradient
+   * @param grad_Z container containing the Z component of the perpendicular gradient
+   */
+ 
     template<class Container1>
     void grad_perp_f (const Container1& f, Container1& F_R, Container1& F_Z){ //INPUT: COVARIANT
         dg::blas2::symv( m_dR, f, m_tmp);
