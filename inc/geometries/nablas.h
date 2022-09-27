@@ -62,8 +62,7 @@
  	dg::blas2::symv( m_dR, f, grad_R);
  	dg::blas2::symv( m_dZ, f, grad_Z); //OUTPUT: COVARIANT
  	dg::tensor::multiply2d(m_metric, grad_R, grad_Z, grad_R, grad_Z) //IF ACTIVE OUTPUT: CONTRAVARIANT
- 	}		
- 	*/
+ 	}
  	/**
       * @brief Divergence of a perpendicular vector field (input contravariant): \f[ \boldsymbol(\nabla)\cdot\boldsymbol{v}=\frac{1}{\sqrt{g}}\partial_i(\sqrt{g}v^i) \f] only in the perpendicular plane.
       * @param v_R container containing the R component of the perpendicular gradient
