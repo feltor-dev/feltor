@@ -517,7 +517,7 @@
         LISTS.push_back(feltor::ToroidalExBDiagnostics2d_list);
      if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
         LISTS.push_back(feltor::ParallelMomDiagnostics2d_list);
-     if(js["output"]["equations"].get( "RS", true).asBool())
+     if(js["output"]["equations"].get( "Zonal-Flow-Energy", true).asBool())
         LISTS.push_back(feltor::RSDiagnostics2d_list);
      if(js["output"]["equations"].get( "COCE", true).asBool())
         LISTS.push_back(feltor::COCEDiagnostics2d_list);
