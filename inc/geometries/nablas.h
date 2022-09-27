@@ -26,12 +26,13 @@
     using value_type = get_value_type<Container>;
 
  /**
-  * @brief Alternative contructor: construct from a 3D geometry and also with a Magnetic field and the input parameters in case there is reversed field
+  * @brief Main contructor: construct from a 3D geometry and also with a Magnetic field and a bool parameter in case there is reversed field
   * @tparam Geometry
   * @param geom3d
   * @tparam g::geo::TokamakMagneticField
   * @param mag
-  * @param feltor::Parameters p
+  * @tparam  bool
+  * @param reversed
   */
 
  Nablas(const Geometry& geom3d, dg::geo::TokamakMagneticField& mag, bool reversed): m_g(geom3d), m_mag(mag), m_reversed_field(reversed) {
@@ -49,24 +50,22 @@
 
      }
 
- 	/*
-      * @brief Perpendicular gradient of function f (output contravariant)
-      *
+    /**
+      * @brief Perpendicular gradient of function f (output contravariant): \f[( \boldsymbol{\nabla_\perp)f)^i = h^{ij}\partial_j f \f]
       * @param f the container containing the scalar
       * @param grad_R container containing the R component of the perpendicular gradient
       * @param grad_Z container containing the Z component of the perpendicular gradient
-      
+      */
       
  	template<class Container1>
  	void Grad_perp_f(const Container1& f, Container1& grad_R, Container1& grad_Z) { 
  	dg::blas2::symv( m_dR, f, grad_R);
  	dg::blas2::symv( m_dZ, f, grad_Z); //OUTPUT: COVARIANT
- 	//dg::tensor::multiply2d(m_metric, grad_R, grad_Z, grad_R, grad_Z) //IF ACTIVE OUTPUT: CONTRAVARIANT
+ 	dg::tensor::multiply2d(m_metric, grad_R, grad_Z, grad_R, grad_Z) //IF ACTIVE OUTPUT: CONTRAVARIANT
  	}		
  	*/
  	/**
-      * @brief Divergence of a perpendicular vector field (input contravariant)
-      *
+      * @brief Divergence of a perpendicular vector field (input contravariant): \f[ \boldsymbol(\nabla)\cdot\boldsymbol{v}=\frac{1}{\sqrt{g}}\partial_i(\sqrt{g}v^i) \f] only in the perpendicular plane.
       * @param v_R container containing the R component of the perpendicular gradient
       * @param v_Z container containing the Z component of the perpendicular gradient
       * @param F the container containing the divergence result
@@ -85,7 +84,7 @@
 
 
  	/**
-      * @brief Vector dot nabla f: gradient in a vector direction (covariant) of a scalar (usually the scalar being different components of a vector)
+      * @brief Vector dot nabla f: gradient in a vector direction (covariant) of a scalar (usually the scalar being different components of a vector): \f[\boldsymbol{v}\cdot{boldsymbol{\nabla}f=v_ih^{ij}\partial_j f \f]
       *
       * @param v_R container containing the R component of the vector of the direction
       * @param v_Z container containing the Z component of the vector of the direction
@@ -98,9 +97,7 @@
  	dg::blas2::symv( m_dR, f, m_tmp);
  	dg::blas2::symv( m_dZ, f, m_tmp2);
  	dg::tensor::multiply2d(m_hh, m_tmp, m_tmp2, m_tmp3, F); //WE MAKE THE GRADIENT CONTRAVARIANT
- 	//dg::blas1::pointwiseDot(v_R, m_tmp3, m_tmp3);
  	dg::blas1::pointwiseDot(1.0, v_R, m_tmp3, 1.0,  v_Z, F, 1.0, F);
-//dg::blas1::axpby(1.0, m_tmp3, 1.0, F);
  	}	
 
  	template<class Container1>
