@@ -52,9 +52,12 @@ Apache-2.0 license. Also, we need Agner Fog's https://github.com/vectorclass/ver
 
 [source,sh]
 ----
-git clone https://www.github.com/thrust/thrust
+git clone https://www.github.com/nvidia/thrust
 git clone https://www.github.com/cusplibrary/cusplibrary
 git clone https://www.github.com/vectorclass/version1 vcl
+# We need to checkout an older version of thrust compatible with cusp
+cd thrust
+git checkout 1.9.3
 ----
 
 ____
@@ -284,6 +287,12 @@ download and install some additional libraries for I/O-operations.
 First, we need to install jsoncpp (distributed under the MIT License),
 which on linux is available as `libjsoncpp-dev` through the package managment system.
 For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
+[source,sh]
+----
+# You may have to manually link the include path
+cd ~/include
+ln -s /usr/include/jsoncpp/json
+----
 
 For data output we use the
 http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
@@ -292,7 +301,7 @@ The underlying https://www.hdfgroup.org/HDF5/[HDF5]
 library also uses a very permissive license.
 Both can be installed easily on Linux through the `libnetcdf-dev` and `libhdf5-dev` packages.
 For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
-Note that by default we also use the serial netcdf and hdf5 libraries in the mpi
+Note that by default we use the serial netcdf and hdf5 libraries alson in the mpi
 versions of applications.
 
 Some desktop applications in FELTOR use the
