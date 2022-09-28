@@ -5,8 +5,6 @@
 #include "utilitiesX.h"
 #include "ribeiro.h"
 
-//! ATTENTION: algorithm might be flawed since f(psi) might make a jump at
-//! ATTENTION: separatrix
 
 namespace dg
 {
@@ -246,6 +244,8 @@ struct XFieldFinv
 
 /**
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010
+ *
+ * @attention algorithm might be flawed since f(psi) might make a jump at separatrix
  * @ingroup generators_geo
  * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double.
  */
@@ -258,14 +258,14 @@ struct RibeiroX : public aGeneratorX2d
         assert( psi_0 < 0 );
         zeta0_ = fpsi_.find_x( psi_0);
         zeta1_= -fx/(1.-fx)*zeta0_;
-        x0_=x0, y0_=y0, psi0_=psi_0;
+        psi0_=psi_0;
     }
 
-    virtual RibeiroX* clone() const{return new RibeiroX(*this);}
+    virtual RibeiroX* clone() const override final{return new RibeiroX(*this);}
     private:
     bool isConformal()const{return false;}
-    bool do_isOrthogonal()const{return false;}
-    void do_generate(
+    virtual bool do_isOrthogonal()const override final{return false;}
+    virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
          unsigned nodeX0, unsigned nodeX1,
@@ -274,7 +274,7 @@ struct RibeiroX : public aGeneratorX2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         unsigned inside=0;
@@ -305,17 +305,16 @@ struct RibeiroX : public aGeneratorX2d
         }
     }
 
-    virtual double do_zeta0(double fx) const { return zeta0_; }
-    virtual double do_zeta1(double fx) const { return zeta1_;}
-    virtual double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    virtual double do_zeta0(double fx) const override final { return zeta0_; }
+    virtual double do_zeta1(double fx) const override final { return zeta1_;}
+    virtual double do_eta0(double fy) const override final { return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual double do_eta1(double fy) const override final { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
     CylindricalFunctorsLvl2 psi_;
     dg::geo::ribeiro::detail::FpsiX fpsi_;
     dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_;
     double zeta0_, zeta1_;
-    double lx_, x0_, y0_, psi0_, psi1_;
-    int mode_; //0 = ribeiro, 1 = equalarc
+    double psi0_;
 };
 
 

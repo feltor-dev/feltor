@@ -1001,8 +1001,7 @@ template<class FieldAligned, class container>
 void ds_average( const FieldAligned& fa, double alpha,
         const container& fm, const container& fp, double beta, container& g)
 {
-    double delta = fa.deltaPhi();
-    dg::blas1::subroutine( [alpha,beta,delta]DG_DEVICE( double& g, double fm, double fp
+    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& g, double fm, double fp
                 ){
             g = alpha*(fp+fm)/2. + beta*g;
             }, g, fm, fp);

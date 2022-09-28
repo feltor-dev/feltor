@@ -40,13 +40,16 @@
 
 #if defined __INTEL_COMPILER
 #define UNROLL_ATTRIBUTE
-#define INLINE_ATTRIBUTE
 #elif defined __GNUC__
+
+#ifdef __APPLE__ //MAC does not know "unroll-loops"
+#define UNROLL_ATTRIBUTE
+#else
 #define UNROLL_ATTRIBUTE __attribute__((optimize("unroll-loops")))
-#define INLINE_ATTRIBUTE __attribute__((always_inline))
+#endif // __APPLE__
+
 #else
 #define UNROLL_ATTRIBUTE
-#define INLINE_ATTRIBUTE
 #endif
 
 #ifdef ATT_SYNTAX

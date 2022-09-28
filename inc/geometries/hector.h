@@ -322,17 +322,17 @@ struct Hector : public aGenerator2d
      * @return  orthogonal zeta, eta grid
      */
     const dg::geo::CurvilinearGrid2d& internal_grid() const {return m_g2d;}
-    virtual Hector* clone() const{return new Hector(*this);}
+    virtual Hector* clone() const override final{return new Hector(*this);}
     bool isConformal() const {return m_conformal;}
     private:
-    virtual double do_width() const {return m_lu;}
-    virtual double do_height() const {return 2.*M_PI;}
+    virtual double do_width() const override final {return m_lu;}
+    virtual double do_height() const override final {return 2.*M_PI;}
     /**
      * @brief True if orthogonal constructor was used
      *
      * @return true if orthogonal constructor was used
      */
-    virtual bool do_isOrthogonal() const {return m_orthogonal;}
+    virtual bool do_isOrthogonal() const override final {return m_orthogonal;}
     virtual void do_generate( const thrust::host_vector<double>& u1d,
                      const thrust::host_vector<double>& v1d,
                      thrust::host_vector<double>& x,
@@ -340,7 +340,7 @@ struct Hector : public aGenerator2d
                      thrust::host_vector<double>& ux,
                      thrust::host_vector<double>& uy,
                      thrust::host_vector<double>& vx,
-                     thrust::host_vector<double>& vy) const
+                     thrust::host_vector<double>& vy) const override final
     {
         thrust::host_vector<double> eta_init, zeta, eta;
         detail::compute_zev( m_etaV, v1d, eta_init, m_g2d);

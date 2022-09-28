@@ -90,7 +90,7 @@ static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
         // carrybit has sign S
         carry = (oldword + carry) >> DIGITS;    // Arithmetic shift
         bool s = oldword > 0;
-        carrybit = (s ? 1ll << KRX : -1ll << KRX);
+        carrybit = (s ? 1ll << KRX : (unsigned long long)(-1ll) << KRX); //MW left shift of negative number is undefined so convert to unsigned
 
         // Cancel carry-save bits
         cpu::xadd(accumulator[i], (int64_t) -(carry << DIGITS), overflow);
