@@ -96,8 +96,8 @@ struct DSPGenerator : public aGenerator2d
     virtual DSPGenerator* clone() const{return new DSPGenerator(*this);}
 
     private:
-    virtual double do_width() const{return m_R1-m_R0;}
-    virtual double do_height() const{return m_Z1-m_Z0;}
+    virtual double do_width() const override final{return m_R1-m_R0;}
+    virtual double do_height() const override final{return m_Z1-m_Z0;}
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
@@ -106,7 +106,7 @@ struct DSPGenerator : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
         unsigned size = Nx*Ny;

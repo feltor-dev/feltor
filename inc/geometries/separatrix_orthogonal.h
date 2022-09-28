@@ -133,7 +133,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
     virtual SimpleOrthogonalX* clone()const override final{return new SimpleOrthogonalX(*this);}
     private:
     bool isConformal()const{return false;}
-    bool do_isOrthogonal()const{return true;}
+    virtual bool do_isOrthogonal()const override final{return true;}
     double f0() const{return f0_;}
     virtual void do_generate( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d,
@@ -165,10 +165,10 @@ struct SimpleOrthogonalX : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    double do_zeta0(double fx) const override final{ return zeta0_; }
-    double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*zeta0_;}
-    double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
-    double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    virtual double do_zeta0(double fx) const override final{ return zeta0_; }
+    virtual double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*zeta0_;}
+    virtual double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     CylindricalFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
@@ -205,16 +205,16 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     SeparatrixOrthogonal( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):
         psi_(psi), chi_(chi),
-        sep_( psi, chi, xX, yX, x0, y0, firstline, verbose), m_verbose( verbose)
+        sep_( psi, chi, xX, yX, x0, y0, firstline, verbose)
     {
         firstline_ = firstline;
         f0_ = sep_.get_f();
         psi_0_=psi_0;
     }
-    SeparatrixOrthogonal* clone()const{return new SeparatrixOrthogonal(*this);}
+    virtual SeparatrixOrthogonal* clone()const override final{return new SeparatrixOrthogonal(*this);}
     private:
     bool isConformal()const{return false;}
-    bool do_isOrthogonal()const{return false;}
+    virtual bool do_isOrthogonal()const override final{return false;}
     double f0() const{return sep_.get_f();}
     virtual void do_generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d,
@@ -225,7 +225,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
 
         thrust::host_vector<double> r_init, z_init;
@@ -337,18 +337,16 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
             etaY[idx] = +h[idx]*(chiXX*psipX + chiXY*psipY);
         }
     }
-    virtual double do_zeta0(double fx) const { return f0_*psi_0_; }
-    virtual double do_zeta1(double fx) const { return -fx/(1.-fx)*f0_*psi_0_;}
-    virtual double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    virtual double do_zeta0(double fx) const override final{ return f0_*psi_0_; }
+    virtual double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*f0_*psi_0_;}
+    virtual double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
-    double R0_[2], Z0_[2];
     double f0_, psi_0_;
     int firstline_;
     CylindricalFunctorsLvl2 psi_;
     CylindricalSymmTensorLvl1 chi_;
     dg::geo::detail::SeparatriX sep_;
-    bool m_verbose;
 };
 
 }//namespace geo

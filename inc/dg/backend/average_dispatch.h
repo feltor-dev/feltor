@@ -48,7 +48,7 @@ void extend_line( unsigned nx, unsigned ny, const ContainerType& in, ContainerTy
 {
     assert(&in != &out);
     using value_type = get_value_type<ContainerType>;
-    dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
+    dg::blas2::parallel_for( [nx]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
         {
             unsigned i = k/nx, j =  k%nx;
             oo[i*nx+j] = ii[j];
@@ -68,7 +68,7 @@ void extend_column( unsigned nx, unsigned ny, const ContainerType& in, Container
 {
     assert(&in != &out);
     using value_type = get_value_type<ContainerType>;
-    dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
+    dg::blas2::parallel_for( [nx]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
         {
             unsigned i = k/nx, j =  k%nx;
             oo[i*nx+j] = ii[i];

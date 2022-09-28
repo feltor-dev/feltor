@@ -26,10 +26,10 @@ struct PolarGenerator : public aGenerator2d
     * @param _r_max maximum radius
     */
     PolarGenerator(double _r_min, double _r_max) : r_min(_r_min), r_max(_r_max) {}
-    virtual PolarGenerator* clone() const{return new PolarGenerator(*this); }
+    virtual PolarGenerator* clone() const override final{return new PolarGenerator(*this); }
 
     private:
-    void do_generate(
+    virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
          thrust::host_vector<double>& x,
@@ -37,7 +37,7 @@ struct PolarGenerator : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const {
+         thrust::host_vector<double>& etaY) const override final {
 
         int size_r   = zeta1d.size();
         int size_phi = eta1d.size();
@@ -64,9 +64,9 @@ struct PolarGenerator : public aGenerator2d
 
     }
 
-    double do_width() const{return r_max-r_min;}
-    double do_height() const{return 2*M_PI;}
-    bool do_isOrthogonal() const{return true;}
+    virtual double do_width() const override final{return r_max-r_min;}
+    virtual double do_height() const override final{return 2*M_PI;}
+    virtual bool do_isOrthogonal() const override final{return true;}
 };
 
 

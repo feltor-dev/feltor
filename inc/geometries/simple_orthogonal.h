@@ -375,13 +375,13 @@ struct SimpleOrthogonal : public aGenerator2d
      * @return f_0 is the grid constant  s.a. width() )
      */
     double f0() const{return f0_;}
-    virtual SimpleOrthogonal* clone() const{return new SimpleOrthogonal(*this);}
+    virtual SimpleOrthogonal* clone() const override final{return new SimpleOrthogonal(*this);}
 
     private:
      // length of zeta-domain (f0*(psi_1-psi_0))
-    virtual double do_width() const{return lz_;}
-    virtual double do_height() const{return 2.*M_PI;}
-    virtual bool do_isOrthogonal() const{return m_orthogonal;}
+    virtual double do_width() const override final{return lz_;}
+    virtual double do_height() const override final{return 2.*M_PI;}
+    virtual bool do_isOrthogonal() const override final{return m_orthogonal;}
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
@@ -390,7 +390,7 @@ struct SimpleOrthogonal : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init,
