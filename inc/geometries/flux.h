@@ -177,7 +177,7 @@ struct FluxGenerator : public aGenerator2d
         if(m_verbose)std::cout << "lx = "<<lx_<<"\n";
     }
 
-    virtual FluxGenerator* clone() const{return new FluxGenerator(*this);}
+    virtual FluxGenerator* clone() const override final{return new FluxGenerator(*this);}
 
     private:
     // length of zeta-domain (f0*(psi_1-psi_0))

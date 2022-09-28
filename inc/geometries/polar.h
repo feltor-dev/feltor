@@ -92,10 +92,10 @@ struct LogPolarGenerator : public aGenerator2d
     * @param _r_max maximum radius
     */
     LogPolarGenerator(double _r_min, double _r_max) : r_min(_r_min), r_max(_r_max) {}
-    virtual LogPolarGenerator* clone() const{return new LogPolarGenerator(*this); }
+    virtual LogPolarGenerator* clone() const override final{return new LogPolarGenerator(*this); }
 
     private:
-    void do_generate(
+    virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
          thrust::host_vector<double>& x,
@@ -103,7 +103,7 @@ struct LogPolarGenerator : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const {
+         thrust::host_vector<double>& etaY) const override final{
 
         int size_r   = zeta1d.size();
         int size_phi = eta1d.size();
@@ -130,9 +130,9 @@ struct LogPolarGenerator : public aGenerator2d
 
     }
 
-    double do_width() const{return log(r_max)-log(r_min);}
-    double do_height() const{return 2*M_PI;}
-    bool do_isOrthogonal() const{return true;}
+    virtual double do_width() const override final{return log(r_max)-log(r_min);}
+    virtual double do_height() const override final{return 2*M_PI;}
+    virtual bool do_isOrthogonal() const override final{return true;}
 };
 
 }

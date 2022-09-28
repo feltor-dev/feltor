@@ -44,7 +44,7 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
     }
 
     const aRealGeneratorX2d<real_type> & generator() const{return *handle_;}
-    virtual RealCurvilinearProductGridX3d* clone()const{return new RealCurvilinearProductGridX3d(*this);}
+    virtual RealCurvilinearProductGridX3d* clone()const override final{return new RealCurvilinearProductGridX3d(*this);}
     private:
     //construct phi and lift rest to 3d
     void constructParallel(unsigned Nz)
@@ -116,7 +116,7 @@ struct RealCurvilinearGridX2d : public dg::aRealGeometryX2d<real_type>
     }
 
     const aRealGeneratorX2d<real_type>& generator() const{return *handle_;}
-    virtual RealCurvilinearGridX2d* clone()const{return new RealCurvilinearGridX2d(*this);}
+    virtual RealCurvilinearGridX2d* clone()const override final{return new RealCurvilinearGridX2d(*this);}
     private:
     void construct( real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny)
     {

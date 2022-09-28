@@ -93,7 +93,7 @@ struct DSPGenerator : public aGenerator2d
 
     }
 
-    virtual DSPGenerator* clone() const{return new DSPGenerator(*this);}
+    virtual DSPGenerator* clone() const override final{return new DSPGenerator(*this);}
 
     private:
     virtual double do_width() const override final{return m_R1-m_R0;}
