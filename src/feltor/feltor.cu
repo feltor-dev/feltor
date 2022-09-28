@@ -197,8 +197,7 @@
      std::vector<double> time_intern(p.itstp);
      Vector y0;
      std::array<dg::x::DVec, 3> gradPsip;
-     bool reversed_field = js["magnetic_field"]["params"]["PI"].asDouble()==-1;
-     dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DVec, dg::x::DMatrix> nabla(grid, mag, reversed_field);
+     dg::geo::Nablas<dg::x::CylindricalGrid3d> nabla(grid);
      gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
      gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
      gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero

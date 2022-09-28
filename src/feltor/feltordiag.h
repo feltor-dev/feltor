@@ -209,7 +209,7 @@ struct Variables{
     std::array<std::array<dg::x::DVec,2>,2>& y0;
     feltor::Parameters p;
     dg::geo::TokamakMagneticField mag;
-    dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DVec, dg::x::DMatrix> nabla;
+    dg::geo::Nablas<dg::x::CylindricalGrid3d> nabla;
     const std::array<dg::x::DVec, 3>& gradPsip;
     std::array<dg::x::DVec, 3> tmp;
     std::array<dg::x::DVec, 3> tmp2;

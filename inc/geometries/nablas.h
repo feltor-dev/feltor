@@ -17,39 +17,27 @@
   * @ingroup misc_geo
   */
 
- template<class Geometry, class Container, class Matrix>                                                                                                                            
+ template<class Geometry>
  struct Nablas 
  {
     using geometry_type = Geometry;
-    using matrix_type = Matrix;
-    using container_type = Container;
-    using value_type = get_value_type<Container>;
+    //using matrix_type = Matrix;
+    //using container_type = Container;
+    //using value_type = get_value_type<Container>;
 
  /**
-  * @brief Main contructor: construct from a 3D geometry and also with a Magnetic field and a bool parameter in case there is reversed field
+  * @brief Main contructor: construct from a 3D geometry:
   * @tparam Geometry
   * @param geom3d
-  * @tparam g::geo::TokamakMagneticField
-  * @param mag
-  * @tparam  bool
-  * @param reversed
   */
 
- Nablas(const Geometry& geom3d, dg::geo::TokamakMagneticField& mag, bool reversed): m_g(geom3d), m_mag(mag), m_reversed_field(reversed) {
+ Nablas(const Geometry& geom3d): m_g(geom3d) {
      dg::blas2::transfer( dg::create::dx( m_g, dg::DIR, dg::centered), m_dR);
      dg::blas2::transfer( dg::create::dy( m_g, dg::DIR, dg::centered), m_dZ);
      m_vol=dg::tensor::volume(m_g.metric());
      m_tmp=m_tmp2=m_tmp3=m_vol;
      m_hh=m_g.metric();
-
-     auto bhat = dg::geo::createBHat( m_mag);
-     bhat = dg::geo::createEPhi(+1);
-     if( m_reversed_field)
-     bhat = dg::geo::createEPhi(-1);
-     m_hh = dg::geo::createProjectionTensor( bhat, m_g);
-
      }
-
     /**
       * @brief Divergence of a perpendicular vector field (input contravariant): \f[ \boldsymbol(\nabla)\cdot\boldsymbol{v}=\frac{1}{\sqrt{g}}\partial_i(\sqrt{g}v^i) \f] only in the perpendicular plane.
       * @param v_R container containing the R component of the perpendicular gradient
@@ -65,11 +53,8 @@
  	dg::blas2::symv( m_dZ, m_tmp2,F);
  	dg::blas1::axpby(1.0, m_tmp3, 1.0, F);
  	dg::blas1::pointwiseDivide(F, m_vol,F);
-
  }
-
-
- 	/**
+ /**
       * @brief Vector dot nabla f: gradient in a vector direction (covariant) of a scalar (usually the scalar being different components of a vector): \f[\boldsymbol{v}\cdot{boldsymbol{\nabla}f=v_ih^{ij}\partial_j f \f]
       *
       * @param v_R container containing the R component of the vector of the direction
@@ -101,14 +86,11 @@
  
     private:
     Geometry m_g;
-    feltor::Parameters m_p;
-    dg::geo::TokamakMagneticField m_mag;
-    dg::SparseTensor<Container > m_metric, m_hh;
-     bool m_reversed_field;
-    Matrix m_dR;
-    Matrix m_dZ;
-    Container m_vol;
-    Container m_tmp, m_tmp2, m_tmp3;
+    dg::SparseTensor<dg::HVec > m_hh;
+    dg::HMatrix m_dR;
+    dg::HMatrix m_dZ;
+    dg::HVec m_vol;
+    dg::HVec m_tmp, m_tmp2, m_tmp3;
  };
  };//namespace geo
  }//namespace dg
