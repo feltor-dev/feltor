@@ -1,20 +1,21 @@
 #include <iostream>
-#include <netcdf>
   
 #include "json/json.h"
 #include "dg/file/file.h"
 #include "dg/geometries/geometries.h"
 #include "dg/algorithm.h"
-#include "ds.h"
-#include "nablas.h"
 
-
-int main()
+//This code takes as input a magnetic field input.json (from magneticfielddb) to test the nabla.h functions on psip.
+int main(int argc, char* argv[])
 {
     unsigned n=1, Nx=200, Ny=400, Nz=1;
     dg::geo::TokamakMagneticField mag;
-    dg::file::WrappedJsonValue js;
-    dg::file::file2Json( "/Users/raulgerru/github_FELTOR/magneticfielddb/data/COMPASS/compass_1X.json", js.asJson(),dg::file::comments::are_discarded, dg::file::error::is_throw);
+    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+    std::string inputfile = argc==1 ? "geometry_diag.json" : argv[1];
+    dg::file::file2Json( inputfile, js.asJson(),
+    dg::file::comments::are_discarded);
+            
+            
     mag=dg::geo::createMagneticField(js);
     const double Rmin=mag.R0()-1.5*mag.params().a();
     const double Zmin=-2.0*mag.params().a();
@@ -44,7 +45,6 @@ int main()
     nabla.grad_perp_f(Psip, gradPsip_nabla[0], gradPsip_nabla[1]);
     nabla.v_dot_nabla_f(gradPsip[0], gradPsip[1], Psip, gradPsip_2_nabla);
     nabla.div(gradPsip[0], gradPsip[1], deltaPsip_nabla);
-    std::cout <<"After div"<<std::endl;
     
     
      //dg::aRealGeometry2d<double> g2d_out_ptr= grid.perp_grid();
