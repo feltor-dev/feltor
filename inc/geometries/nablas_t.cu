@@ -25,7 +25,7 @@ int main()
     std::cout <<"Z from "<<Zmin<<" to "<<Zmax<<std::endl;
     dg::x::CylindricalGrid3d grid( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
     n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
-    dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DVec, dg::x::DMatrix> nabla(grid, mag, false);
+    dg::geo::Nablas<dg::x::CylindricalGrid3d> nabla(grid);
     std::array <dg::HVec, 2> gradPsip, gradPsip_nabla, gradgradPsip;
     dg::HVec Psip, deltaPsip, deltaPsip_nabla, gradPsip_2, gradPsip_2_nabla;
     Psip= dg::evaluate(mag.psip(),grid);
