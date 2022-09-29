@@ -201,13 +201,12 @@ int main( int argc, char* argv[])
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
+    unsigned failed =0;
     feltor::Variables var{
         feltor, y0, p, mag, nabla, gradPsip, gradPsip, gradPsip, gradPsip,
         dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid)),
         0., // duration
-        0 // nfailed
-        //0., // duration
-        //&failed // nfailed
+        &failed // nfailed
     };
     DG_RANK0 std::cout << "# Set Initial conditions ... \n";
     t.tic();

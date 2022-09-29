@@ -34,7 +34,7 @@
      m_hh=m_g.metric();
      }
     /**
-      * @brief Divergence of a perpendicular vector field (input contravariant): \f $ \boldsymbol{\nabla} \cdot \boldsymbol{v}=\frac{1}{\sqrt{g}}\partial_i(\sqrt{g}v^i) \f $ only in the perpendicular plane.
+      * @brief Divergence of a perpendicular vector field (input covariant): \f$ \boldsymbol{\nabla} \cdot \boldsymbol{v}=\frac{1}{\sqrt{g}}\partial_i(\sqrt{g}g^{ij}v_j) \f$ only in the perpendicular plane.
       * @param v_R Contains the R covariant component of the vector v over which to apply the divergence.
       * @param v_Z Contains the Z covariant component of the vector v over which to apply the divergence.
       * @param F Contains the divergence of the vector v.
@@ -50,7 +50,7 @@
         dg::blas1::pointwiseDivide(F, m_vol,F);
  }
  /**
-      * @brief Vector dot nabla f: gradient in a vector direction (covariant) of a scalar (usually the scalar being different components of a vector): \f $ \boldsymbol{v}  \cdot \boldsymbol{\nabla}f=v_ig^{ij}\partial_j f \f $
+      * @brief Vector dot nabla f: gradient in a vector direction (covariant) of a scalar (usually the scalar being different components of a vector): \f$ \boldsymbol{v}  \cdot \boldsymbol{\nabla}f=v_ig^{ij}\partial_j f \f$
       *
       * @param v_R Contains the R covariant component of the vector v that will multiply the gradient.
       * @param v_Z Contains the Z covariant component of the vector v that will multiply the gradient.
@@ -66,7 +66,7 @@
         dg::blas1::pointwiseDot(1.0, v_R, m_tmp, 1.0,  v_Z, F, 1.0, F);
     }
  /**
-   * @brief Perpendicular gradient of function f (output contravariant): \f $( \boldsymbol{\nabla_\perp}f)^i = g^{ij}\partial_j f \f $
+   * @brief Perpendicular gradient of function f (output covariant): \f$( \boldsymbol{\nabla_\perp}f)^i = g^{ij}\partial_j f \f$
    * @param f Contains the scalar function f over which we will apply the gradient.
    * @param F_R Contains the R covariant component of the gradient of f.
    * @param F_Z Contains the Z covariant component of the gradient of f.

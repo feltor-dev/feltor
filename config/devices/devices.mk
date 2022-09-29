@@ -37,6 +37,3 @@ CFLAGS+=-x c++ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
 MPICFLAGS+=$(CFLAGS)
 OPT=-xCORE-AVX512 -O3 # -mtune=skylake # do not use mtune according to cineca
 endif #device=mic
-
-
-
