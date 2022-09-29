@@ -2375,8 +2375,7 @@ with the following definitions:
     \Omega_S=\nc\left[\frac{m_i}{B^2}\left(\frac{\nabla_\perp S_{p_i}}{q_i}+S_{n_i}\nabla_\perp\phi\right)\right],
 \end{equation}
 \begin{equation}
-     \boldsymbol{j_{curv}}\approx\frac{\bhat\times\nabla(p_e+p_i)}{B}+(j_\parallel A_{1,\parallel}+\sumsp m_s n_s u_{\parallel,s}^2) \frac{\nabla\times\bhat}{B}=\boldsymbol{j_{d}}+\boldsymbol{j_A}+\boldsymbol{j_\kappa},
-    \label{eq:J_curv_fluid}
+     \boldsymbol{j_{curv}}\approx\frac{\bhat\times\nabla(p_e+p_i)}{B}+(j_\parallel A_{1,\parallel}+\sum_s m_s n_s u_{\parallel,s}^2) \frac{\nabla\times\bhat}{B}=\boldsymbol{j_{d}}+\boldsymbol{j_A}+\boldsymbol{j_\kappa},
 \end{equation}
 \begin{equation}
       \boldsymbol{j_{b_\perp}}=(j_\parallel+j_{mag})\boldsymbol{b_\perp}-\nc(\boldsymbol{M^{em}}\boldsymbol{b_\perp})=j_\parallel\boldsymbol{b_\perp}+\boldsymbol{j_{M^{em}}}.
@@ -2588,9 +2587,9 @@ There are also "DIAG\_OUTPUTS" flags in \mintinline{bash}{configuration.json} to
 \item "cta2dX":  If true, save \_cta2dX in table \ref{table:diag}.
 \item "fluc2d":  If true, save \_fluc2d in table \ref{table:diag}.
 \item "ifs":  If true, save \_ifs in table \ref{table:diag}.
-\item "std\_fsa":  If true, save \_std_fsa in table \ref{table:diag}.
-\item "ifs\_lcfs":  If true, save \_ifs_lcfs in table \ref{table:diag}.
-\item "ifs\_norm":  If true, save \_ifs_norm in table \ref{table:diag}.
+\item "std\_fsa":  If true, save \_std\_fsa in table \ref{table:diag}.
+\item "ifs\_lcfs":  If true, save \_ifs\_lcfs in table \ref{table:diag}.
+\item "ifs\_norm":  If true, save \_ifs\_norm in table \ref{table:diag}.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

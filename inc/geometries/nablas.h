@@ -17,7 +17,7 @@
   * @ingroup misc_geo
   */
 
- template<class Geometry>
+ template<class Geometry, class Matrix, class Container>
  struct Nablas 
  {
     using geometry_type = Geometry;
@@ -79,13 +79,11 @@
         //dg::tensor::multiply2d(m_hh, m_tmp, m_tmp2, F_R, F_Z); //UNCOMMENT TO MAKE THE GRADIENT CONTRAVARIANT
     }
  
-    private:
-    Geometry m_g;
-    dg::SparseTensor<dg::HVec > m_hh;
-    dg::HMatrix m_dR;
-    dg::HMatrix m_dZ;
-    dg::HVec m_vol;
-    dg::HVec m_tmp, m_tmp2;
+ private:
+ Geometry m_g;
+ dg::SparseTensor<Container> m_hh;
+ Matrix m_dR, m_dZ;
+ Container m_vol, m_tmp, m_tmp2;
  };
  };//namespace geo
  }//namespace dg

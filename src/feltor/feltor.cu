@@ -197,7 +197,7 @@ int main( int argc, char* argv[])
     std::vector<double> time_intern(p.itstp);
     Vector y0;
     std::array<dg::x::DVec, 3> gradPsip;
-    dg::geo::Nablas<dg::x::CylindricalGrid3d> nabla(grid);
+    dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DMatrix, dg::x::DVec> nabla(grid);
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
