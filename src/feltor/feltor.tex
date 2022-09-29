@@ -1996,7 +1996,7 @@ In the input file, inside of the "output" input parameters, a new variable defin
 \end{minted}
 
 \subsection{[Optional] Probes}
-FELTOR has the possibility of getting the output of the computational fields in time at any grid location, as if a probe measurement was done. This output is defined with time outputs at the integration time intervals $\Delta T_{int}$. In the input file, it is required to define the number of pins "num\_pins", and the R, Z and plane position "R\_probe", "Z\_probe" and "phi\_probe" arrays, for each of the probes included. The R and Z values are introduced in $\rho_s$ units, while the plane is defined by the integer number of the plane we want to position the probe. The user should make certain that the length of the position arrays matches "numpins". If the user does not want to use any probes, the entire "probes" input field can be left away.
+FELTOR has the possibility of getting the output of the computational fields in time at any grid location, as if a probe measurement was done. This output is defined with time outputs at the integration time intervals $\Delta T_{int}$. In the input file, it is required to define the number of pins "num\_pins", and the R, Z and plane position "R\_probe", "Z\_probe" and "phi\_probe" arrays, for each of the probes included. The R and Z values are introduced in $\rho_s$ units, while the plane is defined by the integer number of the plane we want to position the probe. The user should make certain that the length of the position arrays matches "num\_pins". If the user does not want to use any probes, the entire "probes" input field can be left away.
 \begin{minted}[texcomments]{js}
 "probes":
 {
