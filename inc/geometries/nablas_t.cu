@@ -5,7 +5,7 @@
 #include "dg/geometries/geometries.h"
 #include "dg/algorithm.h"
 
-//This code takes as input a magnetic field input.json (from magneticfielddb) to test the nabla.h functions on psip.
+//This code takes as input a magnetic field input.json (from magneticfielddb for example) to test the nabla.h functions on psip.
 int main(int argc, char* argv[])
 {
     unsigned n=1, Nx=200, Ny=400, Nz=1;
