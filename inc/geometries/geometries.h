@@ -38,3 +38,5 @@
 #include "average.h"
 //include ds and fieldaligned
 #include "ds.h"
+//include the nablas for gradients and divergence diagnostics
+#include "nablas.h"

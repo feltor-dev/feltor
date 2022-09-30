@@ -51,7 +51,9 @@ struct Parameters
     bool symmetric, calibrate, periodify;
     bool penalize_wall, penalize_sheath, modify_B;
     bool partitioned;
-
+    //bool mass_conserv, energy_theorem, toroidal_mom, parallel_mom, parallel_e_force, zonal_flow, COCE_GF, COCE_fluid; //To define which variable to be saved in the output (from input)
+    bool probes;
+    unsigned num_pins;
     //
 
     Parameters() = default;
@@ -68,13 +70,6 @@ struct Parameters
         tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
-        //solver_type = "lgmres";
-        //if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
-        //{
-        //    partitioned = true;
-        //    solver_type = js["timestepper"]["solver"].get( "type", "lgmres").asString();
-        //}
-
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
@@ -216,6 +211,12 @@ struct Parameters
             }
             else
                 throw std::runtime_error( "Flag "+flag+" not recognized!\n");
+        }
+        
+        //Probes
+        probes = js.asJson().isMember("probes");
+        if(probes){
+                    num_pins = js["probes"]["num_pins"].asUInt();
         }
     }
 };

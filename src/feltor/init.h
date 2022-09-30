@@ -141,6 +141,12 @@ dg::x::HVec make_profile(
         profile = dg::pullback( prof, grid);
         dg::blas1::plus( profile, nbg);
     }
+    else if( "Compass_L_mode" == type)
+        {
+        profile = dg::pullback( dg::compose([]DG_DEVICE ( double rho_p){
+                        return -2.4 + (8.5 +2.4)/(1 + pow(rho_p/0.784,2.88));
+                }, dg::geo::RhoP( mag)), grid);
+        }
     else
         throw dg::Error(dg::Message()<< "Invalid profile type "<<type<<"\n");
     return profile;

@@ -194,14 +194,16 @@ int main( int argc, char* argv[])
     }
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
+    std::vector<double> time_intern(p.itstp);
     Vector y0;
     std::array<dg::x::DVec, 3> gradPsip;
+    dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DMatrix, dg::x::DVec> nabla(grid);
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
-    unsigned failed = 0;
+    unsigned failed =0;
     feltor::Variables var{
-        feltor, y0, p, mag, gradPsip, gradPsip,
+        feltor, y0, p, mag, nabla, gradPsip, gradPsip, gradPsip, gradPsip,
         dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid)),
         0., // duration
         &failed // nfailed
@@ -242,6 +244,35 @@ int main( int argc, char* argv[])
     }
     t.toc();
     DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
+
+
+    ///PROBE ADDITIONS!!!
+    dg::HVec R_probe(p.num_pins), Z_probe(p.num_pins), phi_probe(p.num_pins);
+
+    //Example input
+    if(p.probes){
+    for(unsigned i = 0 ; i < p.num_pins; i++){
+            R_probe[i] = js["probes"]["R_probe"][i].asDouble();
+            Z_probe[i] = js["probes"]["Z_probe"][i].asDouble();
+            phi_probe[i] = js["probes"]["phi_probe"][i].asDouble();
+        }
+    }
+    //Change to device matrix!
+    //IHMatrix probe_interpolate_h = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.local());
+    //IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
+    //dg::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.global());
+#ifdef WITH_MPI
+    dg::MDVec simple_probes_device((dg::DVec)R_probe,grid.communicator());
+    dg::MHVec simple_probes(R_probe, grid.communicator());
+#else //WITH_MPI
+    dg::DVec simple_probes_device(p.num_pins);
+    dg::HVec simple_probes(p.num_pins);
+#endif
+    int probe_length=(feltor::probe_list).size(); 
+    std::vector<std::vector<dg::x::HVec>> simple_probes_intern(probe_length, std::vector<dg::x::HVec>(p.itstp+1, simple_probes));
+    //std::vector<dg::x::HVec> simple_probes_intern(probe_length, simple_probes_1);
+    dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
+
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -472,34 +503,79 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name),
                     "long_name", long_name.size(), long_name.data());
         }
-        for( auto& record : feltor::diagnostics2d_list)
+
+        std::vector<std::vector<feltor::Record>> LISTS;
+        if(js["output"]["equations"].get( "Basic", true).asBool())
+        LISTS.push_back(feltor::basicDiagnostics2d_list);
+        if(js["output"]["equations"].get( "Mass-conserv", true).asBool())
+        LISTS.push_back(feltor::MassConsDiagnostics2d_list);
+        if(js["output"]["equations"].get( "Energy-theorem", true).asBool())
+        LISTS.push_back(feltor::EnergyDiagnostics2d_list);
+        if(js["output"]["equations"].get( "Toroidal-momentum", true).asBool())
+        LISTS.push_back(feltor::ToroidalExBDiagnostics2d_list);
+        if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
+        LISTS.push_back(feltor::ParallelMomDiagnostics2d_list);
+        if(js["output"]["equations"].get( "Zonal-Flow-Energy", true).asBool())
+        LISTS.push_back(feltor::RSDiagnostics2d_list);
+        if(js["output"]["equations"].get( "COCE", true).asBool())
+        LISTS.push_back(feltor::COCEDiagnostics2d_list);
+
+        std::string m_list;
+        for( auto& m_list : LISTS)
         {
-            std::string name = record.name + "_ta2d";
-            std::string long_name = record.long_name + " (Toroidal average)";
-            id3d[name] = 0;//creates a new id3d entry for all processes
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
-                &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+            for( auto& record : m_list)
+            {
+                std::string name = record.name + "_ta2d";
+                std::string long_name = record.long_name + " (Toroidal average)";
+                id3d[name] = 0;//creates a new id3d entry for all processes
+                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                    &id3d.at(name));
+                DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
 
-            name = record.name + "_2d";
-            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
-            id3d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                name = record.name + "_2d";
+                long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+                id3d[name] = 0;
+                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
                     dim_ids3d, &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
+            }
         }
+
         for( auto& record : feltor::diagnostics1d_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
             id1d[name] = 0;
             DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1,
-                    &dim_ids[0], &id1d.at(name));
+                &dim_ids[0], &id1d.at(name));
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
-                    long_name.size(), long_name.data());
+                long_name.size(), long_name.data());
         }
+
+    //Probes:
+        int probe_grp_id;
+        DG_RANK0 err = nc_def_grp(ncid,"probes",&probe_grp_id);
+        int probe_dim_ids[2];
+        int probe_timevarID;
+        int R_pin_id, Z_pin_id, phi_pin_id;
+        DG_RANK0 err = dg::file::define_time( probe_grp_id, "probe_time", &probe_dim_ids[0], &probe_timevarID);
+        DG_RANK0 err = nc_def_dim(probe_grp_id,"pins",p.num_pins,&probe_dim_ids[1]);
+        DG_RANK0 err = nc_def_var(probe_grp_id, "R_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &R_pin_id);
+        DG_RANK0 err = nc_def_var(probe_grp_id, "Z_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &Z_pin_id);
+        DG_RANK0 err = nc_def_var(probe_grp_id, "phi_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &phi_pin_id);
+
+        std::map<std::string, int> probe_id_field;
+        for( auto& record : feltor::probe_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            probe_id_field[name] = 0;//creates a new id4d entry for all processes
+            DG_RANK0 err = nc_def_var( probe_grp_id, name.data(), NC_DOUBLE, 2, probe_dim_ids,  &probe_id_field.at(name));
+            DG_RANK0 err = nc_put_att_text( probe_grp_id, probe_id_field.at(name), "long_name", long_name.size(), long_name.data());
+        }
+
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "First output ... \n";
         //first, update feltor (to get potential etc.)
@@ -530,41 +606,73 @@ int main( int argc, char* argv[])
             dg::assign( resultD, resultH);
             dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
-        for( auto& record : feltor::diagnostics2d_list)
+
+        for( auto& m_list : LISTS)
         {
-            dg::Timer tti;
-            tti.tic();
-            record.function( resultD, var);
-            dg::blas2::symv( projectD, resultD, transferD);
-
-            //toroidal average
-            std::string name = record.name + "_ta2d";
-            dg::assign( transferD, transferH);
-            toroidal_average( transferH, transferH2d, false);
-            //create and init Simpsons for time integrals
-            if( record.integral) time_integrals[name].init( time, transferH2d);
-            tti.toc();
-            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
-            tti.tic();
-            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
-            tti.toc();
-            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
-            tti.tic();
-
-            // and a slice
-            name = record.name + "_2d";
-            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
-            dg::assign( transferD2d, transferH2d);
-            if( record.integral) time_integrals[name].init( time, transferH2d);
-            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
-            tti.toc();
-            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            for( auto& record : m_list)
+            {
+                dg::Timer tti;
+                tti.tic();
+                record.function( resultD, var);
+                dg::blas2::symv( projectD, resultD, transferD);
+                //toroidal average
+                std::string name = record.name + "_ta2d";
+                dg::assign( transferD, transferH);
+                toroidal_average( transferH, transferH2d, false);
+                //create and init Simpsons for time integrals
+                if( record.integral) time_integrals[name].init( time, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+                tti.tic();
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+                tti.tic();
+                // and a slice
+                name = record.name + "_2d";
+                feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                dg::assign( transferD2d, transferH2d);
+                if( record.integral) time_integrals[name].init( time, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            }
         }
         for( auto& record : feltor::diagnostics1d_list)
         {
             double result = record.function( var);
             DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
         }
+
+
+    /// Probes FIRST output ///
+        size_t probe_start[] = {0, 0};
+        size_t probe_count[] = {1, p.num_pins};
+        time_intern[0]=time;
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, R_pin_id, &probe_start[1], &probe_count[1], R_probe.data());
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, Z_pin_id, &probe_start[1], &probe_count[1], Z_probe.data());
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, phi_pin_id, &probe_start[1], &probe_count[1], phi_probe.data());
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &count, &time_intern[0]);
+
+        if(p.probes)
+        {
+            int probe_counter=0;
+            for( auto& record : feltor::probe_list)
+            {
+                record.function( resultD, var);
+                dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+                dg::assign(simple_probes_device,simple_probes);
+                simple_probes_intern[probe_counter][0]=simple_probes;
+#ifdef WITH_MPI
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
+#else
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+#endif
+                probe_counter+=1;
+            }
+        }
+         /// End probes output ///
+
         DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
@@ -579,7 +687,7 @@ int main( int argc, char* argv[])
             {
                 try{
                     odeint->integrate( time, y0, t_output + j*deltaT, y0,
-                         j<p.itstp ? dg::to::at_least :  dg::to::exact);
+                        j<p.itstp ? dg::to::at_least :  dg::to::exact);
                 }
                 catch( dg::Fail& fail){ // a specific exception
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
@@ -595,44 +703,60 @@ int main( int argc, char* argv[])
                 }
                 dg::Timer tti;
                 tti.tic();
-                for( auto& record : feltor::diagnostics2d_list)
+
+
+                if(p.probes)
                 {
-                    if( record.integral)
-                    {
-                        record.function( resultD, var);
-                        dg::blas2::symv( projectD, resultD, transferD);
-                        //toroidal average and add to time integral
-                        dg::assign( transferD, transferH);
-                        toroidal_average( transferH, transferH2d, false);
-                        time_integrals.at(record.name+"_ta2d").add( time,
-                                transferH2d);
-
-                        // 2d data of plane varphi = 0
-                        feltor::slice_vector3d( transferD, transferD2d,
-                                local_size2d);
-                        dg::assign( transferD2d, transferH2d);
-                        time_integrals.at(record.name+"_2d").add( time,
-                                transferH2d);
-                    }
-                }
-
-                DG_RANK0 std::cout << "\tTime "<<time<<"\n";
-                double max_ue = dg::blas1::reduce(
-                    feltor.velocity(0), 0., dg::AbsMax<double>() );
-                DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive" )
+                int probe_counter=0;
+                for( auto& record : feltor::probe_list)
                 {
-                    DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
-                    DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
-                }
-
-                tti.toc();
-                DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
-                if( abort) break;
+                    record.function( resultD, var);
+                    dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+                    dg::assign(simple_probes_device,simple_probes);
+                    simple_probes_intern[probe_counter][j]=simple_probes;
+                    time_intern[j]=time;
+                    probe_counter+=1;
             }
-            ti.toc();
-            var.duration = ti.diff();
-            t_output += p.itstp*deltaT;
+        }
+        for( auto& m_list : LISTS)
+        {
+            for( auto& record : m_list)
+            {
+                if( record.integral)
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+                    //toroidal average and add to time integral
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    time_integrals.at(record.name+"_ta2d").add( time,
+                    transferH2d);
+                    // 2d data of plane varphi = 0
+                    feltor::slice_vector3d( transferD, transferD2d,
+                        local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    time_integrals.at(record.name+"_2d").add( time,
+                        transferH2d);
+                }
+            }
+        }
+
+        DG_RANK0 std::cout << "\tTime "<<time<<"\n";
+        double max_ue = dg::blas1::reduce(
+        feltor.velocity(0), 0., dg::AbsMax<double>() );
+        DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
+        if( p.timestepper == "adaptive" )
+        {
+            DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
+            DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
+        }
+        tti.toc();
+        DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
+        if( abort) break;
+        }
+        ti.toc();
+        var.duration = ti.diff();
+        t_output += p.itstp*deltaT;
             // Does not work due to direct application of Laplace
             // The Laplacian of Aparallel looks smooth in paraview
             ////----------------Test if ampere equation holds
@@ -670,7 +794,9 @@ int main( int argc, char* argv[])
                 dg::file::put_var_double( ncid, restart_ids.at(record.name),
                         grid, resultH);
             }
-            for( auto& record : feltor::diagnostics2d_list)
+            for( auto& m_list : LISTS)
+            {
+            for( auto& record : m_list)
             {
                 if(record.integral) // we already computed the output...
                 {
@@ -705,11 +831,32 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
+           }
+
             for( auto& record : feltor::diagnostics1d_list)
             {
                 double result = record.function( var);
                 DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
+            //OUTPUT OF PROBES
+             if(p.probes){
+
+            for( unsigned j=1; j<=p.itstp; j++)
+            {probe_start[0] += 1;
+             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern[j]);
+             int probe_counter=0;
+	     for( auto& record : feltor::probe_list)
+                {
+#ifdef WITH_MPI
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[probe_counter][j].data().data());
+#else
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[probe_counter][j].data());
+#endif
+		probe_counter+=1;
+                }
+             }
+             }
+
             DG_RANK0 err = nc_close(ncid);
             ti.toc();
             DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
