@@ -74,7 +74,16 @@ namespace geo{
 static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
 {
     std::string e = gs.get( "equilibrium", "solovev" ).asString();
-    equilibrium equi = str2equilibrium.at( e);
+    equilibrium equi = equilibrium::solovev;
+    try{
+        equi = str2equilibrium.at( e);
+    }catch ( std::out_of_range& err)
+    {
+        std::string message = "ERROR: Key \"" + e
+            + "\" not valid in field:\n\t"
+            + gs.access_string() + "\"equilibrium\" \n";
+        throw std::out_of_range(message);
+    }
     switch( equi){
         case equilibrium::polynomial:
         {

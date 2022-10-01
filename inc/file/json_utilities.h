@@ -111,7 +111,14 @@ struct WrappedJsonValue
     ///Write access to the raw Json value (if you know what you are doing)
     Json::Value& asJson( ) { return m_js;}
 
-    ////////////Members imitating the original Json::Value///////////////
+    /*! @brief The creation history of the object
+     *
+     * Useful to print when debugging parameter files
+     * @return A string containing object history
+     */
+    std::string access_string() const {return m_access_str;}
+
+    // //////////Members imitating the original Json::Value///////////////
     /// Wrap the corresponding Json::Value function with error handling
     WrappedJsonValue operator[](std::string key) const{
         return get( key, Json::ValueType::objectValue, "empty object ");

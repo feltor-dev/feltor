@@ -87,6 +87,9 @@ int main()
         unsigned uint = ws["nested"]["another_nest"]["number"].asUInt(0);
         assert( uint == 7);
         std::cout << "TEST PASSED!\n";
+        std::cout << "Test access string\n";
+        std::cout << ws["nested"]["another_nest"]["number"].access_string()
+                  <<" (nested: another_nest: number)\n";
     }
 
     return 0;
