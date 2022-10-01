@@ -291,7 +291,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             dg::geo::ds_divCentered( m_faST, m_p.nu_parallel_n, m_minus, m_plus, 1., yp[0][1]);
         }
     }
-    else if( "log-staggered" == advection)
+    else if( "log-staggered" == advection || "staggered-direct" == advection)
     {
         // does not really work, at least without diffusion...
         // density is in log(n)
@@ -320,28 +320,47 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         }
 
         // compute qhat with ln N
+        if( advection == "log-staggered")
+        {
+            compute_parallel_advection( m_zero, m_minusSTN[1], m_plusSTN[1],
+                    m_divNUb[1], m_p.slope_limiter);
+            m_faST( dg::geo::zeroPlus, m_divNUb[1], m_plus);
+            m_faST( dg::geo::einsMinus, m_divNUb[1], m_minus);
+            // We always use NEU for the fluxes for now
+            update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
+            dg::geo::ds_centered( m_faST, 1., m_minus, m_plus, 0, m_divNUb[1]);
+            dg::blas1::pointwiseDot( m_velocity[1], m_divNUb[1], m_divNUb[1]);
+            dg::geo::ds_divCentered( m_faST, 1., m_minusSTU[1], m_plusSTU[1], 1., m_divNUb[1]);
+            dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
+            m_faST( dg::geo::zeroForw,  m_density[1], m_zero);
+            dg::blas1::pointwiseDot( m_zero, m_divNUb[1], m_divNUb[1]);
 
-        compute_parallel_advection( m_zero, m_minusSTN[1], m_plusSTN[1],
-                m_divNUb[1], m_p.slope_limiter);
-        m_faST( dg::geo::zeroPlus, m_divNUb[1], m_plus);
-        m_faST( dg::geo::einsMinus, m_divNUb[1], m_minus);
-        // We always use NEU for the fluxes for now
-        update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::geo::ds_centered( m_faST, 1., m_minus, m_plus, 0, m_divNUb[1]);
-        dg::blas1::pointwiseDot( m_velocity[1], m_divNUb[1], m_divNUb[1]);
-        dg::geo::ds_divCentered( m_faST, 1., m_minusSTU[1], m_plusSTU[1], 1., m_divNUb[1]);
-        dg::blas1::axpby( -1., m_divNUb[1], 1., yp[0][1]);
-        m_faST( dg::geo::zeroForw,  m_density[1], m_zero);
-        dg::blas1::pointwiseDot( m_zero, m_divNUb[1], m_divNUb[1]);
-
-        // compute fhat
-        compute_parallel_flux( m_velocity[1], m_minusSTU[1], m_plusSTU[1],
-                m_temp0, m_p.slope_limiter);
-        m_faST( dg::geo::einsPlus, m_temp0, m_plus);
-        m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
-        update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
-        dg::geo::ds_centered( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
-
+            // compute fhat
+            compute_parallel_flux( m_velocity[1], m_minusSTU[1], m_plusSTU[1],
+                    m_temp0, m_p.slope_limiter);
+            m_faST( dg::geo::einsPlus, m_temp0, m_plus);
+            m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
+            update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
+            dg::geo::ds_centered( m_faST, -0.5, m_minus, m_plus, 1, yp[1][1]);
+        }
+        else if ( advection == "staggered-direct")
+        {
+            // This is Stegmeir variant
+            dg::geo::ds_centered( m_faST, 1., m_minusSTN[1], m_plusSTN[1], 0., m_temp0);
+            dg::blas1::pointwiseDot( 1., m_velocityST[1], m_temp0, 0., m_temp0);
+            m_faST( dg::geo::zeroPlus,  m_temp0, m_plus);
+            m_faST( dg::geo::einsMinus, m_temp0, m_minus);
+            update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
+            dg::blas1::axpbypgz( -0.5, m_minus, -0.5, m_plus, 1., yp[0][1]);
+            dg::geo::ds_divCentered( m_faST, -1., m_minusSTU[1], m_plusSTU[1], 1., yp[0][1]);
+            // velocity
+            dg::blas1::axpby( 0.5, m_minusSTU[1], 0.5, m_plusSTU[1], m_temp0);
+            m_faST( dg::geo::einsPlus, m_temp0, m_plus);
+            m_faST( dg::geo::zeroMinus, m_temp0, m_minus);
+            update_parallel_bc_1st( m_minus, m_plus, dg::NEU, 0.);
+            dg::geo::ds_centered( m_faST, 1., m_minus, m_plus, 0, m_temp0);
+            dg::blas1::pointwiseDot( -1., m_velocityST[1], m_temp0, 1., yp[1][1]);
+        }
         // Add density gradient
         dg::geo::ds_centered( m_faST, -m_p.tau[1] /m_p.mu[1], m_minusSTN[1], m_plusSTN[1], 1., yp[1][1]);
         // Add parallel viscosity
@@ -592,7 +611,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         dg::blas1::copy( m_velocity[1], m_velocityST[1]);
     }
     //-------------Add regularization----------------------------//
-    if( "log-staggered" == advection)
+    if( "log-staggered" == advection || "staggered-direct" == advection)
     {
         compute_perp_diffusiveN( 1., m_density[1], m_temp0, m_temp1, 0.,
             m_temp1);

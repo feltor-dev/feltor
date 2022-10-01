@@ -227,7 +227,7 @@ int main( int argc, char* argv[])
                     js["init"], time, sheath_coordinate );
 #ifdef WITH_NAVIER_STOKES
             std::string advection = js["advection"].get("type", "velocity-staggered").asString();
-            if( advection == "log-staggered")
+            if( advection == "log-staggered" || advection == "staggered-direct")
                 dg::blas1::transform( y0[0], y0[0], dg::LN<double>());
             else if( advection == "staggered")
             {
