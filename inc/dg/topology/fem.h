@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../blas.h"
 #include "grid.h"
 #include "xspacelib.h"
 #include "fem_weights.h"
