@@ -41,6 +41,9 @@ manufactured_para: manufactured.cu manufactured.h feltor.h
 multigrid_b: multigrid_b.cu parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
+convert_b: convert_b.cu parameters.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
+
 .PHONY: clean doc
 
 doc:
