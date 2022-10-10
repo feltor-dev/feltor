@@ -20,12 +20,12 @@ using IHMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 
 int main( int argc, char* argv[])
 {
-    if( argc < 2)
+    if( argc < 3)
     {
-        std::cerr << "Usage: "<<argv[0]<<" [polarisation.nc] \n";
+        std::cerr << "Usage: "<<argv[0]<<" [polarisation.nc] [output.nc] \n";
         return -1;
     }
-    std::cout << argv[0] <<" -> "<<argv[1]<<std::endl;
+    std::cout << argv[0] <<" "<<argv[1]<<" -> "<<argv[2]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
     dg::file::NC_Error_Handle err;
@@ -64,7 +64,7 @@ int main( int argc, char* argv[])
     std::string names[4] = {"chi", "sol", "rhs", "phi0"};
     dg::x::HVec transferH = dg::evaluate( dg::zero, g3d);
     std::map<std::string, dg::x::HVec> vecs;
-    for( int i =0; i<3; i++)
+    for( int i =0; i<4; i++)
     {
         int dataID;
         err = nc_inq_varid(ncid_in, names[i].data(), &dataID);
@@ -116,10 +116,11 @@ int main( int argc, char* argv[])
 
     int ncid_out, vecID;
     int dim_ids[3];
-    err = nc_create( "pol_out.nc", NC_NETCDF4|NC_CLOBBER, &ncid_out);
+    err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err = dg::file::define_dimensions( ncid_out, dim_ids, g3d,
                 {"z", "y", "x"});
     std::string out_names [3] = { "sol", "rhs", "phi0"};
+    std::cout << "Write output "<<argv[2]<<"\n";
     for ( unsigned i=0; i<3; i++)
     {
         err = nc_def_var( ncid_out, out_names[i].data(), NC_DOUBLE, 3,
@@ -129,7 +130,7 @@ int main( int argc, char* argv[])
     // Write out matrix
     dg::Grid1d g1d( 0,1 , 1, result.num_entries);
     int dim_matrix_id;
-    err = dg::file::define_dimension( ncid_out, &dim_matrix_id, g1d);
+    err = dg::file::define_dimension( ncid_out, &dim_matrix_id, g1d, "idx");
     err = nc_def_var( ncid_out, "row_indices", NC_INT, 1, &dim_matrix_id, &vecID);
     err = nc_put_var_int( ncid_out, vecID, &result.row_indices[0]);
     err = nc_def_var( ncid_out, "column_indices", NC_INT, 1, &dim_matrix_id, &vecID);
