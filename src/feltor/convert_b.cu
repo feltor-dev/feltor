@@ -126,7 +126,10 @@ int main( int argc, char* argv[])
     {
         err = nc_def_var( ncid_out, out_names[i].data(), NC_DOUBLE, 3,
                     dim_ids, &vecID);
-        dg::file::put_var_double( ncid_out, vecID, g3d, vecs[out_names[i]]);
+        if( out_names[i] == "guess")
+            dg::file::put_var_double( ncid_out, vecID, g3d, vecs["phi0"]);
+        else
+            dg::file::put_var_double( ncid_out, vecID, g3d, vecs[out_names[i]]);
     }
     // Write out matrix
     dg::Grid1d g1d_nnz( 0,1 , 1, result.num_entries);
@@ -140,10 +143,11 @@ int main( int argc, char* argv[])
     err = nc_put_var_int( ncid_out, vecID, &result.column_indices[0]);
     err = nc_def_var( ncid_out, "val", NC_DOUBLE, 1, &dim_nnz_id, &vecID);
     err = nc_put_var_double( ncid_out, vecID, &result.values[0]);
+    int num_rows = result.num_rows, num_cols = result.num_cols;
     err = nc_put_att_int( ncid_out, NC_GLOBAL, "ndim", NC_INT, 1,
-		    &result.num_rows);
+		    &num_rows);
     err = nc_put_att_int( ncid_out, NC_GLOBAL, "ncol", NC_INT, 1,
-		    &result.num_cols);
+		    &num_cols);
     err = nc_close(ncid_out);
 
     return 0;
