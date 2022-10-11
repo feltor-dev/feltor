@@ -16,7 +16,8 @@ using Geometry =  dg::x::CylindricalGrid3d;
 using Matrix = dg::x::DMatrix;
 using Container = dg::x::DVec;
 
-using IHMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
+//using IHMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
+using IHMatrix = dg::IHMatrix;
 
 int main( int argc, char* argv[])
 {
@@ -110,8 +111,8 @@ int main( int argc, char* argv[])
     cusp::add( CX, JJ, XX);
     std::cout << "Multiply 5. matrices\n";
     cusp::multiply( inv_vol, XX, result);
-    std::cout << "Sort\n";
-    result.sort_by_row_and_column();
+    //std::cout << "Sort\n";
+    //result.sort_by_row();
     std::cout << "Done\n";
 
     int ncid_out, vecID;
@@ -119,7 +120,7 @@ int main( int argc, char* argv[])
     err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err = dg::file::define_dimensions( ncid_out, dim_ids, g3d,
                 {"z", "y", "x"});
-    std::string out_names [3] = { "sol", "rhs", "phi0"};
+    std::string out_names [3] = { "sol", "rhs", "guess"};
     std::cout << "Write output "<<argv[2]<<"\n";
     for ( unsigned i=0; i<3; i++)
     {
@@ -128,15 +129,21 @@ int main( int argc, char* argv[])
         dg::file::put_var_double( ncid_out, vecID, g3d, vecs[out_names[i]]);
     }
     // Write out matrix
-    dg::Grid1d g1d( 0,1 , 1, result.num_entries);
-    int dim_matrix_id;
-    err = dg::file::define_dimension( ncid_out, &dim_matrix_id, g1d, "idx");
-    err = nc_def_var( ncid_out, "row_indices", NC_INT, 1, &dim_matrix_id, &vecID);
-    err = nc_put_var_int( ncid_out, vecID, &result.row_indices[0]);
-    err = nc_def_var( ncid_out, "column_indices", NC_INT, 1, &dim_matrix_id, &vecID);
+    dg::Grid1d g1d_nnz( 0,1 , 1, result.num_entries);
+    dg::Grid1d g1d_dimi( 0,1 , 1, result.num_rows+1);
+    int dim_nnz_id, dim_dimi_id;
+    err = dg::file::define_dimension( ncid_out, &dim_nnz_id, g1d_nnz, "nnz");
+    err = dg::file::define_dimension( ncid_out, &dim_dimi_id, g1d_dimi, "dimi");
+    err = nc_def_var( ncid_out, "i", NC_INT, 1, &dim_dimi_id, &vecID);
+    err = nc_put_var_int( ncid_out, vecID, &result.row_offsets[0]);
+    err = nc_def_var( ncid_out, "j", NC_INT, 1, &dim_nnz_id, &vecID);
     err = nc_put_var_int( ncid_out, vecID, &result.column_indices[0]);
-    err = nc_def_var( ncid_out, "values", NC_DOUBLE, 1, &dim_matrix_id, &vecID);
+    err = nc_def_var( ncid_out, "val", NC_DOUBLE, 1, &dim_nnz_id, &vecID);
     err = nc_put_var_double( ncid_out, vecID, &result.values[0]);
+    err = nc_put_att_int( ncid_out, NC_GLOBAL, "ndim", NC_INT, 1,
+		    &result.num_rows);
+    err = nc_put_att_int( ncid_out, NC_GLOBAL, "ncol", NC_INT, 1,
+		    &result.num_cols);
     err = nc_close(ncid_out);
 
     return 0;
