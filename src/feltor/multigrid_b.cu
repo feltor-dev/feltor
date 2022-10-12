@@ -77,14 +77,25 @@ int main( int argc, char* argv[])
     unsigned k=4;
     std::cin >>k;
     std::cout << "Plane "<<k<<"\n";
+    unsigned num_stages = p.stages;
+    std::cout << "Num stages\n";
+    std::cin >> num_stages;
+    std::cout << " "<<num_stages<<"\n";
     std::cout << "Eps_pol  [1e-6,1e-6,1e-6]?\n";
-    std::vector<double> eps_pol(3);
-    std::cin >> eps_pol[0]>> eps_pol[1]>> eps_pol[2];
-    std::cout << "Eps: "<<eps_pol[0]<<", "<<eps_pol[1]<<", "<<eps_pol[2]<<"\n";
+    std::vector<double> eps_pol(num_stages);
+    for( unsigned u=0; u<num_stages; u++)
+        std::cin >> eps_pol[u];
+    std::cout << "Eps: ";
+    for( unsigned u=0; u<num_stages; u++)
+        std::cout << eps_pol[u]<<", ";
+    std::cout << "\n";
     std::cout << "Eps_gamma  [1e-7,1e-7,1e-7]?\n";
-    std::vector<double> eps_gamma(3);
-    std::cin >> eps_gamma[0]>> eps_gamma[1]>> eps_gamma[2];
-    std::cout << "Eps: "<<eps_gamma[0]<<", "<<eps_gamma[1]<<", "<<eps_gamma[2]<<"\n";
+    std::vector<double> eps_gamma(num_stages);
+    for( unsigned u=0; u<num_stages; u++)
+        std::cin >> eps_gamma[u];
+    for( unsigned u=0; u<num_stages; u++)
+        std::cout << eps_gamma[u]<<", ";
+    std::cout << "\n";
     std::cout << "Direction (forward)\n";
     std::string direction;
     std::cin >> direction;
@@ -107,12 +118,12 @@ int main( int argc, char* argv[])
         double norm = dg::blas2::dot( weights, pair.second);
         std::cout << pair.first << " "<<sqrt(norm)<<"\n";
     }
-    dg::MultigridCG2d<Geometry, Matrix, Container> multigrid( g2d, p.stages);
+    dg::MultigridCG2d<Geometry, Matrix, Container> multigrid( g2d, num_stages);
     multigrid.set_max_iter( 1e5);
-    std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > multi_pol(p.stages);
-    std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > multi_invgammaN(p.stages);
+    std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > multi_pol(num_stages);
+    std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > multi_invgammaN(num_stages);
     std::vector<Container> multi_chi = multigrid.project( vecs["chi"]);
-    for( unsigned u=0; u<p.stages; u++)
+    for( unsigned u=0; u<num_stages; u++)
     {
 
         multi_pol[u].construct( multigrid.grid(u),
@@ -145,7 +156,7 @@ int main( int argc, char* argv[])
     std::cout << "Norm error Gamma N "<<sqrt(error/norm)<<"\n";
 
     multigrid.project( vecs["chi"], multi_chi);
-    for( unsigned u=0; u<p.stages; u++)
+    for( unsigned u=0; u<num_stages; u++)
         multi_pol[u].set_chi( multi_chi[u]);
     multigrid.set_benchmark( true, "Polarisation");
     dg::x::DVec phi = vecs["phi0"];
