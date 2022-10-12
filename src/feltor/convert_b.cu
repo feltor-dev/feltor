@@ -13,8 +13,8 @@
 #include "feltordiag.h"
 
 using Geometry =  dg::x::CylindricalGrid3d;
-using Matrix = dg::x::DMatrix;
-using Container = dg::x::DVec;
+using Matrix = dg::x::HMatrix;
+using Container = dg::x::HVec;
 
 //using IHMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 using IHMatrix = dg::IHMatrix;
@@ -59,11 +59,12 @@ int main( int argc, char* argv[])
     const double Zmax=p.boxscaleZp*mag.params().a();
 
     /////////////////////////////////////////////////////////////////////////
-    dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
         p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
+
     std::cout << "Reading file "<<argv[1]<<"\n";
     std::string names[4] = {"chi", "sol", "rhs", "phi0"};
-    dg::x::HVec transferH = dg::evaluate( dg::zero, g3d);
+    dg::x::HVec transferH = dg::evaluate( dg::zero, g3d_fine);
     std::map<std::string, dg::x::HVec> vecs;
     for( int i =0; i<4; i++)
     {
@@ -74,6 +75,30 @@ int main( int argc, char* argv[])
         dg::assign( transferH, vecs[names[i]]);
     }
     nc_close(ncid_in);
+    dg::MultigridCG2d<Geometry, Matrix, Container> multigrid( g3d_fine, p.stages);
+    std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > multi_pol(p.stages);
+    std::vector<Container> multi_chi = multigrid.project( vecs["chi"]);
+    std::vector<Container> multi_rhs = multigrid.project( vecs["rhs"]);
+    std::vector<Container> multi_sol = multigrid.project( vecs["sol"]);
+    std::vector<Container> multi_phi = multigrid.project( vecs["phi0"]);
+    for( unsigned u=0; u<p.stages; u++)
+    {
+        multi_pol[u].construct( multigrid.grid(u),
+            p.bcxP, p.bcyP, dg::PER,
+            p.pol_dir, p.jfactor);
+
+        auto bhat = dg::geo::createEPhi(+1);
+        dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
+            bhat, multigrid.grid(u));
+        multi_pol[u].set_chi( hh);
+        if(p.curvmode != "true"){
+            multi_pol[u].set_compute_in_2d( true);
+        }
+        multi_pol[u].set_chi( multi_chi[u]);
+    }
+    // select stage
+    unsigned STAGE = p.stages-1;
+    Geometry g3d = multigrid.grid(STAGE);
     // Create and write matrix to file
     std::cout << "Create 1. matrices\n";
     IHMatrix leftx = dg::create::dx( g3d, dg::inverse( p.bcxP), dg::inverse(p.pol_dir)).asCuspMatrix();
@@ -88,9 +113,10 @@ int main( int argc, char* argv[])
     IHMatrix jumpx =  dg::create::jumpX( g3d, p.bcxP).asCuspMatrix();
     IHMatrix jumpy =  dg::create::jumpY( g3d, p.bcyP).asCuspMatrix();
     // Create volume form
-    dg::HVec vol3d = dg::create::volume( g3d);
-    dg::HVec inv_vol3d = dg::create::inv_volume( g3d);
-    dg::blas1::pointwiseDot( vol3d, vecs["chi"], vol3d);
+    dg::HVec vol3d = dg::tensor::volume( g3d.metric());
+    dg::HVec inv_vol3d = vol3d;
+    dg::blas1::pointwiseDivide( 1., vol3d, inv_vol3d);
+    dg::blas1::pointwiseDot( vol3d, multi_chi[STAGE], vol3d);
     IHMatrix chi_diag = dg::create::diagonal( vol3d);
     IHMatrix inv_vol = dg::create::diagonal( inv_vol3d);
     IHMatrix CX, XX, CY, YY, JJ, result;
@@ -127,10 +153,34 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid_out, out_names[i].data(), NC_DOUBLE, 3,
                     dim_ids, &vecID);
         if( out_names[i] == "guess")
-            dg::file::put_var_double( ncid_out, vecID, g3d, vecs["phi0"]);
-        else
-            dg::file::put_var_double( ncid_out, vecID, g3d, vecs[out_names[i]]);
+            //dg::file::put_var_double( ncid_out, vecID, g3d, vecs["phi0"]);
+            dg::file::put_var_double( ncid_out, vecID, g3d, multi_phi[STAGE]);
+        else if( out_names[i] == "sol")
+            dg::file::put_var_double( ncid_out, vecID, g3d, multi_sol[STAGE]);
+        else if( out_names[i] == "rhs")
+            dg::file::put_var_double( ncid_out, vecID, g3d, multi_rhs[STAGE]);
     }
+    std::cout << "Done!\n";
+    std::cout << "Compare matrices!\n";
+    // Test the matrix if it converges
+    Container w3d = dg::create::volume( g3d);
+    Container phi0 = multi_phi[STAGE];
+    Container rhs0 = multi_rhs[STAGE], rhs1(rhs0);
+
+    dg::blas2::symv( multi_pol[STAGE], phi0, rhs0);
+    dg::blas2::symv( result, phi0, rhs1);
+    dg::blas1::axpby( 1., rhs0, -1., rhs1);
+    double error = dg::blas2::dot( rhs1, w3d, rhs1);
+    std::cout<< "Norm rhs "<<sqrt(dg::blas1::dot( multi_rhs[STAGE], multi_rhs[STAGE]))<<"\n";
+    std::cout<< "Norm guess "<<sqrt(dg::blas1::dot( multi_phi[STAGE], multi_phi[STAGE]))<<"\n";
+    std::cout<< "Norm matrix "<<sqrt(dg::blas1::dot( result.values, result.values))<<"\n";
+    std::cout << "Compare solution with elliptic matrix "<<error <<"\n";
+    dg::PCG<Container> cg( w3d, 2000);
+    rhs0 = multi_rhs[STAGE];
+    cg.set_verbose(true);
+    // why is result faster than multi_pol?? Maybe because no vectorization...
+    unsigned number = cg.solve( result, phi0, rhs0, multi_pol[STAGE].precond(), w3d, p.eps_pol[STAGE], 1, 10);
+    std::cout << "CG solver takes "<<number<<" iterations\n";
     // Write out matrix
     dg::Grid1d g1d_nnz( 0,1 , 1, result.num_entries);
     dg::Grid1d g1d_dimi( 0,1 , 1, result.num_rows+1);
