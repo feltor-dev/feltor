@@ -504,24 +504,43 @@ int main( int argc, char* argv[])
                     "long_name", long_name.size(), long_name.data());
         }
 
-        std::vector<std::vector<feltor::Record>> LISTS;
-        if(js["output"]["equations"].get( "Basic", true).asBool())
-        LISTS.push_back(feltor::basicDiagnostics2d_list);
-        if(js["output"]["equations"].get( "Mass-conserv", true).asBool())
-        LISTS.push_back(feltor::MassConsDiagnostics2d_list);
-        if(js["output"]["equations"].get( "Energy-theorem", true).asBool())
-        LISTS.push_back(feltor::EnergyDiagnostics2d_list);
-        if(js["output"]["equations"].get( "Toroidal-momentum", true).asBool())
-        LISTS.push_back(feltor::ToroidalExBDiagnostics2d_list);
-        if(js["output"]["equations"].get( "Parallel-momentum", true).asBool())
-        LISTS.push_back(feltor::ParallelMomDiagnostics2d_list);
-        if(js["output"]["equations"].get( "Zonal-Flow-Energy", true).asBool())
-        LISTS.push_back(feltor::RSDiagnostics2d_list);
-        if(js["output"]["equations"].get( "COCE", true).asBool())
-        LISTS.push_back(feltor::COCEDiagnostics2d_list);
+        std::vector<std::vector<feltor::Record>> equation_list;
+        bool equation_list_exists = js["output"].asJson().isMember("equations");
+        if( equation_list_exists)
+        {
+            for( unsigned i=0; i<js["output"]["equations"].size(); i++)
+            {
+                std::string eqn = js["output"]["equations"][i].asString();
+                if( eqn == "Basic")
+                    equation_list.push_back(feltor::basicDiagnostics2d_list);
+                else if( eqn == "Mass-conserv")
+                    equation_list.push_back(feltor::MassConsDiagnostics2d_list);
+                else if( eqn == "Energy-theorem")
+                    equation_list.push_back(feltor::EnergyDiagnostics2d_list);
+                else if( eqn == "Toroidal-momentum")
+                    equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
+                else if( eqn == "Parallel-momentum")
+                    equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
+                else if( eqn == "Zonal-Flow-Energy")
+                    equation_list.push_back(feltor::RSDiagnostics2d_list);
+                else if( eqn == "COCE")
+                    equation_list.push_back(feltor::COCEDiagnostics2d_list);
+                else
+                    throw std::runtime_error( "output: equations: "+eqn+" not recognized!\n");
+            }
+        }
+        else // default diagnostics
+        {
+            equation_list.push_back(feltor::basicDiagnostics2d_list);
+            equation_list.push_back(feltor::MassConsDiagnostics2d_list);
+            equation_list.push_back(feltor::EnergyDiagnostics2d_list);
+            equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
+            equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
+            equation_list.push_back(feltor::RSDiagnostics2d_list);
+        }
 
         std::string m_list;
-        for( auto& m_list : LISTS)
+        for( auto& m_list : equation_list)
         {
             for( auto& record : m_list)
             {
@@ -607,7 +626,7 @@ int main( int argc, char* argv[])
             dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
 
-        for( auto& m_list : LISTS)
+        for( auto& m_list : equation_list)
         {
             for( auto& record : m_list)
             {
@@ -718,7 +737,7 @@ int main( int argc, char* argv[])
                     probe_counter+=1;
             }
         }
-        for( auto& m_list : LISTS)
+        for( auto& m_list : equation_list)
         {
             for( auto& record : m_list)
             {
@@ -794,7 +813,7 @@ int main( int argc, char* argv[])
                 dg::file::put_var_double( ncid, restart_ids.at(record.name),
                         grid, resultH);
             }
-            for( auto& m_list : LISTS)
+            for( auto& m_list : equation_list)
             {
             for( auto& record : m_list)
             {

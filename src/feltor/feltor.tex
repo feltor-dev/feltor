@@ -1613,6 +1613,7 @@ The velocity source is chosen such that the density source does not introduce
 net momentum
 \begin{align}
     S_U = -\frac{U_\parallel}{N} S_N
+    \label{eq:velocity_source}
 \end{align}
 for both electrons and ions.
 
@@ -1984,25 +1985,34 @@ while the output time $\Delta T_\text{out}$ determines how often 2d/3d fields ar
 \end{tcolorbox}
 
 
-\subsection{Output equations flags}\label{sec:output_flags}
-In the input file, inside of the "output" input parameters, a new variable defined "equations" allows to turn on and off the different variables that correspond to the different equations that can be studied with FELTOR at the moment. These equations are described in section \ref{sec:output}, and the definitions are in the equations titles.
+\subsection{[Optional] Output equations flags}\label{sec:output_flags}
+The optional variable "equations" contains a list of strings that
+determine which variables will be written into the output file.
+Each string
+corresponds to a different equation that can be studied with FELTOR at the
+moment. These equations are described in section \ref{sec:output}, and their
+definitions are in the equations titles.
 \begin{minted}[texcomments]{js}
 "output":
-{"equations" :
 {
-    "Basic": true,
-    "Mass-conserv": true,
-    "Energy-theorem": true,
-    "Toroidal-momentum": true,
-    "Parallel-momentum": true,
-    "Zonal-Flow-Energy": true,
-    "COCE": true
-}
+    "equations" :
+    [
+        "Basic",
+        "Mass-conserv",
+        "Energy-theorem",
+        "Toroidal-momentum",
+        "Parallel-momentum",
+        "Zonal-Flow-Energy",
+        "COCE"
+    ]
 }
 \end{minted}
+\begin{tcolorbox}[title=Note]
+    If the "equations" field does not exist, the default selection is ["Basic", "Mass-conserv", "Energy-theorem","Toroidal-momemtum","Parallel-momentum","Zonal-Flow-Energy"]
+\end{tcolorbox}
 
 \subsection{[Optional] Probes}
-FELTOR has the possibility of getting the output of the computational fields in time at any grid location, as if a probe measurement was done. This output is defined with time outputs at the integration time intervals $\Delta T_{int}$. In the input file, it is required to define the number of pins "num\_pins", and the R, Z and plane position "R\_probe", "Z\_probe" and "phi\_probe" arrays, for each of the probes included. The R and Z values are introduced in $\rho_s$ units, while the plane is defined by the integer number of the plane we want to position the probe. The user should make certain that the length of the position arrays matches "num\_pins". If the user does not want to use any probes, the entire "probes" input field can be left away.
+FELTOR has the possibility of getting the output of the computational fields in time at any grid location, as if a probe measurement was done. This output is defined with time outputs at the integration time intervals $\Delta T_{int}$. In the input file, it is required to define the number of pins "num\_pins", and the R, Z and plane position "R\_probe", "Z\_probe" and "phi\_probe" arrays, for each of the probes included. The R and Z values are introduced in $\rho_s$ units, while the plane is defined by the integer number of the plane we want to position the probe. The user should make certain that the length of the position arrays matches "num\_pins".
 \begin{minted}[texcomments]{js}
 "probes":
 {
@@ -2012,6 +2022,9 @@ FELTOR has the possibility of getting the output of the computational fields in 
     "phi_probe": [0, 0, 3]
 }
 \end{minted}
+\begin{tcolorbox}[title=Note]
+ If the user does not want to use any probes, the entire "probes" input field can be left away. No probes will be written into the output file then.
+\end{tcolorbox}
 \subsection{[Optional] Computational flags}
 We can simplify the full simulation in a few ways:
 \begin{minted}[texcomments]{js}
@@ -2165,7 +2178,7 @@ fields. This outputs are saved if the flag "output":"equations":"Basic" is true.
 
 %\subsection{Conservation laws} \label{sec:conservation}
 %In the output file we have
-\subsection{Mass conservation, "Mass-conserv": true}
+\subsection{Mass conservation, "Mass-conserv"}
 The density equations directly yield the particle conservation
 \begin{align} \label{eq:mass_theorem}
   \frac{\partial}{\partial t} N
@@ -2234,7 +2247,7 @@ The relevant terms in the output file are
 \end{longtable}
 
 Note that the parallel divergences vanish exactly under a flux-surface average. This can serve as a numerical test of our implementation.
-\subsection{Energy theorem, "Energy-theorem": true}
+\subsection{Energy theorem, "Energy-theorem"}
 The terms of the energy theorem are
 \begin{align} \label{eq:energy_theorem}
 \partial_t \mathcal E +
@@ -2316,7 +2329,7 @@ The relevant terms in the output file are
 \bottomrule
 \end{longtable}
 
-\subsection{Toroidal ExB angular momentum equation, "Toroidal-momentum": true} \label{sec:vorticity_eq}
+\subsection{Toroidal ExB angular momentum equation, "Toroidal-momentum"} \label{sec:vorticity_eq}
 We integrate the polarisation equation over volume, multiply by $\d \psi_p/\d v$ and derive by time. In the drift-ordering up to order $\mathcal O(\delta^3)$ we get
 \begin{align}
     &\partial_t \RA{\Omega} + \frac{\partial}{\partial v}\frac{\d v}{\d\psi_p}\RA{\vec j_\Omega\cn\psi_p} = -\RA{F_{L,\varphi}} + \RA{\mathcal S_\Omega} \label{eq:vorticity_average} \\
@@ -2367,7 +2380,7 @@ In the output file we have
 \end{longtable}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Conservation of Currents (COCE), "COCE": true}\label{sec:COCE}
+\subsection{Conservation of Currents (COCE), "COCE"}\label{sec:COCE}
 If we want to study the electric field locally, without the flux surface average implemented in the equation at section \ref{sec:vorticity_eq}, the COCE diagnostic is necessary. The equation implemented is 
 \begin{equation}
     \partial_t\Omega-\nc\nc(\boldsymbol{\omega u_E})=\nc(j_\parallel\bhat+\boldsymbol{j_{curv}}+\boldsymbol{j_{b_\perp}})+\Omega_S,
@@ -2415,7 +2428,7 @@ The implemented terms are defined as follows:
 Some of these definitions have "\_gf" in their definitions, as they are defined with the gyro-fluid ion density $N_i$. These quantities are also saved without this label, when using the electron fluid density $n_e$ instead of $N_i$. At the same time, all the gradients and divergences in the perpendicular direction are implemented with the toroidal field approximation.
 
 
-\subsection{Parallel momentum balance, "Parallel-momentum": true}
+\subsection{Parallel momentum balance, "Parallel-momentum"}
 The flux surface average over the parallel momentum equation under species summation  yields up to order $\mathcal O(\delta^3)$ in the drift-ordering
 \begin{align}
   \frac{\partial}{\partial t}\RA{\mu_iN_iU_{\parallel,i} }
@@ -2432,7 +2445,9 @@ while the toroidal parallel angular momentum contribution reads up to order $\ma
     \nonumber\\
     = \RA{F_{L,\varphi}} + \mu_i \RA{ (S_{N_i} U_{\parallel,i} + N_i S_{U_\parallel}) b_\varphi}
 \end{align}
-
+\begin{tcolorbox}[title=Note]
+The source terms add up to zero with our choice of the parallel velocity source~\eqref{eq:velocity_source}.
+\end{tcolorbox}
 The relevant terms in the output file are (the Lorentz force term is described in the previous subsection \ref{sec:vorticity_eq})
 \begin{longtable}{llll}
 \toprule
@@ -2463,7 +2478,7 @@ The relevant terms in the output file are (the Lorentz force term is described i
 \end{longtable}
 Note that the parallel viscosity term vanishes exactly under the flux-surface average. This can serve as a numerical test.
 
-\subsection{Parallel electron force balance, "Parallel-momentum": true}
+\subsection{Parallel electron force balance, "Parallel-momentum"}
 We gather the dominant terms in the electron momentum equation (neglecting all terms as $\mu_e=0$). This leaves the parallel force balance
 \begin{align}
     -(\bhat + \vec b_\perp) \cn n_e +n_e\left( \left( \bhat + \vec b_\perp \right) \cn \phi + \frac{\partial A_\parallel}{\partial t} \right) +\eta n_e \left( N_iU_{\parallel,i} - n_eu_{\parallel,e}\right) = 0
@@ -2486,7 +2501,7 @@ We gather the dominant terms in the electron momentum equation (neglecting all t
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\subsection{Zonal flow energy, "Zonal-Flow-Energy": true}
+\subsection{Zonal flow energy, "Zonal-Flow-Energy"}
 
 \begin{align}
     E_\mathrm{zonal} = \frac{1}{2}\RA{\rho_M}\FA{ \iota^{-2}\mathcal I^{\vartheta\vartheta} + 2\iota^{-1}\mathcal I^{\vartheta\varphi} + \mathcal I^{\varphi\varphi}} \FA{u_{E,\varphi}}^2
@@ -2529,7 +2544,7 @@ Compilation
 \mint{bash}{make feltordiag device={gpu,omp}}
 \noindent Usage
 \mint{bash}{./feltordiag configuration.json input0.nc ... inputN.nc output.nc}
-The usage requires a \mintinline{bash}{configuration.json} where parameters for the diagnostic can be introduced. Some of this inputs are "Neta", "Npsi" and "n" for the dimensions and DG method order for the transformation to the magnetic coordinate system. 
+The usage requires a file \mintinline{bash}{configuration.json} where parameters for the diagnostic can be introduced and is described further down.
 \begin{tcolorbox}[title=Note]
 \mintinline{bash}{feltordiag} refuses to overwrite existing files in order to protect against data loss in case of accidental spelling
 errors or other careless mistakes.
@@ -2579,24 +2594,40 @@ where Z $\in$ \{X, Y\_tt\}
 by multiplying $\d v/\d \psi_p$
 in the sense that $\vec j\cn v  = \vec j \cn \psi_p \d v/\d\psi_p$.
 \end{tcolorbox}
-The parameters used for the X-point
+The default parameters used for the X-point
 \href{https://feltor-dev.github.io/doc/geometries/html/structdg_1_1geo_1_1_separatrix_orthogonal.html}{separatrix-orthogonal Grid}
 construction are $f_x = 1/8$, $f_y = 0$, $n_\psi = 3$, $N_\zeta = 64$ and
 $N_\eta = 640$ and the constant monitor metric~\cite{Wiesenberger2018}, but can be specified in the \mintinline{bash}{configuration.json} file.
+Furthermore, a user can specify which kind of diagnostics quantities should be computed and how:
+\begin{minted}[texcomments]{js}
+// for feltordiag
+"n": 3, // resolution of X-point grid for fsa
+"Npsi": 64, // resolution of X-point grid for fsa
+"Neta": 640, // resolution of X-point grid for fsa
+"Kphi": 10, // resolution for convoluted toroidal average (10 is fine)
+"fsa" : "convoluted-toroidal-average" // From which quantity fsa should be computed, can also be "toroidal-average"
+"fx_0" : 0.125 // where the separatrix is in relation to the $\zeta$ coordinate
+"diagnostics" :
+[
+    "1dStatics", // save variables that only depend on psi in table \ref{table:diag}.
+    "fsa1d", // save \_fsa in table \ref{table:diag}.
+    "fsa2d", //  save \_fsa2d in table \ref{table:diag}.
+    "cta2d", //  save \_cta in table \ref{table:diag}.
+    "cta2dX", //  save \_cta2dX in table \ref{table:diag}.
+    "fluc2d", //  save \_fluc2d in table \ref{table:diag}.
+    "ifs", //  save \_ifs in table \ref{table:diag}.
+    "std_fsa", //  save \_std\_fsa in table \ref{table:diag}.
+    "ifs_lcfs", //  save \_ifs\_lcfs in table \ref{table:diag}.
+    "ifs_norm" //  save \_ifs\_norm in table \ref{table:diag}.
+]
+// for interpolate in 3d
+"fine-grid-factor" : 2, // how many additional planes are to be inserted: Nz*fine-grid-factor
+"time-reduction-factor" : 10 // only ouptut every *th step
+\end{minted}
+\begin{tcolorbox}[title=Note]
+    If the "diagnostics" field does not exist, all quantities will be selected and written to the output file
+\end{tcolorbox}
 
-There are also "DIAG\_OUTPUTS" flags in \mintinline{bash}{configuration.json} to specify which kind of diagnosed quantities are wanted:
-\begin{itemize}
-\item "1dStatics": If true, save variables that only depend on psi in table \ref{table:diag}.
-\item "fsa1d": If true, save \_fsa in table \ref{table:diag}.
-\item "fsa2d":  If true, save \_fsa2d in table \ref{table:diag}.
-\item "cta2d":  If true, save \_cta in table \ref{table:diag}.
-\item "cta2dX":  If true, save \_cta2dX in table \ref{table:diag}.
-\item "fluc2d":  If true, save \_fluc2d in table \ref{table:diag}.
-\item "ifs":  If true, save \_ifs in table \ref{table:diag}.
-\item "std\_fsa":  If true, save \_std\_fsa in table \ref{table:diag}.
-\item "ifs\_lcfs":  If true, save \_ifs\_lcfs in table \ref{table:diag}.
-\item "ifs\_norm":  If true, save \_ifs\_norm in table \ref{table:diag}.
-\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Flux surface averaging and safety factor}
