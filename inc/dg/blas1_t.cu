@@ -127,6 +127,12 @@ int main()
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);
     std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
+
+    std::cout << "Human readable test RecursiveRecursiveVector (passed if ouput equals value in brackets) \n";
+    w1 = dg::construct<std::array<Vector,2>>(v1), w2 = {v2,v2}, w3 = {v3,v3}, w4 = {v4,v4};
+    std::array<std::array<Vector, 2>,2> w11( dg::construct<std::array<std::array<Vector,2>,2>>(v1)), w22({w2,w2}), w33({w3,w3}), w44({w4,w4});
+    dg::blas1::axpby( 2., w11, 3., w22);
+    std::cout << "2*2+ 3*3 = " << w22[1][1][0] <<" (13)\n";
     std::cout << "\nFINISHED! Continue with topology/evaluation_t.cu !\n\n";
 
     return 0;
