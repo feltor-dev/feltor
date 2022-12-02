@@ -252,10 +252,10 @@ int main( int argc, char* argv[])
     //Example input
     if(p.probes){
     for(unsigned i = 0 ; i < p.num_pins; i++){
-            R_probe[i] = js["probes"]["R_probe"][i].asDouble();
-            Z_probe[i] = js["probes"]["Z_probe"][i].asDouble();
-            phi_probe[i] = js["probes"]["phi_probe"][i].asDouble();
-        }
+        R_probe[i] = js["probes"]["R_probe"][i].asDouble();
+        Z_probe[i] = js["probes"]["Z_probe"][i].asDouble();
+        phi_probe[i] = js["probes"]["phi_probe"][i].asDouble();
+    }
     }
     //Change to device matrix!
     //IHMatrix probe_interpolate_h = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.local());
@@ -268,9 +268,11 @@ int main( int argc, char* argv[])
     dg::DVec simple_probes_device(p.num_pins);
     dg::HVec simple_probes(p.num_pins);
 #endif
-    int probe_length=(feltor::probe_list).size(); 
-    std::vector<std::vector<dg::x::HVec>> simple_probes_intern(probe_length, std::vector<dg::x::HVec>(p.itstp+1, simple_probes));
-    //std::vector<dg::x::HVec> simple_probes_intern(probe_length, simple_probes_1);
+    std::map<std::string, std::vector<dg::x::HVec>> simple_probes_intern;
+    for( auto& record : feltor::probe_list)
+    {
+        simple_probes_intern[record.name] = std::vector<dg::x::HVec>(p.itstp+1, simple_probes);
+    }
     dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
 
 
@@ -279,7 +281,6 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
     dg::ExplicitMultistep< Vector> multistep;
     dg::Adaptive< dg::ERKStep< Vector>> adapt;
-    dg::Adaptive< dg::ARKStep< Vector>> adapt_ark;
     auto odeint = std::unique_ptr<dg::aTimeloop<Vector>>();
     double rtol = 0., atol = 0., dt = 0., reject_limit = 2;
     if( p.timestepper == "multistep")
@@ -573,26 +574,30 @@ int main( int argc, char* argv[])
                 long_name.size(), long_name.data());
         }
 
-    //Probes:
+        //Probes:
         int probe_grp_id;
-        DG_RANK0 err = nc_def_grp(ncid,"probes",&probe_grp_id);
+        if( p.probes)
+            DG_RANK0 err = nc_def_grp(ncid,"probes",&probe_grp_id);
         int probe_dim_ids[2];
         int probe_timevarID;
         int R_pin_id, Z_pin_id, phi_pin_id;
-        DG_RANK0 err = dg::file::define_time( probe_grp_id, "probe_time", &probe_dim_ids[0], &probe_timevarID);
-        DG_RANK0 err = nc_def_dim(probe_grp_id,"pins",p.num_pins,&probe_dim_ids[1]);
-        DG_RANK0 err = nc_def_var(probe_grp_id, "R_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &R_pin_id);
-        DG_RANK0 err = nc_def_var(probe_grp_id, "Z_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &Z_pin_id);
-        DG_RANK0 err = nc_def_var(probe_grp_id, "phi_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &phi_pin_id);
-
         std::map<std::string, int> probe_id_field;
-        for( auto& record : feltor::probe_list)
+        if( p.probes)
         {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            probe_id_field[name] = 0;//creates a new id4d entry for all processes
-            DG_RANK0 err = nc_def_var( probe_grp_id, name.data(), NC_DOUBLE, 2, probe_dim_ids,  &probe_id_field.at(name));
-            DG_RANK0 err = nc_put_att_text( probe_grp_id, probe_id_field.at(name), "long_name", long_name.size(), long_name.data());
+            DG_RANK0 err = dg::file::define_time( probe_grp_id, "probe_time", &probe_dim_ids[0], &probe_timevarID);
+            DG_RANK0 err = nc_def_dim(probe_grp_id,"pins",p.num_pins,&probe_dim_ids[1]);
+            DG_RANK0 err = nc_def_var(probe_grp_id, "R_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &R_pin_id);
+            DG_RANK0 err = nc_def_var(probe_grp_id, "Z_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &Z_pin_id);
+            DG_RANK0 err = nc_def_var(probe_grp_id, "phi_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &phi_pin_id);
+
+            for( auto& record : feltor::probe_list)
+            {
+                std::string name = record.name;
+                std::string long_name = record.long_name;
+                probe_id_field[name] = 0;//creates a new id4d entry for all processes
+                DG_RANK0 err = nc_def_var( probe_grp_id, name.data(), NC_DOUBLE, 2, probe_dim_ids,  &probe_id_field.at(name));
+                DG_RANK0 err = nc_put_att_text( probe_grp_id, probe_id_field.at(name), "long_name", long_name.size(), long_name.data());
+            }
         }
 
         ///////////////////////////////////first output/////////////////////////
@@ -664,31 +669,29 @@ int main( int argc, char* argv[])
         }
 
 
-    /// Probes FIRST output ///
+        /// Probes FIRST output ///
         size_t probe_start[] = {0, 0};
         size_t probe_count[] = {1, p.num_pins};
         time_intern[0]=time;
+        if(p.probes)
+        {
         DG_RANK0 err = nc_put_vara_double( probe_grp_id, R_pin_id, &probe_start[1], &probe_count[1], R_probe.data());
         DG_RANK0 err = nc_put_vara_double( probe_grp_id, Z_pin_id, &probe_start[1], &probe_count[1], Z_probe.data());
         DG_RANK0 err = nc_put_vara_double( probe_grp_id, phi_pin_id, &probe_start[1], &probe_count[1], phi_probe.data());
         DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &count, &time_intern[0]);
 
-        if(p.probes)
+        for( auto& record : feltor::probe_list)
         {
-            int probe_counter=0;
-            for( auto& record : feltor::probe_list)
-            {
-                record.function( resultD, var);
-                dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
-                dg::assign(simple_probes_device,simple_probes);
-                simple_probes_intern[probe_counter][0]=simple_probes;
+            record.function( resultD, var);
+            dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+            dg::assign(simple_probes_device,simple_probes);
+            simple_probes_intern.at(record.name)[0]=simple_probes;
 #ifdef WITH_MPI
-                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
+            DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
 #else
-                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+            DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
 #endif
-                probe_counter+=1;
-            }
+        }
         }
          /// End probes output ///
 
@@ -726,17 +729,15 @@ int main( int argc, char* argv[])
 
                 if(p.probes)
                 {
-                int probe_counter=0;
                 for( auto& record : feltor::probe_list)
                 {
                     record.function( resultD, var);
                     dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
                     dg::assign(simple_probes_device,simple_probes);
-                    simple_probes_intern[probe_counter][j]=simple_probes;
+                    simple_probes_intern.at(record.name)[j]=simple_probes;
                     time_intern[j]=time;
-                    probe_counter+=1;
-            }
-        }
+                }
+                }
         for( auto& m_list : equation_list)
         {
             for( auto& record : m_list)
@@ -850,7 +851,7 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
-           }
+            }
 
             for( auto& record : feltor::diagnostics1d_list)
             {
@@ -858,23 +859,21 @@ int main( int argc, char* argv[])
                 DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
             //OUTPUT OF PROBES
-             if(p.probes){
-
+            if(p.probes){
             for( unsigned j=1; j<=p.itstp; j++)
-            {probe_start[0] += 1;
-             DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern[j]);
-             int probe_counter=0;
-	     for( auto& record : feltor::probe_list)
+            {
+                probe_start[0] += 1;
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern[j]);
+                for( auto& record : feltor::probe_list)
                 {
 #ifdef WITH_MPI
-                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[probe_counter][j].data().data());
+                    DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern.at(record.name)[j].data().data());
 #else
-                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern[probe_counter][j].data());
+                    DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern.at(record.name)[j].data());
 #endif
-		probe_counter+=1;
                 }
-             }
-             }
+            }
+            }
 
             DG_RANK0 err = nc_close(ncid);
             ti.toc();

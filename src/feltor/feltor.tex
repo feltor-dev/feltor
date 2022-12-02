@@ -101,7 +101,10 @@ tensor $g_{ij}$ and volume element $\sqrt{g} := \sqrt{\det g}$.
 Given a vector field $\vec B(\vec x)$ with unit vector $\bhat(\vec x) := (\vec B/B)({\vec x})$
 we can define various differential operations.
 \begin{table*}[htbp]
-\caption{Definitions of geometric operators with $b^i$ the contra-variant components of $\bhat$ and $g^{ij}$ the contra-variant elements of the metric tensor.
+\caption{Definitions of geometric operators
+with $b^i$ the contra- and $b_i$ the co-variant components of $\bhat$,
+$\eps^{ijk}$ the Levi-Civita symbols
+and $g^{ij}$ the contra-variant elements of the metric tensor.
 % Explicit expressions of these quantities
 % depend on the choice of the magnetic field and the underlying coordinate system.
 }\label{tab:operators}
@@ -149,8 +152,6 @@ we can define various differential operations.
 \bottomrule
 \end{longtable}
 \end{table*}
-with $b^i$ the contra- and $b_i$ the co-variant components of $\bhat$, and
-$\eps^{ijk}$ the Levi-Civita symbols.
 Explicit expressions for the above expressions
 depend on the choice of the magnetic field and the underlying coordinate system.
 Note that we have
@@ -2609,8 +2610,7 @@ Furthermore, a user can specify which kind of diagnostics quantities should be c
 "fx_0" : 0.125 // where the separatrix is in relation to the $\zeta$ coordinate
 "diagnostics" :
 [
-    "1dStatics", // save variables that only depend on psi in table \ref{table:diag}.
-    "fsa1d", // save \_fsa in table \ref{table:diag}.
+    "fsa",  // save \_fsa in table \ref{table:diag}.
     "fsa2d", //  save \_fsa2d in table \ref{table:diag}.
     "cta2d", //  save \_cta in table \ref{table:diag}.
     "cta2dX", //  save \_cta2dX in table \ref{table:diag}.

@@ -234,27 +234,20 @@ int main( int argc, char* argv[])
     int dim_id1d = 0;
     err = dg::file::define_dimension( ncid_out, &dim_id1d, g1d_out, {"psi"} );
     //write 1d static vectors (psi, q-profile, ...) into file
-    for( unsigned i=0; i<config["diagnostics"].size(); i++)
+    for( auto tp : map1d)
     {
-        std::string diag = config["diagnostics"].get(i,"fsa1d").asString();
-        if(diag == "1dStatics")
-        {
-        for( auto tp : map1d)
-        {
-            int vid;
-            err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
-            err = nc_put_att_text( ncid_out, vid, "long_name",
-                std::get<2>(tp).size(), std::get<2>(tp).data());
-            err = nc_enddef(ncid_out);
-            err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
-            err = nc_redef(ncid_out);
-        }
-        if( p.calibrate )
-        {
-            err = nc_close( ncid_out);
-            return 0;
-        }
-        }
+        int vid;
+        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
+        err = nc_put_att_text( ncid_out, vid, "long_name",
+            std::get<2>(tp).size(), std::get<2>(tp).data());
+        err = nc_enddef(ncid_out);
+        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
+        err = nc_redef(ncid_out);
+    }
+    if( p.calibrate )
+    {
+        err = nc_close( ncid_out);
+        return 0;
     }
     //
     //---------------------END OF CALIBRATION-----------------------------//
@@ -327,7 +320,7 @@ int main( int argc, char* argv[])
 
 
     std::map<std::string, Entry> diag_list = {
-        {"fsa1d" , {" (Flux surface average.)", 2, dim_ids2d, false}  },
+        {"fsa" , {" (Flux surface average.)", 2, dim_ids2d, false}  },
         {"fsa2d" , {" (Flux surface average interpolated to 2d plane.)", 3, dim_ids, false} },
         {"cta2d" , {" (Convoluted toroidal average on 2d plane.)", 3, dim_ids, false}},
         {"cta2dX" , {" (Convoluted toroidal average on magnetic plane.)", 3, dim_ids2dX, false}},
@@ -344,8 +337,6 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<config["diagnostics"].size(); i++)
         {
             std::string diag = config["diagnostics"][i].asString();
-            if( diag == "1dStatics")
-                continue;
             try{
                 diag_list.at(diag).exists = true;
             }
@@ -358,7 +349,7 @@ int main( int argc, char* argv[])
         }
     }
     else // compute all diagnostics
-        for( auto entry : diag_list)
+        for( auto& entry : diag_list)
             entry.second.exists = true;
     std::map<std::string, int> IDS;
 
@@ -367,9 +358,9 @@ int main( int argc, char* argv[])
     for( auto& record : m_list) //Loop over the different variables inside each of the lists of outputs.
     for( auto entry : diag_list)
     {
-        std::string diag = entry.first;
-        if( diag == "1dStatics" || !entry.second.exists)
+        if( !entry.second.exists)
             continue;
+        std::string diag = entry.first;
         std::string record_name = record.name;
         if( record_name[0] == 'j')
             if( diag != "cta2dX")
@@ -487,7 +478,7 @@ int main( int argc, char* argv[])
                 dg::blas1::scal( transferH2d, 0.);
                 dg::blas1::scal( t2d_mp, 0.);
             }
-            if(diag_list["fsa1d"].exists)
+            if(diag_list["fsa"].exists)
             {
                 err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fsa"),
                     start1d_out, count1d, fsa1d.data());
@@ -506,8 +497,12 @@ int main( int argc, char* argv[])
             }
             if(diag_list["cta2dX"].exists)
             {
+                if( record_name[0] == 'j')
+                    record_name[1] = 's';
                 err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_cta2dX"),
                     start2d_out, count2dX, realtransferH2dX.data() ); //NEW: saving de X_grid data
+                if( record_name[0] == 'j')
+                    record_name[1] = 'v';
             }
             //4. Read 2d variable and compute fluctuations
             available = true;
