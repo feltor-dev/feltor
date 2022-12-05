@@ -2564,6 +2564,10 @@ geomfile   &     text attribute & - & verbose geometry input file as a string (v
 x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
 y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
 psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( default size: $3\cdot 64$) \\
+eta              & Coord. Var. & 1 (eta) & $\eta$-coordinate ( default size: $3\cdot 640$) \\
+xc               & Dataset & 2 (eta,psi) & Cartesian x-coordinate of the FSA grid \\
+yc               & Dataset & 2 (eta,psi) & Cartesian y-coordinate of the FSA grid\\
+vol2d            & Dataset & 2 (eta,psi) & Volume form in 2d including dG weights (can be used to integrate 2d quantities on the FSA grid; multiply by $2\pi$xc to get 3d volume)  \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
 dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
@@ -2585,7 +2589,7 @@ Z\_std\_fsa      & Dataset & 2 (time, psi) & Standard deviation of flux surface 
 Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\RA{ Z}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \RA{ Z}$ \\
 Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\RA{ Z}$ unless Z is a current, then it is the fsa evaluated $\RA{ j_v}(0)$ \\
 Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average $\sqrt{\int \d v \RA{Z}^2}$, unless Z is a current, then it is the square derivative of the flux surface average $\sqrt{\int\d v (\partial_v \RA{j^v})^2}$\\
-Z\_cta2dX  & Dataset & 3 (time, psi, theta) & Convoluted toroidal average Eq.~\eqref{eq:cta} in the magnetic plane. \\
+Z\_cta2dX  & Dataset & 3 (time, psi, eta) & Convoluted toroidal average Eq.~\eqref{eq:cta} in the magnetic plane. \\
 \bottomrule
 \label{table:diag}
 \end{longtable}

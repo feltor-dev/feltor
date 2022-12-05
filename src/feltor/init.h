@@ -259,6 +259,18 @@ dg::x::HVec make_ntilde(
                     };
                 ntilde = dg::pullback( initT, grid);
             }
+            else if( parallel == "toroidal")
+            {
+                std::function<double(double,double,double)> initT = dg::Gaussian(
+                        x0, y0, sigma, sigma, amp);
+                if( type == "circle")
+                    initT = [amp, sigma, sigma_z, x0, y0]( double x, double y, double z) {
+                        if( (x-x0)*(x-x0) + (y-y0)*(y-y0) < sigma*sigma)
+                            return amp;
+                        return 0.;
+                    };
+                ntilde = dg::pullback( initT, grid);
+            }
             else if( parallel == "step")
             {
                 double rk4eps = js.get("rk4eps", 1e-6).asDouble();

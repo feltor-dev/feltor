@@ -136,13 +136,19 @@ int main( int argc, char* argv[])
 
     /// ------------------- Compute 1d flux labels ---------------------//
 
-    std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
+    std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d, map2d;
     /// Compute flux volume label
     dg::Average<dg::HVec > poloidal_average( gridX2d, dg::coo2d::y);
     dg::HVec dvdpsip;
     //metric and map
     dg::SparseTensor<dg::HVec> metricX = gridX2d.metric();
     std::vector<dg::HVec > coordsX = gridX2d.map();
+    map2d.emplace_back( "xc", coordsX[0],
+        "x-coordinate in Cartesian coordinate system of FSA-grid");
+    map2d.emplace_back( "yc", coordsX[1],
+        "y-coordinate in Cartesian coordinate system of FSA-grid");
+    map2d.emplace_back( "vol", dg::create::volume( gridX2d),
+        "Volume form of FSA-grid");
     dg::HVec volX2d = dg::tensor::volume2d( metricX);
     dg::HVec transferH2dX(volX2d), realtransferH2dX(volX2d); //NEW: definitions
     dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
@@ -233,11 +239,23 @@ int main( int argc, char* argv[])
 
     int dim_id1d = 0;
     err = dg::file::define_dimension( ncid_out, &dim_id1d, g1d_out, {"psi"} );
+    int dim_idX[2]= { 0, dim_id1d};
+    err = dg::file::define_dimension( ncid_out, &dim_idX[0], g1d_out_eta, {"eta"} );
     //write 1d static vectors (psi, q-profile, ...) into file
     for( auto tp : map1d)
     {
         int vid;
         err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
+        err = nc_put_att_text( ncid_out, vid, "long_name",
+            std::get<2>(tp).size(), std::get<2>(tp).data());
+        err = nc_enddef(ncid_out);
+        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
+        err = nc_redef(ncid_out);
+    }
+    for( auto tp : map2d)
+    {
+        int vid;
+        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 2, dim_idX, &vid);
         err = nc_put_att_text( ncid_out, vid, "long_name",
             std::get<2>(tp).size(), std::get<2>(tp).data());
         err = nc_enddef(ncid_out);
@@ -270,8 +288,7 @@ int main( int argc, char* argv[])
     err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
 
     int dim_ids2d[2] = {dim_ids[0], dim_id1d}; //time,  psi
-    int dim_ids2dX[3]= {dim_ids[0], 0, dim_id1d}; //NEW: time,  eta, psip
-    err = dg::file::define_dimension( ncid_out, &dim_ids2dX[1], g1d_out_eta, {"eta"} ); //NEW: Name of the new 1d DIRECTION
+    int dim_ids2dX[3]= {dim_ids[0], dim_idX[0], dim_idX[1]};
     //Write long description
     std::string long_name = "Time at which 2d fields are written";
     err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
