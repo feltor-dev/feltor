@@ -37,15 +37,16 @@ namespace geo{
 // triangularity : 0.0
  * @endcode
  * @code
-// Circular flux surfaces
+// Circular/ellipsoid flux surfaces
 {
     "equilibrium" : "circular",
-    "I_0" : 20,
-    "R_0" : 10
+    "I_0" : 10,
+    "R_0" : 3,
+    "a" : 1.0,
+    "b" : 1.0
 }
 // Automatically chosen:
 // description : "standardO",
-// a : 1.0,
 // elongation : 1.0,
 // triangularity : 0.0
  * @endcode
@@ -53,8 +54,8 @@ namespace geo{
 // The guenter magnetic field
 {
     "equilibrium" : "guenter",
-    "I_0" : 20,
-    "R_0" : 10
+    "I_0" : 10,
+    "R_0" : 3
 }
 // Automatically chosen:
 // description : "square",
@@ -105,7 +106,9 @@ static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonVal
         {
             double I0 = gs.get( "I_0", 20.0).asDouble();
             double R0 = gs.get( "R_0", 10.0).asDouble();
-            return createCircularField( R0, I0);
+            double a = gs.get( "a", 1.0).asDouble();
+            double b = gs.get( "b", 1.0).asDouble();
+            return createCircularField( R0, I0, a, b);
         }
 #ifdef BOOST_VERSION
         case equilibrium::taylor:
