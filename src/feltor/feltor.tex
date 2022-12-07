@@ -2572,6 +2572,9 @@ time             & Coord. Var. & 1 (time)& time at which fields are written (var
 dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
 psi\_area        & Dataset & 1 (psi) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
+dv2ddpsip        & Dataset & 1 (psi) & $\d v/\d\psi_p$ (in the 2d poloidal plane) \\
+psi\_vol2d       & Dataset & 1 (psi) & The 2d volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} dRdZ $ \\
+psi\_arc         & Dataset & 1 (psi) & The arc length of the flux surfaces $L(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) \d R\d Z$ \\
 q-profile        & Dataset & 1 (psi) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but we assign random values outside separatrix) \\
 psi\_psi         & Dataset & 1 (psi) & explicit $\psi_p$ values; Same as psi \\
 psit1d           & Dataset & 1 (psi) & Toroidal flux (integrated q-profile) $\psi_t = \int^{\psi_p} \d\psi_p q(\psi_p)$ \\

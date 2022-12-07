@@ -150,17 +150,24 @@ int main( int argc, char* argv[])
     map2d.emplace_back( "vol", dg::create::volume( gridX2d),
         "Volume form of FSA-grid");
     dg::HVec volX2d = dg::tensor::volume2d( metricX);
-    dg::HVec transferH2dX(volX2d), realtransferH2dX(volX2d); //NEW: definitions
+    poloidal_average( volX2d, dvdpsip, false);
+    dg::blas1::scal( dvdpsip, 2.*M_PI*f0);
+    map1d.emplace_back( "dv2ddpsi", dvdpsip,
+        "Derivative of 2d flux volume (=area) with respect to flux label psi");
+    dg::direction integration_dir = psipO < psipmax ? dg::forward : dg::backward;
+    dg::HVec X_psi_vol = dg::integrate( dvdpsip, g1d_out, integration_dir);
+    map1d.emplace_back( "psi_vol2d", X_psi_vol,
+        "2d Flux volume (area) evaluated with X-point grid");
     dg::blas1::pointwiseDot( coordsX[0], volX2d, volX2d); //R\sqrt{g}
     poloidal_average( volX2d, dvdpsip, false);
     dg::blas1::scal( dvdpsip, 4.*M_PI*M_PI*f0);
     map1d.emplace_back( "dvdpsi", dvdpsip,
         "Derivative of flux volume with respect to flux label psi");
-    dg::direction integration_dir = psipO < psipmax ? dg::forward : dg::backward;
-    dg::HVec X_psi_vol = dg::integrate( dvdpsip, g1d_out, integration_dir);
+    X_psi_vol = dg::integrate( dvdpsip, g1d_out, integration_dir);
     map1d.emplace_back( "psi_vol", X_psi_vol,
         "Flux volume evaluated with X-point grid");
 
+    dg::HVec transferH2dX(volX2d), realtransferH2dX(volX2d); //NEW: definitions
     /// Compute flux area label
     dg::HVec gradZetaX = metricX.value(0,0), X_psi_area;
     dg::blas1::transform( gradZetaX, gradZetaX, dg::SQRT<double>());
@@ -169,6 +176,11 @@ int main( int argc, char* argv[])
     dg::blas1::scal( X_psi_area, 4.*M_PI*M_PI);
     map1d.emplace_back( "psi_area", X_psi_area,
         "Flux area evaluated with X-point grid");
+    dg::blas1::pointwiseDivide( gradZetaX, coordsX[0], gradZetaX); //R\sqrt{g}|\nabla\zeta|
+    poloidal_average( gradZetaX, X_psi_area, false);
+    dg::blas1::scal( X_psi_area, 2.*M_PI);
+    map1d.emplace_back( "psi_arc", X_psi_area,
+        "Psip arc length evaluated with X-point grid");
 
     dg::HVec rho = dg::evaluate( dg::cooX1d, g1d_out);
     dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
