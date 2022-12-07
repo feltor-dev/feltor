@@ -4,18 +4,18 @@
         "type": "curvilinear",
         "generator":{
             "type": "orthogonal",
-            "mode": 0,
-            "firstline" : -4.0
+            "mode": 1,
+            "firstline" : 0.1
         },
         "n" : 3,
         "Nx" : 8,
         "Ny" : 80,
         "Nz" : 20,
-        "psi": [-20,-4]
+        "psi": [0,1]
     },
     "magnetic_field":
     {
         "input" : "file",
-        "file": "geometry_params_Xpoint.json"
+        "file": "circular_params.json"
     }
 }
