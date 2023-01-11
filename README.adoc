@@ -322,14 +322,16 @@ We are now ready to compile and run a simulation program
 cd path/to/feltor/src/toefl # or any other project in the src folder
 
 make toefl device=gpu     # (compile for gpu, cpu or omp)
-./toefl <inputfile.json>  # (behold a live simulation with glfw output on screen)
+cp input/default.json inputfile.json # create an inputfile
+./toefl inputfile.json    # (behold a live simulation with glfw output on screen)
 # or
 make toefl_hpc device=gpu  # (compile for gpu, cpu or omp)
-./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
+cp input/default_hpc.json inputfile_hpc.json # create an inputfile
+./toefl_hpc inputfile_hpc.json outputfile.nc # (a single node simulation with output stored in a file)
 # or
 make toefl_mpi device=omp  # (compile for gpu, cpu or omp)
 export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI)
-echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
+echo 2 2 | mpirun -n 4 ./toefl_mpi inputfile_hpc.json outputfile.nc
 # (a multi node simulation with now in total 8 threads with output stored in a file)
 # The mpi program will wait for you to type the number of processes in x and y direction before
 # running. That is why the echo is there.

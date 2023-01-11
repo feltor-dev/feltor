@@ -1,0 +1,49 @@
+{
+    "grid":
+    {
+        "n" :  3,
+        "Nx" : 100,
+        "Ny" : 100,
+        "lx"  : 200,
+        "ly"  : 200
+    },
+    "init":
+    {
+        "amplitude"  : 1.0,
+        "sigma"  : 10,
+        "posX"  : 0.3,
+        "posY"  : 0.5,
+        "flr"  : "gamma_inv"
+    },
+    "timestepper":
+    {
+        "tableau" : "Bogacki-Shampine-4-2-3",
+        "rtol" : 1e-5,
+        "atol" : 1e-6
+    },
+    "bc" : ["DIR", "PER"],
+    "elliptic":
+    {
+        "stages" : 3,
+        "eps_pol"   : [1e-6, 1, 1],
+        "eps_gamma" : [1e-7, 1, 1],
+        "direction" : "centered"
+    },
+    "model" :
+    {
+        "type": "global",
+        "boussinesq" : false,
+        "curvature" : 0.00015,
+        "tau" : 1,
+        "nu" : 1e-6
+    },
+    "output":
+    {
+        "type" : "netcdf",
+        "tend" : 1000,
+        "maxout" : 50,
+        "n" : 3,
+        "Nx" : 100,
+        "Ny" : 100
+    }
+}
