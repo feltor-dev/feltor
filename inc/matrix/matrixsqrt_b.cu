@@ -66,7 +66,7 @@ int main(int argc, char * argv[])
 
     const Container w2d = dg::create::weights( g);
 
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered);
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( alpha,  {g, dg::centered});
     auto invert = [ eps = epsCG, pcg = dg::PCG<Container>( x, g.size())] (
             auto& A, auto& x, const auto& y) mutable
     {

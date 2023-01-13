@@ -50,10 +50,10 @@ class PolChargeN
      */
     PolChargeN( const Geometry& g, bc bcx, bc bcy,
         direction dir = forward,
-        value_type jfactor=1.)
+        value_type jfactor=1.):
+        m_gamma(-0.5, {g, bcx, bcy, dir, jfactor})
     {
         m_ell.construct(g, bcx, bcy, dir, jfactor );
-        m_gamma.construct(g, bcx, bcy, -0.5, dir, jfactor);
         dg::assign(dg::evaluate(dg::zero,g), m_phi);
         dg::assign(dg::evaluate(dg::one,g), m_temp);
 

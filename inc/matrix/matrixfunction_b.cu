@@ -54,7 +54,7 @@ int main(int argc, char * argv[])
     double min_weights = dg::blas1::reduce(w2d, max_weights, dg::AbsMin<double>() );
     std::cout << "#   min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
     const double kappa = sqrt(max_weights/min_weights); //condition number
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( g, alpha, dg::centered);
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( alpha, {g, dg::centered});
     dg::mat::UniversalLanczos<Container> lanczos( A.weights(), 20);
     auto T = lanczos.tridiag( A, A.weights(), A.weights());
     auto extremeEVs = dg::mat::compute_extreme_EV( T);

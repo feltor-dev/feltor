@@ -53,7 +53,7 @@ int main(int argc, char * argv[])
     const Container w2d = dg::create::weights( grid);
 
     Container x = dg::evaluate( lhs, grid), b(x), error(x), xexac(x);
-    dg::Helmholtz<dg::aRealMPIGeometry2d<double>, Matrix, Container> A( grid, alpha, dg::centered);
+    dg::Helmholtz<dg::aRealMPIGeometry2d<double>, Matrix, Container> A( alpha, {grid, dg::centered});
     {
         t.tic();
         dg::mat::UniversalLanczos< Container > lanczos(x, max_iter);
