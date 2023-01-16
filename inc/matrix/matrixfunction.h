@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 
+#include <boost/math/special_functions.hpp> // has to included before lapack in certain versions
 #include <cusp/transpose.h>
 #include <cusp/array1d.h>
 #include <cusp/array2d.h>
