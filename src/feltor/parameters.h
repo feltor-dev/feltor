@@ -212,12 +212,15 @@ struct Parameters
             else
                 throw std::runtime_error( "Flag "+flag+" not recognized!\n");
         }
-        
+
         //Probes
         probes = js.asJson().isMember("probes");
-        if(probes){
-                    num_pins = js["probes"]["num_pins"].asUInt();
+        if(probes)
+        {
+            num_pins = js["probes"]["num_pins"].asUInt();
         }
+        else
+            num_pins = 0;
     }
 };
 
