@@ -729,7 +729,7 @@ std::vector<Record> MassConsDiagnostics2d_list = {
     {"lniperp_tt", "Perpendicular ion diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             v.f.compute_perp_diffusiveN( 1., v.f.density(1), v.tmp[0],
-                    v.tmp[1], 1., result);
+                    v.tmp[1], 0., result);
         }
     },
     {"lniparallel_tt", "Parallel ion diffusion (Time average)", true,
