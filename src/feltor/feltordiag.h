@@ -217,7 +217,7 @@ void jacobian(
           double beta,
           Container& result)
 {
-    dg::blas1::evaluate( result, dg::Axpby(alpha,beta), Jacobian(),
+    dg::blas1::evaluate( result, dg::Axpby<double>(alpha,beta), Jacobian(),
         a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
 }
 }//namespace routines
@@ -677,38 +677,38 @@ std::vector<Record> MassConsDiagnostics2d_list = {
     {"divneuE_tt", "Divergence of ExB electron particle flux (Time average)", true,
         []( dg::x::DVec& result, Variables& v) {
             routines::dot( v.f.curv(), v.f.gradP(0), result);
-            dg::blas1::pointwiseDot( result, v.f.density(0), result)
-            routines::jacobian( 1., v.f.bhatgB(), v.f.gradP(0), v.gradN(0), 1., result);
+            dg::blas1::pointwiseDot( result, v.f.density(0), result);
+            routines::jacobian( 1., v.f.bhatgB(), v.f.gradP(0), v.f.gradN(0), 1., result);
         }
     },
     {"divniuE_tt", "Divergence of ExB ion particle flux (Time average)", true,
         []( dg::x::DVec& result, Variables& v) {
             routines::dot( v.f.curv(), v.f.gradP(1), result);
-            dg::blas1::pointwiseDot( result, v.f.density(1), result)
-            routines::jacobian( 1., v.f.bhatgB(), v.f.gradP(1), v.gradN(1), 1., result);
+            dg::blas1::pointwiseDot( result, v.f.density(1), result);
+            routines::jacobian( 1., v.f.bhatgB(), v.f.gradP(1), v.f.gradN(1), 1., result);
         }
     },
     {"divneuA_tt", "Divergence of magnetic flutter electron particle flux (Time average)", true,
         []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.f.curv(), v.f.aparallel(), result);
-            routines::dot( -1., v.f.curvKappa(), v.f.aparallel(), 1., result);
+            routines::dot( v.f.curv(), v.f.gradA(), result);
+            routines::dot( -1., v.f.curvKappa(), v.f.gradA(), 1., result);
             dg::blas1::pointwiseDot( 1., v.f.aparallel(), v.f.divCurvKappa(),
                     -1., result); //div bp
             dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0),
                     result, 0., result); // NU div bp
-            dg::blas1::evaluate( result, dg::Axpby(1., 1.),
+            dg::blas1::evaluate( result, dg::Axpby<double>(1., 1.),
                 routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
                 v.f.density(0), 1., v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
-                v.f.gradU(0)[0], v.gradU(0)[1], v.gradU(0)[2],
+                v.f.gradU(0)[0], v.f.gradU(0)[1], v.f.gradU(0)[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             ); // + N bp grad U
-            dg::blas1::evaluate( result, dg::Axpby(1., 1.),
+            dg::blas1::evaluate( result, dg::Axpby<double>(1., 1.),
                 routines::RadialParticleFlux( v.p.tau[0], v.p.mu[0]),
                 1., v.f.velocity(0), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
-                v.f.gradN(0)[0], v.gradN(0)[1], v.gradN(0)[2],
+                v.f.gradN(0)[0], v.f.gradN(0)[1], v.f.gradN(0)[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             ); // + U bp grad N
@@ -716,25 +716,25 @@ std::vector<Record> MassConsDiagnostics2d_list = {
     },
     {"divniuA_tt", "Divergence of magnetic flutter ion particle flux (Time average)", true,
         []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.f.curv(), v.f.aparallel(), result);
-            routines::dot( -1., v.f.curvKappa(), v.f.aparallel(), 1., result);
+            routines::dot( v.f.curv(), v.f.gradA(), result);
+            routines::dot( -1., v.f.curvKappa(), v.f.gradA(), 1., result);
             dg::blas1::pointwiseDot( 1., v.f.aparallel(), v.f.divCurvKappa(),
                     -1., result); //div bp
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1),
                     result, 0., result); // NU div bp
-            dg::blas1::evaluate( result, dg::Axpby(1., 1.),
+            dg::blas1::evaluate( result, dg::Axpby<double>(1., 1.),
                 routines::RadialParticleFlux( v.p.tau[1], v.p.mu[1]),
                 v.f.density(1), 1., v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
-                v.f.gradU(1)[0], v.gradU(1)[1], v.gradU(1)[2],
+                v.f.gradU(1)[0], v.f.gradU(1)[1], v.f.gradU(1)[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             ); // + N bp grad U
-            dg::blas1::evaluate( result, dg::Axpby(1., 1.),
+            dg::blas1::evaluate( result, dg::Axpby<double>(1., 1.),
                 routines::RadialParticleFlux( v.p.tau[1], v.p.mu[1]),
                 1., v.f.velocity(1), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
-                v.f.gradN(1)[0], v.gradN(1)[1], v.gradN(1)[2],
+                v.f.gradN(1)[0], v.f.gradN(1)[1], v.f.gradN(1)[2],
                 v.f.bhatgB()[0], v.f.bhatgB()[1], v.f.bhatgB()[2],
                 v.f.curvKappa()[0], v.f.curvKappa()[1], v.f.curvKappa()[2]
             ); // + U bp grad N
@@ -755,7 +755,7 @@ std::vector<Record> MassConsDiagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0),
                     v.f.velocity(0), 0., result);
             dg::blas1::pointwiseDot( v.p.mu[0], result, v.f.divCurvKappa(),
-                    0., result]);
+                    0., result);
             routines::dot( v.f.curvKappa(), v.f.gradN(0), v.tmp[1]);
             dg::blas1::pointwiseDot( v.p.mu[0], v.f.velocity(0),
                     v.f.velocity(0), v.tmp[1], 1., result);
@@ -769,7 +769,7 @@ std::vector<Record> MassConsDiagnostics2d_list = {
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1),
                     v.f.velocity(1), 0., result);
             dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.divCurvKappa(),
-                    0., result]);
+                    0., result);
             routines::dot( v.f.curvKappa(), v.f.gradN(1), v.tmp[1]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1),
                     v.f.velocity(1), v.tmp[1], 1., result);
