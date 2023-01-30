@@ -2159,6 +2159,8 @@ X and Y\_tt represent the quantities described in the tables in this section sta
     psi &$\psi$ \\
     aparallel &$A_\parallel$ & \\
     vorticity &$-\Delta_\perp\phi$ &
+    vorticity\_i & $-\Delta_\perp \psi$ \\
+     & &
     apar\_vorticity &$-\Delta_\perp A_\parallel$ \\
     dssue & $\npar^2 u_{\parallel,e}$&
     %dppue & $\partial_\varphi^2 u_{\parallel,e}$\\
@@ -2233,7 +2235,11 @@ The relevant terms in the output file are
     sne\_tt & $S_{n_e}$ &
     jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
     divjnepar\_tt & $\nc (\bhat n_e u_{e,\parallel}$) &
-    & \\
+    divneuE\_tt & $\nc ( n_e \vec u_E)$ & \\
+    divcurvne\_tt & $\nc( \tau_e \vec K n_e)$ &
+    divcurvkappane\_tt & $\nc( \mu_e n_e u_{\parallel,e}^2 \KK)$ \\
+    divneuA\_tt & $\nc (\bhat n_e u_{e,\parallel} {\vec b}_\perp)$) &
+     &  \\
     ions & $N_i$ &
     jsniC\_tt &$ N_i ( \vec u_K + \vec u_C )\cn \psi_p$ \\
     jsniA\_tt &$ N_i U_{\parallel,i} \vec{ b}_\perp  \cn \psi_p$ &
@@ -2243,7 +2249,11 @@ The relevant terms in the output file are
     sni\_tt & $S_{N_i}$ &
     jsdiai\_tt & $\tau_i \bhat \times \vn N_i \cn \psi_p /B$\\
     divjnipar\_tt & $\nc (\bhat N_i U_{i,\parallel}$) &
-      & \\
+    divniuE\_tt & $\nc ( N_i \vec u_{E,i})$ & \\
+    divcurvni\_tt & $\nc( \tau_i \vec K N_i)$ &
+    divcurvkappani\_tt & $\nc( \mu_i N_i U_{\parallel,i}^2 \KK)$ \\
+    divniuA\_tt & $\nc (\bhat N_i U_{i,\parallel} {\vec b}_\perp)$) &
+     &  \\
 \bottomrule
 \end{longtable}
 
@@ -2475,6 +2485,13 @@ The relevant terms in the output file are (the Lorentz force term is described i
     lparperp\_tt & $U_{\parallel,i} \Lambda_{N_i} + N_i\Lambda_{U_i} $ \\
     divjpare\_tt & $ \nc( -\mu_e n_e u_{\parallel,e}^2 \bhat)$ &
     divjpari\_tt & $ \nc( +\mu_i N_i U_{\parallel,i}^2 \bhat)$ \\
+    sparphii\_tt & $-N_i\npar \psi$ &
+    sparmirrori\_tt & $-\tau_i\npar N_i$ &
+    sparmirrorAi\_tt & $-\tau_i \vn A_\parallel \times \bhat \cn N_i /B$ \\
+    sparphiAi\_tt & $ -N_i \vn A_\parallel \times \bhat \cn \psi /B$ &
+    spardotAi\_tt & $ -N_i \partial A_\parallel /\partial t$ \\
+    sparKappaphii\_tt & $-\mu_i N_i U_{\parallel,i} \KK\cn \psi_i$ &
+    sparmirrorKappai\_tt & $\tau_i N_i U_{\parallel,i} \nc\KK$ \\
 \bottomrule
 \end{longtable}
 Note that the parallel viscosity term vanishes exactly under the flux-surface average. This can serve as a numerical test.

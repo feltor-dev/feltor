@@ -17,7 +17,7 @@ feltordiag: feltordiag.cu feltordiag.h
 interpolate_in_3d: interpolate_in_3d.cu feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
-feltor: feltor.cu feltor.h init.h parameters.h init_from_file.h
+feltor: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
 feltor_hpc: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h

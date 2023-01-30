@@ -1414,14 +1414,14 @@ std::vector<Record> ParallelMomDiagnostics2d_list = {
         }
     },
     //not so important
-    {"spardivKappa_tt", "Divergence Kappa Source for parallel momentum", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( -v.p.mu[1]*v.p.tau[1], v.f.density(1),
-                    v.f.velocity(1), v.f.divCurvKappa(), 0., result);
+    {"sparmirrorKappai_tt", "Generalized mirror force (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.f.density(1), v.f.velocity(1),
+                v.f.divCurvKappa(), 0., result);
         }
     },
     //not so important
-    {"sparKappaphi_tt", "Kappa Phi Source for parallel momentum", true,
+    {"sparKappaphii_tt", "Kappa Phi Source for parallel momentum", true,
         []( dg::x::DVec& result, Variables& v ) {
             routines::dot( v.f.curvKappa(), v.f.gradP(1), result);
             dg::blas1::pointwiseDot( -v.p.mu[1], v.f.density(1), v.f.velocity(1), result, 0., result);
@@ -1472,11 +1472,6 @@ std::vector<Record> ParallelMomDiagnostics2d_list = {
             dg::blas1::scal( result, v.p.tau[0]);
         }
     },
-    {"sparmirrori_tt", "Parallel ion pressure (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            dg::blas1::axpby( -v.p.tau[1], v.f.dsN(1), 0., result);
-        }
-    },
     //electric force balance usually well-fulfilled
     {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
@@ -1495,10 +1490,33 @@ std::vector<Record> ParallelMomDiagnostics2d_list = {
             dg::blas1::pointwiseDot( v.f.density(0), result, result);
         }
     },
-    //These two should be almost the same
+    // Terms of only the ion momentum equation
+    {"sparmirrori_tt", "Parallel ion pressure (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            dg::blas1::axpby( -v.p.tau[1], v.f.dsN(1), 0., result);
+        }
+    },
+    {"sparmirrorAi_tt", "Apar Mirror force term with ion density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            routines::jacobian( v.f.gradA() , v.f.bhatgB(), v.f.gradN(1), result);
+            dg::blas1::scal( result, -v.p.tau[1]);
+        }
+    },
     {"sparphii_tt", "Electric force term in ion momentum density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             dg::blas1::pointwiseDot( -1., v.f.dsP(1), v.f.density(1), 0., result);
+        }
+    },
+    {"sparphiAi_tt", "Apar Electric force in ion momentum density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            routines::jacobian( v.f.gradA() , v.f.bhatgB(), v.f.gradP(1), result);
+            dg::blas1::pointwiseDot( -1., v.f.density(1), result, 0., result);
+        }
+    },
+    {"spardotAi_tt", "Apar Electric force in ion momentum density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            v.f.compute_dot_aparallel( result);
+            dg::blas1::pointwiseDot( -1., v.f.density(1), result, 0., result);
         }
     },
     {"friction_tt", "Friction force in momentum density (Time average)", true,
