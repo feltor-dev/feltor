@@ -549,7 +549,7 @@ struct Implicit
     {
         m_eqs[0]( t, omega, omS);
     }
-    void operator()(double t, double alpha, Container& omega, const Container& omS)
+    void operator()(double alpha, double time, Container& omega, const Container& omS)
     {
         // Note how the operators and solvers hold these as references
         // so they know when they are updated
