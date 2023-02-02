@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
+#include "generator.h"
 #include "generatorX.h"
 #include "utilitiesX.h"
 
@@ -347,6 +348,52 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     CylindricalFunctorsLvl2 psi_;
     CylindricalSymmTensorLvl1 chi_;
     dg::geo::detail::SeparatriX sep_;
+};
+
+/**
+ * @brief An Adaptor to use SeparatrixOrthogonal as \c aGenerator2d instead of \c aGeneratorX2d
+ *
+ * Generate the same grid as SeparatrixOrthogonal but without private flux region
+ * @ingroup generators_geo
+ */
+struct SeparatrixOrthogonalAdaptor : public aGenerator2d
+{
+    ///@copydoc SeparatrixOrthogonal::SeparatrixOrthogonal
+    ///@param fx fraction of points in the scrape-off layer.
+    ///fx must evenly divide the number of grid points Nx and determines \f$ \psi_1 = -\frac{f_x}{1-f_x}\psi_0\f$
+    ///Its purpose is to guarantee that the separatrix falls on a cell boundary
+    SeparatrixOrthogonalAdaptor( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+            double xX, double yX, double x0, double y0, int firstline, bool verbose = false, double fx = 0 ):
+            m_fx(fx),
+            m_sep( psi, chi, psi_0, xX, yX, x0, y0, firstline, verbose) { }
+    virtual SeparatrixOrthogonalAdaptor* clone() const override final{return new SeparatrixOrthogonalAdaptor(*this);}
+    private:
+    virtual double do_width() const override final{
+        return m_sep.zeta1(m_fx) - m_sep.zeta0(m_fx);
+    }
+    virtual double do_height() const override final{return 2.*M_PI;}
+    virtual bool do_isOrthogonal()const override final{return false;}
+    virtual void do_generate(
+         const thrust::host_vector<double>& zeta1d,
+         const thrust::host_vector<double>& eta1d,
+         thrust::host_vector<double>& x,
+         thrust::host_vector<double>& y,
+         thrust::host_vector<double>& zetaX,
+         thrust::host_vector<double>& zetaY,
+         thrust::host_vector<double>& etaX,
+         thrust::host_vector<double>& etaY) const override final
+    {
+         double zeta0 = m_sep.zeta0(m_fx);
+         auto zeta1d_trafo(zeta1d);
+         // zeta1d is given between [0; zeta1-zeta0] and must be transformed to [zeta0; zeta1]
+         for( unsigned i=0; i<zeta1d.size(); i++)
+             zeta1d_trafo[i] += zeta0;
+         if( !dg::is_divisable( (double)zeta1d.size(), 1./m_fx ))
+             throw dg::Error( dg::Message(_ping_) << "Size of zeta1d "<<zeta1d.size()<<"is not divisable by fx "<<m_fx);
+         m_sep.generate( zeta1d_trafo, eta1d, 0, eta1d.size(), x, y, zetaX, zetaY, etaX, etaY);
+    }
+    double m_fx;
+    SeparatrixOrthogonal m_sep;
 };
 
 }//namespace geo
