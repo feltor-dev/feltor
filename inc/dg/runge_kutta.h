@@ -955,14 +955,14 @@ inline bool is_same( float x, float y, float eps = 1e-6)
 {
     return fabsf(x - y) < eps * std::max(1.0f, std::max( fabsf(x), fabsf(y)));
 }
-/// Checks if two number are integer divisable within accuracy
+/// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
 /// @ingroup misc
 inline bool is_divisable( double a, double b, double eps = 1e-15)
 {
     return is_same( round(a/b)*b, a);
 }
-/// Checks if two number are integer divisable within accuracy
+/// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
 /// @ingroup misc
 inline bool is_divisable( float a, float b, float eps = 1e-6)
