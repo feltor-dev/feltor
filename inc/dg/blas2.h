@@ -339,7 +339,7 @@ dg::DVec x( 100,2), y(100,4);
 unsigned N = 100;
 double hx = 1.;
 // implement forward difference with periodic boundaries
-dg::blas1::subroutine( [&]DG_DEVICE( unsigned i, const double* x, double* y){
+dg::blas1::parallel_for( [&]DG_DEVICE( unsigned i, const double* x, double* y){
     unsigned ip = (i+1)%N;
     y[i] = (x[ip] - x[i])/hx;
 }, N, x, y);
