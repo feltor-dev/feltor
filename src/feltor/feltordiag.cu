@@ -53,6 +53,7 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cerr << e.what()<<std::endl;
         return -1;
     }
+    std::string configfile = config.asJson().toStyledString();
 
     //-------------------Construct grids-------------------------------------//
 
@@ -93,7 +94,7 @@ int main( int argc, char* argv[])
     // Construct weights and temporaries
 
     dg::HVec transferH2d = dg::evaluate(dg::zero,g2d_out);
-    dg::HVec t2d_mp = dg::evaluate(dg::zero,g2d_out);
+    dg::HVec cta2d_mp = dg::evaluate(dg::zero,g2d_out);
 
 
     ///--------------- Construct X-point grid ---------------------//
@@ -117,11 +118,28 @@ int main( int argc, char* argv[])
     double psipmax = -fx_0/(1.-fx_0)*psipO;
     std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
     std::cout << "Generate orthogonal flux-aligned grid ... \n";
-    dg::geo::SimpleOrthogonal generator(mag.get_psip(),
+    std::unique_ptr<dg::geo::aGenerator2d> generator;
+    if( !(mag.params().getDescription() == dg::geo::description::standardX))
+        generator = std::make_unique<dg::geo::SimpleOrthogonal>(
+            mag.get_psip(),
             psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO,
             mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
-    dg::geo::CurvilinearGrid2d gridX2d (generator,
+    else
+    {
+
+        double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+        double ZX = -1.1*mag.params().elongation()*mag.params().a();
+        dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+        const double psipX = mag.psip()( RX, ZX);
+        std::cout << "X-point set at "<<RX<<" "<<ZX<<" with Psi_p = "<<psipX<<"\n";
+        dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
+        generator = std::make_unique<dg::geo::SeparatrixOrthogonalAdaptor>(
+            mag.get_psip(), monitor_chi,
+            psipO<psipmax ? psipO : psipmax,
+            RX, ZX, mag.R0(), 0, 1, false, fx_0);
+    }
+    dg::geo::CurvilinearGrid2d gridX2d (*generator,
             npsi, Npsi, Neta, dg::DIR, dg::PER);
     std::cout << "DONE!\n";
     dg::Grid1d g1d_out(psipO<psipmax ? psipO : psipmax,
@@ -167,7 +185,7 @@ int main( int argc, char* argv[])
     map1d.emplace_back( "psi_vol", X_psi_vol,
         "Flux volume evaluated with X-point grid");
 
-    dg::HVec transferH2dX(volX2d), realtransferH2dX(volX2d); //NEW: definitions
+    dg::HVec transferH2dX(volX2d), cta2dX(volX2d); //NEW: definitions
     /// Compute flux area label
     dg::HVec gradZetaX = metricX.value(0,0), X_psi_area;
     dg::blas1::transform( gradZetaX, gradZetaX, dg::SQRT<double>());
@@ -203,8 +221,8 @@ int main( int argc, char* argv[])
     map1d.emplace_back("psi_psi",    dg::evaluate( dg::cooX1d, g1d_out),
         "Poloidal flux label psi (same as coordinate)");
     dg::HVec psit = dg::integrate( qprofile, g1d_out, integration_dir);
-    std::cout << "q-pfo "<<qprofile[10]<<"\n";
-    std::cout << "Psi_t "<<psit[10]<<"\n";
+    //std::cout << "q-pfo "<<qprofile[10]<<"\n";
+    //std::cout << "Psi_t "<<psit[10]<<"\n";
     map1d.emplace_back("psit1d", psit,
         "Toroidal flux label psi_t integrated using q-profile");
     //we need to avoid integrating >=0 for total psi_t
@@ -215,9 +233,9 @@ int main( int argc, char* argv[])
     double psit_tot = dg::blas1::dot( w1d, qprofile);
     if( integration_dir == dg::backward)
         psit_tot *= -1;
-    std::cout << "q-pfo "<<qprofile[10]<<"\n";
-    std::cout << "Psi_t "<<psit[10]<<"\n";
-    std::cout << "total "<<psit_tot<<"\n";
+    //std::cout << "q-pfo "<<qprofile[10]<<"\n";
+    //std::cout << "Psi_t "<<psit[10]<<"\n";
+    //std::cout << "total "<<psit_tot<<"\n";
     dg::blas1::scal ( psit, 1./psit_tot);
     dg::blas1::transform( psit, psit, dg::SQRT<double>());
     map1d.emplace_back("rho_t", psit,
@@ -245,6 +263,7 @@ int main( int argc, char* argv[])
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
+    att["configfile"] = configfile;
     for( auto pair : att)
         err = nc_put_att_text( ncid_out, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
@@ -284,7 +303,8 @@ int main( int argc, char* argv[])
     //
     // interpolate from 2d grid to X-point points
     dg::IHMatrix grid2gridX2d  = dg::create::interpolation(
-        coordsX[0], coordsX[1], g2d_out);
+        coordsX[0], coordsX[1], g2d_out, dg::NEU, dg::NEU,
+        config.get("x-grid-interpolation","dg").asString());
     // interpolate fsa back to 2d or 3d grid
     dg::IHMatrix fsa2rzmatrix = dg::create::interpolation(
         psipog2d, g1d_out, dg::DIR_NEU);
@@ -409,15 +429,21 @@ int main( int argc, char* argv[])
     }
 
     std::cout << "Construct Fieldaligned derivative ... \n";
+    std::string fsa_mode = config.get( "fsa", "convoluted-toroidal-average").asString();
 
     auto bhat = dg::geo::createBHat( mod_mag);
-    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
-        bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(), //let's take NEU bc because N is not homogeneous
-        p.rk4eps, 5, 5, -1, "dg");
+    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned;
+    if( fsa_mode == "convoluted-toroidal-average" || diag_list["cta2d"].exists
+            || diag_list["cta2dX"].exists)
+    {
+        fieldaligned.construct(
+            bhat, g3d_fine, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
+            p.rk4eps, 5, 5, -1,
+            config.get("cta-interpolation","dg").asString());
+    }
     /////////////////////////////////////////////////////////////////////////
     size_t counter = 0;
     int ncid;
-    std::string fsa_mode = config.get( "fsa", "convoluted-toroidal-average").asString();
     std::cout << "Using flux-surface-average mode: "<<fsa_mode << "\n";
     for( int j=2; j<argc-1; j++)
     {
@@ -475,15 +501,20 @@ int main( int argc, char* argv[])
             {
                 err = nc_get_vara_double( ncid, dataID,
                     start2d, count2d, transferH2d.data());
-                dg::DVec transferD2d = transferH2d;
-                fieldaligned.integrate_between_coarse_grid( g3d, transferD2d, transferD2d);
-                t2d_mp = transferD2d; //save toroidal average
+                if( fsa_mode == "convoluted-toroidal-average" || diag_list["cta2d"].exists
+                        || diag_list["cta2dX"].exists)
+                {
+                    dg::DVec transferD2d = transferH2d;
+                    fieldaligned.integrate_between_coarse_grid( g3d, transferD2d, transferD2d);
+                    cta2d_mp = transferD2d; //save toroidal average
+                    if( fsa_mode == "convoluted-toroidal-average" || diag_list["cta2dX"].exists)
+                        dg::blas2::symv( grid2gridX2d, cta2d_mp, cta2dX); //interpolate convoluted average onto X-point grid
+                }
                 //2. Compute fsa and output fsa
                 if( fsa_mode == "convoluted-toroidal-average")
-                    dg::blas2::symv( grid2gridX2d, t2d_mp, transferH2dX); //interpolate convoluted average onto X-point grid
+                    dg::blas1::copy( cta2dX, transferH2dX);
                 else
                     dg::blas2::symv( grid2gridX2d, transferH2d, transferH2dX); //interpolate simple average onto X-point grid
-                realtransferH2dX=transferH2dX; //NEW: Define the 2dX grid data
                 dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
                 try{
                     poloidal_average( transferH2dX, t1d, false); //average over eta
@@ -505,7 +536,8 @@ int main( int argc, char* argv[])
             {
                 dg::blas1::scal( fsa1d, 0.);
                 dg::blas1::scal( transferH2d, 0.);
-                dg::blas1::scal( t2d_mp, 0.);
+                dg::blas1::scal( cta2d_mp, 0.);
+                dg::blas1::scal( cta2dX, 0.);
             }
             if(diag_list["fsa"].exists)
             {
@@ -517,19 +549,19 @@ int main( int argc, char* argv[])
                 err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fsa2d"),
                     start2d_out, count2d, transferH2d.data() );
             }
-            if( record_name[0] == 'j')
-                dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );//make it jv
             if(diag_list["cta2d"].exists)
             {
+                if( record_name[0] == 'j')
+                    dg::blas1::pointwiseDot( cta2d_mp, dvdpsip2d, cta2d_mp );//make it jv
                 err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_cta2d"),
-                    start2d_out, count2d, t2d_mp.data() );
+                    start2d_out, count2d, cta2d_mp.data() );
             }
             if(diag_list["cta2dX"].exists)
             {
                 if( record_name[0] == 'j')
                     record_name[1] = 's';
                 err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_cta2dX"),
-                    start2d_out, count2dX, realtransferH2dX.data() ); //NEW: saving de X_grid data
+                    start2d_out, count2dX, cta2dX.data() ); //NEW: saving de X_grid data
                 if( record_name[0] == 'j')
                     record_name[1] = 'v';
             }
@@ -550,10 +582,10 @@ int main( int argc, char* argv[])
             if( available)
             {
                 err = nc_get_vara_double( ncid, dataID, start2d, count2d,
-                    t2d_mp.data());
+                    cta2d_mp.data());
                 if( record_name[0] == 'j')
-                    dg::blas1::pointwiseDot( t2d_mp, dvdpsip2d, t2d_mp );
-                dg::blas1::axpby( 1.0, t2d_mp, -1.0, transferH2d);
+                    dg::blas1::pointwiseDot( cta2d_mp, dvdpsip2d, cta2d_mp );
+                dg::blas1::axpby( 1.0, cta2d_mp, -1.0, transferH2d);
                 if(diag_list["fluc2d"].exists)
                 {
                     err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fluc2d"),

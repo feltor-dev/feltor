@@ -601,7 +601,7 @@ struct Fieldaligned
     * divide \c Nz from input grid). The x and y dimensions must be equal to
     * the input grid.
     * @param coarse the 2d input vector
-    * @param out the integral (2d vector)
+    * @param out the integral (2d vector, may alias coarse)
     */
     void integrate_between_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse, container& out );
 
