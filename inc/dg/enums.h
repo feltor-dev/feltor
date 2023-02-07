@@ -95,6 +95,7 @@ static inline bc inverse( bc bound)
 
 ///@brief Direction of a discrete derivative
 enum direction{
+    none, //!< naive derivative (only current cell is used)
     forward, //!< forward derivative (cell to the right and current cell)
     backward, //!< backward derivative (cell to the left and current cell)
     centered //!< centered derivative (cell to the left and right and current cell)
@@ -105,6 +106,7 @@ enum direction{
  * @brief convert a string to a direction
  *
  * converts
+ * - "none" to none
  * - "forward" to forward
  * - "backward" to backward
  * - "centered" to centered
@@ -115,6 +117,8 @@ enum direction{
  */
 static inline direction str2direction( std::string s)
 {
+    if( "none" == s)
+        return none;
     if( "forward" == s)
         return forward;
     if( "backward" == s)
@@ -127,6 +131,7 @@ static inline direction str2direction( std::string s)
  * @brief convert a direciton to string
  *
  * converts
+ * - none to "none"
  * - forward to "forward"
  * - backward to "backward"
  * - centered to "centered"
@@ -139,6 +144,7 @@ static inline std::string direction2str( enum direction dir)
     std::string s;
     switch(dir)
     {
+        case(dg::none): s = "none"; break;
         case(dg::forward): s = "forward"; break;
         case(dg::backward): s = "backward"; break;
         case(dg::centered): s = "centered"; break;
@@ -151,10 +157,11 @@ static inline std::string direction2str( enum direction dir)
  * @brief invert direction
  *
  * @param dir direction to invert
- * @return backward for forward, forward for backward, centered for centered
+ * @return none for none, backward for forward, forward for backward, centered for centered
  */
 static inline direction inverse( direction dir)
 {
+    if( dir == none) return none;
     if( dir == forward) return backward;
     if( dir == backward) return forward;
     return centered;
