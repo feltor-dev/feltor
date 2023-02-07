@@ -172,6 +172,7 @@ struct Explicit
     }
     void compute_lapMperpA ( Container& result)
     {
+        // only if lapperpU has same direction as lapperpP
         dg::blas2::gemv( m_lapperpU, m_apar, result);
     }
     const Container& get_source() const{
@@ -564,9 +565,9 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
-    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER,  m_p.diff_dir),
-    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER,  m_p.diff_dir),
-    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER,  dg::centered),
+    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER,  p.diff_dir),
+    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER,  p.diff_dir),
+    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER,  p.pol_dir),
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
     m_lapperpP.set_chi( m_hh);
@@ -637,14 +638,14 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dxB_N( dg::create::dx( g, p.bcxN, dg::backward) ),
     m_dxF_U( dg::create::dx( g, p.bcxU, dg::forward) ),
     m_dxB_U( dg::create::dx( g, p.bcxU, dg::backward) ),
-    m_dx_P(  dg::create::dx( g, p.bcxP, dg::centered) ),
-    m_dx_A(  dg::create::dx( g, p.bcxA, dg::centered) ),
+    m_dx_P(  dg::create::dx( g, p.bcxP, p.pol_dir) ),
+    m_dx_A(  dg::create::dx( g, p.bcxA, p.pol_dir) ),
     m_dyF_N( dg::create::dy( g, p.bcyN, dg::forward) ),
     m_dyB_N( dg::create::dy( g, p.bcyN, dg::backward) ),
     m_dyF_U( dg::create::dy( g, p.bcyU, dg::forward) ),
     m_dyB_U( dg::create::dy( g, p.bcyU, dg::backward) ),
-    m_dy_P(  dg::create::dy( g, p.bcyP, dg::centered) ),
-    m_dy_A(  dg::create::dy( g, p.bcyA, dg::centered) ),
+    m_dy_P(  dg::create::dy( g, p.bcyP, p.pol_dir) ),
+    m_dy_A(  dg::create::dy( g, p.bcyA, p.pol_dir) ),
     m_dz( dg::create::dz( g, dg::PER) ),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
@@ -1052,7 +1053,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_density(
     {
         ////////////////////perpendicular dynamics////////////////////////
         double mu = m_p.mu[i], tau = m_p.tau[i], beta = m_p.beta;
-        dg::blas1::subroutine( [mu, tau, beta] DG_DEVICE (
+        dg::direction diff_dir = m_p.diff_dir;
+        dg::blas1::subroutine( [mu, tau, beta, diff_dir] DG_DEVICE (
                 double N, double d0FN, double d1FN, double d2FN,
                           double d0BN, double d1BN, double d2BN,
                 double U, double d0FU, double d1FU, double d2FU,
@@ -1092,9 +1094,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_density(
                 dtN += ( v1 > 0 ) ? -v1*d1BN : -v1*d1FN;
                 dtN += ( v2 > 0 ) ? -v2*d2BN : -v2*d2FN;
 
-                // use centered derivatives
-                double KappaU = ( curvKappa0*(d0FU+d0BU)+curvKappa1*(d1FU+d1BU)
-                        +curvKappa2*(d2FU+d2BU) ) / 2.;
+                double d0U = 0, d1U = 0, d2U = 0;
+                if( diff_dir == dg::forward)
+                    d0U = d0FU, d1U = d1FU, d2U = d2FU;
+                else if( diff_dir == dg::backward)
+                    d0U = d0BU, d1U = d1BU, d2U = d2BU;
+                else
+                    d0U = (d0FU+d0BU)/2., d1U = (d1FU+d1BU)/2.,
+                        d2U = (d2FU+d2BU) / 2.;
+
+                double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
                 double KP = curv0*d0P+curv1*d1P+curv2*d2P;
 
                 dtN +=  - N * ( KP + mu * U * U * divCurvKappa
@@ -1105,9 +1114,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_density(
                                      - (curv0-curvKappa0)*d0A
                                      - (curv1-curvKappa1)*d1A
                                      - (curv2-curvKappa2)*d2A;
-                    double bpU = bp0*( d0FU + d0BU) / 2. +
-                                 bp1*( d1FU + d1BU) / 2. +
-                                 bp2*( d2FU + d2BU) / 2.;
+                    double bpU = bp0*d0U + bp1*d1U + bp2*d2U;
                     dtN +=  -N*( U*divbp + bpU);
                 }
                 return;
@@ -1143,7 +1150,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_velocity(
     {
         ////////////////////perpendicular dynamics////////////////////////
         double mu = m_p.mu[i], tau = m_p.tau[i], beta = m_p.beta;
-        dg::blas1::subroutine( [mu, tau, beta] DG_DEVICE (
+        dg::direction diff_dir = m_p.diff_dir;
+        dg::blas1::subroutine( [mu, tau, beta, diff_dir] DG_DEVICE (
                 double N, double d0FN, double d1FN, double d2FN,
                           double d0BN, double d1BN, double d2BN,
                 double U, double d0FU, double d1FU, double d2FU,
@@ -1187,18 +1195,23 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_velocity(
                 dtU += ( v1 > 0 ) ? -v1*d1BU : -v1*d1FU;
                 dtU += ( v2 > 0 ) ? -v2*d2BU : -v2*d2FU;
 
+                double d0N = 0, d1N = 0, d2N = 0;
+                if( diff_dir == dg::forward)
+                    d0N = d0FN, d1N = d1FN, d2N = d2FN;
+                else if( diff_dir == dg::backward)
+                    d0N = d0BN, d1N = d1BN, d2N = d2BN;
+                else
+                    d0N = (d0FN+d0BN)/2., d1N = (d1FN+d1BN)/2.,
+                        d2N = (d2FN+d2BN)/2.;
                 // use centered derivatives
-                double KappaN = ( curvKappa0*(d0FN+d0BN)+curvKappa1*(d1FN+d1BN)
-                        +curvKappa2*(d2FN+d2BN) ) / 2.;
+                double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
                 double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
 
                 dtU +=  - U * ( 2. * tau * KappaN / N + tau * divCurvKappa
                                 + KappaP);
                 if( beta != 0)
                 {
-                    double bpN = bp0*( d0FN + d0BN) / 2. +
-                                 bp1*( d1FN + d1BN) / 2. +
-                                 bp2*( d2FN + d2BN) / 2.;
+                    double bpN = bp0 * d0N + bp1 * d1N + bp2 * d2N;
                     double bpP = bp0 * d0P + bp1 * d1P + bp2 * d2P;
                     dtU +=  - bpP/mu - tau/mu * bpN/N;
                 }

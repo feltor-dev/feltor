@@ -589,11 +589,11 @@ std::vector<Record> basicDiagnostics2d_list = {
     },
     // Does not work due to direct application of Laplace
     // The Laplacian of Aparallel looks smooth in paraview
-    //{"apar_vorticity", "Minus Lap_perp of magnetic potential", false,
-    //    []( dg::x::DVec& result, Variables& v ) {
-    //        v.f.compute_lapMperpA( result);
-    //    }
-    //},
+    {"apar_vorticity", "Minus Lap_perp of magnetic potential", false,
+        []( dg::x::DVec& result, Variables& v ) {
+            v.f.compute_lapMperpA( result);
+        }
+    },
     {"dssue", "2nd parallel derivative of electron velocity", false,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::copy( v.f.dssU( 0), result);
@@ -1575,8 +1575,8 @@ std::vector<Record> COCEDiagnostics2d_list = {
 
     {"v_Omega_E", "Electric PCD", false, //CHECKED
         []( dg::x::DVec& result, Variables& v) {
-        dg::blas1::pointwiseDot(v.f.binv(), v.f.binv(), v.tmp2[0]);
-        dg::blas1::pointwiseDot(v.tmp2[0], v.f.density(0), v.tmp2[0]);
+        dg::blas1::pointwiseDot(1., v.f.binv(), v.f.binv(), v.f.density(0), 0.,
+                v.tmp2[0]);
         routines::scal(v.tmp2[0], v.f.gradP(0), v.tmp); //ne grad(phi)/B^2
         v.nabla.div(v.tmp[0], v.tmp[1], result);
         dg::blas1::scal( result, v.p.mu[1]);
@@ -1584,8 +1584,8 @@ std::vector<Record> COCEDiagnostics2d_list = {
     },
      {"v_Omega_E_gf", "Electric PCD GF", false, //CHECKED
         []( dg::x::DVec& result, Variables& v) {
-        dg::blas1::pointwiseDot(v.f.binv(), v.f.binv(), v.tmp2[0]);
-        dg::blas1::pointwiseDot(v.tmp2[0], v.f.density(1), v.tmp2[0]);
+        dg::blas1::pointwiseDot(1., v.f.binv(), v.f.binv(), v.f.density(1), 0.,
+                v.tmp2[0]);
         routines::scal(v.tmp2[0], v.f.gradP(0), v.tmp); //Ni grad(phi)/B^2
         v.nabla.div(v.tmp[0], v.tmp[1], result);
         dg::blas1::scal( result, v.p.mu[1]);
