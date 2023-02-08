@@ -597,13 +597,13 @@ int main( int argc, char* argv[])
                 {
                     dg::blas2::symv( dpsi, fsa1d, t1d);
                     dg::blas1::pointwiseDivide( t1d, dvdpsip, transfer1d);
-                    result = dg::interpolate( dg::xspace, fsa1d, -1e-12, g1d_out);
+                    result = dg::interpolate( dg::xspace, fsa1d, psipO < psipmax ? -1e-12 : 1e-12, g1d_out);
                 }
                 else
                 {
                     dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
                     transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
-                    result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out); //make sure to take inner cell for interpolation
+                    result = dg::interpolate( dg::xspace, transfer1d, psipO < psipmax ? -1e-12 : 1e-12, g1d_out); //make sure to take inner cell for interpolation
                 }
                 if(diag_list[ "ifs"].exists)
                 {
