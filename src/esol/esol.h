@@ -199,9 +199,6 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     m_multi_chi= m_multigrid.project( m_chi);
     m_multi_iota= m_multigrid.project( m_chi);
     m_multi_elliptic.resize(3);
-    m_multi_g1.resize(3);
-    m_multi_g1dag.resize(3);
-    m_multi_g0.resize(3);
     m_adv.construct(grid,p.bc_N_x, p.bc_y);
     m_centered[0] = dg::create::dx( grid, grid.bcx(), dg::centered);
     m_centeredN = dg::create::dx( grid, p.bc_N_x, dg::centered);
@@ -209,9 +206,9 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     for( unsigned u=0; u<3; u++)
     {
         m_multi_elliptic[u].construct( m_multigrid.grid(u), dg::centered, p.jfactor);
-        m_multi_g0[u].construct( m_multigrid.grid(u), -p.tau[1], dg::centered, p.jfactor);
-        m_multi_g1[u].construct( m_multigrid.grid(u), -0.5*p.tau[1], dg::centered, p.jfactor);     
-        m_multi_g1dag[u].construct( m_multigrid.grid(u), p.bc_N_x, p.bc_y, -0.5*p.tau[1], dg::centered, p.jfactor);
+        m_multi_g0.push_back( {-p.tau[1], {m_multigrid.grid(u), dg::centered, p.jfactor}});
+        m_multi_g1.push_back( {-0.5*p.tau[1], {m_multigrid.grid(u), dg::centered, p.jfactor}});
+        m_multi_g1dag.push_back( {-0.5*p.tau[1], {m_multigrid.grid(u), p.bc_N_x, p.bc_y, dg::centered, p.jfactor}});
     }
     //m_sqrtsolve.construct( m_multi_g0[0], grid, m_chi,  p.eps_cauchy, p.maxiter_sqrt, p.maxiter_cauchy,  p.eps_gamma0);
     m_sqrt.construct( m_multi_g0[0], +1, m_volume, p.eps_gamma0, 1., p.maxiter_sqrt, p.maxiter_cauchy);
