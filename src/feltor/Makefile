@@ -53,4 +53,4 @@ doc:
 	pdflatex -shell-escape feltor.tex
 
 clean:
-	rm -f feltor feltor_hpc feltor_mpi manufactured manufactured_perp manufactured_para feltordiag interpolate_in_3d
+	rm -f feltor feltor_hpc feltor_mpi manufactured manufactured_perp manufactured_para feltordiag interpolate_in_3d feltor.bbl feltor.blg feltor.aux feltor.log feltor.out feltor.toc
