@@ -77,7 +77,7 @@ int main()
     dg::DVec error( solution);
     dg::exblas::udouble res;
 
-    //std::cout << "Create Polarisation object and set chi!\n";
+    std::cout << "Create Polarisation object and set chi!\n";
     {
     std::cout << "Centered Elliptic Multigrid\n";
     //! [multigrid]
@@ -138,7 +138,7 @@ int main()
     x = temp;
     //![pcg]
     //create an Elliptic object
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::centered, jfactor);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::forward, jfactor);
 
     //Set the chi function (chi is a dg::DVec of size grid.size())
     pol_forward.set_chi( chi);
@@ -164,6 +164,10 @@ int main()
     err = dg::blas2::dot( w2d, error);
     const double norm_var = dg::blas2::dot( w2d, variatio);
     std::cout << " "<<sqrt( err/norm_var) << "\n";
+    std::cout << "Compute direct application of forward Elliptic (supraconvergence)\n";
+    dg::apply( pol_forward, solution, x);
+    dg::blas1::axpby( 1.,x,-1., b, error);
+    std::cout << " "<<sqrt( dg::blas2::dot( w2d, error)) << "\n";
     // NOW TEST LGMRES AND BICGSTABl
     unsigned inner_m = 30, outer_k = 3;
     //std::cout << " Type inner and outer iterations (30 3)!\n";
@@ -274,6 +278,10 @@ int main()
         double err = dg::blas2::dot( w1d, x);
         err = sqrt( err/norm1d); res.d = err;
         std::cout << " "<<err<<"\n";
+        std::cout << "Compute direct application of 1d Elliptic (supraconvergence)\n";
+        dg::apply( pol1d, sol1d, x);
+        dg::blas1::axpby( 1.,x,-1., b, x);
+        std::cout << " "<<sqrt( dg::blas2::dot( w1d, x)) << "\n";
 
     }
 
