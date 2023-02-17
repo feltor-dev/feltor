@@ -45,5 +45,65 @@ struct GAMMA0
     }
 };
 
+
+/**
+ * @brief \f$ f(x) = (\exp(x) - 1)/x\f$
+ *
+ * Accurate evaluation close to and at 0
+ * @tparam T value type
+ */
+template<class T>
+T phi1( T x){
+    if ( fabs( x) < 1e-16 )
+        return 1.;
+    if ( fabs(x) < 1)
+        return expm1( x)/x;
+    return (exp( x) - 1)/x;
+}
+
+/**
+ * @brief \f$ f(x) = (\exp(x) - x - 1)/x^2\f$
+ *
+ * Accurate evaluation close to and at 0
+ * @tparam T value type
+ */
+template<class T>
+T phi2( T x){
+    if ( fabs( x) < 1e-16 )
+        return 1./2;
+    if ( fabs(x) < 1e-3)
+        return 0.5+x*(1+x/4.)/6.;
+    return ((exp( x) - 1)/x - 1)/x;
+}
+
+/**
+ * @brief \f$ f(x) = (\exp(x) - x^2/2 -x- 1)/x^3\f$
+ *
+ * Accurate evaluation close to and at 0
+ * @tparam T value type
+ */
+template<class T>
+T phi3( T x){
+    if ( fabs( x) < 1e-16 )
+        return 1./6.;
+    if ( fabs(x) < 1e-2)
+        return 1./6. + x*(1.+x/5.)/24.;
+    return (((exp( x) - 1)/x - 1)/x-1./2.)/x;
+}
+/**
+ * @brief \f$ f(x) = (\exp(x) - x^3/6 - x^2/2 -x- 1)/x^4\f$
+ *
+ * Accurate evaluation close to and at 0
+ * @tparam T value type
+ */
+template<class T>
+T phi4( T x){
+    if ( fabs( x) < 1e-16 )
+        return 1./24.;
+    if ( fabs(x) < 1e-2)
+        return 1./24. + x*(1.+x/6.)/120;
+    return ((((exp( x) - 1)/x - 1)/x-1./2.)/x-1./6.)/x;
+}
+
 }//namespace mat
 }//namespace dg

@@ -12,6 +12,8 @@
  *     @defgroup matrixfunctionapproximation Matrix-functions
  *       approximation
  *      @brief \f$ x \approx f(A)b \f$
+ *     @defgroup exp_int Exponential integrators
+ *      @brief \f$ \dot y = Ay + \hat E(t,y)\f$
  * @}
  *
  * @defgroup matrixnumerical1 Level 4: Advanced numerical schemes
