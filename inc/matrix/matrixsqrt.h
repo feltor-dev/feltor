@@ -157,9 +157,9 @@ struct MatrixFunction
             const ContainerType& weights, value_type eps_rel,
             value_type nrmb_correction  = 1.,
             unsigned max_iter = 500,
-            std::function<value_type(value_type)> f_inner = [](value_type x){return x},
+            std::function<value_type(value_type)> f_inner = [](value_type x){return x;}
             ) : m_weights(weights),
-    m_f_finner(f_inner), m_cauchy( cauchy_steps), m_eps(eps_rel),
+        m_f_inner(f_inner), m_eps(eps_rel),
         m_abs(nrmb_correction)
     {
         m_A = [&]( const ContainerType& x, ContainerType& y){
@@ -190,10 +190,10 @@ struct MatrixFunction
     }
 
     /**
-     * @brief Apply matrix sqrt
+     * @brief Apply matrix function
      *
      * @param b input vector
-     * @param x output vector, contains \f$ x = A^{\pm 1/2} \vec b\f$
+     * @param x output vector, contains \f$ x = f(A) \vec b\f$
      */
     template<class UnaryOp, class ContainerType0, class ContainerType1>
     void operator()( UnaryOp f_outer, const ContainerType0 b, ContainerType1& x)
@@ -217,7 +217,7 @@ struct MatrixFunction
     std::function< void( const ContainerType&, ContainerType&)> m_A;
     std::array<value_type, 2> m_EVs;
     std::function<value_type(value_type)> m_f_inner;
-    unsigned m_number, m_cauchy;
+    unsigned m_number;
     value_type m_eps, m_abs;
     bool m_benchmark = true;
     std::string m_message = "SQRT";

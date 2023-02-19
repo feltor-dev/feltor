@@ -56,7 +56,7 @@ class Operator
     Operator( InputIterator first, InputIterator last, std::enable_if_t<!std::is_integral<InputIterator>::value>* = 0): data_(first, last)
     {
         unsigned n = std::distance( first, last);
-        n_ = (unsigned)sqrt( (value_type)n);
+        n_ = (unsigned)sqrt( (double)n);
         if( n_*n_!=n) throw Error( Message(_ping_)<<"Too few elements "<<n<<" need "<<n_*n_<<"\n");
     }
     /**
@@ -67,7 +67,7 @@ class Operator
     Operator( const std::vector<T>& src): data_(src)
     {
         unsigned n = src.size();
-        n_ = (unsigned)sqrt( (value_type)n);
+        n_ = (unsigned)sqrt( (double)n);
         if( n_*n_!=n) throw Error( Message(_ping_)<<"Wrong number of elements "<<n<<" need "<<n_*n_<<"\n");
     }
 

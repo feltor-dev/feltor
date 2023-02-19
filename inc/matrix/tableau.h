@@ -131,8 +131,9 @@ struct FunctionalButcherTableau{
     // }
     private:
     dg::Operator<function_type> m_a;
-    std::vector<function_type> m_b, m_bt;
+    std::vector<function_type> m_b;
     std::vector<real_type> m_c;
+    std::vector<function_type> m_bt;
     unsigned m_q, m_p, m_s;
     bool m_embedded = false;
 };
@@ -143,25 +144,70 @@ namespace func_tableau{
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Classic Butcher tables%%%%%%%%%%%%%%%%%%
 //https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods
 template<class real_type>
-FunctionalButcherTableau<real_type> explicit_euler_1_1(const real_type& dt )
+FunctionalButcherTableau<real_type> explicit_euler_1_1( )
 {
-    using function_type = std::function<value_type(value_type)>;
-    function_type a[1] = {[&](real_type x){return 0;}};
-    // !!note that expm1 is much safer to use than exp(x) - 1!!
-    function_type b[1] = {[&](real_type x){return (expm1(-dt*x))/(-dt*x);}};
+    auto zero = [&](real_type){return 0;};
+    using function_type = std::function<real_type(real_type)>;
+    function_type a[1] = {zero};
+    function_type b[1] = {[&](real_type x){return dg::mat::phi1(x);}};
     real_type c[1] = {0.};
-    return FunctionalButcherTableau<function_type>( 1,1, a,b,c);
+    return FunctionalButcherTableau<real_type>( 1,1, a,b,c);
 }
 template<class real_type>
 FunctionalButcherTableau<real_type> midpoint_2_2()
 {
-    real_type a[4] = {  [&](real_type x){return 0;}, [&](real_type x){return 0;},
-        [&](real_type x){return 0.5*dg::mat::phi1(-dt*x/2.;},
-                       [&](real_type x){return 0;}};
-    real_type b[2] = { [&](real_type x){return 0;},
-        [&](real_type x){return expm1(-dt*x)/(-dt*x);}};
+    auto zero = [&](real_type){return 0;};
+    using function_type = std::function<real_type(real_type)>;
+    function_type a[4] = {  zero, zero,
+        [&](real_type x){return 0.5*dg::mat::phi1(x/2.);},
+                       zero};
+    function_type b[2] = { zero,
+        [&](real_type x){return dg::mat::phi1(x);}};
     real_type c[2] = {0, 0.5};
     return FunctionalButcherTableau<real_type>( 2,2, a,b,c);
+}
+template<class real_type>
+FunctionalButcherTableau<real_type> classic_4_4()
+{
+    auto zero = [&](real_type){return 0;};
+    using function_type = std::function<real_type(real_type)>;
+    function_type a[16] = {
+        zero,zero,zero,zero,
+        [&](real_type x){return 0.5*dg::mat::phi1(x/2.);}, zero,zero,zero,
+        zero, [&](real_type x){return 0.5*dg::mat::phi1(x/2.);}, zero,zero,
+        [&](real_type x){return 0.5*dg::mat::phi1(x/2.)*(exp(x/2.)-1);},zero,[&](real_type x){return dg::mat::phi1(x/2.);},zero
+    };
+    function_type b[4] = {
+    [&](real_type x){return dg::mat::phi1(x)-3.*dg::mat::phi2(x)+4.*dg::mat::phi3(x);},
+    [&](real_type x){return 2.*dg::mat::phi2(x)-4.*dg::mat::phi3(x);},
+    [&](real_type x){return 2.*dg::mat::phi2(x)-4.*dg::mat::phi3(x);},
+    [&](real_type x){return -dg::mat::phi2(x)+4.*dg::mat::phi3(x);}
+    };
+    real_type c[4] = {0, 0.5, 0.5, 1.};
+    return FunctionalButcherTableau<real_type>( 4,4, a,b,c);
+}
+template<class real_type>
+FunctionalButcherTableau<real_type> hochbruck_3_3_4()
+{
+    auto zero = [&](real_type){return 0;};
+    using function_type = std::function<real_type(real_type)>;
+    function_type a[9] = {
+        zero,zero,zero,
+        [&](real_type x){return 0.5*dg::mat::phi1(x/2.);}, zero,zero,
+        zero, [&](real_type x){return dg::mat::phi1(x);}, zero
+    };
+    function_type b[3] = {
+    [&](real_type x){return dg::mat::phi1(x)-14.*dg::mat::phi3(x)+36.*dg::mat::phi4(x);},
+    [&](real_type x){return 16.*dg::mat::phi3(x)-48.*dg::mat::phi4(x);},
+    [&](real_type x){return -2.*dg::mat::phi3(x)+12.*dg::mat::phi4(x);},
+    };
+    function_type bt[3] = {
+    [&](real_type x){return dg::mat::phi1(x)-14.*dg::mat::phi3(x);},
+    [&](real_type x){return 16.*dg::mat::phi3(x);},
+    [&](real_type x){return -2.*dg::mat::phi3(x);}
+    };
+    real_type c[3] = {0, 0.5, 1.};
+    return FunctionalButcherTableau<real_type>( 3,3,4, a,b,bt,c);
 }
 
 
@@ -171,19 +217,20 @@ FunctionalButcherTableau<real_type> midpoint_2_2()
 /**
 * @brief Identifiers for Butcher Tableaus
 *
-* We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+* We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html
 * as **NAME-S-P-Q** or **NAME-S-Q**, where
 *  - NAME is the author or name of the method
 *  - S is the number of stages in the method
 *  - P is the global order of the embedding
 *  - Q is the global order of the method
 *
-*  @note In some of the links below you might want to use the search function of your browser to find the indicated method
 *  @ingroup time_utils
 */
 enum func_tableau_identifier{
-    EXPLICIT_EULER_1_1, //!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Euler</a>
-    MIDPOINT_2_2, //!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint-2-2</a>
+    EXPLICIT_EULER_1_1, //!
+    MIDPOINT_2_2, //!
+    CLASSIC_4_4,//!
+    HOCHBRUCK_3_3_4
 };
 
 ///@cond
@@ -193,6 +240,8 @@ static std::unordered_map<std::string, enum func_tableau_identifier> str2id{
     //Explicit methods
     {"Euler", EXPLICIT_EULER_1_1},
     {"Midpoint-2-2", MIDPOINT_2_2},
+    {"Runge-Kutta-4-4", CLASSIC_4_4},
+    {"Hochbruck-3-3-4", HOCHBRUCK_3_3_4},
 };
 static inline enum func_tableau_identifier str2func_tableau( std::string name)
 {
@@ -216,18 +265,22 @@ FunctionalButcherTableau<real_type> func_tableau( enum func_tableau_identifier i
 {
     switch(id){
         case EXPLICIT_EULER_1_1:
-            return dg::func_tableau::explicit_euler_1_1<real_type>();
+            return func_tableau::explicit_euler_1_1<real_type>();
         case MIDPOINT_2_2:
-            return dg::func_tableau::midpoint_2_2<real_type>();
+            return func_tableau::midpoint_2_2<real_type>();
+        case CLASSIC_4_4:
+            return func_tableau::classic_4_4<real_type>();
+        case HOCHBRUCK_3_3_4:
+            return func_tableau::hochbruck_3_3_4<real_type>();
     }
     return FunctionalButcherTableau<real_type>(); //avoid compiler warning
 }
 
 
 template<class real_type>
-FunctionalButcherTableau<real_type> tableau( std::string name)
+FunctionalButcherTableau<real_type> func_tableau( std::string name)
 {
-        return tableau<real_type>( str2tableau(name));
+        return func_tableau<real_type>( str2func_tableau(name));
 }
 
 }//namespace create
@@ -244,8 +297,10 @@ FunctionalButcherTableau<real_type> tableau( std::string name)
  *
  *    Name  | Identifier | Description
  *   -------|------------| -----------
- *   Euler                  | dg::EXPLICIT_EULER_1_1     | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Explicit Euler</a>
- *   Midpoint-2-2           | dg::MIDPOINT_2_2           | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Midpoint method</a>
+ *   Euler                  | dg::EXPLICIT_EULER_1_1     | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a>
+ *   Midpoint-2-2           | dg::MIDPOINT_2_2           | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a>
+ *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://doi.org/10.1006/jcph.2002.6995" target="_blank">Cox and Matthews, J. Comput. Phys., 176 (2002)</a>
+ *   Hochbruck-3-3-4        | dg::HOCHBRUCK_3_3_4            | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a> (The exprb43 method)
  *
  */
 
@@ -271,9 +326,9 @@ struct ConvertsToFunctionalButcherTableau
     /*! @brief Create FunctionalButcherTableau from \c dg::tableau_identifier
     *
     * The use of this constructor might be a bit awkward because you'll have to write all caps.
-    * @param id the identifier, for example \c dg::DORMAND_PRINCE_7_4_5
+    * @param id the identifier, for example \c dg::mat::RUNGE_KUTTA_4_4
     */
-    ConvertsToFunctionalButcherTableau( enum tableau_identifier id):m_t( dg::create::tableau<real_type>(id)){}
+    ConvertsToFunctionalButcherTableau( enum tableau_identifier id):m_t( create::func_tableau<real_type>(id)){}
     /*! @brief Create FunctionalButcherTableau from its name (very useful)
     *
     *  @note In some of the links in the Description below you might want to use the search function of your browser to find the indicated method
@@ -282,11 +337,11 @@ struct ConvertsToFunctionalButcherTableau
     * @copydoc hide_explicit_butcher_tableaus
     * Implicit methods
     * @copydoc hide_implicit_butcher_tableaus
-    * @param name The name of the tableau as stated in the Name column above, as a string, for example "Dormand-Prince-7-4-5"
+    * @param name The name of the tableau as stated in the Name column above, as a string, for example "Euler"
     */
-    ConvertsToFunctionalButcherTableau( std::string name):m_t( dg::create::tableau<real_type>(name)){}
+    ConvertsToFunctionalButcherTableau( std::string name):m_t( create::func_tableau<real_type>(name)){}
     ///@copydoc ConvertsToFunctionalButcherTableau(std::string)
-    ConvertsToFunctionalButcherTableau( const char* name):m_t( dg::create::tableau<real_type>(std::string(name))){}
+    ConvertsToFunctionalButcherTableau( const char* name):m_t( create::func_tableau<real_type>(std::string(name))){}
     ///Convert to FunctionalButcherTableau
     ///
     ///which means an object can be directly assigned to a FunctionalButcherTableau
