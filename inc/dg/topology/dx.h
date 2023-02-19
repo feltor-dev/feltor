@@ -294,44 +294,6 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
         return A;
     }
 };
-/**
-* @brief Create and assemble a host Matrix for the naive 1d single derivative
-*
-* This derivative directly derives the polynomials in each cell, thus loosing
-* one order (which is wrong for n=1) but may be desirable to avoid oscillations
-* for higher order polynomials
-* @ingroup create
-* @param n Number of Legendre nodes per cell
-* @param N Vector size ( number of cells)
-* @param h cell size ( used to compute normalisation)
-*
-* @return Host Matrix
-*/
-template<class real_type>
-EllSparseBlockMat<real_type> dx_naive( int n, int N, real_type h )
-{
-    Operator<real_type> d = create::pidxpj<real_type>(n);
-    Operator<real_type> t = create::pipj_inv<real_type>(n);
-    t*= 2./h;
-    //transform to XSPACE
-    DLT<real_type> dlt( n);
-    Operator<real_type> backward( dlt.backward());
-    Operator<real_type> forward( dlt.forward());
-    Operator<real_type> a = backward*t*d*forward;
-
-    EllSparseBlockMat<real_type> A(N, N, 1, 1, n);
-    for( int i=0; i<n; i++)
-    for( int j=0; j<n; j++)
-    {
-        A.data[i*n+j] = a(i,j);
-    }
-    for( int i=0; i<N; i++)
-    {
-        A.data_idx[i] = 0; //bp, a
-        A.cols_idx[i] = i;
-    }
-    return A;
-};
 
 /**
 * @brief Create and assemble a host Matrix for the jump terms in 1d
@@ -431,7 +393,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
-* @param bcx boundary condition (ignored for dg::none as direction)
+* @param bcx boundary condition
 * @param dir The direction of the first derivative
 *
 * @return Host Matrix
@@ -441,8 +403,6 @@ EllSparseBlockMat<real_type> dx_normed( int n, int N, real_type h, bc bcx, direc
 {
     if( dir == centered)
         return create::dx_symm(n, N, h, bcx);
-    else if( dir == none)
-        return create::dx_naive(n, N, h);
     else if (dir == forward)
         return create::dx_plus(n, N, h, bcx);
     else if (dir == backward)

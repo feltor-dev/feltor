@@ -33,7 +33,6 @@ int main ()
         Matrix hs = dg::create::dx( g[i], dg::centered);
         Matrix hf = dg::create::dx( g[i], dg::forward);
         Matrix hb = dg::create::dx( g[i], dg::backward);
-        Matrix hn = dg::create::dx( g[i], dg::none);
         Matrix js = dg::create::jump( g[i].n(), g[i].N(), g[i].h(), g[i].bcx());
         const Vector func = dg::evaluate( function, g[i]);
         Vector error = func;
@@ -50,9 +49,6 @@ int main ()
         dg::blas2::symv( hb, func, error);
         dg::blas1::axpby( 1., deri, -1., error);
         std::cout << "Distance to true solution (backward ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
-        dg::blas2::symv( hn, func, error);
-        dg::blas1::axpby( 1., deri, -1., error);
-        std::cout << "Distance to true solution (naive    ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
         dg::blas2::symv( js, func, error);
         dg::blas1::axpby( 1., null , -1., error);
         std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
