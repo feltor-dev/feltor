@@ -113,6 +113,7 @@ struct MatrixSqrt
 
 };
 
+// The following is not tested yet, but should be ...
 /**
  * @brief Computation of \f$ \vec x = f(A)\vec b\f$ for self-adjoint \f$ A\f$
  *
@@ -148,7 +149,6 @@ struct MatrixFunction
      * @param eps_rel relative accuracy of solution
      * @param nrmb_correction absolute accuracy in units of \c eps_rel
      * @param max_iter Maximum number of iterations in Lanczos tridiagonalization
-     * @param cauchy_steps number of cells in the Cauchy integral
      * @param f_inner the inner "pre-factor" function (useful only in connection with
      * a exponential integrator where f_outer is set by the integrator)
      */
@@ -192,6 +192,7 @@ struct MatrixFunction
     /**
      * @brief Apply matrix function
      *
+     * @param f_outer Matrix function to apply together with \c f_inner from constructor
      * @param b input vector
      * @param x output vector, contains \f$ x = f(A) \vec b\f$
      */

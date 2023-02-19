@@ -9,6 +9,7 @@ namespace mat {
 /**
 * @brief Exponential one step time-integration for \f$ \dot y = A y \f$
 *
+* This integrator yields the exact solution
 * \f[
  \begin{align}
     y^{n+1} = \exp(-\Delta t A) y^n
@@ -41,13 +42,13 @@ struct ExponentialStep
 };
 
 /**
-* @brief Exponential Runge-Kutta fixed-step time-integration for \f$ \dot y = A y + \hat E(t,y)\f$
+* @brief Exponential Runge-Kutta fixed-step time-integration for \f$ \dot y = A y + g(t,y)\f$
 *
 * We follow <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a>
 * \f[
  \begin{align}
-    u^{n+1} = \exp(\Delta t A) u^n + \Delta t \sum_{i=1}^s b_i(\Delta t A) \hat E(t^n + c_i \Delta t, U_{ni}) \\
-    U_{ni}  = \exp(c_i\Delta t A) u^n + \Delta t \sum_{j=1}^{i-1} a_{ij}(\Delta t A) \hat E(t^n + c_j \Delta t, U_{nj})
+    u^{n+1} = \exp(\Delta t A) u^n + \Delta t \sum_{i=1}^s b_i(\Delta t A) g(t^n + c_i \Delta t, U_{ni}) \\
+    U_{ni}  = \exp(c_i\Delta t A) u^n + \Delta t \sum_{j=1}^{i-1} a_{ij}(\Delta t A) g(t^n + c_j \Delta t, U_{nj})
  \end{align}
 \f]
 
@@ -56,17 +57,16 @@ The method is defined by the coefficient matrix functions \f$a_{ij}(z),\ b_i(z),
 of stages. For \f$ A=0\f$ the underlying Runge-Kutta method with Butcher Tableau
 \f$ a_{ij} = a_{ij}(0),\ b_i=b_i(0)\f$ is recovered.
 We introduce the functions
+\f[
 \begin{align}
 \varphi_{k+1}(z) := \frac{\varphi_k(z) - \varphi_k(0)}{z} \\
 \varphi_0(z) = \exp(z)
 \end{align}
+\f]
 and the shorthand notation \f$ \varphi_{j,k} := \varphi_j(-c_k\Delta t A),\ \varphi_j := \varphi_j(-\Delta tA)\f$.
 
 You can provide your own coefficients or use one of our predefined methods:
 @copydoc hide_func_explicit_butcher_tableaus
-@note In exponential Rosenbrock type schemes it is assumed that \f$ A\f$ is the
-Jacobian of the system. If it is not, then the order conditions are different
-and the order and embedded orders are not what is indicated in our names.
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType

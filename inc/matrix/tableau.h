@@ -286,7 +286,7 @@ FunctionalButcherTableau<real_type> func_tableau( std::string name)
 }//namespace create
 ///@endcond
 
-/*! @class hide_explicit_butcher_tableaus
+/*! @class hide_func_explicit_butcher_tableaus
  *
  * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
  * as **NAME-S-P-Q** or **NAME-S-Q**, where
@@ -297,15 +297,18 @@ FunctionalButcherTableau<real_type> func_tableau( std::string name)
  *
  *    Name  | Identifier | Description
  *   -------|------------| -----------
- *   Euler                  | dg::EXPLICIT_EULER_1_1     | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a>
- *   Midpoint-2-2           | dg::MIDPOINT_2_2           | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a>
- *   Runge-Kutta-4-4        | dg::CLASSIC_4_4            | <a href="https://doi.org/10.1006/jcph.2002.6995" target="_blank">Cox and Matthews, J. Comput. Phys., 176 (2002)</a>
- *   Hochbruck-3-3-4        | dg::HOCHBRUCK_3_3_4            | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a> (The exprb43 method)
+ *   Euler                  | dg::mat::EXPLICIT_EULER_1_1     | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a>
+ *   Midpoint-2-2           | dg::mat::MIDPOINT_2_2           | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a>
+ *   Runge-Kutta-4-4        | dg::mat::CLASSIC_4_4            | <a href="https://doi.org/10.1006/jcph.2002.6995" target="_blank">Cox and Matthews, J. Comput. Phys., 176 (2002)</a>
+ *   Hochbruck-3-3-4        | dg::mat::HOCHBRUCK_3_3_4            | <a href="https://doi.org/10.1017/S0962492910000048" target="_blank">Hochbruck and Ostermann, Exponential Integrators, Acta Numerica (2010)</a> (The exprb43 method)
  *
+ * @note In exponential Rosenbrock type schemes it is assumed that \f$ A\f$ (the matrix) is the
+    Jacobian of the system. If it is not, then the order conditions are different
+    and the order and embedded orders are not what is indicated in our names.
  */
 
 
-/*! @brief Convert identifiers to their corresponding \c dg::FunctionalButcherTableau
+/*! @brief Convert identifiers to their corresponding \c dg::mat::FunctionalButcherTableau
  *
  * This is a helper class to simplify the interfaces of our timestepper functions and classes.
  * The sole purpose is to implicitly convert either a FunctionalButcherTableau or one of
@@ -323,7 +326,7 @@ struct ConvertsToFunctionalButcherTableau
     ///Useful if you constructed your very own coefficients
     ConvertsToFunctionalButcherTableau( FunctionalButcherTableau<real_type> tableau): m_t(tableau){}
 
-    /*! @brief Create FunctionalButcherTableau from \c dg::tableau_identifier
+    /*! @brief Create FunctionalButcherTableau from \c dg::mat::func_tableau_identifier
     *
     * The use of this constructor might be a bit awkward because you'll have to write all caps.
     * @param id the identifier, for example \c dg::mat::RUNGE_KUTTA_4_4
@@ -334,9 +337,7 @@ struct ConvertsToFunctionalButcherTableau
     *  @note In some of the links in the Description below you might want to use the search function of your browser to find the indicated method
     *
     * Explicit methods
-    * @copydoc hide_explicit_butcher_tableaus
-    * Implicit methods
-    * @copydoc hide_implicit_butcher_tableaus
+    * @copydoc hide_func_explicit_butcher_tableaus
     * @param name The name of the tableau as stated in the Name column above, as a string, for example "Euler"
     */
     ConvertsToFunctionalButcherTableau( std::string name):m_t( create::func_tableau<real_type>(name)){}

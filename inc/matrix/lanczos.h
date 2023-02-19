@@ -61,6 +61,7 @@ with
 * Thus the iterations should be kept as small as possible. Could be fixed via
 * full, partial or selective reorthogonalization strategies, but so far no
 * problems occured due to this.
+* @copydoc hide_ContainerType
 */
 template< class ContainerType >
 class UniversalLanczos
