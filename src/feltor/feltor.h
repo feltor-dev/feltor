@@ -60,8 +60,6 @@ struct Explicit
     const Container& restart_aparallel() const {
         return m_aparST;
     }
-
-
     /// ///////////////////DIAGNOSTIC MEMBERS //////////////////////
     const Geometry& grid() const {
         return m_multigrid.grid(0);
@@ -73,6 +71,18 @@ struct Explicit
     const Container& density(int i)const{
         return m_density[i];
     }
+    const Container&  gammaNi() const{
+        if( m_p.tau[1] == 0)
+            return m_density[1];
+        return m_old_gammaN.head();
+    }
+    const Container&  gammaPhi() const{
+        if( m_p.tau[1] == 0)
+            return m_potential[0];
+        return m_old_psi.head();
+    }
+
+
     const Container& density_source(int i)const{
         return m_s[0][i];
     }
@@ -91,10 +101,12 @@ struct Explicit
     }
     const std::array<Container, 3> & gradN (int i) {
         update_diag();
+        // m_dFN is updated to the diff_dir direction derivative
         return m_dFN[i];
     }
     const std::array<Container, 3> & gradU (int i) {
         update_diag();
+        // m_dFU is updated to the diff_dir direction derivative
         return m_dFU[i];
     }
     const std::array<Container, 3> & gradP (int i) {
@@ -138,7 +150,7 @@ struct Explicit
         // grad S_ne and grad S_ni
         dg::blas2::symv( m_dxF_N, m_s[0][i], gradS[0]);
         dg::blas2::symv( m_dyF_N, m_s[0][i], gradS[1]);
-        if(!m_p.symmetric)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
+        if(m_compute_in_3d)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
     }
     void compute_dot_aparallel( Container& tmp) const {
         m_old_apar.derive( tmp);
@@ -163,7 +175,18 @@ struct Explicit
     const Container& weights() const { return m_lapperpN.weights();}
     //bhat / sqrt{g} / B
     const std::array<Container, 3> & bhatgB () const {
+        // covariant components
         return m_b;
+    }
+    void compute_lapMperpN (double alpha, const Container& density, Container& temp0, double beta, Container& result)
+    {
+        // positive Laplacian
+        dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
+        dg::blas2::symv( alpha, m_lapperpN, temp0, beta, result);
+    }
+    void compute_lapMperpU (int i, Container& result)
+    {
+        dg::blas2::symv( m_lapperpU, m_velocity[i], result);
     }
     void compute_lapMperpP (int i, Container& result)
     {
@@ -230,6 +253,31 @@ struct Explicit
             dg::blas1::scal( result, beta);
     }
 
+    // Compute divergence using centered derivatives
+    // note that no matter how divergence is computed you always loose one order
+    // unless the polarisation term or the Laplacian of N,U is computed
+    // then the correct direction must be chosen
+    template<class Container2>
+    void centered_div( const Container2& prefactor, const std::array<Container, 3>& contra_vec, Container& temp0, Container& temp1, double beta, Container& result)
+    {
+        const Container& vol = m_multi_pol[0].weights();
+        dg::blas1::pointwiseDot( prefactor, vol, contra_vec[0], temp0);
+        dg::blas2::symv( m_dxC, temp0, temp1);
+        dg::blas1::pointwiseDot( prefactor, vol, contra_vec[1], temp0);
+        dg::blas2::symv( 1., m_dyC, temp0, 1., temp1);
+        if( m_compute_in_3d)
+        {
+            dg::blas1::pointwiseDot( prefactor, vol, contra_vec[2], temp0);
+            dg::blas2::symv( 1., m_dz, temp0, 1., temp1);
+        }
+        dg::blas1::pointwiseDivide( 1., temp1, vol, beta, result);
+    }
+    void compute_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
+    {
+        dg::blas1::pointwiseDot( m_p.mu[1], density, m_binv, m_binv, 0., temp);
+        m_multi_pol[0].set_chi( temp);
+        dg::blas2::symv( alpha, m_multi_pol[0], m_potential[0], beta, result);
+    }
     unsigned called() const { return m_called;}
 
     /// //////////////////////DIAGNOSTICS END////////////////////////////////
@@ -273,6 +321,25 @@ struct Explicit
                 dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
                             double sn, double u, double n){ return -u*sn/n;},
                         m_s[0][i], m_velocity[i], m_density[i]);
+            }
+            for( unsigned i=0; i<2; i++)
+            for( unsigned j=0; j<3; j++)
+            {
+                // update m_dFU, m_dFN to the diff_dir direction derivative
+                if( m_p.diff_dir == dg::forward)
+                {
+                    ;
+                }
+                else if( m_p.diff_dir == dg::backward)
+                {
+                    dg::blas1::copy( m_dBN[i][j], m_dFN[i][j]);
+                    dg::blas1::copy( m_dBU[i][j], m_dFU[i][j]);
+                }
+                else
+                {
+                    dg::blas1::axpby( 1./2.,m_dBN[i][j], 1./2., m_dFN[i][j]);
+                    dg::blas1::axpby( 1./2.,m_dBU[i][j], 1./2., m_dFU[i][j]);
+                }
             }
             m_upToDate = true;
         }
@@ -456,8 +523,9 @@ struct Explicit
     Container m_vbm, m_vbp, m_dN, m_dNMM, m_dNM, m_dNZ, m_dNP, m_dNPP;
 
     //matrices and solvers
-    Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
-    Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_P, m_dy_A, m_dz;
+    Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_N, m_dx_P, m_dx_A;
+    Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_N, m_dy_P, m_dy_A, m_dz;
+    Matrix m_dxC, m_dyC;
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
@@ -475,7 +543,7 @@ struct Explicit
     double m_source_rate = 0., m_sheath_rate = 0., m_wall_rate = 0.;
     double m_minne = 0., m_minrate  = 0., m_minalpha = 0.;
     double m_nwall = 0., m_uwall = 0.;
-    bool m_fixed_profile = true, m_reversed_field = false;
+    bool m_fixed_profile = true, m_reversed_field = false, m_compute_in_3d = true;
     bool m_upToDate = false;
     unsigned m_called = 0;
 
@@ -557,6 +625,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
         bhat = dg::geo::createEPhi(-1);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
     dg::SparseTensor<Container> metric = g.metric();
+    // make bhat covariant:
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
     dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
@@ -571,8 +640,11 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     m_lapperpN.set_chi( m_hh);
     m_lapperpU.set_chi( m_hh);
     m_lapperpP.set_chi( m_hh);
-    if( p.curvmode != "true")
+    if( (p.curvmode == "true") && (p.symmetric == false))
+        m_compute_in_3d = true;
+    else
     {
+        m_compute_in_3d = false;
         m_lapperpN.set_compute_in_2d(true);
         m_lapperpU.set_compute_in_2d(true);
         m_lapperpP.set_compute_in_2d(true);
@@ -615,7 +687,7 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
         m_multi_invgammaP[u].matrix().set_chi( hh);
         m_multi_invgammaN[u].matrix().set_chi( hh);
         m_multi_ampere[u].matrix().set_chi( hh);
-        if(p.curvmode != "true"){
+        if( !((p.curvmode == "true") && (p.symmetric == false))){
             m_multi_pol[u].set_compute_in_2d( true);
             m_multi_invgammaP[u].matrix().set_compute_in_2d( true);
             m_multi_invgammaN[u].matrix().set_compute_in_2d( true);
@@ -638,12 +710,14 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dxB_N( dg::create::dx( g, p.bcxN, dg::backward) ),
     m_dxF_U( dg::create::dx( g, p.bcxU, dg::forward) ),
     m_dxB_U( dg::create::dx( g, p.bcxU, dg::backward) ),
+    m_dxC(   dg::create::dx( g, dg::NEU, dg::centered) ), // for divergence
     m_dx_P(  dg::create::dx( g, p.bcxP, p.pol_dir) ),
     m_dx_A(  dg::create::dx( g, p.bcxA, p.pol_dir) ),
     m_dyF_N( dg::create::dy( g, p.bcyN, dg::forward) ),
     m_dyB_N( dg::create::dy( g, p.bcyN, dg::backward) ),
     m_dyF_U( dg::create::dy( g, p.bcyU, dg::forward) ),
     m_dyB_U( dg::create::dy( g, p.bcyU, dg::backward) ),
+    m_dyC(   dg::create::dy( g, dg::NEU, dg::centered) ), // for divergence
     m_dy_P(  dg::create::dy( g, p.bcyP, p.pol_dir) ),
     m_dy_A(  dg::create::dy( g, p.bcyA, p.pol_dir) ),
     m_dz( dg::create::dz( g, dg::PER) ),
@@ -874,7 +948,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
     //-------Compute Psi and derivatives
     dg::blas2::symv( m_dx_P, phi, m_dP[0][0]);
     dg::blas2::symv( m_dy_P, phi, m_dP[0][1]);
-    if( !m_p.symmetric) dg::blas2::symv( m_dz, phi, m_dP[0][2]);
+    if( m_compute_in_3d) dg::blas2::symv( m_dz, phi, m_dP[0][2]);
     //if( staggered)
     //    dg::tensor::scalar_product3d( 1., m_binv,
     //        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
@@ -948,20 +1022,20 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_perp_derivatives(
         dg::blas2::symv( m_dyF_N, m_temp1, m_dFN[i][1]);
         dg::blas2::symv( m_dxB_N, m_temp1, m_dBN[i][0]);
         dg::blas2::symv( m_dyB_N, m_temp1, m_dBN[i][1]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, m_temp1, m_dFN[i][2]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, m_temp1, m_dBN[i][2]);
+        if(m_compute_in_3d) dg::blas2::symv( m_dz, m_temp1, m_dFN[i][2]);
+        if(m_compute_in_3d) dg::blas2::symv( m_dz, m_temp1, m_dBN[i][2]);
         dg::blas2::symv( m_dxF_U, velocity[i], m_dFU[i][0]);
         dg::blas2::symv( m_dyF_U, velocity[i], m_dFU[i][1]);
         dg::blas2::symv( m_dxB_U, velocity[i], m_dBU[i][0]);
         dg::blas2::symv( m_dyB_U, velocity[i], m_dBU[i][1]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, velocity[i], m_dFU[i][2]);
-        if(!m_p.symmetric) dg::blas2::symv( m_dz, velocity[i], m_dBU[i][2]);
+        if(m_compute_in_3d) dg::blas2::symv( m_dz, velocity[i], m_dFU[i][2]);
+        if(m_compute_in_3d) dg::blas2::symv( m_dz, velocity[i], m_dBU[i][2]);
         dg::blas2::symv( m_dx_P, potential[i], m_dP[i][0]);
         dg::blas2::symv( m_dy_P, potential[i], m_dP[i][1]);
-        if( !m_p.symmetric) dg::blas2::symv( m_dz, potential[i], m_dP[i][2]);
+        if( m_compute_in_3d) dg::blas2::symv( m_dz, potential[i], m_dP[i][2]);
         dg::blas2::symv( m_dx_A, apar, m_dA[0]);
         dg::blas2::symv( m_dy_A, apar, m_dA[1]);
-        if( !m_p.symmetric) dg::blas2::symv( m_dz, apar, m_dA[2]);
+        if( m_compute_in_3d) dg::blas2::symv( m_dz, apar, m_dA[2]);
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>

@@ -197,13 +197,12 @@ int main( int argc, char* argv[])
     std::vector<double> time_intern(p.itstp);
     Vector y0;
     std::array<dg::x::DVec, 3> gradPsip;
-    dg::geo::Nablas<dg::x::CylindricalGrid3d, dg::x::DMatrix, dg::x::DVec> nabla(grid);
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
     unsigned failed =0;
     feltor::Variables var{
-        feltor, y0, p, mag, nabla, gradPsip, gradPsip, gradPsip, gradPsip,
+        feltor, y0, p, mag, gradPsip, gradPsip, gradPsip, gradPsip,
         dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid)),
         0., // duration
         &failed // nfailed

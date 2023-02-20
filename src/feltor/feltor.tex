@@ -2158,8 +2158,12 @@ X and Y\_tt represent the quantities described in the tables in this section sta
     potential &$\phi$ &
     psi &$\psi$ \\
     aparallel &$A_\parallel$ & \\
+    gammaNi & $\Gamma_{1,i} N_i$  &
+    gammaPhi & $\Gamma_{1,i} \phi$  \\
     vorticity &$-\Delta_\perp\phi$ &
     vorticity\_i & $-\Delta_\perp \psi$ \\
+    laplace\_ne &$\Delta_\perp n_e$ &
+    laplace\_ni & $\Delta_\perp N_i$ \\
      & &
     apar\_vorticity &$-\Delta_\perp A_\parallel$ \\
     dssue & $\npar^2 u_{\parallel,e}$&
@@ -2227,7 +2231,9 @@ The relevant terms in the output file are
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} & \textbf{Name} &  \textbf{Equation}\\
 \midrule
     electrons & $n_e$ &
-    jsneC\_tt &$ n_e ( \vec u_K + \vec u_C )\cn \psi_p$ \\
+    jscurvne\_tt &$ n_e  \vec u_K \cn \psi_p$ \\
+    jscurvkappane\_tt &$ n_e  \vec u_C \cn \psi_p$ &
+    & \\
     jsneA\_tt &$ n_e u_{\parallel,e} \vec{ b}_\perp  \cn \psi_p$ &
     jsneE\_tt & $ n_e \vec u_E\cn\psi_p$ \\
     lneperp\_tt &$ \Lambda_{\perp,n_e} = -\nu_{n,\perp} (-\Delta_\perp)^s n_e$&
@@ -2235,13 +2241,15 @@ The relevant terms in the output file are
     sne\_tt & $S_{n_e}$ &
     jsdiae\_tt & $\tau_e \bhat \times \vn n_e \cn \psi_p /B$\\
     divjnepar\_tt & $\nc (\bhat n_e u_{e,\parallel}$) &
-    divneuE\_tt & $\nc ( n_e \vec u_E)$ \\
+    divneE\_tt & $\nc ( n_e \vec u_E)$ \\
     divcurvne\_tt & $\nc( \tau_e \vec K n_e)$ &
     divcurvkappane\_tt & $\nc( \mu_e n_e u_{\parallel,e}^2 \KK)$ \\
-    divneuA\_tt & $\nc (\bhat n_e u_{e,\parallel} {\vec b}_\perp)$) &
+    divneA\_tt & $\nc (\bhat n_e u_{e,\parallel} {\vec b}_\perp)$) &
      &  \\
     ions & $N_i$ &
-    jsniC\_tt &$ N_i ( \vec u_K + \vec u_C )\cn \psi_p$ \\
+    jscurvni\_tt &$ N_i \vec u_K \cn \psi_p$ \\
+    jscurvkappani\_tt &$ N_i \vec u_C \cn \psi_p$ &
+    & \\
     jsniA\_tt &$ N_i U_{\parallel,i} \vec{ b}_\perp  \cn \psi_p$ &
     jsniE\_tt & $ N_i \vec u^i_E\cn\psi_p$ \\
     lniperp\_tt &$ \Lambda_{\perp,N_i} = -\nu_{n,\perp} (-\Delta_\perp)^s N_i$&
@@ -2249,10 +2257,10 @@ The relevant terms in the output file are
     sni\_tt & $S_{N_i}$ &
     jsdiai\_tt & $\tau_i \bhat \times \vn N_i \cn \psi_p /B$\\
     divjnipar\_tt & $\nc (\bhat N_i U_{i,\parallel}$) &
-    divniuE\_tt & $\nc ( N_i \vec u_{E,i})$ \\
+    divniE\_tt & $\nc ( N_i \vec u_{E,i})$ \\
     divcurvni\_tt & $\nc( \tau_i \vec K N_i)$ &
     divcurvkappani\_tt & $\nc( \mu_i N_i U_{\parallel,i}^2 \KK)$ \\
-    divniuA\_tt & $\nc (\bhat N_i U_{i,\parallel} {\vec b}_\perp)$) &
+    divniA\_tt & $\nc (\bhat N_i U_{i,\parallel} {\vec b}_\perp)$) &
      &  \\
 \bottomrule
 \end{longtable}
@@ -2327,6 +2335,10 @@ The relevant terms in the output file are
         + z_e \tau_e n_e u_{\parallel,e} \vec{ b}_\perp \cn \psi_p $ \\
     jseia\_tt &$z_i(\tau_i \ln N_i + \mu_i U_{\parallel,i}^2 + \psi_i)N_i \vec { b}_\perp\cn \psi_p
         + z_i \tau_i N_i U_{\parallel,i} \vec{ b}_\perp \cn \psi_p $ \\
+    divee\_tt &$\nc \vec j_{\mathcal E}^e$ \\
+    divei\_tt &$\nc \vec j_{\mathcal E}^i$ \\
+    diveea\_tt &$\nc \vec j_{\mathcal E,A}^e$\\
+    diveia\_tt &$\nc \vec j_{\mathcal E,A}^i$\\
     leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e} + z_e\mu_e n_e u_{\parallel,e} \Lambda_{u_e}$ \\
     leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \Lambda_{N_i} + z_i\mu_i N_i U_{\parallel,i} \Lambda_{U_i}$ \\
     leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_{N,\parallel} \Delta_\parallel n_e +
@@ -2394,21 +2406,21 @@ In the output file we have
 \subsection{Conservation of Currents (COCE), "COCE"}\label{sec:COCE}
 If we want to study the electric field locally, without the flux surface average implemented in the equation at section \ref{sec:vorticity_eq}, the COCE diagnostic is necessary. The equation implemented is 
 \begin{equation}
-    \partial_t\Omega-\nc\nc(\boldsymbol{\omega u_E})=\nc(j_\parallel\bhat+\boldsymbol{j_{curv}}+\boldsymbol{j_{b_\perp}})+\Omega_S,
+    \partial_t\Omega-\nc\nc(\vec{\omega u_E})=\nc(j_\parallel\bhat+\vec{j_{curv}}+\vec{j_{b_\perp}})+\Omega_S,
     \label{eq:COCE_diagnostic}
 \end{equation}   
 with the following definitions:
 \begin{equation}
-\Omega=\Omega_E+\Omega_D=-\nc\boldsymbol{\omega}=-\nc(\boldsymbol{\omega_D}+\boldsymbol{\omega_E})=\nc\left[\frac{m_i}{B^2}\left(\frac{\nabla_\perp p_i}{q_i}+n_i\nabla_\perp\phi\right)\right],
+\Omega=\Omega_E+\Omega_D=-\nc\vec{\omega}=-\nc(\vec{\omega_D}+\vec{\omega_E})=\nc\left[\frac{m_i}{B^2}\left(\frac{\nabla_\perp p_i}{q_i}+n_i\nabla_\perp\phi\right)\right],
 \end{equation}
 \begin{equation}
     \Omega_S=\nc\left[\frac{m_i}{B^2}\left(\frac{\nabla_\perp S_{p_i}}{q_i}+S_{n_i}\nabla_\perp\phi\right)\right],
 \end{equation}
 \begin{equation}
-     \boldsymbol{j_{curv}}\approx\frac{\bhat\times\nabla(p_e+p_i)}{B}+(j_\parallel A_{1,\parallel}+\sum_s m_s n_s u_{\parallel,s}^2) \frac{\nabla\times\bhat}{B}=\boldsymbol{j_{d}}+\boldsymbol{j_A}+\boldsymbol{j_\kappa},
+     \vec{j_{curv}}\approx\frac{\bhat\times\nabla(p_e+p_i)}{B}+(j_\parallel A_{1,\parallel}+\sum_s m_s n_s u_{\parallel,s}^2) \frac{\nabla\times\bhat}{B}=\vec{j_{d}}+\vec{j_A}+\vec{j_\kappa},
 \end{equation}
 \begin{equation}
-      \boldsymbol{j_{b_\perp}}=(j_\parallel+j_{mag})\boldsymbol{b_\perp}-\nc(\boldsymbol{M^{em}}\boldsymbol{b_\perp})=j_\parallel\boldsymbol{b_\perp}+\boldsymbol{j_{M^{em}}}.
+      \vec{j_{b_\perp}}=(j_\parallel+j_{mag})\vec{b_\perp}-\nc(\vec{M^{em}}\vec{b_\perp})=j_\parallel\vec{b_\perp}+\vec{j_{M^{em}}}.
 \end{equation}
 
 The implemented terms are defined as follows:
@@ -2416,23 +2428,23 @@ The implemented terms are defined as follows:
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
 \midrule
-    v\_Omega\_E\_gf &$ \mu_i\nc(\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2})$ \\
-    v\_Omega\_D\_gf &$ \mu_i\tau_i \nc(\boldsymbol{\nabla_\perp} N_i)$ \\
-    v\_adv\_E\_gf\_tt &$ -\nc\nc(\boldsymbol{\omega_E u_E})=\mu_i\nc(\nc (\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2})\boldsymbol{u_E}+\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2}\cdot\nabla \boldsymbol{u_E})  $\\
-    v\_adv\_E\_main\_tt &$ -\nc(\nc\boldsymbol{\omega_E u_E})=\mu_i\nc(\nc (\frac{N_i\boldsymbol{\nabla_\perp}\phi}{B^2})\boldsymbol{u_E})   $\\
-    v\_adv\_D\_gf\_tt &$  -\nc\nc(\boldsymbol{\omega_D u_E})=\mu_i\tau_i \nc(\nc (\boldsymbol{\nabla_\perp} N_i)\boldsymbol{u_E}+\boldsymbol{\nabla_\perp} N_i\cdot\nabla \boldsymbol{u_E})  $\\
-    v\_adv\_D\_main\_tt &$  -\nc(\nc\boldsymbol{\omega_D u_E})=\mu_i\tau_i \nc(\nc (\boldsymbol{\nabla_\perp} N_i)\boldsymbol{u_E})   $\\
-    v\_M\_em\_gf\_tt &$  -\nc\nc(\boldsymbol{M^{em}}\boldsymbol{b_\perp})=-\nc\nc(\frac{\boldsymbol{\nabla_\perp} N_i U_{i,\parallel}+ N_i\boldsymbol{\nabla_\perp} U_{i,\parallel}}{B^2} \boldsymbol{b_\perp}) $\\
-    v\_J\_mag\_gf\_tt &$ \nc(j_{mag,||}\boldsymbol{b_\perp})=\tau_i\nc((\nc\frac{\boldsymbol{M^{em}}}{2})\boldsymbol{b_\perp})=\tau_i\nc((\nc\frac{\boldsymbol{\nabla_\perp} N_i U_{i,\parallel}+ N_i\boldsymbol{\nabla_\perp} U_{i,\parallel}}{2B^2})\boldsymbol{b_\perp})  $\\
-    v\_J\_bperp\_tt &$ \nc(j_{||}\boldsymbol{b_\perp})=\boldsymbol{\nabla_\perp} j_{||}\cdot\boldsymbol{b_\perp}+j_{||}\nc\boldsymbol{b_\perp}  $\\
-    v\_J\_D\_gf\_tt &$ \nc\boldsymbol{j_d}= \nc\left(\frac{\bhat\times(\tau_i\boldsymbol{\nabla_\perp} N_i-\tau_e\boldsymbol{\nabla_\perp} n_e)}{B}\right) $\\
-    v\_J\_par\_tt &$ \nc(J_{||}\boldsymbol{\bhat})=\nc(N_i U_{i,\parallel}\bhat)-\nc(n_e u_{e,\parallel}\bhat)  $\\
-    v\_J\_JAK\_gf\_tt &$ \nc(J_\parallel A_{1,\parallel}\boldsymbol{\kappa}_{\nabla\times\bhat})  $\\
-    v\_J\_NUK\_gf\_tt &$ \nc((\mu_iN_iU_{i,\parallel}^2-\mu_en_eu_{e,\parallel}^2)\boldsymbol{\kappa}_{\boldsymbol{\nabla}\times\bhat})  $\\
-    v\_S\_E\_tt &$ \mu_i\nc(\frac{S_N\boldsymbol{\nabla_\perp}\phi}{B^2})  $\\
-    v\_S\_D\_tt &$ \mu_i\tau_i\nc(\boldsymbol{\nabla_\perp} S_{N})  $\\
-    RFB\_E\_r\_GradPsip\_tt &$ -\boldsymbol{\nabla}\phi\cdot\boldsymbol{\nabla}\psi_p  $\\
-    RFB\_GradPi\_GradPsip\_tt &$ \tau_i\boldsymbol{\nabla} N_i/N_i\cdot\boldsymbol{\nabla}\psi_p  $\\
+    v\_Omega\_E\_gf &$ \mu_i\nc(\frac{N_i\vec{\nabla_\perp}\phi}{B^2})$ \\
+    v\_Omega\_D\_gf &$ \mu_i\tau_i \Delta_\perp N_i$ REMOVED! use laplace\_ne and laplace\_ni instead \\
+    v\_adv\_E\_main\_tt &$ \mu_i\nc(\nc (\frac{N_i\vec{\nabla_\perp}\phi}{B^2})\vec{u_E})   $\\
+    v\_adv\_E\_rest\_gf\_tt &$ \mu_i\nc(\frac{N_i\vec{\nabla_\perp}\phi}{B^2}\cdot\nabla \vec{u_E})  $\\
+    v\_adv\_D\_main\_tt &$  \mu_i\tau_i \nc((\Delta_\perp N_i)\vec{u_E})   $\\
+    v\_adv\_D\_rest\_gf\_tt &$  \mu_i\tau_i \nc(\vec{\nabla_\perp} N_i\cdot\nabla \vec{u_E})  $\\
+    v\_M\_em\_gf\_tt &$  -\nc\nc(\vec{M^{em}}\vec{b_\perp})$ REMOVED! we have no $\Gamma_1 A_\parallel$ terms \\
+    v\_J\_mag\_tt &$ \nc(j_{mag,||}\vec{b_\perp})=\tau_i\nc(\nc\left(\frac{\vec{M^{em}}}{2}\right)\vec{b_\perp})=\tau_i\nc\left(\frac{\Delta_\perp( N_i U_{i,\parallel})}{2}\vec{b_\perp}\right)  $\\
+    v\_J\_bperp\_tt &$ \nc(j_{||}\vec{b_\perp}) $ yields the Maxwell stress\\
+    v\_J\_D\_gf\_tt &$ \nc\left(\frac{\bhat\times(\tau_i\vec{\nabla_\perp} N_i-\tau_e\vec{\nabla_\perp} n_e)}{B}\right) $ REMOVED! use divcurvn* instead\\
+    v\_J\_par\_tt &$ \nc((N_i U_{i,\parallel} - n_e u_{e,\parallel})\bhat)  $ REMOVED! use divjnipar-divjnepar instead\\
+    v\_J\_NUK\_gf\_tt &$ \nc((\mu_iN_iU_{i,\parallel}^2-\mu_en_eu_{e,\parallel}^2)\KK)  $ REMOVED! use divcurvkappa* instead\\
+    v\_J\_JAK\_tt &$ \nc(J_\parallel A_{1,\parallel}\KK)  $ REMOVED! part of v\_J\_bperp\\
+    v\_S\_E\_tt &$ \mu_i\nc(\frac{S_N\np\phi}{B^2})  $\\
+    v\_S\_D\_tt &$ \mu_i\tau_i\nc(\np S_{N})  $\\
+    RFB\_E\_r\_GradPsip\_tt &$ -\vec{\nabla}\phi\cn\psi_p  $\\
+    RFB\_GradPi\_GradPsip\_tt &$ \tau_i\vec{\nabla} n_e/n_e\cn\psi_p  $\\
     
 \bottomrule
 \end{longtable}
@@ -2477,8 +2489,6 @@ The relevant terms in the output file are (the Lorentz force term is described i
     jsparbphikappai\_tt       & $\mu_i N_iU_{\parallel,i}b_\varphi ( \mu_i U_{\parallel,i}^2 + 2\tau_i)\vec K_{\vn\times \bhat}\cn\psi_p$ \\
     jsparApar\_tt       & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_{\parallel,s}^2)b_\perp^v$ &
     jsparbphiApar\_tt   & $\sum_s (z_s \tau_s N_s + z_s \mu_s N_s U_{\parallel,s}^2)b_\varphi b_\perp^v$ \\
-    sparmirrore\_tt & $-z_e\tau_en_e\npar \ln B$ &
-    sparmirrori\_tt & $-z_i\tau_iN_i\npar \ln B$ \\
     sparsni\_tt & $\mu_i S_{N_i} U_{\parallel,i} + \mu_i S_{U_i} N_i $ &
     sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi + \mu_i S_{U,i} N_i b_\varphi $ \\
     lparpar\_tt   & $\nu_{\parallel,i} \Delta_\parallel U_{\parallel,i} + U_{\parallel,i} \Lambda_{N_i,\parallel}$ &
