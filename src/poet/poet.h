@@ -169,8 +169,6 @@ Poet< Geometry, M,  container>::Poet( const Geometry& grid, const Parameters& p 
     m_multi_iota= m_multigrid.project( m_chi);
     m_multi_elliptic.resize(3);
     m_multi_tensorelliptic.resize(3);
-    m_multi_g1.resize(3);
-    m_multi_g0.resize(3);
     m_adv.construct(grid);
     m_centered[0] = dg::create::dx( grid, grid.bcx(), dg::centered);
     m_centered[1] = dg::create::dy( grid, grid.bcy(), dg::centered);
@@ -178,8 +176,8 @@ Poet< Geometry, M,  container>::Poet( const Geometry& grid, const Parameters& p 
     {
         m_multi_elliptic[u].construct(       m_multigrid.grid(u), dg::centered, p.jfactor);
         m_multi_tensorelliptic[u].construct( m_multigrid.grid(u), dg::centered, p.jfactor);       
-        m_multi_g0[u].construct( m_multigrid.grid(u), -p.tau[1], dg::centered, p.jfactor);
-        m_multi_g1[u].construct( m_multigrid.grid(u), -0.5*p.tau[1], dg::centered, p.jfactor);     
+        m_multi_g0.push_back( {-p.tau[1], {m_multigrid.grid(u), dg::centered, p.jfactor}});
+        m_multi_g1.push_back( {-0.5*p.tau[1], {m_multigrid.grid(u), dg::centered, p.jfactor}});     
     }
     m_sqrt.construct( m_multi_g0[0], +1, m_volume, p.eps_gamma0, p.maxiter_sqrt, p.maxiter_cauchy);
 }
