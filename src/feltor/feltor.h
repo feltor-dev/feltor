@@ -21,6 +21,20 @@ dg::file::NC_Error_Handle err_pol;
 namespace feltor
 {
 
+struct BPerp{
+    //b_perp
+    DG_DEVICE void operator()(double A,
+        double d0A, double d1A, double d2A,
+        double& bp0, double& bp1, double& bp2, //bperp
+        double b_0,         double b_1,         double b_2,
+        double curvKappa0,  double curvKappa1,  double curvKappa2
+        ){
+        bp0 = (b_2*d1A - b_1*d2A + A*curvKappa0);
+        bp1 = (b_0*d2A - b_2*d0A + A*curvKappa1);
+        bp2 = (b_1*d0A - b_0*d1A + A*curvKappa2);
+    }
+};
+
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
 {
@@ -198,6 +212,15 @@ struct Explicit
         // only if lapperpU has same direction as lapperpP
         dg::blas2::gemv( m_lapperpU, m_apar, result);
     }
+    void compute_bperp( std::array<Container,3>& bperp)
+    {
+        dg::blas1::subroutine( BPerp(), aparallel(),
+            gradA()[0], gradA()[1], gradA()[2],
+            bperp[0], bperp[1], bperp[2], // bperp on output
+            bhatgB()[0], bhatgB()[1], bhatgB()[2],
+            curvKappa()[0], curvKappa()[1], curvKappa()[2]
+        );
+    }
     const Container& get_source() const{
         return m_source;
     }
@@ -257,20 +280,37 @@ struct Explicit
     // note that no matter how divergence is computed you always loose one order
     // unless the polarisation term or the Laplacian of N,U is computed
     // then the correct direction must be chosen
+    // prefactor cannot alias result
+    // Div ( f v)
     template<class Container2>
-    void centered_div( const Container2& prefactor, const std::array<Container, 3>& contra_vec, Container& temp0, Container& temp1, double beta, Container& result)
+    void centered_div( const Container2& prefactor,
+            const std::array<Container, 3>& contra_vec,
+            Container& temp0, Container& result)
     {
         const Container& vol = m_multi_pol[0].weights();
-        dg::blas1::pointwiseDot( prefactor, vol, contra_vec[0], temp0);
-        dg::blas2::symv( m_dxC, temp0, temp1);
-        dg::blas1::pointwiseDot( prefactor, vol, contra_vec[1], temp0);
-        dg::blas2::symv( 1., m_dyC, temp0, 1., temp1);
+        dg::blas1::pointwiseDot( 1., prefactor, vol, contra_vec[0], 0., temp0);
+        dg::blas2::symv( m_dxC, temp0, result);
+        dg::blas1::pointwiseDot( 1., prefactor, vol, contra_vec[1], 0., temp0);
+        dg::blas2::symv( 1., m_dyC, temp0, 1., result);
         if( m_compute_in_3d)
         {
-            dg::blas1::pointwiseDot( prefactor, vol, contra_vec[2], temp0);
-            dg::blas2::symv( 1., m_dz, temp0, 1., temp1);
+            dg::blas1::pointwiseDot( 1., prefactor, vol, contra_vec[2], 0., temp0);
+            dg::blas2::symv( 1., m_dz, temp0, 1., result);
         }
-        dg::blas1::pointwiseDivide( 1., temp1, vol, beta, result);
+        dg::blas1::pointwiseDivide( 1., result, vol, 0., result);
+    }
+    void centered_v_dot_nabla( const std::array<Container, 3>& contra_vec,
+            const Container& f, Container& temp1, Container& result)
+    {
+        dg::blas2::symv( m_dxC, f, temp1);
+        dg::blas1::pointwiseDot( contra_vec[0], temp1, result);
+        dg::blas2::symv( m_dyC, f, temp1);
+        dg::blas1::pointwiseDot( 1., contra_vec[1], temp1, 1., result);
+        if( m_compute_in_3d)
+        {
+            dg::blas2::symv( m_dz, f, temp1);
+            dg::blas1::pointwiseDot( 1., contra_vec[2], temp1, 1., result);
+        }
     }
     void compute_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
@@ -710,17 +750,17 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dxB_N( dg::create::dx( g, p.bcxN, dg::backward) ),
     m_dxF_U( dg::create::dx( g, p.bcxU, dg::forward) ),
     m_dxB_U( dg::create::dx( g, p.bcxU, dg::backward) ),
-    m_dxC(   dg::create::dx( g, dg::NEU, dg::centered) ), // for divergence
     m_dx_P(  dg::create::dx( g, p.bcxP, p.pol_dir) ),
     m_dx_A(  dg::create::dx( g, p.bcxA, p.pol_dir) ),
     m_dyF_N( dg::create::dy( g, p.bcyN, dg::forward) ),
     m_dyB_N( dg::create::dy( g, p.bcyN, dg::backward) ),
     m_dyF_U( dg::create::dy( g, p.bcyU, dg::forward) ),
     m_dyB_U( dg::create::dy( g, p.bcyU, dg::backward) ),
-    m_dyC(   dg::create::dy( g, dg::NEU, dg::centered) ), // for divergence
     m_dy_P(  dg::create::dy( g, p.bcyP, p.pol_dir) ),
     m_dy_A(  dg::create::dy( g, p.bcyA, p.pol_dir) ),
     m_dz( dg::create::dz( g, dg::PER) ),
+    m_dxC(   dg::create::dx( g, dg::NEU, dg::centered) ), // for divergence
+    m_dyC(   dg::create::dy( g, dg::NEU, dg::centered) ), // for divergence
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)),
     m_old_psi( m_old_phi), m_old_gammaN( m_old_phi),
