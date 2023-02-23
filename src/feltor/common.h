@@ -2,6 +2,23 @@
 
 namespace feltor
 {
+template<class Container>
+void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)
+{
+#ifdef WITH_MPI
+    thrust::copy(
+        transfer.data().begin(),
+        transfer.data().begin() + local_size2d,
+        transfer2d.data().begin()
+    );
+#else
+    thrust::copy(
+        transfer.begin(),
+        transfer.begin() + local_size2d,
+        transfer2d.begin()
+    );
+#endif
+}
 
 dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
     const dg::geo::TokamakMagneticField& mag, double& psipO, double& psipmax, double& f0)

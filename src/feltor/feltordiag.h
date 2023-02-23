@@ -1889,21 +1889,4 @@ std::vector<Record> restart3d_list = {
     }
 };
 
-template<class Container>
-void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)
-{
-#ifdef WITH_MPI
-    thrust::copy(
-        transfer.data().begin(),
-        transfer.data().begin() + local_size2d,
-        transfer2d.data().begin()
-    );
-#else
-    thrust::copy(
-        transfer.begin(),
-        transfer.begin() + local_size2d,
-        transfer2d.begin()
-    );
-#endif
-}
 }//namespace feltor

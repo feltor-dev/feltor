@@ -19,6 +19,7 @@
 #include "init.h"
 #include "feltordiag.h"
 #include "init_from_file.h"
+#include "common.h"
 
 #ifdef WITH_MPI
 //ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
@@ -350,16 +351,23 @@ int main( int argc, char* argv[])
 #endif
         std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
         dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
+        dg::Average<dg::x::HVec> toroidal_average_full( grid, dg::coo3d::z, "simple");
         dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
             dg::create::fast_projection( grid, 1, cx, cy);
         dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
             dg::create::fast_projection( grid, 1, cx, cy);
+        dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH2d =
+            dg::create::fast_projection( *grid.perp_grid(), 1, cx, cy);
+        dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD2d =
+            dg::create::fast_projection( *grid.perp_grid(), 1, cx, cy);
         dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
         dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
         dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
         dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::x::HVec resultH2d = dg::evaluate( dg::zero, *grid.perp_grid());
+        dg::x::DVec resultD2d = dg::evaluate( dg::zero, *grid.perp_grid());
         if( argc != 3 && argc != 4)
         {
             DG_RANK0 std::cerr << "ERROR: Wrong number of arguments for netcdf output!\nUsage: "
@@ -410,6 +418,49 @@ int main( int argc, char* argv[])
 #endif
         }
 
+        /// ------------------- Set up fsa computation ---------------//
+        int dim_id1d = 0;
+        size_t count1d[2];
+        std::unique_ptr<dg::Average<dg::HVec>> poloidal_average;
+        // !! figure out MPI interpolation creation here !!
+        dg::x::IHMatrix grid2gridX2d;
+        bool compute_fsa = js["output"].asJson().isMember("fsa");
+        dg::HVec volX2d, fsa1d;
+        double psipO = 0, psipmax = 0, f0 = 0.;
+
+        DG_RANK0
+        if( compute_fsa)
+        { ///--------------- Construct X-point grid on master thread-----//
+            auto gridX2d = feltor::generate_XGrid( js["output"]["fsa"], mag, psipO, psipmax, f0);
+            /// ------------------- Compute flux labels ---------------------//
+            poloidal_average = std::make_unique<dg::Average<dg::HVec >>( gridX2d, dg::coo2d::y);
+            dg::Grid1d g1d_out, g1d_out_eta;
+            dg::HVec dvdpsip;
+            auto map1d = feltor::compute_oneflux_labels( *poloidal_average,
+                    gridX2d, mod_mag, psipO, psipmax, f0,
+                    dvdpsip, g1d_out, g1d_out_eta);
+            err = dg::file::define_dimension( ncid, &dim_id1d, g1d_out, {"psi"} );
+            count1d[0] = 1, count1d[1] = g1d_out.n()*g1d_out.N();
+            //write 1d static vectors (psi, q-profile, ...) into file
+            for( auto tp : map1d)
+            {
+                int vid;
+                err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
+                err = nc_put_att_text( ncid, vid, "long_name",
+                    std::get<2>(tp).size(), std::get<2>(tp).data());
+                err = nc_enddef(ncid);
+                err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
+                err = nc_redef(ncid);
+            }
+            std::vector<dg::HVec > coordsX = gridX2d.map();
+            grid2gridX2d  = dg::create::interpolation(
+                coordsX[0], coordsX[1], *grid.perp_grid(), dg::NEU, dg::NEU,
+                js["output"]["fsa"].get("x-grid-interpolation","dg").asString());
+            volX2d = dg::tensor::volume2d(gridX2d.metric());
+            fsa1d = dg::evaluate( dg::zero, g1d_out);
+        }
+        dg::HVec transferH2dX(volX2d); //NEW: definitions
+
         // Define dimensions (t,z,y,x)
         int dim_ids[4], restart_dim_ids[3], tvarID;
         DG_RANK0 err = dg::file::define_dimensions( ncid, &dim_ids[1], g3d_out,
@@ -422,6 +473,7 @@ int main( int argc, char* argv[])
         DG_RANK0 err_pol = dg::file::define_dimensions( ncid_pol, dim_ids_pol, grid,
                 {"z", "y", "x"});
 #endif
+        int dim_ids2d[2] = {dim_ids[0], dim_id1d}; //time,  psi
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
         bool write2d = true;
 #ifdef WITH_MPI
@@ -482,7 +534,7 @@ int main( int argc, char* argv[])
 
         //Create field IDs
         // the vector ids
-        std::map<std::string, int> id1d, id3d, id4d, restart_ids;
+        std::map<std::string, int> id1d, id2d, id3d, id4d, restart_ids;
         for( auto& record : feltor::diagnostics3d_list)
         {
             std::string name = record.name;
@@ -559,6 +611,17 @@ int main( int argc, char* argv[])
                     dim_ids3d, &id3d.at(name));
                 DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
+                DG_RANK0
+                if( compute_fsa)
+                {
+                    std::string name = record.name + "_fsa";
+                    std::string long_name = record.long_name + " (Flux surface average)";
+                    id2d[name] = 0;//creates a new id2d entry for all processes
+                    DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, dim_ids2d,
+                        &id2d.at(name));
+                    DG_RANK0 err = nc_put_att_text( ncid, id2d.at(name), "long_name",
+                        long_name.size(), long_name.data());
+                }
             }
         }
 
@@ -659,6 +722,28 @@ int main( int argc, char* argv[])
                 if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
                 tti.toc();
                 DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+                if( compute_fsa)
+                {
+                    // vectors may be distributed but gridX lives only on master
+                    // so we need to gather 2d vector to master
+                    dg::assign( resultD, resultH);
+                    toroidal_average_full( resultH, resultH2d, false);
+                    dg::blas2::symv( grid2gridX2d, resultH2d, transferH2dX); //interpolate simple average onto X-point grid
+                    dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
+                    dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
+                    try{
+                        poloidal_average->operator()( transferH2dX, fsa1d, false); //average over eta
+                    } catch( dg::Error& e)
+                    {
+                        std::cerr << "WARNING: "<<record.name<<" contains NaN or Inf\n";
+                        dg::blas1::scal( fsa1d, NAN);
+                    }
+                    dg::blas1::scal( fsa1d, 4*M_PI*M_PI*f0); //
+                    size_t start1d_out[2] = {start, 0};
+                    err = nc_put_vara_double( ncid, id2d.at(record.name+"_fsa"),
+                        start1d_out, count1d, fsa1d.data());
+                }
+
             }
         }
         for( auto& record : feltor::diagnostics1d_list)
