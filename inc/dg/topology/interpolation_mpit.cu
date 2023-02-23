@@ -86,6 +86,40 @@ int main(int argc, char* argv[])
         std::cout << "SUCCESS from rank "<<rank<<"!\n";
     MPI_Barrier(comm);
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
+    if(rank==0) std::cout << "Now test COMMUNICATING MPI local2global interpolation!\n";
+    if(rank==0)
+    {
+        x = dg::evaluate( dg::cooX2d, g2d.global());
+        y = dg::evaluate( dg::cooY2d, g2d.global());
+    }
+    else
+    {
+        x = dg::HVec(); // empty for all other pids
+        y = dg::HVec();
+    }
+    dg::MIHMatrix local2global = dg::create::interpolation( x,y,g2d);
+    dg::MHVec mpi_sine = dg::evaluate( function, g2d);
+    dg::MHVec mpi_temp( x, g2d.communicator());
+    local2global.symv( mpi_sine, mpi_temp);
+    global_sine = dg::evaluate( function, g2d.global());
+    //now compare
+    success = true;
+    if(rank==0)
+    {
+        for( unsigned i=0; i<mpi_temp.size(); i++)
+            if( fabs(mpi_temp.data()[i] - global_sine[i]) > 1e-14)
+                success = false;
+    }
+    else
+        if( mpi_temp.data().size() != 0)
+            success = false;
+
+    if( !success)
+        std::cout << "FAILED from rank "<<rank<<"!\n";
+    else
+        std::cout << "SUCCESS from rank "<<rank<<"!\n";
+    MPI_Barrier(comm);
+    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0) std::cout << "Now test TRANSPOSITION!\n";
     converted_i = dg::transpose( converted_i);
     converted_i.symv( sine, temp);
