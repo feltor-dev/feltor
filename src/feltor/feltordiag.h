@@ -32,6 +32,7 @@ struct RadialEnergyFlux{
         double curv0,  double curv1,  double curv2,
         double curvKappa0,  double curvKappa1,  double curvKappa2
         ){
+        // J_N
         jE0 = ne*(b_1*d2P - b_2*d1P + m_mu*ue*ue*curvKappa0 + m_tau*curv0);
         jE1 = ne*(b_2*d0P - b_0*d2P + m_mu*ue*ue*curvKappa1 + m_tau*curv1);
         jE2 = ne*(b_0*d1P - b_1*d0P + m_mu*ue*ue*curvKappa2 + m_tau*curv2);
@@ -48,15 +49,16 @@ struct RadialEnergyFlux{
         double b_0,         double b_1,         double b_2,
         double curvKappa0,  double curvKappa1,  double curvKappa2
         ){
-        jE0 = m_z*ne*ue*(b_2*d1A - b_1*d2A + A*curvKappa0);
-        jE1 = m_z*ne*ue*(b_0*d2A - b_2*d0A + A*curvKappa1);
-        jE2 = m_z*ne*ue*(b_1*d0A - b_0*d1A + A*curvKappa2);
+        // NU bperp
+        jE0 = ne*ue*(b_2*d1A - b_1*d2A + A*curvKappa0);
+        jE1 = ne*ue*(b_0*d2A - b_2*d0A + A*curvKappa1);
+        jE2 = ne*ue*(b_1*d0A - b_0*d1A + A*curvKappa2);
         jE0 = m_z*(m_tau * log(ne <=0 ? 1e-16 : ne) + 0.5*m_mu*ue*ue + P)*jE0
-            + m_z*m_mu*m_tau*ne*ue*ue*curvKappa0;
+            + m_z*m_tau*jE0;
         jE1 = m_z*(m_tau * log(ne <=0 ? 1e-16 : ne) + 0.5*m_mu*ue*ue + P)*jE1
-            + m_z*m_mu*m_tau*ne*ue*ue*curvKappa1;
+            + m_z*m_tau*jE1;
         jE2 = m_z*(m_tau * log(ne <=0 ? 1e-16 : ne) + 0.5*m_mu*ue*ue + P)*jE2
-            + m_z*m_mu*m_tau*ne*ue*ue*curvKappa2;
+            + m_z*m_tau*jE2;
     }
     //energy dissipation
     DG_DEVICE double operator()( double ne, double ue, double P,
@@ -74,10 +76,9 @@ struct RadialEnergyFlux{
 };
 struct PositiveLN
 {
-    DG_DEVICE double operator()(double x)
+    DG_DEVICE double operator()(double ne)
     {
-        if( x > 0) return log(x);
-        return log(1e-16); // avoid nans in output
+        return log(ne <= 0 ? 1e-16 : ne); // avoid nans in output
     }
 };
 
@@ -501,7 +502,7 @@ std::vector<Record_static> diagnostics2d_static_list = {
         }
     },
 };
-// and here are all the 2d outputs we want to produce (currently ~ 100)
+// and here are all the 2d outputs we want to produce (currently ~ 150)
 std::vector<Record> basicDiagnostics2d_list = { // 22
     {"electrons", "Electron density", false,
         []( dg::x::DVec& result, Variables& v ) {
@@ -584,20 +585,19 @@ std::vector<Record> basicDiagnostics2d_list = { // 22
     {"lperpinv", "Perpendicular density gradient length scale", false,
         []( dg::x::DVec& result, Variables& v ) {
             const std::array<dg::x::DVec, 3>& dN = v.f.gradN(0);
-            dg::tensor::multiply3d( v.f.projection(), //grad_perp
-                dN[0], dN[1], dN[2], v.tmp[0], v.tmp[1], v.tmp[2]);
-            routines::dot(dN, v.tmp, result);
-            dg::blas1::pointwiseDivide( result, v.f.density(0), result);
-            dg::blas1::pointwiseDivide( result, v.f.density(0), result);
+            dg::blas1::pointwiseDivide( 1., v.f.density(0), v.tmp[0]);
+            dg::tensor::scalar_product3d( 1., v.tmp[0],
+                dN[0], dN[1], dN[2], v.f.projection(), v.tmp[0], //grad_perp
+                dN[0], dN[1], dN[2], 0., result); // ((grad N)/N)**2
             dg::blas1::transform( result, result, dg::SQRT<double>());
         }
     },
     {"perpaligned", "Perpendicular density alignement", false,
         []( dg::x::DVec& result, Variables& v ) {
             const std::array<dg::x::DVec, 3>& dN = v.f.gradN(0);
-            dg::tensor::multiply3d( v.f.projection(), //grad_perp
-                dN[0], dN[1], dN[2], v.tmp[0], v.tmp[1], v.tmp[2]);
-            routines::dot(dN, v.tmp, result);
+            dg::tensor::scalar_product3d( 1., 1.,
+                dN[0], dN[1], dN[2], v.f.projection(), 1., //grad_perp
+                dN[0], dN[1], dN[2], 0., result); // (grad N)**2
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
         }
     },
@@ -610,8 +610,7 @@ std::vector<Record> basicDiagnostics2d_list = { // 22
     },
     {"aligned", "Parallel density alignement", false,
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::copy( v.f.dsN( 0), result);
-            dg::blas1::pointwiseDot ( result, result, result);
+            dg::blas1::pointwiseDot ( v.f.dsN(0), v.f.dsN(0), result);
             dg::blas1::pointwiseDivide( result, v.f.density(0), result);
         }
     },
@@ -821,7 +820,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     },
     {"aperp2", "Magnetic energy", false,
         []( dg::x::DVec& result, Variables& v ) {
-            if( v.p.beta == 0)
+            if( v.p.beta == 0) // avoid divison by zero
             {
                 dg::blas1::scal( result, 0.);
             }
@@ -1077,20 +1076,14 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     }
 };
 
-std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
+std::vector<Record> ToroidalExBDiagnostics2d_list = { //27
     /// ------------------------ Vorticity terms ---------------------------//
+    /// ----------------------with ion density -------------------------///
     {"oexbi", "ExB vorticity term with ion density", false,
         []( dg::x::DVec& result, Variables& v){
             routines::dot( v.f.gradP(0), v.gradPsip, result);
             dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
             dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.density(1), 0., result);
-        }
-    },
-    {"oexbe", "ExB vorticity term with electron density", false,
-        []( dg::x::DVec& result, Variables& v){
-            routines::dot( v.f.gradP(0), v.gradPsip, result);
-            dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
-            dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.density(0), 0., result);
         }
     },
     {"odiai", "Diamagnetic vorticity term with ion density", false,
@@ -1099,22 +1092,15 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
             dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
         }
     },
-    {"odiae", "Diamagnetic vorticity term with electron density", false,
-        []( dg::x::DVec& result, Variables& v){
-            routines::dot( v.f.gradN(0), v.gradPsip, result);
-            dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
-        }
-    },
-    /// --------------------- Vorticity flux terms ---------------------------//
     {"jsoexbi_tt", "ExB vorticity flux term with ion density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, v.tmp[0]);
 
             // Omega_E
-            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
-            dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.density(1), 0., v.tmp[0]);
+            routines::dot( v.f.gradP(0), v.gradPsip, result);
+            dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.density(1), 0., result);
 
             // Multiply everything
             dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
@@ -1134,6 +1120,19 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
+    {"jsoexbiUD_tt", "ExB vorticity flux term by diamagnetic velocity with ion density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // bxGradN/B Dot GradPsi
+            routines::jacobian( v.p.tau[1], v.f.bhatgB(), v.f.gradN(1), v.gradPsip, 0., result);
+
+            // m Omega_E,phi
+            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
     {"divoexbiUD_tt", "ExB vorticity flux term by diamagnetic velocity with ion density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             routines::times( v.f.bhatgB(), v.f.gradN(1), v.tmp);
@@ -1146,6 +1145,18 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
+    {"jsodiaiUE_tt", "Diamagnetic vorticity flux by ExB veloctiy term with ion density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // Omega_D,phi
+            routines::dot( v.p.mu[1]*v.p.tau[1], v.f.gradN(1), v.gradPsip, 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
     {"divodiaiUE_tt", "Diamagnetic vorticity flux by ExB veloctiy term with ion density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             // ExB
@@ -1156,6 +1167,34 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
 
             // Divergence
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
+    /// ----------------------with electron density --------------------///
+    {"oexbe", "ExB vorticity term with electron density", false,
+        []( dg::x::DVec& result, Variables& v){
+            routines::dot( v.f.gradP(0), v.gradPsip, result);
+            dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.density(0), 0., result);
+        }
+    },
+    {"odiae", "Diamagnetic vorticity term with electron density", false,
+        []( dg::x::DVec& result, Variables& v){
+            routines::dot( v.f.gradN(0), v.gradPsip, result);
+            dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
+        }
+    },
+    {"jsoexbe_tt", "ExB vorticity flux term with electron density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, v.tmp[0]);
+
+            // Omega_E
+            routines::dot( v.f.gradP(0), v.gradPsip, result);
+            dg::blas1::pointwiseDot( 1., result, v.f.binv(), v.f.binv(), 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1], result, v.f.density(0), 0., result);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
         }
     },
     {"divoexbe_tt", "ExB vorticity flux term with electron density (Time average)", true,
@@ -1172,6 +1211,19 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
+    {"jsoexbeUD_tt", "ExB vorticity flux term by diamagnetic velocity with electron density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // bxGradN/B Dot GradPsi
+            routines::jacobian( v.p.tau[1], v.f.bhatgB(), v.f.gradN(0), v.gradPsip, 0., result);
+
+            // m Omega_E,phi
+            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
+        }
+    },
     {"divoexbeUD_tt", "ExB vorticity flux term by diamagnetic velocity with electron density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             routines::times( v.f.bhatgB(), v.f.gradN(0), v.tmp);
@@ -1182,6 +1234,18 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
 
             // Divergence
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
+    {"jsodiaeUE_tt", "Diamagnetic vorticity flux by ExB velocity term with electron density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // Omega_D,phi
+            routines::dot( v.p.mu[1]*v.p.tau[1], v.f.gradN(0), v.gradPsip, 0., v.tmp[0]);
+
+            // Multiply everything
+            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
         }
     },
     {"divodiaeUE_tt", "Diamagnetic vorticity flux by ExB veloctiy term with electron density (Time average)", true,
@@ -1196,88 +1260,27 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
-    {"jsoexbe_tt", "ExB vorticity flux term with electron density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
-
-            // Omega_E
-            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
-            dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.density(0), 0., v.tmp[0]);
-
-            // Multiply everything
-            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
-        }
-    },
-    {"jsodiaiUE_tt", "Diamagnetic vorticity flux by ExB veloctiy term with ion density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
-
-            // Omega_D,phi
-            routines::dot( v.f.gradN(1), v.gradPsip, v.tmp[0]);
-            dg::blas1::scal( v.tmp[0], v.p.mu[1]*v.p.tau[1]);
-
-            // Multiply everything
-            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
-        }
-    },
-    {"jsodiaeUE_tt", "Diamagnetic vorticity flux by ExB velocity term with electron density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
-
-            // Omega_D,phi
-            routines::dot( v.f.gradN(0), v.gradPsip, v.tmp[0]);
-            dg::blas1::scal( v.tmp[0], v.p.mu[1]*v.p.tau[1]);
-
-            // Multiply everything
-            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
-        }
-    },
-    {"jsoexbiUD_tt", "ExB vorticity flux term by diamagnetic velocity with ion density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            // bxGradN/B Dot GradPsi
-            routines::jacobian( v.p.tau[1], v.f.bhatgB(), v.f.gradN(1), v.gradPsip, 0., result);
-
-            // m Omega_E,phi
-            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
-
-            // Multiply everything
-            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
-        }
-    },
-    {"jsoexbeUD_tt", "ExB vorticity flux term by diamagnetic velocity with electron density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            // bxGradN/B Dot GradPsi
-            routines::jacobian( v.p.tau[1], v.f.bhatgB(), v.f.gradN(0), v.gradPsip, 0., result);
-
-            // m Omega_E,phi
-            routines::dot( v.f.gradP(0), v.gradPsip, v.tmp[0]);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], v.f.binv(), v.f.binv(), 0., v.tmp[0]);
-
-            // Multiply everything
-            dg::blas1::pointwiseDot( 1., result, v.tmp[0], 0., result);
-        }
-    },
+    /// ----------------------Remainders--------------------------------///
     {"jsoApar_tt", "A parallel vorticity flux term (Maxwell stress) (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
+            if( v.p.beta == 0) // avoid division by zero
+            {
                 dg::blas1::scal( result, 0.);
+            }
             else
             {
                 routines::jacobian( v.f.bhatgB(), v.f.gradA(), v.gradPsip, result);
-                routines::dot( v.f.gradA(), v.gradPsip, v.tmp[0]);
-                dg::blas1::pointwiseDot( -1./v.p.beta, result, v.tmp[0], 0., result);
+                routines::dot( -1./v.p.beta, v.f.gradA(), v.gradPsip, 0., v.tmp[0]);
+                dg::blas1::pointwiseDot( result, v.tmp[0], result);
             }
         }
     },
     {"divoApar_tt", "A parallel vorticity flux term (Maxwell stress) (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
+            if( v.p.beta == 0) // avoid division by zero
+            {
                 dg::blas1::scal( result, 0.);
+            }
             else
             {
                 routines::times( v.f.bhatgB(), v.f.gradA(), v.tmp);
@@ -1288,33 +1291,49 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
     },
     {"jsodiaApar_tt", "A parallel diamagnetic vorticity flux term (magnetization stress) (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
-                dg::blas1::scal( result, 0.);
-            else
-            {
-                routines::dot( v.gradPsip, v.f.gradU(1), v.tmp[0]);
-                routines::dot( v.gradPsip, v.f.gradN(1), v.tmp[1]);
-                dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.density(1), 1., v.tmp[0], v.f.velocity(1), 0., result);
+            routines::dot( v.gradPsip, v.f.gradU(1), v.tmp[0]);
+            routines::dot( v.gradPsip, v.f.gradN(1), v.tmp[1]);
+            dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.density(1), 1., v.tmp[0], v.f.velocity(1), 0., result);
 
-                routines::jacobian( v.f.bhatgB(), v.f.gradA(), v.gradPsip, result);
-                dg::blas1::pointwiseDot( -1./2.*v.p.tau[1], result, v.tmp[0], 0., result);
-            }
+            routines::jacobian( v.f.bhatgB(), v.f.gradA(), v.gradPsip, result);
+            dg::blas1::pointwiseDot( -1./2.*v.p.tau[1], result, v.tmp[0], 0., result);
         }
     },
     {"jsoexbApar_tt", "A parallel ExB vorticity flux term (magnetization stress) (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
-                dg::blas1::scal( result, 0.);
-            else
-            {
-                routines::jacobian( v.f.bhatgB(), v.f.gradU(1), v.gradPsip, v.tmp[0]);
-                routines::jacobian( v.f.bhatgB(), v.f.gradN(1), v.gradPsip, v.tmp[1]);
-                dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.density(1), 1., v.tmp[1], v.f.velocity(1), 0., result);
-                routines::dot( v.f.gradA(), v.gradPsip, v.tmp[2]);
-                dg::blas1::pointwiseDot( -1./2.*v.p.tau[1], result, v.tmp[2], 0., result);
-            }
+            routines::jacobian( v.f.bhatgB(), v.f.gradU(1), v.gradPsip, v.tmp[0]);
+            routines::jacobian( v.f.bhatgB(), v.f.gradN(1), v.gradPsip, v.tmp[1]);
+            dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.density(1), 1., v.tmp[1], v.f.velocity(1), 0., result);
+            routines::dot( v.f.gradA(), v.gradPsip, v.tmp[2]);
+            dg::blas1::pointwiseDot( -1./2.*v.p.tau[1], result, v.tmp[2], 0., result);
         }
     },
+    {"socurve_tt", "Vorticity source term electron curvature (Time average)", true,
+        []( dg::x::DVec& result, Variables& v) {
+            routines::dot( v.f.curv(), v.gradPsip, result);
+            dg::blas1::pointwiseDot( -v.p.tau[0], v.f.density(0), result, 0., result);
+        }
+    },
+    {"socurvi_tt", "Vorticity source term ion curvature (Time average)", true,
+        []( dg::x::DVec& result, Variables& v) {
+            routines::dot( v.f.curv(), v.gradPsip, result);
+            dg::blas1::pointwiseDot( v.p.tau[1], v.f.density(1), result, 0., result);
+        }
+    },
+    {"socurvkappae_tt", "Vorticity source term electron kappa curvature (Time average)", true,
+        []( dg::x::DVec& result, Variables& v) {
+            routines::dot( v.f.curvKappa(), v.gradPsip, result);
+            dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0), v.f.velocity(0), 0., v.tmp[0]);
+            dg::blas1::pointwiseDot( -v.p.mu[0], v.tmp[0], result, 0., result);
+        }
+    },
+    {"socurvkappai_tt", "Vorticity source term ion kappa curvature (Time average)", true,
+        []( dg::x::DVec& result, Variables& v) {
+            routines::dot( v.f.curvKappa(), v.gradPsip, result);
+            dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.velocity(1), 0., v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], result, 0., result);
+        }
+    }
     {"sosne_tt", "ExB vorticity source term with electron source", true,
         []( dg::x::DVec& result, Variables& v){
             routines::dot( v.f.gradP(0), v.gradPsip, result);
@@ -1342,27 +1361,14 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //20
     }
 };
 
-std::vector<Record> ParallelMomDiagnostics2d_list = { //40
+std::vector<Record> ParallelMomDiagnostics2d_list = { //36
     ///-----------------------Parallel momentum terms ------------------------//
-    {"neue", "Product of electron density and velocity", false,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot(
-                v.f.density(0), v.f.velocity(0), result);
-        }
-    },
     {"niui", "Product of ion gyrocentre density and velocity", false,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot(
                 v.f.density(1), v.f.velocity(1), result);
         }
     },
-    {"niuibphi", "Product of NiUi and covariant phi component of magnetic field unit vector", false,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( 1.,
-                v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., result);
-        }
-    },
-    /// --------------------- Parallel momentum flux terms ---------------------//
     {"jsparexbi_tt", "Parallel momentum radial flux by ExB velocity with electron potential (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             // ExB Dot GradPsi
@@ -1390,121 +1396,65 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //40
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
-    {"jsparbphiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with electron potential (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
-
-            // parallel momentum mu_iN_iU_i
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
-
-            // Multiply everything
-            dg::blas1::pointwiseDot( 1., result, v.tmp[0],v.f.bphi(), 0., result);
-        }
-    },
-    {"divparbphiexbi_tt", "Divergence of parallel angular momentum radial flux by ExB velocity with electron potential (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            // ExB
-            routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
-            // parallel momentum mu_iN_iU_i bphi
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., v.tmp3[0]);
-            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
-        }
-    },
     {"divpardiai_tt", "Parallel momentum radial flux by Diamagnetic velocity with ion density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             routines::dot( 1., v.f.curv(), v.f.gradN(1), 0., v.tmp[0]);
             routines::dot( 1., v.f.curv(), v.f.gradU(1), 0., v.tmp[1]);
             // Multiply everything
-            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.tmp[0], v.f.velocity(1), v.p.mu[1]*v.p.tau[1], v.tmp[1], v.f.density(1), 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.tmp[0], v.f.velocity(1),
+                v.p.mu[1]*v.p.tau[1], v.tmp[1], v.f.density(1), 0., result);
         }
     },
     {"divparkappai_tt", "Parallel momentum radial flux by curvature velocity (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1), v.f.velocity(1), 0., v.tmp[1]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]); // mu NU
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.tmp[0], 0., v.tmp[1]); //muNU mu U**2
             // mu NU(mu U^2 + 2tau)
             dg::blas1::axpbypgz( 2.*v.p.tau[1], v.tmp[0], +1., v.tmp[1], 0., v.tmp3[0]);
             v.f.centered_div( v.tmp3[0], v.f.curvKappa(), v.tmp2[0], result);
         }
     },
-    {"divparbphidiai_tt", "Parallel angular momentum radial flux by Diamagnetic velocity with ion density (Time average)", true,
+    {"divparmirrorAi_tt", "Divergence of parallel magnetic flutter force (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            routines::dot( 1., v.f.curv(), v.f.gradN(1), 0., v.tmp[0]);
-            routines::dot( 1., v.f.curv(), v.f.gradU(1), 0., v.tmp[1]);
-            dg::blas1::pointwiseDot( v.tmp[0], v.f.bphi(), v.tmp[0]);
-            dg::blas1::pointwiseDot( v.tmp[1], v.f.bphi(), v.tmp[1]);
-            // Multiply everything
-            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.tmp[0], v.f.velocity(1), v.p.mu[1]*v.p.tau[1], v.tmp[1], v.f.density(1), 0., result);
+            //b_\perp
+            v.f.compute_bperp( v.tmp);
+            v.f.centered_div( v.f.density(1), v.tmp, v.tmp2[0], result);
+            dg::blas1::scal( result, v.p.tau[1]);
         }
     },
-    {"divparbphikappai_tt", "Parallel angular momentum radial flux by curvature velocity (Time average)", true,
+    {"divparmirrorAe_tt", "Divergence of parallel magnetic flutter force (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., v.tmp[0]);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.bphi(), 0., v.tmp[1]);
-            // mu NU(mu U^2 + 2tau)bphi
-            dg::blas1::axpbypgz( 2.*v.p.tau[1], v.tmp[0], +1., v.tmp[1], 0., v.tmp3[0]);
-            v.f.centered_div( v.tmp3[0], v.f.curvKappa(), v.tmp2[0], result);
+            //b_\perp
+            v.f.compute_bperp( v.tmp);
+            v.f.centered_div( v.f.density(0), v.tmp, v.tmp2[0], result);
+            dg::blas1::scal( result, -1.);
         }
     },
     {"divparApari_tt", "Parallel momentum radial flux by magnetic flutter (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
-            {
-                dg::blas1::scal( result, 0.);
-            }
-            else
-            {
-                dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.density(1),  0., v.tmp3[0]);
-                //b_\perp^v
-                v.f.compute_bperp( v.tmp);
-                v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
-            }
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.density(1),  0., v.tmp3[0]);
+            //b_\perp^v
+            v.f.compute_bperp( v.tmp);
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
-    {"divparmirrorAi_tt", "Divergence of parallel magnetic flutter force (Time average)", true,
+    {"divparApare_tt", "Divergence of parallel momentum radial flux by magnetic flutter (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
-            {
-                dg::blas1::scal( result, 0.);
-            }
-            else
-            {
-                //b_\perp^v
-                v.f.compute_bperp( v.tmp);
-                v.f.centered_div( v.f.density(1), v.tmp, v.tmp2[0], result);
-                dg::blas1::scal( result, v.p.tau[1]);
-            }
+            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.velocity(0), v.f.velocity(0), v.f.density(0),  0., v.tmp3[0]);
+            //b_\perp^v
+            v.f.compute_bperp( v.tmp);
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
-    {"divparbphiApar_tt", "Parallel angular momentum radial flux by magnetic flutter (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
-            {
-                dg::blas1::scal( result, 0.);
-            }
-            else
-            {
-                dg::blas1::pointwiseDot( -v.p.mu[0], v.f.velocity(0), v.f.velocity(0), v.f.density(0),  0., result);
-                dg::blas1::pointwiseDot( +v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.density(1),  1., result);
-                dg::blas1::pointwiseDot( -v.p.tau[0], v.f.density(0), v.tmp[2],
-                                         +v.p.tau[1], v.f.density(1), v.tmp[2], 1., result);
-                dg::blas1::pointwiseDot( v.f.bphi(), result, v.tmp3[0]);
-                v.f.compute_bperp( v.tmp);
-                v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
-            }
+    // should be zero
+    {"sparsni_tt", "Parallel momentum source by density and velocity sources", true,
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( v.p.mu[1],
+                v.f.density_source(1), v.f.velocity(1),
+                v.p.mu[1], v.f.velocity_source(1), v.f.density(1), 0., result);
         }
     },
     /// --------------------- Parallel momentum source terms ---------------------//
-    {"divjpare_tt", "Divergence of parallel electron momentum flux", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.divNUb(0), v.f.velocity(0),
-                    0., result);
-            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.density(0),
-                    v.f.velocity(0), v.f.dsU(0), 1., result);
-        }
-    },
     {"divjpari_tt", "Divergence of parallel ion momentum flux", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::pointwiseDot( v.p.mu[1], v.f.divNUb(1), v.f.velocity(1),
@@ -1513,34 +1463,12 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //40
                     v.f.velocity(1), v.f.dsU(1), 1., result);
         }
     },
-    //not so important
-    {"sparmirrorKappai_tt", "Generalized mirror force (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.f.density(1), v.f.velocity(1),
-                v.f.divCurvKappa(), 0., result);
-        }
-    },
-    //not so important
-    {"sparKappaphii_tt", "Kappa Phi Source for parallel momentum", true,
+    {"divjpare_tt", "Divergence of parallel electron momentum flux", true,
         []( dg::x::DVec& result, Variables& v ) {
-            routines::dot( v.f.curvKappa(), v.f.gradP(1), result);
-            dg::blas1::pointwiseDot( -v.p.mu[1], v.f.density(1), v.f.velocity(1), result, 0., result);
-        }
-    },
-    // should be zero in new implementation
-    {"sparsni_tt", "Parallel momentum source by density and velocity sources", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.density_source(1), v.f.velocity(1),
-                v.p.mu[1], v.f.velocity_source(1), v.f.density(1), 0., result);
-        }
-    },
-    {"sparsnibphi_tt", "Parallel angular momentum source by density and velocity sources", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.density_source(1), v.f.velocity(1), v.f.bphi(), 0., result);
-            dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.velocity_source(1), v.f.density(1), v.f.bphi(), 1., result);
+            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.divNUb(0), v.f.velocity(0),
+                    0., result);
+            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.density(0),
+                    v.f.velocity(0), v.f.dsU(0), 1., result);
         }
     },
     //should be zero
@@ -1560,7 +1488,103 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //40
                     1., v.tmp[1], v.f.density(1), 0., result);
         }
     },
-    /// --------------------- Mirror force term ---------------------------//
+    //not so important
+    {"sparKappaphii_tt", "Kappa Phi Source for parallel momentum", true,
+        []( dg::x::DVec& result, Variables& v ) {
+            routines::dot( v.f.curvKappa(), v.f.gradP(1), result);
+            dg::blas1::pointwiseDot( -v.p.mu[1], v.f.density(1), v.f.velocity(1), result, 0., result);
+        }
+    },
+    //not so important
+    {"sparmirrorKappai_tt", "Generalized mirror force (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.f.density(1), v.f.velocity(1),
+                v.f.divCurvKappa(), 0., result);
+        }
+    },
+    ///-----------------------Parallel anbular momentum terms-----------------//
+    {"niuibphi", "Product of NiUi and covariant phi component of magnetic field unit vector", false,
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( 1.,
+                v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., result);
+        }
+    },
+    {"jsparbphiexbi_tt", "Parallel angular momentum radial flux by ExB velocity with electron potential (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // ExB Dot GradPsi
+            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
+
+            // parallel momentum mu_iN_iU_i
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), result, 0., result);
+
+            // Multiply bphi
+            dg::blas1::pointwiseDot( 1., result, v.f.bphi(), 0., result);
+        }
+    },
+    {"divparbphiexbi_tt", "Divergence of parallel angular momentum radial flux by ExB velocity with electron potential (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // ExB
+            routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
+            // parallel momentum mu_iN_iU_i bphi
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., v.tmp3[0]);
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
+    {"divparbphiexbii_tt", "Divergence of parallel angular momentum radial flux by ExB velocity with ion potential (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            // ExB
+            routines::times(v.f.bhatgB(), v.f.gradP(1), v.tmp); //u_E
+            // parallel momentum mu_iN_iU_i bphi
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), v.f.bphi(), 0., v.tmp3[0]);
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
+    {"divparbphidiai_tt", "Parallel angular momentum radial flux by Diamagnetic velocity with ion density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            routines::dot( 1., v.f.curv(), v.f.gradN(1), 0., v.tmp[0]);
+            routines::dot( 1., v.f.curv(), v.f.gradU(1), 0., v.tmp[1]);
+            dg::blas1::pointwiseDot( v.tmp[0], v.f.bphi(), v.tmp[0]);
+            dg::blas1::pointwiseDot( v.tmp[1], v.f.bphi(), v.tmp[1]);
+            // Multiply everything
+            dg::blas1::pointwiseDot( v.p.mu[1]*v.p.tau[1], v.tmp[0], v.f.velocity(1),
+                v.p.mu[1]*v.p.tau[1], v.tmp[1], v.f.density(1), 0., result);
+        }
+    },
+    {"divparbphikappai_tt", "Parallel angular momentum radial flux by curvature velocity (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.density(1), v.f.velocity(1), 0., v.tmp[0]);
+            dg::blas1::pointwiseDot( v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.tmp[0],  0., v.tmp[1]);
+            // mu NU(mu U^2 + 2tau)bphi
+            dg::blas1::pointwiseDot( 2.*v.p.tau[1], v.tmp[0], v.f.bphi(), +1., v.tmp[1], v.f.bphi(), 0., v.tmp3[0]);
+            v.f.centered_div( v.tmp3[0], v.f.curvKappa(), v.tmp2[0], result);
+        }
+    },
+    {"divparbphiApar_tt", "Parallel angular momentum radial flux by magnetic flutter (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( -v.p.mu[0], v.f.velocity(0), v.f.velocity(0), v.f.density(0),  0., result);
+            dg::blas1::pointwiseDot( +v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.density(1),  1., result);
+            dg::blas1::axpby( -v.p.tau[0], v.f.density(0),
+                              +v.p.tau[1], v.f.density(1), 1., result);
+            dg::blas1::pointwiseDot( v.f.bphi(), result, v.tmp3[0]);
+            v.f.compute_bperp( v.tmp);
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
+    // should be zero
+    {"sparsnibphi_tt", "Parallel angular momentum source by density and velocity sources", true,
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot( v.p.mu[1],
+                v.f.density_source(1), v.f.velocity(1), v.f.bphi(), 0., result);
+            dg::blas1::pointwiseDot( v.p.mu[1],
+                v.f.velocity_source(1), v.f.density(1), v.f.bphi(), 1., result);
+        }
+    },
+    /// --------------------electron force balance usually well-fulfilled ----//
+    {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
+        []( dg::x::DVec& result, Variables& v){
+            dg::blas1::pointwiseDot( 1., v.f.dsP(0), v.f.density(0), 0., result);
+        }
+    },
     {"sparmirrore_tt", "Parallel electron pressure (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             dg::blas1::axpby( v.p.tau[0], v.f.dsN(0), 0., result);
@@ -1572,12 +1596,7 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //40
             routines::dot( v.p.tau[0], v.tmp, v.f.gradN(0), 0., result);
         }
     },
-    //electric force balance usually well-fulfilled
-    {"sparphie_tt", "Electric force in electron momentum density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( 1., v.f.dsP(0), v.f.density(0), 0., result);
-        }
-    },
+
     {"sparphiAe_tt", "Apar Electric force in electron momentum density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             v.f.compute_bperp( v.tmp);
@@ -1591,37 +1610,18 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //40
             dg::blas1::pointwiseDot( v.f.density(0), result, result);
         }
     },
-    {"divparApare_tt", "Divergence of parallel momentum radial flux by magnetic flutter (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
-            {
-                dg::blas1::scal( result, 0.);
-            }
-            else
-            {
-                dg::blas1::pointwiseDot( -v.p.mu[0], v.f.velocity(0), v.f.velocity(0), v.f.density(0),  0., v.tmp3[0]);
-                //b_\perp^v
-                v.f.compute_bperp( v.tmp);
-                v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
-            }
+    {"neue", "Product of electron density and velocity", false,
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::pointwiseDot(
+                v.f.density(0), v.f.velocity(0), result);
         }
     },
-    {"divparmirrorAe_tt", "Divergence of parallel magnetic flutter force (Time average)", true,
+    /// -----------Ion force balance ----------------------///
+    {"sparphii_tt", "Electric force term in ion momentum density (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
-            if( v.p.beta == 0)
-            {
-                dg::blas1::scal( result, 0.);
-            }
-            else
-            {
-                //b_\perp^v
-                v.f.compute_bperp( v.tmp);
-                v.f.centered_div( v.f.density(0), v.tmp, v.tmp2[0], result);
-                dg::blas1::scal( result, -1.);
-            }
+            dg::blas1::pointwiseDot( -1., v.f.dsP(1), v.f.density(1), 0., result);
         }
     },
-    // Terms of only the ion momentum equation
     {"sparmirrori_tt", "Parallel ion pressure (Time average)", true,
         []( dg::x::DVec& result, Variables& v){
             dg::blas1::axpby( -v.p.tau[1], v.f.dsN(1), 0., result);
@@ -1631,11 +1631,6 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //40
         []( dg::x::DVec& result, Variables& v){
             v.f.compute_bperp( v.tmp);
             routines::dot( -v.p.tau[1], v.tmp, v.f.gradN(1), 0., result);
-        }
-    },
-    {"sparphii_tt", "Electric force term in ion momentum density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v){
-            dg::blas1::pointwiseDot( -1., v.f.dsP(1), v.f.density(1), 0., result);
         }
     },
     {"sparphiAi_tt", "Apar Electric force in ion momentum density (Time average)", true,
@@ -1658,33 +1653,6 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //40
             dg::blas1::pointwiseDot( v.p.eta, result, v.f.density(0), 0, result);
         }
     },
-    /// --------------------- Lorentz force terms ---------------------------//
-    {"socurve_tt", "Vorticity source term electron curvature (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.f.curv(), v.gradPsip, result);
-            dg::blas1::pointwiseDot( -v.p.tau[0], v.f.density(0), result, 0., result);
-        }
-    },
-    {"socurvi_tt", "Vorticity source term ion curvature (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.f.curv(), v.gradPsip, result);
-            dg::blas1::pointwiseDot( v.p.tau[1], v.f.density(1), result, 0., result);
-        }
-    },
-    {"socurvkappae_tt", "Vorticity source term electron kappa curvature (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.f.curvKappa(), v.gradPsip, result);
-            dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0), v.f.velocity(0), 0., v.tmp[0]);
-            dg::blas1::pointwiseDot( -v.p.mu[0], v.tmp[0], result, 0., result);
-        }
-    },
-    {"socurvkappai_tt", "Vorticity source term ion kappa curvature (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.f.curvKappa(), v.gradPsip, result);
-            dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.velocity(1), 0., v.tmp[0]);
-            dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], result, 0., result);
-        }
-    }
 };
 
 std::vector<Record> RSDiagnostics2d_list = { //2
@@ -1701,24 +1669,37 @@ std::vector<Record> RSDiagnostics2d_list = { //2
     }
 };
 
-std::vector<Record> COCEDiagnostics2d_list = { // 14
+std::vector<Record> COCEDiagnostics2d_list = { // 16
     /// ----------------- COCE EQUATION ----------------//
     /// ---------- Polarization charge densities -----------///
-
-    {"v_Omega_E", "Electron polarisation term", false, //CHECKED
+    {"v_Omega_E", "Electron polarisation term", false,
         []( dg::x::DVec& result, Variables& v) {
             v.f.compute_pol( 1., v.f.density(0), v.tmp[0], 0., result);
         }
     },
-    {"v_Omega_E_gf", "Ion polarisation term", false, //CHECKED
+    {"v_Omega_E_gf", "Ion polarisation term", false,
         []( dg::x::DVec& result, Variables& v) {
             v.f.compute_pol( 1., v.f.density(1), v.tmp[0], 0., result);
         }
     },
-
     /// ------------ Polarization advections ------------------//
+    {"v_adv_E_main_tt", "Main electric advective term (time integrated)", true,
+        []( dg::x::DVec& result, Variables& v) {
+            v.f.compute_pol( 1., v.f.density(0), v.tmp[0], 0., v.tmp3[0]);
+            routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
+    {"v_adv_E_main_gf_tt", "Main electric advective term (time integrated)", true,
+        []( dg::x::DVec& result, Variables& v) {
+            v.f.compute_pol( 1., v.f.density(1), v.tmp[0], 0., v.tmp3[0]);
+            routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
     {"v_adv_E_rest_tt", "Electric advective term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
+            // NOT implemented for true curvature mode
             routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp2); //u_E
             dg::blas1::pointwiseDot(1., v.f.binv(), v.f.binv(), v.f.density(0), 0., v.tmp[0]);
             routines::scal(v.tmp[0], v.f.gradP(0), v.tmp3); //ne Grad_phi/B^2
@@ -1727,9 +1708,9 @@ std::vector<Record> COCEDiagnostics2d_list = { // 14
             v.f.centered_div( v.p.mu[1], v.tmp, v.tmp2[0], result);
         }
     },
-
     {"v_adv_E_rest_gf_tt", "Electric advective term GF (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
+            // NOT implemented for true curvature mode
             routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp2); //u_E
             dg::blas1::pointwiseDot(1., v.f.binv(), v.f.binv(), v.f.density(1), 0., v.tmp[0]);
             routines::scal(v.tmp[0], v.f.gradP(0), v.tmp3); //ne Grad_phi/B^2
@@ -1738,15 +1719,23 @@ std::vector<Record> COCEDiagnostics2d_list = { // 14
             v.f.centered_div( v.p.mu[1], v.tmp, v.tmp2[0], result);
         }
     },
-    {"v_adv_E_main_tt", "Main electric advective term (time integrated)", true,
+    {"v_adv_D_main_tt", "Main diamagnetic term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
-            v.f.compute_pol( 1., v.f.density(0), v.tmp[0], 0., v.tmp3[0]);
+            v.f.compute_lapMperpN(-1.0, v.f.density(0), v.tmp[0], 0., v.tmp3[0]);
+            routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
+            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+        }
+    },
+    {"v_adv_D_main_gf_tt", "Main diamagnetic term (time integrated)", true,
+        []( dg::x::DVec& result, Variables& v) {
+            v.f.compute_lapMperpN(-1.0, v.f.density(1), v.tmp[0], 0., v.tmp3[0]);
             routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
     {"v_adv_D_rest_tt", "Diamagnetic advective term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
+            // NOT implemented for true curvature mode
             routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp2); //u_E
             v.f.centered_v_dot_nabla(v.f.gradN(0), v.tmp2[0], v.tmp[2], v.tmp[0]); //t3*nabla(u_E^R)
             v.f.centered_v_dot_nabla(v.f.gradN(0), v.tmp2[1], v.tmp[2], v.tmp[1]); //t3*nabla(u_E^Z)
@@ -1755,18 +1744,12 @@ std::vector<Record> COCEDiagnostics2d_list = { // 14
     },
 
     {"v_adv_D_rest_gf_tt", "Diamagnetic advective term GF (time integrated)", true,
-        []( dg::x::DVec& result, Variables& v) { //CHECKED
+        []( dg::x::DVec& result, Variables& v) {
+            // NOT implemented for true curvature mode
             routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp2); //u_E
             v.f.centered_v_dot_nabla(v.f.gradN(1), v.tmp2[0], v.tmp[2], v.tmp[0]); //t3*nabla(u_E^R)
             v.f.centered_v_dot_nabla(v.f.gradN(1), v.tmp2[1], v.tmp[2], v.tmp[1]); //t3*nabla(u_E^Z)
             v.f.centered_div( v.p.tau[1]*v.p.mu[1], v.tmp, v.tmp2[0], result);
-        }
-    },
-    {"v_adv_D_main_tt", "Main diamagnetic term (time integrated)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            v.f.compute_lapMperpN(-1.0, v.f.density(1), v.tmp[0], 0., v.tmp3[0]);
-            routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
-            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
     ///---------------- J_b_perp components --------//
@@ -1784,8 +1767,8 @@ std::vector<Record> COCEDiagnostics2d_list = { // 14
                     0., v.tmp2[2]);
             v.f.compute_bperp(v.tmp);
             dg::blas1::axpbypgz( 1., v.tmp2[0], 1., v.tmp2[1], 1., v.tmp2[2]);
-            routines::scal( v.tmp2[2], v.tmp, v.tmp);
-            v.f.centered_div( v.p.tau[1]/2., v.tmp, v.tmp2[0], result);
+            v.f.centered_div( v.tmp2[2], v.tmp, v.tmp2[0], result);
+            dg::blas1::scal ( result, v.p.tau[1]/2.);
         }
     },
     {"v_J_bperp_tt", "Div J_par times b_perp term (time integrated)", true,
@@ -1793,17 +1776,16 @@ std::vector<Record> COCEDiagnostics2d_list = { // 14
             v.f.compute_bperp(v.tmp);
             dg::blas1::pointwiseDot(1., v.f.density(1), v.f.velocity(1), -1.,
                     v.f.density(0), v.f.velocity(0), 0, v.tmp2[0]);
-            routines::scal(v.tmp2[0], v.tmp, v.tmp3);
-            v.f.centered_div( 1., v.tmp3, v.tmp2[0], result);
+            v.f.centered_div( v.tmp2[0], v.tmp, v.tmp3[0], result);
         }
     },
     ///-------------- Sources term----------///
-    {"v_S_E_tt", "Electric source vorticity (time integrated)", true, //FINAL
+    {"v_S_E_tt", "Electric source vorticity (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
             v.f.compute_pol( 1., v.f.density_source(0), v.tmp[0], 0., result);
         }
     },
-    {"v_S_D_tt", "Diamagnetic source vorticity (time integrated)", true, //FINAL
+    {"v_S_D_tt", "Diamagnetic source vorticity (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
             v.f.compute_lapMperpN(-v.p.tau[1]*v.p.mu[1], v.f.density_source(0), v.tmp[0], 0., result);
         }

@@ -214,11 +214,12 @@ struct Explicit
     }
     void compute_bperp( std::array<Container,3>& bperp)
     {
-        dg::blas1::subroutine( BPerp(), aparallel(),
-            gradA()[0], gradA()[1], gradA()[2],
+        update_diag();
+        dg::blas1::subroutine( BPerp(), m_apar,
+            m_dA[0], m_dA[1], m_dA[2],
             bperp[0], bperp[1], bperp[2], // bperp on output
-            bhatgB()[0], bhatgB()[1], bhatgB()[2],
-            curvKappa()[0], curvKappa()[1], curvKappa()[2]
+            m_b[0], m_b[1], m_b[2],
+            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2]
         );
     }
     const Container& get_source() const{
@@ -280,7 +281,7 @@ struct Explicit
     // note that no matter how divergence is computed you always loose one order
     // unless the polarisation term or the Laplacian of N,U is computed
     // then the correct direction must be chosen
-    // prefactor cannot alias result
+    // prefactor cannot alias result!!
     // Div ( f v)
     template<class Container2>
     void centered_div( const Container2& prefactor,
@@ -314,9 +315,10 @@ struct Explicit
     }
     void compute_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
+        // positive polarisation term !!
         dg::blas1::pointwiseDot( m_p.mu[1], density, m_binv, m_binv, 0., temp);
         m_multi_pol[0].set_chi( temp);
-        dg::blas2::symv( alpha, m_multi_pol[0], m_potential[0], beta, result);
+        dg::blas2::symv( -alpha, m_multi_pol[0], m_potential[0], beta, result);
     }
     unsigned called() const { return m_called;}
 
@@ -563,8 +565,8 @@ struct Explicit
     Container m_vbm, m_vbp, m_dN, m_dNMM, m_dNM, m_dNZ, m_dNP, m_dNPP;
 
     //matrices and solvers
-    Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_N, m_dx_P, m_dx_A;
-    Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_N, m_dy_P, m_dy_A, m_dz;
+    Matrix m_dxF_N, m_dxB_N, m_dxF_U, m_dxB_U, m_dx_P, m_dx_A;
+    Matrix m_dyF_N, m_dyB_N, m_dyF_U, m_dyB_U, m_dy_P, m_dy_A, m_dz;
     Matrix m_dxC, m_dyC;
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;

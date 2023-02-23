@@ -2438,17 +2438,17 @@ The implemented terms are defined as follows:
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation}\\
 \midrule
     v\_Omega\_E\_gf &$ \mu_i\nc(\frac{N_i\vec{\nabla_\perp}\phi}{B^2})$ \\
-    v\_Omega\_D\_gf &$ \mu_i\tau_i \Delta_\perp N_i$ REMOVED! use laplace\_ne and laplace\_ni instead \\
-    v\_adv\_E\_main\_tt &$ \mu_i\nc(\nc (\frac{N_i\vec{\nabla_\perp}\phi}{B^2})\vec{u_E})   $\\
+    v\_Omega\_D\_gf &$ \mu_i\tau_i \Delta_\perp N_i$ REMOVED! use laplace\_ne and laplace\_ni \\
+    v\_adv\_E\_main\_gf\_tt &$ \mu_i\nc(\nc (\frac{N_i\vec{\nabla_\perp}\phi}{B^2})\vec{u_E})   $\\
     v\_adv\_E\_rest\_gf\_tt &$ \mu_i\nc(\frac{N_i\vec{\nabla_\perp}\phi}{B^2}\cdot\nabla \vec{u_E})  $\\
-    v\_adv\_D\_main\_tt &$  \mu_i\tau_i \nc((\Delta_\perp N_i)\vec{u_E})   $\\
+    v\_adv\_D\_main\_gf\_tt &$  \mu_i\tau_i \nc((\Delta_\perp N_i)\vec{u_E})   $\\
     v\_adv\_D\_rest\_gf\_tt &$  \mu_i\tau_i \nc(\vec{\nabla_\perp} N_i\cdot\nabla \vec{u_E})  $\\
     v\_M\_em\_gf\_tt &$  -\nc\nc(\vec{M^{em}}\vec{b_\perp})$ REMOVED! we have no $\Gamma_1 A_\parallel$ terms \\
-    v\_J\_mag\_tt &$ \nc(j_{mag,||}\vec{b_\perp})=\tau_i\nc\left(\frac{\Delta_\perp( N_i U_{i,\parallel})}{2}\vec{b_\perp}\right)  $\\
-    v\_J\_bperp\_tt &$ \nc(j_{||}\vec{b_\perp}) $ yields the Maxwell stress\\
-    v\_J\_D\_gf\_tt &$ \nc\left(\frac{\bhat\times(\tau_i\vec{\nabla_\perp} N_i-\tau_e\vec{\nabla_\perp} n_e)}{B}\right) $ REMOVED! use divcurvn* instead\\
-    v\_J\_par\_tt &$ \nc((N_i U_{i,\parallel} - n_e u_{e,\parallel})\bhat)  $ REMOVED! use divjnipar-divjnepar instead\\
-    v\_J\_NUK\_gf\_tt &$ \nc((\mu_iN_iU_{i,\parallel}^2-\mu_en_eu_{e,\parallel}^2)\KK)  $ REMOVED! use divcurvkappa* instead\\
+    v\_J\_mag\_tt &$ \nc(j_{mag,||}\vec{b_\perp})=(\tau_i/2)\nc\left(\Delta_\perp( N_i U_{i,\parallel})\vec{b_\perp}\right)  $\\
+    v\_J\_bperp\_tt &$ \nc(j_{||}\vec{b_\perp}) = \nc ((N_i U_{\parallel,i} - n_e u_{\parallel,e})\vec b_\perp)$ yields the Maxwell stress\\
+    v\_J\_D\_gf\_tt &$ \nc\left(\frac{\bhat\times(\tau_i\vec{\nabla_\perp} N_i-\tau_e\vec{\nabla_\perp} n_e)}{B}\right) $ REMOVED! use divcurvn*\\
+    v\_J\_par\_tt &$ \nc((N_i U_{i,\parallel} - n_e u_{e,\parallel})\bhat)  $ REMOVED! use divjnipar-divjnepar\\
+    v\_J\_NUK\_gf\_tt &$ \nc((\mu_iN_iU_{i,\parallel}^2-\mu_en_eu_{e,\parallel}^2)\KK)  $ REMOVED! use divcurvkappa*\\
     v\_J\_JAK\_tt &$ \nc(J_\parallel A_{1,\parallel}\KK)  $ REMOVED! part of v\_J\_bperp\\
     v\_S\_E\_tt &$ \mu_i\nc(\frac{S_N\np\phi}{B^2})  $\\
     v\_S\_D\_tt &$ \mu_i\tau_i\nc(\np S_{N})  $\\
@@ -2499,43 +2499,46 @@ The relevant terms in the output file are (the Lorentz force term is described i
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} &
 \textbf{Name} &  \textbf{Equation}\\
 \midrule
-    neue &$n_e u_{\parallel,e}$ &
-    niui &$\mu_i N_i U_{\parallel,i}$ \\
-    neuebphi &$n_eu_{\parallel,e}b_\varphi$ &
+    niui &$\mu_i N_i U_{\parallel,i}$ &
     niuibphi &$\mu_i N_iU_{\parallel,i}b_\varphi$ \\
     jsparexbi\_tt       & $\mu_i N_iU_{\parallel,i}(\bhat\times\vn\phi)\cn \psi_p/B$ &
     jsparbphiexbi\_tt   & $\mu_i N_iU_{\parallel,i}b_\varphi(\bhat\times\vn\phi)\cn \psi_p/B$ \\
     divparexbi\_tt       & $\mu_i \nc (N_iU_{\parallel,i}\vec u_E)$ &
     divparbphiexbi\_tt   & $\mu_i\nc( N_iU_{\parallel,i}b_\varphi \vec u_E)$ \\
     divparexbii\_tt       & $\mu_i \nc (N_iU_{\parallel,i}\vec u_E^i)$ &
-    & \\
+    divparbphiexbii\_tt   & $\mu_i\nc( N_iU_{\parallel,i}b_\varphi \vec u_E^i)$ \\
     divpardiai\_tt       & $\nc(\mu_i \tau_i N_iU_{\parallel,i}\vec K)$ &
     divparbphdiai\_tt   & $\nc ( \mu_i \tau_i N_iU_{\parallel,i}b_\varphi\vec K)$ \\
     divparkappai\_tt       & $\nc (\mu_i N_iU_{\parallel,i} ( \mu_i U_{\parallel,i}^2 + 2\tau_i)\KK )$ &
     divparbphikappai\_tt       & $\nc( \mu_i N_iU_{\parallel,i}b_\varphi ( \mu_i U_{\parallel,i}^2 + 2\tau_i)\KK)$ \\
     divparmirrorAi\_tt       & $\nc(z_i \tau_i N_i \vec b_\perp)$ &
     divparbphiApar\_tt   & $\sum_s \nc ((z_s \tau_s N_s + z_s \mu_s N_s U_{\parallel,s}^2)b_\varphi \vec b_\perp)$ \\
+    divparmirrorAe\_tt       & $-\nc ( n_e \vec b_\perp)$ &
+    & \\
     divparApari\_tt       & $\nc( z_i \mu_i N_i U_{\parallel,i}^2\vec b_\perp)$ &
+    & \\
+    divparApare\_tt       & $\nc( z_e \mu_e n_e u_{\parallel,e}^2\vec b_\perp)$ &
     & \\
     sparsni\_tt & $\mu_i S_{N_i} U_{\parallel,i} + \mu_i S_{U_i} N_i $ &
     sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi + \mu_i S_{U,i} N_i b_\varphi $ \\
+    divjpari\_tt & $ \nc( +\mu_i N_i U_{\parallel,i}^2 \bhat)$ &
+    & \\
+    divjpare\_tt & $ \nc( -\mu_e n_e u_{\parallel,e}^2 \bhat)$ &
+    & \\
     lparpar\_tt   & $\nu_{\parallel,i} \Delta_\parallel U_{\parallel,i} + U_{\parallel,i} \Lambda_{N_i,\parallel}$ &
     lparperp\_tt & $U_{\parallel,i} \Lambda_{N_i} + N_i\Lambda_{U_i} $ \\
-    divjpare\_tt & $ \nc( -\mu_e n_e u_{\parallel,e}^2 \bhat)$ &
-    divjpari\_tt & $ \nc( +\mu_i N_i U_{\parallel,i}^2 \bhat)$ \\
+    sparKappaphii\_tt & $-\mu_i N_i U_{\parallel,i} \KK\cn \psi_i$ &
+    sparmirrorKappai\_tt & $\tau_i N_i U_{\parallel,i} \nc\KK$ \\
     sparphii\_tt & $-N_i\npar \psi$ &
-     & \\
+    friction\_tt & $ \eta n_e(N_iU_{\parallel,i}-n_eu_{\parallel,e})$ \\
     sparmirrori\_tt & $-\tau_i\npar N_i$ &
     sparmirrorAi\_tt & $-\tau_i \vec b_\perp \cn N_i $ \\
     sparphiAi\_tt & $ -N_i \vec b_\perp \cn \psi $ &
     spardotAi\_tt & $ -N_i \partial A_\parallel /\partial t$ \\
-    sparKappaphii\_tt & $-\mu_i N_i U_{\parallel,i} \KK\cn \psi_i$ &
-    sparmirrorKappai\_tt & $\tau_i N_i U_{\parallel,i} \nc\KK$ \\
 \bottomrule
 \end{longtable}
 Note that the parallel viscosity term vanishes exactly under the flux-surface average. This can serve as a numerical test.
 
-\subsection{Parallel electron force balance, "Parallel-momentum"}
 We gather the dominant terms in the electron momentum equation (neglecting all terms as $\mu_e=0$). This leaves the parallel force balance
 \begin{align}
     -(\bhat + \vec b_\perp) \cn n_e +n_e\left( \left( \bhat + \vec b_\perp \right) \cn \phi + \frac{\partial A_\parallel}{\partial t} \right) +\eta n_e \left( N_iU_{\parallel,i} - n_eu_{\parallel,e}\right) = 0
@@ -2556,8 +2559,8 @@ Further we can compare if the following terms are small in the electron force ba
     sparmirrorAe\_tt & $-\vec b_\perp \cn n_e $ \\
     sparphiAe\_tt & $n_e \vec b_\perp \cn \phi$ &
     spardotAe\_tt & $ n_e \partial A_\parallel /\partial t$ \\
-    divparApare\_tt       & $\nc( z_e \mu_e n_e u_{\parallel,e}^2\vec b_\perp)$ &
-    divparmirrorAe\_tt       & $-\nc ( n_e \vec b_\perp)$ \\
+    neue &$n_e u_{\parallel,e}$ &
+    & \\
 \bottomrule
 \end{longtable}
 
