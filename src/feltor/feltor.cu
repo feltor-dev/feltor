@@ -858,7 +858,7 @@ int main( int argc, char* argv[])
                             record.function( resultD, var);
                             dg::assign( resultD, resultH);
                             toroidal_average_full( resultH, resultH2d, false);
-                            time_integrals.at(record.name+"_ta2d").add( time,
+                            time_integrals_full.at(record.name+"_ta2d").add( time,
                                 resultH2d);
                             // 2d data of plane varphi = 0
                             dg::blas2::symv( projectD, resultD, transferD);
