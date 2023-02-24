@@ -76,7 +76,7 @@ struct ExponentialStep
     * @param dt timestep
     */
     template< class MatrixFunction>
-    void step( const MatrixFunction& ode, value_type t0,
+    void step( MatrixFunction& ode, value_type t0,
             const ContainerType& u0, value_type& t1, ContainerType& u1,
             value_type dt)
     {
