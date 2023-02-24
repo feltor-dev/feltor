@@ -6,7 +6,7 @@
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = "Extension: Matrix functions"
 PROJECT_NUMBER         =
-PROJECT_BRIEF          = "#include "\"dg/matrix/matrix.h\""
+PROJECT_BRIEF          = "#include \"dg/matrix/matrix.h\""
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = ./doc
 CREATE_SUBDIRS         = NO

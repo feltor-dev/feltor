@@ -75,7 +75,7 @@ void gemm(
  * functor may \b not override, and the third is the output, i.e. y' = E(t, y)
  * translates to E(t, y, y').
  * The two ContainerType arguments never alias each other in calls to the functor.
- * The operator can throw to indicate failure. Exceptions should derive from
+ * The functor can throw to indicate failure. Exceptions should derive from
  * \c std::exception.
  */
 /** @class hide_implicit_rhs
@@ -86,7 +86,7 @@ void gemm(
  * functor may \b not override, and the third is the output, i.e. y' = I(t, y)
  * translates to I(t, y, y').
  * The two ContainerType arguments never alias each other in calls to the functor.
- * The operator can throw to indicate failure. Exceptions should derive from
+ * The functor can throw to indicate failure. Exceptions should derive from
  * \c std::exception.
  */
 /** @class hide_solver
@@ -96,7 +96,7 @@ void gemm(
  * Alpha is always positive and non-zero.
  * Signature
  * <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
- * The operator can throw. Any Exception should derive from \c std::exception.
+ * The functor can throw. Any Exception should derive from \c std::exception.
   */
 /*! @class hide_ode
  * @tparam ODE The ExplicitRHS or tuple type that corresponds to what is
