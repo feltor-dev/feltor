@@ -126,6 +126,11 @@ int main( int argc, char* argv[])
         , comm
         #endif //WITH_MPI
         );
+    // get perpendicular grid
+    std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
+        g2d_ptr  ( dynamic_cast<typename
+                dg::x::CylindricalGrid3d::perpendicular_grid*>(
+                    grid.perp_grid()));
 
     if( p.periodify)
     {
@@ -165,7 +170,7 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cerr <<e.what()<<std::endl;
             dg::abort_program();
         }
-        dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *grid.perp_grid());
+        dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *g2d_ptr);
         dg::x::DVec coord3d;
         dg::assign3dfrom2d( coord2d, coord3d, grid);
         feltor.set_sheath(
@@ -349,7 +354,7 @@ int main( int argc, char* argv[])
 #else
         unsigned local_size2d = g2d_out_ptr->size();
 #endif
-        std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
+        std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals, time_integrals_full;
         dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
         dg::Average<dg::x::HVec> toroidal_average_full( grid, dg::coo3d::z, "simple");
         dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
@@ -357,17 +362,17 @@ int main( int argc, char* argv[])
         dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
             dg::create::fast_projection( grid, 1, cx, cy);
         dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH2d =
-            dg::create::fast_projection( *grid.perp_grid(), 1, cx, cy);
+            dg::create::fast_projection( *g2d_ptr, 1, cx, cy);
         dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD2d =
-            dg::create::fast_projection( *grid.perp_grid(), 1, cx, cy);
+            dg::create::fast_projection( *g2d_ptr, 1, cx, cy);
         dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
         dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
         dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
         dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
-        dg::x::HVec resultH2d = dg::evaluate( dg::zero, *grid.perp_grid());
-        dg::x::DVec resultD2d = dg::evaluate( dg::zero, *grid.perp_grid());
+        dg::x::HVec resultH2d = dg::evaluate( dg::zero, *g2d_ptr);
+        dg::x::DVec resultD2d = dg::evaluate( dg::zero, *g2d_ptr);
         if( argc != 3 && argc != 4)
         {
             DG_RANK0 std::cerr << "ERROR: Wrong number of arguments for netcdf output!\nUsage: "
@@ -419,47 +424,64 @@ int main( int argc, char* argv[])
         }
 
         /// ------------------- Set up fsa computation ---------------//
+        bool compute_fsa = js["output"].asJson().isMember("fsa");
+        // all these variables live on the master thread only !!
         int dim_id1d = 0;
         size_t count1d[2];
         std::unique_ptr<dg::Average<dg::HVec>> poloidal_average;
-        // !! figure out MPI interpolation creation here !!
         dg::x::IHMatrix grid2gridX2d;
-        bool compute_fsa = js["output"].asJson().isMember("fsa");
         dg::HVec volX2d, fsa1d;
         double psipO = 0, psipmax = 0, f0 = 0.;
 
-        DG_RANK0
         if( compute_fsa)
         { ///--------------- Construct X-point grid on master thread-----//
-            auto gridX2d = feltor::generate_XGrid( js["output"]["fsa"], mag, psipO, psipmax, f0);
-            /// ------------------- Compute flux labels ---------------------//
-            poloidal_average = std::make_unique<dg::Average<dg::HVec >>( gridX2d, dg::coo2d::y);
-            dg::Grid1d g1d_out, g1d_out_eta;
-            dg::HVec dvdpsip;
-            auto map1d = feltor::compute_oneflux_labels( *poloidal_average,
-                    gridX2d, mod_mag, psipO, psipmax, f0,
-                    dvdpsip, g1d_out, g1d_out_eta);
-            err = dg::file::define_dimension( ncid, &dim_id1d, g1d_out, {"psi"} );
-            count1d[0] = 1, count1d[1] = g1d_out.n()*g1d_out.N();
-            //write 1d static vectors (psi, q-profile, ...) into file
-            for( auto tp : map1d)
+#ifdef WITH_MPI
+            if( rank==0)
+#endif // WITH_MPI
             {
-                int vid;
-                err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
-                err = nc_put_att_text( ncid, vid, "long_name",
-                    std::get<2>(tp).size(), std::get<2>(tp).data());
-                err = nc_enddef(ncid);
-                err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
-                err = nc_redef(ncid);
+                auto gridX2d = feltor::generate_XGrid( js["output"]["fsa"], mag, psipO, psipmax, f0);
+                /// ------------------- Compute flux labels ---------------------//
+                poloidal_average = std::make_unique<dg::Average<dg::HVec >>( gridX2d, dg::coo2d::y);
+                dg::Grid1d g1d_out, g1d_out_eta;
+                dg::HVec dvdpsip;
+                auto map1d = feltor::compute_oneflux_labels( *poloidal_average,
+                        gridX2d, mod_mag, psipO, psipmax, f0,
+                        dvdpsip, g1d_out, g1d_out_eta);
+                err = dg::file::define_dimension( ncid, &dim_id1d, g1d_out, {"psi"} );
+                count1d[0] = 1, count1d[1] = g1d_out.n()*g1d_out.N();
+                //write 1d static vectors (psi, q-profile, ...) into file
+                for( auto tp : map1d)
+                {
+                    int vid;
+                    err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
+                    err = nc_put_att_text( ncid, vid, "long_name",
+                        std::get<2>(tp).size(), std::get<2>(tp).data());
+                    err = nc_enddef(ncid);
+                    err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
+                    err = nc_redef(ncid);
+                }
+                std::vector<dg::HVec > coordsX = gridX2d.map();
+                grid2gridX2d  = dg::create::interpolation(
+                    coordsX[0], coordsX[1], *g2d_ptr, dg::NEU, dg::NEU,
+                    "dg");
+                volX2d = dg::tensor::volume2d(gridX2d.metric());
+                fsa1d = dg::evaluate( dg::zero, g1d_out);
             }
-            std::vector<dg::HVec > coordsX = gridX2d.map();
-            grid2gridX2d  = dg::create::interpolation(
-                coordsX[0], coordsX[1], *grid.perp_grid(), dg::NEU, dg::NEU,
-                js["output"]["fsa"].get("x-grid-interpolation","dg").asString());
-            volX2d = dg::tensor::volume2d(gridX2d.metric());
-            fsa1d = dg::evaluate( dg::zero, g1d_out);
+#ifdef WITH_MPI
+            else
+                grid2gridX2d  = dg::create::interpolation(
+                    dg::HVec(), dg::HVec(), *g2d_ptr, dg::NEU, dg::NEU,
+                    "dg");
+#endif // WITH_MPI
         }
-        dg::HVec transferH2dX(volX2d); //NEW: definitions
+#ifdef WITH_MPI
+        dg::x::HVec inter_transferH2dX(volX2d , g2d_ptr->communicator());
+        dg::HVec & transferH2dX = inter_transferH2dX.data();
+#else
+        dg::x::HVec inter_transferH2dX(volX2d);
+        dg::HVec & transferH2dX = inter_transferH2dX;
+#endif // WITH_MPI
+        /// ---------------END  Set up fsa computation ---------------//
 
         // Define dimensions (t,z,y,x)
         int dim_ids[4], restart_dim_ids[3], tvarID;
@@ -700,49 +722,54 @@ int main( int argc, char* argv[])
                 dg::Timer tti;
                 tti.tic();
                 record.function( resultD, var);
-                dg::blas2::symv( projectD, resultD, transferD);
-                //toroidal average
+                dg::assign( resultD, resultH);
+                toroidal_average_full( resultH, resultH2d, false);
                 std::string name = record.name + "_ta2d";
-                dg::assign( transferD, transferH);
-                toroidal_average( transferH, transferH2d, false);
                 //create and init Simpsons for time integrals
-                if( record.integral) time_integrals[name].init( time, transferH2d);
+                if( record.integral) time_integrals_full[name].init( time, resultH2d);
                 tti.toc();
                 DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
                 tti.tic();
+                // output only a projection
+                dg::blas2::symv( projectH2d, resultH2d, transferH2d);
                 if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
                 tti.toc();
                 DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
                 tti.tic();
-                // and a slice
+                // Next: time integrate and output a projected slice
                 name = record.name + "_2d";
+                dg::blas2::symv( projectD, resultD, transferD);
                 feltor::slice_vector3d( transferD, transferD2d, local_size2d);
                 dg::assign( transferD2d, transferH2d);
                 if( record.integral) time_integrals[name].init( time, transferH2d);
                 if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
                 tti.toc();
                 DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+                tti.tic();
                 if( compute_fsa)
-                {
+                {   // interpolate toroidal average onto X-point grid
                     // vectors may be distributed but gridX lives only on master
                     // so we need to gather 2d vector to master
-                    dg::assign( resultD, resultH);
-                    toroidal_average_full( resultH, resultH2d, false);
-                    dg::blas2::symv( grid2gridX2d, resultH2d, transferH2dX); //interpolate simple average onto X-point grid
-                    dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
-                    dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
-                    try{
-                        poloidal_average->operator()( transferH2dX, fsa1d, false); //average over eta
-                    } catch( dg::Error& e)
+                    dg::blas2::symv( grid2gridX2d, resultH2d, inter_transferH2dX);
+                    DG_RANK0
                     {
-                        std::cerr << "WARNING: "<<record.name<<" contains NaN or Inf\n";
-                        dg::blas1::scal( fsa1d, NAN);
+                        dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
+                        dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
+                        try{
+                            poloidal_average->operator()( transferH2dX, fsa1d, false); //average over eta
+                        } catch( dg::Error& e)
+                        {
+                            std::cerr << "WARNING: "<<record.name<<" contains NaN or Inf\n";
+                            dg::blas1::scal( fsa1d, NAN);
+                        }
+                        dg::blas1::scal( fsa1d, 4*M_PI*M_PI*f0); //
+                        size_t start1d_out[2] = {start, 0};
+                        err = nc_put_vara_double( ncid, id2d.at(record.name+"_fsa"),
+                            start1d_out, count1d, fsa1d.data());
                     }
-                    dg::blas1::scal( fsa1d, 4*M_PI*M_PI*f0); //
-                    size_t start1d_out[2] = {start, 0};
-                    err = nc_put_vara_double( ncid, id2d.at(record.name+"_fsa"),
-                        start1d_out, count1d, fsa1d.data());
                 }
+                tti.toc();
+                DG_RANK0 std::cout<< name << " FSA output took "<<tti.diff()<<"\n";
 
             }
         }
@@ -822,45 +849,44 @@ int main( int argc, char* argv[])
                     time_intern[j]=time;
                 }
                 }
-        for( auto& m_list : equation_list)
-        {
-            for( auto& record : m_list)
-            {
-                if( record.integral)
+                for( auto& m_list : equation_list)
                 {
-                    record.function( resultD, var);
-                    dg::blas2::symv( projectD, resultD, transferD);
-                    //toroidal average and add to time integral
-                    dg::assign( transferD, transferH);
-                    toroidal_average( transferH, transferH2d, false);
-                    time_integrals.at(record.name+"_ta2d").add( time,
-                    transferH2d);
-                    // 2d data of plane varphi = 0
-                    feltor::slice_vector3d( transferD, transferD2d,
-                        local_size2d);
-                    dg::assign( transferD2d, transferH2d);
-                    time_integrals.at(record.name+"_2d").add( time,
-                        transferH2d);
+                    for( auto& record : m_list)
+                    {
+                        if( record.integral)
+                        {
+                            record.function( resultD, var);
+                            dg::assign( resultD, resultH);
+                            toroidal_average_full( resultH, resultH2d, false);
+                            time_integrals.at(record.name+"_ta2d").add( time,
+                                resultH2d);
+                            // 2d data of plane varphi = 0
+                            dg::blas2::symv( projectD, resultD, transferD);
+                            feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                            dg::assign( transferD2d, transferH2d);
+                            time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                        }
+                    }
                 }
-            }
-        }
 
-        DG_RANK0 std::cout << "\tTime "<<time<<"\n";
-        double max_ue = dg::blas1::reduce(
-        feltor.velocity(0), 0., dg::AbsMax<double>() );
-        DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-        if( p.timestepper == "adaptive" )
-        {
-            DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
-            DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
-        }
-        tti.toc();
-        DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
-        if( abort) break;
-        }
-        ti.toc();
-        var.duration = ti.diff();
-        t_output += p.itstp*deltaT;
+                DG_RANK0 std::cout << "\tTime "<<time<<"\n";
+                double max_ue = dg::blas1::reduce(
+                feltor.velocity(0), 0., dg::AbsMax<double>() );
+                DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
+                if( p.timestepper == "adaptive" )
+                {
+                    DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
+                    DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
+                }
+                tti.toc();
+                DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
+                if( abort) break;
+            }
+            ti.toc();
+            var.duration = ti.diff();
+            t_output += p.itstp*deltaT;
             // Does not work due to direct application of Laplace
             // The Laplacian of Aparallel looks smooth in paraview
             ////----------------Test if ampere equation holds
@@ -905,34 +931,59 @@ int main( int argc, char* argv[])
                 if(record.integral) // we already computed the output...
                 {
                     std::string name = record.name+"_ta2d";
-                    transferH2d = time_integrals.at(name).get_integral();
-                    time_integrals.at(name).flush();
+                    resultH2d = time_integrals_full.at(name).get_integral();
+                    time_integrals_full.at(name).flush();
+                    // output only a projection
+                    dg::blas2::symv( projectH2d, resultH2d, transferH2d);
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
                             start, *g2d_out_ptr, transferH2d);
 
                     name = record.name+"_2d";
                     transferH2d = time_integrals.at(name).get_integral( );
-                    time_integrals.at(name).flush( );
+                    time_integrals.at(name).flush();
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
                             start, *g2d_out_ptr, transferH2d);
-                }
+                } // resultH2d contains full TA
                 else // compute from scratch
                 {
                     record.function( resultD, var);
-                    dg::blas2::symv( projectD, resultD, transferD);
-
-                    std::string name = record.name+"_ta2d";
-                    dg::assign( transferD, transferH);
-                    toroidal_average( transferH, transferH2d, false);
+                    dg::assign( resultD, resultH);
+                    toroidal_average_full( resultH, resultH2d, false);
+                    std::string name = record.name + "_ta2d";
+                    // output only a projection
+                    dg::blas2::symv( projectH2d, resultH2d, transferH2d);
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
                             start, *g2d_out_ptr, transferH2d);
 
                     // 2d data of plane varphi = 0
                     name = record.name+"_2d";
+                    dg::blas2::symv( projectD, resultD, transferD);
                     feltor::slice_vector3d( transferD, transferD2d, local_size2d);
                     dg::assign( transferD2d, transferH2d);
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
                             start, *g2d_out_ptr, transferH2d);
+                } // resultH2d contains full TA
+                if( compute_fsa)
+                {   // interpolate toroidal average onto X-point grid
+                    // vectors may be distributed but gridX lives only on master
+                    // so we need to gather 2d vector to master
+                    dg::blas2::symv( grid2gridX2d, resultH2d, inter_transferH2dX);
+                    DG_RANK0
+                    {
+                        dg::blas1::pointwiseDot( transferH2dX, volX2d, transferH2dX); //multiply by sqrt(g)
+                        dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
+                        try{
+                            poloidal_average->operator()( transferH2dX, fsa1d, false); //average over eta
+                        } catch( dg::Error& e)
+                        {
+                            std::cerr << "WARNING: "<<record.name<<" contains NaN or Inf\n";
+                            dg::blas1::scal( fsa1d, NAN);
+                        }
+                        dg::blas1::scal( fsa1d, 4*M_PI*M_PI*f0); //
+                        size_t start1d_out[2] = {start, 0};
+                        err = nc_put_vara_double( ncid, id2d.at(record.name+"_fsa"),
+                            start1d_out, count1d, fsa1d.data());
+                    }
                 }
             }
             }

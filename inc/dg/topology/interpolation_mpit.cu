@@ -87,17 +87,19 @@ int main(int argc, char* argv[])
     MPI_Barrier(comm);
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0) std::cout << "Now test COMMUNICATING MPI local2global interpolation!\n";
+    dg::MIHMatrix local2global;
     if(rank==0)
     {
         x = dg::evaluate( dg::cooX2d, g2d.global());
         y = dg::evaluate( dg::cooY2d, g2d.global());
+        local2global = dg::create::interpolation( x,y,g2d);
     }
     else
     {
         x = dg::HVec(); // empty for all other pids
         y = dg::HVec();
+        local2global = dg::create::interpolation( x,y,g2d);
     }
-    dg::MIHMatrix local2global = dg::create::interpolation( x,y,g2d);
     dg::MHVec mpi_sine = dg::evaluate( function, g2d);
     dg::MHVec mpi_temp( x, g2d.communicator());
     local2global.symv( mpi_sine, mpi_temp);

@@ -1,7 +1,116 @@
+#pragma once
+
 #include "dg/algorithm.h"
 
 namespace feltor
 {
+namespace routines{
+
+
+// result = Sum_i v_i w_i
+template<class Container>
+void dot( const std::array<Container, 3>& v,
+          const std::array<Container, 3>& w,
+          Container& result)
+{
+    dg::blas1::evaluate( result, dg::equals(), dg::PairSum(),
+        v[0], w[0], v[1], w[1], v[2], w[2]);
+}
+
+// result = alpha * Sum_i v_i w_i + beta*result
+template<class Container>
+void dot( double alpha, const std::array<Container, 3>& v,
+          const std::array<Container, 3>& w, double beta,
+          Container& result)
+{
+    dg::blas1::evaluate( result, dg::Axpby<double>(alpha,beta), dg::PairSum(),
+        v[0], w[0], v[1], w[1], v[2], w[2]);
+}
+
+
+struct Dot{
+    DG_DEVICE void operator()(
+            double lambda,
+        double d0P, double d1P, double d2P,
+        double& c_0, double& c_1, double& c_2)
+    {
+        c_0 = lambda*(d0P);
+        c_1 = lambda*(d1P);
+        c_2 = lambda*(d2P);
+    }
+};
+// c_i = lambda*a_i
+template<class Container>
+void scal( const Container& lambda,
+          const std::array<Container, 3>& a,
+          std::array<Container, 3>& c)
+{
+    dg::blas1::subroutine( Dot(), lambda,
+        a[0], a[1], a[2], c[0], c[1], c[2]);
+}
+
+struct Times{
+    DG_DEVICE void operator()(
+        double d0P, double d1P, double d2P, //any three vectors
+        double d0S, double d1S, double d2S,
+        double& c_0, double& c_1, double& c_2)
+    {
+        c_0 = (d1P*d2S-d2P*d1S);
+        c_1 = (d2P*d0S-d0P*d2S);
+        c_2 = (d0P*d1S-d1P*d0S);
+    }
+};
+
+// Vec c = ( Vec a x Vec b)
+template<class Container>
+void times(
+          const std::array<Container, 3>& a,
+          const std::array<Container, 3>& b,
+          std::array<Container, 3>& c)
+{
+    dg::blas1::subroutine( Times(),
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+}
+
+struct Jacobian{
+    DG_DEVICE double operator()(
+        double d0P, double d1P, double d2P, //any three vectors
+        double d0S, double d1S, double d2S,
+        double b_0, double b_1, double b_2)
+    {
+        return      b_0*( d1P*d2S-d2P*d1S)+
+                    b_1*( d2P*d0S-d0P*d2S)+
+                    b_2*( d0P*d1S-d1P*d0S);
+    }
+};
+
+// result = Vec c Cdot ( Vec a x Vec b)
+template<class Container>
+void jacobian(
+          const std::array<Container, 3>& a,
+          const std::array<Container, 3>& b,
+          const std::array<Container, 3>& c,
+          Container& result)
+{
+    dg::blas1::evaluate( result, dg::equals(), Jacobian(),
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+}
+// result = alpha * Vec c Cdot ( Vec a x Vec b) + beta * result
+template<class Container>
+void jacobian(
+        double alpha,
+          const std::array<Container, 3>& a,
+          const std::array<Container, 3>& b,
+          const std::array<Container, 3>& c,
+          double beta,
+          Container& result)
+{
+    dg::blas1::evaluate( result, dg::Axpby<double>(alpha,beta), Jacobian(),
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+}
+}//namespace routines
+
+// take first 2d plane out of a 3d vector
 template<class Container>
 void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)
 {
@@ -20,6 +129,12 @@ void slice_vector3d( const Container& transfer, Container& transfer2d, size_t lo
 #endif
 }
 
+// generate a Curvilinear flux aligned grid
+// config contains configuration parameters from input file
+// mag is the magnetic field
+// psipO is psi value at O-point (write only)
+// psipmax is maximum psi value based on psipO and fx_0 from config file (write only)
+// f0 is linear grid constant (write only)
 dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
     const dg::geo::TokamakMagneticField& mag, double& psipO, double& psipmax, double& f0)
 {
@@ -27,20 +142,20 @@ dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
     unsigned npsi = config.get("n",3).asUInt();
     unsigned Npsi = config.get("Npsi", 64).asUInt();
     unsigned Neta = config.get("Neta", 640).asUInt();
-    DG_RANK0 std::cout << "Using X-point grid resolution (n("<<npsi<<"), Npsi("<<Npsi<<"), Neta("<<Neta<<"))\n";
+    std::cout << "Using X-point grid resolution (n("<<npsi<<"), Npsi("<<Npsi<<"), Neta("<<Neta<<"))\n";
     double RO = mag.R0(), ZO = 0;
     int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
     psipO = mag.psip()(RO, ZO);
-    DG_RANK0 std::cout << "O-point found at "<<RO<<" "<<ZO
+    std::cout << "O-point found at "<<RO<<" "<<ZO
               <<" with Psip "<<psipO<<std::endl;
     if( point == 1 )
-        DG_RANK0 std::cout << " (minimum)"<<std::endl;
+        std::cout << " (minimum)"<<std::endl;
     if( point == 2 )
-        DG_RANK0 std::cout << " (maximum)"<<std::endl;
+        std::cout << " (maximum)"<<std::endl;
     double fx_0 = config.get( "fx_0", 1./8.).asDouble(); //must evenly divide Npsi
     psipmax = -fx_0/(1.-fx_0)*psipO;
-    DG_RANK0 std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
-    DG_RANK0 std::cout << "Generate orthogonal flux-aligned grid ... \n";
+    std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
+    std::cout << "Generate orthogonal flux-aligned grid ... \n";
     std::unique_ptr<dg::geo::aGenerator2d> generator;
     if( !(mag.params().getDescription() == dg::geo::description::standardX))
         generator = std::make_unique<dg::geo::SimpleOrthogonal>(
@@ -62,7 +177,7 @@ dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
             psipO<psipmax ? psipO : psipmax,
             RX, ZX, mag.R0(), 0, 1, false, fx_0);
     }
-    DG_RANK0 std::cout << "DONE!\n";
+    std::cout << "DONE!\n";
     dg::geo::CurvilinearGrid2d gridX2d(*generator,
             npsi, Npsi, Neta, dg::DIR, dg::PER);
     //f0 makes a - sign if psipmax < psipO
@@ -71,6 +186,7 @@ dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
 }
 
 
+/// generate list of 2d flux grid file outputs
 std::vector<std::tuple<std::string, dg::HVec, std::string> >
     compute_twoflux_labels( const dg::geo::CurvilinearGrid2d& gridX2d)
 {
@@ -85,6 +201,7 @@ std::vector<std::tuple<std::string, dg::HVec, std::string> >
     return map2d;
 }
 
+/// generate list of 1d flux grid file outputs
 /// ------------------- Compute 1d flux labels ---------------------//
 std::vector<std::tuple<std::string, dg::HVec, std::string> >
     compute_oneflux_labels(

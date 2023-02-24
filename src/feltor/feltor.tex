@@ -1964,9 +1964,16 @@ while the output time $\Delta T_\text{out}$ determines how often 2d/3d fields ar
     "type" : "netcdf",
     "itstp"  : 4, // $s_\text{itstp}$ the number of discretization steps
     // between file outputs (2d and 3d quantities);
-    // Note that 1d and
-    // 0d quantities can only be computed post-simulation since we can't
-    // compute flux-integrals in parallel in MPI.
+    // Flux-surface averages of all quantities can be computed based on full-resolution fields
+    // during the simulation (in contrast to feltordiag, which computes them based on the
+    // compressed fields which may introduce errors, s.a. Diagnostics):
+    "fsa":  // [Optional] indicate that fsa should be computed during simulation
+    {
+        "n": 3, // resolution of X-point grid for fsa
+        "Npsi": 64, // resolution of X-point grid for fsa
+        "Neta": 640, // resolution of X-point grid for fsa
+        "fx_0" : 0.125 // where the separatrix is in relation to the $\zeta$ coordinate
+    }
     "maxout" : 100 // Total Number of fields outputs excluding first
     // If you want to let the simulation run for a long time
     // choose this parameter very large and either manually kill the simulation
@@ -2679,8 +2686,10 @@ Furthermore, a user can specify which kind of diagnostics quantities should be c
 "Npsi": 64, // resolution of X-point grid for fsa
 "Neta": 640, // resolution of X-point grid for fsa
 "Kphi": 10, // resolution for convoluted toroidal average (10 is fine)
-"fsa" : "convoluted-toroidal-average" // From which quantity fsa should be computed, can also be "toroidal-average"
-"fx_0" : 0.125 // where the separatrix is in relation to the $\zeta$ coordinate
+"fsa" : "toroidal-average", // From which quantity fsa should be computed, can also be "convoluted-toroidal-average"
+"fx_0" : 0.125, // where the separatrix is in relation to the $\zeta$ coordinate
+"x-grid-interpolation" : "dg", // type of interpolation for Cylindrical2XGrid
+"cta-interpolation" : "dg", // interpolation type in Fieldaligned object for convoluted toroidal averages
 "diagnostics" :
 [
     "fsa",  // save \_fsa in table \ref{table:diag}.
@@ -2692,7 +2701,7 @@ Furthermore, a user can specify which kind of diagnostics quantities should be c
     "std_fsa", //  save \_std\_fsa in table \ref{table:diag}.
     "ifs_lcfs", //  save \_ifs\_lcfs in table \ref{table:diag}.
     "ifs_norm" //  save \_ifs\_norm in table \ref{table:diag}.
-]
+],
 // for interpolate in 3d
 "fine-grid-factor" : 2, // how many additional planes are to be inserted: Nz*fine-grid-factor
 "time-reduction-factor" : 10 // only ouptut every *th step

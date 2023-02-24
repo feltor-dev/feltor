@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <vector>
 #include <functional>
@@ -9,6 +11,7 @@
 #include "feltor/parameters.h"
 
 #include "feltor/init.h"
+#include "common.h"
 
 namespace feltor{
 
@@ -17,9 +20,6 @@ namespace feltor{
 // You can register you own diagnostics in one of three diagnostics lists (static 3d, dynamic 3d and
 // dynamic 2d) further down
 // which will then be applied during a simulation
-
-namespace routines{
-
 struct RadialEnergyFlux{
     RadialEnergyFlux( double tau, double mu, double z):
         m_tau(tau), m_mu(mu), m_z(z){
@@ -82,109 +82,6 @@ struct PositiveLN
     }
 };
 
-template<class Container>
-void dot( const std::array<Container, 3>& v,
-          const std::array<Container, 3>& w,
-          Container& result)
-{
-    dg::blas1::evaluate( result, dg::equals(), dg::PairSum(),
-        v[0], w[0], v[1], w[1], v[2], w[2]);
-}
-template<class Container>
-void dot( double alpha, const std::array<Container, 3>& v,
-          const std::array<Container, 3>& w, double beta,
-          Container& result)
-{
-    dg::blas1::evaluate( result, dg::Axpby<double>(alpha,beta), dg::PairSum(),
-        v[0], w[0], v[1], w[1], v[2], w[2]);
-}
-
-
-struct Dot{
-    DG_DEVICE void operator()(
-            double lambda,
-        double d0P, double d1P, double d2P,
-        double& c_0, double& c_1, double& c_2)
-    {
-        c_0 = lambda*(d0P);
-        c_1 = lambda*(d1P);
-        c_2 = lambda*(d2P);
-    }
-};
-template<class Container>
-void scal( const Container& lambda,
-          const std::array<Container, 3>& a,
-          std::array<Container, 3>& c)
-{
-    dg::blas1::subroutine( Dot(), lambda,
-        a[0], a[1], a[2], c[0], c[1], c[2]);
-}
-
-struct Times{
-    DG_DEVICE void operator()(
-            double lambda,
-        double d0P, double d1P, double d2P, //any three vectors
-        double d0S, double d1S, double d2S,
-        double& c_0, double& c_1, double& c_2)
-    {
-        c_0 = lambda*(d1P*d2S-d2P*d1S);
-        c_1 = lambda*(d2P*d0S-d0P*d2S);
-        c_2 = lambda*(d0P*d1S-d1P*d0S);
-    }
-};
-template<class Container>
-void times(
-          const std::array<Container, 3>& a,
-          const std::array<Container, 3>& b,
-          std::array<Container, 3>& c)
-{
-    dg::blas1::subroutine( Times(), 1.,
-        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-}
-template<class Container>
-void times(
-          const Container& lambda,
-          const std::array<Container, 3>& a,
-          const std::array<Container, 3>& b,
-          std::array<Container, 3>& c)
-{
-    dg::blas1::subroutine( Times(), lambda,
-        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-}
-struct Jacobian{
-    DG_DEVICE double operator()(
-        double d0P, double d1P, double d2P, //any three vectors
-        double d0S, double d1S, double d2S,
-        double b_0, double b_1, double b_2)
-    {
-        return      b_0*( d1P*d2S-d2P*d1S)+
-                    b_1*( d2P*d0S-d0P*d2S)+
-                    b_2*( d0P*d1S-d1P*d0S);
-    }
-};
-template<class Container>
-void jacobian(
-          const std::array<Container, 3>& a,
-          const std::array<Container, 3>& b,
-          const std::array<Container, 3>& c,
-          Container& result)
-{
-    dg::blas1::evaluate( result, dg::equals(), Jacobian(),
-        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-}
-template<class Container>
-void jacobian(
-        double alpha,
-          const std::array<Container, 3>& a,
-          const std::array<Container, 3>& b,
-          const std::array<Container, 3>& c,
-          double beta,
-          Container& result)
-{
-    dg::blas1::evaluate( result, dg::Axpby<double>(alpha,beta), Jacobian(),
-        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
-}
-}//namespace routines
 
 //From here on, we use the typedefs to ease the notation
 
@@ -808,13 +705,13 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     /// ------------------- Energy terms ------------------------//
     {"nelnne", "Entropy electrons", false,
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::transform( v.f.density(0), result, routines::PositiveLN());
+            dg::blas1::transform( v.f.density(0), result, PositiveLN());
             dg::blas1::pointwiseDot( result, v.f.density(0), result);
         }
     },
     {"nilnni", "Entropy ions", false,
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::transform( v.f.density(1), result, routines::PositiveLN());
+            dg::blas1::transform( v.f.density(1), result, PositiveLN());
             dg::blas1::pointwiseDot( v.p.tau[1], result, v.f.density(1), 0., result);
         }
     },
@@ -863,7 +760,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"see_tt", "Energy sink/source for electrons", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.f.density_source(0)
             );
@@ -872,7 +769,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"sei_tt", "Energy sink/source for ions", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.f.density_source(1)
             );
@@ -882,7 +779,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"jsee_tt", "Radial electron energy flux without magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.f.gradP(0)[0], v.f.gradP(0)[1], v.f.gradP(0)[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -896,7 +793,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"jseea_tt", "Radial electron energy flux: magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -909,7 +806,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"jsei_tt", "Radial ion energy flux without magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.f.gradP(1)[0], v.f.gradP(1)[1], v.f.gradP(1)[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -923,7 +820,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"jseia_tt", "Radial ion energy flux: magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -936,7 +833,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"divee_tt", "Radial electron energy flux without magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.f.gradP(0)[0], v.f.gradP(0)[1], v.f.gradP(0)[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -950,7 +847,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"diveea_tt", "Radial electron energy flux: magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -963,7 +860,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"divei_tt", "Radial ion energy flux without magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.f.gradP(1)[0], v.f.gradP(1)[1], v.f.gradP(1)[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -977,7 +874,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"diveia_tt", "Radial ion energy flux: magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::subroutine(
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1), v.f.aparallel(),
                 v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
                 v.tmp[0], v.tmp[1], v.tmp[2],
@@ -995,7 +892,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             v.f.compute_perp_diffusiveU( 1., v.f.velocity(0), v.f.density(0), result, v.tmp[2],
                     0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
             );
@@ -1008,7 +905,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1), result, v.tmp[2],
                     0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
             );
@@ -1020,7 +917,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             dg::blas1::pointwiseDivide( v.p.nu_parallel_u[0], v.f.lapParU(0),
                 v.f.density(0), 0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.tmp[0], v.tmp[1]
             );
@@ -1032,7 +929,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             dg::blas1::pointwiseDivide( v.p.nu_parallel_u[1], v.f.lapParU(1),
                 v.f.density(1), 0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.tmp[0], v.tmp[1]
             );
@@ -1043,7 +940,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             // Multiply out divNUb to get implementable form
             double z = -1.;
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[0], v.p.mu[0], z),
+                RadialEnergyFlux( v.p.tau[0], v.p.mu[0], z),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
                 v.f.divNUb(0)
             );
@@ -1061,7 +958,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             // Multiply out divNUb to get implementable form
             double z = +1.;
             dg::blas1::evaluate( result, dg::equals(),
-                routines::RadialEnergyFlux( v.p.tau[1], v.p.mu[1], z),
+                RadialEnergyFlux( v.p.tau[1], v.p.mu[1], z),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
                 v.f.divNUb(1)
             );
@@ -1333,7 +1230,7 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //27
             dg::blas1::pointwiseDot( 1., v.f.density(1), v.f.velocity(1), v.f.velocity(1), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( v.p.mu[1], v.tmp[0], result, 0., result);
         }
-    }
+    },
     {"sosne_tt", "ExB vorticity source term with electron source", true,
         []( dg::x::DVec& result, Variables& v){
             routines::dot( v.f.gradP(0), v.gradPsip, result);
@@ -1563,8 +1460,8 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
         []( dg::x::DVec& result, Variables& v){
             dg::blas1::pointwiseDot( -v.p.mu[0], v.f.velocity(0), v.f.velocity(0), v.f.density(0),  0., result);
             dg::blas1::pointwiseDot( +v.p.mu[1], v.f.velocity(1), v.f.velocity(1), v.f.density(1),  1., result);
-            dg::blas1::axpby( -v.p.tau[0], v.f.density(0),
-                              +v.p.tau[1], v.f.density(1), 1., result);
+            dg::blas1::axpbypgz( -v.p.tau[0], v.f.density(0),
+                                 +v.p.tau[1], v.f.density(1), 1., result);
             dg::blas1::pointwiseDot( v.f.bphi(), result, v.tmp3[0]);
             v.f.compute_bperp( v.tmp);
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
