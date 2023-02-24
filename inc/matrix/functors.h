@@ -71,8 +71,8 @@ template<class T>
 T phi2( T x){
     if ( fabs( x) < 1e-16 )
         return 1./2;
-    if ( fabs(x) < 1e-3)
-        return 0.5+x*(1+x/4.)/6.;
+    if ( fabs(x) < 1e-2)
+        return 1./2.+x*(1./6.+x*(1./24. + x/120.));
     return ((exp( x) - 1)/x - 1)/x;
 }
 
@@ -87,7 +87,7 @@ T phi3( T x){
     if ( fabs( x) < 1e-16 )
         return 1./6.;
     if ( fabs(x) < 1e-2)
-        return 1./6. + x*(1.+x/5.)/24.;
+        return 1./6. + x*(1./24.+x*(1./120. +x/720.));
     return (((exp( x) - 1)/x - 1)/x-1./2.)/x;
 }
 /**
@@ -101,7 +101,7 @@ T phi4( T x){
     if ( fabs( x) < 1e-16 )
         return 1./24.;
     if ( fabs(x) < 1e-2)
-        return 1./24. + x*(1.+x/6.)/120;
+        return 1./24. + x*(1./120.+x*(1./720. + x/5040));
     return ((((exp( x) - 1)/x - 1)/x-1./2.)/x-1./6.)/x;
 }
 
