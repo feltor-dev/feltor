@@ -11,37 +11,37 @@ INCLUDE+= -I../../inc   # other project libraries
 
 all: feltor feltor_hpc feltor_mpi manufactured manufactured_perp manufactured_para feltordiag interpolate_in_3d
 
-feltordiag: feltordiag.cu feltordiag.h
+feltordiag: feltordiag.cpp feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
-interpolate_in_3d: interpolate_in_3d.cu feltordiag.h
+interpolate_in_3d: interpolate_in_3d.cpp feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
-feltor: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
-feltor_hpc: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor_hpc: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
 	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITHOUT_GLFW $(VERSION_FLAGS)
 
-feltor_mpi: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor_mpi: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DWITHOUT_GLFW $(VERSION_FLAGS)
 
-feltor_pol: feltor.cu feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor_pol: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DWRITE_POL_FILE -DWITHOUT_GLFW $(VERSION_FLAGS)
 
-manufactured: manufactured.cu manufactured.h feltor.h
+manufactured: manufactured.cpp manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=1 -DFELTORPERP=1
 
-manufactured_perp: manufactured.cu manufactured.h feltor.h
+manufactured_perp: manufactured.cpp manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=0 -DFELTORPERP=1
 
-manufactured_para: manufactured.cu manufactured.h feltor.h
+manufactured_para: manufactured.cpp manufactured.h feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=1 -DFELTORPERP=0
 
-multigrid_b: multigrid_b.cu parameters.h
+multigrid_b: multigrid_b.cpp parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
-convert_b: convert_b.cu parameters.h
+convert_b: convert_b.cpp parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
 .PHONY: clean doc
