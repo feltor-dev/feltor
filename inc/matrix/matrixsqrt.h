@@ -8,7 +8,7 @@ namespace mat{
 
 
 /**
- * @brief Fast computation of \f$ \vec x = A^{\pm 1/2}\vec b\f$
+ * @brief Fast computation of \f$ \vec x = A^{\pm 1/2}\vec b\f$ for self-adjoint positive definite \f$A\f$
  *
  * Convenience wrapper that
  * uses \c dg::mat::UniversalLanczos combined with
@@ -17,6 +17,7 @@ namespace mat{
  * @note This is the fastest method to compute matrix square roots vector
  *  multiplications that we found to date
  * @ingroup matrixfunctionapproximation
+ * @attention Just as in the Lanczos or PCG methods the matrix \f$ A\f$ needs to be positive-definite (i.e. it won't work for negative definite)
  */
 template<class ContainerType>
 struct MatrixSqrt
@@ -115,7 +116,7 @@ struct MatrixSqrt
 
 // The following is not tested yet, but should be ...
 /**
- * @brief Computation of \f$ \vec x = f(A)\vec b\f$ for self-adjoint \f$ A\f$
+ * @brief Computation of \f$ \vec x = f(A)\vec b\f$ for self-adjoint positive definite \f$ A\f$
  *
  * where \f$ f(x) = f_{outer}(f_{inner}(x))\f$ is composed of an inner pre-factor function
  * \f$f_{inner}(x)\f$ and an outer \f$ f_{outer}(x)\f$ function.
@@ -130,6 +131,7 @@ struct MatrixSqrt
  * \c dg::mat::make_FuncEigen_Te1( f) in its
  * "universal" stopping criterion
  * @ingroup matrixfunctionapproximation
+ * @attention Just as in the Lanczos or PCG methods the matrix \f$ A\f$ needs to be positive-definite (i.e. it won't work for negative definite)
  */
 template<class ContainerType>
 struct MatrixFunction
@@ -184,7 +186,7 @@ struct MatrixFunction
      * benchmark (intended use is to distinguish different messages
      * in the output)
     */
-    void set_benchmark( bool benchmark, std::string message = "SQRT"){
+    void set_benchmark( bool benchmark, std::string message = "Function"){
         m_benchmark = benchmark;
         m_message = message;
     }
@@ -221,7 +223,7 @@ struct MatrixFunction
     unsigned m_number;
     value_type m_eps, m_abs;
     bool m_benchmark = true;
-    std::string m_message = "SQRT";
+    std::string m_message = "Function";
 
 };
 }//namespace mat
