@@ -430,7 +430,7 @@ int main( int argc, char* argv[])
         size_t count1d[2];
         std::unique_ptr<dg::Average<dg::HVec>> poloidal_average;
         dg::x::IHMatrix grid2gridX2d;
-        dg::HVec volX2d, fsa1d;
+        dg::HVec volX2d, fsa1d, dvdpsip;
         double psipO = 0, psipmax = 0, f0 = 0.;
 
         if( compute_fsa)
@@ -443,7 +443,6 @@ int main( int argc, char* argv[])
                 /// ------------------- Compute flux labels ---------------------//
                 poloidal_average = std::make_unique<dg::Average<dg::HVec >>( gridX2d, dg::coo2d::y);
                 dg::Grid1d g1d_out, g1d_out_eta;
-                dg::HVec dvdpsip;
                 auto map1d = feltor::compute_oneflux_labels( *poloidal_average,
                         gridX2d, mod_mag, psipO, psipmax, f0,
                         dvdpsip, g1d_out, g1d_out_eta);
@@ -763,6 +762,7 @@ int main( int argc, char* argv[])
                             dg::blas1::scal( fsa1d, NAN);
                         }
                         dg::blas1::scal( fsa1d, 4*M_PI*M_PI*f0); //
+                        dg::blas1::pointwiseDivide( fsa1d, dvdpsip, fsa1d );
                         size_t start1d_out[2] = {start, 0};
                         err = nc_put_vara_double( ncid, id2d.at(record.name+"_fsa"),
                             start1d_out, count1d, fsa1d.data());
@@ -980,6 +980,7 @@ int main( int argc, char* argv[])
                             dg::blas1::scal( fsa1d, NAN);
                         }
                         dg::blas1::scal( fsa1d, 4*M_PI*M_PI*f0); //
+                        dg::blas1::pointwiseDivide( fsa1d, dvdpsip, fsa1d );
                         size_t start1d_out[2] = {start, 0};
                         err = nc_put_vara_double( ncid, id2d.at(record.name+"_fsa"),
                             start1d_out, count1d, fsa1d.data());
