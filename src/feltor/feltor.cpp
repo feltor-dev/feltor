@@ -445,7 +445,7 @@ int main( int argc, char* argv[])
                 dg::Grid1d g1d_out, g1d_out_eta;
                 auto map1d = feltor::compute_oneflux_labels( *poloidal_average,
                         gridX2d, mod_mag, psipO, psipmax, f0,
-                        dvdpsip, g1d_out, g1d_out_eta);
+                        dvdpsip, volX2d, g1d_out, g1d_out_eta);
                 err = dg::file::define_dimension( ncid, &dim_id1d, g1d_out, {"psi"} );
                 count1d[0] = 1, count1d[1] = g1d_out.n()*g1d_out.N();
                 //write 1d static vectors (psi, q-profile, ...) into file
@@ -463,7 +463,6 @@ int main( int argc, char* argv[])
                 grid2gridX2d  = dg::create::interpolation(
                     coordsX[0], coordsX[1], *g2d_ptr, dg::NEU, dg::NEU,
                     "dg");
-                volX2d = dg::tensor::volume2d(gridX2d.metric());
                 fsa1d = dg::evaluate( dg::zero, g1d_out);
             }
 #ifdef WITH_MPI

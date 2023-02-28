@@ -209,7 +209,7 @@ std::vector<std::tuple<std::string, dg::HVec, std::string> >
     const dg::geo::CurvilinearGrid2d& gridX2d,
     const dg::geo::TokamakMagneticField& mod_mag,
     double psipO, double psipmax, double f0,
-    dg::HVec& dvdpsip,
+    dg::HVec& dvdpsip, dg::HVec& volX2d,
     dg::Grid1d& g1d_out, // Psip grid
     dg::Grid1d& g1d_out_eta // Eta grid
     )
@@ -221,7 +221,7 @@ std::vector<std::tuple<std::string, dg::HVec, std::string> >
     std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
     /// Compute flux volume label
     dg::SparseTensor<dg::HVec> metricX = gridX2d.metric();
-    dg::HVec volX2d = dg::tensor::volume2d( metricX);
+    volX2d = dg::tensor::volume2d( metricX);
     poloidal_average( volX2d, dvdpsip, false);
     //O-point fsa value is always 0 (hence the DIR boundary condition)
     g1d_out = dg::Grid1d(psipO<psipmax ? psipO : psipmax,

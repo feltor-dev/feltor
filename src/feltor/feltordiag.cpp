@@ -104,16 +104,15 @@ int main( int argc, char* argv[])
     /// ------------------- Compute flux labels ---------------------//
     dg::Average<dg::HVec > poloidal_average( gridX2d, dg::coo2d::y);
     dg::Grid1d g1d_out, g1d_out_eta;
-    dg::HVec dvdpsip;
+    dg::HVec dvdpsip, volX2d;
     auto map1d = feltor::compute_oneflux_labels( poloidal_average,
             gridX2d, mod_mag, psipO, psipmax, f0,
-            dvdpsip, g1d_out, g1d_out_eta);
+            dvdpsip, volX2d, g1d_out, g1d_out_eta);
     auto map2d = feltor::compute_twoflux_labels( gridX2d);
 
     dg::direction integration_dir = psipO < psipmax ? dg::forward : dg::backward;
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
-    dg::HVec volX2d = dg::tensor::volume2d(gridX2d.metric());
     dg::HVec transferH2dX(volX2d), cta2dX(volX2d); //NEW: definitions
 
     //-----------------Create Netcdf output file with attributes----------//
