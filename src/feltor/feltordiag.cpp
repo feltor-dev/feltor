@@ -336,6 +336,7 @@ int main( int argc, char* argv[])
         }
         err = nc_inq_unlimdim( ncid, &timeID);
         err = nc_inq_dimlen( ncid, timeID, &steps);
+        err = nc_inq_varid(ncid, "time", &timeID);
         //steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
         {
