@@ -288,17 +288,16 @@ struct Explicit
             const std::array<Container, 3>& contra_vec,
             Container& temp0, Container& result)
     {
-        const Container& vol = m_multi_pol[0].weights();
-        dg::blas1::pointwiseDot( 1., prefactor, vol, contra_vec[0], 0., temp0);
+        dg::blas1::pointwiseDot( 1., prefactor, m_detg, contra_vec[0], 0., temp0);
         dg::blas2::symv( m_dxC, temp0, result);
-        dg::blas1::pointwiseDot( 1., prefactor, vol, contra_vec[1], 0., temp0);
+        dg::blas1::pointwiseDot( 1., prefactor, m_detg, contra_vec[1], 0., temp0);
         dg::blas2::symv( 1., m_dyC, temp0, 1., result);
         if( m_compute_in_3d)
         {
-            dg::blas1::pointwiseDot( 1., prefactor, vol, contra_vec[2], 0., temp0);
+            dg::blas1::pointwiseDot( 1., prefactor, m_detg, contra_vec[2], 0., temp0);
             dg::blas2::symv( 1., m_dz, temp0, 1., result);
         }
-        dg::blas1::pointwiseDivide( 1., result, vol, 0., result);
+        dg::blas1::pointwiseDivide( 1., result, m_detg, 0., result);
     }
     void centered_v_dot_nabla( const std::array<Container, 3>& contra_vec,
             const Container& f, Container& temp1, Container& result)
@@ -533,7 +532,7 @@ struct Explicit
     //these should be considered const // m_curv is full curvature
     std::array<Container,3> m_curv, m_curvKappa, m_b; //m_b is bhat/ sqrt(g) / B
     Container m_divCurvKappa;
-    Container m_bphi, m_binv, m_divb;
+    Container m_bphi, m_binv, m_divb, m_detg;
     Container m_source, m_profne, m_sheath_coordinate;
     Container m_wall, m_sheath;
 
@@ -671,8 +670,8 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
                                         m_b[0], m_b[1], m_b[2]);
     dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
-    Container detg = dg::tensor::volume( metric);
-    dg::blas1::pointwiseDivide( m_binv, detg, m_temp0); //1/B/detg
+    m_detg = dg::tensor::volume( metric);
+    dg::blas1::pointwiseDivide( m_binv, m_detg, m_temp0); //1/B/detg
     for( int i=0; i<3; i++)
         dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/detg/B
     m_hh = dg::geo::createProjectionTensor( bhat, g);
