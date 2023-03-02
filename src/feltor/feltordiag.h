@@ -1534,7 +1534,7 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
         []( dg::x::DVec& result, Variables& v){
             v.f.compute_bperp( v.tmp);
             routines::dot( v.tmp, v.f.gradP(1), result);
-            dg::blas1::pointwiseDot( v.f.density(1), result, result);
+            dg::blas1::pointwiseDot( -1., v.f.density(1), result, 0., result);
         }
     },
     {"spardotAi_tt", "Apar Electric force in ion momentum density (Time average)", true,
@@ -1580,6 +1580,7 @@ std::vector<Record> COCEDiagnostics2d_list = { // 16
         }
     },
     /// ------------ Polarization advections ------------------//
+    //The fsa of the main and rest terms is almost the same as the one of divoexbi
     {"v_adv_E_main_tt", "Main electric advective term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
             v.f.compute_pol( 1., v.f.density(0), v.tmp[0], 0., v.tmp3[0]);
@@ -1616,11 +1617,13 @@ std::vector<Record> COCEDiagnostics2d_list = { // 16
             v.f.centered_div( v.p.mu[1], v.tmp, v.tmp2[0], result);
         }
     },
+    //The fsa of the main and rest terms is almost the same as the one of divodiaiUE
     {"v_adv_D_main_tt", "Main diamagnetic term (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
             v.f.compute_lapMperpN(-1.0, v.f.density(0), v.tmp[0], 0., v.tmp3[0]);
             routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+            dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
         }
     },
     {"v_adv_D_main_gf_tt", "Main diamagnetic term (time integrated)", true,
@@ -1628,6 +1631,7 @@ std::vector<Record> COCEDiagnostics2d_list = { // 16
             v.f.compute_lapMperpN(-1.0, v.f.density(1), v.tmp[0], 0., v.tmp3[0]);
             routines::times(v.f.bhatgB(), v.f.gradP(0), v.tmp); //u_E
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+            dg::blas1::scal( result, v.p.mu[1]*v.p.tau[1]);
         }
     },
     {"v_adv_D_rest_tt", "Diamagnetic advective term (time integrated)", true,

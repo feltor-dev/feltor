@@ -122,7 +122,8 @@ class Elliptic1d
      *
      * @param sigma The new scalar part \f$\chi\f$
      * @attention If some or all elements of sigma are zero the preconditioner
-     * is invalidated and the operator can no longer be inverted. The symv
+     * is invalidated and the operator can no longer be inverted until \c set_chi
+     * is called with a positive sigma again. The symv
      * function can still be called however.
      * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
      */
@@ -299,7 +300,8 @@ class Elliptic2d
      * @param sigma The new scalar part in \f$\chi\f$
      * @note The class will take care of the volume element in the divergence so do not multiply it to \c sigma yourself
      * @attention If some or all elements of sigma are zero the preconditioner
-     * is invalidated and the operator can no longer be inverted. The symv
+     * is invalidated and the operator can no longer be inverted until \c set_chi
+     * is called with a positive sigma again. The symv
      * function can still be called however.
      * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
      */
