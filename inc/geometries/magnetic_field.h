@@ -963,7 +963,7 @@ struct RhoP: public aCylindricalFunctor<RhoP>
 
 };
 
-///@brief Inertia factor \f$ \mathcal I_0 \f$
+///@brief Inertia factor \f$ \mathcal I_0 = B^2/(R_0^2|\nabla\psi_p|^2)\f$
 struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
 {
     Hoo( dg::geo::TokamakMagneticField mag): m_mag(mag){}

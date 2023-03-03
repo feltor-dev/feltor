@@ -122,9 +122,10 @@ class Elliptic1d
      *
      * @param sigma The new scalar part \f$\chi\f$
      * @attention If some or all elements of sigma are zero the preconditioner
-     * is invalidated and the operator can no longer be inverted until \c set_chi
-     * is called with a positive sigma again. The symv
-     * function can still be called however.
+     * is invalidated and the operator can no longer be inverted (due to divide by zero)
+     * until \c set_chi is called with a positive sigma again.
+     * The symv function can always be called, however, if sigma is zero you likely also want to set
+     * the \c jfactor to 0 because the jumps in phi may not vanish and then pollute the result.
      * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>
@@ -300,9 +301,10 @@ class Elliptic2d
      * @param sigma The new scalar part in \f$\chi\f$
      * @note The class will take care of the volume element in the divergence so do not multiply it to \c sigma yourself
      * @attention If some or all elements of sigma are zero the preconditioner
-     * is invalidated and the operator can no longer be inverted until \c set_chi
-     * is called with a positive sigma again. The symv
-     * function can still be called however.
+     * is invalidated and the operator can no longer be inverted (due to divide by zero)
+     * until \c set_chi is called with a positive sigma again.
+     * The symv function can always be called, however, if sigma is zero you likely also want to set
+     * the \c jfactor to 0 because the jumps in phi may not vanish and then pollute the result.
      * @tparam ContainerType0 must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0>

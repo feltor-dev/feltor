@@ -81,6 +81,13 @@ struct PositiveLN
         return log(ne <= 0 ? 1e-16 : ne); // avoid nans in output
     }
 };
+struct Positive
+{
+    DG_DEVICE double operator()(double ne)
+    {
+        return ne <= 0 ? 1e-16 : ne; // avoid nans in output
+    }
+};
 
 
 //From here on, we use the typedefs to ease the notation
@@ -94,7 +101,6 @@ struct Variables{
     std::array<dg::x::DVec, 3> tmp;
     std::array<dg::x::DVec, 3> tmp2;
     std::array<dg::x::DVec, 3> tmp3;
-    dg::x::DVec hoo; //keep hoo there to avoid pullback
     double duration;
     const unsigned* nfailed;
 };
@@ -449,11 +455,13 @@ std::vector<Record> basicDiagnostics2d_list = { // 22
     /// -----------------Miscellaneous additions --------------------//
     {"vorticity", "Minus Lap_perp of electric potential", false,
         []( dg::x::DVec& result, Variables& v ) {
+            // has no jump terms
             v.f.compute_lapMperpP(0, result);
         }
     },
     {"vorticity_i", "Minus Lap_perp of ion potential", false,
         []( dg::x::DVec& result, Variables& v ) {
+            // has no jump terms
             v.f.compute_lapMperpP(1, result);
         }
     },
@@ -1556,12 +1564,20 @@ std::vector<Record> RSDiagnostics2d_list = { //2
     /// --------------------- Zonal flow energy terms------------------------//
     {"nei0", "inertial factor", false,
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.f.density(0), v.hoo, result);
+            routines::dot( v.gradPsip, v.gradPsip, result);
+            dg::blas1::transform( result, result, Positive());
+            dg::blas1::pointwiseDot( v.mag.R0()*v.mag.R0(),
+                result, v.f.binv(), v.f.binv(), 0., result);
+            dg::blas1::pointwiseDivide( v.f.density(0), result, result);
         }
     },
     {"snei0_tt", "inertial factor source", true,
         []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.f.density_source(0), v.hoo, result);
+            routines::dot( v.gradPsip, v.gradPsip, result);
+            dg::blas1::transform( result, result, Positive());
+            dg::blas1::pointwiseDot( v.mag.R0()*v.mag.R0(),
+                result, v.f.binv(), v.f.binv(), 0., result);
+            dg::blas1::pointwiseDivide( v.f.density_source(0), result, result);
         }
     }
 };
@@ -1683,7 +1699,7 @@ std::vector<Record> COCEDiagnostics2d_list = { // 16
     ///-------------- Sources term----------///
     {"v_S_E_tt", "Electric source vorticity (time integrated)", true,
         []( dg::x::DVec& result, Variables& v) {
-            v.f.compute_pol( 1., v.f.density_source(0), v.tmp[0], 0., result);
+            v.f.compute_source_pol( 1., v.f.density_source(0), v.tmp[0], 0., result);
         }
     },
     {"v_S_D_tt", "Diamagnetic source vorticity (time integrated)", true,

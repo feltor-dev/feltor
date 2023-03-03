@@ -314,10 +314,17 @@ struct Explicit
     }
     void compute_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
-        // positive polarisation term !!
+        // polarisation term
         dg::blas1::pointwiseDot( m_p.mu[1], density, m_binv, m_binv, 0., temp);
         m_multi_pol[0].set_chi( temp);
         dg::blas2::symv( -alpha, m_multi_pol[0], m_potential[0], beta, result);
+    }
+    void compute_source_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
+    {
+        // we don't want jumps in phi in here so we use lapperpP
+        dg::blas1::pointwiseDot( m_p.mu[1], density, m_binv, m_binv, 0., temp);
+        m_lapperpP.set_chi( temp);
+        dg::blas2::symv( -alpha, m_lapperpP, m_potential[0], beta, result);
     }
     unsigned called() const { return m_called;}
 
