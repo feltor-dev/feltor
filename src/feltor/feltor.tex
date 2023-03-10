@@ -2702,6 +2702,8 @@ Furthermore, a user can specify which kind of diagnostics quantities should be c
     "ifs_lcfs", //  save \_ifs\_lcfs in table \ref{table:diag}.
     "ifs_norm" //  save \_ifs\_norm in table \ref{table:diag}.
 ],
+flags : [ "copy-fsa" ], // If set, copy the fsa from data file instead of re-computing it,
+// only works if n, Npsi, Neta equal the ones in the data file
 // for interpolate in 3d
 "fine-grid-factor" : 2, // how many additional planes are to be inserted: Nz*fine-grid-factor
 "time-reduction-factor" : 10 // only ouptut every *th step

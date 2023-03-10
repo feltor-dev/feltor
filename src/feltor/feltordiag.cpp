@@ -55,6 +55,21 @@ int main( int argc, char* argv[])
         return -1;
     }
     std::string configfile = config.asJson().toStyledString();
+    std::cout << configfile <<  std::endl;
+
+    // Computing flags
+    bool copy_fsa = false;
+    for( unsigned i=0; i<config["flags"].size(); i++)
+    {
+        std::string flag = config["flags"].get(i,"copy-fsa").asString();
+        if( flag  == "copy-fsa")
+        {
+            std::cout <<"Copy Flux surface averages!\n";
+            copy_fsa = true;
+        }
+        else
+            throw std::runtime_error( "Flag "+flag+" not recognized!\n");
+    }
 
     //-------------------Construct grids-------------------------------------//
 
@@ -101,6 +116,8 @@ int main( int argc, char* argv[])
     ///--------------- Construct X-point grid ---------------------//
     double psipO = 0, psipmax = 0, f0 = 0.;
     auto gridX2d = feltor::generate_XGrid( config, mag, psipO, psipmax, f0);
+    double fx_0 = config.get( "fx_0", 1./8.).asDouble(); //must evenly divide Npsi
+    unsigned inner_Nx = (unsigned)round((1-fx_0)*(double)gridX2d.Nx());
     /// ------------------- Compute flux labels ---------------------//
     dg::Average<dg::HVec > poloidal_average( gridX2d, dg::coo2d::y);
     dg::Grid1d g1d_out, g1d_out_eta;
@@ -114,6 +131,7 @@ int main( int argc, char* argv[])
     dg::HVec t1d = dg::evaluate( dg::zero, g1d_out), fsa1d( t1d);
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
     dg::HVec transferH2dX(volX2d), cta2dX(volX2d); //NEW: definitions
+    const dg::HVec w1d = dg::create::weights( g1d_out);
 
     //-----------------Create Netcdf output file with attributes----------//
     //-----------------And 1d static output                     ----------//
@@ -399,6 +417,15 @@ int main( int argc, char* argv[])
                     dg::blas1::scal( t1d, NAN);
                 }
                 dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
+                if( copy_fsa)
+                {   // if fsa already exists overwrite t1d
+                    try{
+                        err = nc_inq_varid(ncid, (record.name+"_fsa").data(), &dataID);
+                        size_t count_fsa[2] = {1, g1d_out.n()*g1d_out.N()};
+                        err = nc_get_vara_double( ncid, dataID,
+                            start2d, count_fsa, t1d.data());
+                    } catch (dg::file::NC_Error& error) {}
+                }
                 dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
                 if( record_name[0] != 'j')
                     dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
@@ -478,7 +505,14 @@ int main( int argc, char* argv[])
                 {
                     dg::blas1::pointwiseDot( fsa1d, dvdpsip, t1d);
                     transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
-                    result = dg::interpolate( dg::xspace, transfer1d, psipO < psipmax ? -1e-12 : 1e-12, g1d_out); //make sure to take inner cell for interpolation
+                    // dG computation of integral up to lcfs
+                    dg::HVec temp1( inner_Nx*gridX2d.n()), temp2(temp1);
+                    for( unsigned u=0; u<temp1.size(); u++)
+                    {
+                        temp1[u] = w1d[u];
+                        temp2[u] = integration_dir == dg::forward ? t1d[u] : t1d[t1d.size() -1 -u];
+                    }
+                    result = dg::blas1::dot( temp1, temp2);
                 }
                 if(diag_list[ "ifs"].exists)
                 {
@@ -498,18 +532,20 @@ int main( int argc, char* argv[])
                     dg::blas1::pointwiseDivide( t1d, dvdpsip, t1d); //dvjv
                     dg::blas1::pointwiseDot( t1d, t1d, t1d);//dvjv2
                     dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);//dvjv2
-                    transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
-                    result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
-                    result = sqrt(result);
                 }
                 else
                 {
                     dg::blas1::pointwiseDot( fsa1d, fsa1d, t1d);
                     dg::blas1::pointwiseDot( t1d, dvdpsip, t1d);
-                    transfer1d = dg::integrate( t1d, g1d_out, integration_dir);
-                    result = dg::interpolate( dg::xspace, transfer1d, -1e-12, g1d_out);
-                    result = sqrt(result);
                 }
+                // dG computation of integral up to lcfs
+                dg::HVec temp1( inner_Nx*gridX2d.n()), temp2(temp1);
+                for( unsigned u=0; u<temp1.size(); u++)
+                {
+                    temp1[u] = w1d[u];
+                    temp2[u] = integration_dir == dg::forward ? t1d[u] : t1d[t1d.size() -1 -u];
+                }
+                result = sqrt(dg::blas1::dot( temp1, temp2));
                 if(diag_list["ifs_norm"].exists)
                 {
                     err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_norm"),
@@ -535,7 +571,7 @@ int main( int argc, char* argv[])
                         start1d_out, count1d, fsa1d.data());
                 }
             }
-            else
+            else // make everything zero
             {
                 dg::blas1::scal( transferH2d, 0.);
                 dg::blas1::scal( transfer1d, 0.);
