@@ -35,6 +35,10 @@ int main( int argc, char* argv[])
     dg::file::NC_Error_Handle err;
     int ncid_in;
     err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
+    // create output early so that netcdf failures register early
+    // and simplesimdb knows that file is under construction
+    int ncid_out;
+    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
     size_t length;
     err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
     std::string inputfile(length, 'x');
@@ -135,8 +139,6 @@ int main( int argc, char* argv[])
 
     //-----------------Create Netcdf output file with attributes----------//
     //-----------------And 1d static output                     ----------//
-    int ncid_out;
-    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
 
     /// Set global attributes
     std::map<std::string, std::string> att;
