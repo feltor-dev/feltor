@@ -417,20 +417,22 @@ int main( int argc, char* argv[])
                     dg::blas1::scal( t1d, NAN);
                 }
                 dg::blas1::scal( t1d, 4*M_PI*M_PI*f0); //
-                if( copy_fsa)
-                {   // if fsa already exists overwrite t1d
-                    try{
-                        err = nc_inq_varid(ncid, (record.name+"_fsa").data(), &dataID);
-                        size_t count_fsa[2] = {1, g1d_out.n()*g1d_out.N()};
-                        err = nc_get_vara_double( ncid, dataID,
-                            start2d, count_fsa, t1d.data());
-                    } catch (dg::file::NC_Error& error) {}
-                }
                 dg::blas1::copy( 0., fsa1d); //get rid of previous nan in fsa1d (nasty bug)
                 if( record_name[0] != 'j')
                     dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
                 else
                     dg::blas1::copy( t1d, fsa1d);
+                if( copy_fsa)
+                {   // if fsa already exists overwrite fsa1d
+                    try{
+                        err = nc_inq_varid(ncid, (record.name+"_fsa").data(), &dataID);
+                        size_t count_fsa[2] = {1, g1d_out.n()*g1d_out.N()};
+                        err = nc_get_vara_double( ncid, dataID,
+                            start2d, count_fsa, fsa1d.data());
+                        if( record_name[0] == 'j')
+                            dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d );
+                    } catch (dg::file::NC_Error& error) {}
+                }
                 //3. Interpolate fsa on 2d plane : <f>
                 dg::blas2::gemv(fsa2rzmatrix, fsa1d, transferH2d); //fsa on RZ grid
             }
