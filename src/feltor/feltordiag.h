@@ -1376,7 +1376,6 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
                     v.f.velocity(0), v.f.dsU(0), 1., result);
         }
     },
-    //should be zero
     {"lparpar_tt", "Parallel momentum dissipation by parallel diffusion", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::axpby( v.p.nu_parallel_u[1], v.f.lapParU(1), 0., result);
@@ -1391,6 +1390,24 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
                     0., v.tmp[1]);
             dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.velocity(1),
                     1., v.tmp[1], v.f.density(1), 0., result);
+        }
+    },
+    {"lparparbphi_tt", "Parallel angular momentum dissipation by parallel diffusion", true,
+        []( dg::x::DVec& result, Variables& v ) {
+            dg::blas1::axpby( v.p.nu_parallel_u[1], v.f.lapParU(1), 0., result);
+            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.velocity(1), v.f.lapParN(1), 1., result);
+            dg::blas1::pointwiseDot( result, v.f.bphi(), result);
+        }
+    },
+    {"lparperpbphi_tt", "Parallel angular momentum dissipation by perp diffusion", true,
+        []( dg::x::DVec& result, Variables& v ) {
+            v.f.compute_perp_diffusiveN( 1., v.f.density(1), result, v.tmp[2],
+                    0., v.tmp[0]);
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1), result, v.tmp[2],
+                    0., v.tmp[1]);
+            dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.velocity(1),
+                    1., v.tmp[1], v.f.density(1), 0., result);
+            dg::blas1::pointwiseDot( result, v.f.bphi(), result);
         }
     },
     //not so important
