@@ -87,15 +87,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             );
         }
         // Add parallel viscosity
+        m_fa( dg::geo::einsMinus, m_velocityST[1], m_minusU[1]);
+        m_fa( dg::geo::einsPlus, m_velocityST[1], m_plusU[1]);
+        m_fa( dg::geo::zeroForw, m_velocityST[1], m_zeroU[1]);
+        update_parallel_bc_2nd( m_fa, m_minusU[1], m_zeroU[1],
+                m_plusU[1], m_p.bcxU, 0.);
         if( m_p.nu_parallel_u[1] > 0)
         {
-            m_fa( dg::geo::einsMinus, m_velocityST[1], m_minus);
-            m_fa( dg::geo::einsPlus, m_velocityST[1], m_plus);
-            m_fa( dg::geo::zeroForw, m_velocityST[1], m_zero);
-            update_parallel_bc_2nd( m_fa, m_minus, m_zero,
-                    m_plus, m_p.bcxU, 0.);
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[1],
-                    m_minus, m_zero, m_plus, 0., m_temp0);
+                    m_minusU[1], m_zeroU[1], m_plusU[1], 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, m_densityST[1], 1., yp[1][1]);
         }
         if( m_p.nu_parallel_n > 0)
@@ -105,6 +105,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             m_fa( dg::geo::zeroForw, m_density[1], m_zero);
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_n,
                     m_minus, m_zero, m_plus, 1., yp[0][1]);
+            // Add density gradient correction
+            double delta = m_fa.deltaPhi();
+            double nu = m_p.nu_parallel_n;
+            dg::blas1::subroutine( [delta, nu]DG_DEVICE ( double& WDot,
+                        double QN, double PN, double UM, double U0, double UP,
+                        double bphi)
+                    {
+                        //upwind scheme
+                        double current = -nu*bphi*(PN-QN)/delta/2./(PN + QN);
+                        if( current > 0)
+                            WDot += - current*bphi*(U0-UM)/delta;
+                        else
+                            WDot += - current*bphi*(UP-U0)/delta;
+
+                    },
+                    yp[1][1], m_minusSTN[1], m_plusSTN[1], m_minusU[1], m_zeroU[1],
+                    m_plusU[1], m_fa.bphi()
+            );
         }
     }
     else if( "velocity-staggered-fieldaligned" == advection ||
@@ -620,8 +638,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     else
         compute_perp_diffusiveN( 1., m_density[1], m_temp0, m_temp1, 1.,
             yp[0][1]);
-    compute_perp_diffusiveU( 1., m_velocityST[1], m_densityST[1], m_temp0, m_temp1, 1.,
-            yp[1][1]);
+    compute_perp_diffusiveU( 1., m_velocityST[1], m_densityST[1], m_temp0,
+            m_temp1, m_dFU[1][0], m_dFU[1][1], 1., yp[1][1]);
 
     // partitioned means imex timestepper
     for( unsigned i=0; i<2; i++)
