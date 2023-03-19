@@ -258,7 +258,7 @@ struct Explicit
     }
     void compute_perp_diffusiveU( double alpha, const Container& velocity,
             const Container& density,
-            Container& temp0, Container& temp1, double beta, Container& result)
+            Container& temp0, Container& temp1, Container& temp2, Container& temp3, double beta, Container& result)
     {
         // density = full N
         // result = alpha Lambda_U + beta result
@@ -275,6 +275,31 @@ struct Explicit
         }
         else
             dg::blas1::scal( result, beta);
+        if( m_p.nu_perp_n > 0)
+        {
+            dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
+            for( unsigned s=0; s<m_p.diff_order-1; s++)
+            {
+                using std::swap;
+                swap( temp0, temp1);
+                dg::blas2::symv( 1., m_lapperpN, temp1, 0., temp0);
+            }
+
+            // - v_x dx U
+            dg::blas2::symv( m_dxC, temp0, temp1);
+            dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
+            dg::blas2::symv( m_dxB_U, velocity, temp2);
+            dg::blas2::symv( m_dxF_U, velocity, temp3);
+            dg::blas1::evaluate( result, dg::minus_equals(), dg::Upwind(),
+                    temp1, temp2, temp3);
+            // - v_y dy U
+            dg::blas2::symv( m_dyC, temp0, temp1);
+            dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
+            dg::blas2::symv( m_dyB_U, velocity, temp2);
+            dg::blas2::symv( m_dyF_U, velocity, temp3);
+            dg::blas1::evaluate( result, dg::minus_equals(), dg::Upwind(),
+                    temp1, temp2, temp3);
+        }
     }
 
     // Compute divergence using centered derivatives
@@ -1928,7 +1953,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
     for( unsigned i=0; i<2; i++)
     {
         compute_perp_diffusiveU( 1., velocityST[i], densityST[i], m_temp0,
-                m_temp1, beta, yp[i]);
+                m_temp1, m_dFU[i][0], m_dFU[i][1], beta, yp[i]);
     }
 #else
     dg::blas1::scal( yp, beta);
@@ -1942,6 +1967,27 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[i],
                     m_minusU[i], m_zeroU[i], m_plusU[i], 0., m_temp0);
             dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
+        }
+        if( m_p.nu_parallel_n > 0)
+        {
+            // Add density gradient correction
+            double delta = m_fa.deltaPhi();
+            double nu = m_p.nu_parallel_n;
+            dg::blas1::subroutine( [delta, nu]DG_DEVICE ( double& WDot,
+                        double QN, double PN, double UM, double U0, double UP,
+                        double bphi)
+                    {
+                        //upwind scheme
+                        double current = -nu*bphi*(PN-QN)/delta/2./(PN + QN);
+                        if( current > 0)
+                            WDot += - current*bphi*(U0-UM)/delta;
+                        else
+                            WDot += - current*bphi*(UP-U0)/delta;
+
+                    },
+                    yp[i], m_minusSTN[i], m_plusSTN[i], m_minusU[i], m_zeroU[i],
+                    m_plusU[i], m_fa.bphi()
+            );
         }
     }
 #endif

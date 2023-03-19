@@ -69,7 +69,7 @@ struct RadialEnergyFlux{
     //energy source
     DG_DEVICE double operator()( double ne, double ue, double P,
         double source){
-        return m_z*(m_tau*(1+log(ne <= 0 ? 1e-16 : ne))+P+0.5*m_mu*ue*ue)*source;
+        return m_z*(m_tau*(1+log(ne <= 0 ? 1e-16 : ne))+P-0.5*m_mu*ue*ue)*source;
     }
     private:
     double m_tau, m_mu, m_z;
@@ -895,10 +895,10 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     /// ------------------------ Energy dissipation terms ------------------//
     {"leeperp_tt", "Perpendicular electron energy dissipation (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_perp_diffusiveN( 1., v.f.density(0), result, v.tmp[2],
+            v.f.compute_perp_diffusiveN( 1., v.f.density(0), v.tmp3[0], v.tmp3[1],
                     0., v.tmp[0]);
-            v.f.compute_perp_diffusiveU( 1., v.f.velocity(0), v.f.density(0), result, v.tmp[2],
-                    0., v.tmp[1]);
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(0), v.f.density(0),
+                    v.tmp3[0], v.tmp3[1], v.tmp3[2], v.tmp2[0], 0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
@@ -908,10 +908,10 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     },
     {"leiperp_tt", "Perpendicular ion energy dissipation (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_perp_diffusiveN( 1., v.f.density(1), result, v.tmp[2],
+            v.f.compute_perp_diffusiveN( 1., v.f.density(1), v.tmp3[0], v.tmp3[1],
                     0., v.tmp[0]);
-            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1), result, v.tmp[2],
-                    0., v.tmp[1]);
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1),
+                    v.tmp3[0], v.tmp3[1], v.tmp3[2], v.tmp2[0], 0., v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
@@ -922,8 +922,11 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"leeparallel_tt", "Parallel electron energy dissipation (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::axpby( v.p.nu_parallel_n, v.f.lapParN(0), 0., v.tmp[0]);
-            dg::blas1::pointwiseDivide( v.p.nu_parallel_u[0], v.f.lapParU(0),
-                v.f.density(0), 0., v.tmp[1]);
+            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.dsN(0), v.f.dsU(0),
+                    0., v.tmp[1]);
+            dg::blas1::axpby( v.p.nu_parallel_u[0], v.f.lapParU(0), 1., v.tmp[1]);
+            dg::blas1::pointwiseDivide( 1., v.tmp[1], v.f.density(0), 0.,
+                    v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 RadialEnergyFlux( v.p.tau[0], v.p.mu[0], -1.),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
@@ -934,8 +937,11 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
     {"leiparallel_tt", "Parallel ion energy dissipation (Time average)", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::axpby( v.p.nu_parallel_n, v.f.lapParN(1), 0., v.tmp[0]);
-            dg::blas1::pointwiseDivide( v.p.nu_parallel_u[1], v.f.lapParU(1),
-                v.f.density(1), 0., v.tmp[1]);
+            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.dsN(1), v.f.dsU(1),
+                    0., v.tmp[1]);
+            dg::blas1::axpby( v.p.nu_parallel_u[0], v.f.lapParU(1), 1., v.tmp[1]);
+            dg::blas1::pointwiseDivide( 1., v.tmp[1], v.f.density(1), 0.,
+                    v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
                 RadialEnergyFlux( v.p.tau[1], v.p.mu[1], 1.),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
@@ -950,7 +956,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             dg::blas1::evaluate( result, dg::equals(),
                 RadialEnergyFlux( v.p.tau[0], v.p.mu[0], z),
                 v.f.density(0), v.f.velocity(0), v.f.potential(0),
-                v.f.divNUb(0)
+                v.f.divNUb(0), 0.
             );
             dg::blas1::pointwiseDot( z*v.p.tau[0], v.f.velocity(0), v.f.dsN(0),
                     1., result);
@@ -968,7 +974,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             dg::blas1::evaluate( result, dg::equals(),
                 RadialEnergyFlux( v.p.tau[1], v.p.mu[1], z),
                 v.f.density(1), v.f.velocity(1), v.f.potential(1),
-                v.f.divNUb(1)
+                v.f.divNUb(1), 0.
             );
             dg::blas1::pointwiseDot( z*v.p.tau[1], v.f.velocity(1), v.f.dsN(1),
                     1., result);
@@ -1351,14 +1357,6 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
         }
     },
-    // should be zero
-    {"sparsni_tt", "Parallel momentum source by density and velocity sources", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.density_source(1), v.f.velocity(1),
-                v.p.mu[1], v.f.velocity_source(1), v.f.density(1), 0., result);
-        }
-    },
     /// --------------------- Parallel momentum source terms ---------------------//
     {"divjpari_tt", "Divergence of parallel ion momentum flux", true,
         []( dg::x::DVec& result, Variables& v ) {
@@ -1379,15 +1377,18 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
     {"lparpar_tt", "Parallel momentum dissipation by parallel diffusion", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::axpby( v.p.nu_parallel_u[1], v.f.lapParU(1), 0., result);
-            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.velocity(1), v.f.lapParN(1), 1., result);
+            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.velocity(1),
+                    v.f.lapParN(1), 1., result);
+            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.dsU(1), v.f.dsN(1),
+                    1., result);
         }
     },
     {"lparperp_tt", "Parallel momentum dissipation by perp diffusion", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_perp_diffusiveN( 1., v.f.density(1), result, v.tmp[2],
+            v.f.compute_perp_diffusiveN( 1., v.f.density(1), v.tmp3[0], v.tmp3[1],
                     0., v.tmp[0]);
-            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1), result, v.tmp[2],
-                    0., v.tmp[1]);
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1),
+                    v.tmp3[0], v.tmp3[1], v.tmp3[2], v.tmp2[0], 0., v.tmp[1]);
             dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.velocity(1),
                     1., v.tmp[1], v.f.density(1), 0., result);
         }
@@ -1395,16 +1396,19 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
     {"lparparbphi_tt", "Parallel angular momentum dissipation by parallel diffusion", true,
         []( dg::x::DVec& result, Variables& v ) {
             dg::blas1::axpby( v.p.nu_parallel_u[1], v.f.lapParU(1), 0., result);
-            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.velocity(1), v.f.lapParN(1), 1., result);
+            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.velocity(1),
+                    v.f.lapParN(1), 1., result);
+            dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.dsU(1), v.f.dsN(1),
+                    1., result);
             dg::blas1::pointwiseDot( result, v.f.bphi(), result);
         }
     },
     {"lparperpbphi_tt", "Parallel angular momentum dissipation by perp diffusion", true,
         []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_perp_diffusiveN( 1., v.f.density(1), result, v.tmp[2],
+            v.f.compute_perp_diffusiveN( 1., v.f.density(1), v.tmp3[0], v.tmp3[1],
                     0., v.tmp[0]);
-            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1), result, v.tmp[2],
-                    0., v.tmp[1]);
+            v.f.compute_perp_diffusiveU( 1., v.f.velocity(1), v.f.density(1),
+                    v.tmp3[0], v.tmp3[1], v.tmp3[2], v.tmp2[0], 0., v.tmp[1]);
             dg::blas1::pointwiseDot( 1., v.tmp[0], v.f.velocity(1),
                     1., v.tmp[1], v.f.density(1), 0., result);
             dg::blas1::pointwiseDot( result, v.f.bphi(), result);
@@ -1490,15 +1494,6 @@ std::vector<Record> ParallelMomDiagnostics2d_list = { //36
             dg::blas1::pointwiseDot( v.f.bphi(), result, v.tmp3[0]);
             v.f.compute_bperp( v.tmp);
             v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
-        }
-    },
-    // should be zero
-    {"sparsnibphi_tt", "Parallel angular momentum source by density and velocity sources", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.density_source(1), v.f.velocity(1), v.f.bphi(), 0., result);
-            dg::blas1::pointwiseDot( v.p.mu[1],
-                v.f.velocity_source(1), v.f.density(1), v.f.bphi(), 1., result);
         }
     },
     /// --------------------electron force balance usually well-fulfilled ----//

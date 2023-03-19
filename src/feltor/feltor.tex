@@ -514,7 +514,7 @@ colback=yellow!10!white, colframe=red!50!black,
     -N \left( \left(\bhat+{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right)
     - \eta n_e(N_iU_{\parallel,i}-n_eu_{\parallel,e})
     \nonumber\\
-    &+ \mu \nu_\parallel \Delta_\parallel U+ \mu N\left(\Lambda_U + S_U\right) + \mu U_\parallel \left(\Lambda_N + S_N\right)
+    &+ \Lambda_{\mu NU}
 \label{}
 \end{tcolorbox}
 with
@@ -593,14 +593,19 @@ The dynamic viscosity $\mu\nu_\parallel$ is larger for ions than for electrons.
  %to the density equation.
 \begin{align}
 \label{eq:perpdiffNU}
-\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e + \nu_{N,\parallel}\Delta_\parallel n_e&
-\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i + \nu_{N,\parallel}\Delta_\parallel N_i& \\
-\Lambda_{u_e} &=  -\nu_{U,\perp}\frac{(-\Delta_\perp)^s u_{\parallel,e}}{n_e} &
-\Lambda_{U_i} &=  -\nu_{U,\perp}\frac{(-\Delta_\perp)^s U_{\parallel,i}}{N_i}
+\Lambda_{n_e} &=  -\nu_{N,\perp}(-\Delta_\perp)^s n_e + \nu_{N,\parallel}\Delta_\parallel n_e = -\nc ( \vec j_{\nu,n_e}) \\
+\Lambda_{N_i} &=  -\nu_{N,\perp}(-\Delta_\perp)^s N_i + \nu_{N,\parallel}\Delta_\parallel N_i= -\nc ( \vec j_{\nu,N_i}) \\
+\Lambda_{\mu_e n_e u_e} &=  -\mu_e\nu_{U,\perp}(-\Delta_\perp)^s u_{\parallel,e} + \mu_e \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}  - \nc ( \mu_e u_{\parallel,e} \vec j_{\nu,n_e})\\
+\Lambda_{\mu_i N_i U_i} &=  -\mu_i\nu_{U,\perp}(-\Delta_\perp)^s U_{\parallel,i} + \mu_i \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}  - \nc ( \mu_i U_{\parallel,i} \vec j_{\nu,N_i})
 \end{align}
 Here we separately identify the mass diffusion coefficient and the viscous
 coefficient, hence the Schmidt number \(\mathit{Sc}_\parallel:=
 \frac{\nu_{U,\perp}}{\nu_{N,\perp}}\).
+We have
+\begin{align}
+    N\Lambda_U &=  -\nu_{U,\perp}(-\Delta_\perp)^s U_{\parallel} +  \nu_{\parallel} \Delta_\parallel U_{\parallel}  + \nu_{N,\parallel} \npar N \npar U_{\parallel} + \nu_{N,\perp}\np\left( (-\Delta_\perp)^{s-1}N\right) \cn U_{\parallel}
+\end{align}
+Note here that the latter two terms have the form of advection terms for the parallel velocity $\vec j_{\nu,N}\cn U_\parallel$.
 
 We do not derive resistive drifts in the gyro-fluid approach.
 The drift-fluid corresponding resistive drift gives an order-of-magnitude estimate for $\nu_\perp$.
@@ -671,13 +676,16 @@ used to implement and divergences.
         - \frac{1}{2}\npar U_\parallel^2
         - \frac{1}{\mu} \npar \psi% \nonumber\\
         -\frac{\tau}{\mu} \npar \ln N
+        - \frac{\eta}{\mu} \frac{n_e}{N}(N_iU_{\parallel,i} - n_eu_{\parallel,e})
 %\right.
 \nonumber \\&
-%\left.
 \vphantom{\frac{\vec b\times\vn \psi}{B}} %PHANTOM
-        - \frac{\eta}{\mu} \frac{n_e}{N}(N_iU_{\parallel,i} - n_eu_{\parallel,e})
-        + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel - \frac{\nu_{U,\perp}}{N}(-\Delta_\perp)^s U_\parallel
-    + S_U
+        + \frac{\nu_\parallel}{N} \Delta_\parallel U_\parallel
+        + \frac{\nu_{N,\parallel}}{N} \npar N \npar U_\parallel
+        - \frac{\nu_{U,\perp}}{N}(-\Delta_\perp)^{s} U_\parallel
+        + \frac{\nu_{N,\perp}}{N} \np (-\Delta_\perp)^{s-1} N \cn U_\parallel
+\nonumber \\&
+    - \frac{U_\parallel}{N} S_N
 %\right] (1-\chi_s - \chi_w)
  %\nonumber \\&
     %+ \omega_s\chi_s ( U_{\parallel}^{sh} - U_\parallel) -\omega_w \chi_wU_\parallel
@@ -2288,9 +2296,9 @@ with ( $z_e=-1$ and $z_i=+1$) and $\vec u_E := {\bhat\times \vn\phi}/{B}$
   \nonumber\\
   &+ \sum_z z\left[\mu \tau NU_\parallel^2\vec K_{\vn\times\bhat} + \tau NU_\parallel \left(\bhat + {\vec b}_\perp\right)\right], \\
   \Lambda_{\mathcal E} =&  \sum_s z\left[\left( \tau\left( 1+\ln{N}\right) + \psi + \frac{1}{2} \mu U_\parallel^2 \right)
-  \Lambda_N  +  \mu NU_\parallel\Lambda_U + \mu \nu_\parallel U_\parallel \Delta_\parallel U_\parallel \right]
+  \Lambda_N  +  \mu NU_\parallel\Lambda_U  \right]
 \nonumber \\
-  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi + \frac{1}{2} \mu U_\parallel^2 \right)S_{N}\right]
+  S_{\mathcal E} =&  \sum_s  z\left[ \left(\tau\left( 1+\ln{N}\right) +\psi - \frac{1}{2} \mu U_\parallel^2 \right)S_{N}\right]
 \nonumber \\
 R_{\mathcal E} =&  -\eta_\parallel  n_e(U_{\parallel,i}-u_{\parallel,e})(N_iU_{\parallel,i} - n_eu_{\parallel,e}).
 \end{align}
@@ -2339,12 +2347,12 @@ The relevant terms in the output file are
     divei\_tt &$\nc \vec j_{\mathcal E}^i$ \\
     diveea\_tt &$\nc \vec j_{\mathcal E,A}^e$\\
     diveia\_tt &$\nc \vec j_{\mathcal E,A}^i$\\
-    leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e} + z_e\mu_e n_e u_{\parallel,e} \Lambda_{u_e}$ \\
-    leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \Lambda_{N_i} + z_i\mu_i N_i U_{\parallel,i} \Lambda_{U_i}$ \\
-    leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \nu_{N,\parallel} \Delta_\parallel n_e +
-                         z_e\mu_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
-    leiparallel\_tt & $z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \nu_{N,\parallel} \Delta_\parallel N_i +
-                         z_i\mu_i U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
+    leeperp\_tt &$z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e,\perp} + z_e\mu_e n_e u_{\parallel,e} \Lambda_{u_e,\perp}$ \\
+    leiperp\_tt &$z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2) \Lambda_{N_i,\perp} + z_i\mu_i N_i U_{\parallel,i} \Lambda_{U_i,\perp}$ \\
+    leeparallel\_tt & $z_e(\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) \Lambda_{n_e,\parallel} +
+    z_e\mu_e u_{\parallel,e} \Lambda_{u_e, \parallel}$ \\
+    leiparallel\_tt & $z_i(\tau_i(1+\ln N_i) + \psi_i + \mu_iU_{\parallel,i}^2/2)\Lambda_{N_i,_\parallel} +
+    z_i\mu_i U_{\parallel,i} \Lambda_{U_i,\parallel}$ \\
     %leeparallel\_tt & $ z_e\mu_e u_{\parallel,e} \nu_{\parallel,e} \Delta_\parallel u_{\parallel,e}$ \\
     %leiparallel\_tt & $ z_i\mu_i U_{\parallel,i} \nu_{\parallel,i} \Delta_\parallel U_{\parallel,i}$ \\
     divjeepar\_tt &$ z_e\nc \left( (\tau_e(1+\ln n_e) + \phi + \mu_eu_{\parallel,e}^2/2) n_eu_{\parallel,e}\bhat\right)$ \\
@@ -2472,7 +2480,7 @@ The ion parallel momentum balance reads
     -N \left( \left(\bhat+{\vec b}_\perp\right)\cn \psi + \frac{\partial A_\parallel}{\partial t}\right)
     - \eta n_e(N_iU_{\parallel,i}-n_eu_{\parallel,e})
     \nonumber\\
-    &+ \mu \nu_\parallel \Delta_\parallel U+ \mu N\left(\Lambda_U + S_U\right) + \mu U_\parallel \left(\Lambda_N + S_N\right)
+    &+ \mu N\Lambda_U + \mu U_\parallel \Lambda_N
 \end{align}
 The flux surface average over the parallel momentum equations under species summation  yields up to order $\mathcal O(\delta^3)$ in the drift-ordering
 \begin{align}
@@ -2480,7 +2488,7 @@ The flux surface average over the parallel momentum equations under species summ
     % \nonumber\\
     + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_{\parallel,i} \frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_sN_s + z_s\mu_s N_sU_{\parallel,s}^2) b_{\perp}^{\;v}  }
     \nonumber\\
-   = \sum_s\RA{-z_s\tau_s \npar N_s} + \mu_i \RA{ S_{N_i} U_{\parallel,i} + N_i S_{U_\parallel}}
+   = \sum_s\RA{-z_s\tau_s \npar N_s}
    \label{eq:parallel_momentum}
 \end{align}
 while the toroidal parallel angular momentum contribution reads up to order $\mathcal O(\delta^3)$
@@ -2488,7 +2496,7 @@ while the toroidal parallel angular momentum contribution reads up to order $\ma
     \frac{\partial}{\partial t}  \RA{\mu_iN_iU_{\parallel,i} b_\varphi}
     + \frac{\partial}{\partial v} \frac{\d v}{\d\psi_p} \RA{\mu_iN_iU_{\parallel,i} b_\varphi\frac{\bhat\times\vn\phi}{B}\cn\psi_p + \sum_s (z_s\tau_s N_s + z_s\mu_sN_sU_{\parallel,s}^2) b_\varphi b_{\perp}^{\;v} }
     \nonumber\\
-    = \RA{F_{L,\varphi}} + \mu_i \RA{ (S_{N_i} U_{\parallel,i} + N_i S_{U_\parallel}) b_\varphi}
+    = \RA{F_{L,\varphi}}
 \end{align}
 \begin{tcolorbox}[title=Note]
 The source terms add up to zero with our choice of the parallel velocity source~\eqref{eq:velocity_source}.
@@ -2519,15 +2527,13 @@ The relevant terms in the output file are (the Lorentz force term is described i
     & \\
     divparApare\_tt       & $\nc( z_e \mu_e n_e u_{\parallel,e}^2\vec b_\perp)$ &
     & \\
-    sparsni\_tt & $\mu_i S_{N_i} U_{\parallel,i} + \mu_i S_{U_i} N_i $ &
-    sparsnibphi\_tt & $\mu_i S_{N_i} U_{\parallel,i}b_\varphi + \mu_i S_{U,i} N_i b_\varphi $ \\
     divjpari\_tt & $ \nc( +\mu_i N_i U_{\parallel,i}^2 \bhat)$ &
     & \\
     divjpare\_tt & $ \nc( -\mu_e n_e u_{\parallel,e}^2 \bhat)$ &
     & \\
-    lparpar\_tt   & $\nu_{\parallel,i} \Delta_\parallel U_{\parallel,i} + U_{\parallel,i} \Lambda_{N_i,\parallel}$ &
+    lparpar\_tt   & $N_i \Lambda_{U_i,\parallel} + U_{\parallel,i} \Lambda_{N_i,\parallel}$ &
     lparperp\_tt & $U_{\parallel,i} \Lambda_{N_i} + N_i\Lambda_{U_i} $ \\
-    lparparbphi\_tt   & $(\nu_{\parallel,i} \Delta_\parallel U_{\parallel,i} + U_{\parallel,i} \Lambda_{N_i,\parallel})b_\varphi$ &
+    lparparbphi\_tt   & $(N_i \Lambda_{U_i,\parallel} + U_{\parallel,i} \Lambda_{N_i,\parallel})b_\varphi$ &
     lparperpbphi\_tt & $(U_{\parallel,i} \Lambda_{N_i} + N_i\Lambda_{U_i})b_\varphi $ \\
     sparKappaphii\_tt & $-\mu_i N_i U_{\parallel,i} \KK\cn \psi_i$ &
     sparmirrorKappai\_tt & $\tau_i N_i U_{\parallel,i} \nc\KK$ \\
