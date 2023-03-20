@@ -113,7 +113,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                         double bphi)
                     {
                         //upwind scheme
-                        double current = -nu*bphi*(PN-QN)/delta/2./(PN + QN);
+                        double nST = (PN+QN)/2.;
+                        double current = -nu*bphi*(PN-QN)/delta/nST;
                         if( current > 0)
                             WDot += - current*bphi*(U0-UM)/delta;
                         else

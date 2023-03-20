@@ -290,14 +290,14 @@ struct Explicit
             dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
             dg::blas2::symv( m_dxB_U, velocity, temp2);
             dg::blas2::symv( m_dxF_U, velocity, temp3);
-            dg::blas1::evaluate( result, dg::minus_equals(), dg::Upwind(),
+            dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
                     temp1, temp2, temp3);
             // - v_y dy U
             dg::blas2::symv( m_dyC, temp0, temp1);
             dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
             dg::blas2::symv( m_dyB_U, velocity, temp2);
             dg::blas2::symv( m_dyF_U, velocity, temp3);
-            dg::blas1::evaluate( result, dg::minus_equals(), dg::Upwind(),
+            dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
                     temp1, temp2, temp3);
         }
     }
@@ -1978,7 +1978,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
                         double bphi)
                     {
                         //upwind scheme
-                        double current = -nu*bphi*(PN-QN)/delta/2./(PN + QN);
+                        double nST = (PN+QN)/2.;
+                        double current = -nu*bphi*(PN-QN)/delta/nST;
                         if( current > 0)
                             WDot += - current*bphi*(U0-UM)/delta;
                         else
