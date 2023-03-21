@@ -939,7 +939,7 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             dg::blas1::axpby( v.p.nu_parallel_n, v.f.lapParN(1), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( v.p.nu_parallel_n, v.f.dsN(1), v.f.dsU(1),
                     0., v.tmp[1]);
-            dg::blas1::axpby( v.p.nu_parallel_u[0], v.f.lapParU(1), 1., v.tmp[1]);
+            dg::blas1::axpby( v.p.nu_parallel_u[1], v.f.lapParU(1), 1., v.tmp[1]);
             dg::blas1::pointwiseDivide( 1., v.tmp[1], v.f.density(1), 0.,
                     v.tmp[1]);
             dg::blas1::evaluate( result, dg::equals(),
