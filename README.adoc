@@ -20,6 +20,7 @@ Note that the library ships with a multitude of test and benchmark programs.
 https://zenodo.org/badge/latestdoi/14143578[image:https://zenodo.org/badge/14143578.svg[DOI]]
 link:LICENSE[image:https://img.shields.io/badge/License-MIT-yellow.svg[License:
 MIT]]
+https://github.com/feltor-dev/feltor/releases/latest[image:https://img.shields.io/github/v/release/feltor-dev/feltor[GitHub release (latest by date)]]
 
 toc::[]
 
