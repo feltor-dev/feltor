@@ -5,6 +5,11 @@
 #libjs-mathjax (for nice mathematical formulas)
 #graphviz (for nice graphical nodes)
 
+# We copy https://github.com/jothepro/doxygen-awesome-css files (current version 2.2.0)
+# We followed doxygen-awesome documentation in this
+# and use menubar.css for some custom code colors
+# and header.html with some additions to make the menubar and activate doxygen-awesome extensions
+
 # To update the online documentation we use ghp-import with the -o option, such
 # that the gh-pages always
 # contains only a single commit (to save space; and the history of documentation
@@ -56,7 +61,6 @@ matrix.tag:
 		echo "GENERATE_TAGFILE = ../../doc/matrix.tag" ) | doxygen - ;
 
 
-# needs doxygen >= 1.9.1 (for the sidebar only theme)
 dg: exblas.tag geometries.tag matrix.tag
 	cd ../inc/dg; \
 		(cat Doxyfile; \
@@ -65,13 +69,10 @@ dg: exblas.tag geometries.tag matrix.tag
 		echo "HTML_FOOTER = ../../doc/footer.html"; \
 		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
+		echo "HTML_COLORSTYLE = LIGHT";\
 		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html" ../../doc/matrix.tag=../../matrix/html) | doxygen - ;
-
-# MW don't know what these are good for (recommended by doxygen-awesome)
-#echo "HTML_COLORSTYLE_GAMMA = 113";\
-#echo "HTML_COLORSTYLE_HUE = 209";\
-#echo "HTML_COLORSTYLE_SAT = 255";\
 
 geometries: dg.tag
 	cd ../inc/geometries; \
@@ -81,7 +82,9 @@ geometries: dg.tag
 		echo "HTML_FOOTER = ../../doc/footer.html"; \
 		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
+		echo "HTML_COLORSTYLE = LIGHT";\
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
 
 matrix: dg.tag
@@ -92,7 +95,9 @@ matrix: dg.tag
 		echo "HTML_FOOTER = ../../doc/footer.html"; \
 		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
+		echo "HTML_COLORSTYLE = LIGHT";\
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
 
 file:
@@ -103,7 +108,9 @@ file:
 		echo "HTML_FOOTER = ../../doc/footer.html"; \
 		echo "HTML_EXTRA_STYLESHEET = ../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
+		echo "HTML_COLORSTYLE = LIGHT";\
 		echo ) | doxygen - ;
 
 exblas:
@@ -114,7 +121,9 @@ exblas:
 		echo "HTML_FOOTER = ../../../../doc/footer.html"; \
 		echo "HTML_EXTRA_STYLESHEET = ../../../../doc/doxygen-awesome.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/doxygen-awesome-sidebar-only.css";\
+		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/menubar.css";\
+		echo "HTML_COLORSTYLE = LIGHT";\
 		echo ) | doxygen - ;
 
 
