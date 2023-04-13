@@ -364,7 +364,7 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
     /*!@class hide_fieldaligned_numerics_parameters
     * @param eps Desired accuracy of the fieldline integrator
     * @param mx refinement factor in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
-    * high as possible, 10 is a good start)
+    * high as possible, 12 is a good start) If the projection method (parsed from \c interpolation_method) is not "dg" then \c mx must be a multiple of \c nx
     * @param my analogous to \c mx, applies to y direction
     * @param deltaPhi The angular distance that the fieldline-integrator will
     * integrate. Per default this is the distance between planes, which is
@@ -378,12 +378,27 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
     * plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries
         function.  If there is no limiter, the boundary condition is periodic.
-     * @param interpolation_method Several interpolation methods are available:
-     * **dg** uses the native dG interpolation scheme given by the grid,
-     * **nearest** searches for the nearest point and copies its value,
-     * **linear** searches for the two (in 2d four, etc.) closest points and
-     * linearly interpolates their values, **cubic** searches for the four (in
-     * 2d 16, etc) closest points and interpolates a cubic polynomial
+     * @param interpolation_method parsed according to
+     *
+     * |interpolation_method | interpolation | projection|
+     * |---------------------|---------------|-----------|
+     * |"dg"                 |    "dg"       | "dg"      |
+     * |"linear"             |    "linear"   | "dg"      |
+     * |"cubic"              |    "cubic"    | "dg"      |
+     * |"nearest"            |    "nearest"  | "dg"      |
+     * |"linear-nearest" (##)   | "linear"      | "nearest" |
+     * |"cubic-nearest"      | "cubic"       | "nearest" |
+     * |"nearest-nearest"    | "nearest"     | "nearest" |
+     * |"dg-linear"          | "dg"          | "linear"  |
+     * |"linear-linear"      | "linear"      | "linear"  |
+     * |"cubic-linear"       | "cubic"       | "linear"  |
+     * |"nearest-linear"     | "nearest"     | "linear"  |
+     *
+     * (##) Use "linear-nearest" if in doubt.
+     * The table yields one parameter passed to \c create::interpolation
+     * (from the given grid to the fine grid) and one parameter
+     * to \c create::projection (from the fine grid to the given grid)
+     *
      * @param benchmark If true write construction timings to std::cout
     */
 //////////////////////////////FieldalignedCLASS////////////////////////////////////////////
@@ -415,9 +430,9 @@ struct Fieldaligned
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned mx=10, unsigned my=10,
+        unsigned mx=12, unsigned my=12,
         double deltaPhi = -1,
-        std::string interpolation_method = "dg",
+        std::string interpolation_method = "linear-nearest",
         bool benchmark=true
         ):
             Fieldaligned( dg::geo::createBHat(vec),
@@ -435,9 +450,9 @@ struct Fieldaligned
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned mx=10, unsigned my=10,
+        unsigned mx=12, unsigned my=12,
         double deltaPhi = -1,
-        std::string interpolation_method = "dg",
+        std::string interpolation_method = "linear-nearest",
         bool benchmark=true
         );
     /**
@@ -638,6 +653,7 @@ struct Fieldaligned
     container evaluate( BinaryOp binary, UnaryOp unary,
             unsigned p0, unsigned rounds) const;
 
+    ///Return the \c interpolation_method string given in the constructor
     std::string method() const{return m_interpolation_method;}
 
     private:

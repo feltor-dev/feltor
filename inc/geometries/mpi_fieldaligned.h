@@ -73,8 +73,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1, std::string interpolation_method = "dg",
+        unsigned mx=12, unsigned my=12,
+        double deltaPhi = -1, std::string interpolation_method = "linear-nearest",
         bool benchmark = true):
             Fieldaligned( dg::geo::createBHat(vec), grid, bcx, bcy, limit, eps,
                     mx, my, deltaPhi, interpolation_method)
@@ -87,8 +87,8 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned mx=10, unsigned my=10,
-        double deltaPhi = -1, std::string interpolation_method = "dg",
+        unsigned mx=12, unsigned my=12,
+        double deltaPhi = -1, std::string interpolation_method = "linear-nearest",
         bool benchmark = true);
     template<class ...Params>
     void construct( Params&& ...ps)
