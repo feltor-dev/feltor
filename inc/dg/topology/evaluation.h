@@ -54,7 +54,7 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
  *   in the output vector \f$ v_i = f(x_i)\f$ for all \c i
  * .
  * @copydoc hide_code_evaluate1d
- * @tparam UnaryOp Model of Unary Function \c real_type \c f(real_type)
+ * @tparam UnaryOp Model of Unary Function <tt> real_type f(real_type) </tt>
  * @param f The function to evaluate, see @ref functions for a host of predefined functors to evaluate
  * @param g The grid that defines the computational space on which to evaluate f
  *
@@ -88,11 +88,11 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$ representing the given computational space discretization (the grid)
  * -# evaluate the given function or functor at these coordinates and store the result
- *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \c i
+ *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \f$ i \f$
  *.
  * @copydoc hide_code_evaluate2d
  * @copydoc hide_binary
- * @param f The function to evaluate: f = f(x,y), see @ref functions for a host of predefined functors to evaluate
+ * @param f The function to evaluate: \f$ f = f(x,y)\f$, see @ref functions for a host of predefined functors to evaluate
  * @param g The 2d grid on which to evaluate \c f
  *
  * @return The output vector \c v as a host vector
@@ -130,11 +130,11 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$, \f$ z_i \f$ representing the given computational space discretization (the grid)
  * -# evaluate the given function or functor at these coordinates and store the result
- *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \c i
+ *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \f$ i\f$
  *.
  * @copydoc hide_code_evaluate3d
  * @copydoc hide_ternary
- * @param f The function to evaluate: f = f(x,y,z), see @ref functions for a host of predefined functors to evaluate
+ * @param f The function to evaluate: \f$ f = f(x,y,z) \f$, see @ref functions for a host of predefined functors to evaluate
  * @param g The 3d grid on which to evaluate \c f
  *
  * @return The output vector \c v as a host vector

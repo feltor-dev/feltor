@@ -21,7 +21,7 @@ namespace dg
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$ representing the local part of the given computational space discretization (the grid) that the calling process owns
  * -# evaluate the given function or functor at these coordinates and store the result 
- *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \c i
+ *   in the output vector \f$ v_i = f(x_i, y_i)\f$ for all \f$ i\f$
  *.
  * @copydoc hide_code_mpi_evaluate2d
  * @copydoc hide_binary
@@ -84,7 +84,7 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, re
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$, \f$ z_i \f$ representing the local part of the given computational space discretization (the grid) that the calling process owns
  * -# evaluate the given function or functor at these coordinates and store the result
- *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \c i
+ *   in the output vector \f$ v_i = f(x_i, y_i, z_i)\f$ for all \f$ i\f$
  *.
  * @copydoc hide_code_mpi_evaluate3d
  * @copydoc hide_ternary

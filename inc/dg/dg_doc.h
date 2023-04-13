@@ -15,24 +15,22 @@
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
  *         @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
- *             Successive calls to blas routines are executed sequentially.
- *             A manual synchronization of threads or devices is never needed
- *             in an application using these functions. All functions returning
- *             a value block until the value is ready.
+ * @note Successive calls to blas routines are executed sequentially
+ * @note A manual synchronization of threads or devices is never needed in an application
+ * using these functions. All functions returning a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
  *         @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
- *             Successive calls to blas routines are executed sequentially.
- *             A manual synchronization of threads or devices is never needed
- *             in an application using these functions. All functions returning
- *             a value block until the value is ready.
+ * @note Successive calls to blas routines are executed sequentially
+ * @note A manual synchronization of threads or devices is never needed in an application
+ * using these functions. All functions returning a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
  *         @brief \f$ v^i = T^{ij} w_j\f$
  *
- *              Although a tensor needs a topology to be well-defined mathematically,
- *              we do not need a grid to perform basic operations computationally.
- *              This is why the tensor operations can appear already in Level 1
- *              of this library.
+ * Although a tensor needs a topology to be well-defined mathematically,
+ * we do not need a grid to perform basic operations computationally.
+ * This is why the tensor operations can appear already in Level 1
+ * of this library.
  *     @}
  *     @defgroup typedefs Useful Typedefs
  *     @defgroup sparsematrix Sparse matrix formats
@@ -69,24 +67,25 @@
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
- *         @brief \f$ f_i = f(x_i) \f$
+ *         @brief \f$ f_i = f(\vec x_i) \f$
  *
- *             The function discretisation routines compute the DG discretisation
- *             of analytic functions on a given grid. In 1D the discretisation
- *             simply consists of n function values per grid cell ( where n is the number
- *             of Legendre coefficients used; currently 1 <= n <= 20 ) evaluated at
- *             the Gaussian abscissas in the respective cell. In 2D and 3D we simply
- *             use the product space. We choose x to be the contiguous direction.
- *             The first elements of the resulting vector lie in the cell at (x0,y0) and the last
- *             in (x1, y1).
+ * The function discretisation routines compute the dG discretisation
+ * of analytic functions on a given grid. In 1D the discretisation
+ * simply consists of n function values per grid cell ( where n is the number
+ * of Legendre coefficients used; currently \f$ 1 <= n <= 20\f$  ) evaluated at
+ * the Gaussian abscissas in the respective cell. In 2D and 3D we simply
+ * use the product space.
+ * @note We choose x to be the contiguous direction.
+ * E.g. in 2D the first element of the resulting vector lies in the grid corner \f$ (x_0,y_0)\f$ and the last
+ * in \f$(x_1, y_1)\f$ .
  *         @defgroup highlevel create weights
  *
- *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
- *              available topologies
+ * overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
+ * available topologies
  *         @defgroup creation create derivatives
  *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
- *             High level matrix creation functions
+ * High level matrix creation functions
  *         @defgroup stencil create stencils
  *         @defgroup interpolation Interpolation, Projection, Transformation
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
@@ -154,11 +153,11 @@
 
 /** @class hide_binary
   * @tparam BinaryOp A class or function type with a member/signature equivalent to
-  *  - real_type operator()(real_type, real_type) const
+  *  - <tt>real_type operator()(real_type, real_type) const </tt>
   */
 /** @class hide_ternary
   * @tparam TernaryOp A class or function type with a member/signature equivalent to
-  *  - real_type operator()(real_type, real_type, real_type) const
+  *  - <tt>real_type operator()(real_type, real_type, real_type) const</tt>
   */
 
 /** @class hide_construct
