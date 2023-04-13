@@ -406,6 +406,7 @@ inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTyp
  * @endcode
  * Other matrix types have not yet been implemented.
  * @note Since the matrix is known, a communication pattern is available and thus the function works in parallel for MPI (unlike \c dg::blas2::parallel_for).
+ * @note In a way this function is a generalization of \c dg::blas2::parallel_for to MPI vectors at the cost of having to encode the communication stencil in the matrix \c M and only one vector argument
  *
  * @param f The filter function is called like <tt> f(i, m.row_offsets_ptr, m.column_indices_ptr, m.values_ptr, x_ptr, y_ptr) </tt>
  * @param M The Matrix.

@@ -27,8 +27,9 @@ struct ClonePtr
 
     /**
     * @brief clone the given value and manage
-    * @note Since the original object \c src is cloned, the original can go out of
-    * scope after the ClonePtr was initialized.
+    * @note Since the original object \c src is cloned, \c src
+    * is allowed to go out of
+    * scope after \c ClonePtr was initialized.
     * @param src an object to clone
     */
     ClonePtr( const Cloneable& src) : m_ptr( src.clone() ) { }
