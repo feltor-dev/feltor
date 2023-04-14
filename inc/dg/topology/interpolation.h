@@ -307,7 +307,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
         thrust::host_vector<real_type> abs = dg::create::abscissas( g);
-        //dg::RealGrid1d<real_type> gx( g.x0(), g.x1(), 1, g.n()*g.N(), bcx);
         dg::RealGrid1d<real_type> gx( g.x0(), g.x1(), g.n(), g.N(), bcx);
         for( unsigned i=0; i<x.size(); i++)
         {
@@ -334,12 +333,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
     A.row_indices = row_indices;
     A.column_indices = column_indices;
     A.values = values;
-    //if( method != "dg")
-    //{
-    //    auto backscatter = dg::create::backscatter( g);
-    //    cusp::coo_matrix<int, real_type, cusp::host_memory> B(A);
-    //    cusp::multiply(B,backscatter,A);
-    //}
     return A;
 }
 
@@ -503,8 +496,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             points_per_line = 4;
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
-        //RealGrid1d<real_type> gx(g.x0(), g.x1(), 1, g.nx()*g.Nx(), bcx);
-        //RealGrid1d<real_type> gy(g.y0(), g.y1(), 1, g.ny()*g.Ny(), bcy);
         RealGrid1d<real_type> gx(g.x0(), g.x1(), g.nx(), g.Nx(), bcx);
         RealGrid1d<real_type> gy(g.y0(), g.y1(), g.ny(), g.Ny(), bcy);
         thrust::host_vector<real_type> absX = dg::create::abscissas( gx);
@@ -549,12 +540,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
     A.row_indices = row_indices;
     A.column_indices = column_indices;
     A.values = values;
-    //if( method != "dg")
-    //{
-    //    auto backscatter = dg::create::backscatter( g);
-    //    cusp::coo_matrix<int, real_type, cusp::host_memory> B(A);
-    //    cusp::multiply(B,backscatter,A);
-    //}
 
     return A;
 }
@@ -742,9 +727,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
             points_per_line = 4;
         else
             throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
-        //RealGrid1d<real_type> gx(g.x0(), g.x1(), 1, g.nx()* g.Nx(), bcx);
-        //RealGrid1d<real_type> gy(g.y0(), g.y1(), 1, g.ny()* g.Ny(), bcy);
-        //RealGrid1d<real_type> gz(g.z0(), g.z1(), 1, g.nz()* g.Nz(), bcz);
         RealGrid1d<real_type> gx(g.x0(), g.x1(), g.nx(), g.Nx(), bcx);
         RealGrid1d<real_type> gy(g.y0(), g.y1(), g.ny(), g.Ny(), bcy);
         RealGrid1d<real_type> gz(g.z0(), g.z1(), g.nz(), g.Nz(), bcz);
@@ -797,12 +779,6 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
     A.row_indices = row_indices;
     A.column_indices = column_indices;
     A.values = values;
-    //if( method != "dg")
-    //{
-    //    auto backscatter = dg::create::backscatter( g);
-    //    cusp::coo_matrix<int, real_type, cusp::host_memory> B(A);
-    //    cusp::multiply(B,backscatter,A);
-    //}
 
     return A;
 }

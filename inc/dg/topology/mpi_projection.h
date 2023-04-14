@@ -50,6 +50,13 @@ static void global2bufferIdx(
 /**
  * @brief Convert a (row-distributed) matrix with local row and global column indices to a row distributed MPI matrix
  *
+@code{.cpp}
+    dg::IHMatrix_t<real_type> mat = dg::create::interpolation(
+        g_new.local(), g_old.global(), method);
+    // mat is row distributed
+    // mat has local row and global column indices
+    auto mpi_mat = dg::convert(  mat, g_old);
+@endcode
  * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
  *  - <tt> bool global2localIdx(unsigned,unsigned&,unsigned&) const; </tt>
  * where the first parameter is the global index and the
@@ -57,7 +64,7 @@ static void global2bufferIdx(
    return true if successful, false if global index is not part of the grid
  *  - <tt> MPI_Comm %communicator() const; </tt>  returns the communicator to use in the gather/scatter
  *  - <tt> local_size(); </tt> return the local vector size
- * @param global the column indices and num_cols need to be global, the row indices and num_rows local
+ * @param global the local part of the matrix (different on each process) with **global column indices** and num_cols but **local row indices** and num_rows
  * @param policy the conversion object
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed the collective communicator will have zero size.
@@ -95,10 +102,22 @@ dg::MIHMatrix_t<real_type> convert( const dg::IHMatrix_t<real_type>& global, con
 }
 
 /**
- * @brief Convert a (column-distributed) matrix with global row indices to a row distributed matrix
+ * @brief Convert a (column-distributed) matrix with global row and column indices to a row distributed matrix
  *
  * Send all elements with a global row-index that does not belong to the calling process to the
- * process where it belongs to
+ * process where it belongs to.
+ * This can be used to convert a column distributed matrix to a row-distributed matrix as in
+ * @code{.cpp}
+    dg::IHMatrix_t<real_type> mat = dg::create::projection(
+        g_new.global(), g_old.local(), method);
+    // mat is column distributed
+    // mat has global rows and local column indices
+    dg::convertLocal2GlobalCols( mat, g_old);
+    // now mat has global rows and global column indices
+    auto mat_loc = dg::convertGlobal2LocalRows( mat, g_new);
+    // now mat is row distributed with global column indices
+    auto mpi_mat = dg::convert(  mat_loc, g_old);
+ * @endcode
  * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
  *  - <tt> bool global2localIdx(unsigned,unsigned&,unsigned&) const; </tt>
  * where the first parameter is the global index and the
@@ -149,7 +168,18 @@ dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_typ
 /**
  * @brief Convert a matrix with local column indices to a matrix with global column indices
  *
- * Simply call policy.local2globalIdx for every column
+ * Simply call policy.local2globalIdx for every column index
+ * @code{.cpp}
+    dg::IHMatrix_t<real_type> mat = dg::create::projection(
+        g_new.global(), g_old.local(), method);
+    // mat is column distributed
+    // mat has global rows and local column indices
+    dg::convertLocal2GlobalCols( mat, g_old);
+    // now mat has global rows and global column indices
+    auto mat_loc = dg::convertGlobal2LocalRows( mat, g_new);
+    // now mat is row distributed with global column indices
+    auto mpi_mat = dg::convert(  mat_loc, g_old);
+ * @endcode
  * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
  *  - <tt> bool local2globalIdx(unsigned,unsigned&,unsigned&) const; </tt>
  * where the first two parameters are the pair (localIdx, rank).

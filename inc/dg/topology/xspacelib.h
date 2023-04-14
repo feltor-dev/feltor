@@ -81,7 +81,7 @@ namespace create{
  * @param g The grid on which to operate
  *
  * @return transformation matrix (block diagonal)
- * @sa dg::blas2::symv
+ * @sa dg::create::backproject
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> backscatter( const RealGrid1d<real_type>& g)
@@ -123,7 +123,7 @@ dg::IHMatrix_t<real_type> backscatter( const aRealTopology3d<real_type>& g)
  * @param g The grid on which to operate
  *
  * @return transformation matrix (block diagonal)
- * @sa dg::blas2::symv dg::create::backscatter
+ * @sa dg::create::inv_backproject dg::create::backscatter
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> inv_backscatter( const RealGrid1d<real_type>& g)

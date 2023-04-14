@@ -423,7 +423,9 @@ by transposition of both the local matrix and the gather matrix (s.a. \c dg::tra
 The result is then a column distributed matrix.
 Analogously, the transpose of a column distributed matrix is a row-distributed matrix.
 \subsubsection mpi_create Creation
-You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
+You can create a row-distributed MPI matrix given its local parts on each process with local row and global column indices by our \c dg::convert function.
+If you have a column distributed matrix with its local parts on each process with global row and local columns indices, you can
+use a combination of \c dg::convertLocal2GlobalCols and \c dg::convertGlobal2LocalRows to bring it to a row-distributed form. The latter can then be used in \c dg::convert again.
 */
 
 namespace dg{

@@ -204,10 +204,11 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const RealG
 /**
  * @brief Create a matrix \f$ PI\f$ that projects values to an equidistant grid
  *
+ * Same as <tt>dg::create::transformation( g_equidist, g)</tt>
  * @param g The grid on which to operate
  *
  * @return transformation matrix (block diagonal)
- * @sa dg::blas2::symv
+ * @sa dg::create::backscatter, dg::create::transformation
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> backproject( const RealGrid1d<real_type>& g)
@@ -245,11 +246,12 @@ dg::IHMatrix_t<real_type> backproject( const aRealTopology3d<real_type>& g)
 /**
  * @brief Create a matrix \f$ (PI)^{-1}\f$ that transforms values from an equidistant grid back to a dg grid
  *
+ * Same as <tt>dg::create::transformation( g, g_equidist)</tt>
  * @note The inverse of the backproject matrix is **not** its adjoint!
  * @param g The grid on which to operate
  *
  * @return transformation matrix (block diagonal)
- * @sa dg::blas2::symv
+ * @sa dg::create::inv_backscatter dg::create::backproject
  */
 template<class real_type>
 dg::IHMatrix_t<real_type> inv_backproject( const RealGrid1d<real_type>& g)

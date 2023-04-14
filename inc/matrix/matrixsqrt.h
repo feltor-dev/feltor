@@ -114,7 +114,7 @@ struct MatrixSqrt
 
 };
 
-// The following is not tested yet, but should be ...
+// The following is only indirectly tested in diffusion project but should appear formally in _t file here as well
 /**
  * @brief Computation of \f$ \vec x = f(A)\vec b\f$ for self-adjoint positive definite \f$ A\f$
  *

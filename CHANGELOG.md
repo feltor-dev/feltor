@@ -14,40 +14,74 @@ far away from strictly following it really.
 
 > Only changes in code are reported here, we do not track changes in the
 > doxygen documentation, READMEs or tex writeups.
+> As of v7.0 we also stop reporting changes in test and benchmark programs.
 
 ## [v7.0] Three-dimensional
 ### Added
  - A left looking sparse inverse preconditioner `dg::sainv_precond` (sadly did not yield any benefits over `dg::nested_iterations` in our tests so we did not implement an MPI version)
  - `dg::blas2::parallel_for` for general parallelization tasks on shared memory containers (very close in functionality to `kokkos::parallel_for`
  - `dg::blas2::stencil` A generalization of `dg::blas2::parallel_for` that works for MPI parallelization at the cost of having to encode the communication stencil in a sparse matrix and only one vector argument
- - `dg::create::window_stencil` and `dg::create::limiter_stencil` for use as communication stencils in `dg::blas2::stencil`
+ - `dg::create::window_stencil` and `dg::create::limiter_stencil` overloaded for various topologies for use as communication stencils in `dg::blas2::stencil`
  - Functors `dg::CSRSlopeLimiter`, `dg::CSRMedianFilter`, `dg::CSRSWMFilter`, `dg::CSRAverageFilter`, `dg::CSRSymvFilter` for use as functors in `dg::blas2::stencil`
  - `isLocalBijective` method in `dg::SurjectiveComm`
  - write access to `inner_matrix` and `outer_matrix` in `dg::MPI_Matrix`
  - `MPI_Comm` parameter in constructor of `dg::NearestNeighborComm`
- - `set_right_size` and `set_left_size` in `dg::EllSarseBlockMat`
+ - `set_right_size` and `set_left_size` methods in `dg::EllSarseBlockMat`
  - `dg::Elliptic1d` (since we have 2d and 3d versions)
  - `dg::Sign` a 1d functor that returns the sign of its argument
  - `dg::GeneralHelmholtz` generalizes all the Helmholtz classes into one class (and specializes to `dg::Helmholtz1d`, `dg::Helmholtz`, `dg::Helmholtz2d`, `dg::Helmholtz3d`
  - Experimental `dg::FilteredERKStep` class (sadly does not work so well)
+ - `n` method to access number of polynomial coefficients in `dg::DLT`
+ - `dg::create::fast_transform` for creating block diagonal matrices on various topologies
+ - overloads for `dg::create::fast_interpolation` and `dg::create::fast_projection` to select directions
+ - new fem functionality: `dg::create::fem_linear2const`, `dg::create::inv_fem_mass` `dg::create::inv_fem_linear2const`, `dg::create::fem_mass2d`, `dg::create::inv_fem_mass2d`, `dg::create::fem_linear2const2d`, `dg::create::inv_fem_linear2const2d`
+ -  `dg::create::interpolation` and `dg::create::projection` functions now all have a `method` parameter (that defaults to "dg")
+ - `dg::invert` overload acting on `dg::Operator` as an alias to `dg::create::inverse`
+ - `dg::create::backproject` and `dg::create::inv_backproject` for projecting a dG grid vector to an equidistant grid and back
+ - `dg::create::inv_backscatter` for inverting an interpolation to an equidistant grid
+ - `dg::convertGlobal2LocalRows` and `dg::convertLocal2GlobalCols` helper functions to enable mpi conversion of column distributed matrices
+ - `access_string` method in `dg::file::WrappedJsonValue` to access creation history of an object
+ - Restructure of `dg::geo::Fieldaligned` to allow for different interpolation and backprojection from dG to fine grid and back (to a possibly equidistant grid and with possibly cubic, linear or nearest methods)
+ - in `dg::geo::DS` the derivative methods now have the general zero transform
+ - `dg::geo::createCircularField` has not two radii parameter to allow for the creation of an ellipsis and changed the sign
+ - `dg::geo::SeparatrixOrthogonalAdaptor` to create Separatrix grids without XGrid topology
+ - Utilities for exponential integration: `dg::mat::ExponentialStep`,  `dg::mat::ExponentialERKStep`, `dg::mat::phi1`, `dg::mat::phi2`, `dg::mat::phi3`, `dg::mat::phi4`, `dg::mat::FuncionalButcherTableau`, `dg::mat::ConvertsToFunctionalButcherTableau` with the four methods "Euler", "Midpoint-2-2", "Runge-Kutta-4-4", and "Hochbruck-3-3-4"
+ - Utility function `dg::mat::MatrixFunction` for easy general purpose use
+ - Test of filters and Limiters in the `src/lamb_dipole` project
+ - Test of new schemes in `src/navier_stokes` project
+ - File `src/toefl/input/default_hpc.json` to be consistent with Quick Start guide
 ### Changed
- - explicit use of "default" constructors in `dg::Adaptive`, `dg::Advection`, `dg::AndersonAcceleration`, `dg::ArakawaX`, `dg::BijectiveComm`, `dg::GeneralComm`, `dg::BICGSTABl`, `dg::ChebyshevIteration`, `dg::EVE`, `dg::LGMRES`, `dg::MultigridCG2d`, `dg::PCG`, `dg::Poisson`, `dg::ERKStep`, `dg::SinglestepTimeloop`, `dg::ButcherTableau`, `dg::ShuOSherTableau`
- - `dg::blas2::modal_filter` no longer returns a `dg::MultiMatrix` directly. Instead, a `dg::Operator` is returned that can be converted to `dg::MultiMatrix` using `dg::create::fast_transform`
+ - explicit use of "default" constructors in `dg::Adaptive`, `dg::Advection`, `dg::AndersonAcceleration`, `dg::ArakawaX`, `dg::BijectiveComm`, `dg::GeneralComm`, `dg::BICGSTABl`, `dg::ChebyshevIteration`, `dg::EVE`, `dg::LGMRES`, `dg::MultigridCG2d`, `dg::PCG`, `dg::Poisson`, `dg::ERKStep`, `dg::SinglestepTimeloop`, `dg::ButcherTableau`, `dg::ShuOSherTableau`, `dg::RealGrid1d`, `dg::Operator`
+ - `dg::create::modal_filter` no longer returns a `dg::MultiMatrix` directly. Instead, a `dg::Operator` is returned that can be converted to `dg::MultiMatrix` using `dg::create::fast_transform`
  - rename `getLocalGatherMap` to `getLocalIndexMap` in `dg::SurjectiveComm` and `dg::GeneralComm`
  - rename `getPidGatherMap` to `getPidIndexMap` in `dg::SurjectiveComm` and `dg::GeneralComm`
  - rename `getSortedGatherMap` to `getSortedIndexMap` in `dg::SurjectiveComm`
  - Constructors of `dg::Helmholtz`, and `dg::Helmholtz3d` change the orders of parameter `alpha` and reverts to constructor of respective `dg::Elliptic` class
+ - 1d overloads for `dg::create::fast_interpolation` and `dg::create::fast_projection` return `dg::HMatrix_t` instead of `dg::MultiMatrix`
+ - `dg::create::fem_mass` now returns `dg::TriDiagonal` instead of `cusp::coo_matrix`
+ - `dg::create::precond` overload for `dg::DLT` renamed to `dg::create::inv_weights`
+ - parameters to `dg::tensorproduct` changed from `cusp::coo_matrix` to `cusp::csr_matrix`
+ - all appearances of `guenther` or `Guenther` in `dg::geo` are corrected to `guenter` respectively `Guenter` (because that is how her name is spelled)
+ - `clone` and other virtual methods in `dg::geo::RealCurvilinearGridX2d`, `dg::geo::RealCurvilinearProductGridX3d`, `dg::geo::DSPGenerator`, `dg::geo::FluxGenerator`, `dg::geo::Hector`, `dg::geo::RealCurvilinearProductMPIGrid3d`, `dg::geo::PolarGenerator`, `dg::geo::LogPolarGenerator`, `dg::geo::Ribeiro`, `dg::geo::RibeiroX`, `dg::geo::SimpleOrthogonalX`, `dg::geo::SeparatrixOrthogonal`, `dg::geo::SimpleOrthogonal` have `override final` keywords
+ - default parameters changed in `dg::geo::Fieldaligned` constructor
+ - restructure of the `src/feltor` project (including renaming `*.cu` files to `*.cpp`)
 ### Deprecated
 ### Removed
  - `dg::ModalFilter` is removed in favor of generating and using `dg::MultiMatrix` directly
  - `dg::transpose_dispatch` (replaced by `dg::blas2::parallel_for`)
  - `dg::extend_line` (replaced by `dg::blas2::parallel_for`)
  - `dg::extend_column` (replaced by `dg::blas2::parallel_for`)
+ - `dg::create::interpolationT` (is not used anywhere)
+ - file `src/toefl/toefl_hpc.cu` (was previously merged into `toefl.cpp`
 ### Fixed
  - Fix left shift in exblas::AccumulateWord by -1 by explicit conversion to unsigned
  - Fix `isCommunicating` in `dg::BijectiveComm`
  - Fix `global_gather` and `global_scatter_reduce` in `dg::aCommunicator` in the case that a map is not communicating but still needs to locally gather values. This makes the two functions truly the transpose of each other.
  - Fix `dg::ShuOsher` copyable method segmentation fault in case of default constructed
+ - Fix size method in `dg::Operator` for integer value types
+ - Fix convergence criterion in fieldline integrator for `dg::geo::SimpleOrthogonal`
+ - Fix constructor of `dg::mat::PolCharge` and `dg::mat::PolChargeN`
+
 
 ## [v6.0] More modular
 ### Added

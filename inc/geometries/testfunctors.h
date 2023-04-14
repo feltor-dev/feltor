@@ -220,7 +220,6 @@ template<class DS, class container>
 void callDS( DS& ds, std::string name, const container& in, container& out,
 unsigned max_iter = 1e4, double eps = 1e-6)
 {
-    //container tmp(in);
     if( name == "forward") ds.ds( dg::forward, in, out);
     else if( name == "backward") ds.ds( dg::backward, in, out);
     else if( name == "forward2") ds.forward2( 1., in, 0., out);
@@ -243,7 +242,6 @@ unsigned max_iter = 1e4, double eps = 1e-6)
         ds.dssd_bc_along_field( 1., in, 0., out, ds.fieldaligned().bcx(), {0,0});
     }
     else if( name == "invCenteredLap"){
-        //ds.fieldaligned()( zeroForw, in, tmp);
         //dg::LGMRES<container> invert( in, 30,3,10000);
         dg::BICGSTABl<container> invert( in, 30000,3);
         dg::Timer t;
@@ -254,7 +252,6 @@ unsigned max_iter = 1e4, double eps = 1e-6)
                 dg::blas2::symv( ds, x, y);
                 dg::blas1::axpby( 1., x, -1., y, y);
             }, out, in, precond, ds.weights(), eps);
-            //}, out, tmp, precond, ds.weights(), eps);
         t.toc();
 #ifdef MPI_VERSION
     int rank;
@@ -269,8 +266,6 @@ unsigned max_iter = 1e4, double eps = 1e-6)
 #endif //MPI
         return;
     }
-    //ds.fieldaligned()( zeroBack, out, tmp);
-    //tmp.swap(out);
 
 }
 ///////////////////////////////Functions for 2d grids//////////////////

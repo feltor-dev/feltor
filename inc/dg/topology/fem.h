@@ -9,7 +9,12 @@ namespace dg{
 
 ///@addtogroup sparsematrix
 ///@{
-/*!@brief Fast tridiagonal sparse matrix
+/*!@brief Fast (shared memory) tridiagonal sparse matrix
+ *
+ * Consists of the three diagonal vectors [M, O, P] (for "Minus", "ZerO", "Plus), i.e.
+ * M is the subdiagonal, O the diagonal and P the superdiagonal vector.
+ * @note It is fast to apply using \c dg::blas2::parallel_for (which only works on shared memory vectors though)
+ * @tparam Container One of the shared memory containers
  */
 template<class Container>
 struct TriDiagonal
@@ -45,6 +50,7 @@ struct TriDiagonal
             }, M.size(), M, O, P, x, y);
     }
 
+    ///convert to a sparse matrix format
     dg::IHMatrix_t<value_type> asIMatrix() const{
         unsigned size = M.size();
         cusp::coo_matrix<int,value_type,cusp::host_memory>  A( size, size, 3*size-2);
@@ -82,7 +88,7 @@ struct TriDiagonal
 /*!@brief Fast inverse tridiagonal sparse matrix
  *
  * When applied to a vector, uses Thomas algorithm to compute \f$ T^{-1} v\f$
- * @attention Only for shared memory vectors
+ * @attention Only for shared memory host vectors
  */
 template<class value_type>
 struct InverseTriDiagonal
@@ -116,6 +122,10 @@ struct InverseTriDiagonal
 };
 
 /*!@brief Fast tridiagonal sparse matrix in 2d \f$ T_y\otimes T_x\f$
+ *
+ * Consists of Two \c TriDiagonal matrices \f$ T_x\f$ and \f$ T_y\f$
+ * @note It is fast to apply using \c dg::blas2::parallel_for (which only works on shared memory vectors though)
+ * @tparam Container One of the shared memory containers
  */
 template<class Container>
 struct KroneckerTriDiagonal2d
@@ -236,7 +246,7 @@ struct KroneckerTriDiagonal2d
  *
  * When applied to a vector, uses Thomas algorithm to compute \f$ T^{-1} v\f$ first
  * row-wise in x and then column-wise in y
- * @attention Only for shared memory vectors
+ * @attention Only for shared memory vectors (works for GPUs but is not fast)
  */
 template<class Container>
 struct InverseKroneckerTriDiagonal2d
