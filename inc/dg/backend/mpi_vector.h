@@ -126,7 +126,7 @@ void swap( MPI_Vector<container>& a, MPI_Vector<container>& b){
 }
 ///@endcond
 
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 
 ///@brief prototypical MPI vector

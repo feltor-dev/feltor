@@ -5,7 +5,7 @@
 
 namespace dg
 {
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 
 ///@brief Recognize arithmetic types as scalars

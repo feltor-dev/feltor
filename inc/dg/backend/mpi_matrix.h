@@ -341,7 +341,7 @@ struct MPIDistMat
 };
 ///@}
 
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 template<class LI, class LO, class C>
 struct TensorTraits<RowColDistMat<LI,LO, C> >

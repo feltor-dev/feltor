@@ -9,7 +9,7 @@
 #include "execution_policy.h"
 
 namespace dg{
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 
 

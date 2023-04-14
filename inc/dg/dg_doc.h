@@ -45,7 +45,9 @@
  * communication from local computations and thus readily reuse the
  * existing, optimized library for the local part.
  *     @defgroup dispatch The tag dispatch system
- *           Implementation details of \ref dispatch
+ *     @{
+ *          @defgroup traits All TensorTraits specialisations
+ *     @}
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * @{
@@ -245,17 +247,31 @@
  */
 
 /*!
- * @addtogroup blas
+ * @addtogroup dispatch
  * @section dispatch The dg dispatch system
  *
- * Let us first define some nomenclature to ease the following discussion
- *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyScalarTag
- *    - \e Vector: A template parameter T is a Vector if it is not a Scalar and if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyVectorTag
- *    - \e Matrix: A template parameter T is a Matrix if it is not a Scalar or Vector and if <tt> typename  dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyMatrixTag
+ * At the heart of the dispatch system lies the <tt>dg::TensorTraits</tt> class that specifies how
+ * a type \c T behaves in the respective functions though a tag system defined by the \c tensor_category tag and the \c execution_policy tag. Per default it looks like
+@code{.cpp}
+template< class T, class Enable=void>
+struct TensorTraits
+{
+    using value_type = void;
+    using tensor_category = NotATensorTag;
+    using execution_policy = NoPolicyTag;
+};
+@endcode
+ * The values for \c tensor_category are either \c dg::NotATensorTag or (a class derived from) \c dg::AnyMatrixTag,
+ * while the values for \c execution_policy are either \c dg::NoPolicyTag or (a class derived from) \c dg::AnyPolicyTag.
+ * Any type \c T assumes the above default values for \c value_type, \c tensor_category and \c execution_policy unless a specialisation exists for that type (see \ref traits for a full list).
+ * We define the following nomenclature
+ *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt>  derives from \c dg::AnyScalarTag
+ *    - \e Vector: A template parameter T is a Vector if it is not a Scalar and if <tt> typename dg::TensorTraits<T>::tensor_category </tt> derives from \c dg::AnyVectorTag
+ *    - \e Matrix: A template parameter T is a Matrix if it is not a Scalar or Vector and if <tt> typename  dg::TensorTraits<T>::tensor_category </tt> derives from \c dg::AnyMatrixTag
  *    - \e execution \e policy: A template parameter T has an execution policy if
- *      <tt> typename dg::TensorTraits<T>::execution_policy </tt> exists and derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
+ *      <tt> typename dg::TensorTraits<T>::execution_policy </tt> derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
  *    - \e value \e type : A template parameter T has a value type if
- *      <tt> typename dg::TensorTraits<T>::value_type </tt> exists
+ *      <tt> typename dg::TensorTraits<T>::value_type </tt> is non-void
  *    - \e compatible: Two vectors are compatible if their tensor_categories both derive from the same base class that itself derives from but is not equal to \c dg::AnyVectorTag, Two execution policies are compatible if they are equal or if at least one of them is trivial.
  *    - \e promote: A Scalar can be promoted to a Vector with all elements equal to the value of the Scalar. A Vector can be promoted to a  Matrix with the Vector being the diagonal and all other elements zero.
  *
@@ -304,28 +320,24 @@
  *
  * @subsection dispatch_symv The symv function
  * In the execution of the \c dg::blas2::symv (and its aliases \c dg::blas2::gemv and \c dg::apply)
- * each matrix type has individual prerequisites and execution paths.
+ * each matrix type has individual prerequisites and execution paths depending on its \c tensor_category.
  * We can identify some general rules:
- *   -# The Matrix type can be either a Scalar (promotes to Scalar times the
- *   Unit Matrix), a Vector (promotes to a diagonal Matrix), a Matrix or a
- *   Functor
- *   -# If the Matrix type is either a Scalar or a Vector and the remaining types do
- *   not have the \c dg::RecursiveVectorTag tensor category, then
- *   \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
- *   -# If the Matrix type has the \c dg::SelfMadeMatrixTag tensor category,
- *   then all parameters are immediately forwarded to the \c symv member
- *   function.  No asserts are performed and none of the following applies.
  *   -# If the tensor category is \c dg::NotATensorTag (any type has this tag
  *   by default unless it is overwritten by a specialization of
  *   \c dg::TensorTraits ) then the compiler assumes that the type is a functor
  *   type and immediately forwards all parameters to the \c operator() member
  *   and none of the following applies
+ *   -# If the Matrix type has the \c dg::SelfMadeMatrixTag tensor category,
+ *   then all parameters are immediately forwarded to the \c symv member
+ *   function.  No asserts are performed and none of the following applies.
+ *   -# If the Matrix type is either a Scalar or a Vector and the remaining types do
+ *   not have the \c dg::RecursiveVectorTag tensor category, then
+ *   \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
  *   -# The container template parameters must be Vectors or Scalars and must
  *   have compatible execution policies. Vectors must be compatible.
  *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
  *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is
  *   recursively called with the Matrix on all elements of the Vectors.
- *
  */
 
  /*!
