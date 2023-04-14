@@ -8,7 +8,16 @@ feltor/config/*.mk                  #overwrite variables if machine is recognize
 feltor/config/devices/devices.mk    #recombine variables depending on device
 ```
 
-Your machine specific config file (e.g. feltor/config/your-machine.mk) should have an include guard and overwrite or add to any of the following variables:
+You can create your own machine specific config file e.g. `feltor/config/your-machine.mk` **Please do not commit unique machine specific config files**
+Through the above construct the config file will be included after `default.mk` and before `devices.mk`
+To avoid inclusion on machines other than your own the file should have an include guard; something like
+```shell
+ifeq ($(strip $(shell domainname)),leo3-domain)
+# ...
+endif
+```
+
+Within the file you can overwrite or add to any of the following variables:
 
 | variable  | default value                | description                                                  |
 | :-------: | :--------------------------- | :----------------------------------------------------------- |
