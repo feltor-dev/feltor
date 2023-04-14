@@ -62,4 +62,5 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
  - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
  - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
  - The library headers are compliant with the c++14 standard but we reserve the right to upgrade that in future updates
+ - For a mac, we need X-code to compile. At the same time, we need to include the paths to the json, hdf5 and netcdf libraries. We work without GLFW, as it gives problems.  As it is now, the libraries are installed with homebrew, one of the prefered installers for mac. If other programs are used, it is neccessary to include the paths to the libraries used. We compile with g++, but other compilers might also work (like clang++).
 
