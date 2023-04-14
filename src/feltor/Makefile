@@ -9,7 +9,7 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
-all: feltor feltor_hpc feltor_mpi manufactured manufactured_perp manufactured_para feltordiag interpolate_in_3d
+all: feltor feltor_hpc feltor_mpi feltordiag interpolate_in_3d
 
 feltordiag: feltordiag.cpp feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
@@ -29,15 +29,6 @@ feltor_mpi: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.
 feltor_pol: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DWRITE_POL_FILE -DWITHOUT_GLFW $(VERSION_FLAGS)
 
-manufactured: manufactured.cpp manufactured.h feltor.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=1 -DFELTORPERP=1
-
-manufactured_perp: manufactured.cpp manufactured.h feltor.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=0 -DFELTORPERP=1
-
-manufactured_para: manufactured.cpp manufactured.h feltor.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -DFELTORPARALLEL=1 -DFELTORPERP=0
-
 multigrid_b: multigrid_b.cpp parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
@@ -53,4 +44,4 @@ doc:
 	pdflatex -shell-escape feltor.tex
 
 clean:
-	rm -f feltor feltor_hpc feltor_mpi manufactured manufactured_perp manufactured_para feltordiag interpolate_in_3d feltor.bbl feltor.blg feltor.aux feltor.log feltor.out feltor.toc
+	rm -f feltor feltor_hpc feltor_mpi feltordiag interpolate_in_3d feltor.bbl feltor.blg feltor.aux feltor.log feltor.out feltor.toc
