@@ -41,8 +41,9 @@ int main()
             };
     dg::PCG< dg::DVec > pcg( w3d, n*n*Nx*Ny);
 
-    const dg::DVec sol = dg::evaluate( dg::geo::TestFunctionDirNeu(mag), g3d);
-    dg::DVec b = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    auto ff = dg::geo::TestFunctionDirNeu(mag);
+    const dg::DVec sol = dg::evaluate( ff, g3d);
+    dg::DVec b = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionDirNeu>(mag, ff), g3d);
     dg::DVec x = b;
 
     std::cout << "# --------- Alignment Tensor:\n";
@@ -67,7 +68,7 @@ int main()
     dg::blas1::copy( 1., one);
     ellipticP.set_chi( one);
 
-    b = dg::evaluate( dg::geo::DPerpFunction<dg::geo::TestFunctionDirNeu>(mag), g3d);
+    b = dg::evaluate( dg::geo::DPerpFunction<dg::geo::TestFunctionDirNeu>(mag,ff), g3d);
 
     std::cout << "# --------- Projection Tensor:\n";
     t.tic();

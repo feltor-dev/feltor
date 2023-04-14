@@ -47,7 +47,7 @@ far away from strictly following it really.
  - `dg::geo::SeparatrixOrthogonalAdaptor` to create Separatrix grids without XGrid topology
  - Utilities for exponential integration: `dg::mat::ExponentialStep`,  `dg::mat::ExponentialERKStep`, `dg::mat::phi1`, `dg::mat::phi2`, `dg::mat::phi3`, `dg::mat::phi4`, `dg::mat::FuncionalButcherTableau`, `dg::mat::ConvertsToFunctionalButcherTableau` with the four methods "Euler", "Midpoint-2-2", "Runge-Kutta-4-4", and "Hochbruck-3-3-4"
  - Utility function `dg::mat::MatrixFunction` for easy general purpose use
- - Test of filters and Limiters in the `src/lamb_dipole` project
+ - Test of filters and Limiters and implicit timesteppers in the `src/lamb_dipole` project
  - Test of new schemes in `src/navier_stokes` project
  - File `src/toefl/input/default_hpc.json` to be consistent with Quick Start guide
 ### Changed

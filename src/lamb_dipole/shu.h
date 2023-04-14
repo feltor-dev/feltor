@@ -553,7 +553,7 @@ struct Implicit
     {
         // Note how the operators and solvers hold these as references
         // so they know when they are updated
-        m_time = t, m_alpha = alpha;
+        m_time = time, m_alpha = alpha;
         // Solve the implicit equation
         if( m_system == "single")
         {

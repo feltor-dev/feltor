@@ -141,13 +141,11 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
 {
     multi_chi= multigrid.project( chi);
     multi_pol.resize(3);
-    multi_gammaN.resize(3);
-    multi_gammaPhi.resize(3);
     for( unsigned u=0; u<3; u++)
     {
         multi_pol[u].construct(      multigrid.grid(u), p.bc_x_phi, g.bcy(),  dg::centered, p.jfactor);
-        multi_gammaN[u].construct(   multigrid.grid(u), g.bcx(),    g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
-        multi_gammaPhi[u].construct( multigrid.grid(u), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_gammaN.push_back(   {-0.5*p.tau[1]*p.mu[1], {multigrid.grid(u), g.bcx(),    g.bcy(), dg::centered}});
+        multi_gammaPhi.push_back( {-0.5*p.tau[1]*p.mu[1], {multigrid.grid(u), p.bc_x_phi, g.bcy(), dg::centered}});
     }
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
