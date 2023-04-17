@@ -10,7 +10,7 @@
         "interpolation-method" : "linear-nearest"
     },
     "advection": {
-        "type": "staggered",
+        "type": "velocity-staggered",
         "slope-limiter": "none"
     },
     "boundary": {
@@ -81,8 +81,8 @@
                 "revolutions": 1,
                 "rk4eps": 1e-06,
                 "sigma": 0.2,
-                "sigma_z": 0.5,
-                "type": "blob"
+                "sigma_z": 1,
+                "type": "circle"
             },
             "profile": {
                 "background": 0.2,
@@ -135,9 +135,9 @@
         "viscosity": "value"
     },
     "regularization": {
-        "direction": "forward",
-        "nu_perp_n": 0.0,
-        "nu_perp_u": 0.0,
+        "direction": "centered",
+        "nu_perp_n": 0.0e-9,
+        "nu_perp_u": 0.0e-9,
         "nu_parallel_n" : 0.0,
         "order": 2
     },

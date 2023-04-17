@@ -174,6 +174,72 @@ be an integer number). If you compiled for MPI{plus}OpenMP, you can set the
 number of OpenMP threads with e.g. `export OMP_NUM_THREADS=2`.
 
 
+
+
+=== Running a FELTOR simulation
+
+Now, we want to compile and run a simulation program. To this end, we have to
+download and install some additional libraries for I/O-operations.
+
+First, we need to install jsoncpp (distributed under the MIT License),
+which on linux is available as `libjsoncpp-dev` through the package managment system.
+For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
+[source,sh]
+----
+# You may have to manually link the include path
+cd ~/include
+ln -s /usr/include/jsoncpp/json
+----
+
+For data output we use the
+http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
+MIT - like license (we use the netcdf-4 file format).
+The underlying https://www.hdfgroup.org/HDF5/[HDF5]
+library also uses a very permissive license.
+Both can be installed easily on Linux through the `libnetcdf-dev` and `libhdf5-dev` packages.
+For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
+Note that by default we use the serial netcdf and hdf5 libraries alson in the mpi
+versions of applications.
+
+Some desktop applications in FELTOR use the
+https://github.com/mwiesenberger/draw[draw library] (developed by us
+also under MIT), which depends on
+http://www.glfw.org[glfw3], an OpenGL development library under a
+BSD-like license. There is a `libglfw3-dev` package for convenient installation. Again, link `path/to/draw` in the `include` folder.
+
+____
+If you are on a HPC cluster, you may need to set INCLUDE and LIB variables manually.
+For details on how FELTOR's Makefiles are configured please see the link:config/README.md[config] file. There are also examples of some existing Makefiles in the same folder.
+____
+
+We are now ready to compile and run a simulation program
+
+[source,sh]
+----
+cd path/to/feltor/src/toefl # or any other project in the src folder
+
+make toefl device=gpu     # (compile for gpu, cpu or omp)
+cp input/default.json inputfile.json # create an inputfile
+./toefl inputfile.json    # (behold a live simulation with glfw output on screen)
+# or
+make toefl_hpc device=gpu  # (compile for gpu, cpu or omp)
+cp input/default_hpc.json inputfile_hpc.json # create an inputfile
+./toefl_hpc inputfile_hpc.json outputfile.nc # (a single node simulation with output stored in a file)
+# or
+make toefl_mpi device=omp  # (compile for gpu, cpu or omp)
+export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI)
+echo 2 2 | mpirun -n 4 ./toefl_mpi inputfile_hpc.json outputfile.nc
+# (a multi node simulation with now in total 8 threads with output stored in a file)
+# The mpi program will wait for you to type the number of processes in x and y direction before
+# running. That is why the echo is there.
+----
+
+Default input files are located in `path/to/feltor/src/toefl/input`. All
+three programs solve the same equations. The technical documentation on
+what equations are discretized, input/output parameters, etc. can be
+generated as a pdf with `make doc` in the `path/to/feltor/src/toefl`
+directory.
+
 === Using FELTOR as a library
 
 FELTOR's library is the *dg-library* (from discontinuous Galerkin). Note
@@ -188,8 +254,6 @@ function:
 #include <iostream>
 //include the basic dg-library
 #include "dg/algorithm.h"
-//optional: include the geometries expansion
-#include "dg/geometries/geometries.h"
 
 double function(double x, double y){return exp(x)*exp(y);}
 int main()
@@ -212,7 +276,7 @@ To compile and run this code for a GPU use (assuming the external libraries are 
 
 [source,sh]
 ----
-nvcc -x cu -std=c++14 -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+nvcc -x cu -std=c++14 --extended-lambda -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -280,70 +344,48 @@ line calling the dot function did not change at all. The compiler
 chooses the correct implementation for you! This is a first example of a
 __container free numerical algorithm__.
 
-=== Running a FELTOR simulation
 
-Now, we want to compile and run a simulation program. To this end, we have to
-download and install some additional libraries for I/O-operations.
 
-First, we need to install jsoncpp (distributed under the MIT License),
-which on linux is available as `libjsoncpp-dev` through the package managment system.
-For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
+=== Using FELTOR's Makefile system
+In order to simplify compilation in your own project we suggest to use __Makefile__ and import the feltor configuration like so:
 [source,sh]
 ----
-# You may have to manually link the include path
-cd ~/include
-ln -s /usr/include/jsoncpp/json
+device=omp # default device
+FELTOR_PATH=path/to/feltor
+
+# use Feltor's configuration
+include $(FELTOR_PATH)/config/default.mk
+include $(FELTOR_PATH)/config/*.mk
+include $(FELTOR_PATH)/config/devices/devices.mk
+
+INCLUDE+=-I$(FELTOR_PATH)/inc/
+
+# See feltor/config/README for a list of all defined variables
+# For example here the feltor/src/toefl project is set up
+# The toefl.cpp program can be compiled in three different ways
+# and each can be compiled for various device values e.g.
+# make toefl device=gpu
+
+all: toefl toefl_hpc toefl_mpi
+
+# shared memory version using glfw, jsoncpp and netcdf
+toefl: toefl.cpp toefl.h parameters.h diag.h
+    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -DWITH_GLFW -g
+
+# shared memory version using jsoncpp and netcdf without glfw
+toefl_hpc: toefl.cpp toefl.h parameters.h diag.h
+    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
+
+# mpi version using jsoncpp and netcdf without glfw
+toefl_mpi: toefl.cpp toefl.h parameters.h diag.h
+    $(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)
+
+.PHONY: clean
+
+clean:
+    rm -f toefl toefl_hpc toefl_mpi
+
 ----
-
-For data output we use the
-http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
-MIT - like license (we use the netcdf-4 file format).
-The underlying https://www.hdfgroup.org/HDF5/[HDF5]
-library also uses a very permissive license.
-Both can be installed easily on Linux through the `libnetcdf-dev` and `libhdf5-dev` packages.
-For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
-Note that by default we use the serial netcdf and hdf5 libraries alson in the mpi
-versions of applications.
-
-Some desktop applications in FELTOR use the
-https://github.com/mwiesenberger/draw[draw library] (developed by us
-also under MIT), which depends on
-http://www.glfw.org[glfw3], an OpenGL development library under a
-BSD-like license. There is a `libglfw3-dev` package for convenient installation. Again, link `path/to/draw` in the `include` folder.
-
-____
-If you are on a HPC cluster, you may need to set INCLUDE and LIB variables manually.
-For details on how FELTOR's Makefiles are configured please see the link:config/README.md[config] file. There are also examples of some existing Makefiles in the same folder.
-____
-
-We are now ready to compile and run a simulation program
-
-[source,sh]
-----
-cd path/to/feltor/src/toefl # or any other project in the src folder
-
-make toefl device=gpu     # (compile for gpu, cpu or omp)
-cp input/default.json inputfile.json # create an inputfile
-./toefl inputfile.json    # (behold a live simulation with glfw output on screen)
-# or
-make toefl_hpc device=gpu  # (compile for gpu, cpu or omp)
-cp input/default_hpc.json inputfile_hpc.json # create an inputfile
-./toefl_hpc inputfile_hpc.json outputfile.nc # (a single node simulation with output stored in a file)
-# or
-make toefl_mpi device=omp  # (compile for gpu, cpu or omp)
-export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI)
-echo 2 2 | mpirun -n 4 ./toefl_mpi inputfile_hpc.json outputfile.nc
-# (a multi node simulation with now in total 8 threads with output stored in a file)
-# The mpi program will wait for you to type the number of processes in x and y direction before
-# running. That is why the echo is there.
-----
-
-A default input file is located in `path/to/feltor/src/toefl/input`. All
-three programs solve the same equations. The technical documentation on
-what equations are discretized, input/output parameters, etc. can be
-generated as a pdf with `make doc` in the `path/to/feltor/src/toefl`
-directory.
-
 
 === Using FELTOR on Windows [[sec_windows]]
 FELTOR has been developed mostly on Linux machines.

@@ -285,14 +285,24 @@ struct Explicit
             }
 
             // - v_x dx U
-            dg::blas2::symv( m_dxC, temp0, temp1);
+            if( m_p.diff_dir == dg::centered)
+                dg::blas2::symv( m_dxC, temp0, temp1);
+            else if( m_p.diff_dir == dg::forward)
+                dg::blas2::symv( m_dxF_N, temp0, temp1);
+            else
+                dg::blas2::symv( m_dxB_N, temp0, temp1);
             dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
             dg::blas2::symv( m_dxB_U, velocity, temp2);
             dg::blas2::symv( m_dxF_U, velocity, temp3);
             dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
                     temp1, temp2, temp3);
             // - v_y dy U
-            dg::blas2::symv( m_dyC, temp0, temp1);
+            if( m_p.diff_dir == dg::centered)
+                dg::blas2::symv( m_dyC, temp0, temp1);
+            else if( m_p.diff_dir == dg::forward)
+                dg::blas2::symv( m_dyF_N, temp0, temp1);
+            else
+                dg::blas2::symv( m_dyB_N, temp0, temp1);
             dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
             dg::blas2::symv( m_dyB_U, velocity, temp2);
             dg::blas2::symv( m_dyF_U, velocity, temp3);
