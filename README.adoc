@@ -47,7 +47,7 @@ Open a terminal and clone the repository into any folder you like
 git clone https://www.github.com/feltor-dev/feltor
 ----
 
-You also need to clone https://github.com/thrust/thrust[thrust] and
+You also need to clone https://github.com/nvidia/thrust[thrust] and
 https://github.com/cusplibrary/cusplibrary[cusp] distributed under the
 Apache-2.0 license. Also, we need Agner Fog's https://github.com/vectorclass/version1[vcl] library (Apache 2.0). So again in a folder of your choice
 
