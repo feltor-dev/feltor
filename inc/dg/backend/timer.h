@@ -35,42 +35,22 @@ class Timer //OMP non-MPI
 #else // MPI_VERSION not defined and THRUST == CPU
 
 ///@cond
-#if defined _MSC_VER //we are on windows, God help us
-#include <windows.h>
+#include <chrono>
 namespace dg{
 class Timer
 {
 public:
-    Timer()
-    {
-        LARGE_INTEGER timerFreq;
-        QueryPerformanceFrequency(&timerFreq);
-        m_freq = 1.0 / timerFreq.QuadPart;
-    }
-    inline void tic(void) { QueryPerformanceCounter(&m_beginTime); }
-    inline void toc(void) { QueryPerformanceCounter(&m_endTime); }
+    inline void tic(void) { m_start = std::chrono::system_clock::now(); }
+    inline void toc(void) { m_stop = std::chrono::system_clock::now();}
     inline double diff(void) {
-        return (m_endTime.QuadPart - m_beginTime.QuadPart) * m_freq;
+        double difference = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            m_stop - m_start).count();
+        return difference*1e-9;
     }
 private:
-    double m_freq;
-    LARGE_INTEGER m_beginTime;
-    LARGE_INTEGER m_endTime;
-};
-#else //linux
-#include <sys/time.h>
-namespace dg{
-class Timer //CPU non-MPI
-{
-    timeval start;
-    timeval stop;
-    public:
-    void tic(){ gettimeofday( &start, NULL);}
-    void toc(){ gettimeofday( &stop, NULL);}
-    double diff()const{ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
+    typename std::chrono::system_clock::time_point m_start, m_stop;
 };
 }//namespace dg
-#endif//windows or not
 #endif//MPI_VERSION
 
 #else //THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA

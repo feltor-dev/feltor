@@ -25,7 +25,7 @@ namespace exblas{
 namespace cpu{
 
 static inline int64_t myllrint(double x) {
-#ifndef _WITHOUT_VCL
+#if not defined _WITHOUT_VCL && not defined( _MSC_VER)
     return _mm_cvtsd_si64(_mm_set_sd(x));
 #else
     return std::llrint(x);

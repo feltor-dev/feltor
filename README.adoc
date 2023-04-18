@@ -292,7 +292,7 @@ export OMP_NUM_THREADS=4
 If you do not want any parallelization, you can use a single thread version
 [source,sh]
 ----
-g++ -std=c++14 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPU -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+g++ -std=c++14 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -404,9 +404,10 @@ Please clone all four of the following URLs using `File -> Clone repository...`
 [source,sh]
 ----
 https://www.github.com/feltor-dev/feltor
-https://www.github.com/thrust/thrust
+https://www.github.com/nvidia/thrust
+# Checkout thrust to 1.9.3
 https://www.github.com/cusplibrary/cusplibrary
-https://www.github.com/feltor-dev/vcl
+https://www.github.com/vectorclass/version1 # local path "vcl"
 ----
 Please also have a look at the relevant <<tab_requirements, system requirements>> Table.
 
@@ -416,7 +417,7 @@ The Property Sheet can then be conveniently added to any project that includes
 the FELTOR library headers `dg/algorithm.h` and/or `dg/geometries/geometries.h`
 
 * Open an existing solution in Visual Studio or create a new project with `File -> New -> Projet ...` selecting `Empty Project` in Visual C{plus}{plus}.
-* In the Solution Explorer change to the `Property Manager` tab, then click on `Add New Project Property Sheet`, name it `FeltorPropertySheet.props` and save it
+* In the Solution Explorer change to the `Property Manager` tab (you may have to google how to activate it if it is not there), then click on `Add New Project Property Sheet`, name it `FeltorPropertySheet.props` and save it
 to a convenient location.
 * Double click on `FeltorPropertySheet` (expand your solution and any of the Debug or Release tabs to find it)
 ** In `VC++ Directories -> Include Directories` click on `Edit` Then add the four lines
@@ -424,9 +425,8 @@ to a convenient location.
 `path\to\cusplibrary` and `path\to\folder_containing_vcl`
 ** In `C/C++ -> Optimization -> Enable Intrinsic Functions` select `Yes (/Oi)`
 ** In `C/C++ -> Preprocessor -> Preprocessor Definitions` select `Edit` and
-add the line `THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` (Selects the OpenMP backend in FELTOR)
+add the line `THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP` (Selects the CPU backend in FELTOR)
 ** In `C/C++ -> Code Generation -> Enable Enhanced Instruction Set` select `Advanced Vector Extensions 2 (/arch:AVX2)` (If your CPU supports it, of course)
-** In `C/C++ -> Language -> Open MP Support` select `Yes (/openmp)`
 * Don't forget to click `Apply` in the end.
 
 That's it.
