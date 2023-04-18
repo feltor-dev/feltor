@@ -463,10 +463,9 @@ properties accordingly.
 jsoncpp::
 
 * Download and Install https://www.anaconda.com/download[Anaconda].
-(Once Anaconda is installed don't do anything yet, it's just to get a working
- python3 installation)
+(to get a working python3 installation)
 * In Github desktop: `File -> Clone repository...` clone `https://github.com/open-source-parsers/jsoncpp`
-* Execute the file `path\to\jsconcpp\amalgamate.py` (double click). The only way
+* Execute the file `path\to\jsconcpp\amalgamate.py`. The only way
 to confirm its success is to look for a `dist` folder containing `jsconcpp.cpp`
 and a folder containing two header files.
 * Add `path\to\jsoncpp\dist` to `Properties -> VC++ Directories -> Include Directories`
