@@ -105,7 +105,9 @@ int main()
         u = solution(t_start, damping, omega_0, omega_drive);
         std::array<double, 2> u1(u), sol = solution(t_end, damping, omega_0,
                 omega_drive);
-        dg::stepperRK(name, rhs, t_start, u, t_end, u1, N);
+        dg::SinglestepTimeloop<std::array<double,2>>(
+                dg::RungeKutta<std::array<double,2>>( name, u), rhs
+                ).integrate_steps( t_start, u, t_end, u1, N);
         dg::blas1::axpby( 1., sol , -1., u1);
         auto b = dg::create::tableau<double>(name);
         std::cout << "Norm of error in "<<std::setw(24) <<name<<"\t"<<sqrt(dg::blas1::dot( u1, u1))<<(b.isFsal()?" (fsal)" : "") <<"\n";

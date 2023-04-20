@@ -66,6 +66,7 @@ far away from strictly following it really.
  - default parameters changed in `dg::geo::Fieldaligned` constructor
  - restructure of the `src/feltor` project (including renaming `*.cu` files to `*.cpp`)
 ### Deprecated
+ - `dg::geo::createModifiedSolovevField` is superseded by `dg::geo::make_field`
 ### Removed
  - `dg::ModalFilter` is removed in favor of generating and using `dg::MultiMatrix` directly
  - `dg::transpose_dispatch` (replaced by `dg::blas2::parallel_for`)
@@ -81,6 +82,9 @@ far away from strictly following it really.
  - Fix size method in `dg::Operator` for integer value types
  - Fix convergence criterion in fieldline integrator for `dg::geo::SimpleOrthogonal`
  - Fix constructor of `dg::mat::PolCharge` and `dg::mat::PolChargeN`
+ - `dg::integrate` replaced by `dg::aTimeloop` functionality
+ - `dg::integrateERK` replaced by `dg::aTimeloop` functionality
+ - `dg::stepperRK` replaced by `dg::aTimeloop` functionality
 
 
 ## [v6.0] More modular

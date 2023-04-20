@@ -1112,26 +1112,6 @@ void SinglestepTimeloop<ContainerType>::do_integrate(
 }
 ///@endcond
 
-/*! @brief DEPRECATED
- *
- * Same as
- * @code{.cpp}
- * using Vec = ContainerType; // if ContainerType is really long to type
- * dg::SinglestepTimeloop<Vec>( dg::RungeKutta<Vec>(
- *      tableau, u0), rhs).integrate_steps( t_begin, begin, t_end, end, N);
- * @endcode
- */
-template<class ExplicitRHS, class ContainerType >
-void stepperRK(	ConvertsToButcherTableau< get_value_type< ContainerType >>
-        tableau, ExplicitRHS& rhs, get_value_type< ContainerType > t_begin,
-        const ContainerType& begin, get_value_type< ContainerType>
-        t_end, ContainerType& end, unsigned N )
-{
-    SinglestepTimeloop<ContainerType>( RungeKutta<ContainerType>( tableau,
-                begin), rhs).integrate_steps(t_begin, begin, t_end, end,N);
-}
-
-
 ///@}
 
 } //namespace dg

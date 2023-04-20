@@ -22,7 +22,7 @@ namespace geo
  */
 namespace mod
 {
-    //modify with a polynomial Heaviside function
+//modify with a polynomial Heaviside function
 ///@addtogroup mod
 ///@{
 
@@ -166,7 +166,7 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
  * @param psi0 parameter for dg::PolynomialHeaviside function
  * @param alpha parameter for dg::PolynomialHeaviside function
  * @param sign parameter for dg::PolynomialHeaviside function
- * @sa nowhere, everywhere, HeavisideZ
+ * @sa createModifiedField
  *
  * @return  the modified flux function
  */
