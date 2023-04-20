@@ -288,7 +288,7 @@ void construct_rz( Nemov nemov,
             }
             //std::cout << "Effective Absolute diff-r error is "<<eps<<" with "<<N<<" steps\n";
             N*=2;
-            if( eps > eps_old && N > 1024 && eps > 1e-6)
+            if( (eps > eps_old && N > 1024 && eps > 1e-6) || N > 64000)
                 throw dg::Error(dg::Message(_ping_) <<
                 "Grid generator encountered loss of convergence integrating from x = "
                 <<x0<<" to x = "<<x1);
