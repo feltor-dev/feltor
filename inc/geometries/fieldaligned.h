@@ -204,9 +204,18 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
 
 /**
  * @brief %Distance to wall along fieldline in phi or s coordinate
+ *
+ * The following differential equation is integrated
+ * \f[ \frac{ d R}{d \varphi} = b^R / b^\varphi \\
+ *     \frac{ d Z}{d \varphi} = b^Z / b^\varphi \\
+ *     \frac{ d s}{s \varphi} = 1   / b^\varphi
+ * \f]
+ * for initial conditions \f$ (R,Z,0)\f$ until either a maximum angle is reached or until \f$ (R,Z) \f$ leaves the given domain. In the latter case a bisection algorithm is used to find the exact angle \f$\varphi_l\f$ of leave. Either the angle \f$ \varphi_l\f$ or the corresponding \f$ s_l\f$ is returned by the function.
  * @ingroup fluxfunctions
- * @attention The sign of the distance is defined with respect to the direction
- * of the magnetic field (not the angle coordinate like in Fieldaligned)
+ * @attention The sign of the angle coordinate in this class (unlike in
+ * Fieldaligned) is defined with respect to the direction of the magnetic
+ * field. Thus, for a positive maxPhi, the distance (both "phi" and "s")
+ * will be positive and for negative maxPhi the distance is negative.
  */
 struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
 {
@@ -215,11 +224,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
      *
      * @param vec The vector field to integrate
      * @param domain The box
-     * @param maxPhi the maximum angle to integrate to (something like +- 2.*M_PI)
-     * @attention The sign of the angle coordinate in this class (unlike in
-     * Fieldaligned) is defined with respect to the direction of the magnetic
-     * field. Thus, for a positive maxPhi, the distance (both "phi" and "s")
-     * will be positive and for negative maxPhi the distance is negative.
+     * @param maxPhi the maximum angle to integrate to (something like plus or minus 2.*M_PI)
      * @param eps the accuracy of the fieldline integrator
      * @param type either "phi" then the distance is computed in the angle coordinate
      * or "s" then the distance is computed in the s parameter
@@ -282,6 +287,14 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
 /**
  * @brief Normalized coordinate relative to wall along fieldline in phi or s coordinate
  *
+ * The following differential equation is integrated
+ * \f[ \frac{ d R}{d \varphi} = b^R / b^\varphi \\
+ *     \frac{ d Z}{d \varphi} = b^Z / b^\varphi \\
+ *     \frac{ d s}{s \varphi} = 1   / b^\varphi
+ * \f]
+ * for initial conditions \f$ (R,Z,0)\f$ until either a maximum angle is reached or until \f$ (R,Z) \f$ leaves the given domain. In the latter case a bisection algorithm is used to find the exact angle \f$\varphi_l\f$ of leave.
+ *
+ * The difference to \c WallFieldlineDistance is that this class integrates the differential equations in **both** directions and normalizes the output to \f$ [-1,1]\f$.
  * -1 means at the negative sheath (you have to go agains the field to go out
  *  of the box), +1 at the postive sheath (you have to go with the field to go
  *  out of the box) and anything else is in-between; when the sheath cannot be
@@ -294,6 +307,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
 struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordinate>
 {
     ///@copydoc WallFieldlineDistance::WallFieldlineDistance()
+    ///@note The sign of \c maxPhi does not matter here as both directions are integrated
     WallFieldlineCoordinate(
         const dg::geo::CylindricalVectorLvl0& vec,
         const dg::aRealTopology2d<double>& domain,

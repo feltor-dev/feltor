@@ -145,13 +145,15 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
 ///@addtogroup wall
 ///@{
 /**
- * @brief Modify Magnetic Field above or below certain Psi values according to given parameters
+ * @brief Modify Magnetic Field and create wall above or below certain Psi values according to given parameters
  *
  * We modify psi above or below certain Psip values to a constant using the
  * \c dg::IPolynomialHeaviside function (an approximation to the integrated Heaviside
  * function with width alpha), i.e. we replace psi with IPolynomialHeaviside(psi).
  * This subsequently modifies all derivatives of psi and the poloidal
  * current in this region.
+ *
+ * Furthermore, the same parameters define the **wall** region.
  *
 @code
 {
@@ -171,10 +173,9 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
 @endcode
 @sa dg::geo::modification for possible values of "type" parameter
  * @param gs forwarded to \c dg::geo::createMagneticField
- * @param jsmod contains the fields described above to steer the creation of a modification region
+ * @param jsmod contains the fields described above to steer the creation of the modification and wall region
  * @param wall (out) On output contains the region where the wall is applied, the functor returns 1 where the wall is, 0 where there it is not and 0<f<1 in the transition region
  * @param transition (out) On output contains the region where the transition of Psip to a constant value occurs, the functor returns 0<f<=1 for when there is a transition and 0 else
- * @note Per default the dampening happens nowhere
  * @return A magnetic field object
  * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
  */
@@ -325,8 +326,8 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
  * horizontal (Z0, Z1) boundaries check if the "wall" functor is zero
  * anywhere on the line: if not then move this boundary far away
  * (ii) Measure the angular distance along the fieldline (both in positive and
- * negative direction) to the remaining walls
- * (iii) Modify the angular distances with a dg::PolynomialHeaviside functor
+ * negative direction) to the remaining walls using \c dg::geo::WallFieldlineDistance (in "phi" mode)
+ * (iii) Modify the angular distances with a \c dg::PolynomialHeaviside functor
  * with parameters given in jsmod:
 @code
 {
