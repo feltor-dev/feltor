@@ -2663,7 +2663,7 @@ Z\_fluc2d        & Dataset & 3 (time,y,x) & Fluctuation level on selected plane 
 Z\_fsa2d         & Dataset & 3 (time, y,x) & Flux surface average $\RA{ Z}$ interpolated onto 2d plane Eq.~\eqref{eq:fsa_vol} \\
 Z\_cta2d         & Dataset & 3 (time, y,x) & Convoluted toroidal average Eq.~\eqref{eq:cta} \\
 Z\_fsa           & Dataset & 2 (time, psi) & Flux surface average $\RA{ Z}$ Eq.~\eqref{eq:fsa_vol} \\
-Z\_std\_fsa      & Dataset & 2 (time, psi) & Standard deviation of flux surface average on outboard midplane $\sqrt{\RA{(\delta Z)^2}}$ \\
+Z\_std\_fsa      & Dataset & 2 (time, psi) & Standard deviation of flux surface average on selected plane ($\varphi=0$) $\sqrt{\RA{(\delta Z)^2}}$ \\
 Z\_ifs           & Dataset & 2 (time, psi) & Volume integrated flux surface average $\int\d v\RA{ Z}$ unless Z is a current, then it is the volume derived flux-surface average $\partial_v \RA{ Z}$ \\
 Z\_ifs\_lcfs     & Dataset & 1 (time) & Volume integrated flux surface average evaluated on last closed flux surface $\int_0^{v(0)}\d v\RA{ Z}$ unless Z is a current, then it is the fsa evaluated $\RA{ j_v}(0)$ \\
 Z\_ifs\_norm     & Dataset & 1 (time) & Volume integrated square flux surface average $\sqrt{\int \d v \RA{Z}^2}$, unless Z is a current, then it is the square derivative of the flux surface average $\sqrt{\int\d v (\partial_v \RA{j^v})^2}$\\

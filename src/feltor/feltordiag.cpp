@@ -61,20 +61,6 @@ int main( int argc, char* argv[])
     std::string configfile = config.asJson().toStyledString();
     std::cout << configfile <<  std::endl;
 
-    // Computing flags
-    bool copy_fsa = false;
-    for( unsigned i=0; i<config["flags"].size(); i++)
-    {
-        std::string flag = config["flags"].get(i,"copy-fsa").asString();
-        if( flag  == "copy-fsa")
-        {
-            std::cout <<"Copy Flux surface averages!\n";
-            copy_fsa = true;
-        }
-        else
-            throw std::runtime_error( "Flag "+flag+" not recognized!\n");
-    }
-
     //-------------------Construct grids-------------------------------------//
 
     dg::geo::CylindricalFunctor wall, transition;
@@ -424,17 +410,6 @@ int main( int argc, char* argv[])
                     dg::blas1::pointwiseDivide( t1d, dvdpsip, fsa1d );
                 else
                     dg::blas1::copy( t1d, fsa1d);
-                if( copy_fsa)
-                {   // if fsa already exists overwrite fsa1d
-                    try{
-                        err = nc_inq_varid(ncid, (record.name+"_fsa").data(), &dataID);
-                        size_t count_fsa[2] = {1, g1d_out.n()*g1d_out.N()};
-                        err = nc_get_vara_double( ncid, dataID,
-                            start2d, count_fsa, fsa1d.data());
-                        if( record_name[0] == 'j')
-                            dg::blas1::pointwiseDot( fsa1d, dvdpsip, fsa1d );
-                    } catch (dg::file::NC_Error& error) {}
-                }
                 //3. Interpolate fsa on 2d plane : <f>
                 dg::blas2::gemv(fsa2rzmatrix, fsa1d, transferH2d); //fsa on RZ grid
             }
