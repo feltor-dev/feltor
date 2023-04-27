@@ -2147,10 +2147,10 @@ X\_ta2d          & Dataset & 3 (time,y,x) & Toroidal average $\PA{ X }$
 Eq.~\eqref{eq:phi_average} \\
 Y\_tt\_2d        & Dataset & 3 (time,y,x) & Time integrated (between two outputs, Simpson's rule) selected plane
 $\int_{t_0}^{t_1}\d t Y(\varphi=0) $
-where $t_1 - t_0 = \Delta T_{\text{out}}$ \\
+where $t_1 - t_0 = \Delta T_{\text{out}}$, $t_1$ is the current time and $t_0$ is the time of the last output. \color{red} The first output at time $t_1=0$ is the same as X\_2d !!\color{black} \\
 Y\_tt\_ta2d      & Dataset & 3 (time,y,x) & Time integrated (between two outputs, Simpson's rule) toroidal average (Eq.~\eqref{eq:phi_average})
 $\int_{t_0}^{t_1}\d t \PA{ Y }$
-where $t_1 - t_0 = \Delta T_{\text{out}}$ \\
+where $t_1 - t_0 = \Delta T_{\text{out}}$, $t_1$ is the current time and $t_0$ is the time of the last output. \color{red} The first output at time $t_1 = 0$ is the same as X\_2d !!\color{black} \\
 \bottomrule
 \end{longtable}
 where
