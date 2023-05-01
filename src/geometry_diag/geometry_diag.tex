@@ -66,6 +66,50 @@ Furthermore, a user can specify which kind of diagnostics quantities should be c
     "fx_0" : 0.125, // where the separatrix is in relation to the $\zeta$ coordinate
 }
 \end{minted}
+\subsection{Diagnostics}
+
+By default only the standard basic diagnostics is run that has little danger of failing.
+ALL of the following can fail and should only be attempted once the parameters are tuned!
+The diagnostics field is a list of flags that can be empty
+\begin{minted}[texcomments]{js}
+"diagnostics" : // Can be empty
+[
+    "q-profile", // integrate field-lines within LCFS to get q-profile (
+            //can fail e.g. if Psi\_p = 0 is not a closed flux-surface)
+    "fsa",  //compute a flux-aligned grid and compute flux-surface averaged quantities
+    "sheath" // integrate field-lines to get distance to divertor
+]
+\end{minted}
+
+\subsection{Magnetic field} \label{sec:geometry_file}
+The json structure of the geometry parameters depends on which expansion for $\psi_p$ is chosen Eq.~\eqref{eq:solovev} or Eq.~\eqref{eq:polynomial}.\cite{Cerfon2010}
+In addition we have an option to read the geometry parameters either from an external
+file or directly from a field in the input file.
+\begin{minted}[texcomments]{js}
+"magnetic_field":
+{
+    // Tells the parser that the geometry parameters are located in an
+    // external file the json file (relative to where the program is
+    //  executed) containing the geometry parameters to read
+    "input": "file",
+    "file": "path/to/geometry.json",
+    //
+    // Tells the parser that the geometry parameters are located in the
+    // same file in the params field (recommended option)
+    "input": "params",
+    "params":
+    // copy of the geometry.json
+}
+\end{minted}
+\noindent
+\subsection{q-profile}
+
+In the computation of the q-profile using the delta-function method the delta function can have
+a width parameter
+\begin{minted}[texcomments]{js}
+"width-factor" : 0.03
+\end{minted}
+
 \subsection{The boundary region} \label{sec:boundary}
 Setting the boundary conditions in an appropriate manner is probably the most
 fiddly task in setting up a simulation.
@@ -179,47 +223,6 @@ determine the sheath penalization region:
 }
 \end{minted}
 \noindent
-
-\subsection{Diagnostics}
-
-By default only the standard basic diagnostics is run that has little danger of failing.
-ALL of the following can fail and should only be attempted once the parameters are tuned!
-The diagnostics field is a list of flags that can be empty
-\begin{minted}[texcomments]{js}
-"diagnostics" : ["q-profile", // integrate field-lines within LCFS to get q-profile (
-     //can fail e.g. if Psi\_p = 0 is not a closed flux-surface)
-"fsa", //compute a flux-aligned grid and compute flux-surface averaged quantities
-"sheath" // integrate field-lines to get distance to divertor
-\end{minted}
-
-\subsection{Magnetic field} \label{sec:geometry_file}
-The json structure of the geometry parameters depends on which expansion for $\psi_p$ is chosen Eq.~\eqref{eq:solovev} or Eq.~\eqref{eq:polynomial}.
-In addition we have an option to read the geometry parameters either from an external
-file or directly from a field in the input file.
-\begin{minted}[texcomments]{js}
-"magnetic_field":
-{
-    // Tells the parser that the geometry parameters are located in an
-    // external file the json file (relative to where the program is
-    //  executed) containing the geometry parameters to read
-    "input": "file",
-    "file": "path/to/geometry.json",
-    //
-    // Tells the parser that the geometry parameters are located in the
-    // same file in the params field (recommended option)
-    "input": "params",
-    "params":
-    // copy of the geometry.json
-}
-\end{minted}
-\noindent
-\subsection{q-profile}
-
-In the computation of the q-profile using the delta-function method the delta function can have
-a width parameter
-\begin{minted}[texcomments]{js}
-"width-factor" : 0.03
-\end{minted}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

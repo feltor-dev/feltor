@@ -105,7 +105,7 @@ int main( int argc, char* argv[])
     if( deltaPsi < 1e-14) // protect against toroidal
         deltaPsi = 0.1;
 
-    std::vector<std::tuple<std::string, dg::HVec, std::string> > map1d;
+    std::vector<std::tuple<std::string, dg::HVec, std::string, double> > map1d;
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
         {"Psip", "Flux function", mag.psip()},
@@ -199,6 +199,7 @@ int main( int argc, char* argv[])
     /// -------  Elements for fsa on X-point grid ----------------
     std::unique_ptr<dg::geo::CurvilinearGrid2d> gX2d;
     dg::direction integration_dir = psipO<psipmax ? dg::forward : dg::backward;
+    dg::Timer t;
     if( compute_fsa &&
         (
         mag_description == dg::geo::description::standardX ||
@@ -208,6 +209,7 @@ int main( int argc, char* argv[])
         )
         )
     {
+        t.tic();
         std::cout << "Generate orthogonal flux-aligned grid ... \n";
         double fx_0 = js["grid"].get( "fx_0", 1./8.).asDouble(); // must evenly divide Npsi
         psipmax = -fx_0/(1.-fx_0)*psipO;
@@ -219,7 +221,10 @@ int main( int argc, char* argv[])
                 mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
         gX2d = std::make_unique<dg::geo::CurvilinearGrid2d>(generator,
                 npsi, Npsi, Neta, dg::DIR, dg::PER);
+        t.toc();
+        map1d.emplace_back( "gridX", dg::HVec(npsi*Npsi,0.0), "Time to generated X-grid", t.diff());
         std::cout << "DONE! \n";
+        t.tic();
         dg::Average<dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
         dg::SparseTensor<dg::HVec> metricX = gX2d->metric();
@@ -234,15 +239,19 @@ int main( int argc, char* argv[])
         dg::Grid1d gX1d(psipO<psipmax ? psipO : psipmax,
                         psipO<psipmax ? psipmax : psipO,
                         npsi, Npsi, psipO < psipmax ? dg::DIR_NEU : dg::NEU_DIR);
+        //O-point fsa value is always zero
+        t.toc();
+        map1d.emplace_back( "dvdpsip", dvdpsip,
+            "Derivative of flux volume with respect to flux label psi", t.diff());
+        t.tic();
+        dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d, integration_dir);
+        t.toc();
+        map1d.emplace_back( "psi_vol", X_psi_vol,
+            "Flux volume on X-point grid", t.diff());
+        t.tic();
         dg::HMatrix dpsi = dg::create::dx( gX1d, dg::NEU, dg::backward); //we need to avoid involving cells outside LCFS in computation (also avoids right boundary)
         if( psipO > psipmax)
             dpsi = dg::create::dx( gX1d, dg::NEU, dg::forward);
-        //O-point fsa value is always zero
-        dg::HVec X_psi_vol = dg::integrate( dvdpsip, gX1d, integration_dir);
-        map1d.emplace_back( "dvdpsip", dvdpsip,
-            "Derivative of flux volume with respect to flux label psi");
-        map1d.emplace_back( "psi_vol", X_psi_vol,
-            "Flux volume on X-point grid");
 
         //NOTE: VOLUME is WITHIN cells while AREA is ON gridpoints
         dg::HVec gradZetaX = metricX.value(0,0), X_psi_area;
@@ -250,8 +259,9 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( volX2d, gradZetaX, gradZetaX); //R\sqrt{g}|\nabla\zeta|
         avg_eta( gradZetaX, X_psi_area, false);
         dg::blas1::scal( X_psi_area, 4.*M_PI*M_PI);
+        t.toc();
         map1d.emplace_back( "psi_area", X_psi_area,
-            "Flux area on X-point grid");
+            "Flux area on X-point grid", t.diff());
         std::cout << "Total volume within separatrix is "
               << dg::interpolate( dg::xspace, X_psi_vol, 0., gX1d)<<std::endl;
 
@@ -264,20 +274,26 @@ int main( int argc, char* argv[])
             if( std::get<0>(tp).find("Sheath") != std::string::npos)
                 continue;
             transferH = dg::pullback( std::get<2>(tp), *gX2d);
+            t.tic();
             dg::blas1::pointwiseDot( volX2d, transferH, transferH);
             avg_eta( transferH, transferH1d, false);
             dg::blas1::scal( transferH1d, 4*M_PI*M_PI*f0); //
             dg::blas1::pointwiseDivide( transferH1d, dvdpsip, transferH1d );
+            t.toc();
             map1d.emplace_back( std::get<0>(tp)+"_fsa", transferH1d,
-                std::get<1>(tp)+" (Flux surface average)");
+                std::get<1>(tp)+" (Flux surface average)", t.diff());
+            t.tic();
             dg::blas1::pointwiseDot( transferH1d, dvdpsip, transferH1d );
             integral1d = dg::integrate( transferH1d, gX1d, integration_dir);
+            t.toc();
             map1d.emplace_back( std::get<0>(tp)+"_ifs", integral1d,
-                std::get<1>(tp)+" (Flux surface integral)");
+                std::get<1>(tp)+" (Flux surface integral)", t.diff());
+            t.tic();
             dg::blas2::symv( dpsi, transferH1d, integral1d);
             dg::blas1::pointwiseDivide( integral1d, dvdpsip, integral1d);
+            t.toc();
             map1d.emplace_back( std::get<0>(tp)+"_dfs", integral1d,
-                std::get<1>(tp)+" (Flux current derivative)");
+                std::get<1>(tp)+" (Flux current derivative)", t.diff());
         }
     }
     /// --------- More flux labels --------------------------------
@@ -292,13 +308,18 @@ int main( int argc, char* argv[])
         )
         )
     {
+        t.tic();
         dg::HVec rho = dg::evaluate( dg::cooX1d, grid1d);
         dg::blas1::axpby( -1./psipO, rho, +1., 1., rho); //transform psi to rho
+        t.toc();
         map1d.emplace_back("rho", rho,
-            "Alternative flux label rho = -psi/psimin + 1");
+            "Alternative flux label rho = -psi/psimin + 1", t.diff());
+        t.tic();
         dg::blas1::transform( rho, rho, dg::SQRT<double>());
+        t.toc();
         map1d.emplace_back("rho_p", rho,
-            "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]");
+            "Alternative flux label rho_p = Sqrt[-psi/psimin + 1]", t.diff());
+        t.tic();
         dg::geo::SafetyFactor qprof( mag);
         dg::HVec psi_vals = dg::evaluate( dg::cooX1d, grid1d);
         // we need to avoid calling SafetyFactor outside closed fieldlines
@@ -308,8 +329,9 @@ int main( int argc, char* argv[])
             }, psi_vals);
         dg::HVec qprofile( psi_vals);
         dg::blas1::evaluate( qprofile, dg::equals(), qprof, psi_vals);
+        t.toc();
         map1d.emplace_back("q-profile", qprofile,
-            "q-profile (Safety factor) using direct integration");
+            "q-profile (Safety factor) using direct integration", t.diff());
         if( mag_description == dg::geo::description::standardX
             || mag_description == dg::geo::description::doubleX)
         {
@@ -327,32 +349,41 @@ int main( int argc, char* argv[])
                 double width_factor = js.get("width-factor",0.03).asDouble();
                 dg::geo::SafetyFactorAverage qprof_avg(grid2d_tmp, mag, width_factor);
                 dg::HVec qprofile_avg( psi_vals);
+                t.tic();
                 dg::blas1::evaluate( qprofile_avg, dg::equals(), qprof_avg, psi_vals);
+                t.toc();
                 map1d.emplace_back("q-profile-avg", qprofile_avg,
-                    "q-profile (Safety factor) using average integration");
+                    "q-profile (Safety factor) using average integration", t.diff());
                 dg::HVec curvVec = dg::evaluate( dg::geo::ScalarProduct(
                             dg::geo::createCurvatureNablaB(mag, +1),
                             dg::geo::createGradPsip(mag)), grid2d_tmp);
-                dg::geo::FluxSurfaceAverage<dg::HVec> fsa_avg( grid2d_tmp, mag,
+                dg::geo::FluxSurfaceAverage<dg::DVec> fsa_avg( grid2d_tmp, mag,
                         curvVec, dg::evaluate( dg::cooX2d, grid2d_tmp), width_factor);
+                t.tic();
                 dg::blas1::evaluate( qprofile_avg, dg::equals(), fsa_avg, psi_vals);
+                t.toc();
                 map1d.emplace_back("CurvatureNablaBGradPsip_fsa-avg", qprofile_avg,
-                    "using average integration");
+                    "using average integration", t.diff());
                 curvVec = dg::evaluate( dg::geo::ScalarProduct(
                             dg::geo::createCurvatureKappa(mag, +1),
                             dg::geo::createGradPsip(mag)), grid2d_tmp);
                 fsa_avg.set_container( curvVec);
+                t.tic();
                 dg::blas1::evaluate( qprofile_avg, dg::equals(), fsa_avg, psi_vals);
+                t.toc();
                 map1d.emplace_back("CurvatureKappaGradPsip_fsa-avg", qprofile_avg,
-                    "using average integration");
+                    "using average integration", t.diff());
 
 
             } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
         }
+        t.tic();
         dg::HVec psit = dg::integrate( qprofile, grid1d, integration_dir);
+        t.toc();
         map1d.emplace_back("psit1d", psit,
-            "Toroidal flux label psi_t integrated  on grid1d using direct q");
+            "Toroidal flux label psi_t integrated  on grid1d using direct q", t.diff());
         //we need to avoid integrating outside closed fieldlines
+        t.tic();
         dg::Grid1d g1d_fine(psipO<0. ? psipO : 0.,
                 psipO<0. ? 0. : psipO, npsi, Npsi,dg::NEU);
         qprofile = dg::evaluate( qprof, g1d_fine);
@@ -363,8 +394,9 @@ int main( int argc, char* argv[])
         //std::cout << "psit tot "<<psit_tot<<"\n";
         dg::blas1::scal ( psit, 1./psit_tot);
         dg::blas1::transform( psit, psit, dg::SQRT<double>());
+        t.toc();
         map1d.emplace_back("rho_t", psit,
-            "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d");
+            "Toroidal flux label rho_t = sqrt( psit/psit_tot) evaluated on grid1d", t.diff());
     }
 
     /////////////////////////////set up netcdf/////////////////////////////////////
@@ -375,18 +407,18 @@ int main( int argc, char* argv[])
     err = nc_create( newfilename.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
     /// Set global attributes
     std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/inc/geometries/geometry_diag.cu";
+    att["title"] = "Output file of feltor/src/geometry_diag/geometry_diag.cpp";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+    auto tt = std::time(nullptr);
+    auto tm = *std::localtime(&tt);
 
     std::ostringstream oss;
     ///time string  + program-name + args
     oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
     for( int i=0; i<argc; i++) oss << " "<<argv[i];
     att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/geometry_diag.tex";
+    att["comment"] = "Find more info in feltor/src/geometry_diag/geometry_diag.tex";
     att["source"] = "FELTOR";
     att["git-hash"] = GIT_HASH;
     att["git-branch"] = GIT_BRANCH;
@@ -450,6 +482,7 @@ int main( int argc, char* argv[])
         int vid;
         err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1,
             &dim1d_ids[0], &vid);
+        err = nc_put_att_double( ncid, vid, "time", NC_DOUBLE, 1, &std::get<3>(tp));
         err = nc_put_att_text( ncid, vid, "long_name",
             std::get<2>(tp).size(), std::get<2>(tp).data());
         err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
@@ -473,7 +506,6 @@ int main( int argc, char* argv[])
             std::get<1>(tp).size(), std::get<1>(tp).data());
         std::string coordinates = "zc yc xc";
         err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
-        dg::Timer t;
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
         dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
         dg::assign( hvisual, fvisual);

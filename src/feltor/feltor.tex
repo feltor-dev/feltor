@@ -2751,14 +2751,13 @@ We define the {\bf toroidal average} of a function $f(R,Z,\varphi)$ as
 \PA{ f}(R,Z) := \frac{1}{2\pi}\oint f(R,Z,\varphi)\d \varphi
 \end{align}
 
-In arbitrary coordinates the area integral is defined by the pull back
-of the flux 2-form and the metric
+In arbitrary coordinates the area 2-form is given by the interior product of the
+surface normal with the volume form
 \begin{align}
 \label{}
 \dA^2 = i_{\hat \psi_p} vol^3 \quad \hat \psi_p = \frac{\vn \psi_p}{|\vn \psi_p|}
 \end{align}
-to a parameterization of the flux-surface.
-In a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ the pull-back is trivial ($\zeta=const$) and we have
+The pullback to a flux-aligned coordinate system $\{\zeta, \eta, \varphi\}$ is trivial (since $\vn \psi_p$ only has one component $g^{\zeta\zeta} \partial \psi_p / \partial \zeta$) and we have
 \begin{align}
 \dA &= \sqrt{g^{\zeta\zeta}} \sqrt{g} \d\eta\d\varphi = f_0|\vn\psi_p|\sqrt{g}\d\eta\d\varphi,
 \\
