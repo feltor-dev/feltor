@@ -1,0 +1,231 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{../common/header.tex}
+\input{../common/newcommands.tex}
+\usepackage{minted}
+\renewcommand{\ne}{\ensuremath{{n_e} }}
+\renewcommand{\ni}{\ensuremath{{N_i} }}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{Diagnostics of geometry}
+\author{ M.~Wiesenberger and M.~Held}
+\maketitle
+
+\begin{abstract}
+  This is a program for 1d, 2d and 3d diagnostics of magnetic field geometry in Feltor
+\end{abstract}
+\tableofcontents
+
+\section{Compilation and useage}
+The program geometry\_diag.cpp can be compiled with
+\begin{verbatim}
+make geometry_diag
+\end{verbatim}
+Run with
+\begin{verbatim}
+path/to/geometry_diag/geometry_diag input.json output.nc
+\end{verbatim}
+The program writes performance informations to std::cout and uses serial netcdf to write a netcdf file.
+
+\section{The input file}
+Input file format: \href{https://en.wikipedia.org/wiki/JSON}{json}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Spatial grid} \label{sec:spatial}
+The spatial grid is an equidistant discontinuous Galerkin discretization of the
+3D Cylindrical product-space
+$[ R_{\min}, R_{\max}]\times [Z_{\min}, Z_{\max}] \times [0,2\pi]$,
+where we define
+\begin{align} \label{eq:box}
+    R_{\min}&=R_0-\varepsilon_{R-}a\quad
+    &&R_{\max}=R_0+\varepsilon_{R+}a\nonumber\\
+    Z_{\min}&=-\varepsilon_{Z-}a\quad
+    &&Z_{\max}=\varepsilon_{Z+}a
+\end{align}
+We use an equal number of Gaussian nodes in $x$ and $y$.
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    "n"  :  3, // The number of Gaussian nodes in x and y (3 is a good value)
+    "Nx"  : 48, // Number of cells in R
+    "Ny"  : 48, // Number of cells in Z
+    "Nz"  : 20, // Number of cells in varphi
+    "scaleR"  : [1.1,1.1], // $[\varepsilon_{R-}, \varepsilon_{R+}]$ scale left and right boundary in R in Eq.\eqref{eq:box}\\
+    "scaleZ"  : [1.2,1.1], // $[\varepsilon_{Z-}, \varepsilon_{Z+}]$ scale lower and upper boundary in Z in Eq.\eqref{eq:box}
+}
+\end{minted}
+Furthermore, a user can specify which kind of diagnostics quantities should be computed and how:
+\begin{minted}[texcomments]{js}
+"grid" :
+{
+    // for flux surface average computations
+    "Npsi": 64, // resolution of X-point grid for fsa
+    "Neta": 640, // resolution of X-point grid for fsa
+    "fx_0" : 0.125, // where the separatrix is in relation to the $\zeta$ coordinate
+}
+\end{minted}
+\subsection{The boundary region} \label{sec:boundary}
+Setting the boundary conditions in an appropriate manner is probably the most
+fiddly task in setting up a simulation.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{The wall region}\label{sec:wall}
+\begin{minted}[texcomments]{js}
+"boundary":
+{
+    "wall" :
+    {
+        // no wall region
+        "type" : "none"
+    }
+}
+\end{minted}
+Being a box, our computational domain is in particular not aligned with the
+magnetic flux surfaces. This means that particularly in the corners of
+the domain the field lines inside the domain are very short (in the
+sense that the distance between the entry point and leave point is short).
+It turns out that this behaviour is numerically disadvantageous (may
+blow up the simulation in the worst case) in the
+computation of parallel derivatives.
+In order to remedy this situation
+we propose a penalization method to model the actual physical wall.
+We define an approximation to the step function with a transition layer of radius $a$
+around the origin
+\begin{align}
+\Theta_a(x) := \begin{cases}
+    0 & \text{ for } x \leq -a  \\
+    \frac{1}{32 a^7}  \left(16 a^3-29 a^2 x+20 a x^2-5 x^3\right) (a+x)^4
+    &\text{ for } -a<x\leq a \\
+    1 & \text{ for } x > a
+\end{cases}
+    \approx H(x)
+\label{eq:approx_heaviside}
+\end{align}
+where $H(x)$ is the Heaviside step function.
+
+We now use the region defined by
+\begin{align}\label{eq:wall}
+    \chi_w(R,Z,\varphi):=\Theta_{\alpha/2}\left(\psi_{p,b} + \frac{\alpha}{2} - \psi \right) \approx H(\psi_{p,b}-\psi)
+\end{align}
+to define the wall region.
+In order to simplify the setup of this region we give $\psi_{p,b}$ and $\alpha$ in terms of
+$\rho_p$ and $\alpha_p$ via $\psi_{p,b} = (1-\rho_{p,b}^2)\psi_{p,O}$ and $\alpha = -(2\rho_{p,b} \alpha_p + \alpha_p^2)\psi_{p,O}$. In case we change the sign
+of $\psi_p$ via $\mathcal P_\psi$ (to make it concave) note that $\alpha$ becomes
+negative and $\psi_{p,O}$ is positive).
+We then need to point mirror Eq.~\eqref{eq:wall} at $\psi_{p,b}+\frac{\alpha}{2}$.
+
+\begin{minted}[texcomments]{js}
+"boundary":
+{
+    "wall" :
+    {
+        // Simple flux aligned wall above a threshold value
+        "type" : "heaviside",
+        "boundary" : 1.2, // wall region boundary $\rho_{p,b}$
+        // yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.\eqref{eq:wall}.
+        "alpha" : 0.25, // Transition width $\alpha_p$: yields
+        // $\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside
+        // in the wall function \eqref{eq:wall}.
+
+        // Double flux aligned wall above and below a threshold value
+        "type" : "sol_pfr",
+        "boundary" : [1.2, 0.8],
+        "alpha" : [0.25,0.25],
+        // first one is for main region, second one for PFR
+    }
+}
+\end{minted}
+\noindent
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{The sheath region}\label{sec:sheath}
+\begin{minted}[texcomments]{js}
+"boundary":
+{
+    "sheath" :
+    {
+        // no sheath region
+        "type" : "none",
+    }
+}
+\end{minted}
+In order to define sheath boundary conditions we first define a sheath region
+and then determine whether the field lines point toward the wall or away from it.
+We define as sheath any part on the bounding box that is not included in the wall
+penalization. Then we check for each point in the box the poloidal distance (in
+terms of angle $\varphi$) to the sheath wall and if the poloidal field points
+toward or away from the wall closest to it.
+We then take $\theta_{\alpha/2}\left( 2\pi(\eps_s - \frac{\alpha}{2}) - d(R,Z)\right)$
+and take the set intersection of that region and the ``not wall'' region to
+determine the sheath penalization region:
+\begin{align}\label{eq:sheath}
+\chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( 2\pi\left(\eps_s - \frac{\alpha}{2}\right) - d(R,Z)\right)
+\end{align}
+\begin{minted}[texcomments]{js}
+"boundary" :
+{
+    "sheath" :
+    {
+        "boundary" : 3/32, // Total width of the sheath $\eps_s$ away from the wall
+        // in units of $2\pi$ in Eq.\eqref{eq:sheath}
+        "alpha" : 2/32, // Transition width $\alpha$
+        // in units of $2\pi$ in Eq.\eqref{eq:sheath}.
+        "max_angle" : 4 // $\varphi_{\max}$ in units of $2\pi$
+        // in order to compute field-line following coordinates
+        // we need to integrate fieldlines. In order to avoid infinite integration
+        // we here give a maximum angle where to stop integration
+    }
+}
+\end{minted}
+\noindent
+
+\subsection{Diagnostics}
+
+By default only the standard basic diagnostics is run that has little danger of failing.
+ALL of the following can fail and should only be attempted once the parameters are tuned!
+The diagnostics field is a list of flags that can be empty
+\begin{minted}[texcomments]{js}
+"diagnostics" : ["q-profile", // integrate field-lines within LCFS to get q-profile (
+     //can fail e.g. if Psi\_p = 0 is not a closed flux-surface)
+"fsa", //compute a flux-aligned grid and compute flux-surface averaged quantities
+"sheath" // integrate field-lines to get distance to divertor
+\end{minted}
+
+\subsection{Magnetic field} \label{sec:geometry_file}
+The json structure of the geometry parameters depends on which expansion for $\psi_p$ is chosen Eq.~\eqref{eq:solovev} or Eq.~\eqref{eq:polynomial}.
+In addition we have an option to read the geometry parameters either from an external
+file or directly from a field in the input file.
+\begin{minted}[texcomments]{js}
+"magnetic_field":
+{
+    // Tells the parser that the geometry parameters are located in an
+    // external file the json file (relative to where the program is
+    //  executed) containing the geometry parameters to read
+    "input": "file",
+    "file": "path/to/geometry.json",
+    //
+    // Tells the parser that the geometry parameters are located in the
+    // same file in the params field (recommended option)
+    "input": "params",
+    "params":
+    // copy of the geometry.json
+}
+\end{minted}
+\noindent
+\subsection{q-profile}
+
+In the computation of the q-profile using the delta-function method the delta function can have
+a width parameter
+\begin{minted}[texcomments]{js}
+"width-factor" : 0.03
+\end{minted}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%..................................................................
+\bibliography{../common/references}
+%..................................................................
+
+\end{document}
