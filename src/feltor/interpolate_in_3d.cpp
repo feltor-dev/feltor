@@ -206,7 +206,7 @@ int main( int argc, char* argv[])
     dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix, dg::HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
         //let's take NEU bc because N is not homogeneous
-        p.rk4eps, 5, 5);
+        p.rk4eps, 5, 5, -1, "dg" );
     dg::IHMatrix interpolate_in_2d = dg::create::interpolation(
             g3d_out_equidistant, g3d_out);
 

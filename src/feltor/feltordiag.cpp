@@ -489,7 +489,7 @@ int main( int argc, char* argv[])
                     for( unsigned u=0; u<temp1.size(); u++)
                     {
                         temp1[u] = w1d[u];
-                        temp2[u] = integration_dir == dg::forward ? t1d[u] : t1d[t1d.size() -1 -u];
+                        temp2[u] = integration_dir == dg::forward ? t1d[u] : -t1d[t1d.size() -1 -u];
                     }
                     result = dg::blas1::dot( temp1, temp2);
                 }
