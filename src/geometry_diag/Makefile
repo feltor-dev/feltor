@@ -23,4 +23,4 @@ doc:
 .PHONY: clean
 
 clean:
-	rm -f geometry_diag geometry_diag.aux geometry_diag.log geometry_diag.out geometry_diag.pyg geometry_diag.pdf geometry_diag.bbl geometry_diag.blg
+	rm -f geometry_diag geometry_diag.aux geometry_diag.log geometry_diag.out geometry_diag.pyg geometry_diag.pdf geometry_diag.bbl geometry_diag.blg geometry_diag.toc
