@@ -43,7 +43,7 @@ far away from strictly following it really.
  - `access_string` method in `dg::file::WrappedJsonValue` to access creation history of an object
  - Restructure of `dg::geo::Fieldaligned` to allow for different interpolation and backprojection from dG to fine grid and back (to a possibly equidistant grid and with possibly cubic, linear or nearest methods)
  - in `dg::geo::DS` the derivative methods now have the general zero transform
- - `dg::geo::createCircularField` has not two radii parameter to allow for the creation of an ellipsis and changed the sign
+ - `dg::geo::createCircularField` has now two radii parameter to allow for the creation of an ellipsis and changed the sign
  - `dg::geo::SeparatrixOrthogonalAdaptor` to create Separatrix grids without XGrid topology
  - Utilities for exponential integration: `dg::mat::ExponentialStep`,  `dg::mat::ExponentialERKStep`, `dg::mat::phi1`, `dg::mat::phi2`, `dg::mat::phi3`, `dg::mat::phi4`, `dg::mat::FuncionalButcherTableau`, `dg::mat::ConvertsToFunctionalButcherTableau` with the four methods "Euler", "Midpoint-2-2", "Runge-Kutta-4-4", and "Hochbruck-3-3-4"
  - Utility function `dg::mat::MatrixFunction` for easy general purpose use
@@ -74,6 +74,9 @@ far away from strictly following it really.
  - `dg::extend_column` (replaced by `dg::blas2::parallel_for`)
  - `dg::create::interpolationT` (is not used anywhere)
  - file `src/toefl/toefl_hpc.cu` (was previously merged into `toefl.cpp`
+ - `dg::integrate` replaced by `dg::aTimeloop` functionality
+ - `dg::integrateERK` replaced by `dg::aTimeloop` functionality
+ - `dg::stepperRK` replaced by `dg::aTimeloop` functionality
 ### Fixed
  - Fix left shift in exblas::AccumulateWord by -1 by explicit conversion to unsigned
  - Fix `isCommunicating` in `dg::BijectiveComm`
@@ -82,9 +85,6 @@ far away from strictly following it really.
  - Fix size method in `dg::Operator` for integer value types
  - Fix convergence criterion in fieldline integrator for `dg::geo::SimpleOrthogonal`
  - Fix constructor of `dg::mat::PolCharge` and `dg::mat::PolChargeN`
- - `dg::integrate` replaced by `dg::aTimeloop` functionality
- - `dg::integrateERK` replaced by `dg::aTimeloop` functionality
- - `dg::stepperRK` replaced by `dg::aTimeloop` functionality
 
 
 ## [v6.0] More modular
