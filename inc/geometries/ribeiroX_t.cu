@@ -11,7 +11,7 @@
 
 #include "solovev.h"
 #include "taylor.h"
-//#include "guenther.h"
+//#include "guenter.h"
 #include "curvilinearX.h"
 #include "ribeiroX.h"
 #include "ds.h"

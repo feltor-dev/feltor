@@ -7,27 +7,6 @@
 
 namespace dg
 {
-template<class value_type>
-void transpose_dispatch( SerialTag, unsigned nx, unsigned ny, const value_type* in, value_type* out)
-{
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[j*ny+i] = in[i*nx+j];
-}
-template<class value_type>
-void extend_line( SerialTag, unsigned nx, unsigned ny, const value_type* in, value_type* out)
-{
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[i*nx+j] = in[j];
-}
-template<class value_type>
-void extend_column( SerialTag, unsigned nx, unsigned ny, const value_type* in, value_type* out)
-{
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[i*nx+j] = in[i];
-}
 
 template<class value_type>
 void average( SerialTag, unsigned nx, unsigned ny, const value_type* in0, const value_type* in1, value_type* out)

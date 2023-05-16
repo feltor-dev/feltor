@@ -40,8 +40,8 @@ int main(int argc, char * argv[])
     const Container w2d = dg::create::weights( grid);
     Container x = dg::evaluate( lhs, grid), error(x);
     Container b = dg::evaluate( rhs, grid), xexac(x);
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( grid, alpha,
-            dg::centered);
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( alpha, {grid,
+            dg::centered});
 
     {
         t.tic();

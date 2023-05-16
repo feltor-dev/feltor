@@ -225,7 +225,7 @@ struct Ribeiro : public aGenerator2d
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         if(m_verbose)std::cout << "lx = "<<lx_<<"\n";
     }
-    virtual Ribeiro* clone() const{return new Ribeiro(*this);}
+    virtual Ribeiro* clone() const override final{return new Ribeiro(*this);}
 
     private:
     /**
@@ -235,14 +235,14 @@ struct Ribeiro : public aGenerator2d
      * @return length of zeta-domain (f0*(psi_1-psi_0))
      * @note the length is always positive
      */
-    virtual double do_width() const{return lx_;}
+    virtual double do_width() const override final{return lx_;}
     /**
      * @brief 2pi (length of the eta domain)
      *
      * Always returns 2pi
      * @return 2pi
      */
-    virtual double do_height() const{return 2.*M_PI;}
+    virtual double do_height() const override final{return 2.*M_PI;}
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
@@ -251,7 +251,7 @@ struct Ribeiro : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         ribeiro::detail::FieldFinv fpsiMinv_(psi_, x0_,y0_, 500, mode_);

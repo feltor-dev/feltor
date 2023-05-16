@@ -7,20 +7,17 @@ namespace dg{
 
 //here we introduce the concept of data access
 
-///@addtogroup dispatch
-///@{
 /**
  * @brief Vector Tag base class, indicates the basic Vector/container concept
  *
- * The vector tag has three functions.
-First, it indicates the fundamental datatype a vector class contains (typically a double).
- Second, it describes how the data in a Vector type is layed out in memory. We distinguish between a simple, contiguous chunk of data in a shared memory system (dg::SharedVectorTag), a dataset that is
+ * The vector tag has two functions.
+ First, it describes how the data in a Vector type is layed out in memory. We distinguish between a simple, contiguous chunk of data in a shared memory system (dg::SharedVectorTag), a dataset that is
 part of a larger dataset on a distributed memory system (dg::MPIVectorTag), and
 a dataset that consists of a number of subsets (dg::RecursiveVectorTag).
 Both the MPIVectorTag and the RecursiveVectorTag allow recursion, that is
 for example a RecursiveVector can consist itself of many shared vectors or of many
 RecursiveVector again. The innermost type must always be a shared vector however.
-  The third function of the Vector tag is to describe how the data in the vector has to be accessed.For example
+  The second function of the Vector tag is to describe how the data in the vector has to be accessed.For example
  * how do we get the pointer to the first element, the size, or how to access the MPI communicator? This is described in Derived Tags from the fundamental
 Tags, e.g. the \c ThrustVectorTag.
  * @note in any case we assume that the class has a default constructor, is copyable/assignable and has a \c size and a \c swap member function
@@ -29,7 +26,6 @@ Tags, e.g. the \c ThrustVectorTag.
  * @see \ref dispatch
  */
 struct AnyVectorTag : public AnyMatrixTag{};
-///@}
 
 /**
  * @brief Indicate a contiguous chunk of shared memory

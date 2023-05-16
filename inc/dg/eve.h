@@ -14,7 +14,7 @@
 namespace dg
 {
 
-/*! @brief The Eigen-Value-Estimator (EVE) finds largest Eigenvalue of \f[ M^{-1}Ax = \lambda_\max x\f]
+/*! @brief The Eigen-Value-Estimator (EVE) finds largest Eigenvalue of \f$ M^{-1}Ax = \lambda_\max x\f$
  *
  * Estimate largest Eigenvalue
  * of a symmetric positive definite matrix \f$ A\f$ with possible preconditioner \f$ M^{-1}\f$ using the conjugate gradient (CG) method.
@@ -39,7 +39,7 @@ class EVE
     using container_type = ContainerType;
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
-    EVE() {}
+    EVE() = default;
     ///@copydoc construct()
     EVE( const ContainerType& copyable, unsigned max_iter = 100):r( copyable), p( r), ap( r), m_max_iter( max_iter) {}
     /**

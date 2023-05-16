@@ -1,4 +1,6 @@
 #pragma once
+
+#include <boost/math/special_functions.hpp> // has to be included before lapack in certain versions
 #include <cusp/dia_matrix.h>
 #include <cusp/coo_matrix.h>
 #include <cusp/lapack/lapack.h>

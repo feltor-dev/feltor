@@ -196,7 +196,7 @@ inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
 
 @code{.cpp}
 dg::DVec two( 100,2);
-dg::blas1::plus( two,  2. )); // result[i] = 4.
+dg::blas1::plus( two,  3. )); // two[i] = 5.
 @endcode
  * @param alpha Scalar
  * @param x (read/write) x
@@ -515,7 +515,7 @@ dg::blas1::transform( two, result, dg::EXP<double>());
  * @param x ContainerType x may alias y
  * @param y (write-only) ContainerType y contains result, may alias x
  * @param op unary %Operator to use on every element
- * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
+ * @tparam UnaryOp Functor with signature: <tt> value_type operator()( value_type) </tt>
  * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType

@@ -140,7 +140,7 @@ int main()
         std::cout << "#####df polarization charge without nested inversion (commute = false)\n";
         std::cout << "df-notnested-nocommute:" << std::endl;
         dg::Elliptic< dg::CartesianGrid2d, Matrix, Container > lapperp(grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered);
-        dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
+        dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  alpha, {grid2d,grid2d.bcx(),grid2d.bcy(), dg::centered});
 
         dg::blas1::scal(x,0.0);
 
@@ -216,7 +216,7 @@ int main()
         std::cout << "ffO2-notnested-nocommute:" << std::endl;
         dg::Elliptic< dg::CartesianGrid2d, Matrix, Container > lapperp(grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered);
         lapperp.set_chi( chi);
-        dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  grid2d, grid2d.bcx(), grid2d.bcy(), alpha, dg::centered, 1.0);
+        dg::Helmholtz< dg::CartesianGrid2d, Matrix, Container > gamma0inv(  alpha,{grid2d, grid2d.bcx(), grid2d.bcy(), dg::centered, 1.0});
         dg::blas1::scal(x_gamma, 0.0);
         dg::blas1::scal(temp, 0.0);
         dg::blas1::scal(x, 0.0);
@@ -281,7 +281,7 @@ int main()
 //             multi_tensorelliptic[u].set_chi( multi_chi[u]);
 //             multi_tensorelliptic[u].set_iota( multi_chi[u]);
 //         }
-//         dg::Helmholtz< dg::CartesianGrid2d,  Matrix, Container > gamma1inv(grid2d, grid2d.bcx(),grid2d.bcy(), beta, dg::centered, 1.);
+//         dg::Helmholtz< dg::CartesianGrid2d,  Matrix, Container > gamma1inv(beta, {grid2d, grid2d.bcx(),grid2d.bcy(), dg::centered, 1.});
 //         dg::blas1::scal(x, 0.0);
 //         eps_pol_vec = {eps_pol, 0.1*eps_pol, 0.1*eps_pol};
 //

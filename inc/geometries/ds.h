@@ -429,8 +429,9 @@ struct DS
     * @copydoc hide_ds_parameters4
     */
     void forward( double alpha, const container& f, double beta, container& g){
+        m_fa(zeroForw, f, m_tempO);
         m_fa(einsPlus, f, m_tempP);
-        ds_forward( m_fa, alpha, f, m_tempP, beta, g);
+        ds_forward( m_fa, alpha, m_tempO, m_tempP, beta, g);
     }
     /**
     * @brief 2nd order forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -439,9 +440,10 @@ struct DS
     * @copydoc hide_ds_parameters4
     */
     void forward2( double alpha, const container& f, double beta, container& g){
+        m_fa(zeroForw, f, m_tempO);
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsPlus, m_tempP, m_tempM);
-        ds_forward2( m_fa, alpha, f, m_tempP, m_tempM, beta, g);
+        ds_forward2( m_fa, alpha, m_tempO, m_tempP, m_tempM, beta, g);
     }
     /**
     * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -451,7 +453,8 @@ struct DS
     */
     void backward( double alpha, const container& f, double beta, container& g){
         m_fa(einsMinus, f, m_tempM);
-        ds_backward( m_fa, alpha, m_tempM, f, beta, g);
+        m_fa(zeroForw, f, m_tempO);
+        ds_backward( m_fa, alpha, m_tempM, m_tempO, beta, g);
     }
     /**
     * @brief 2nd order backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -462,7 +465,8 @@ struct DS
     void backward2( double alpha, const container& f, double beta, container& g){
         m_fa(einsMinus, f, m_tempM);
         m_fa(einsMinus, m_tempM, m_tempP);
-        ds_backward2( m_fa, alpha, m_tempP, m_tempM, f, beta, g);
+        m_fa(zeroForw, f, m_tempO);
+        ds_backward2( m_fa, alpha, m_tempP, m_tempM, m_tempO, beta, g);
     }
     /**
     * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
@@ -523,14 +527,16 @@ struct DS
     ///@copydoc hide_ds_attention
     void divForward( double alpha, const container& f, double beta, container& g){
         m_fa(einsPlus,  f, m_tempP);
-        ds_divForward( m_fa, alpha, f, m_tempP, beta, g);
+        m_fa(zeroForw,  f, m_tempO);
+        ds_divForward( m_fa, alpha, m_tempO, m_tempP, beta, g);
     }
     ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
     ///@copydoc hide_ds_attention
     void divBackward( double alpha, const container& f, double beta, container& g){
         m_fa(einsMinus,  f, m_tempM);
-        ds_divBackward( m_fa, alpha, m_tempM, f, beta, g);
+        m_fa(zeroForw,  f, m_tempO);
+        ds_divBackward( m_fa, alpha, m_tempM, m_tempO, beta, g);
     }
     ///@brief centered divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
@@ -627,7 +633,8 @@ struct DS
     void dss( double alpha, const container& f, double beta, container& g){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dss_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+        m_fa(zeroForw,  f, m_tempO);
+        dss_centered( m_fa, alpha, m_tempM, m_tempO, m_tempP, beta, g);
     }
     /// Same as \c dg::geo::dss_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void dss_bc_along_field(
@@ -635,16 +642,18 @@ struct DS
         std::array<double,2> boundary_value = {0,0}){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
+        m_fa(zeroForw,  f, m_tempO);
+        assign_bc_along_field_2nd( m_fa, m_tempM, m_tempO, m_tempP, m_tempM, m_tempP,
                 bound, boundary_value);
-        dss_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+        dss_centered( m_fa, alpha, m_tempM, m_tempO, m_tempP, beta, g);
     }
     /// Same as \c dg::geo::dssd_centered
     void dssd( double alpha, const container& f, double
             beta, container& g){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        dssd_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
+        m_fa(zeroForw,  f, m_tempO);
+        dssd_centered( m_fa, alpha, m_tempM, m_tempO, m_tempP, beta, g);
     }
     /// Same as \c dg::geo::dssd_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void dssd_bc_along_field( double alpha, const
@@ -652,7 +661,8 @@ struct DS
             std::array<double,2> boundary_value = {0,0}){
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
-        assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
+        m_fa(zeroForw,  f, m_tempO);
+        assign_bc_along_field_2nd( m_fa, m_tempM, m_tempO, m_tempP, m_tempM, m_tempP,
                 bound, boundary_value);
         dssd_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
@@ -681,7 +691,7 @@ struct DS
     const FA& fieldaligned()const{return m_fa;}
     private:
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
-    container m_tempP, m_tempM;
+    container m_tempP, m_tempO, m_tempM;
     Matrix m_jumpX, m_jumpY;
     double m_jfactor = 1.;
 };
@@ -694,7 +704,7 @@ DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa): m_fa
 {
     dg::blas2::transfer( dg::create::jumpX( fa.grid(), fa.bcx()), m_jumpX);
     dg::blas2::transfer( dg::create::jumpY( fa.grid(), fa.bcy()), m_jumpY);
-    m_tempP = fa.sqrtG(), m_tempM = m_tempP;
+    m_tempP = fa.sqrtG(), m_tempM = m_tempO = m_tempP;
 }
 
 template<class G, class I, class M, class container>
@@ -728,7 +738,7 @@ void DS<G,I,M,container>::symv( double alpha, const container& f, double beta, c
 {
     dssd( alpha, f, beta, dsTdsf);
     //     add jump terms
-    if( m_jfactor !=0)
+    if( m_jfactor !=0 && m_fa.method() == "dg")
     {
         dg::blas2::symv( -m_jfactor*alpha, m_jumpX, f, 1., dsTdsf);
         dg::blas2::symv( -m_jfactor*alpha, m_jumpY, f, 1., dsTdsf);
@@ -991,8 +1001,7 @@ template<class FieldAligned, class container>
 void ds_average( const FieldAligned& fa, double alpha,
         const container& fm, const container& fp, double beta, container& g)
 {
-    double delta = fa.deltaPhi();
-    dg::blas1::subroutine( [alpha,beta,delta]DG_DEVICE( double& g, double fm, double fp
+    dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& g, double fm, double fp
                 ){
             g = alpha*(fp+fm)/2. + beta*g;
             }, g, fm, fp);

@@ -5,6 +5,7 @@
 #include "grid.h"
 #include "interpolation.h"
 #include "weights.h"
+#include "fem.h"
 
 /*!@file
 
@@ -55,45 +56,6 @@ T lcm( T a, T b)
 namespace create{
 
 /**
- * @brief Create the transpose of the interpolation matrix from new to old
- *
- * Does the equivalent of the following
- * @code
-   Matrix A = dg::create::interpolation( g_old, g_new);
-   return A.transpose();
-   @endcode
- * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
- * @param g_new The new grid
- * @param g_old The old grid
- *
- * @return transposed interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
-{
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
-///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
-template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
-{
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
-///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
-template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
-{
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
-
-/**
  * @brief Create a diagonal matrix
  *
  * This matrix is given by \f$ D_{ij} = d_i \delta_{ij}\f$
@@ -129,23 +91,27 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
  *
  * @param g_new The new (coarse) grid
  * @param g_old The old (fine) grid
+ * @copydoc hide_method
  *
  * @return Projection matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  * @note also check \c dg::create::transformation, which is the more general solution
  * @attention Projection only works if the number of cells in the
  * fine grid is a multiple of the number of cells in the coarse grid
+ * and if the number of polynomial coefficients is lower or the same in the new grid
  */
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old, std::string method = "dg")
 {
-    if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
+    if( g_old.N() % g_new.N() != 0) std::cerr << "# ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
+    if( g_old.n() < g_new.n()) std::cerr << "# ATTENTION: you project between incompatible grids!! old n: "<<g_old.n()<<" new n: "<<g_new.n()<<"\n";
     //form the adjoint
     cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
         dg::create::diagonal( dg::create::weights( g_old));
     cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
         dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new, method), A;
+    cusp::transpose( temp, A);
     //!!! cusp::multiply removes explicit zeros in the output
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
@@ -154,40 +120,23 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
 }
 
 
-///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&,std::string)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old, std::string method = "dg")
 {
-    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
-    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
-    //form the adjoint
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
-        dg::create::diagonal( dg::create::weights( g_old));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
-        dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
-    return A;
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx(), method);
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy(), method);
+    return dg::tensorproduct( projectY, projectX);
 }
 
-///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&,std::string)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old, std::string method = "dg")
 {
-    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
-    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
-    //form the adjoint
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =
-        dg::create::diagonal( dg::create::weights( g_old));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc =
-        dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
-    return A;
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectX = projection( g_new.gx(), g_old.gx(), method);
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectY = projection( g_new.gy(), g_old.gy(), method);
+    cusp::csr_matrix<int, real_type, cusp::host_memory> projectZ = projection( g_new.gz(), g_old.gz(), method);
+    return dg::tensorproduct( projectZ, dg::tensorproduct( projectY, projectX));
 }
 
 /**
@@ -248,6 +197,96 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const RealG
     Y.sort_by_row_and_column();
     return Y;
 }
+///@}
+///@addtogroup scatter
+///@{
+
+/**
+ * @brief Create a matrix \f$ PI\f$ that projects values to an equidistant grid
+ *
+ * Same as <tt>dg::create::transformation( g_equidist, g)</tt>
+ * @param g The grid on which to operate
+ *
+ * @return transformation matrix (block diagonal)
+ * @sa dg::create::backscatter, dg::create::transformation
+ */
+template<class real_type>
+dg::IHMatrix_t<real_type> backproject( const RealGrid1d<real_type>& g)
+{
+    unsigned n=g.n();
+    dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
+    dg::RealGrid1d<real_type> g_new( -1., 1., 1, n);
+    auto block = dg::create::transformation( g_new, g_old);
+    dg::Operator<real_type> op(n, 0.);
+    for( unsigned i=0; i<block.num_entries; i++)
+        op( block.row_indices[i], block.column_indices[i]) = block.values[i];
+
+    return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), op);
+}
+
+///@copydoc backproject(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> backproject( const aRealTopology2d<real_type>& g)
+{
+    auto transformX = backproject( g.gx());
+    auto transformY = backproject( g.gy());
+    return dg::tensorproduct( transformY, transformX);
+}
+
+///@copydoc backproject(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> backproject( const aRealTopology3d<real_type>& g)
+{
+    auto transformX = backproject( g.gx());
+    auto transformY = backproject( g.gy());
+    auto transformZ = backproject( g.gz());
+    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
+}
+
+/**
+ * @brief Create a matrix \f$ (PI)^{-1}\f$ that transforms values from an equidistant grid back to a dg grid
+ *
+ * Same as <tt>dg::create::transformation( g, g_equidist)</tt>
+ * @note The inverse of the backproject matrix is **not** its adjoint!
+ * @param g The grid on which to operate
+ *
+ * @return transformation matrix (block diagonal)
+ * @sa dg::create::inv_backscatter dg::create::backproject
+ */
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backproject( const RealGrid1d<real_type>& g)
+{
+    unsigned n=g.n();
+    dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
+    dg::RealGrid1d<real_type> g_new( -1., 1., 1, n);
+    auto block = dg::create::transformation( g_new, g_old);
+    dg::Operator<real_type> op(n, 0.);
+    for( unsigned i=0; i<block.num_entries; i++)
+        op( block.row_indices[i], block.column_indices[i]) = block.values[i];
+
+    return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), dg::invert(op));
+}
+
+///@copydoc inv_backproject(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology2d<real_type>& g)
+{
+    //create equidistant backward transformation
+    auto transformX = inv_backproject( g.gx());
+    auto transformY = inv_backproject( g.gy());
+    return dg::tensorproduct( transformY, transformX);
+}
+
+///@copydoc inv_backproject(const RealGrid1d<real_type>&)
+template<class real_type>
+dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology3d<real_type>& g)
+{
+    auto transformX = inv_backproject( g.gx());
+    auto transformY = inv_backproject( g.gy());
+    auto transformZ = inv_backproject( g.gz());
+    return dg::tensorproduct( transformZ, dg::tensorproduct(transformY, transformX));
+}
+
 ///@}
 
 }//namespace create

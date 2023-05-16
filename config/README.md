@@ -8,7 +8,16 @@ feltor/config/*.mk                  #overwrite variables if machine is recognize
 feltor/config/devices/devices.mk    #recombine variables depending on device
 ```
 
-Your machine specific config file (e.g. feltor/config/your-machine.mk) should have an include guard and overwrite or add to any of the following variables:
+You can create your own machine specific config file e.g. `feltor/config/your-machine.mk` **Please do not commit unique machine specific config files**
+Through the above construct the config file will be included after `default.mk` and before `devices.mk`
+To avoid inclusion on machines other than your own the file should have an include guard; something like
+```shell
+ifeq ($(strip $(shell domainname)),leo3-domain)
+# ...
+endif
+```
+
+Within the file you can overwrite or add to any of the following variables:
 
 | variable  | default value                | description                                                  |
 | :-------: | :--------------------------- | :----------------------------------------------------------- |
@@ -62,4 +71,5 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
  - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
  - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
  - The library headers are compliant with the c++14 standard but we reserve the right to upgrade that in future updates
+ - For a mac, we need X-code to compile. At the same time, we need to include the paths to the json, hdf5 and netcdf libraries. We work without GLFW, as it gives problems.  As it is now, the libraries are installed with homebrew, one of the prefered installers for mac. If other programs are used, it is neccessary to include the paths to the libraries used. We compile with g++, but other compilers might also work (like clang++).
 

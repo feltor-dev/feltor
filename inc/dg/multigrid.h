@@ -504,13 +504,13 @@ struct MultigridCG2d
     using container_type = Container;
     using value_type = get_value_type<Container>;
     ///@brief Allocate nothing, Call \c construct method before usage
-    MultigridCG2d(){}
+    MultigridCG2d() = default;
     /**
      * @brief Construct the grids and the interpolation/projection operators
      *
      * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
      * @param stages number of grids in total (The second grid contains half the points of the original grids,
-     *   The third grid contains half of the second grid ...). Must be >= 1
+     *   The third grid contains half of the second grid ...). Must be >= 1. A good number to start is 3.
      * @param ps parameters necessary for \c dg::construct to construct a \c Container from a \c dg::HVec
     */
     template<class ...ContainerParams>
@@ -606,7 +606,7 @@ struct MultigridCG2d
      * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon(
      * ||b|| + 1) \f$. If needed (and it is recommended to tune these values)
      * the accuracy can be set for each stage separately. Per default the same
-     * accuracy is used at all stages.
+     * accuracy is used at all stages but \f$ \epsilon_i = 0.5\epsilon_0\f$ for i > 0 may be a good value as well.
      * @return the number of iterations in each of the stages beginning with the finest grid
      * @note the convergence test on the coarse grids is only evaluated every
      * 10th iteration. This effectively saves one dot product per iteration.
@@ -614,16 +614,16 @@ struct MultigridCG2d
      * @copydoc hide_matrix
      * @copydoc hide_ContainerType
     */
-	template<class MatrixType, class ContainerType0, class ContainerType1>
+    template<class MatrixType, class ContainerType0, class ContainerType1>
     std::vector<unsigned> solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, value_type eps)
     {
         std::vector<value_type> v_eps( m_stages, eps);
-		for( unsigned u=m_stages-1; u>0; u--)
+        for( unsigned u=m_stages-1; u>0; u--)
             v_eps[u] = eps;
         return solve( ops, x, b, v_eps);
     }
     ///@copydoc solve()
-	template<class MatrixType, class ContainerType0, class ContainerType1>
+    template<class MatrixType, class ContainerType0, class ContainerType1>
     std::vector<unsigned> solve( std::vector<MatrixType>& ops, ContainerType0&  x, const ContainerType1& b, std::vector<value_type> eps)
     {
 #ifdef MPI_VERSION

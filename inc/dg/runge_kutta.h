@@ -75,7 +75,7 @@ void gemm(
  * functor may \b not override, and the third is the output, i.e. y' = E(t, y)
  * translates to E(t, y, y').
  * The two ContainerType arguments never alias each other in calls to the functor.
- * The operator can throw to indicate failure. Exceptions should derive from
+ * The functor can throw to indicate failure. Exceptions should derive from
  * \c std::exception.
  */
 /** @class hide_implicit_rhs
@@ -86,7 +86,7 @@ void gemm(
  * functor may \b not override, and the third is the output, i.e. y' = I(t, y)
  * translates to I(t, y, y').
  * The two ContainerType arguments never alias each other in calls to the functor.
- * The operator can throw to indicate failure. Exceptions should derive from
+ * The functor can throw to indicate failure. Exceptions should derive from
  * \c std::exception.
  */
 /** @class hide_solver
@@ -96,7 +96,7 @@ void gemm(
  * Alpha is always positive and non-zero.
  * Signature
  * <tt> void operator()( value_type alpha, value_type t, ContainerType& y, const ContainerType& ys); </tt>
- * The operator can throw. Any Exception should derive from \c std::exception.
+ * The functor can throw. Any Exception should derive from \c std::exception.
   */
 /*! @class hide_ode
  * @tparam ODE The ExplicitRHS or tuple type that corresponds to what is
@@ -105,12 +105,10 @@ void gemm(
  */
  /** @class hide_limiter
   * @tparam Limiter The filter or limiter class to use in connection with the
-  * time-stepper has a member function \c apply
-  * of signature <tt> void apply( const ContainerType&, ContainerType&)</tt>
-  * The first argument is the input vector, which the functor may \b not
-  * override, and the second is the output,
-  * i.e. y' = L( y) translates to L.apply( y, y').
-  * The two ContainerType arguments never alias each other in calls to the functor.
+  * time-stepper has a member function \c operator()
+  * of signature <tt> void operator()( ContainerType&)</tt>
+  * The argument is the input vector that the function has to override
+  * i.e. y = L( y) translates to L( y).
   */
 
 /**
@@ -120,18 +118,19 @@ void gemm(
 struct IdentityFilter
 {
     /**
-     * @brief copy in to out
+     * @brief Do nothing
      *
      * @copydoc hide_ContainerType
-     * @param in (input)
-     * @param out (copied version of in)
+     * @param inout (input-output) remains unchanged
      */
-    template<class ContainerType0, class ContainerType1>
-    void apply( const ContainerType0& in, ContainerType1& out) const{
-        dg::blas1::copy( in, out);
-    }
-
+    template<class ContainerType1>
+    void operator()( ContainerType1& inout) const{ }
 };
+///@cond
+template<class ContainerType>
+struct FilteredERKStep;
+///@endcond
+//Should we try if filters inside RHS are equally usable?
 
 ///@addtogroup time
 ///@{
@@ -139,13 +138,14 @@ struct IdentityFilter
 
 /**
 * @brief Embedded Runge Kutta explicit time-step with error estimate
-* \f[
+* \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
-    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j \\
+    \delta^{n+1} = u^{n+1} - \tilde u^{n+1} = \Delta t\sum_{j=1}^s (b_j - \tilde b_j) k_j
  \end{align}
-\f]
+\f$
 
 The method is defined by its (extended explicit) ButcherTableau, given by
 the coefficients \c a, \c b and \c c,  and \c s is the number
@@ -163,8 +163,8 @@ struct ERKStep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    ERKStep() { m_k.resize(1); }
+    ///@brief No memory allocation
+    ERKStep() = default;
     /**
     * @brief Reserve internal workspace for the integration
     *
@@ -174,14 +174,8 @@ struct ERKStep
      the \c step method can only be called with vectors of the same size)
     */
     ERKStep( ConvertsToButcherTableau<value_type> tableau, const ContainerType&
-        copyable): m_rk(tableau), m_k(m_rk.num_stages(), copyable)
+        copyable): m_ferk(tableau, copyable)
     {
-        m_rkb.resize(m_k.size()), m_rkd.resize(m_k.size());
-        for( unsigned i=0; i<m_k.size(); i++)
-        {
-            m_rkb[i] = m_rk.b(i);
-            m_rkd[i] = m_rk.d(i);
-        }
     }
 
     ///@copydoc hide_construct
@@ -192,12 +186,12 @@ struct ERKStep
         *this = ERKStep( std::forward<Params>( ps)...);
     }
     ///@copydoc hide_copyable
-    const ContainerType& copyable()const{ return m_k[0];}
+    const ContainerType& copyable()const{ return m_ferk.copyable();}
 
     ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
-    void ignore_fsal(){ m_ignore_fsal = true;}
+    void ignore_fsal(){ m_ferk.ignore_fsal();}
     ///All subsequent calls to \c step method will enable the check for the first same as last property
-    void enable_fsal(){ m_ignore_fsal = false;}
+    void enable_fsal(){ m_ferk.enable_fsal();}
 
     /// @brief Advance one step with error estimate
     ///@copydetails step(ExplicitRHS&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
@@ -205,7 +199,8 @@ struct ERKStep
     template<class ExplicitRHS>
     void step( ExplicitRHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
     {
-        step ( rhs, t0, u0, t1, u1, dt, delta, true);
+        dg::IdentityFilter id;
+        m_ferk.step( std::tie( rhs, id), t0, u0, t1, u1, dt, delta);
     }
     /**
     * @brief Advance one step ignoring error estimate and embedded method
@@ -237,10 +232,100 @@ struct ERKStep
     void step( ExplicitRHS& rhs, value_type t0, const ContainerType& u0, value_type&
             t1, ContainerType& u1, value_type dt)
     {
-        if( !m_allocated)
+        dg::IdentityFilter id;
+        m_ferk.step( std::tie( rhs, id), t0, u0, t1, u1, dt);
+    }
+    ///global order of the method given by the current Butcher Tableau
+    unsigned order() const {
+        return m_ferk.order();
+    }
+    ///global order of the embedding given by the current Butcher Tableau
+    unsigned embedded_order() const {
+        return m_ferk.embedded_order();
+    }
+    ///number of stages of the method given by the current Butcher Tableau
+    unsigned num_stages() const{
+        return m_ferk.num_stages();
+    }
+  private:
+    FilteredERKStep<ContainerType> m_ferk;
+};
+
+/**
+* @brief EXPERIMENTAL: Filtered Embedded Runge Kutta explicit time-step with error estimate
+* \f$
+ \begin{align}
+    k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right]\right) \\
+    u^{n+1} = \Lambda\Pi\left[u^{n} + \Delta t\sum_{j=1}^s b_j k_j\right] \\
+    \delta^{n+1} = \Delta t\sum_{j=1}^s (\tilde b_j  - b_j) k_j
+ \end{align}
+\f$
+
+@note
+We compute \f$ \delta^{n+1} \f$ with the
+unfiltered sum since with non-linear filters in the filtered sum, some error
+components might not vanish and the timestepper crash. No filter is applied for
+\f$ k_0\f$ since \f$ u^n\f$ is already filtered.
+Even though it may look like it the filter **cannot** be absorbed into the
+right hand side function f analytically. Also, the formulation is **not** equivalent
+to that of the \c dg::ShuOsher class.
+
+@copydetails ERKStep
+*/
+template< class ContainerType>
+struct FilteredERKStep
+{
+    using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
+    using container_type = ContainerType; //!< the type of the vector class in use
+    ///@copydoc ERKStep::ERKStep()
+    FilteredERKStep() { m_k.resize(1); }
+    ///@copydoc ERKStep::ERKStep(ConvertsToButcherTableau<value_type>,const ContainerType&)
+    FilteredERKStep( ConvertsToButcherTableau<value_type> tableau, const
+            ContainerType& copyable): m_rk(tableau), m_k(m_rk.num_stages(),
+                copyable)
+    {
+        m_rkb.resize(m_k.size()), m_rkd.resize( m_k.size());
+        for( unsigned i=0; i<m_k.size(); i++)
+        {
+            m_rkb[i] = m_rk.b(i);
+            m_rkd[i] = m_rk.d(i);
+        }
+    }
+
+    ///@copydoc hide_construct
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = FilteredERKStep( std::forward<Params>( ps)...);
+    }
+    ///@copydoc hide_copyable
+    const ContainerType& copyable()const{ return m_k[0];}
+
+    ///All subsequent calls to \c step method will ignore the first same as last property (useful if you want to implement an operator splitting)
+    void ignore_fsal(){ m_ignore_fsal = true;}
+    ///All subsequent calls to \c step method will enable the check for the first same as last property
+    void enable_fsal(){ m_ignore_fsal = false;}
+
+    /// @brief Advance one step with error estimate
+    ///@copydetails ERKStep::step(ExplicitRHS&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
+    ///@param delta Contains error estimate (u1 - tilde u1) on return (must have equal size as \c u0)
+    ///@copydoc hide_limiter
+    template<class ExplicitRHS, class Limiter>
+    void step( const std::tuple<ExplicitRHS,Limiter>& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta)
+    {
+        step ( rhs, t0, u0, t1, u1, dt, delta, true);
+    }
+    ///@copydoc ERKStep::step(ExplicitRHS&,value_type,const ContainerType&,value_type&,ContainerType&,value_type)
+    ///@copydoc hide_limiter
+    template<class ExplicitRHS, class Limiter>
+    void step( const std::tuple<ExplicitRHS, Limiter>& rhs, value_type t0, const ContainerType& u0, value_type&
+            t1, ContainerType& u1, value_type dt)
+    {
+        if( !m_tmp_allocated)
         {
             dg::assign( m_k[0], m_tmp);
-            m_allocated = true;
+            m_tmp_allocated = true;
         }
         step ( rhs, t0, u0, t1, u1, dt, m_tmp, false);
     }
@@ -257,28 +342,29 @@ struct ERKStep
         return m_rk.num_stages();
     }
   private:
-    template<class ExplicitRHS>
-    void step( ExplicitRHS& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool);
+    template<class ExplicitRHS, class Limiter>
+    void step( const std::tuple<ExplicitRHS, Limiter>& rhs, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool);
     ButcherTableau<value_type> m_rk;
     std::vector<value_type> m_rkb, m_rkd;
     std::vector<ContainerType> m_k;
     value_type m_t1 = 1e300;//remember the last timestep at which ERK is called
     bool m_ignore_fsal = false;
     ContainerType m_tmp; //  only conditionally allocated
-    bool m_allocated = false;
+    bool m_tmp_allocated = false;
 };
 
 ///@cond
+
 template< class ContainerType>
-template< class ExplicitRHS>
-void ERKStep<ContainerType>::step( ExplicitRHS& f, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
+template<class ExplicitRHS, class Limiter>
+void FilteredERKStep<ContainerType>::step( const std::tuple<ExplicitRHS, Limiter>& ode, value_type t0, const ContainerType& u0, value_type& t1, ContainerType& u1, value_type dt, ContainerType& delta, bool compute_delta)
 {
     unsigned s = m_rk.num_stages();
     std::vector<const ContainerType*> k_ptrs = dg::asPointers( m_k);
     //0 stage: probe
     value_type tu = t0;
     if( t0 != m_t1 || m_ignore_fsal)
-        f(t0, u0, m_k[0]); //freshly compute k_0
+        std::get<0>(ode)(t0, u0, m_k[0]); //freshly compute k_0
     //else take from last call
     for ( unsigned i=1; i<s; i++)
     {
@@ -290,7 +376,8 @@ void ERKStep<ContainerType>::step( ExplicitRHS& f, value_type t0, const Containe
         dg::blas1::copy( u0, delta); // can't use u1 here cause u0 can alias
         dg::blas2::gemv( dt, dg::asDenseMatrix( k_ptrs, i), rka, 1., delta);
 
-        f( tu, delta, m_k[i]);
+        std::get<1>(ode)( delta);
+        std::get<0>(ode)( tu, delta, m_k[i]);
     }
     //Now add everything up to get solution and error estimate
     dg::blas1::copy( u0, u1);
@@ -299,10 +386,11 @@ void ERKStep<ContainerType>::step( ExplicitRHS& f, value_type t0, const Containe
             {1.,0.}, {&u1, &delta});
     else
         blas2::gemv( dt, dg::asDenseMatrix(k_ptrs), m_rkb, 1., u1);
+    std::get<1>(ode)( u1);
     //make sure (t1,u1) is the last call to f
     m_t1 = t1 = t0 + dt;
     if(!m_rk.isFsal() )
-        f(t1,u1,m_k[0]);
+        std::get<0>(ode)( t1, u1, m_k[0]);
     else
     {
         using std::swap;
@@ -341,7 +429,7 @@ struct ARKStep
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
+    ///@copydoc ERKStep::ERKStep()
     ARKStep(){ m_kI.resize(1); }
     /*!@brief Construct with given name
      * @param name Currently, one of "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" or "ARK-8-4-5"
@@ -507,13 +595,14 @@ void ARKStep<ContainerType>::step( const std::tuple<Explicit,Implicit,Solver>& o
 
 /*!
  * @brief Embedded diagonally implicit Runge Kutta time-step with error estimate
-* \f[
+* \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
-    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j
+    \tilde u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s \tilde b_j k_j \\
+    \delta^{n+1} = u^{n+1} - \tilde u^{n+1} = \Delta t\sum_{j=1}^s (b_j-\tilde b_j) k_j
  \end{align}
-\f]
+\f$
  *
  * You can provide your own coefficients or use one of the methods
  * in the following table:
@@ -527,7 +616,7 @@ struct DIRKStep
     //MW Dirk methods cannot have stage order greater than 1
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
+    ///@copydoc ERKStep::ERKStep()
     DIRKStep(){ m_kI.resize(1); }
 
     /*!@brief Construct with a diagonally implicit Butcher Tableau
@@ -679,18 +768,18 @@ void DIRKStep<ContainerType>::step( const std::tuple<ImplicitRHS,Solver>& ode,  
 
 /**
 * @brief Runge-Kutta fixed-step explicit time-integration
-* \f[
+* \f$
  \begin{align}
-    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s-1} a_{ij} k_j\right) \\
+    k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j
  \end{align}
-\f]
+\f$
 
 The method is defined by its (explicit) ButcherTableau, given by
 the coefficients \c a, \c b and \c c,  and \c s is the number
 of stages.
 
-You can provide your own coefficients or use one of our predefined methods:
+You can provide your own coefficients or use one of our predefined methods (including the ones in Shu-Osher form):
 @copydoc hide_explicit_butcher_tableaus
 The following code snippet demonstrates how to use the class for the integration of
 the harmonic oscillator:
@@ -705,16 +794,29 @@ template<class ContainerType>
 using RungeKutta = ERKStep<ContainerType>;
 
 /**
+* @brief Filtered Runge-Kutta fixed-step explicit time-integration
+* \f$
+ \begin{align}
+    k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right]\right) \\
+    u^{n+1} = \Lambda\Pi\left[u^{n} + \Delta t\sum_{j=1}^s b_j k_j\right]
+ \end{align}
+\f$
+@copydetails RungeKutta
+*/
+template<class ContainerType>
+using FilteredRungeKutta = FilteredERKStep<ContainerType>;
+
+/**
 * @brief Shu-Osher fixed-step explicit time-integration with Slope Limiter / Filter
-* \f[
+* \f$
  \begin{align}
     u_0 &= u_n \\
     u_i &= \Lambda\Pi \left(\sum_{j=0}^{i-1}\left[ \alpha_{ij} u_j + \Delta t \beta_{ij} f( t_j, u_j)\right]\right)\\
     u^{n+1} &= u_s
  \end{align}
-\f]
+\f$
 
-where \f$ \Lambda\Pi\f$ is the limiter, \c i=1,...,s and \c s is the number of stages (i.e. the number of times the right hand side is evaluated.
+where \f$ \Lambda\Pi\f$ is the limiter, \f$ i\in [1,s]\f$ and \c s is the number of stages (i.e. the number of times the right hand side is evaluated.
 
 The method is defined by its (explicit) ShuOsherTableau, given by
 the coefficients \c alpha and \c beta,  and \c s is the number
@@ -741,8 +843,8 @@ struct ShuOsher
 {
     using value_type = get_value_type<ContainerType>;//!< the value type of the time variable (float or double)
     using container_type = ContainerType; //!< the type of the vector class in use
-    ///@copydoc RungeKutta::RungeKutta()
-    ShuOsher(){}
+    ///@copydoc ERKStep::ERKStep()
+    ShuOsher(){m_u.resize(1);}
     /**
     * @brief Reserve internal workspace for the integration
     *
@@ -751,7 +853,7 @@ struct ShuOsher
      it does not matter what values \c copyable contains, but its size is important;
      the \c step method can only be called with vectors of the same size)
     */
-    ShuOsher( dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable): m_t( tableau), m_u(  m_t.num_stages(), copyable), m_k(m_u), m_temp(copyable)
+    ShuOsher( dg::ConvertsToShuOsherTableau<value_type> tableau, const ContainerType& copyable): m_t( tableau), m_u(  m_t.num_stages(), copyable), m_k(m_u)
         { }
     ///@copydoc hide_construct
     template<class ...Params>
@@ -761,7 +863,7 @@ struct ShuOsher
         *this = ShuOsher( std::forward<Params>( ps)...);
     }
     ///@copydoc hide_copyable
-    const ContainerType& copyable()const{ return m_temp;}
+    const ContainerType& copyable()const{ return m_u[0];}
 
     /**
     * @brief Advance one step
@@ -782,35 +884,26 @@ struct ShuOsher
         unsigned s = m_t.num_stages();
         std::vector<value_type> ts( m_t.num_stages()+1);
         ts[0] = t0;
+        dg::blas1::copy(u0, m_u[0]);
         if( t0 != m_t1 ) //this is the first time we call step
-        {
-            std::get<1>(ode).apply( u0, m_u[0]);
             std::get<0>(ode)(ts[0], m_u[0], m_k[0]); //freshly compute k_0
-        }
-        else
-            dg::blas1::copy(u0, m_u[0]);
         for( unsigned i=1; i<=s; i++)
         {
-
-            dg::blas1::axpbypgz( m_t.alpha(i-1,0), m_u[0], dt*m_t.beta(i-1,0), m_k[0], 0., m_temp);
+            dg::blas1::axpbypgz( m_t.alpha(i-1,0), m_u[0], dt*m_t.beta(i-1,0), m_k[0], 0., i==s ? u1 : m_u[i]);
             ts[i] = m_t.alpha(i-1,0)*ts[0] + dt*m_t.beta(i-1,0);
             for( unsigned j=1; j<i; j++)
             {
                 //about the i-1: it is unclear to me how the ShuOsher tableau makes implicit schemes
-                dg::blas1::axpbypgz( m_t.alpha(i-1,j), m_u[j], dt*m_t.beta(i-1,j), m_k[j], 1., m_temp);
+                dg::blas1::axpbypgz( m_t.alpha(i-1,j), m_u[j], dt*m_t.beta(i-1,j), m_k[j], 1., i==s ? u1 : m_u[i]);
                 ts[i] += m_t.alpha(i-1,j)*ts[j] + dt*m_t.beta(i-1,j);
 
             }
+            std::get<1>(ode)( i==s ? u1 : m_u[i]);
             if(i!=s)
-            {
-                std::get<1>(ode).apply( m_temp, m_u[i]);
                 std::get<0>(ode)(ts[i], m_u[i], m_k[i]);
-            }
-            else{
-                std::get<1>(ode).apply( m_temp, u1);
+            else
                 //make sure (t1,u1) is the last call to f
                 std::get<0>(ode)(ts[i], u1, m_k[0]);
-            }
         }
         m_t1 = t1 = ts[s];
     }
@@ -825,17 +918,16 @@ struct ShuOsher
   private:
     ShuOsherTableau<value_type> m_t;
     std::vector<ContainerType> m_u, m_k;
-    ContainerType m_temp;
     value_type m_t1 = 1e300;
 };
 /**
 * @brief Runge-Kutta fixed-step implicit time-integration
-* \f[
+* \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j
  \end{align}
-\f]
+\f$
 
 The method is defined by its (implicit) ButcherTableau, given by
 the coefficients \c a, \c b and \c c,  and \c s is the number
@@ -863,14 +955,14 @@ inline bool is_same( float x, float y, float eps = 1e-6)
 {
     return fabsf(x - y) < eps * std::max(1.0f, std::max( fabsf(x), fabsf(y)));
 }
-/// Checks if two number are integer divisable within accuracy
+/// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
 /// @ingroup misc
 inline bool is_divisable( double a, double b, double eps = 1e-15)
 {
     return is_same( round(a/b)*b, a);
 }
-/// Checks if two number are integer divisable within accuracy
+/// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
 /// @ingroup misc
 inline bool is_divisable( float a, float b, float eps = 1e-6)
@@ -899,7 +991,7 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>;
     /// no allocation
-    SinglestepTimeloop( ){}
+    SinglestepTimeloop( ) = default;
 
     /**
      * @brief Construct using a \c std::function
@@ -1019,26 +1111,6 @@ void SinglestepTimeloop<ContainerType>::do_integrate(
     return;
 }
 ///@endcond
-
-/*! @brief DEPRECATED
- *
- * Same as
- * @code{.cpp}
- * using Vec = ContainerType; // if ContainerType is really long to type
- * dg::SinglestepTimeloop<Vec>( dg::RungeKutta<Vec>(
- *      tableau, u0), rhs).integrate_steps( t_begin, begin, t_end, end, N);
- * @endcode
- */
-template<class ExplicitRHS, class ContainerType >
-void stepperRK(	ConvertsToButcherTableau< get_value_type< ContainerType >>
-        tableau, ExplicitRHS& rhs, get_value_type< ContainerType > t_begin,
-        const ContainerType& begin, get_value_type< ContainerType>
-        t_end, ContainerType& end, unsigned N )
-{
-    SinglestepTimeloop<ContainerType>( RungeKutta<ContainerType>( tableau,
-                begin), rhs).integrate_steps(t_begin, begin, t_end, end,N);
-}
-
 
 ///@}
 

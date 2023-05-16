@@ -33,7 +33,7 @@ int main()
     dg::DVec x(rho.size(), 0.);
     //dg::DVec x(rho);
 
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1( grid, alpha, dg::centered);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1( alpha, {grid, dg::centered});
 
     dg::PCG< dg::DVec > pcg(x, x.size());
     dg::Timer t;

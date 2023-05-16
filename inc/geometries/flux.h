@@ -177,12 +177,12 @@ struct FluxGenerator : public aGenerator2d
         if(m_verbose)std::cout << "lx = "<<lx_<<"\n";
     }
 
-    virtual FluxGenerator* clone() const{return new FluxGenerator(*this);}
+    virtual FluxGenerator* clone() const override final{return new FluxGenerator(*this);}
 
     private:
     // length of zeta-domain (f0*(psi_1-psi_0))
-    virtual double do_width() const{return lx_;}
-    virtual double do_height() const{return 2.*M_PI;}
+    virtual double do_width() const override final{return lx_;}
+    virtual double do_height() const override final{return 2.*M_PI;}
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
@@ -191,7 +191,7 @@ struct FluxGenerator : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         thrust::host_vector<double> psi_x(zeta1d);

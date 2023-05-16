@@ -7,6 +7,8 @@
 #include "blas1_dispatch_shared.h"
 #include "blas1_dispatch_vector.h"
 
+#include "blas2_stencil.h"
+
 ///@cond
 namespace dg{
 
@@ -80,6 +82,27 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
             acc[0][k] += acc[i][k];
     }
     return acc[0];
+}
+
+template< class Stencil, class ContainerType, class ...ContainerTypes>
+inline void doParallelFor( SharedVectorTag, Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
+{
+    // a copy of doSubroutine ...
+
+    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
+    using execution_policy = get_execution_policy<vector_type>;
+    static_assert( all_true<
+            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
+            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
+            >::value,
+        "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
+    doParallelFor_dispatch(
+            get_execution_policy<vector_type>(),
+            N,
+            f,
+            do_get_pointer_or_reference(std::forward<ContainerType>(x),get_tensor_category<ContainerType>()) ,
+            do_get_pointer_or_reference(std::forward<ContainerTypes>(xs),get_tensor_category<ContainerTypes>()) ...
+            );
 }
 
 template< class Matrix, class Vector1, class Vector2>

@@ -20,7 +20,7 @@ namespace dg{
 
 /**
 * @brief Preconditioned BICGSTAB(l) method to solve
-* \f[ Ax=b\f]
+* \f$ Ax=b\f$
 *
 * @ingroup invert
 *
@@ -37,7 +37,7 @@ class BICGSTABl
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
-    BICGSTABl(){}
+    BICGSTABl() = default;
     /**
      * @brief Allocate memory for the preconditioned BICGSTABl method
      *

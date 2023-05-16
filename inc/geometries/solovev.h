@@ -190,7 +190,7 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
 struct PsipZ: public aCylindricalFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZ( Parameters gp ): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) { }
+    PsipZ( Parameters gp ): m_R0(gp.R_0), m_pp(gp.pp), m_c(gp.c) { }
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,lgRn;
@@ -211,7 +211,7 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
 
     }
   private:
-    double m_R0, m_A, m_pp;
+    double m_R0, m_pp;
     std::vector<double> m_c;
 };
 /**
@@ -228,7 +228,7 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
 struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZZ( Parameters gp): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) { }
+    PsipZZ( Parameters gp): m_R0(gp.R_0), m_pp(gp.pp), m_c(gp.c) { }
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,lgRn;
@@ -239,7 +239,7 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
         + (150. *Rn4 - 1680. *Rn2 *Zn2 + 240. *Zn4 + 360. *Rn4*lgRn - 1440. *Rn2 *Zn2*lgRn)* m_c[6] + 6.* Zn* m_c[9] -  24. *Rn2 *Zn *m_c[10] + (160. *Zn3 - 480. *Rn2* Zn*lgRn) *m_c[11]);
     }
   private:
-    double m_R0, m_A, m_pp;
+    double m_R0, m_pp;
     std::vector<double> m_c;
 };
 /**
@@ -258,7 +258,7 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
-    PsipRZ( Parameters gp ): m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_c(gp.c) { }
+    PsipRZ( Parameters gp ): m_R0(gp.R_0), m_pp(gp.pp), m_c(gp.c) { }
     double do_compute(double R, double Z) const
     {
         double Rn,Rn2,Rn3,Zn,Zn2,Zn3,lgRn;
@@ -272,7 +272,7 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
                  );
     }
   private:
-    double m_R0, m_A, m_pp;
+    double m_R0, m_pp;
     std::vector<double> m_c;
 };
 
@@ -381,7 +381,7 @@ static inline dg::geo::TokamakMagneticField createSolovevField(
         solovev::createIpol(gp, solovev::createPsip(gp)), params);
 }
 /**
- * @brief Create a modified Solovev Magnetic field
+ * @brief DEPRECATED Create a modified Solovev Magnetic field
  *
  * Based on \c dg::geo::mod::Psip(gp) and
  * \c dg::geo::solovev::Ipol(gp)

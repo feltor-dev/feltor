@@ -37,7 +37,7 @@ struct Adaptor
  * @code{.cpp}
  *  auto solver = [&eps = eps, &im = im, pcg = dg::PCG<ContainerType>( y0, 1000)]
  *      ( value_type alpha, value_type time, ContainerType& y, const
- *          ContainerType& ys)
+ *          ContainerType& ys) mutable
  *  {
  *     auto wrapper = [a = alpha, t = time, &i = im]( const auto& x, auto& y){
  *         i( t, x, y);
@@ -45,7 +45,7 @@ struct Adaptor
  *     };
  *     dg::blas1::copy( ys, y); // take rhs as initial guess
  *     pcg.solve( wrapper, y, ys, im.precond(), im.weights(), eps);
- *  }
+ *  };
  * @endcode
  * @sa In general it is recommended to write your own solver using a wrapper
  * lambda like the above and one of the existing solvers like \c dg::PCG,

@@ -31,6 +31,9 @@ class DLT
      */
     DLT( unsigned n=3);
 
+    ///@brief # of polynomial coefficients
+    unsigned n() const { return w_.size();}
+
     /**
      * @brief Return Gauss-Legendre weights
      *

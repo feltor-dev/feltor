@@ -22,7 +22,8 @@ enum whichMatrix
     zeroPlus,  //!< plus interpolation in the current plane
     zeroMinus, //!< minus interpolation in the current plane
     zeroPlusT, //!< transposed plus interpolation in the current plane
-    zeroMinusT //!< transposed minus interpolation in the current plane
+    zeroMinusT, //!< transposed minus interpolation in the current plane
+    zeroForw  //!< from dg to transformed coordinates
 };
 
 ///@brief Full Limiter means there is a limiter everywhere
@@ -35,6 +36,36 @@ typedef ZERO NoLimiter;
 ///@cond
 namespace detail{
 
+static void parse_method( std::string method, std::string& i, std::string& p, std::string& f)
+{
+    f = "dg";
+    if( method == "dg")                 i = "dg",       p = "dg";
+    else if( method == "linear")        i = "linear",   p = "dg";
+    else if( method == "cubic")         i = "cubic",    p = "dg";
+    else if( method == "nearest")       i = "nearest",  p = "dg";
+    else if( method == "dg-nearest")      i = "dg",      p = "nearest";
+    else if( method == "linear-nearest")  i = "linear",  p = "nearest";
+    else if( method == "cubic-nearest")   i = "cubic",   p = "nearest";
+    else if( method == "nearest-nearest") i = "nearest",  p = "nearest";
+    else if( method == "dg-linear")      i = "dg",       p = "linear";
+    else if( method == "linear-linear")  i = "linear",   p = "linear";
+    else if( method == "cubic-linear")   i = "cubic",    p = "linear";
+    else if( method == "nearest-linear") i = "nearest",  p = "linear";
+    else if( method == "dg-equi")       i = "dg",       p = "dg", f = "equi";
+    else if( method == "linear-equi")   i = "linear",   p = "dg", f = "equi";
+    else if( method == "cubic-equi")    i = "cubic",    p = "dg", f = "equi";
+    else if( method == "nearest-equi")  i = "nearest",  p = "dg", f = "equi";
+    else if( method == "dg-equi-nearest")      i = "dg",      p = "nearest", f = "equi";
+    else if( method == "linear-equi-nearest")  i = "linear",  p = "nearest", f = "equi";
+    else if( method == "cubic-equi-nearest")   i = "cubic",   p = "nearest", f = "equi";
+    else if( method == "nearest-equi-nearest") i = "nearest", p = "nearest", f = "equi";
+    else if( method == "dg-equi-linear")      i = "dg",       p = "linear", f = "equi";
+    else if( method == "linear-equi-linear")  i = "linear",   p = "linear", f = "equi";
+    else if( method == "cubic-equi-linear")   i = "cubic",    p = "linear", f = "equi";
+    else if( method == "nearest-equi-linear") i = "nearest",  p = "linear", f = "equi";
+    else
+        throw Error( Message(_ping_) << "The method "<< method << " is not recognized\n");
+}
 
 struct DSFieldCylindrical3
 {
@@ -102,11 +133,6 @@ struct DSField
     thrust::host_vector<double> dzetadphi_, detadphi_, dvdphi_;
     dg::ClonePtr<dg::aGeometry2d> m_g;
 };
-
-template<class real_type>
-inline real_type ds_norm( const std::array<real_type,3>& x0){
-    return sqrt( x0[0]*x0[0] +x0[1]*x0[1] + x0[2]*x0[2]);
-}
 
 //used in constructor of Fieldaligned
 template<class real_type>
@@ -178,9 +204,18 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
 
 /**
  * @brief %Distance to wall along fieldline in phi or s coordinate
+ *
+ * The following differential equation is integrated
+ * \f[ \frac{ d R}{d \varphi} = b^R / b^\varphi \\
+ *     \frac{ d Z}{d \varphi} = b^Z / b^\varphi \\
+ *     \frac{ d s}{s \varphi} = 1   / b^\varphi
+ * \f]
+ * for initial conditions \f$ (R,Z,0)\f$ until either a maximum angle is reached or until \f$ (R,Z) \f$ leaves the given domain. In the latter case a bisection algorithm is used to find the exact angle \f$\varphi_l\f$ of leave. Either the angle \f$ \varphi_l\f$ or the corresponding \f$ s_l\f$ is returned by the function.
  * @ingroup fluxfunctions
- * @attention The sign of the distance is defined with respect to the direction
- * of the magnetic field (not the angle coordinate like in Fieldaligned)
+ * @attention The sign of the angle coordinate in this class (unlike in
+ * Fieldaligned) is defined with respect to the direction of the magnetic
+ * field. Thus, for a positive maxPhi, the distance (both "phi" and "s")
+ * will be positive and for negative maxPhi the distance is negative.
  */
 struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
 {
@@ -189,11 +224,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
      *
      * @param vec The vector field to integrate
      * @param domain The box
-     * @param maxPhi the maximum angle to integrate to (something like +- 2.*M_PI)
-     * @attention The sign of the angle coordinate in this class (unlike in
-     * Fieldaligned) is defined with respect to the direction of the magnetic
-     * field. Thus, for a positive maxPhi, the distance (both "phi" and "s")
-     * will be positive and for negative maxPhi the distance is negative.
+     * @param maxPhi the maximum angle to integrate to (something like plus or minus 2.*M_PI)
      * @param eps the accuracy of the fieldline integrator
      * @param type either "phi" then the distance is computed in the angle coordinate
      * or "s" then the distance is computed in the s parameter
@@ -256,6 +287,14 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
 /**
  * @brief Normalized coordinate relative to wall along fieldline in phi or s coordinate
  *
+ * The following differential equation is integrated
+ * \f[ \frac{ d R}{d \varphi} = b^R / b^\varphi \\
+ *     \frac{ d Z}{d \varphi} = b^Z / b^\varphi \\
+ *     \frac{ d s}{s \varphi} = 1   / b^\varphi
+ * \f]
+ * for initial conditions \f$ (R,Z,0)\f$ until either a maximum angle is reached or until \f$ (R,Z) \f$ leaves the given domain. In the latter case a bisection algorithm is used to find the exact angle \f$\varphi_l\f$ of leave.
+ *
+ * The difference to \c WallFieldlineDistance is that this class integrates the differential equations in **both** directions and normalizes the output to \f$ [-1,1]\f$.
  * -1 means at the negative sheath (you have to go agains the field to go out
  *  of the box), +1 at the postive sheath (you have to go with the field to go
  *  out of the box) and anything else is in-between; when the sheath cannot be
@@ -268,6 +307,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
 struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordinate>
 {
     ///@copydoc WallFieldlineDistance::WallFieldlineDistance()
+    ///@note The sign of \c maxPhi does not matter here as both directions are integrated
     WallFieldlineCoordinate(
         const dg::geo::CylindricalVectorLvl0& vec,
         const dg::aRealTopology2d<double>& domain,
@@ -292,7 +332,6 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
                     dg::pid_control, dg::fast_l2norm, m_eps, 1e-10);
             odeint.integrate_in_domain( 0., coords, phiP, coordsP, 0.,
                     m_domain, m_eps);
-            odeint.set_dt(0);
             odeint.integrate_in_domain( 0., coords, phiM, coordsM, 0.,
                     m_domain, m_eps);
         }catch (std::exception& e)
@@ -339,7 +378,7 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
     /*!@class hide_fieldaligned_numerics_parameters
     * @param eps Desired accuracy of the fieldline integrator
     * @param mx refinement factor in X of the fine grid relative to grid (Set to 1, if the x-component of \c vec vanishes, else as
-    * high as possible, 10 is a good start)
+    * high as possible, 12 is a good start) If the projection method (parsed from \c interpolation_method) is not "dg" then \c mx must be a multiple of \c nx
     * @param my analogous to \c mx, applies to y direction
     * @param deltaPhi The angular distance that the fieldline-integrator will
     * integrate. Per default this is the distance between planes, which is
@@ -353,12 +392,27 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
     * plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries
         function.  If there is no limiter, the boundary condition is periodic.
-     * @param interpolation_method Several interpolation methods are available:
-     * **dg** uses the native dG interpolation scheme given by the grid,
-     * **nearest** searches for the nearest point and copies its value,
-     * **linear** searches for the two (in 2d four, etc.) closest points and
-     * linearly interpolates their values, **cubic** searches for the four (in
-     * 2d 16, etc) closest points and interpolates a cubic polynomial
+     * @param interpolation_method parsed according to
+     *
+     * |interpolation_method | interpolation | projection|
+     * |---------------------|---------------|-----------|
+     * |"dg"                 |    "dg"       | "dg"      |
+     * |"linear"             |    "linear"   | "dg"      |
+     * |"cubic"              |    "cubic"    | "dg"      |
+     * |"nearest"            |    "nearest"  | "dg"      |
+     * |"linear-nearest" (##)   | "linear"      | "nearest" |
+     * |"cubic-nearest"      | "cubic"       | "nearest" |
+     * |"nearest-nearest"    | "nearest"     | "nearest" |
+     * |"dg-linear"          | "dg"          | "linear"  |
+     * |"linear-linear"      | "linear"      | "linear"  |
+     * |"cubic-linear"       | "cubic"       | "linear"  |
+     * |"nearest-linear"     | "nearest"     | "linear"  |
+     *
+     * (##) Use "linear-nearest" if in doubt.
+     * The table yields one parameter passed to \c create::interpolation
+     * (from the given grid to the fine grid) and one parameter
+     * to \c create::projection (from the fine grid to the given grid)
+     *
      * @param benchmark If true write construction timings to std::cout
     */
 //////////////////////////////FieldalignedCLASS////////////////////////////////////////////
@@ -390,9 +444,9 @@ struct Fieldaligned
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned mx=10, unsigned my=10,
+        unsigned mx=12, unsigned my=12,
         double deltaPhi = -1,
-        std::string interpolation_method = "dg",
+        std::string interpolation_method = "linear-nearest",
         bool benchmark=true
         ):
             Fieldaligned( dg::geo::createBHat(vec),
@@ -410,9 +464,9 @@ struct Fieldaligned
         dg::bc bcy = dg::NEU,
         Limiter limit = FullLimiter(),
         double eps = 1e-5,
-        unsigned mx=10, unsigned my=10,
+        unsigned mx=12, unsigned my=12,
         double deltaPhi = -1,
-        std::string interpolation_method = "dg",
+        std::string interpolation_method = "linear-nearest",
         bool benchmark=true
         );
     /**
@@ -576,7 +630,7 @@ struct Fieldaligned
     * divide \c Nz from input grid). The x and y dimensions must be equal to
     * the input grid.
     * @param coarse the 2d input vector
-    * @param out the integral (2d vector)
+    * @param out the integral (2d vector, may alias coarse)
     */
     void integrate_between_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse, container& out );
 
@@ -613,12 +667,14 @@ struct Fieldaligned
     container evaluate( BinaryOp binary, UnaryOp unary,
             unsigned p0, unsigned rounds) const;
 
+    ///Return the \c interpolation_method string given in the constructor
+    std::string method() const{return m_interpolation_method;}
 
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
     void zero( enum whichMatrix which, const container& in, container& out);
-    IMatrix m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
+    IMatrix m_plus, m_zero, m_minus, m_plusT, m_minusT; //2d interpolation matrices
     container m_hbm, m_hbp;         //3d size
     container m_G, m_Gm, m_Gp; // 3d size
     container m_bphi, m_bphiM, m_bphiP; // 3d size
@@ -632,7 +688,9 @@ struct Fieldaligned
     std::vector<dg::View<const container>> m_f;
     std::vector<dg::View< container>> m_temp;
     dg::ClonePtr<ProductGeometry> m_g;
+    dg::InverseKroneckerTriDiagonal2d<container> m_inv_linear;
     double m_deltaPhi;
+    std::string m_interpolation_method;
 
     bool m_have_adjoint = false;
     void updateAdjoint( )
@@ -652,30 +710,45 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     const dg::geo::CylindricalVectorLvl1& vec,
     const Geometry& grid,
     dg::bc bcx, dg::bc bcy, Limiter limit, double eps,
-    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method, bool benchmark)
+    unsigned mx, unsigned my, double deltaPhi, std::string interpolation_method, bool benchmark) :
+        m_g(grid),
+        m_interpolation_method(interpolation_method)
 {
+
+    std::string inter_m, project_m, fine_m;
+    detail::parse_method( interpolation_method, inter_m, project_m, fine_m);
+    if( benchmark) std::cout << "# Interpolation method: \""<<inter_m << "\" projection method: \""<<project_m<<"\" fine grid \""<<fine_m<<"\"\n";
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
     if( (grid.bcy() == PER && bcy != PER) || (grid.bcy() != PER && bcy == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting boundary conditions in y. The grid says "<<bc2str(grid.bcy())<<" while the parameter says "<<bc2str(bcy)));
     m_Nz=grid.Nz(), m_bcx = bcx, m_bcy = bcy, m_bcz=grid.bcz();
-    m_g.reset(grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
-    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
-    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    m_perp_size = grid_coarse->size();
-    dg::assign( dg::pullback(limit, *grid_coarse), m_limiter);
-    dg::assign( dg::evaluate(dg::zero, *grid_coarse), m_left);
-    m_ghostM = m_ghostP = m_right = m_left;
-    ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
+    ///%%%%%%%%%%%%%%%%%%%%%Setup grids%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
+    //  grid_trafo -> grid_equi -> grid_fine -> grid_equi -> grid_trafo
     dg::Timer t;
     if( benchmark) t.tic();
-    std::array<thrust::host_vector<double>,3> yp_coarse, ym_coarse, yp, ym;
-    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
-    grid_magnetic->set( 7, grid_magnetic->Nx(), grid_magnetic->Ny());
-    dg::Grid2d grid_fine( *grid_coarse );//FINE GRID
+    dg::ClonePtr<dg::aGeometry2d> grid_transform( grid.perp_grid()) ;
+    // We do not need metric of grid_equidist or or grid_fine
+    dg::RealGrid2d<double> grid_equidist( *grid_transform) ;
+    dg::RealGrid2d<double> grid_fine( *grid_transform);
+    grid_equidist.set( 1, grid.gx().size(), grid.gy().size());
+    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_transform;//INTEGRATE HIGH ORDER GRID
+    grid_magnetic->set( grid_transform->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
+    // For project method "const" we round up to the nearest multiple of n
+    if( project_m != "dg" && fine_m == "dg")
+    {
+        unsigned rx = mx % grid.nx(), ry = my % grid.ny();
+        if( 0 != rx || 0 != ry)
+        {
+            std::cerr << "#Warning: for projection method \"const\" mx and my must be multiples of nx and ny! Rounding up for you ...\n";
+            mx = mx + grid.nx() - rx;
+            my = my + grid.ny() - ry;
+        }
+    }
+    if( fine_m == "equi")
+        grid_fine = grid_equidist;
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
     if( benchmark)
     {
@@ -683,24 +756,30 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
         t.tic();
     }
+    ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
+    std::array<thrust::host_vector<double>,3> yp_trafo, ym_trafo, yp, ym;
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
     thrust::host_vector<double> vol = dg::tensor::volume(grid.metric()), vol2d0;
     auto vol2d = dg::split( vol, grid);
     dg::assign( vol2d[0], vol2d0);
-    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
-            yp_coarse, vol2d0, hbp, in_boxp, deltaPhi, eps);
-    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_coarse,
-            ym_coarse, vol2d0, hbm, in_boxm, -deltaPhi, eps);
-    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine,
-            *grid_coarse);  //INTERPOLATE TO FINE GRID
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
+            yp_trafo, vol2d0, hbp, in_boxp, deltaPhi, eps);
+    detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
+            ym_trafo, vol2d0, hbm, in_boxm, -deltaPhi, eps);
+    dg::HVec Xf = dg::evaluate(  dg::cooX2d, grid_fine);
+    dg::HVec Yf = dg::evaluate(  dg::cooY2d, grid_fine);
+    {
+    dg::IHMatrix interpolate = dg::create::interpolation( Xf, Yf,
+            *grid_transform, dg::NEU, dg::NEU, grid_transform->n() < 3 ? "cubic" : "dg");
     yp.fill(dg::evaluate( dg::zero, grid_fine));
     ym = yp;
     for( int i=0; i<2; i++) //only R and Z get interpolated
     {
-        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
-        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
+        dg::blas2::symv( interpolate, yp_trafo[i], yp[i]);
+        dg::blas2::symv( interpolate, ym_trafo[i], ym[i]);
     }
+    } // release memory for interpolate matrix
     if( benchmark)
     {
         t.toc();
@@ -708,60 +787,103 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         t.tic();
     }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1],
-            *grid_coarse, bcx, bcy, interpolation_method), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1],
-            *grid_coarse, bcx, bcy, interpolation_method), minus, minusT;
-    if( mx == my && mx == 1)
+    if( inter_m == "dg")
     {
-        plus = plusFine;
-        minus = minusFine;
+        dg::IHMatrix fine, projection, multi;
+        if( project_m == "dg")
+            projection = dg::create::projection( *grid_transform, grid_fine);
+        else
+        {
+            multi = dg::create::projection( grid_equidist, grid_fine, project_m);
+            fine = dg::create::inv_backproject( *grid_transform);
+            cusp::multiply( fine, multi, projection);
+        }
+        fine = dg::create::interpolation( yp[0], yp[1],
+            *grid_transform, bcx, bcy, "dg");
+        cusp::multiply( projection, fine, multi);
+        dg::blas2::transfer( multi, m_plus);
+        fine = dg::create::interpolation( Xf, Yf,
+            *grid_transform, bcx, bcy, "dg");
+        cusp::multiply( projection, fine, multi);
+        dg::blas2::transfer( multi, m_zero);
+        fine = dg::create::interpolation( ym[0], ym[1],
+            *grid_transform, bcx, bcy, "dg");
+        cusp::multiply( projection, fine, multi);
+        dg::blas2::transfer( multi, m_minus);
     }
     else
     {
-        dg::IHMatrix projection = dg::create::projection( *grid_coarse, grid_fine);
-        cusp::multiply( projection, plusFine, plus);
-        cusp::multiply( projection, minusFine, minus);
+        dg::IHMatrix fine, projection, multi, temp;
+        if( project_m == "dg")
+            projection = dg::create::projection( *grid_transform, grid_fine);
+        else
+        {
+            multi = dg::create::projection( grid_equidist, grid_fine, project_m);
+            fine = dg::create::inv_backproject( *grid_transform);
+            cusp::multiply( fine, multi, projection);
+        }
+
+        fine = dg::create::backproject( *grid_transform); // from dg to equidist
+
+        multi = dg::create::interpolation( yp[0], yp[1],
+            grid_equidist, bcx, bcy, inter_m);
+        cusp::multiply( multi, fine, temp);
+        cusp::multiply( projection, temp, multi);
+        dg::blas2::transfer( multi, m_plus);
+
+        multi = dg::create::interpolation( Xf, Yf,
+                grid_equidist, bcx, bcy, inter_m);
+        cusp::multiply( multi, fine, temp);
+        cusp::multiply( projection, temp, multi);
+        dg::blas2::transfer( multi, m_zero);
+
+        multi = dg::create::interpolation( ym[0], ym[1],
+            grid_equidist, bcx, bcy, inter_m);
+        cusp::multiply( multi, fine, temp);
+        cusp::multiply( projection, temp, multi);
+        dg::blas2::transfer( multi, m_minus);
     }
+
     if( benchmark)
     {
         t.toc();
         std::cout << "# DS: Multiplication PI    took: "<<t.diff()<<"\n";
     }
-    dg::blas2::transfer( plus, m_plus);
-    dg::blas2::transfer( minus, m_minus);
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
-    dg::HVec hbphi( yp_coarse[2]), hbphiP(hbphi), hbphiM(hbphi);
-    hbphi = dg::pullback( vec.z(), *grid_coarse);
+    dg::HVec hbphi( yp_trafo[2]), hbphiP(hbphi), hbphiM(hbphi);
+    hbphi = dg::pullback( vec.z(), *grid_transform);
     //this is a pullback bphi( R(zeta, eta), Z(zeta, eta)):
-    if( dynamic_cast<const dg::CartesianGrid2d*>( grid_coarse.get()))
+    if( dynamic_cast<const dg::CartesianGrid2d*>( grid_transform.get()))
     {
         for( unsigned i=0; i<hbphiP.size(); i++)
         {
-            hbphiP[i] = vec.z()(yp_coarse[0][i], yp_coarse[1][i]);
-            hbphiM[i] = vec.z()(ym_coarse[0][i], ym_coarse[1][i]);
+            hbphiP[i] = vec.z()(yp_trafo[0][i], yp_trafo[1][i]);
+            hbphiM[i] = vec.z()(ym_trafo[0][i], ym_trafo[1][i]);
         }
     }
     else
     {
         dg::HVec Ihbphi = dg::pullback( vec.z(), *grid_magnetic);
         dg::HVec Lhbphi = dg::forward_transform( Ihbphi, *grid_magnetic);
-        for( unsigned i=0; i<yp_coarse[0].size(); i++)
+        for( unsigned i=0; i<yp_trafo[0].size(); i++)
         {
-            hbphiP[i] = dg::interpolate( dg::lspace, Lhbphi, yp_coarse[0][i],
-                    yp_coarse[1][i], *grid_magnetic);
-            hbphiM[i] = dg::interpolate( dg::lspace, Lhbphi, ym_coarse[0][i],
-                    ym_coarse[1][i], *grid_magnetic);
+            hbphiP[i] = dg::interpolate( dg::lspace, Lhbphi, yp_trafo[0][i],
+                    yp_trafo[1][i], *grid_magnetic);
+            hbphiM[i] = dg::interpolate( dg::lspace, Lhbphi, ym_trafo[0][i],
+                    ym_trafo[1][i], *grid_magnetic);
         }
     }
     dg::assign3dfrom2d( hbphi,  m_bphi,  grid);
     dg::assign3dfrom2d( hbphiM, m_bphiM, grid);
     dg::assign3dfrom2d( hbphiP, m_bphiP, grid);
 
-    dg::assign3dfrom2d( yp_coarse[2], m_Gp, grid);
-    dg::assign3dfrom2d( ym_coarse[2], m_Gm, grid);
-    m_G = dg::create::volume(grid);
+    dg::assign3dfrom2d( yp_trafo[2], m_Gp, grid);
+    dg::assign3dfrom2d( ym_trafo[2], m_Gm, grid);
+    // The weights don't matter since they fall out in Div and Lap anyway
+    // But they are good for testing
+    m_G = vol;
     container weights = dg::create::weights( grid);
+    dg::blas1::pointwiseDot( m_G, weights, m_G);
     dg::blas1::pointwiseDot( m_Gp, weights, m_Gp);
     dg::blas1::pointwiseDot( m_Gm, weights, m_Gm);
 
@@ -789,6 +911,12 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::assign3dfrom2d( bbp, m_bbp, grid);
 
     m_deltaPhi = deltaPhi; // store for evaluate
+
+    ///%%%%%%%%%%%%%%%%%%%%%Assign Limiter%%%%%%%%%%%%%%%%%%%%%%%%%//
+    m_perp_size = grid_transform->size();
+    dg::assign( dg::pullback(limit, *grid_transform), m_limiter);
+    dg::assign( dg::evaluate(dg::zero, *grid_transform), m_left);
+    m_ghostM = m_ghostP = m_right = m_left;
 }
 
 
@@ -867,7 +995,8 @@ void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const co
     if(     which == einsPlus  || which == einsMinusT ) ePlus(  which, f, fe);
     else if(which == einsMinus || which == einsPlusT  ) eMinus( which, f, fe);
     else if(which == zeroMinus || which == zeroPlus ||
-            which == zeroMinusT|| which == zeroPlusT  ) zero(   which, f, fe);
+            which == zeroMinusT|| which == zeroPlusT ||
+            which == zeroForw  ) zero(   which, f, fe);
 }
 
 template< class G, class I, class container>
@@ -892,6 +1021,15 @@ void Fieldaligned<G, I, container>::zero( enum whichMatrix which,
         {
             if( ! m_have_adjoint) updateAdjoint( );
             dg::blas2::symv( m_minusT, m_f[i0], m_temp[i0]);
+        }
+        else if( which == zeroForw)
+        {
+            if ( m_interpolation_method != "dg" )
+            {
+                dg::blas2::symv( m_zero, m_f[i0], m_temp[i0]);
+            }
+            else
+                dg::blas1::copy( m_f[i0], m_temp[i0]);
         }
     }
 }

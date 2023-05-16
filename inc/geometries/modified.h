@@ -22,7 +22,7 @@ namespace geo
  */
 namespace mod
 {
-    //modify with a polynomial Heaviside function
+//modify with a polynomial Heaviside function
 ///@addtogroup mod
 ///@{
 
@@ -33,6 +33,7 @@ namespace mod
  * \f$
  *
  * where H is the integrated dg::IPolynomialHeaviside function and P is a predicate that returns either true or false.
+ * @note the predicate can usually be true everywhere, the idea for the predicate is to be able to selectively target the private flux region(s) for modification.
  */
 struct Psip: public aCylindricalFunctor<Psip>
 {
@@ -161,12 +162,13 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 /**
  * @copydoc dg::geo::mod::Psip
  *
+ * @note This is a helper function used in the implementation of \c dg::geo::createModifiedField
  * @param predicate P(R,Z) indicates the positions where Psi is to be modified (true) or not (false)
  * @param psip the flux function to be modified
  * @param psi0 parameter for dg::PolynomialHeaviside function
  * @param alpha parameter for dg::PolynomialHeaviside function
  * @param sign parameter for dg::PolynomialHeaviside function
- * @sa nowhere, everywhere, HeavisideZ
+ * @sa createModifiedField
  *
  * @return  the modified flux function
  */

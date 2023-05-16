@@ -241,9 +241,9 @@ void construct_rz( Nemov nemov,
     unsigned size2d = x_vec.size()*r_init.size();
     r.resize(size2d), z.resize(size2d), h.resize(size2d);
     double x0=x_0, x1 = x_vec[0];
-    thrust::host_vector<double> r_new(r_init), z_new(z_init), h_new(r_init);
-    thrust::host_vector<double> r_old(r_init), r_diff( r_init);
-    thrust::host_vector<double> z_old(z_init), z_diff(z_init);
+    thrust::host_vector<double> r_new(r_init), r_old(r_init), r_diff(r_init);
+    thrust::host_vector<double> z_new(z_init), z_old(z_init), z_diff(z_init);
+    thrust::host_vector<double> h_new(h_init); //, h_old(h_init), h_diff(h_init);
     for( unsigned i=0; i<sizeX; i++)
     {
         N = 1;
@@ -252,6 +252,7 @@ void construct_rz( Nemov nemov,
         while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
         {
             r_old = r_new, z_old = z_new; eps_old = eps;
+            //h_old = h_new;
             temp = begin;
             //////////////////////////////////////////////////
             x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
@@ -269,18 +270,25 @@ void construct_rz( Nemov nemov,
             temp = end;
             dg::blas1::axpby( 1., r_new, -1., r_old, r_diff);
             dg::blas1::axpby( 1., z_new, -1., z_old, z_diff);
+            //dg::blas1::axpby( 1., h_new, -1., h_old, h_diff);
+            //dg::blas1::pointwiseDot( h_diff, h_diff, h_diff);
+            //dg::blas1::pointwiseDivide( h_diff, h_old, h_diff); // h is always > 0
             dg::blas1::pointwiseDot( r_diff, r_diff, r_diff);
             dg::blas1::pointwiseDot( 1., z_diff, z_diff, 1., r_diff);
+            //dg::blas1::axpby( 1., h_diff, 1., r_diff);
             try{
-                eps = sqrt( dg::blas1::dot( r_diff, r_diff)/sizeY); //should be relative to the interpoint distances
+                eps = sqrt( dg::blas1::dot( r_diff, 1.)/sizeY); //should be relative to the interpoint distances
+                //double eps_h = sqrt( dg::blas1::dot( h_diff, 1.)/sizeY);
+                //std::cout << "Effective Relative diff-h error is "<<eps_h<<" with "<<N<<" steps\n";
             } catch ( dg::Error& )
             {
                 eps = eps_old;
                 r_new = r_old , z_new = z_old;
+                //h_new = h_old;
             }
-            //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n";
+            //std::cout << "Effective Absolute diff-r error is "<<eps<<" with "<<N<<" steps\n";
             N*=2;
-            if( eps > eps_old && N > 1024)
+            if( (eps > eps_old && N > 1024 && eps > 1e-6) || N > 64000)
                 throw dg::Error(dg::Message(_ping_) <<
                 "Grid generator encountered loss of convergence integrating from x = "
                 <<x0<<" to x = "<<x1);
@@ -375,13 +383,13 @@ struct SimpleOrthogonal : public aGenerator2d
      * @return f_0 is the grid constant  s.a. width() )
      */
     double f0() const{return f0_;}
-    virtual SimpleOrthogonal* clone() const{return new SimpleOrthogonal(*this);}
+    virtual SimpleOrthogonal* clone() const override final{return new SimpleOrthogonal(*this);}
 
     private:
      // length of zeta-domain (f0*(psi_1-psi_0))
-    virtual double do_width() const{return lz_;}
-    virtual double do_height() const{return 2.*M_PI;}
-    virtual bool do_isOrthogonal() const{return m_orthogonal;}
+    virtual double do_width() const override final{return lz_;}
+    virtual double do_height() const override final{return 2.*M_PI;}
+    virtual bool do_isOrthogonal() const override final{return m_orthogonal;}
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
@@ -390,7 +398,7 @@ struct SimpleOrthogonal : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init,

@@ -5,7 +5,6 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/multiply.h>
 #include "operator.h"
-#include "grid.h"
 
 namespace dg
 {
@@ -42,15 +41,22 @@ Operator<T> tensorproduct( const Operator<T>& op1, const Operator<T>& op2)
 
 
 /**
-* @brief Tensor product between Delta and an operator
+* @brief Tensor product between Identity matrix and an operator
 *
+\f[ M = \begin{pmatrix}
+op &   &   &   &   & \\
+  & op &   &   &   & \\
+  &   & op &   &   & \\
+  &   &   & op &   & \\
+  &   &   &...&   &
+  \end{pmatrix}
+  \f]
 * Can be used to create tensors that operate on each dg-vector entry
-* The DG Tensor Product 1 x op
 * @tparam T value type
-* @param N Size of the delta operator
+* @param N Size of the identity (=number of times op is repeated in the matrix)
 * @param op The Operator
-*
-* @return A newly allocated cusp matrix
+* @return A newly allocated cusp matrix (of size  <tt> N*op.size()</tt> )
+* @sa fast_transform
 */
 template< class T>
 cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Operator<T>& op)
@@ -58,11 +64,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Oper
     assert( N>0);
     unsigned n = op.size();
     //compute number of nonzeroes in op
-    unsigned number =0;
-    for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
-            //if( op(i,j) != 0)
-                number++;
+    unsigned number = n*n;
     // allocate output matrix
     cusp::coo_matrix<int, T, cusp::host_memory> A(n*N, n*N, N*number);
     number = 0;
@@ -81,7 +83,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Oper
 
 
 /**
- * @brief Multiply 1d matrices by diagonal block batrices from left and right
+ * @brief Multiply 1d matrices by diagonal block matrices from left and right
  *
  * computes (1xleft)m(1xright)
  * @tparam T value type
@@ -98,8 +100,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     unsigned n = left.size();
     unsigned N = m.num_rows/n;
-    Matrix r = tensorproduc( N, right);
-    Matrix l = tensorproduc( N, left);
+    Matrix r = tensorproduct( N, right);
+    Matrix l = tensorproduct( N, left);
     Matrix mr(m ), lmr(m);
 
     cusp::multiply( m, r, mr);

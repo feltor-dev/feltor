@@ -71,7 +71,7 @@ Mima< G, M, Container>::Mima( const G& grid, double kappa, double alpha, double 
     m_pcg( phi, grid.size()),
     m_extra( 2, phi),
     m_eps(eps), m_nu(nu),
-    m_helmholtz( grid, -1)
+    m_helmholtz( -1., {grid})
 {
 }
 

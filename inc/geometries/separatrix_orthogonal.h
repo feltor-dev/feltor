@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
+#include "generator.h"
 #include "generatorX.h"
 #include "utilitiesX.h"
 
@@ -133,7 +134,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
     virtual SimpleOrthogonalX* clone()const override final{return new SimpleOrthogonalX(*this);}
     private:
     bool isConformal()const{return false;}
-    bool do_isOrthogonal()const{return true;}
+    virtual bool do_isOrthogonal()const override final{return true;}
     double f0() const{return f0_;}
     virtual void do_generate( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d,
@@ -165,10 +166,10 @@ struct SimpleOrthogonalX : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    double do_zeta0(double fx) const override final{ return zeta0_; }
-    double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*zeta0_;}
-    double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
-    double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    virtual double do_zeta0(double fx) const override final{ return zeta0_; }
+    virtual double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*zeta0_;}
+    virtual double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     CylindricalFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
@@ -205,16 +206,16 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     SeparatrixOrthogonal( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):
         psi_(psi), chi_(chi),
-        sep_( psi, chi, xX, yX, x0, y0, firstline, verbose), m_verbose( verbose)
+        sep_( psi, chi, xX, yX, x0, y0, firstline, verbose)
     {
         firstline_ = firstline;
         f0_ = sep_.get_f();
         psi_0_=psi_0;
     }
-    SeparatrixOrthogonal* clone()const{return new SeparatrixOrthogonal(*this);}
+    virtual SeparatrixOrthogonal* clone()const override final{return new SeparatrixOrthogonal(*this);}
     private:
     bool isConformal()const{return false;}
-    bool do_isOrthogonal()const{return false;}
+    virtual bool do_isOrthogonal()const override final{return false;}
     double f0() const{return sep_.get_f();}
     virtual void do_generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d,
@@ -225,7 +226,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
 
         thrust::host_vector<double> r_init, z_init;
@@ -337,18 +338,62 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
             etaY[idx] = +h[idx]*(chiXX*psipX + chiXY*psipY);
         }
     }
-    virtual double do_zeta0(double fx) const { return f0_*psi_0_; }
-    virtual double do_zeta1(double fx) const { return -fx/(1.-fx)*f0_*psi_0_;}
-    virtual double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    virtual double do_zeta0(double fx) const override final{ return f0_*psi_0_; }
+    virtual double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*f0_*psi_0_;}
+    virtual double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
-    double R0_[2], Z0_[2];
     double f0_, psi_0_;
     int firstline_;
     CylindricalFunctorsLvl2 psi_;
     CylindricalSymmTensorLvl1 chi_;
     dg::geo::detail::SeparatriX sep_;
-    bool m_verbose;
+};
+
+/**
+ * @brief An Adaptor to use SeparatrixOrthogonal as \c aGenerator2d instead of \c aGeneratorX2d
+ *
+ * Generate the same grid as SeparatrixOrthogonal but without private flux region
+ * @ingroup generators_geo
+ */
+struct SeparatrixOrthogonalAdaptor : public aGenerator2d
+{
+    ///@copydoc SeparatrixOrthogonal::SeparatrixOrthogonal
+    ///@param fx fraction of points in the scrape-off layer.
+    ///fx must evenly divide the number of grid points Nx and determines \f$ \psi_1 = -\frac{f_x}{1-f_x}\psi_0\f$
+    ///Its purpose is to guarantee that the separatrix falls on a cell boundary
+    SeparatrixOrthogonalAdaptor( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+            double xX, double yX, double x0, double y0, int firstline, bool verbose = false, double fx = 0 ):
+            m_fx(fx),
+            m_sep( psi, chi, psi_0, xX, yX, x0, y0, firstline, verbose) { }
+    virtual SeparatrixOrthogonalAdaptor* clone() const override final{return new SeparatrixOrthogonalAdaptor(*this);}
+    private:
+    virtual double do_width() const override final{
+        return m_sep.zeta1(m_fx) - m_sep.zeta0(m_fx);
+    }
+    virtual double do_height() const override final{return 2.*M_PI;}
+    virtual bool do_isOrthogonal()const override final{return false;}
+    virtual void do_generate(
+         const thrust::host_vector<double>& zeta1d,
+         const thrust::host_vector<double>& eta1d,
+         thrust::host_vector<double>& x,
+         thrust::host_vector<double>& y,
+         thrust::host_vector<double>& zetaX,
+         thrust::host_vector<double>& zetaY,
+         thrust::host_vector<double>& etaX,
+         thrust::host_vector<double>& etaY) const override final
+    {
+         double zeta0 = m_sep.zeta0(m_fx);
+         auto zeta1d_trafo(zeta1d);
+         // zeta1d is given between [0; zeta1-zeta0] and must be transformed to [zeta0; zeta1]
+         for( unsigned i=0; i<zeta1d.size(); i++)
+             zeta1d_trafo[i] += zeta0;
+         if( !dg::is_divisable( (double)zeta1d.size(), 1./m_fx ))
+             throw dg::Error( dg::Message(_ping_) << "Size of zeta1d "<<zeta1d.size()<<"is not divisable by fx "<<m_fx);
+         m_sep.generate( zeta1d_trafo, eta1d, 0, eta1d.size(), x, y, zetaX, zetaY, etaX, etaY);
+    }
+    double m_fx;
+    SeparatrixOrthogonal m_sep;
 };
 
 }//namespace geo

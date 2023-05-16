@@ -55,6 +55,14 @@ int main()
         h2->speak();
         h1 = h0;
         h1->speak();
+        h0.reset(nullptr);
+        {
+            Cat cat;
+            h0 = cat;
+        }
+        std::cout<< "Are you a cat?\n";
+        h0->speak();
+
     }
     {
         std::cout << "Test correct behaviour of buffer class with mouse\n";

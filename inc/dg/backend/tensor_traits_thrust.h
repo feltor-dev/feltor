@@ -7,7 +7,7 @@
 
 namespace dg
 {
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 
 ///@brief prototypical Shared Vector with Serial Tag

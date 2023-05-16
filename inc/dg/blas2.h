@@ -173,6 +173,29 @@ inline void doSymv( MatrixType&& M,
             get_tensor_category<MatrixType>(),
             get_tensor_category<ContainerType1>());
 }
+template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
+inline void doStencil(
+                  FunctorType f,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y,
+                  AnyMatrixTag)
+{
+    static_assert( std::is_same<get_execution_policy<ContainerType1>,
+                                get_execution_policy<ContainerType2>>::value,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same<get_value_type<ContainerType1>,
+                                get_value_type<MatrixType>>::value &&
+                   std::is_same<get_value_type<ContainerType2>,
+                                get_value_type<MatrixType>>::value,
+                                "Vector and Matrix types must have same value type");
+    static_assert( std::is_same<get_tensor_category<ContainerType1>,
+                                get_tensor_category<ContainerType2>>::value,
+                                "Vector types must have same data layout");
+    dg::blas2::detail::doStencil( f, std::forward<MatrixType>(M), x, y,
+            get_tensor_category<MatrixType>(),
+            get_tensor_category<ContainerType1>());
+}
 
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void doSymv( get_value_type<ContainerType1> alpha,
@@ -206,14 +229,14 @@ inline void doSymv( MatrixType&& M,
  *
  * This routine computes \f[ y = \alpha M x + \beta y \f]
  * where \f$ M\f$ is a matrix (or functor that is called like \c M(alpha,x,beta,y)).
- * @copydoc hide_code_blas2_symv
- * @param alpha A Scalar
- * @param M The Matrix.
  * There is nothing that prevents you from making the matrix \c M non-symmetric or even
  * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
  * multiplication) is misleading.  For better code readability we introduce
  * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
  * \c dg::apply (general, possibly non-linear functor application).
+ * @copydoc hide_code_blas2_symv
+ * @param alpha A Scalar
+ * @param M The Matrix.
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
@@ -243,13 +266,13 @@ inline void symv( get_value_type<ContainerType1> alpha,
  *
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix (or functor that is called like \c M(x,y)).
- * @copydoc hide_code_blas2_symv
- * @param M The Matrix.
  * There is nothing that prevents you from making the matrix \c M non-symmetric or even
  * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
  * multiplication) is misleading.  For better code readability we introduce
  * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
  * \c dg::apply (general, possibly non-linear functor application)
+ * @copydoc hide_code_blas2_symv
+ * @param M The Matrix.
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
@@ -293,6 +316,117 @@ inline void gemv( MatrixType&& M,
                   ContainerType2& y)
 {
     dg::blas2::symv( std::forward<MatrixType>(M), x, y);
+}
+
+/**
+ * @brief \f$ f(i, x_0, x_1, ...)\ \forall i\f$; Customizable and generic for loop
+ *
+ * @attention Only works for shared memory vectors (or scalars): no MPI, no Recursive (find reasons below).
+ * @attention For trivially parallel operations (no neighboring points involved) use \c dg::blas1::subroutine
+ *
+ * This routine loops over an arbitrary user-defined "loop body" functor \c f with an arbitrary number of arguments \f$ x_s\f$ elementwise
+ * \f[ f(i, x_{0}, x_{1}, ...)  \f]
+ * where \c i iterates from \c 0 to a given size \c N.
+ * The order of iterations is undefined.
+ * It is equivalent to the following
+ * @code
+ * for(unsigned i=0; i<N; i++)
+ *     f( i, *x_0[0], *x_1[0], ...);
+ * @endcode
+ * With this function very general for-loops can be parallelized like for example a forward finite difference:
+@code{.cpp}
+dg::DVec x( 100,2), y(100,4);
+unsigned N = 100;
+double hx = 1.;
+// implement forward difference with periodic boundaries
+dg::blas1::parallel_for( [&]DG_DEVICE( unsigned i, const double* x, double* y){
+    unsigned ip = (i+1)%N;
+    y[i] = (x[ip] - x[i])/hx;
+}, N, x, y);
+// y[i] now has the value 0
+@endcode
+
+ * @note In a way this function is a generalization of \c dg::blas1::subroutine
+ * to non-trivial parallelization tasks. However, this comes at a price:
+ * this function only works for containers with the \c dg::SharedVectorTag and sclar types.
+ * The reason it cannot work for MPI is that the stencil (and thus the
+ * communication pattern) is unkown. However, it can serve as an important
+ * building block for other parallel functions like \c dg::blas2::parallel_for.
+ * @note This is the closest function we have to <tt> kokkos::parallel_for</tt> of the <a href="https://github.com/kokkos/kokkos">Kokkos library</a>.
+ *
+ * @param f the loop body
+ * @param N the total number of iterations in the for loop
+ * @param x the first argument
+ * @param xs other arguments
+ * @attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
+ * @tparam Stencil a function or functor with an arbitrary number of arguments
+ * and no return type; The first argument is an unsigned (the loop iteration),
+ * afterwards takes a \c const_pointer_type argument (const pointer to first element in vector) for each input argument in
+ * the call and a <tt> pointer_type  </tt> argument (pointer to first element in vector) for each output argument.
+ * Scalars are forwarded "as is" <tt> scalar_type </tt>.
+ * \c Stencil must be callable on the device in use. In particular, with CUDA
+ * it must be a functor (@b not a function) and its signature must contain the
+ * \__device__ specifier. (s.a. \ref DG_DEVICE)
+  * @tparam ContainerType
+  * Any class for which a specialization of \c TensorTraits exists and which
+  * fulfills the requirements of the \c SharedVectorTag and \c AnyPolicyTag.
+  * Among others
+  *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp)</tt>
+  *  - \c int,  \c double and other primitive types ...
+ */
+template< class Stencil, class ContainerType, class ...ContainerTypes>
+inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs)
+{
+    // Is the assumption that results are automatically ready on return still true?
+    // Do we have to introduce barriers around this function?
+    static_assert( all_true<
+            dg::is_vector<ContainerType>::value,
+            dg::is_vector<ContainerTypes>::value...>::value,
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
+    dg::blas2::detail::doParallelFor(tensor_category(), f, N, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+}
+/*! @brief \f$ F(M, x, y)\f$
+ *
+ * This routine calls \f[ F(i, [M], x, y) \f] for all \f$ i \in [0,N[\f$, where N is the number of rows in M,
+ * using \c dg::blas2::parallel_for,
+ * where [M] depends on the matrix type:
+ *  - for a csr matrix it is [M] = m.row_offsets, m.column_indices, m.values
+ * .
+ * Possible shared memory implementation
+ * @code
+ * dg::blas2::parallel_for( F, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
+ * @endcode
+ * Other matrix types have not yet been implemented.
+ * @note Since the matrix is known, a communication pattern is available and thus the function works in parallel for MPI (unlike \c dg::blas2::parallel_for).
+ * @note In a way this function is a generalization of \c dg::blas2::parallel_for to MPI vectors at the cost of having to encode the communication stencil in the matrix \c M and only one vector argument
+ *
+ * @param f The filter function is called like <tt> f(i, m.row_offsets_ptr, m.column_indices_ptr, m.values_ptr, x_ptr, y_ptr) </tt>
+ * @param M The Matrix.
+ * @param x input vector
+ * @param y contains the solution on output (may not alias \p x)
+ * @tparam FunctorType A type that is callable
+ *  <tt> void operator()( unsigned, pointer, [m_pointers], const_pointer) </tt>  For GPU vector the functor
+ *  must be callable on the device.
+ * @tparam MatrixType So far only one of the \c cusp::csr_matrix types and their MPI variants <tt> dg::MPIDistMat<cusp::csr_matrix, Comm> </tt> are allowed
+ * @sa dg::convert, dg::CSRMedianFilter, dg::create::window_stencil
+ * @copydoc hide_ContainerType
+ */
+template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
+inline void stencil(
+                  FunctorType f,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y)
+{
+    dg::blas2::detail::doStencil( f, std::forward<MatrixType>(M), x, y, get_tensor_category<MatrixType>());
 }
 /**
  * @brief \f$ y = x\f$; Generic way to copy and/or convert a Matrix type to a different Matrix type

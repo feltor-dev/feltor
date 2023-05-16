@@ -20,12 +20,13 @@ Note that the library ships with a multitude of test and benchmark programs.
 https://zenodo.org/badge/latestdoi/14143578[image:https://zenodo.org/badge/14143578.svg[DOI]]
 link:LICENSE[image:https://img.shields.io/badge/License-MIT-yellow.svg[License:
 MIT]]
+https://github.com/feltor-dev/feltor/releases/latest[image:https://img.shields.io/github/v/release/feltor-dev/feltor[GitHub release (latest by date)]]
 
 toc::[]
 
 == 1. Quick start guide [[sec_quickstart]]
 This guide discusses how to setup, test and benchmark the FELTOR library
-installation. Please read it before you proceed to the https://feltor-dev.github.io/tutorial/[online tutorial] to learn how to use the library in your own programs.
+installation. Please read it before you proceed to the https://feltor-dev.github.io/user-guide[user guide] to learn how to use the library in your own programs.
 We also present how to use the FELTOR software package,
 which requires additional external libraries to be installed on the system.
 ____
@@ -46,15 +47,18 @@ Open a terminal and clone the repository into any folder you like
 git clone https://www.github.com/feltor-dev/feltor
 ----
 
-You also need to clone https://github.com/thrust/thrust[thrust] and
+You also need to clone https://github.com/nvidia/thrust[thrust] and
 https://github.com/cusplibrary/cusplibrary[cusp] distributed under the
 Apache-2.0 license. Also, we need Agner Fog's https://github.com/vectorclass/version1[vcl] library (Apache 2.0). So again in a folder of your choice
 
 [source,sh]
 ----
-git clone https://www.github.com/thrust/thrust
+git clone https://www.github.com/nvidia/thrust
 git clone https://www.github.com/cusplibrary/cusplibrary
 git clone https://www.github.com/vectorclass/version1 vcl
+# We need to checkout an older version of thrust compatible with cusp
+cd thrust
+git checkout 1.9.3
 ----
 
 ____
@@ -170,6 +174,72 @@ be an integer number). If you compiled for MPI{plus}OpenMP, you can set the
 number of OpenMP threads with e.g. `export OMP_NUM_THREADS=2`.
 
 
+
+
+=== Running a FELTOR simulation
+
+Now, we want to compile and run a simulation program. To this end, we have to
+download and install some additional libraries for I/O-operations.
+
+First, we need to install jsoncpp (distributed under the MIT License),
+which on linux is available as `libjsoncpp-dev` through the package managment system.
+For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
+[source,sh]
+----
+# You may have to manually link the include path
+cd ~/include
+ln -s /usr/include/jsoncpp/json
+----
+
+For data output we use the
+http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
+MIT - like license (we use the netcdf-4 file format).
+The underlying https://www.hdfgroup.org/HDF5/[HDF5]
+library also uses a very permissive license.
+Both can be installed easily on Linux through the `libnetcdf-dev` and `libhdf5-dev` packages.
+For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
+Note that by default we use the serial netcdf and hdf5 libraries alson in the mpi
+versions of applications.
+
+Some desktop applications in FELTOR use the
+https://github.com/mwiesenberger/draw[draw library] (developed by us
+also under MIT), which depends on
+http://www.glfw.org[glfw3], an OpenGL development library under a
+BSD-like license. There is a `libglfw3-dev` package for convenient installation. Again, link `path/to/draw` in the `include` folder.
+
+____
+If you are on a HPC cluster, you may need to set INCLUDE and LIB variables manually.
+For details on how FELTOR's Makefiles are configured please see the link:config/README.md[config] file. There are also examples of some existing Makefiles in the same folder.
+____
+
+We are now ready to compile and run a simulation program
+
+[source,sh]
+----
+cd path/to/feltor/src/toefl # or any other project in the src folder
+
+make toefl device=gpu     # (compile for gpu, cpu or omp)
+cp input/default.json inputfile.json # create an inputfile
+./toefl inputfile.json    # (behold a live simulation with glfw output on screen)
+# or
+make toefl_hpc device=gpu  # (compile for gpu, cpu or omp)
+cp input/default_hpc.json inputfile_hpc.json # create an inputfile
+./toefl_hpc inputfile_hpc.json outputfile.nc # (a single node simulation with output stored in a file)
+# or
+make toefl_mpi device=omp  # (compile for gpu, cpu or omp)
+export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI)
+echo 2 2 | mpirun -n 4 ./toefl_mpi inputfile_hpc.json outputfile.nc
+# (a multi node simulation with now in total 8 threads with output stored in a file)
+# The mpi program will wait for you to type the number of processes in x and y direction before
+# running. That is why the echo is there.
+----
+
+Default input files are located in `path/to/feltor/src/toefl/input`. All
+three programs solve the same equations. The technical documentation on
+what equations are discretized, input/output parameters, etc. can be
+generated as a pdf with `make doc` in the `path/to/feltor/src/toefl`
+directory.
+
 === Using FELTOR as a library
 
 FELTOR's library is the *dg-library* (from discontinuous Galerkin). Note
@@ -184,8 +254,6 @@ function:
 #include <iostream>
 //include the basic dg-library
 #include "dg/algorithm.h"
-//optional: include the geometries expansion
-#include "dg/geometries/geometries.h"
 
 double function(double x, double y){return exp(x)*exp(y);}
 int main()
@@ -208,7 +276,7 @@ To compile and run this code for a GPU use (assuming the external libraries are 
 
 [source,sh]
 ----
-nvcc -x cu -std=c++14 -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+nvcc -x cu -std=c++14 --extended-lambda -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -224,7 +292,7 @@ export OMP_NUM_THREADS=4
 If you do not want any parallelization, you can use a single thread version
 [source,sh]
 ----
-g++ -std=c++14 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPU -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+g++ -std=c++14 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -276,62 +344,48 @@ line calling the dot function did not change at all. The compiler
 chooses the correct implementation for you! This is a first example of a
 __container free numerical algorithm__.
 
-=== Running a FELTOR simulation
 
-Now, we want to compile and run a simulation program. To this end, we have to
-download and install some additional libraries for I/O-operations.
 
-First, we need to install jsoncpp (distributed under the MIT License),
-which on linux is available as `libjsoncpp-dev` through the package managment system.
-For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
-
-For data output we use the
-http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
-MIT - like license (we use the netcdf-4 file format).
-The underlying https://www.hdfgroup.org/HDF5/[HDF5]
-library also uses a very permissive license.
-Both can be installed easily on Linux through the `libnetcdf-dev` and `libhdf5-dev` packages.
-For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
-Note that by default we also use the serial netcdf and hdf5 libraries in the mpi
-versions of applications.
-
-Some desktop applications in FELTOR use the
-https://github.com/mwiesenberger/draw[draw library] (developed by us
-also under MIT), which depends on
-http://www.glfw.org[glfw3], an OpenGL development library under a
-BSD-like license. There is a `libglfw3-dev` package for convenient installation. Again, link `path/to/draw` in the `include` folder.
-
-____
-If you are on a HPC cluster, you may need to set INCLUDE and LIB variables manually.
-For details on how FELTOR's Makefiles are configured please see the link:config/README.md[config] file. There are also examples of some existing Makefiles in the same folder.
-____
-
-We are now ready to compile and run a simulation program
-
+=== Using FELTOR's Makefile system
+In order to simplify compilation in your own project we suggest to use __Makefile__ and import the feltor configuration like so:
 [source,sh]
 ----
-cd path/to/feltor/src/toefl # or any other project in the src folder
+device=omp # default device
+FELTOR_PATH=path/to/feltor
 
-make toefl device=gpu     # (compile for gpu, cpu or omp)
-./toefl <inputfile.json>  # (behold a live simulation with glfw output on screen)
-# or
-make toefl_hpc device=gpu  # (compile for gpu, cpu or omp)
-./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
-# or
-make toefl_mpi device=omp  # (compile for gpu, cpu or omp)
-export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI)
-echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
-# (a multi node simulation with now in total 8 threads with output stored in a file)
-# The mpi program will wait for you to type the number of processes in x and y direction before
-# running. That is why the echo is there.
+# use Feltor's configuration
+include $(FELTOR_PATH)/config/default.mk
+include $(FELTOR_PATH)/config/*.mk
+include $(FELTOR_PATH)/config/devices/devices.mk
+
+INCLUDE+=-I$(FELTOR_PATH)/inc/
+
+# See feltor/config/README for a list of all defined variables
+# For example here the feltor/src/toefl project is set up
+# The toefl.cpp program can be compiled in three different ways
+# and each can be compiled for various device values e.g.
+# make toefl device=gpu
+
+all: toefl toefl_hpc toefl_mpi
+
+# shared memory version using glfw, jsoncpp and netcdf
+toefl: toefl.cpp toefl.h parameters.h diag.h
+    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -DWITH_GLFW -g
+
+# shared memory version using jsoncpp and netcdf without glfw
+toefl_hpc: toefl.cpp toefl.h parameters.h diag.h
+    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
+
+# mpi version using jsoncpp and netcdf without glfw
+toefl_mpi: toefl.cpp toefl.h parameters.h diag.h
+    $(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)
+
+.PHONY: clean
+
+clean:
+    rm -f toefl toefl_hpc toefl_mpi
+
 ----
-
-A default input file is located in `path/to/feltor/src/toefl/input`. All
-three programs solve the same equations. The technical documentation on
-what equations are discretized, input/output parameters, etc. can be
-generated as a pdf with `make doc` in the `path/to/feltor/src/toefl`
-directory.
-
 
 === Using FELTOR on Windows [[sec_windows]]
 FELTOR has been developed mostly on Linux machines.
@@ -350,9 +404,10 @@ Please clone all four of the following URLs using `File -> Clone repository...`
 [source,sh]
 ----
 https://www.github.com/feltor-dev/feltor
-https://www.github.com/thrust/thrust
+https://www.github.com/nvidia/thrust
+# Checkout thrust to 1.9.3
 https://www.github.com/cusplibrary/cusplibrary
-https://www.github.com/feltor-dev/vcl
+https://www.github.com/vectorclass/version1 # local path "vcl"
 ----
 Please also have a look at the relevant <<tab_requirements, system requirements>> Table.
 
@@ -362,7 +417,7 @@ The Property Sheet can then be conveniently added to any project that includes
 the FELTOR library headers `dg/algorithm.h` and/or `dg/geometries/geometries.h`
 
 * Open an existing solution in Visual Studio or create a new project with `File -> New -> Projet ...` selecting `Empty Project` in Visual C{plus}{plus}.
-* In the Solution Explorer change to the `Property Manager` tab, then click on `Add New Project Property Sheet`, name it `FeltorPropertySheet.props` and save it
+* In the Solution Explorer change to the `Property Manager` tab (you may have to google how to activate it if it is not there), then click on `Add New Project Property Sheet`, name it `FeltorPropertySheet.props` and save it
 to a convenient location.
 * Double click on `FeltorPropertySheet` (expand your solution and any of the Debug or Release tabs to find it)
 ** In `VC++ Directories -> Include Directories` click on `Edit` Then add the four lines
@@ -370,9 +425,8 @@ to a convenient location.
 `path\to\cusplibrary` and `path\to\folder_containing_vcl`
 ** In `C/C++ -> Optimization -> Enable Intrinsic Functions` select `Yes (/Oi)`
 ** In `C/C++ -> Preprocessor -> Preprocessor Definitions` select `Edit` and
-add the line `THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` (Selects the OpenMP backend in FELTOR)
+add the line `THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP` (Selects the CPU backend in FELTOR)
 ** In `C/C++ -> Code Generation -> Enable Enhanced Instruction Set` select `Advanced Vector Extensions 2 (/arch:AVX2)` (If your CPU supports it, of course)
-** In `C/C++ -> Language -> Open MP Support` select `Yes (/openmp)`
 * Don't forget to click `Apply` in the end.
 
 That's it.
@@ -409,10 +463,9 @@ properties accordingly.
 jsoncpp::
 
 * Download and Install https://www.anaconda.com/download[Anaconda].
-(Once Anaconda is installed don't do anything yet, it's just to get a working
- python3 installation)
+(to get a working python3 installation)
 * In Github desktop: `File -> Clone repository...` clone `https://github.com/open-source-parsers/jsoncpp`
-* Execute the file `path\to\jsconcpp\amalgamate.py` (double click). The only way
+* Execute the file `path\to\jsconcpp\amalgamate.py`. The only way
 to confirm its success is to look for a `dist` folder containing `jsconcpp.cpp`
 and a folder containing two header files.
 * Add `path\to\jsoncpp\dist` to `Properties -> VC++ Directories -> Include Directories`

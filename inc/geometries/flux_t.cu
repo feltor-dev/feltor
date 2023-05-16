@@ -14,6 +14,7 @@
 #include "make_field.h"
 #include "flux.h"
 #include "simple_orthogonal.h"
+#include "separatrix_orthogonal.h"
 #include "ds_generator.h"
 #include "ribeiro.h"
 #include "hector.h"
@@ -95,6 +96,18 @@ int main( int argc, char* argv[])
                 mag.get_psip(), lc, psi_0, psi_1, mag.R0(), 0., psi_init,
                 mode%2);
         }
+    }
+    else if( type == "separatrix-orthogonal")
+    {
+        double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+        double ZX = -1.1*mag.params().elongation()*mag.params().a();
+        dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+        //dg::geo::CylindricalSymmTensorLvl1 monitor_chi;
+        dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
+        double fx = js["grid"]["generator"]["fx"].asDouble();
+        generator = std::make_unique<dg::geo::SeparatrixOrthogonalAdaptor>(
+            mag.get_psip(), monitor_chi, psi_0, RX, ZX, mag.R0(), 0., mode, false, fx);
+        //psi_1 = -fx/(1.-fx)*psi_0;
     }
     else if ( type == "dsp")
     {

@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 
+#include <boost/math/special_functions.hpp> // has to be included before lapack in certain versions
 #include <cusp/transpose.h>
 #include <cusp/array1d.h>
 #include <cusp/array2d.h>
@@ -20,7 +21,7 @@ namespace mat {
 ///@{
 
 /**
- * @brief Use Eigenvalue decomposition to compute
+ * @brief Create a functor that uses Eigenvalue decomposition to compute
  * \f$ f(T)\vec e_1 = E f(\Lambda) E^T \vec e_1 \f$ for symmetric tridiagonal \c T
  *
  * @note This is a general purpose solution. Very fast for small sizes (<40) of T,
@@ -70,7 +71,7 @@ auto make_FuncEigen_Te1( UnaryOp f)
 }
 
 /**
- * @brief Compute \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using SqrtCauchyInt
+ * @brief Create a functor that computes \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using SqrtCauchyInt
  *
  * @note The Eigenvalues can be estimated from a few lanczos iterations (which
  *  is at least more reliable than doing it semi-analytically)
@@ -108,7 +109,7 @@ auto make_SqrtCauchy_Te1( int exp, std::array<value_type,2> EVs, unsigned stepsC
 }
 
 /**
- * @brief Compute \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using either Eigen or SqrtCauchy solve based on whichever is fastest for given size
+ * @brief Create a functor that computes \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using either Eigen or SqrtCauchy solve based on whichever is fastest for given size
  *
  * @note The Eigenvalues can be estimated from a few lanczos iterations (which
  *  is at least more reliable than doing it semi-analytically)
@@ -149,8 +150,8 @@ auto make_SqrtCauchyEigen_Te1( int exp, std::array<value_type,2> EVs, unsigned s
 
 
 /**
- * @brief Compute \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using ODE solve
- * @param exp exponent if +1 compute \f$ \sqrt(T)\f$, if -1 compute \f$ 1/\sqrt(T)\f$
+ * @brief Create a functor that computes \f$ \sqrt{T^{\pm 1}} \vec e_1\f$ using ODE solve
+ * @param exp exponent if +1 compute \f$ \sqrt{T}\f$, if -1 compute \f$ 1/\sqrt{T}\f$
  * @param tableau Tableau of time integrator
  * @param rtol relative tolerance of time integrator
  * @param atol absolute tolerance of time integrator
@@ -181,7 +182,7 @@ auto make_SqrtODE_Te1( int exp, std::string tableau, value_type rtol,
 }
 
 /**
- * @brief Compute \f$ T^{\pm 1} \vec e_1\f$ directly
+ * @brief Create a functor that computes \f$ T^{\pm 1} \vec e_1\f$ directly
  * @param exp exponent if +1 compute \f$ Te_1\f$, if -1 compute \f$ T^{-1} e_1\f$
  * @return an operator to use in \c UniversalLanczos solve method
  * @sa \c UniversalLanczos

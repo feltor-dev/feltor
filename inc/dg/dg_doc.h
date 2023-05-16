@@ -15,24 +15,22 @@
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
  *         @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
- *             Successive calls to blas routines are executed sequentially.
- *             A manual synchronization of threads or devices is never needed
- *             in an application using these functions. All functions returning
- *             a value block until the value is ready.
+ * @note Successive calls to blas routines are executed sequentially
+ * @note A manual synchronization of threads or devices is never needed in an application
+ * using these functions. All functions returning a value block until the value is ready.
  *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
  *         @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
- *             Successive calls to blas routines are executed sequentially.
- *             A manual synchronization of threads or devices is never needed
- *             in an application using these functions. All functions returning
- *             a value block until the value is ready.
+ * @note Successive calls to blas routines are executed sequentially
+ * @note A manual synchronization of threads or devices is never needed in an application
+ * using these functions. All functions returning a value block until the value is ready.
  *         @defgroup tensor Tensor-Vector operations
  *         @brief \f$ v^i = T^{ij} w_j\f$
  *
- *              Although a tensor needs a topology to be well-defined mathematically,
- *              we do not need a grid to perform basic operations computationally.
- *              This is why the tensor operations can appear already in Level 1
- *              of this library.
+ * Although a tensor needs a topology to be well-defined mathematically,
+ * we do not need a grid to perform basic operations computationally.
+ * This is why the tensor operations can appear already in Level 1
+ * of this library.
  *     @}
  *     @defgroup typedefs Useful Typedefs
  *     @defgroup sparsematrix Sparse matrix formats
@@ -47,7 +45,9 @@
  * communication from local computations and thus readily reuse the
  * existing, optimized library for the local part.
  *     @defgroup dispatch The tag dispatch system
- *           Implementation details of \ref dispatch
+ *     @{
+ *          @defgroup traits All TensorTraits specialisations
+ *     @}
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * @{
@@ -69,25 +69,27 @@
  *     @{
  *         @defgroup basictopology Topology base classes
  *         @defgroup evaluation evaluate
- *         @brief \f$ f_i = f(x_i) \f$
+ *         @brief \f$ f_i = f(\vec x_i) \f$
  *
- *             The function discretisation routines compute the DG discretisation
- *             of analytic functions on a given grid. In 1D the discretisation
- *             simply consists of n function values per grid cell ( where n is the number
- *             of Legendre coefficients used; currently 1 <= n <= 20 ) evaluated at
- *             the Gaussian abscissas in the respective cell. In 2D and 3D we simply
- *             use the product space. We choose x to be the contiguous direction.
- *             The first elements of the resulting vector lie in the cell at (x0,y0) and the last
- *             in (x1, y1).
+ * The function discretisation routines compute the dG discretisation
+ * of analytic functions on a given grid. In 1D the discretisation
+ * simply consists of n function values per grid cell ( where n is the number
+ * of Legendre coefficients used; currently \f$ 1 <= n <= 20\f$  ) evaluated at
+ * the Gaussian abscissas in the respective cell. In 2D and 3D we simply
+ * use the product space.
+ * @note We choose x to be the contiguous direction.
+ * E.g. in 2D the first element of the resulting vector lies in the grid corner \f$ (x_0,y_0)\f$ and the last
+ * in \f$(x_1, y_1)\f$ .
  *         @defgroup highlevel create weights
  *
- *              overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
- *              available topologies
+ * overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
+ * available topologies
  *         @defgroup creation create derivatives
  *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
- *             High level matrix creation functions
- *         @defgroup interpolation Interpolation and projection
+ * High level matrix creation functions
+ *         @defgroup stencil create stencils
+ *         @defgroup interpolation Interpolation, Projection, Transformation
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
  *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
@@ -102,9 +104,9 @@
  *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
  *         @defgroup metric create volume
  *         @brief \f$ \sqrt{g} \f$
- *         @defgroup generators Grid Generator classes
+ *         @defgroup generators Grid Refinement classes
  *     @}
- *     @defgroup fem Finite Element Method
+ *     @defgroup fem Finite Element Methods
  *     @defgroup gridtypes Useful Typedefs
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
@@ -123,7 +125,7 @@
  * @{
  *     @defgroup timer Timer class
  *     @brief  t.tic(); t.toc(); t.diff();
- *     @defgroup blas1_helpers Functions and functors for subroutine and evaluate
+ *     @defgroup blas1_helpers Functions and functors
  *     @{
  *          @defgroup basics Simple
  *          @brief   For the dg::evaluate and dg::blas1::evaluate functions
@@ -133,14 +135,17 @@
  *
  *          @defgroup composition Composition of two or more functors
  *
- *          @defgroup binary_operators blas1::evaluate binary operators
+ *          @defgroup binary_operators dg::blas1::evaluate binary operators
  *          @brief   Binary subroutines for the dg::blas1::evaluate function
  *
- *          @defgroup variadic_evaluates blas1::evaluate variadic functors
+ *          @defgroup variadic_evaluates dg::blas1::evaluate variadic functors
  *          @brief   Functors to use in the dg::blas1::evaluate function
  *
- *          @defgroup variadic_subroutines blas1::subroutine subroutines
+ *          @defgroup variadic_subroutines dg::blas1::subroutine subroutines
  *          @brief   Functors to use in the dg::blas1::subroutine functions
+ *
+ *          @defgroup filters dg::blas2::stencil subroutines
+ *          @brief Functors to use in dg::blas2::stencil function
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *
@@ -150,11 +155,11 @@
 
 /** @class hide_binary
   * @tparam BinaryOp A class or function type with a member/signature equivalent to
-  *  - real_type operator()(real_type, real_type) const
+  *  - <tt>real_type operator()(real_type, real_type) const </tt>
   */
 /** @class hide_ternary
   * @tparam TernaryOp A class or function type with a member/signature equivalent to
-  *  - real_type operator()(real_type, real_type, real_type) const
+  *  - <tt>real_type operator()(real_type, real_type, real_type) const</tt>
   */
 
 /** @class hide_construct
@@ -242,17 +247,31 @@
  */
 
 /*!
- * @addtogroup blas
+ * @addtogroup dispatch
  * @section dispatch The dg dispatch system
  *
- * Let us first define some nomenclature to ease the following discussion
- *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyScalarTag
- *    - \e Vector: A template parameter T is a Vector if it is not a Scalar and if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyVectorTag
- *    - \e Matrix: A template parameter T is a Matrix if it is not a Scalar or Vector and if <tt> typename  dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyMatrixTag
+ * At the heart of the dispatch system lies the <tt>dg::TensorTraits</tt> class that specifies how
+ * a type \c T behaves in the respective functions though a tag system defined by the \c tensor_category tag and the \c execution_policy tag. Per default it looks like
+@code{.cpp}
+template< class T, class Enable=void>
+struct TensorTraits
+{
+    using value_type = void;
+    using tensor_category = NotATensorTag;
+    using execution_policy = NoPolicyTag;
+};
+@endcode
+ * The values for \c tensor_category are either \c dg::NotATensorTag or (a class derived from) \c dg::AnyMatrixTag,
+ * while the values for \c execution_policy are either \c dg::NoPolicyTag or (a class derived from) \c dg::AnyPolicyTag.
+ * Any type \c T assumes the above default values for \c value_type, \c tensor_category and \c execution_policy unless a specialisation exists for that type (see \ref traits for a full list).
+ * We define the following nomenclature
+ *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt>  derives from \c dg::AnyScalarTag
+ *    - \e Vector: A template parameter T is a Vector if it is not a Scalar and if <tt> typename dg::TensorTraits<T>::tensor_category </tt> derives from \c dg::AnyVectorTag
+ *    - \e Matrix: A template parameter T is a Matrix if it is not a Scalar or Vector and if <tt> typename  dg::TensorTraits<T>::tensor_category </tt> derives from \c dg::AnyMatrixTag
  *    - \e execution \e policy: A template parameter T has an execution policy if
- *      <tt> typename dg::TensorTraits<T>::execution_policy </tt> exists and derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
+ *      <tt> typename dg::TensorTraits<T>::execution_policy </tt> derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
  *    - \e value \e type : A template parameter T has a value type if
- *      <tt> typename dg::TensorTraits<T>::value_type </tt> exists
+ *      <tt> typename dg::TensorTraits<T>::value_type </tt> is non-void
  *    - \e compatible: Two vectors are compatible if their tensor_categories both derive from the same base class that itself derives from but is not equal to \c dg::AnyVectorTag, Two execution policies are compatible if they are equal or if at least one of them is trivial.
  *    - \e promote: A Scalar can be promoted to a Vector with all elements equal to the value of the Scalar. A Vector can be promoted to a  Matrix with the Vector being the diagonal and all other elements zero.
  *
@@ -301,28 +320,24 @@
  *
  * @subsection dispatch_symv The symv function
  * In the execution of the \c dg::blas2::symv (and its aliases \c dg::blas2::gemv and \c dg::apply)
- * each matrix type has individual prerequisites and execution paths.
+ * each matrix type has individual prerequisites and execution paths depending on its \c tensor_category.
  * We can identify some general rules:
- *   -# The Matrix type can be either a Scalar (promotes to Scalar times the
- *   Unit Matrix), a Vector (promotes to a diagonal Matrix), a Matrix or a
- *   Functor
- *   -# If the Matrix type is either a Scalar or a Vector and the remaining types do
- *   not have the \c dg::RecursiveVectorTag tensor category, then
- *   \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
- *   -# If the Matrix type has the \c dg::SelfMadeMatrixTag tensor category,
- *   then all parameters are immediately forwarded to the \c symv member
- *   function.  No asserts are performed and none of the following applies.
  *   -# If the tensor category is \c dg::NotATensorTag (any type has this tag
  *   by default unless it is overwritten by a specialization of
  *   \c dg::TensorTraits ) then the compiler assumes that the type is a functor
  *   type and immediately forwards all parameters to the \c operator() member
  *   and none of the following applies
+ *   -# If the Matrix type has the \c dg::SelfMadeMatrixTag tensor category,
+ *   then all parameters are immediately forwarded to the \c symv member
+ *   function.  No asserts are performed and none of the following applies.
+ *   -# If the Matrix type is either a Scalar or a Vector and the remaining types do
+ *   not have the \c dg::RecursiveVectorTag tensor category, then
+ *   \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
  *   -# The container template parameters must be Vectors or Scalars and must
  *   have compatible execution policies. Vectors must be compatible.
  *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
  *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is
  *   recursively called with the Matrix on all elements of the Vectors.
- *
  */
 
  /*!
@@ -408,7 +423,9 @@ by transposition of both the local matrix and the gather matrix (s.a. \c dg::tra
 The result is then a column distributed matrix.
 Analogously, the transpose of a column distributed matrix is a row-distributed matrix.
 \subsubsection mpi_create Creation
-You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
+You can create a row-distributed MPI matrix given its local parts on each process with local row and global column indices by our \c dg::convert function.
+If you have a column distributed matrix with its local parts on each process with global row and local columns indices, you can
+use a combination of \c dg::convertLocal2GlobalCols and \c dg::convertGlobal2LocalRows to bring it to a row-distributed form. The latter can then be used in \c dg::convert again.
 */
 
 namespace dg{

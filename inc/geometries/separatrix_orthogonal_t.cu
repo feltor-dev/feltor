@@ -11,7 +11,7 @@
 #include "dg/backend/timer.h"
 #include "solovev.h"
 //#include "taylor.h"
-//#include "guenther.h"
+//#include "guenter.h"
 #include "dg/topology/transform.h"
 #include "refined_curvilinearX.h"
 #include "curvilinearX.h"

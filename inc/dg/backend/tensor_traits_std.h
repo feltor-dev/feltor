@@ -8,7 +8,7 @@
 
 namespace dg
 {
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 
 ///@brief Prototypical Recursive Vector

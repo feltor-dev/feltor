@@ -11,9 +11,6 @@ CUFILES=$(wildcard *.cu)
 
 all: $(CUFILES:%.cu=%)
 
-geometry_diag: geometry_diag.cu solovev.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) $(JSONLIB) -g
-
 %_t: %_t.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
@@ -34,4 +31,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f geometry_diag *_t *_b *_mpit *_mpib
+	rm -f *_t *_b *_mpit *_mpib

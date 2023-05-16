@@ -33,7 +33,7 @@ template<class real_type>
 struct ButcherTableau{
     using value_type = real_type;
     ///No memory allocation
-    ButcherTableau(){}
+    ButcherTableau() = default;
     /*! @brief Construct a classic non-embedded tableau
      * @param s number of stages
      * @param order (global) order of the resulting method
@@ -181,7 +181,7 @@ struct ShuOsherTableau
 {
     using value_type = real_type;
     ///No memory allocation
-    ShuOsherTableau(){}
+    ShuOsherTableau() = default;
     /*! @brief Construct a non-embedded explicit tableau
      * @param stages number of stages
      * @param order (global) order of the resulting method
@@ -212,8 +212,8 @@ struct ShuOsherTableau
      */
     operator ButcherTableau<real_type>( )const{
         //the converse is not unique:
-        //AN  EXTENSION  AND  ANALYSISOF  THE
-        //SHU-OSHER  REPRESENTATIONOF  RUNGE-KUTTA  METHODS
+        //AN  EXTENSION  AND  ANALYSIS OF  THE
+        //SHU-OSHER  REPRESENTATION OF  RUNGE-KUTTA  METHODS
         dg::Operator<real_type> a(m_stages, 0);
         std::vector< real_type > b(m_stages), c(m_stages);
         //convert to Butcher tableau

@@ -16,11 +16,11 @@ namespace dg{
 * @brief A square nxn matrix
 *
 * @ingroup densematrix
-* In principle an enhanced square dynamic matrix
+* An enhanced square dynamic matrix
 * for which arithmetic operators are overloaded.
-* It is not meant for performance critical code but very convenient
+* It is not meant for performance critical code but is very convenient
 * for example for the assembly of matrices.
-* @sa \c dg::inverse and \c dg::transpose
+* @sa \c dg::create::inverse, \c dg::create::lu_pivot, \c dg::create::lu_solve
 * @tparam T value type
 */
 template< class T>
@@ -31,7 +31,7 @@ class Operator
     /**
     * @brief Construct empty Operator
     */
-    Operator(){}
+    Operator() = default;
     /**
      * @brief allocate storage for nxn matrix
      *
@@ -56,7 +56,7 @@ class Operator
     Operator( InputIterator first, InputIterator last, std::enable_if_t<!std::is_integral<InputIterator>::value>* = 0): data_(first, last)
     {
         unsigned n = std::distance( first, last);
-        n_ = (unsigned)sqrt( (value_type)n);
+        n_ = (unsigned)sqrt( (double)n);
         if( n_*n_!=n) throw Error( Message(_ping_)<<"Too few elements "<<n<<" need "<<n_*n_<<"\n");
     }
     /**
@@ -67,7 +67,7 @@ class Operator
     Operator( const std::vector<T>& src): data_(src)
     {
         unsigned n = src.size();
-        n_ = (unsigned)sqrt( (value_type)n);
+        n_ = (unsigned)sqrt( (double)n);
         if( n_*n_!=n) throw Error( Message(_ping_)<<"Wrong number of elements "<<n<<" need "<<n_*n_<<"\n");
     }
 
@@ -366,9 +366,13 @@ namespace create
  *
  * @tparam T value type
  * @throw std::runtime_error if the matrix is singular
+ * @param m  contains lu decomposition of input on output (inplace transformation)
+ * @param p contains the pivot elements on output
+ * @return determinant of \c m
  * @note uses extended accuracy of \c dg::exblas which makes it quite robust
  * against almost singular matrices
  * @ingroup densematrix
+ * @sa \c dg::create::lu_solve
  */
 template< class T>
 T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
@@ -433,7 +437,7 @@ T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
  *
  * @tparam T value type
  * @param lu result of \c dg::create::lu_pivot
- * @param p pivot vector
+ * @param p pivot vector from \c dg::create::lu_pivot
  * @param b right hand side (contains solution on output)
  * @ingroup densematrix
  */
@@ -672,7 +676,7 @@ Operator<real_type> weights( const DLT<real_type>& dlt)
  * @return new operator
  */
 template<class real_type>
-Operator<real_type> precond( const DLT<real_type>& dlt)
+Operator<real_type> inv_weights( const DLT<real_type>& dlt)
 {
     unsigned n = dlt.weights().size();
     Operator<real_type> op( n, 0);
@@ -684,6 +688,14 @@ Operator<real_type> precond( const DLT<real_type>& dlt)
 }//namespace create
 
 
+///@brief Alias for \c dg::create::inverse. Compute inverse of square matrix
+///@copydetails dg::create::inverse(const dg::Operator<T>&)
+///@ingroup densematrix
+template<class T>
+dg::Operator<T> invert( const dg::Operator<T>& in)
+{
+    return dg::create::inverse(in);
+}
 
 } //namespace dg
 

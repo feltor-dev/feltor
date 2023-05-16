@@ -86,7 +86,7 @@ struct RealGrid1d
      * @brief construct an empty grid
      * this leaves the access functions undefined
      */
-    RealGrid1d(){}
+    RealGrid1d() = default;
     /**
      * @brief 1D grid
      *
@@ -186,6 +186,8 @@ struct RealGrid1d
         set(n,N);
     }
     /////////////////////////////////////////convencience//////////////////////////////
+
+    /// @brief \c n()*\c N() (Total number of grid points)
     unsigned size() const { return n_*Nx_;}
     /**
      * @brief the discrete legendre transformation

@@ -7,10 +7,12 @@
 #include "backend/timer.h"
 #include "backend/mpi_init.h"
 #include "blas.h"
+#include "topology/filter.h"
 #include "topology/mpi_evaluation.h"
 #include "topology/mpi_derivatives.h"
 #include "topology/mpi_weights.h"
 #include "topology/fast_interpolation.h"
+#include "topology/stencil.h"
 
 //using value_type = float;
 //using Vector     = dg::fMDVec;
@@ -190,6 +192,20 @@ int main( int argc, char* argv[])
         t.toc();
         if(rank==0)std::cout<<"centered z derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     }
+    dg::MIDMatrix stencil = dg::create::window_stencil( {3,3}, grid,
+            grid.bcx(), grid.bcy());
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::stencil( dg::CSRMedianFilter(), stencil, x[0], y[0]);
+    t.toc();
+    if(rank==0)std::cout<<"stencil Median             took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+    dg::MIDMatrix limiter_stencil = dg::create::limiter_stencil( dg::coo3d::x, grid,
+            grid.bcx());
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::stencil( dg::CSRSlopeLimiter<double>(), limiter_stencil, x[0], y[0]);
+    t.toc();
+    if(rank==0)std::cout<<"stencil Slope Limiter      took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::jumpX( grid), M);
     dg::blas2::symv( M, x, y);//warm up

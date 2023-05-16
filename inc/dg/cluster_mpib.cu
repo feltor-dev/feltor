@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
         dg::CylindricalMPIGrid3d g3d( R0-a, R0+a, -a, +a, 0, 2.*M_PI, n, Nx
             ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
         dg::geo::TokamakMagneticField mag =
-            dg::geo::createGuentherField(R0, I0);
+            dg::geo::createGuenterField(R0, I0);
         dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector>
             dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 5, 5);
         dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Matrix, Vector>

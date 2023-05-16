@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
     dg::blas2::symv( project, vec, projected_vec);
     dg::blas2::symv( interpo, projected_vec, inter_vec);
-    filter.apply( vec, filtered_vec);
+    filter( vec, filtered_vec);
     dg::blas1::axpby( 1., filtered_vec, -1., inter_vec);
     double error = sqrt(dg::blas2::dot( inter_vec, weights, inter_vec)/ dg::blas2::dot( vec, weights, vec));
     if(rank==0)std::cout << "Error by filtering: "<<error<<std::endl;
@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
         std::cout << "2D TEST PASSED!\n";
     }
     }
+    MPI_Comm_free(&comm); // Segmentation fault without this line for unknown reasons!?
     {
     MPI_Comm comm;
     std::stringstream ss;
@@ -77,7 +78,7 @@ int main(int argc, char* argv[])
 
     dg::blas2::symv( project, vec, projected_vec);
     dg::blas2::symv( interpo, projected_vec, inter_vec);
-    filter.apply( vec, filtered_vec);
+    filter( vec, filtered_vec);
     dg::blas1::axpby( 1., filtered_vec, -1., inter_vec);
     double error = sqrt(dg::blas2::dot( inter_vec, weights, inter_vec)/ dg::blas2::dot( vec, weights, vec));
     if(rank==0)std::cout << "Error by filtering: "<<error<<std::endl;

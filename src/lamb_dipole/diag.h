@@ -42,6 +42,11 @@ std::vector<Record> diagnostics2d_list = {
 };
 
 std::vector<Record> diagnostics2d_static_list = {
+    { "weights", "integration weights in Cartesian coordinate system",
+        []( dg::DVec& result, Variables& v ) {
+            result = dg::create::weights( v.grid);
+        }
+    },
     { "xc", "x-coordinate in Cartesian coordinate system",
         []( dg::DVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.grid);
@@ -70,7 +75,7 @@ std::vector<Record1d> diagnostics1d_list = {
             return 0.5*dg::blas2::dot( v.y0, v.weights, v.shu.potential()) ;
         }
     },
-    {"time_per_step", "Computation time per step",
+    {"time_per_step", "Computation time between outputs",
         []( Variables& v ) {
             return v.duration;
         }

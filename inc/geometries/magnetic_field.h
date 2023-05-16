@@ -27,7 +27,7 @@ enum class equilibrium
     solovev, //!< dg::geo::solovev::Psip
     taylor, //!< dg::geo::taylor::Psip
     polynomial, //!< dg::geo::polynomial::Psip
-    guenther, //!< dg::geo::guenther::Psip
+    guenter, //!< dg::geo::guenter::Psip
     toroidal, //!< dg::geo::createToroidalField
     circular //!< dg::geo::circular::Psip
 };
@@ -50,7 +50,7 @@ enum class description
     standardX, //!< closed flux surfaces centered around an O-point located near (R_0, 0) and bordered by a separatrix with a single X-point; flux-aligned X-grids can be constructed
     doubleX, //!< closed flux surfaces centered around an O-point located near (R_0, 0) and bordered by a separatrix with two X-points; flux-aligned X-grids cannnot be constructed
     none, //!< no shaping: Purely toroidal magnetic field
-    square, //!< closed flux surfaces centered around an O-point and bordered by a square  with four X-points in the corners (mainly the Guenther field)
+    square, //!< closed flux surfaces centered around an O-point and bordered by a square  with four X-points in the corners (mainly the Guenter field)
     centeredX //!< one X-point in the middle, no O-point, only open flux surfaces, X-grids cannot be constructed
 };
 ///@cond
@@ -58,7 +58,7 @@ static const std::map<std::string, equilibrium> str2equilibrium{
     {"solovev", equilibrium::solovev},
     {"taylor", equilibrium::taylor},
     {"polynomial", equilibrium::polynomial},
-    {"guenther", equilibrium::guenther},
+    {"guenter", equilibrium::guenter},
     {"toroidal", equilibrium::toroidal},
     {"circular", equilibrium::circular}
 };
@@ -963,7 +963,7 @@ struct RhoP: public aCylindricalFunctor<RhoP>
 
 };
 
-///@brief Inertia factor \f$ \mathcal I_0 \f$
+///@brief Inertia factor \f$ \mathcal I_0 = B^2/(R_0^2|\nabla\psi_p|^2)\f$
 struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
 {
     Hoo( dg::geo::TokamakMagneticField mag): m_mag(mag){}

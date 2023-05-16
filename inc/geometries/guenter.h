@@ -17,11 +17,11 @@ namespace dg
 namespace geo
 {
 /**
- * @brief Contains the Guenther type flux functions
+ * @brief Contains the Guenter type flux functions
  */
-namespace guenther
+namespace guenter
 {
-///@addtogroup guenther
+///@addtogroup guenter
 ///@{
 
 
@@ -144,22 +144,22 @@ static inline CylindricalFunctorsLvl1 createIpol( double I_0)
     return CylindricalFunctorsLvl1( Ipol(I_0), IpolR(), IpolZ());
 }
 ///@}
-} //namespace guenther
+} //namespace guenter
 
 /**
- * @brief Create a Guenther Magnetic field
+ * @brief Create a Guenter Magnetic field
 
  * \f[\psi_p(R,Z) = \cos(\pi(R-R_0)/2)\cos(\pi Z/2),\quad I(\psi_p) = I_0\f]
  * @param R_0 the major radius
  * @param I_0 the current
  * @return A magnetic field object
- * @ingroup guenther
+ * @ingroup guenter
  */
-static inline dg::geo::TokamakMagneticField createGuentherField( double R_0, double I_0)
+static inline dg::geo::TokamakMagneticField createGuenterField( double R_0, double I_0)
 {
     MagneticFieldParameters params = { 1., 1., 0.,
-            equilibrium::guenther, modifier::none, description::square};
-    return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0), params);
+            equilibrium::guenter, modifier::none, description::square};
+    return TokamakMagneticField( R_0, guenter::createPsip(R_0), guenter::createIpol(I_0), params);
 }
 } //namespace geo
 }//namespace dg

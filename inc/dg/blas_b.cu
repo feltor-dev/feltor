@@ -3,12 +3,13 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-
 #include "backend/timer.h"
 #include "blas.h"
+#include "topology/filter.h"
 #include "topology/derivatives.h"
 #include "topology/evaluation.h"
 #include "topology/fast_interpolation.h"
+#include "topology/stencil.h"
 
 using value_type = double;
 using Vector     = dg::DVec;
@@ -80,6 +81,10 @@ int main()
     dg::blas2::transfer(dg::create::fast_projection( grid, 1,2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
+    dg::IDMatrix stencil = dg::create::window_stencil( {3,3}, grid,
+            grid.bcx(), grid.bcy());
+    dg::IDMatrix limiter_stencil = dg::create::limiter_stencil( dg::coo3d::x, grid,
+            grid.bcx());
     int multi=100;
     //t.tic();
     std::cout<<"\nNo communication\n";
@@ -186,6 +191,25 @@ int main()
         std::cout<<"centered z derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     }
 
+    t.tic();
+    unsigned ysize = y[0].size();
+    for( int i=0; i<multi; i++)
+        dg::blas2::parallel_for( [ysize]DG_DEVICE( unsigned i, double* x, const double* y){
+                x[i] = y[(i+1)%ysize] - y[i];
+            }, ysize, x[0], y[0]);
+    t.toc();
+    std::cout<<"Stencil forward derivative took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::stencil( dg::CSRMedianFilter(), stencil, x[0], y[0]);
+    t.toc();
+    std::cout<<"stencil Median             took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::stencil( dg::CSRSlopeLimiter<double>(), limiter_stencil, x[0], y[0]);
+    t.toc();
+    std::cout<<"stencil Slope Limiter      took  "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/x.size()<<"GB/s\n";
+
     dg::blas2::transfer(dg::create::jumpX( grid), M);
     dg::blas2::symv( M, x, y);//warm up
     t.tic();
@@ -270,7 +294,10 @@ int main()
     std::cout<<"Rotation        took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        std::swap( x[0], y[0]); //does not call free swap functions but uses move assignments which is just as fast
+    {
+        using std::swap;
+        swap( x[0], y[0]); //call free swap functions
+    }
     t.toc();
     std::cout<<"std::sawp       took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();

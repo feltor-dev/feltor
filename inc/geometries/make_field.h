@@ -1,7 +1,7 @@
 #ifdef JSONCPP_VERSION_STRING
 #include "magnetic_field.h"
 #include "solovev.h"
-#include "guenther.h"
+#include "guenter.h"
 #include "polynomial.h"
 #include "toroidal.h"
 #include "fieldaligned.h"
@@ -37,24 +37,25 @@ namespace geo{
 // triangularity : 0.0
  * @endcode
  * @code
-// Circular flux surfaces
+// Circular/ellipsoid flux surfaces
 {
     "equilibrium" : "circular",
-    "I_0" : 20,
-    "R_0" : 10
+    "I_0" : 10,
+    "R_0" : 3,
+    "a" : 1.0,
+    "b" : 1.0
 }
 // Automatically chosen:
 // description : "standardO",
-// a : 1.0,
 // elongation : 1.0,
 // triangularity : 0.0
  * @endcode
  * @code
-// The guenther magnetic field
+// The guenter magnetic field
 {
-    "equilibrium" : "guenther",
-    "I_0" : 20,
-    "R_0" : 10
+    "equilibrium" : "guenter",
+    "I_0" : 10,
+    "R_0" : 3
 }
 // Automatically chosen:
 // description : "square",
@@ -74,7 +75,16 @@ namespace geo{
 static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
 {
     std::string e = gs.get( "equilibrium", "solovev" ).asString();
-    equilibrium equi = str2equilibrium.at( e);
+    equilibrium equi = equilibrium::solovev;
+    try{
+        equi = str2equilibrium.at( e);
+    }catch ( std::out_of_range& err)
+    {
+        std::string message = "ERROR: Key \"" + e
+            + "\" not valid in field:\n\t"
+            + gs.access_string() + "\"equilibrium\" \n";
+        throw std::out_of_range(message);
+    }
     switch( equi){
         case equilibrium::polynomial:
         {
@@ -86,17 +96,19 @@ static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonVal
             double R0 = gs.get( "R_0", 10.0).asDouble();
             return createToroidalField( R0);
         }
-        case equilibrium::guenther:
+        case equilibrium::guenter:
         {
             double I0 = gs.get( "I_0", 20.0).asDouble();
             double R0 = gs.get( "R_0", 10.0).asDouble();
-            return createGuentherField( R0, I0);
+            return createGuenterField( R0, I0);
         }
         case equilibrium::circular:
         {
             double I0 = gs.get( "I_0", 20.0).asDouble();
             double R0 = gs.get( "R_0", 10.0).asDouble();
-            return createCircularField( R0, I0);
+            double a = gs.get( "a", 1.0).asDouble();
+            double b = gs.get( "b", 1.0).asDouble();
+            return createCircularField( R0, I0, a, b);
         }
 #ifdef BOOST_VERSION
         case equilibrium::taylor:
@@ -133,13 +145,15 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
 ///@addtogroup wall
 ///@{
 /**
- * @brief Modify Magnetic Field above or below certain Psi values according to given parameters
+ * @brief Modify Magnetic Field and create wall above or below certain Psi values according to given parameters
  *
  * We modify psi above or below certain Psip values to a constant using the
  * \c dg::IPolynomialHeaviside function (an approximation to the integrated Heaviside
  * function with width alpha), i.e. we replace psi with IPolynomialHeaviside(psi).
  * This subsequently modifies all derivatives of psi and the poloidal
  * current in this region.
+ *
+ * Furthermore, the same parameters define the **wall** region.
  *
 @code
 {
@@ -159,10 +173,9 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
 @endcode
 @sa dg::geo::modification for possible values of "type" parameter
  * @param gs forwarded to \c dg::geo::createMagneticField
- * @param jsmod contains the fields described above to steer the creation of a modification region
+ * @param jsmod contains the fields described above to steer the creation of the modification and wall region
  * @param wall (out) On output contains the region where the wall is applied, the functor returns 1 where the wall is, 0 where there it is not and 0<f<1 in the transition region
  * @param transition (out) On output contains the region where the transition of Psip to a constant value occurs, the functor returns 0<f<=1 for when there is a transition and 0 else
- * @note Per default the dampening happens nowhere
  * @return A magnetic field object
  * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
  */
@@ -313,8 +326,8 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
  * horizontal (Z0, Z1) boundaries check if the "wall" functor is zero
  * anywhere on the line: if not then move this boundary far away
  * (ii) Measure the angular distance along the fieldline (both in positive and
- * negative direction) to the remaining walls
- * (iii) Modify the angular distances with a dg::PolynomialHeaviside functor
+ * negative direction) to the remaining walls using \c dg::geo::WallFieldlineDistance (in "phi" mode)
+ * (iii) Modify the angular distances with a \c dg::PolynomialHeaviside functor
  * with parameters given in jsmod:
 @code
 {

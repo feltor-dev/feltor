@@ -46,7 +46,7 @@ struct Advection
     using matrix_type = Matrix;
     using container_type = Container;
     using value_type = get_value_type<Container>;
-    Advection(){}
+    Advection() = default;
     /**
      * @brief Create Arakawa on a grid
      * @param g The grid

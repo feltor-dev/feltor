@@ -5,15 +5,10 @@
 
 namespace dg{
 
-//here we introduce the concept of data access
-
-///@addtogroup dispatch
-///@{
 /**
  * @brief Scalar Tag base class, indicates the basic Scalar Tensor concept
  */
 struct AnyScalarTag : public AnyVectorTag{};
-///@}
 struct ScalarTag : public AnyScalarTag{};
 
 }//namespace dg

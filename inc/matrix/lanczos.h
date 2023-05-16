@@ -61,6 +61,7 @@ with
 * Thus the iterations should be kept as small as possible. Could be fixed via
 * full, partial or selective reorthogonalization strategies, but so far no
 * problems occured due to this.
+* @copydoc hide_ContainerType
 */
 template< class ContainerType >
 class UniversalLanczos
@@ -130,7 +131,7 @@ class UniversalLanczos
      * @param b input vector
      * @param weights weights in which A is self-adjoint
      * @param eps relative accuracy of M-Lanczos method
-     * @param nrmb_correction the absolute error \c C in units of \c eps to be
+     * @param nrmb_correction the absolute error in units of \c eps to be
      *  respected
      * @param error_norm Either "residual" or "universal"
      * @param res_fac factor \f$ \tau\f$ that is multiplied to the norm of the

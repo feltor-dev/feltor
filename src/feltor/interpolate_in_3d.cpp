@@ -136,8 +136,12 @@ int main( int argc, char* argv[])
         dg::evaluate( dg::cooY2d, g2d),
         dg::evaluate( dg::zero, g2d)}, yy1(yy0); //s
     auto bhat = dg::geo::createBHat( mag);
-    dg::geo::detail::DSFieldCylindrical cyl_field(bhat);
+    dg::geo::detail::DSFieldCylindrical3 cyl_field(bhat);
+    dg::Adaptive<dg::ERKStep<std::array<double,3>>> adapt(
+            "Dormand-Prince-7-4-5", std::array<double,3>{0,0,0});
     double eps = 1e-5;
+    dg::AdaptiveTimeloop< std::array<double,3>> odeint( adapt,
+            cyl_field, dg::pid_control, dg::fast_l2norm, eps, 1e-10);
     double deltaPhi = g3d_out_fieldaligned.hz();
     double phi0 = deltaPhi/2.;
     for( unsigned i=0; i<g2d.size(); i++)
@@ -152,9 +156,7 @@ int main( int argc, char* argv[])
         {
             double phi1 = phi0 + deltaPhi;
             std::array<double,3> coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
-            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phi0, coords0,
-                    phi1, coords1, 0., dg::pid_control,
-                    dg::geo::detail::ds_norm, eps, 1e-10, g2d );
+            odeint.integrate_in_domain( phi0, coords0, phi1, coords1, 0., g2d, eps);
             yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] = coords1[2];
             //now write into right place in RR ...
             RR[ (Nz_out + k)*g2d.size() + i] = yy1[0][i];
@@ -176,9 +178,7 @@ int main( int argc, char* argv[])
         {
             double phi1 = phi0 - deltaPhi;
             std::array<double,3> coords0{yy0[0][i],yy0[1][i],yy0[2][i]}, coords1;
-            dg::integrateERK( "Dormand-Prince-7-4-5", cyl_field, phi0, coords0,
-                    phi1, coords1, 0., dg::pid_control,
-                    dg::geo::detail::ds_norm, eps, 1e-10, g2d);
+            odeint.integrate_in_domain( phi0, coords0, phi1, coords1, 0., g2d, eps);
             yy1[0][i] = coords1[0], yy1[1][i] = coords1[1], yy1[2][i] = coords1[2];
             //now write into right place in RR ...
             RR[ (Nz_out - k - 1)*g2d.size() + i] = yy1[0][i];
@@ -206,7 +206,7 @@ int main( int argc, char* argv[])
     dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix, dg::HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
         //let's take NEU bc because N is not homogeneous
-        p.rk4eps, 5, 5);
+        p.rk4eps, 5, 5, -1, "dg" );
     dg::IHMatrix interpolate_in_2d = dg::create::interpolation(
             g3d_out_equidistant, g3d_out);
 

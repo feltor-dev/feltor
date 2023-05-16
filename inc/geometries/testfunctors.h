@@ -16,81 +16,43 @@ namespace geo
 ///@addtogroup profiles
 ///@{
 /////////////Test functors for DS////////////////////////
-//-psi*cos(phi)
-struct TestFunctionPsi
-{
-    TestFunctionPsi( const TokamakMagneticField& c):c_(c){}
-    double operator()(double R, double Z, double phi) const {
-        return -c_.psip()(R,Z)*cos(phi);
-    }
-    double dR( double R, double Z, double phi) const{
-        return -c_.psipR()(R,Z)*cos(phi);
-    }
-    double dRR( double R, double Z, double phi) const{
-        return -c_.psipRR()(R,Z)*cos(phi);
-    }
-    double dRZ( double R, double Z, double phi) const{
-        return -c_.psipRZ()(R,Z)*cos(phi);
-    }
-    double dZ( double R, double Z, double phi) const{
-        return -c_.psipZ()(R,Z)*cos(phi);
-    }
-    double dZZ( double R, double Z, double phi) const{
-        return -c_.psipZZ()(R,Z)*cos(phi);
-    }
-    double dP( double R, double Z, double phi) const{
-        return c_.psip()(R,Z)*sin(phi);
-    }
-    double dRP( double R, double Z, double phi) const{
-        return c_.psipR()(R,Z)*sin(phi);
-    }
-    double dZP( double R, double Z, double phi) const{
-        return c_.psipZ()(R,Z)*sin(phi);
-    }
-    double dPP( double R, double Z, double phi) const{
-        return c_.psip()(R,Z)*cos(phi);
-    }
-    private:
-    TokamakMagneticField c_;
-};
 
-//-psi*cos(phi) + 0.25*(R-R_0)*(R-R_0) +0.25*Z*(R-R_0) ;
+//exp(R-R_0)exp(Z)cos^2 (phi)
 struct TestFunctionPsi2
 {
-    TestFunctionPsi2( const TokamakMagneticField& c):R_0(c.R0()), f_(c), c_(c){}
+    TestFunctionPsi2( const TokamakMagneticField& c, double a):R_0(c.R0()), a(a), c_(c){}
     double operator()(double R, double Z, double phi) const {
-        return f_(R,Z,phi)+0.25*(R-R_0)*(R-R_0) +0.25*Z*(R-R_0) ;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi);
     }
     double dR( double R, double Z, double phi) const{
-        return f_.dR(R,Z,phi) + 0.5*(R-R_0) + 0.25*Z;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a;
     }
     double dRR( double R, double Z, double phi) const{
-        return f_.dRR(R,Z,phi) + 0.5;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a/a;
     }
     double dRZ( double R, double Z, double phi) const{
-        return f_.dRZ(R,Z,phi) + 0.25;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a/a;
     }
     double dZ( double R, double Z, double phi) const{
-        return f_.dZ(R,Z,phi) + 0.25*(R-R_0);
+        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a;
     }
     double dZZ( double R, double Z, double phi) const{
-        return f_.dZZ(R,Z,phi);
+        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a/a;
     }
     double dP( double R, double Z, double phi) const{
-        return f_.dP(R,Z,phi);
+        return exp((R-R_0)/a)*exp(Z/a)*(-2.*sin(phi)*cos(phi));
     }
     double dRP( double R, double Z, double phi) const{
-        return f_.dRP(R,Z,phi);
+        return exp((R-R_0)/a)*exp(Z/a)*(-2.*sin(phi)*cos(phi))/a;
     }
     double dZP( double R, double Z, double phi) const{
-        return f_.dZP(R,Z,phi);
+        return exp((R-R_0)/a)*exp(Z/a)*(-2.*sin(phi)*cos(phi))/a;
     }
     double dPP( double R, double Z, double phi) const{
-        return f_.dPP(R,Z,phi);
+        return exp((R-R_0)/a)*exp(Z/a)*(2.*sin(phi)*sin(phi)-2.*cos(phi)*cos(phi));
     }
     private:
-    double R_0;
-    TestFunctionPsi f_;
+    double R_0, a;
     TokamakMagneticField c_;
 };
 
@@ -138,7 +100,7 @@ struct TestFunctionDirNeu{
 template<class Function>
 struct DsFunction
 {
-    DsFunction( const TokamakMagneticField& c): f_(c), c_(c),
+    DsFunction( const TokamakMagneticField& c, Function f): f_(f), c_(c),
         bhatR_(c), bhatZ_(c), bhatP_(c){}
     double operator()(double R, double Z, double phi) const {
         return bhatR_(R,Z)*f_.dR(R,Z,phi) +
@@ -156,8 +118,8 @@ struct DsFunction
 template<class Function>
 struct DsDivFunction
 {
-    DsDivFunction( const TokamakMagneticField& c):
-        f_(c), dsf_(c), divb_(c){}
+    DsDivFunction( const TokamakMagneticField& c, Function f):
+        f_(f), dsf_(c,f), divb_(c){}
     double operator()(double R, double Z, double phi) const {
         return f_(R,Z,phi)*divb_(R,Z) + dsf_(R,Z,phi);
     }
@@ -171,7 +133,7 @@ struct DsDivFunction
 template<class Function>
 struct DssFunction
 {
-    DssFunction( TokamakMagneticField c):f_(c), c_(c),
+    DssFunction( TokamakMagneticField c, Function f):f_(f), c_(c),
         bhatR_(c), bhatZ_(c), bhatP_(c),
         bhatRR_(c), bhatZR_(c), bhatPR_(c),
         bhatRZ_(c), bhatZZ_(c), bhatPZ_(c){}
@@ -207,7 +169,7 @@ struct DssFunction
 template<class Function>
 struct DsDivDsFunction
 {
-    DsDivDsFunction( const TokamakMagneticField& c): dsf_(c), dssf_(c), divb_(c){}
+    DsDivDsFunction( const TokamakMagneticField& c,Function f): dsf_(c,f), dssf_(c,f), divb_(c){}
     double operator()(double R, double Z, double phi) const {
         return divb_(R,Z)*dsf_(R,Z,phi) + dssf_(R,Z,phi);
     }
@@ -221,7 +183,7 @@ struct DsDivDsFunction
 template<class Function>
 struct DPerpFunction
 {
-    DPerpFunction( const TokamakMagneticField& c): f_(c), dsf_(c){}
+    DPerpFunction( const TokamakMagneticField& c, Function f): f_(f), dsf_(c,f){}
     double operator()(double R, double Z, double phi) const {
         return f_.dR(R,Z,phi)/R + f_.dRR(R,Z,phi) + f_.dZZ(R,Z,phi) + f_.dPP(R,Z,phi)/R/R - dsf_(R,Z,phi);
     }
@@ -233,7 +195,7 @@ struct DPerpFunction
 template<class Function>
 struct OMDsDivDsFunction
 {
-    OMDsDivDsFunction( const TokamakMagneticField& c): f_(c), df_(c){}
+    OMDsDivDsFunction( const TokamakMagneticField& c,Function f): f_(f), df_(c,f){}
     double operator()(double R, double Z, double phi) const {
         return f_(R,Z,phi)-df_(R,Z,phi);
     }
@@ -245,7 +207,7 @@ struct OMDsDivDsFunction
 template<class Function>
 struct Variation
 {
-    Variation( const TokamakMagneticField& c): f_(c){}
+    Variation( Function f): f_(f){}
     double operator()(double R, double Z, double phi) const {
         return sqrt(f_.dR(R,Z,phi)*f_.dR(R,Z,phi) + f_.dZ(R,Z,phi)*f_.dZ(R,Z,phi));
     }
@@ -302,6 +264,7 @@ unsigned max_iter = 1e4, double eps = 1e-6)
 #ifdef MPI_VERSION
     }
 #endif //MPI
+        return;
     }
 
 }

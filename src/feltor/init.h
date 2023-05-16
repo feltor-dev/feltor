@@ -141,6 +141,12 @@ dg::x::HVec make_profile(
         profile = dg::pullback( prof, grid);
         dg::blas1::plus( profile, nbg);
     }
+    else if( "Compass_L_mode" == type)
+        {
+        profile = dg::pullback( dg::compose([]DG_DEVICE ( double rho_p){
+                        return -2.4 + (8.5 +2.4)/(1 + pow(rho_p/0.784,2.88));
+                }, dg::geo::RhoP( mag)), grid);
+        }
     else
         throw dg::Error(dg::Message()<< "Invalid profile type "<<type<<"\n");
     return profile;
@@ -249,6 +255,18 @@ dg::x::HVec make_ntilde(
                     initT = [amp, sigma, sigma_z, x0, y0]( double x, double y, double z) {
                         if( (x-x0)*(x-x0) + (y-y0)*(y-y0) < sigma*sigma)
                             return amp*exp( -(z-M_PI)*(z-M_PI)/2/sigma_z/sigma_z);
+                        return 0.;
+                    };
+                ntilde = dg::pullback( initT, grid);
+            }
+            else if( parallel == "toroidal")
+            {
+                std::function<double(double,double,double)> initT = dg::Gaussian(
+                        x0, y0, sigma, sigma, amp);
+                if( type == "circle")
+                    initT = [amp, sigma, sigma_z, x0, y0]( double x, double y, double z) {
+                        if( (x-x0)*(x-x0) + (y-y0)*(y-y0) < sigma*sigma)
+                            return amp;
                         return 0.;
                     };
                 ntilde = dg::pullback( initT, grid);

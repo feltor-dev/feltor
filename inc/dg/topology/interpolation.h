@@ -3,10 +3,12 @@
 
 #include <cusp/coo_matrix.h>
 #include <cusp/csr_matrix.h>
+#include "dg/backend/typedefs.h"
 #include "grid.h"
 #include "evaluation.h"
 #include "functions.h"
 #include "operator_tensor.h"
+#include "xspacelib.h"
 
 /*! @file
 
@@ -14,30 +16,6 @@
   */
 
 namespace dg{
-///@addtogroup typedefs
-///@{
-template<class real_type>
-using IHMatrix_t = cusp::csr_matrix<int, real_type, cusp::host_memory>;
-template<class real_type>
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-//Ell matrix can be almost 3x faster than csr for GPU
-//However, sometimes matrices contain outlier rows that do not fit in ell
-using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
-#else
-// csr matrix can be much faster than ell for CPU (we have our own symv implementation!)
-using IDMatrix_t = cusp::csr_matrix<int, real_type, cusp::device_memory>;
-#endif
-using IHMatrix = IHMatrix_t<double>;
-using IDMatrix = IDMatrix_t<double>;
-#ifndef MPI_VERSION
-namespace x{
-//introduce into namespace x
-using IHMatrix = IHMatrix;
-using IDMatrix = IDMatrix;
-} //namespace x
-#endif //MPI_VERSION
-
-///@}
 
 namespace create{
 ///@cond
@@ -250,7 +228,8 @@ std::vector<real_type> choose_1d_abscissas( real_type X,
  * nearest point and copies its value, **linear** searches for the two (in 2d
  * four, etc.) closest points and linearly interpolates their values, **cubic**
  * searches for the four (in 2d 16, etc) closest points and interpolates a
- * cubic polynomial
+ * cubic polynomial. Pay attention that **linear** and **cubic** entail nearest neighbor
+ * **communication in mpi**.
  */
 
 /**
@@ -812,6 +791,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  *
  * @param g_new The new grid
  * @param g_old The old grid
+ * @copydoc hide_method
  *
  * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
  * @attention The 1d version does **not** remove explicit zeros from the
@@ -821,18 +801,18 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation(
  * @note also check the transformation matrix, which is the more general solution
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old, std::string method = "dg")
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
     assert( g_new.x1() <= g_old.x1());
     thrust::host_vector<real_type> pointsX = dg::evaluate( dg::cooX1d, g_new);
-    return interpolation( pointsX, g_old);
+    return interpolation( pointsX, g_old, g_old.bcx(), method);
 
 }
-///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&)
+///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&,std::string)
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old, std::string method = "dg")
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -842,13 +822,13 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
     thrust::host_vector<real_type> pointsX = dg::evaluate( dg::cooX2d, g_new);
 
     thrust::host_vector<real_type> pointsY = dg::evaluate( dg::cooY2d, g_new);
-    return interpolation( pointsX, pointsY, g_old);
+    return interpolation( pointsX, pointsY, g_old, g_old.bcx(), g_old.bcy(), method);
 
 }
 
-///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&)
+///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&,std::string)
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old, std::string method = "dg")
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -860,12 +840,12 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
     thrust::host_vector<real_type> pointsX = dg::evaluate( dg::cooX3d, g_new);
     thrust::host_vector<real_type> pointsY = dg::evaluate( dg::cooY3d, g_new);
     thrust::host_vector<real_type> pointsZ = dg::evaluate( dg::cooZ3d, g_new);
-    return interpolation( pointsX, pointsY, pointsZ, g_old);
+    return interpolation( pointsX, pointsY, pointsZ, g_old, g_old.bcx(), g_old.bcy(), g_old.bcz(), method);
 
 }
-///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&)
+///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&,std::string)
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology2d<real_type>& g_old, std::string method = "dg")
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -874,39 +854,13 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
     assert( g_new.y1() <= g_old.y1());
     thrust::host_vector<real_type> pointsX = dg::evaluate( dg::cooX3d, g_new);
     thrust::host_vector<real_type> pointsY = dg::evaluate( dg::cooY3d, g_new);
-    return interpolation( pointsX, pointsY, g_old);
+    return interpolation( pointsX, pointsY, g_old, g_old.bcx(), g_old.bcy(), method);
 
 }
 ///@}
 
 
 }//namespace create
-
-/**
- * @brief Transform a vector from dg::xspace (nodal values) to dg::lspace (modal values)
- *
- * @param in input
- * @param g grid
- *
- * @ingroup misc
- * @return the vector in LSPACE
- */
-template<class real_type>
-thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real_type>& in, const aRealTopology2d<real_type>& g)
-{
-    thrust::host_vector<real_type> out(in.size(), 0);
-    dg::Operator<real_type> forwardx( g.dltx().forward());
-    dg::Operator<real_type> forwardy( g.dlty().forward());
-    for( unsigned i=0; i<g.Ny(); i++)
-    for( unsigned k=0; k<g.ny(); k++)
-    for( unsigned j=0; j<g.Nx(); j++)
-    for( unsigned l=0; l<g.nx(); l++)
-    for( unsigned o=0; o<g.ny(); o++)
-    for( unsigned m=0; m<g.nx(); m++)
-        out[((i*g.ny() + k)*g.Nx() + j)*g.nx() + l] +=
-            forwardy(k,o)*forwardx( l, m)*in[((i*g.ny() + o)*g.Nx() + j)*g.nx() + m];
-    return out;
-}
 
 
 /**
@@ -985,7 +939,7 @@ real_type interpolate(
  *      It is faster to interpolate in dg::lspace so consider
  *      transforming v using dg::forward_transform( )
  *      if you do it very many times)
- * @param v The vector to interpolate in dg::xspace, or dg::lspace s.a. dg::forward_transform( )
+ * @param v The vector to interpolate in dg::xspace, or dg::lspace s.a. \c dg::forward_transform( )
  * @param x X-coordinate of interpolation point
  * @param y Y-coordinate of interpolation point
  * @param g The Grid on which to operate

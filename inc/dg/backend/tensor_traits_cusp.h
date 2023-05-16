@@ -16,8 +16,6 @@ namespace dg
 {
 //makes such a long name in class list
 ///@cond
-///@addtogroup dispatch
-///@{
 template<class T>
 struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
     std::enable_if_t< std::is_arithmetic<T>::value>>
@@ -41,9 +39,8 @@ struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
 #endif
 };
 #endif
-///@}
 ///@endcond
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 
 template< class I, class V, class M>

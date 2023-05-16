@@ -14,10 +14,13 @@
 //nvcc does not compile the avx512 instruction set, so do not include it
 #ifdef __NVCC__
 #define _WITHOUT_VCL
-#endif//__NVCC__
+#endif //__NVCC__
+#ifdef __APPLE__ //Condition for mac users to define without VCL
+#define _WITHOUT_VCL
+#endif//__APPLE__
 #ifdef WITHOUT_VCL
 #define _WITHOUT_VCL
-#endif
+#endif//WITHOUT_VCL
 
 ////////////////////////////////////////////////////////////////////////
 //include vcl if available
@@ -37,13 +40,16 @@
 
 #if defined __INTEL_COMPILER
 #define UNROLL_ATTRIBUTE
-#define INLINE_ATTRIBUTE
 #elif defined __GNUC__
+
+#ifdef __APPLE__ //MAC does not know "unroll-loops"
+#define UNROLL_ATTRIBUTE
+#else
 #define UNROLL_ATTRIBUTE __attribute__((optimize("unroll-loops")))
-#define INLINE_ATTRIBUTE __attribute__((always_inline))
+#endif // __APPLE__
+
 #else
 #define UNROLL_ATTRIBUTE
-#define INLINE_ATTRIBUTE
 #endif
 
 #ifdef ATT_SYNTAX

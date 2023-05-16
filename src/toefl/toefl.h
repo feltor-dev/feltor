@@ -74,7 +74,7 @@ Explicit< Geometry, M, Container>::Explicit( const Geometry& grid, const Paramet
     for( unsigned u=0; u<p.num_stages; u++)
     {
         m_multi_pol.push_back({ m_multigrid.grid(u),  p.pol_dir, 1.});
-        m_multi_gamma1.push_back({ m_multigrid.grid(u), -0.5*p.tau, p.pol_dir});
+        m_multi_gamma1.push_back({-0.5*p.tau, { m_multigrid.grid(u), p.pol_dir}});
     }
     m_centered = {dg::create::dx( grid, m_p.bcx),
                   dg::create::dy( grid, m_p.bcy)};
@@ -93,7 +93,7 @@ void Explicit<G, M, Container>::compute_psi( double t)
         }
         else {
             m_old_psi.extrapolate( t, m_phi[1]);
-            m_multigrid.set_benchmark( true, "Gamma Phi");
+            m_multigrid.set_benchmark( true, "Gamma Phi   ");
             m_multigrid.solve( m_multi_gamma1, m_phi[1], m_phi[0], m_p.eps_gamma);
             m_old_psi.update( t, m_phi[1]);
         }
@@ -167,7 +167,7 @@ void Explicit<G, M, Container>::polarisation( double t,
         }
         else {
             m_old_gammaN.extrapolate(t, m_gamma_n);
-            m_multigrid.set_benchmark( true, "Gamma N");
+            m_multigrid.set_benchmark( true, "Gamma N     ");
             m_multigrid.solve( m_multi_gamma1, m_gamma_n, y[1], m_p.eps_gamma);
             m_old_gammaN.update(t, m_gamma_n);
         }

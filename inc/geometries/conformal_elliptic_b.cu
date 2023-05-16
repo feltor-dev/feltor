@@ -10,7 +10,7 @@
 #include "hector.h"
 //and some functors
 #include "solovev.h"
-//#include "guenther.h"
+//#include "guenter.h"
 #include "testfunctors.h"
 
 const unsigned nIter=6;

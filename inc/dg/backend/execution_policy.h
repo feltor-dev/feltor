@@ -16,7 +16,7 @@ possible parallelization and optimization strategies.
  * It is therefore unfortunately not possible to easily change the execution policy of a type in a program other than brute force MACROS.
  */
 struct AnyPolicyTag{};
-/// Indicates that a type does not have an execution policy
+/// Indicate that a type does not have an execution policy
 struct NoPolicyTag{};
 ///@}
 /**

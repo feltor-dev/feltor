@@ -17,10 +17,16 @@ reconnection: reconnection.cpp reconnection.h init.h diag.h parameters.h
 reconnection_hpc: reconnection.cpp reconnection.h init.h diag.h parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -DWITHOUT_GLFW
 
-reconnection_mpi: reconnection.cpp reconnection.h init.h diag.h
+reconnection_mpi: reconnection.cpp reconnection.h init.h diag.h parameters.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -DWITH_MPI -DWITHOUT_GLFW
 
 .PHONY: clean
 
+doc:
+	pdflatex -shell-escape ./reconnection.tex;
+	bibtex reconnection.aux;
+	pdflatex -shell-escape ./reconnection.tex;
+	pdflatex -shell-escape ./reconnection.tex;
+
 clean:
-	rm -f reconnection reconnection_hpc reconnection_mpi
+	rm -f reconnection reconnection_hpc reconnection_mpi reconnection.aux reconnection.bbl reconnection.blg reconnection.log reconnection.out reconnection.toc

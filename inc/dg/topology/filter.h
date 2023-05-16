@@ -9,173 +9,325 @@
 namespace dg
 {
 
-///@cond
 namespace create
 {
-    //op is evaluated at eta and returns a double
-template<class UnaryOp, class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-modal_filter( UnaryOp op, const RealGrid1d<real_type>& g )
-{
-    Operator<real_type> backward=g.dlt().backward();
-    Operator<real_type> forward=g.dlt().forward();
-    Operator<real_type> filter( g.n(), 0);
-    for( unsigned i=0; i<g.n(); i++)
-        filter(i,i) = op( i);
-    filter = backward*filter*forward;
-    //Assemble the matrix
-    EllSparseBlockMat<real_type> A(g.N(), g.N(), 1, 1, g.n());
-    A.data = filter.data();
-    for( unsigned i=0; i<g.N(); i++)
-    {
-        A.data_idx[i] = 0;
-        A.cols_idx[i] = i;
-    }
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filter_matrix(1);
-    filter_matrix.get_matrices()[0] = A;
-    return filter_matrix;
-}
-template<class UnaryOp, class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-modal_filter( UnaryOp op, const aRealTopology2d<real_type>& t)
-{
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.nx(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.ny(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterX = dg::create::modal_filter( op, gx);
-    filterX.get_matrices()[0].left_size = t.ny()*t.Ny();
-    filterX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterY = dg::create::modal_filter( op, gy);
-    filterY.get_matrices()[0].right_size = t.nx()*t.Nx();
-    filterY.get_matrices()[0].set_default_range();
-
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > filter(2);
-    filter.get_matrices()[0] = filterX.get_matrices()[0];
-    filter.get_matrices()[1] = filterY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size());
-    filter.get_temp()[0] = Buffer<thrust::host_vector<real_type > >(vec);
-    return filter;
-}
-template<class UnaryOp, class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-modal_filter( UnaryOp op, const aRealTopology3d<real_type>& t)
-{
-    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.nx(), t.Nx());
-    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.ny(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterX = dg::create::modal_filter( op, gx);
-    filterX.get_matrices()[0].left_size = t.ny()*t.Ny()*t.nz()*t.Nz();
-    filterX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> >
-        filterY = dg::create::modal_filter( op, gy);
-    filterY.get_matrices()[0].right_size = t.nx()*t.Nx();
-    filterY.get_matrices()[0].left_size = t.nz()*t.Nz();
-    filterY.get_matrices()[0].set_default_range();
-
-    MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > filter(2);
-    filter.get_matrices()[0] = filterX.get_matrices()[0];
-    filter.get_matrices()[1] = filterY.get_matrices()[0];
-    thrust::host_vector<real_type> vec( t.size());
-    filter.get_temp()[0] = Buffer<thrust::host_vector<real_type > >(vec);
-    return filter;
-}
-
-#ifdef MPI_VERSION
-//very elaborate way of telling the compiler to just apply the local matrix to the local vector
-template<class UnaryOp, class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > >
-modal_filter( UnaryOp op, const aRealMPITopology2d<real_type>& t)
-{
-    typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
-    typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::modal_filter( op, t.local());
-    MultiMatrix< Matrix, Vector > filter(2);
-    filter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
-    return filter;
-}
-
-template<class UnaryOp, class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > >
-modal_filter( UnaryOp op, const aRealMPITopology3d<real_type>& t)
-{
-    typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
-    typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
-    MultiMatrix<EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > temp = dg::create::modal_filter( op, t.local());
-    MultiMatrix< Matrix, Vector > filter(2);
-    filter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<real_type>(), NNCH<real_type>());
-    filter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
-    return filter;
-}
-
-#endif //MPI_VERSION
-
-} //namespace create
-///@endcond
 
 /**
- * @brief Struct that applies a given modal filter to a vector
+ * @brief Create a modal filter block \f$ V D V^{-1}\f$
  *
- * \f[ y = V D V^{-1}\f]
  * where \f$ V\f$ is the Vandermonde matrix (the backward transformation matrix)
  * and \f$ D \f$ is a diagonal matrix with \f$ D_{ii} = \sigma(i)\f$
  * @sa A discussion of the effects of the modal filter on advection schemes can be found here https://mwiesenberger.github.io/advection
  * @note basically the result is that it is usually not advantageous to use a modal filter
- * @copydoc hide_matrix
- * @copydoc hide_ContainerType
+ * @tparam UnaryOp Model of Unary Function \c real_type \c sigma(unsigned) The input will be the modal number \c i where \f$ i=0,...,n-1\f$ and \c n is the number of polynomial coefficients in use. The output is the filter strength for the given mode number
+ * @param op the unary function
+ * @param dlt provide the forward, backward transformation and number of coefficients \c n
+ * @return The product \f$ V D V^{-1}\f$
+
+ * @note The idea is to use the result in connection with \c dg::create::fast_transform() to create a matrix that applies the filter to vectors. For example
+ * to create a modal filter that acts in two dimensions:
+ * @code{.cpp}
+ * // create filter:
+ * auto filter = dg::create::fast_transform(
+ *      dg::create::modal_filter( op, grid.dltx()),
+ *      dg::create::modal_filter( op, grid.dlty()), grid);
+ * //apply filter:
+ * dg::blas2::symv( filter, x, y);
+ * @endcode
  * @ingroup misc
  */
-template<class MatrixType, class ContainerType>
-struct ModalFilter
+template<class UnaryOp, class real_type>
+dg::Operator<real_type> modal_filter( UnaryOp op, const DLT<real_type>& dlt )
 {
-    using real_type = get_value_type<ContainerType>;
-    ModalFilter(){}
-    /**
-     * @brief Create arbitrary filter
-     *
-     * @tparam Topology Any grid
-     * @tparam UnaryOp Model of Unary Function \c real_type \c sigma(unsigned) The input will be the modal number \c i where \f$ i=0,...,n-1\f$ and \c n is the number of polynomial coefficients in use. The output is the filter strength for the given mode number
-     * @param sigma The filter to evaluate on the normalized modal coefficients
-     * @param t The topology to apply the modal filter on
-     * @param ps parameters that are forwarded to the creation of a ContainerType (e.g. when a std::vector is to be created it is the vector size)
-     */
-    template<class UnaryOp, class Topology, class ...Params>
-    ModalFilter( UnaryOp sigma, const Topology& t, Params&& ...ps) : m_filter (
-            dg::create::modal_filter( sigma, t), std::forward<Params>(ps)...) { }
+    Operator<real_type> backward=dlt.backward();
+    Operator<real_type> forward=dlt.forward();
+    Operator<real_type> filter( dlt.n(), 0);
+    for( unsigned i=0; i<dlt.n(); i++)
+        filter(i,i) = op( i);
+    filter = backward*filter*forward;
+    return filter;
+}
 
-    /**
-    * @brief Perfect forward parameters to one of the constructors
-    *
-    * @tparam Params deduced by the compiler
-    * @param ps parameters forwarded to constructors
-    */
-    template<class ...Params>
-    void construct( Params&& ...ps)
-    {
-        //construct and swap
-        *this = ModalFilter( std::forward<Params>( ps)...);
-    }
-
-    void apply( const ContainerType& x, ContainerType& y) const{ symv( 1., x, 0., y);}
-    void symv( const ContainerType& x, ContainerType& y) const{ symv( 1., x,0,y);}
-    void symv(real_type alpha, const ContainerType& x, real_type beta, ContainerType& y) const
-    {
-        m_filter.symv( alpha, x, beta, y);
-    }
-    private:
-    MultiMatrix<MatrixType, ContainerType> m_filter;
-};
+} //namespace create
 
 ///@cond
-template <class M, class V>
-struct TensorTraits<ModalFilter<M, V> >
+namespace detail{
+
+template<class real_type>
+DG_DEVICE void pix_sort( real_type& a, real_type& b)
 {
-    using value_type  = get_value_type<V>;
-    using tensor_category = SelfMadeMatrixTag;
-};
+    if( a > b) // swap
+    {
+        real_type tmp = a;
+        a = b;
+        b = tmp;
+    }
+}
+
+template<class real_type>
+DG_DEVICE real_type median3( real_type* p)
+{
+    pix_sort(p[0],p[1]) ; pix_sort(p[1],p[2]) ; pix_sort(p[0],p[1]) ;
+    return (p[1]) ;
+}
+
+template<class real_type>
+DG_DEVICE real_type median5( real_type* p)
+{
+    pix_sort(p[0],p[1]) ; pix_sort(p[3],p[4]) ; pix_sort(p[0],p[3]) ;
+    pix_sort(p[1],p[4]) ; pix_sort(p[1],p[2]) ; pix_sort(p[2],p[3]) ;
+    pix_sort(p[1],p[2]) ; return (p[2]) ;
+}
+
+template<class real_type>
+DG_DEVICE real_type median9( real_type* p)
+{
+    pix_sort(p[1], p[2]) ; pix_sort(p[4], p[5]) ; pix_sort(p[7], p[8]) ;
+    pix_sort(p[0], p[1]) ; pix_sort(p[3], p[4]) ; pix_sort(p[6], p[7]) ;
+    pix_sort(p[1], p[2]) ; pix_sort(p[4], p[5]) ; pix_sort(p[7], p[8]) ;
+    pix_sort(p[0], p[3]) ; pix_sort(p[5], p[8]) ; pix_sort(p[4], p[7]) ;
+    pix_sort(p[3], p[6]) ; pix_sort(p[1], p[4]) ; pix_sort(p[2], p[5]) ;
+    pix_sort(p[4], p[7]) ; pix_sort(p[4], p[2]) ; pix_sort(p[6], p[4]) ;
+    pix_sort(p[4], p[2]) ; return (p[4]) ;
+}
+
+template<class real_type, class Functor>
+DG_DEVICE real_type median( unsigned i, const int* row_offsets,
+            const int* column_indices, Functor f, const real_type* x )
+{
+    int n = row_offsets[i+1]-row_offsets[i];
+    if( n == 3)
+    {
+        real_type p[3];
+        int k = row_offsets[i];
+        for( int l = 0; l<3; l++)
+            p[l] =  f(x[column_indices[k+l]]);
+        return detail::median3( p);
+    }
+    if ( n == 5)
+    {
+        real_type p[5];
+        int k = row_offsets[i];
+        for( int l = 0; l<5; l++)
+            p[l] =  f(x[column_indices[k+l]]);
+        return detail::median5(p);
+    }
+    if( n == 9)
+    {
+        real_type p[9];
+        int k = row_offsets[i];
+        for( int l = 0; l<9; l++)
+            p[l] =  f(x[column_indices[k+l]]);
+        return detail::median9( p);
+
+    }
+    int less, greater, equal;
+    real_type  min, max, guess, maxltguess, mingtguess;
+
+    min = max = f(x[column_indices[row_offsets[i]]]) ;
+    for (int k=row_offsets[i]+1 ; k<row_offsets[i+1] ; k++) {
+        if (f(x[column_indices[k]])<min) min=f(x[column_indices[k]]);
+        if (f(x[column_indices[k]])>max) max=f(x[column_indices[k]]);
+    }
+
+    while (1) {
+        guess = (min+max)/2;
+        less = 0; greater = 0; equal = 0;
+        maxltguess = min ;
+        mingtguess = max ;
+        for (int k=row_offsets[i]; k<row_offsets[i+1]; k++) {
+            if (f(x[column_indices[k]])<guess) {
+                less++;
+                if (f(x[column_indices[k]])>maxltguess)
+                    maxltguess = f(x[column_indices[k]]) ;
+            } else if (f(x[column_indices[k]])>guess) {
+                greater++;
+                if (f(x[column_indices[k]])<mingtguess)
+                    mingtguess = f(x[column_indices[k]]) ;
+            } else equal++;
+        }
+        if (less <= (n+1)/2 && greater <= (n+1)/2) break ;
+        else if (less>greater) max = maxltguess ;
+        else min = mingtguess;
+    }
+    if (less >= (n+1)/2) return maxltguess;
+    else if (less+equal >= (n+1)/2) return guess;
+    else return mingtguess;
+}
+
+}//namespace detail
 ///@endcond
+
+///@addtogroup filters
+///@{
+/**
+ * @brief Compute (lower) Median of input numbers
+ *
+ * The (lower) median of N numbers is the N/2 (rounded up) largest number.
+ * Another definition is implicit
+ * \f$ \text{Median}(x) := \{ m : \sum_i \text{sgn}(x_i - m) = 0\} \f$
+ * The Median is taken over all points contained
+ * in the stencil given by the row and column indices. The matrix values are ignored.
+ * @sa dg::blas2::stencil dg::create::window_stencil
+ */
+struct CSRMedianFilter
+{
+    template<class real_type>
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        // http://ndevilla.free.fr/median/median/index.html
+        // ignore the values array ...
+        y[i] = detail::median( i, row_offsets, column_indices, []DG_DEVICE(double x){return x;}, x);
+    }
+};
+
+
+/**
+ * @brief Switching median filter
+ *
+ \f[ y_i = \begin{cases}
+      \text{Median}( x) \text{ if } |x_i - \text{Median}(x)| > \alpha \sigma\\
+      x_i \text{ else}
+      \end{cases}
+ \f]
+ with
+ \f[
+ \sigma = \text{Median}(|x-\text{Median}(x)|)
+ \f]
+ the median absolute deviation and \f$ \alpha\f$ a constant.
+ The Median is taken over all points contained
+ in the stencil given by the row and column indices. The matrix values are ignored.
+ @note Adaptive Switching Median Filter from Akkoul "A New Adaptive Switching Median Filter" IEEE Signal processing letters (2010)
+ * @sa dg::blas2::stencil dg::create::window_stencil
+ */
+template<class real_type>
+struct CSRSWMFilter
+{
+    CSRSWMFilter( real_type alpha) : m_alpha( alpha) {}
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        real_type median = detail::median( i, row_offsets, column_indices,
+            []DG_DEVICE(double x){return x;}, x);
+        real_type amd = detail::median( i, row_offsets, column_indices,
+            [median]DG_DEVICE(double x){return fabs(x-median);}, x);
+
+        if( fabs( x[i] - median) > m_alpha*amd)
+        {
+            y[i] = median;
+        }
+        else
+            y[i] = x[i];
+    }
+    private:
+    real_type m_alpha ;
+};
+
+/**
+ * @brief %Average filter that computes the average of all points in the stencil
+ * @sa dg::blas2::stencil dg::create::window_stencil
+ */
+struct CSRAverageFilter
+{
+    template<class real_type>
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        y[i] = 0;
+        int n = row_offsets[i+1]-row_offsets[i];
+        for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
+            y[i] += x[column_indices[k]]/(real_type)n;
+    }
+};
+/**
+ * @brief Test filter that computes the symv csr matrix-vector product if used
+ * @sa dg::blas2::stencil dg::create::window_stencil
+ */
+struct CSRSymvFilter
+{
+    template<class real_type>
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        y[i] = 0;
+        for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
+            y[i] += x[column_indices[k]]*values[k];
+    }
+};
+
+/**
+ * @brief Generalized slope limiter for dG methods
+ *
+ * Consider the one-dimensional case. The first step is to transform the given
+ * values to compute modal coefficients.
+ * The linear part is given by
+ * \f$ u_h^1(x) = u_{n0}p_{n0}(x) + u_{n1}p_{n1}(x)\f$ with \f$p_{n0}(x) = 1\f$
+ * and \f$ p_{n1}(x) = 2(x-x_n)/h\f$.
+ * Then the limiter is defined via
+ * \f[
+ * \Lambda\Pi ( u_h^1)|_n = u_{n0} + \textrm{minmod}\left( u_{n1}, ( u_{(n+1)0} - u_{n0}), (u_{(n)0} - u_{(n-1)0})\right)p_{n1}(x)
+ * \f]
+ * If the result of the minmod function is \f$ u_{n1}\f$, then \f$ \Lambda\Pi( u_h)|_n = u_h|_n\f$, else \f$ \Lambda\Pi(u_h)|_n = \Lambda\Pi(u_h^1)|_n\f$
+ * Must be applied in combination with \c limiter_stencil
+ * @note This limiter in a dG advection scheme has mixed success, generally
+ * maybe because we use it as a Kronecker product of two 1d filters?
+ *
+ * @sa dg::blas2::stencil dg::create::limiter_stencil
+ */
+template<class real_type>
+struct CSRSlopeLimiter
+{
+    CSRSlopeLimiter( real_type mod = (real_type)0) :
+        m_mod(mod) {}
+    DG_DEVICE
+    void operator()( unsigned i, const int* row_offsets,
+            const int* column_indices, const real_type* values,
+            const real_type* x, real_type* y)
+    {
+        int k = row_offsets[i];
+        int n = (row_offsets[i+1] - row_offsets[i])/3;
+        if( n == 0) //only every n-th thread does something
+            return;
+        for( int u=0; u<n; u++)
+            y[column_indices[k+1*n+u]] = x[column_indices[k+1*n + u]]; // copy input
+        // Transform
+        real_type uM = 0, u0 = 0, uP = 0, u1 = 0;
+        for( int u=0; u<n; u++)
+        {
+            uM += x[column_indices[k+0*n + u]]*fabs(values[k+u]);
+            u0 += x[column_indices[k+1*n + u]]*fabs(values[k+u]);
+            u1 += x[column_indices[k+1*n + u]]*values[k+n+u];
+            uP += x[column_indices[k+2*n + u]]*fabs(values[k+u]);
+        }
+        if( values[k]<0) //DIR boundary condition
+            uM *= -1;
+        if( values[k+2*n]>0) //DIR boundary condition
+            uP *= -1;
+
+        dg::MinMod minmod;
+        if( fabs( u1) <= m_mod)
+            return;
+        real_type m = minmod( u1, uP - u0, u0 - uM);
+        if( m == u1)
+            return;
+        // Else transform back
+        for( int u=0; u<n; u++)
+            y[column_indices[k+1*n+u]] =
+             values[k+2*n]>0 ? u0 - m*values[k+2*n+u] : u0 + m*values[k+2*n+u];
+    }
+    private:
+    real_type m_mod;
+};
+
+
+///@}
 }//namespace dg

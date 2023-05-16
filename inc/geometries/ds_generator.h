@@ -93,11 +93,11 @@ struct DSPGenerator : public aGenerator2d
 
     }
 
-    virtual DSPGenerator* clone() const{return new DSPGenerator(*this);}
+    virtual DSPGenerator* clone() const override final{return new DSPGenerator(*this);}
 
     private:
-    virtual double do_width() const{return m_R1-m_R0;}
-    virtual double do_height() const{return m_Z1-m_Z0;}
+    virtual double do_width() const override final{return m_R1-m_R0;}
+    virtual double do_height() const override final{return m_Z1-m_Z0;}
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d,
          const thrust::host_vector<double>& eta1d,
@@ -106,7 +106,7 @@ struct DSPGenerator : public aGenerator2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
         unsigned size = Nx*Ny;
@@ -120,11 +120,15 @@ struct DSPGenerator : public aGenerator2d
         for( unsigned i=0; i<size; i++)
         {
             std::array<double,6> coords{x[i],y[i],1, 0,0,1}, coordsP;
-            //x,y,s
             double phi1 = m_deltaPhi;
-            dg::integrateERK( "Dormand-Prince-7-4-5", m_dsmetric, 0., coords,
-                    phi1, coordsP, m_deltaPhi/2., dg::pid_control, detail::ds_metric_norm,
-                    1e-8,1e-10);
+            //x,y,s
+            using Vec = std::array<double,6>;
+            dg::Adaptive<dg::ERKStep<Vec>> adapt( "Dormand-Prince-7-4-5", coords);
+            dg::AdaptiveTimeloop<Vec> loop( adapt, m_dsmetric, dg::pid_control,
+                    detail::ds_metric_norm, 1e-8, 1e-10, 2);
+            loop.set_dt( m_deltaPhi/2.);
+            loop.integrate( 0, coords, phi1, coordsP);
+
             x[i] = coordsP[0];
             y[i] = coordsP[1];
             zetaX[i] = coordsP[2];

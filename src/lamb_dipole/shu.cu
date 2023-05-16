@@ -52,6 +52,8 @@ int main( int argc, char* argv[])
     shu::Shu<dg::CartesianGrid2d, dg::DMatrix, dg::DVec>
         shu( grid, ws);
     shu::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( shu);
+    shu::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> shu_implicit( grid, ws);
+    shu::Filter<dg::IDMatrix, dg::DVec> shu_filter( grid, ws) ;
     if( "mms" == ws["init"]["type"].asString())
     {
         double sigma = ws["init"].get( "sigma", 0.2).asDouble();
@@ -63,6 +65,7 @@ int main( int argc, char* argv[])
     shu::Variables var = {shu, grid, y0, time, w2d, 0., ws};
     dg::Timer t;
     t.tic();
+    std::cout << "Trigger potential computation\n";
     shu( 0., y0, y1);
     t.toc();
     var.duration = t.diff();
@@ -76,71 +79,83 @@ int main( int argc, char* argv[])
     std::string stepper = ws[ "timestepper"].get( "type", "FilteredExplicitMultistep").asString();
     std::string tableau = ws[ "timestepper"].get( "tableau", "ImEx-BDF-3-3").asString();
     std::string regularization = ws[ "regularization"].get( "type", "modal").asString();
-    dg::ModalFilter<dg::DMatrix, dg::DVec> filter;
-    dg::IdentityFilter identity;
-    bool apply_filter = false;
     dg::DefaultSolver<dg::DVec> solver;
     dg::ImExMultistep<dg::DVec> imex;
+    dg::ImplicitMultistep<dg::DVec> implicit;
     dg::ShuOsher<dg::DVec> shu_osher;
     dg::FilteredExplicitMultistep<dg::DVec> multistep;
-    dg::Adaptive<dg::ERKStep<dg::DVec> > adaptive;
+    dg::Adaptive<dg::FilteredERKStep<dg::DVec> > adaptive;
     dg::Adaptive<dg::ARKStep<dg::DVec> > adaptive_imex;
-    if( regularization == "modal")
+    dg::Adaptive<dg::DIRKStep<dg::DVec> > adaptive_implicit;
+    if( regularization == "modal" || regularization == "swm" || regularization == "median" || regularization == "dg-limiter")
     {
-        double alpha = ws[ "regularization"].get( "alpha", 36).asDouble();
-        double order = ws[ "regularization"].get( "order", 8).asDouble();
-        double eta_c = ws[ "regularization"].get( "eta_c", 0.5).asDouble();
-        filter.construct( dg::ExponentialFilter(alpha, eta_c, order, grid.n()), grid);
-        apply_filter = true;
-        if( stepper != "FilteredExplicitMultistep" && stepper != "Shu-Osher" && stepper != "FilteredImplicitMultistep" )
+        if( stepper != "FilteredExplicitMultistep" && stepper != "Shu-Osher" && stepper != "ERK" )
         {
-            throw std::runtime_error( "Error: modal regularization only works with either FilteredExplicit- or -ImplicitMultistep or Shu-Osher!");
+            throw std::runtime_error( "Error: Limiter regularization only works with either FilteredExplicitMultistep or Shu-Osher or ERK!");
             return -1;
         }
     }
-    else if( regularization != "viscosity")
+    else if( regularization != "viscosity" && regularization != "none")
         throw std::runtime_error( "ERROR: Unkown regularization type "+regularization);
 
     double dt = 0.;
     double rtol = 1., atol = 1.;
+    auto odeint = std::unique_ptr<dg::aTimeloop<dg::DVec>>();
     if( "ImExMultistep" == stepper)
     {
         dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
-        unsigned mMax = ws["timestepper"].get( "mMax", 8).asUInt();
-        unsigned max_iter = ws["timestepper"].get( "max_iter", 1000).asUInt();
-        double damping = ws["timestepper"].get( "damping", 1e-5).asDouble();
         double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
         solver.construct( diffusion, y0, y0.size(), eps_time);
         imex.construct( tableau, y0);
-        imex.init( std::tie(shu, diffusion, solver), time, y0, dt);
+        odeint = std::make_unique<dg::MultistepTimeloop<dg::DVec>>( imex,
+            std::tie( shu, diffusion, solver), time, y0, dt);
+    }
+    else if( "ImplicitMultistep" == stepper)
+    {
+        dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
+        implicit.construct( tableau, y0);
+        odeint = std::make_unique<dg::MultistepTimeloop<dg::DVec>>( implicit,
+            std::tie( shu_implicit, shu_implicit), time, y0, dt);
     }
     else if( "Shu-Osher" == stepper)
     {
         dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
         shu_osher.construct( tableau, y0);
+        odeint = std::make_unique<dg::SinglestepTimeloop<dg::DVec>>( shu_osher,
+            std::tie( shu, shu_filter), dt);
     }
     else if( "FilteredExplicitMultistep" == stepper)
     {
         dt = ws[ "timestepper"].get( "dt", 2e-3).asDouble();
         multistep.construct( tableau, y0);
-        if( apply_filter)
-            multistep.init( std::tie(shu, filter), time, y0, dt);
-        else
-            multistep.init( std::tie(shu, identity), time, y0, dt);
+        odeint = std::make_unique<dg::MultistepTimeloop<dg::DVec>>( multistep,
+            std::tie( shu, shu_filter), time, y0, dt);
     }
     else if( "ERK" == stepper)
     {
-        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
-        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
+        rtol = ws["timestepper"].get("rtol", 1e-5).asDouble();
+        atol = ws["timestepper"].get("atol", 1e-5).asDouble();
         adaptive.construct( tableau, y0);
+        odeint = std::make_unique<dg::AdaptiveTimeloop<dg::DVec>>( adaptive,
+            std::tie( shu, shu_filter), dg::pid_control, dg::l2norm, rtol, atol);
     }
     else if( "ARK" == stepper)
     {
         double eps_time = ws[ "timestepper"].get( "eps_time", 1e-10).asDouble();
-        rtol = ws["timestepper"].get(rtol, 1e-5).asDouble();
-        atol = ws["timestepper"].get(atol, 1e-5).asDouble();
+        rtol = ws["timestepper"].get("rtol", 1e-5).asDouble();
+        atol = ws["timestepper"].get("atol", 1e-5).asDouble();
         solver.construct( diffusion, y0, y0.size(), eps_time);
         adaptive_imex.construct( tableau, y0);
+        odeint = std::make_unique<dg::AdaptiveTimeloop<dg::DVec>>( adaptive_imex,
+            std::tie( shu, diffusion, solver), dg::pid_control, dg::l2norm, rtol, atol);
+    }
+    else if( "DIRK" == stepper)
+    {
+        rtol = ws["timestepper"].get("rtol", 1e-5).asDouble();
+        atol = ws["timestepper"].get("atol", 1e-5).asDouble();
+        adaptive_implicit.construct( tableau, y0);
+        odeint = std::make_unique<dg::AdaptiveTimeloop<dg::DVec>>( adaptive_implicit,
+            std::tie( shu_implicit, shu_implicit), dg::i_control, dg::l2norm, rtol, atol);
     }
     else
     {
@@ -149,7 +164,8 @@ int main( int argc, char* argv[])
         return -1;
     }
     unsigned maxout =    ws[ "output"].get( "maxout", 100).asUInt();
-    unsigned itstp =     ws[ "output"].get( "itstp", 5).asUInt();
+    double tend = ws["output"].get( "tend", 100).asDouble();
+    double deltaT = tend/(double)maxout;
     std::string output = ws[ "output"].get( "type", "glfw").asString();
 #ifndef WITHOUT_GLFW
     if( "glfw" == output)
@@ -164,14 +180,14 @@ int main( int argc, char* argv[])
         draw::RenderHostData render( 1,1);
         draw::ColorMapRedBlueExt colors( 1.);
         dg::IDMatrix equidistant = dg::create::backscatter( grid );
-        while (!glfwWindowShouldClose(w) && time < maxout*itstp*dt)
+        while (!glfwWindowShouldClose(w) && time < tend)
         {
             dg::blas2::symv( equidistant, y0, visual);
             colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
             //draw and swap buffers
             dg::assign( visual, hvisual);
             render.renderQuad( hvisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-            title << "Time "<<time<< " \ttook "<<t.diff()/(double)itstp<<"\t per step";
+            title << "Time "<<time<< " \ttook "<<t.diff()<<"\t per step";
             glfwSetWindowTitle(w, title.str().c_str());
             title.str("");
             glfwPollEvents();
@@ -179,32 +195,15 @@ int main( int argc, char* argv[])
             //step
             t.tic();
             try{
-                for( unsigned j=0; j<itstp; j++)
-                {
-                    if( "ImExMultistep" == stepper)
-                        imex.step( std::tie(shu, diffusion,solver), time, y0);
-                    else if ( "FilteredExplicitMultistep" == stepper)
-                    {
-                        if( apply_filter)
-                            multistep.step( std::tie(shu, filter), time, y0);
-                        else
-                            multistep.step( std::tie(shu, identity), time, y0);
-                    }
-                    else if ( "Shu-Osher" == stepper)
-                    {
-                        if( apply_filter)
-                            shu_osher.step( std::tie(shu, filter), time, y0, time, y0, dt);
-                        else
-                            shu_osher.step( std::tie(shu, identity), time, y0, time, y0, dt);
-                    }
-                }
+                odeint->integrate( time, y0, time+deltaT, y0, dg::to::exact);
             } catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 return -1;
             }
             t.toc();
-            var.duration = t.diff()/(double)itstp;
+            var.duration = t.diff();
+            std::cout << "\n\n\tTime "<<time<<" Current timestep: "<<odeint->get_dt()<<"\n\n";
         }
         glfwTerminate();
     }
@@ -307,37 +306,17 @@ int main( int argc, char* argv[])
         }
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         ///////////////////////////////////timeloop/////////////////////////
-        unsigned step=0;
         try{
-        for( unsigned i=1; i<=maxout; i++)
+        for( unsigned u=1; u<=maxout; u++)
         {
 
             dg::Timer ti;
             ti.tic();
-            for( unsigned j=0; j<itstp; j++)
-            {
-                if( "ImExMultistep" == stepper)
-                    imex.step( std::tie(shu, diffusion, solver), time, y0);
-                else if ( "FilteredExplicitMultistep" == stepper)
-                {
-                    if( apply_filter)
-                        multistep.step( std::tie( shu, filter), time, y0);
-                    else
-                        multistep.step( std::tie( shu, identity), time, y0);
-                }
-                else if ( "Shu-Osher" == stepper)
-                {
-                    if( apply_filter)
-                        shu_osher.step( std::tie( shu, filter), time, y0, time, y0, dt);
-                    else
-                        shu_osher.step( std::tie( shu, identity), time, y0, time, y0, dt);
-                }
-            }
-            step+=itstp;
+            odeint->integrate( time, y0, time+deltaT, y0, dg::to::exact);
             ti.toc();
-            var.duration = ti.diff() / (double) itstp;
+            var.duration = ti.diff();
             //output all fields
-            start[0] = i;
+            start[0] = u;
             for( auto& record : shu::diagnostics2d_list)
             {
                 record.function( resultD, var);
@@ -350,7 +329,7 @@ int main( int argc, char* argv[])
                 nc_put_vara_double( ncid, id1d.at(record.name), start, count, &result);
             }
             err = nc_put_vara_double( ncid, tvarID, start, count, &time);
-            std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time;
+            std::cout << "\n\t Step "<<u <<" of "<<maxout <<" at time "<<time;
             std::cout << "\n\t Average time for one step: "<<var.duration<<"s\n\n"<<std::flush;
         }
         }

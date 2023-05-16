@@ -21,9 +21,8 @@ namespace dg
 ///@addtogroup basics
 ///@{
 //Everything that is quite basic and simple
-/**
- * @brief \f$ f(x) = f(x,y) = f(x,y,z) = 0\f$
- */
+
+///@brief \f$ f(x) = f(x,y) = f(x,y,z) = 0\f$
 struct ZERO
 {
     DG_DEVICE
@@ -34,9 +33,7 @@ struct ZERO
     double operator()(double x, double y, double z)const{return 0.;}
 };
 
-/**
- * @brief \f$ f(x) = f(x,y) = f(x,y,z) = 1\f$
- */
+///@brief \f$ f(x) = f(x,y) = f(x,y,z) = 1\f$
 struct ONE
 {
     DG_DEVICE
@@ -46,15 +43,14 @@ struct ONE
     DG_DEVICE
     double operator()(double x, double y, double z)const{return 1.;}
 };
-/**
- * @brief \f$ f(x) = f(x,y) = f(x,y,z) = c\f$
- */
+
+///@brief \f$ f(x) = f(x,y) = f(x,y,z) = c\f$
 struct CONSTANT
 {
     /**
      * @brief Construct with a value
      *
-     * @param cte the constant value
+     * @param cte the constant value c
      */
     CONSTANT( double cte): m_value(cte){}
 
@@ -67,45 +63,27 @@ struct CONSTANT
     private:
     double m_value;
 };
-/**
- * @brief \f$ f(x) = x + c\f$
- *
- * Add a constant value
- * @tparam T value type
- */
+
+///@brief \f$ f(x) = x + c\f$
 template <class T = double>
 struct PLUS
 {
     /**
      * @brief Construct
      *
-     * @param value to be added
+     * @param value the constant c to be added
      */
     PLUS( T value): x_(value){}
-    /**
-     * @brief Add a constant value
-     *
-     * @param x  the input
-     *
-     * @return  x + value
-     */
     DG_DEVICE
     T operator()( T x)const{ return x + x_;}
     private:
     T x_;
 };
+
 ///@brief \f$ f(x) = \exp( x)\f$
 template< class T = double >
 struct EXP
 {
-    EXP( ) {}
-    /**
-     * @brief return exponential
-     *
-     * @param x x
-     *
-     * @return \f$ \exp( x)\f$
-     */
     DG_DEVICE T operator() ( T x) const
     {
         return exp(x);
@@ -116,12 +94,6 @@ struct EXP
 template < class T = double>
 struct LN
 {
-    /**
-     * @brief The natural logarithm
-     *
-     * @param x of x
-     * @return  \f$ \ln(x) \f$
-     */
     DG_DEVICE T operator() (const T& x) const
     {
         return log(x);
@@ -156,7 +128,6 @@ struct InvSqrt
     }
 };
 
-
 ///@brief \f$ f(x) = 1/x \f$
 template <class T = double>
 struct INVERT
@@ -168,31 +139,27 @@ struct INVERT
 template <class T = double>
 struct ABS
 {
-    /**
-     * @brief The absolute value
-     *
-     * @param x of x
-     *
-     * @return  abs(x)
-     */
     DG_DEVICE T operator()(T x)const{ return fabs(x);}
 };
+
 /**
- * @brief \f$ f(x,y) = \max(|x|,|y|)\f$
- *
- * Absolute maximum
+ * @brief
+ * \f$ f(x) = \text{sgn}(x) = \begin{cases}
+ *  -1 \text{ for } x < 0 \\
+ *  0  \text{ for } x = 0 \\
+ *  +1 \text{ for } x > 0
+ *  \end{cases}\f$
  */
+template <class T = double>
+struct Sign
+{
+    DG_DEVICE T operator()(T x)const{ return (T(0) < x) - (x < T(0));}
+};
+
+///@brief \f$ f(x,y) = \max(|x|,|y|)\f$
 template <class T = double>
 struct AbsMax
 {
-    /**
-     * @brief Return the asbolute maximum
-     *
-     * @param x left value
-     * @param y right value
-     *
-     * @return absolute maximum
-     */
     DG_DEVICE T operator() ( T x, T y) const
     {
         T absx = x>0 ? x : -x;
@@ -200,22 +167,11 @@ struct AbsMax
         return absx > absy ? absx : absy;
     }
 };
-/**
- * @brief \f$ f(x,y) = \min(|x|,|y|)\f$
- *
- * Absolute minimum
- */
+
+///@brief \f$ f(x,y) = \min(|x|,|y|)\f$
 template <class T = double>
 struct AbsMin
 {
-    /**
-     * @brief Return the asbolute minimum
-     *
-     * @param x left value
-     * @param y right value
-     *
-     * @return absolute minimum
-     */
     DG_DEVICE T operator() (T x, T y) const
     {
         T absx = x<0 ? -x : x;
@@ -224,8 +180,6 @@ struct AbsMin
     }
 };
 
-
-
 /**
  * @brief
  \f$ f(x) = \begin{cases}
@@ -233,23 +187,16 @@ struct AbsMin
          0 \text{ else}
  \end{cases}
  \f$
- *
  */
 template <class T = double>
 struct POSVALUE
 {
-    /**
-     * @brief Returns positive values of x
-     *
-     * @param x of x
-     *
-     * @return  x*0.5*(1+sign(x))
-     */
     DG_DEVICE T operator()( T x)const{
         if (x >= 0.0) return x;
         return 0.0;
     }
 };
+
 /**
  * @brief \f$ f(x) = \f$ \c x mod m > 0 ? x mod m : x mod m + m
  *
@@ -296,6 +243,7 @@ struct ISNFINITE
     bool operator()( T x){ return !std::isfinite(x);}
 #endif
 };
+
 /**
  * @brief \f$ f(x) =\begin{cases} \mathrm{true\ if}\ |x| > 10^{100}\\
  * \mathrm{false\ else}
@@ -333,7 +281,6 @@ struct ISNSANE
     }
 #endif
 };
-
 
 /**
  * @brief
@@ -377,7 +324,6 @@ struct MinMod
         return this-> operator()( this-> operator()( x1, x2), x3);
     }
 };
-
 
 /**
  * @brief \f$ f(x_1,x_2) = 2\begin{cases}
@@ -455,6 +401,7 @@ struct SlopeLimiter
     private:
     Limiter m_l;
 };
+
 /**
  * @brief \f$ \text{up}(v, g_m, g_0, g_p, h_m, h_p ) = v \begin{cases}  +h_m \Lambda( g_0, g_m) &\text{ if } v \geq 0 \\
  *  -h_p \Lambda( g_p, g_0) &\text{ else}
@@ -716,7 +663,7 @@ struct Gaussian
     /**
      * @brief Return the value of the %Gaussian
      * \f[
-       f(x,y,z) = Ae^{-(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2})}
+       f(x,y,z) = Ae^{-\left(\frac{(x-x_0)^2}{2\sigma_x^2} + \frac{(y-y_0)^2}{2\sigma_y^2}\right)}
        \f]
      * @param x x - coordinate
      * @param y y - coordinate

@@ -20,16 +20,20 @@ const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
+double initial( double x) {return 0.;}
 double initial( double x, double y) {return 0.;}
 //double amp = 0.9999; // LGMRES has problems here
 double amp = 0.9;
+double pol( double x) {return 1. + amp*sin(x); } //must be strictly positive
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
 //double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
 
+double rhs( double x) { return sin(x) + amp*sin(x)*sin(x) - amp*cos(x)*cos(x);}
 double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
+double sol(double x)  { return sin( x);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
 double derX(double x, double y)  { return cos( x)*sin(y);}
 double derY(double x, double y)  { return sin( x)*cos(y);}
@@ -58,7 +62,6 @@ int main()
 
 	dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
-    dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
@@ -74,7 +77,7 @@ int main()
     dg::DVec error( solution);
     dg::exblas::udouble res;
 
-    //std::cout << "Create Polarisation object and set chi!\n";
+    std::cout << "Create Polarisation object and set chi!\n";
     {
     std::cout << "Centered Elliptic Multigrid\n";
     //! [multigrid]
@@ -135,7 +138,7 @@ int main()
     x = temp;
     //![pcg]
     //create an Elliptic object
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::centered, jfactor);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::forward, jfactor);
 
     //Set the chi function (chi is a dg::DVec of size grid.size())
     pol_forward.set_chi( chi);
@@ -161,6 +164,10 @@ int main()
     err = dg::blas2::dot( w2d, error);
     const double norm_var = dg::blas2::dot( w2d, variatio);
     std::cout << " "<<sqrt( err/norm_var) << "\n";
+    std::cout << "Compute direct application of forward Elliptic (supraconvergence)\n";
+    dg::apply( pol_forward, solution, x);
+    dg::blas1::axpby( 1.,x,-1., b, error);
+    std::cout << " "<<sqrt( dg::blas2::dot( w2d, error)) << "\n";
     // NOW TEST LGMRES AND BICGSTABl
     unsigned inner_m = 30, outer_k = 3;
     //std::cout << " Type inner and outer iterations (30 3)!\n";
@@ -244,6 +251,38 @@ int main()
         std::cerr << "TEST failure message";
         std::cerr << fail.what()<<std::endl;
         std::cerr << "END TEST failure message\n";
+    }
+    {
+        std::cout  <<"# TEST 1D elliptic operator\n";
+        dg::Grid1d grid1d( 0, lx, n, Nx, bcx);
+        dg::DVec w1d = dg::create::weights( grid1d);
+        x =    dg::evaluate( initial, grid1d);
+        b =    dg::evaluate( rhs, grid1d);
+        chi =  dg::evaluate( pol, grid1d);
+        const dg::DVec sol1d = dg::evaluate( sol, grid1d);
+        const double norm1d = dg::blas2::dot( w1d, sol1d);
+        chi_inv = chi;
+        dg::blas1::transform( chi, chi_inv, dg::INVERT<double>());
+        dg::DVec temp = x;
+        dg::Elliptic1d<dg::Grid1d, dg::DMatrix, dg::DVec> pol1d( grid1d,
+                dg::backward, jfactor);
+        pol1d.set_chi( chi);
+        dg::PCG<dg::DVec > pcg1d( x, 10*n*Nx);
+        unsigned number = 0;
+        try{
+		    number = pcg1d.solve( pol1d, x, b, chi_inv, w1d, eps);
+        }catch ( dg::Fail& fail){}
+        std::cout << "# Number of 1d iterations: "<<number<<"\n";
+
+        dg::blas1::axpby( 1.,x,-1., sol1d, x);
+        double err = dg::blas2::dot( w1d, x);
+        err = sqrt( err/norm1d); res.d = err;
+        std::cout << " "<<err<<"\n";
+        std::cout << "Compute direct application of 1d Elliptic (supraconvergence)\n";
+        dg::apply( pol1d, sol1d, x);
+        dg::blas1::axpby( 1.,x,-1., b, x);
+        std::cout << " "<<sqrt( dg::blas2::dot( w1d, x)) << "\n";
+
     }
 
 

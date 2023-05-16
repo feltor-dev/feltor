@@ -228,7 +228,8 @@ The flux is discretized according to
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{2nd Elevating the scheme to three-dimensions}
 A second possibility is to first center the coordinate system on the fluxes on the staggered grid and then
-in a second step center on the time-derivative:
+in a second step center on the time-derivative: (this is generally found to generate more oscillations and
+be less stable)
 \begin{align}
 n_k^\dagger =& \frac{1}{2}\left( \QQ n_k + \PP n_{k+1}\right) \\
 u_k =& \frac{1}{2}\left( \QQ u^\dagger_{k-1} + \PP u_{k}^\dagger\right)\\

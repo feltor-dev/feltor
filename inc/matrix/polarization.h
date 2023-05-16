@@ -96,8 +96,8 @@ class PolCharge
             m_multi_g.construct(g, 3);
             for( unsigned u=0; u<3; u++)
             {
-                m_multi_gamma.push_back( {m_multi_g.grid(u), bcx, bcy,
-                        m_alpha, dir, jfactor});
+                m_multi_gamma.push_back( {m_alpha, {m_multi_g.grid(u), bcx, bcy,
+                        dir, jfactor}});
             }
         }
         if (m_mode == "ff")
@@ -105,7 +105,8 @@ class PolCharge
             m_ell.construct(g, bcx, bcy, dir, jfactor );
             m_multi_gamma.resize(1);
             m_multi_gamma.resize(1);
-            m_multi_gamma[0].construct( g, bcx, bcy, m_alpha, dir, jfactor);
+            m_multi_gamma[0].construct( m_alpha, dg::Elliptic<Geometry,
+                Matrix, Container>{g, bcx, bcy, dir, jfactor});
 
             m_inv_sqrt.construct( m_multi_gamma[0], -1,
                     m_multi_gamma[0].weights(), m_eps_gamma[0]);
@@ -116,8 +117,8 @@ class PolCharge
             m_multi_g.construct(g, 3);
             for( unsigned u=0; u<3; u++)
             {
-                m_multi_gamma.push_back({ m_multi_g.grid(u), bcx, bcy,
-                        m_alpha, dir, jfactor});
+                m_multi_gamma.push_back({ m_alpha, {m_multi_g.grid(u), bcx, bcy,
+                        dir, jfactor}});
             }
         }
     }

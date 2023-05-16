@@ -32,6 +32,8 @@ void sigterm_handler(int signal)
 }
 #endif //WITH_MPI
 
+using Vector = std::array<std::array<dg::x::DVec, 2>,2>;
+
 int main( int argc, char* argv[])
 {
 #ifdef WITH_MPI
@@ -135,10 +137,9 @@ int main( int argc, char* argv[])
         mag = unmod_mag;
 
     DG_RANK0 std::cout << "# Constructing Feltor...\n";
+    //feltor::Filter<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DVec> filter( grid, js);
     feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
-    feltor::Implicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
-        dg::x::DMatrix, dg::x::DVec> implicit( feltor);
     DG_RANK0 std::cout << "# Done!\n";
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
@@ -193,16 +194,17 @@ int main( int argc, char* argv[])
     }
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
-    std::array<std::array<dg::x::DVec,2>,2> y0;
-    std::array<dg::x::DVec, 3> gradPsip;
+    std::vector<double> time_intern(p.itstp);
+    Vector y0;
+    std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
     gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
     gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
+    unsigned failed =0;
     feltor::Variables var{
-        feltor, y0, p, mag, gradPsip, gradPsip,
-        dg::construct<dg::x::DVec>( dg::pullback( dg::geo::Hoo(mag),grid)),
+        feltor, y0, p, mag, gradPsip, gradPsip, gradPsip, gradPsip,
         0., // duration
-        0 // nfailed
+        &failed // nfailed
     };
     DG_RANK0 std::cout << "# Set Initial conditions ... \n";
     t.tic();
@@ -223,7 +225,7 @@ int main( int argc, char* argv[])
                     js["init"], time, sheath_coordinate );
 #ifdef WITH_NAVIER_STOKES
             std::string advection = js["advection"].get("type", "velocity-staggered").asString();
-            if( advection == "log-staggered")
+            if( advection == "log-staggered" || advection == "staggered-direct")
                 dg::blas1::transform( y0[0], y0[0], dg::LN<double>());
             else if( advection == "staggered")
             {
@@ -242,53 +244,87 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
 
 
+    ///PROBE ADDITIONS!!!
+    dg::HVec R_probe(p.num_pins), Z_probe(p.num_pins), phi_probe(p.num_pins);
+
+    //Example input
+    if(p.probes){
+    for(unsigned i = 0 ; i < p.num_pins; i++){
+        R_probe[i] = js["probes"]["R_probe"][i].asDouble();
+        Z_probe[i] = js["probes"]["Z_probe"][i].asDouble();
+        phi_probe[i] = js["probes"]["phi_probe"][i].asDouble();
+    }
+    }
+    //Change to device matrix!
+    //IHMatrix probe_interpolate_h = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.local());
+    //IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
+    //dg::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid.global());
+#ifdef WITH_MPI
+    dg::MDVec simple_probes_device((dg::DVec)R_probe,grid.communicator());
+    dg::MHVec simple_probes(R_probe, grid.communicator());
+#else //WITH_MPI
+    dg::DVec simple_probes_device(p.num_pins);
+    dg::HVec simple_probes(p.num_pins);
+#endif
+    std::map<std::string, std::vector<dg::x::HVec>> simple_probes_intern;
+    for( auto& record : feltor::probe_list)
+    {
+        simple_probes_intern[record.name] = std::vector<dg::x::HVec>(p.itstp+1, simple_probes);
+    }
+    dg::x::IDMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, phi_probe, grid);
+
+
+
     ///////////////////////////////////////////////////////////////////////////
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
-    dg::ExplicitMultistep< std::array<std::array<dg::x::DVec,2>,2>> multistep;
-    feltor::ImplicitSolver<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> solver;
-    dg::ImExMultistep< std::array<std::array<dg::x::DVec,2>,2> > multistep_imex;
-    dg::Adaptive< dg::ERKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt;
-    dg::Adaptive< dg::ARKStep< std::array<std::array<dg::x::DVec,2>,2>>> adapt_ark;
+    dg::ExplicitMultistep< Vector> multistep;
+    dg::Adaptive< dg::ERKStep< Vector>> adapt;
+    auto odeint = std::unique_ptr<dg::aTimeloop<Vector>>();
     double rtol = 0., atol = 0., dt = 0., reject_limit = 2;
     if( p.timestepper == "multistep")
     {
         multistep = { p.tableau, y0};
         dt = js[ "timestepper"]["dt"].asDouble( 0.01);
-    }
-    else if( p.timestepper == "multistep-imex")
-    {
-        double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
-        solver = { feltor, eps_time};
-        multistep_imex = { p.tableau, y0};
-        dt = js[ "timestepper"]["dt"].asDouble( 0.01);
+        odeint = std::make_unique<dg::MultistepTimeloop<Vector>>( multistep,
+            feltor, time, y0, dt);
     }
     else if (p.timestepper == "adaptive")
     {
         adapt = {p.tableau, y0};
-        adapt.stepper().ignore_fsal();
+        //adapt.stepper().ignore_fsal();
         rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
         atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
-        dt = 1e-5; //that should be a small enough initial guess
         reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
-    }
-    else if (p.timestepper == "adaptive-imex")
-    {
-        double eps_time = js[ "timestepper"]["solver"].get("eps_time", 1e-10).asDouble();
-        solver = { feltor, eps_time};
-        adapt_ark = { p.tableau, y0};
-        rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
-        atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
-        dt = 1e-5; //that should be a small enough initial guess
-        reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
+        odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>( adapt,
+            //std::tie(feltor, filter), dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
+            feltor, dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
+        var.nfailed = &adapt.nfailed();
     }
     else
     {
         DG_RANK0 std::cerr << "Error: Unrecognized timestepper: '"
-                           << p.timestepper << "'! Exit now!";
+                           << p.timestepper << "'! Exit now!\n";
         dg::abort_program();
     }
     DG_RANK0 std::cout << "Done!\n";
+    double t_output = time;
 
+    unsigned maxout = js["output"].get( "maxout", 0).asUInt();
+    std::string output_mode = js["timestepper"].get(
+            "output-mode", "Tend").asString();
+    double Tend = 0, deltaT = 0.;
+    if( output_mode == "Tend")
+    {
+        Tend = js["timestepper"].get( "Tend", 1).asDouble();
+        deltaT = Tend/(double)(maxout*p.itstp);
+    }
+    else if( output_mode == "deltaT")
+    {
+        deltaT = js["timestepper"].get( "deltaT", 1).asDouble()/(double)(p.itstp);
+        Tend = deltaT*(double)(maxout*p.itstp);
+    }
+    else
+        throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
     {
@@ -335,6 +371,10 @@ int main( int argc, char* argv[])
         int ncid=-1;
         try{
             DG_RANK0 err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+#ifdef WRITE_POL_FILE
+            DG_RANK0 err_pol = nc_create( "polarisation.nc", NC_NETCDF4|NC_CLOBBER, &ncid_pol);
+#endif
+
         }catch( std::exception& e)
         {
             DG_RANK0 std::cerr << "ERROR creating file "<<file_name<<std::endl;
@@ -360,8 +400,14 @@ int main( int argc, char* argv[])
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = inputfile;
         for( auto pair : att)
+        {
             DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
                 pair.first.data(), pair.second.size(), pair.second.data());
+#ifdef WRITE_POL_FILE
+            DG_RANK0 err_pol = nc_put_att_text( ncid_pol, NC_GLOBAL,
+                pair.first.data(), pair.second.size(), pair.second.data());
+#endif
+        }
 
         // Define dimensions (t,z,y,x)
         int dim_ids[4], restart_dim_ids[3], tvarID;
@@ -371,6 +417,10 @@ int main( int argc, char* argv[])
             DG_RANK0 err = dg::file::define_time( ncid, "time", dim_ids, &tvarID);
         DG_RANK0 err = dg::file::define_dimensions( ncid, restart_dim_ids, grid,
                 {"zr", "yr", "xr"});
+#ifdef WRITE_POL_FILE
+        DG_RANK0 err_pol = dg::file::define_dimensions( ncid_pol, dim_ids_pol, grid,
+                {"z", "y", "x"});
+#endif
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
         bool write2d = true;
 #ifdef WITH_MPI
@@ -452,34 +502,102 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name),
                     "long_name", long_name.size(), long_name.data());
         }
-        for( auto& record : feltor::diagnostics2d_list)
+
+        std::vector<std::vector<feltor::Record>> equation_list;
+        bool equation_list_exists = js["output"].asJson().isMember("equations");
+        if( equation_list_exists)
         {
-            std::string name = record.name + "_ta2d";
-            std::string long_name = record.long_name + " (Toroidal average)";
-            id3d[name] = 0;//creates a new id3d entry for all processes
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
-                &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+            for( unsigned i=0; i<js["output"]["equations"].size(); i++)
+            {
+                std::string eqn = js["output"]["equations"][i].asString();
+                if( eqn == "Basic")
+                    equation_list.push_back(feltor::basicDiagnostics2d_list);
+                else if( eqn == "Mass-conserv")
+                    equation_list.push_back(feltor::MassConsDiagnostics2d_list);
+                else if( eqn == "Energy-theorem")
+                    equation_list.push_back(feltor::EnergyDiagnostics2d_list);
+                else if( eqn == "Toroidal-momentum")
+                    equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
+                else if( eqn == "Parallel-momentum")
+                    equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
+                else if( eqn == "Zonal-Flow-Energy")
+                    equation_list.push_back(feltor::RSDiagnostics2d_list);
+                else if( eqn == "COCE")
+                    equation_list.push_back(feltor::COCEDiagnostics2d_list);
+                else
+                    throw std::runtime_error( "output: equations: "+eqn+" not recognized!\n");
+            }
+        }
+        else // default diagnostics
+        {
+            equation_list.push_back(feltor::basicDiagnostics2d_list);
+            equation_list.push_back(feltor::MassConsDiagnostics2d_list);
+            equation_list.push_back(feltor::EnergyDiagnostics2d_list);
+            equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
+            equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
+            equation_list.push_back(feltor::RSDiagnostics2d_list);
+        }
+
+        std::string m_list;
+        for( auto& m_list : equation_list)
+        {
+            for( auto& record : m_list)
+            {
+                std::string name = record.name + "_ta2d";
+                std::string long_name = record.long_name + " (Toroidal average)";
+                id3d[name] = 0;//creates a new id3d entry for all processes
+                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                    &id3d.at(name));
+                DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
 
-            name = record.name + "_2d";
-            long_name = record.long_name + " (Evaluated on phi = 0 plane)";
-            id3d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                name = record.name + "_2d";
+                long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+                id3d[name] = 0;
+                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
                     dim_ids3d, &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
+                DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
                     long_name.size(), long_name.data());
+            }
         }
+
         for( auto& record : feltor::diagnostics1d_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
             id1d[name] = 0;
             DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1,
-                    &dim_ids[0], &id1d.at(name));
+                &dim_ids[0], &id1d.at(name));
             DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
-                    long_name.size(), long_name.data());
+                long_name.size(), long_name.data());
         }
+
+        //Probes:
+        int probe_grp_id;
+        if( p.probes)
+            DG_RANK0 err = nc_def_grp(ncid,"probes",&probe_grp_id);
+        int probe_dim_ids[2];
+        int probe_timevarID;
+        int R_pin_id, Z_pin_id, phi_pin_id;
+        std::map<std::string, int> probe_id_field;
+        if( p.probes)
+        {
+            DG_RANK0 err = dg::file::define_time( probe_grp_id, "probe_time", &probe_dim_ids[0], &probe_timevarID);
+            DG_RANK0 err = nc_def_dim(probe_grp_id,"pins",p.num_pins,&probe_dim_ids[1]);
+            DG_RANK0 err = nc_def_var(probe_grp_id, "R_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &R_pin_id);
+            DG_RANK0 err = nc_def_var(probe_grp_id, "Z_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &Z_pin_id);
+            DG_RANK0 err = nc_def_var(probe_grp_id, "phi_pin_coord", NC_DOUBLE, 1, &probe_dim_ids[1], &phi_pin_id);
+
+            for( auto& record : feltor::probe_list)
+            {
+                std::string name = record.name;
+                std::string long_name = record.long_name;
+                probe_id_field[name] = 0;//creates a new id4d entry for all processes
+                DG_RANK0 err = nc_def_var( probe_grp_id, name.data(), NC_DOUBLE, 2, probe_dim_ids,  &probe_id_field.at(name));
+                DG_RANK0 err = nc_put_att_text( probe_grp_id, probe_id_field.at(name), "long_name", long_name.size(), long_name.data());
+            }
+        }
+
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "First output ... \n";
         //first, update feltor (to get potential etc.)
@@ -510,144 +628,86 @@ int main( int argc, char* argv[])
             dg::assign( resultD, resultH);
             dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
         }
-        for( auto& record : feltor::diagnostics2d_list)
+
+        for( auto& m_list : equation_list)
         {
-            dg::Timer tti;
-            tti.tic();
-            record.function( resultD, var);
-            dg::blas2::symv( projectD, resultD, transferD);
-
-            //toroidal average
-            std::string name = record.name + "_ta2d";
-            dg::assign( transferD, transferH);
-            toroidal_average( transferH, transferH2d, false);
-            //create and init Simpsons for time integrals
-            if( record.integral) time_integrals[name].init( time, transferH2d);
-            tti.toc();
-            DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
-            tti.tic();
-            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
-            tti.toc();
-            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
-            tti.tic();
-
-            // and a slice
-            name = record.name + "_2d";
-            feltor::slice_vector3d( transferD, transferD2d, local_size2d);
-            dg::assign( transferD2d, transferH2d);
-            if( record.integral) time_integrals[name].init( time, transferH2d);
-            if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
-            tti.toc();
-            DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            for( auto& record : m_list)
+            {
+                dg::Timer tti;
+                tti.tic();
+                record.function( resultD, var);
+                dg::blas2::symv( projectD, resultD, transferD);
+                //toroidal average
+                std::string name = record.name + "_ta2d";
+                dg::assign( transferD, transferH);
+                toroidal_average( transferH, transferH2d, false);
+                //create and init Simpsons for time integrals
+                if( record.integral) time_integrals[name].init( time, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+                tti.tic();
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+                tti.tic();
+                // add a slice
+                name = record.name + "_2d";
+                feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                dg::assign( transferD2d, transferH2d);
+                if( record.integral) time_integrals[name].init( time, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            }
         }
         for( auto& record : feltor::diagnostics1d_list)
         {
             double result = record.function( var);
             DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
         }
+
+
+        /// Probes FIRST output ///
+        size_t probe_start[] = {0, 0};
+        size_t probe_count[] = {1, p.num_pins};
+        time_intern[0]=time;
+        if(p.probes)
+        {
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, R_pin_id, &probe_start[1], &probe_count[1], R_probe.data());
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, Z_pin_id, &probe_start[1], &probe_count[1], Z_probe.data());
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, phi_pin_id, &probe_start[1], &probe_count[1], phi_probe.data());
+        DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0], &count, &time_intern[0]);
+
+        for( auto& record : feltor::probe_list)
+        {
+            record.function( resultD, var);
+            dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+            dg::assign(simple_probes_device,simple_probes);
+            simple_probes_intern.at(record.name)[0]=simple_probes;
+#ifdef WITH_MPI
+            DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data().data());
+#else
+            DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes.data());
+#endif
+        }
+        }
+         /// End probes output ///
+
         DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
 
         t.tic();
-        unsigned step = 0;
-        unsigned maxout = js["output"].get( "maxout", 0).asUInt();
-        double Tend = 0, deltaT = 0, t_output = 0;
-        std::string output_mode = "free";
-        if( p.timestepper == "multistep")
-            multistep.init( feltor, time, y0, dt);
-        if( p.timestepper == "multistep-imex")
-            multistep_imex.init( std::tie( feltor, implicit, solver), time, y0,
-                    dt);
-        else if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
-        {
-            output_mode = js["timestepper"].get(
-                    "output-mode", "equidistant").asString();
-            if( output_mode == "equidistant")
-            {
-                Tend = js["timestepper"].get( "Tend", 1).asDouble();
-                deltaT = Tend/(double)(maxout*p.itstp);
-                t_output = time + deltaT;
-            }
-            else if( !(output_mode == "free"))
-                throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
-
-        }
         bool abort = false;
         for( unsigned i=1; i<=maxout; i++)
         {
             dg::Timer ti;
             ti.tic();
-            for( unsigned j=0; j<p.itstp; j++)
+            for( unsigned j=1; j<=p.itstp; j++)
             {
                 try{
-                if( output_mode == "equidistant")
-                {
-                    while( time < t_output)
-                    {
-                        if( time + dt > t_output)
-                            dt = t_output-time;
-                        if( p.timestepper == "adaptive")
-                        {
-                            do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt.failed());
-                        }
-                        else if ( p.timestepper == "adaptive-imex")
-                            do{
-                                adapt_ark.step( std::tie( feltor, implicit,
-                                            solver), time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt_ark.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt_ark.failed());
-                        DG_RANK0 std::cout << "## time "<<time<<" dt "<<dt<<" t_out "<<t_output<<" step "<<step<<" failed "<<var.nfailed<<"\n";
-                        step++;
-                    }
-                    t_output += deltaT;
-                }
-                else
-                    for( unsigned k=0; k<p.inner_loop; k++)
-                    {
-                        if( p.timestepper == "adaptive")
-                        {
-                            do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt.failed());
-                        }
-                        else if( p.timestepper == "adaptive-imex")
-                            do{
-                                adapt_ark.step( std::tie( feltor, implicit,
-                                            solver), time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol, reject_limit);
-                                if( adapt_ark.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt_ark.failed());
-                        else if ( p.timestepper == "multistep")
-                            multistep.step( feltor, time, y0);
-                        else if ( p.timestepper == "multistep-imex")
-                            multistep_imex.step( std::tie( feltor, implicit,
-                                        solver), time, y0);
-                        step++;
-                    }
+                    odeint->integrate( time, y0, t_output + j*deltaT, y0,
+                        j<p.itstp ? dg::to::at_least :  dg::to::exact);
                 }
                 catch( dg::Fail& fail){ // a specific exception
                     DG_RANK0 std::cerr << "ERROR failed to converge to "<<fail.epsilon()<<"\n";
@@ -663,43 +723,58 @@ int main( int argc, char* argv[])
                 }
                 dg::Timer tti;
                 tti.tic();
-                for( auto& record : feltor::diagnostics2d_list)
-                {
-                    if( record.integral)
-                    {
-                        record.function( resultD, var);
-                        dg::blas2::symv( projectD, resultD, transferD);
-                        //toroidal average and add to time integral
-                        dg::assign( transferD, transferH);
-                        toroidal_average( transferH, transferH2d, false);
-                        time_integrals.at(record.name+"_ta2d").add( time,
-                                transferH2d);
 
-                        // 2d data of plane varphi = 0
-                        feltor::slice_vector3d( transferD, transferD2d,
-                                local_size2d);
-                        dg::assign( transferD2d, transferH2d);
-                        time_integrals.at(record.name+"_2d").add( time,
+
+                if(p.probes)
+                {
+                for( auto& record : feltor::probe_list)
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( probe_interpolate, resultD, simple_probes_device);
+                    dg::assign(simple_probes_device,simple_probes);
+                    simple_probes_intern.at(record.name)[j]=simple_probes;
+                    time_intern[j]=time;
+                }
+                }
+                for( auto& m_list : equation_list)
+                {
+                    for( auto& record : m_list)
+                    {
+                        if( record.integral)
+                        {
+                            record.function( resultD, var);
+                            dg::blas2::symv( projectD, resultD, transferD);
+                            //toroidal average and add to time integral
+                            dg::assign( transferD, transferH);
+                            toroidal_average( transferH, transferH2d, false);
+                            time_integrals.at(record.name+"_ta2d").add( time,
                                 transferH2d);
+                            // 2d data of plane varphi = 0
+                            feltor::slice_vector3d( transferD, transferD2d,
+                                local_size2d);
+                            dg::assign( transferD2d, transferH2d);
+                            time_integrals.at(record.name+"_2d").add( time,
+                                transferH2d);
+                        }
                     }
                 }
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
                 double max_ue = dg::blas1::reduce(
-                    feltor.velocity(0), 0., dg::AbsMax<double>() );
+                feltor.velocity(0), 0., dg::AbsMax<double>() );
                 DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
+                if( p.timestepper == "adaptive" )
                 {
                     DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
-                    DG_RANK0 std::cout << "\tfailed "<<var.nfailed<<"\n";
+                    DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
                 }
-
                 tti.toc();
                 DG_RANK0 std::cout << " Time for internal diagnostics "<<tti.diff()<<"s\n";
                 if( abort) break;
             }
             ti.toc();
             var.duration = ti.diff();
+            t_output += p.itstp*deltaT;
             // Does not work due to direct application of Laplace
             // The Laplacian of Aparallel looks smooth in paraview
             ////----------------Test if ampere equation holds
@@ -713,17 +788,9 @@ int main( int argc, char* argv[])
             //    double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
             //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
             //}
-            if( output_mode == "free")
-            {
-                DG_RANK0 std::cout << "\n\t Step "<<step <<" of "
-                            << p.inner_loop*p.itstp*maxout << " at time "<<time;
-                DG_RANK0 std::cout << "\n\t Average time for one step: "
-                            << var.duration/(double)p.itstp/(double)p.inner_loop<<"s";
-            }
-            else
-                DG_RANK0 std::cout << "\n\t Step: Time "<<time <<" of " << Tend;
-                DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
-                            << var.duration/(double)p.itstp<<"s";
+            DG_RANK0 std::cout << "\n\t Step: Time "<<time <<" of " << Tend;
+            DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
+                        << var.duration/(double)p.itstp<<"s";
 
             ti.tic();
             //////////////////////////write fields////////////////////////
@@ -745,7 +812,9 @@ int main( int argc, char* argv[])
                 dg::file::put_var_double( ncid, restart_ids.at(record.name),
                         grid, resultH);
             }
-            for( auto& record : feltor::diagnostics2d_list)
+            for( auto& m_list : equation_list)
+            {
+            for( auto& record : m_list)
             {
                 if(record.integral) // we already computed the output...
                 {
@@ -757,7 +826,7 @@ int main( int argc, char* argv[])
 
                     name = record.name+"_2d";
                     transferH2d = time_integrals.at(name).get_integral( );
-                    time_integrals.at(name).flush( );
+                    time_integrals.at(name).flush();
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
                             start, *g2d_out_ptr, transferH2d);
                 }
@@ -765,8 +834,7 @@ int main( int argc, char* argv[])
                 {
                     record.function( resultD, var);
                     dg::blas2::symv( projectD, resultD, transferD);
-
-                    std::string name = record.name+"_ta2d";
+                    std::string name = record.name + "_ta2d";
                     dg::assign( transferD, transferH);
                     toroidal_average( transferH, transferH2d, false);
                     if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
@@ -780,11 +848,30 @@ int main( int argc, char* argv[])
                             start, *g2d_out_ptr, transferH2d);
                 }
             }
+            }
+
             for( auto& record : feltor::diagnostics1d_list)
             {
                 double result = record.function( var);
                 DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
             }
+            //OUTPUT OF PROBES
+            if(p.probes){
+            for( unsigned j=1; j<=p.itstp; j++)
+            {
+                probe_start[0] += 1;
+                DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_timevarID, &probe_start[0] , &probe_count[0], &time_intern[j]);
+                for( auto& record : feltor::probe_list)
+                {
+#ifdef WITH_MPI
+                    DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern.at(record.name)[j].data().data());
+#else
+                    DG_RANK0 err = nc_put_vara_double( probe_grp_id, probe_id_field.at(record.name), probe_start, probe_count, simple_probes_intern.at(record.name)[j].data());
+#endif
+                }
+            }
+            }
+
             DG_RANK0 err = nc_close(ncid);
             ti.toc();
             DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
@@ -802,7 +889,6 @@ int main( int argc, char* argv[])
     if( p.output == "glfw")
     {
         dg::Timer t;
-        unsigned step = 0;
 
         std::map<std::string, const dg::x::DVec* > v4d;
         v4d["ne-1 / "] = &feltor.density(0),  v4d["ni-1 / "] = &feltor.density(1);
@@ -877,62 +963,19 @@ int main( int argc, char* argv[])
 
             //step
             t.tic();
-            if( p.timestepper == "multistep")
-                multistep.init( feltor, time, y0, dt);
-            if( p.timestepper == "multistep-imex")
-                multistep_imex.init( std::tie( feltor, implicit, solver), time,
-                        y0, dt);
-            for( unsigned i=0; i<p.itstp; i++)
+            for( unsigned i=1; i<=p.itstp; i++)
             {
-                for( unsigned k=0; k<p.inner_loop; k++)
-                {
-                    try{
-                        if( p.timestepper == "adaptive")
-                        {
-                            do{
-                                adapt.step( feltor, time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol);
-                                if( adapt.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt.failed());
-                        }
-                        else if( p.timestepper == "adaptive-imex")
-                            do{
-                                adapt_ark.step( std::tie( feltor, implicit,
-                                            solver), time, y0, time, y0, dt,
-                                        dg::pid_control, dg::l2norm, rtol,
-                                        atol);
-                                if( adapt_ark.failed())
-                                    var.nfailed++;
-                                if( dt < 1e-6)
-                                    throw dg::Error(dg::Message(_ping_)<<"Adaptive failed to converge! dt = "<<std::scientific<<dt);
-                            }while( adapt_ark.failed());
-                        else if ( p.timestepper == "multistep")
-                            multistep.step( feltor, time, y0);
-                        else if ( p.timestepper == "multistep-imex")
-                            multistep_imex.step( std::tie( feltor, implicit,
-                                        solver), time, y0);
-                    }
-                    catch( dg::Fail& fail) {
-                        std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                        std::cerr << "Does Simulation respect CFL condition?\n";
-                        glfwSetWindowShouldClose( w, GL_TRUE);
-                        break;
-                    }
-                    step++;
-                }
+                odeint->integrate( time, y0, t_output + i*deltaT, y0,
+                         i<p.itstp ? dg::to::at_least :  dg::to::exact);
+                std::cout << "Time "<<time<<" t_out "<<t_output<<" deltaT "<<deltaT<<" i "<<i<<" itstp "<<p.itstp<<"\n";
 
-                std::cout << "\tTime "<<time<<"\n";
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive" || p.timestepper == "adaptive-imex")
+                if( p.timestepper == "adaptive" )
                 {
-                    std::cout << "\tdt "<<dt<<"\n";
-                    std::cout << "\tfailed "<<var.nfailed<<"\n";
+                    std::cout << "\tdt "<<odeint->get_dt()<<"\n";
+                    std::cout << "\tfailed "<<*var.nfailed<<"\n";
                 }
                 //----------------Test if ampere equation holds
                 // Does not work due to direct application of Laplace
@@ -947,11 +990,11 @@ int main( int argc, char* argv[])
                 //    double error = dg::blas2::dot( dvisual, feltor.vol3d(), dvisual);
                 //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
                 //}
-
             }
+            t_output += p.itstp*deltaT;
             t.toc();
-            std::cout << "\n\t Step "<<step << " at time  "<<time;
-            std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp/(double)p.inner_loop<<"\n\n";
+            std::cout << "\n\t Time  "<<time<<" of "<<Tend;
+            std::cout << "\n\t Average time for one inner loop: "<<t.diff()/(double)p.itstp<<"\n\n";
         }
         glfwTerminate();
     }

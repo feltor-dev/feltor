@@ -5,7 +5,10 @@ namespace dg{
 
 ///@addtogroup dispatch
 ///@{
+
+///tensor_category base class
 struct AnyMatrixTag{};
+
 ///Indicate that a type is not a tensor
 struct NotATensorTag{};
 ///@}

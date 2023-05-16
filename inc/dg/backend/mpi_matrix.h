@@ -17,6 +17,10 @@ template< class MatrixType, class ContainerType1, class ContainerType2>
 void symv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y);
+template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
+void stencil( FunctorType f, MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y);
 template< class MatrixType, class ContainerType1, class ContainerType2>
 void symv( get_value_type<ContainerType1> alpha,
                   MatrixType&& M,
@@ -88,23 +92,15 @@ struct RowColDistMat
     template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
     RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):
         m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_c(src.collective()), m_buffer( m_c.allocate_buffer()) { }
-    /**
-    * @brief Read access to the inner matrix
-    *
-    * @return
-    */
+    ///@brief Read access to the inner matrix
     const LocalMatrixInner& inner_matrix() const{return m_i;}
-    /**
-    * @brief Read access to the outer matrix
-    *
-    * @return
-    */
+    ///@brief Write access to the inner matrix
+    LocalMatrixInner& inner_matrix(){return m_i;}
+    ///@brief Read access to the outer matrix
     const LocalMatrixOuter& outer_matrix() const{return m_o;}
-    /**
-    * @brief Read access to the communication object
-    *
-    * @return
-    */
+    ///@brief Write access to the outer matrix
+    LocalMatrixOuter& outer_matrix(){return m_o;}
+    ///@brief Read access to the communication object
     const Collective& collective() const{return m_c;}
 
     /**
@@ -312,6 +308,30 @@ struct MPIDistMat
             m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
         }
     }
+    template<class Functor, class ContainerType1, class ContainerType2>
+    void stencil( const Functor f, const ContainerType1& x, ContainerType2& y) const
+    {
+        //the blas2 functions should make enough static assertions on tpyes
+        if( !m_c->isCommunicating()) //no communication needed
+        {
+            dg::blas2::stencil( f, m_m, x.data(), y.data());
+            return;
+
+        }
+        int result;
+        MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+        if( m_dist == row_dist){
+            const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
+            m_c->global_gather( x_ptr, m_buffer.data());
+            dg::blas2::stencil( f, m_m, m_buffer.data(), y.data());
+        }
+        if( m_dist == col_dist){
+            throw Error( Message(_ping_)<<"stencil cannot be used with a column distributed mpi matrix!");
+        }
+    }
 
     private:
     LocalMatrix m_m;
@@ -321,7 +341,7 @@ struct MPIDistMat
 };
 ///@}
 
-///@addtogroup dispatch
+///@addtogroup traits
 ///@{
 template<class LI, class LO, class C>
 struct TensorTraits<RowColDistMat<LI,LO, C> >

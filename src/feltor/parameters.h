@@ -3,7 +3,7 @@
 #include <array>
 #include <string>
 #include <cmath>
-#include "dg/enums.h"
+
 #include "json/json.h"
 #include "dg/file/json_utilities.h"
 
@@ -12,9 +12,8 @@ namespace feltor{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
-    std::string tableau, timestepper, solver_type;
+    std::string tableau, timestepper;
 
-    unsigned inner_loop;
     unsigned itstp;
 
     std::vector<double> eps_pol;
@@ -32,7 +31,7 @@ struct Parameters
     double eta, beta;
 
     unsigned diff_order;
-    double nu_perp_n, nu_perp_u;
+    double nu_perp_n, nu_perp_u, nu_parallel_n;
     enum dg::direction diff_dir;
     std::string slope_limiter;
 
@@ -52,7 +51,9 @@ struct Parameters
     bool symmetric, calibrate, periodify;
     bool penalize_wall, penalize_sheath, modify_B;
     bool partitioned;
-
+    //bool mass_conserv, energy_theorem, toroidal_mom, parallel_mom, parallel_e_force, zonal_flow, COCE_GF, COCE_fluid; //To define which variable to be saved in the output (from input)
+    bool probes;
+    unsigned num_pins;
     //
 
     Parameters() = default;
@@ -69,14 +70,6 @@ struct Parameters
         tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
-        solver_type = "lgmres";
-        if( timestepper == "multistep-imex" || timestepper == "adaptive-imex")
-        {
-            partitioned = true;
-            solver_type = js["timestepper"]["solver"].get( "type", "lgmres").asString();
-        }
-
-        inner_loop  = js["output"].get("inner_loop",1).asUInt();
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
@@ -113,7 +106,7 @@ struct Parameters
                 js["regularization"].get( "direction", "centered").asString() );
         nu_perp_n   = js["regularization"].get( "nu_perp_n", 0.).asDouble();
         nu_perp_u   = js["regularization"].get( "nu_perp_u", 0.).asDouble();
-        //nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
+        nu_parallel_n = js["regularization"].get( "nu_parallel_n", 0.).asDouble();
         slope_limiter = js["advection"].get("slope-limiter", "none").asString();
         if( (slope_limiter != "none") && (slope_limiter != "minmod")
              && (slope_limiter != "vanLeer")
@@ -219,6 +212,15 @@ struct Parameters
             else
                 throw std::runtime_error( "Flag "+flag+" not recognized!\n");
         }
+
+        //Probes
+        probes = js.asJson().isMember("probes");
+        if(probes)
+        {
+            num_pins = js["probes"]["num_pins"].asUInt();
+        }
+        else
+            num_pins = 0;
     }
 };
 

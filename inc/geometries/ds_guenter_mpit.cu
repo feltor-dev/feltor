@@ -2,16 +2,14 @@
 #include <iomanip>
 
 #include <mpi.h>
-#define DG_BENCHMARK
-#undef DG_DEBUG
 #include "dg/algorithm.h"
 #include "ds.h"
-#include "guenther.h"
+#include "guenter.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
-const double R_0 = 10;
-const double I_0 = 20; //q factor at r=1 is I_0/R_0
+const double R_0 = 3;
+const double I_0 = 10; //q factor at r=1 is I_0/R_0
 const double a  = 1; //small radius
 
 int main(int argc, char * argv[])
@@ -23,7 +21,7 @@ int main(int argc, char * argv[])
     unsigned letters = 0;
     MPI_Comm comm;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if(rank==0)std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenther flux surfaces. Fieldlines do not cross boundaries.\n";
+    if(rank==0)std::cout << "# Test the parallel derivative DS in cylindrical coordinates for the guenter flux surfaces. Fieldlines do not cross boundaries.\n";
     dg::mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     if( rank == 0)
     {
@@ -51,19 +49,20 @@ int main(int argc, char * argv[])
     MPI_Bcast( &method[0], letters, MPI_CHAR, 0, MPI_COMM_WORLD);
     ////////////////////////////////initialze fields /////////////////////
     const dg::CylindricalMPIGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
-    const dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(R_0, I_0);
+    const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField(R_0, I_0);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix,
         dg::MDVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
                 1e-8, mx[0], mx[1], -1., method);
 
     ///##########################################################///
-    const dg::MDVec fun = dg::evaluate( dg::geo::TestFunctionPsi2(mag), g3d);
+    auto ff = dg::geo::TestFunctionPsi2(mag,a);
+    const dg::MDVec fun = dg::evaluate( ff, g3d);
     dg::MDVec derivative(fun);
-    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
-    dg::MDVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag), g3d);
+    dg::MDVec sol0 = dg::evaluate( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol1 = dg::evaluate( dg::geo::DssFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol2 = dg::evaluate( dg::geo::DsDivFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol3 = dg::evaluate( dg::geo::DsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::MDVec sol4 = dg::evaluate( dg::geo::OMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
     std::vector<std::pair<std::string, std::array<const dg::MDVec*,2>>> names{
          {"forward",{&fun,&sol0}},          {"backward",{&fun,&sol0}},
          {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},
@@ -74,8 +73,8 @@ int main(int argc, char * argv[])
          {"invCenteredLap",{&sol4,&fun}}
     };
     ///##########################################################///
-    if(rank==0)std::cout << "# TEST Guenther (No Boundary conditions)!\n";
-    if(rank==0)std::cout <<"Guenther:\n";
+    if(rank==0)std::cout << "# TEST Guenter (No Boundary conditions)!\n";
+    if(rank==0)std::cout <<"Guenter:\n";
     const dg::MDVec vol3d = dg::create::volume( g3d);
     for( const auto& tuple :  names)
     {

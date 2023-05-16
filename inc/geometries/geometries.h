@@ -22,7 +22,7 @@
 
 //include magnetic field geometries
 #include "solovev.h"
-#include "guenther.h"
+#include "guenter.h"
 #include "toroidal.h"
 #include "polynomial.h"
 #ifdef BOOST_VERSION

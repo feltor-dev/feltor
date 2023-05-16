@@ -2,7 +2,7 @@ import json, sys, yaml
 import numpy as np
 import subprocess
 
-program='ds_t' # 'ds_t' 'ds_guenther_t' 'ds_curv_t'
+program='ds_t' # 'ds_t' 'ds_guenter_t' 'ds_curv_t'
 for m in [1,10,50]: # [1,10,50] [1,10,50] [1,10,100,1000]
     file_name = 'out_'+program+str(m)+'.json'
     f = open(file_name, "w")

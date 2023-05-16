@@ -139,7 +139,7 @@ struct View
 
 /**
  * @brief A View has identical value_type and execution_policy as the underlying container
- * @ingroup dispatch
+ * @ingroup traits
  */
 template<class ThrustVector>
 struct TensorTraits< View<ThrustVector>>
