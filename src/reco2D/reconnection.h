@@ -103,8 +103,8 @@ Asela<Grid, Matrix, Container>::Asela( const Grid& g, Parameters p):
     for( unsigned u=0; u<3; u++)
     {
         m_multi_pol[u].construct(      m_multigrid.grid(u),  dg::str2direction(m_p.direction_ell), m_p.jfactor);
-        m_multi_maxwell[u].construct(  m_multigrid.grid(u), -1., dg::str2direction(m_p.direction_ell));
-        m_multi_invgamma[u].construct( m_multigrid.grid(u), -0.5*m_p.tau[1]*m_p.mu[1], dg::str2direction(m_p.direction_ell));
+        m_multi_maxwell.push_back(  {-1., {m_multigrid.grid(u), dg::str2direction(m_p.direction_ell)}});
+        m_multi_invgamma.push_back( {-0.5*m_p.tau[1]*m_p.mu[1], {m_multigrid.grid(u), dg::str2direction(m_p.direction_ell)}});
     }
 }
 
