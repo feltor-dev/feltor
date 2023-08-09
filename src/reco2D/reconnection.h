@@ -98,8 +98,6 @@ Asela<Grid, Matrix, Container>::Asela( const Grid& g, Parameters p):
     //////////////////////////////init elliptic and helmholtz operators////////////
     m_multi_chi = m_multigrid.project( m_temp0);
     m_multi_pol.resize(3);
-    m_multi_maxwell.resize(3);
-    m_multi_invgamma.resize(3);
     for( unsigned u=0; u<3; u++)
     {
         m_multi_pol[u].construct(      m_multigrid.grid(u),  dg::str2direction(m_p.direction_ell), m_p.jfactor);
