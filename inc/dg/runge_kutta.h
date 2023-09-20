@@ -155,7 +155,7 @@ You can provide your own coefficients or use one of the embedded methods
 in the following table:
 @copydoc hide_explicit_butcher_tableaus
 
-* @note The name of this class is in reminiscence of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/index.html
+* @note The name of this class is in reminiscence of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/index.html
 * @copydoc hide_ContainerType
 */
 template< class ContainerType>
@@ -403,7 +403,7 @@ void FilteredERKStep<ContainerType>::step( const std::tuple<ExplicitRHS, Limiter
 /*!
  * @brief Additive Runge Kutta (semi-implicit) time-step with error estimate
  * following
- * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
+ * <a href="https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
  *
  * Currently, the possible Butcher Tableaus for a fully implicit-explicit scheme
  * are the "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.

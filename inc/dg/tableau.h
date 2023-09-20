@@ -340,7 +340,7 @@ ButcherTableau<real_type> sirk3a_im_3_3()
 }
 
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%%Embedded Butcher tables%%%%%%%%%%%%%%%%%%
-//tables copied from: http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html
+//tables copied from: https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html
 template<class real_type>
 ButcherTableau<real_type> heun_euler_2_1_2()
 {
@@ -1315,7 +1315,7 @@ ShuOsherTableau<real_type> ssprk_5_4()
 /**
 * @brief Identifiers for Butcher Tableaus
 *
-* We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+* We follow the naming convention of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html (They also provide nice stability plots for their methods)
 * as **NAME-S-P-Q** or **NAME-S-Q**, where
 *  - NAME is the author or name of the method
 *  - S is the number of stages in the method
@@ -1337,10 +1337,10 @@ enum tableau_identifier{
     FEHLBERG_4_2_3,//!< The original method uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987] (fsal)
     BOGACKI_SHAMPINE_4_2_3,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine-4-2-3</a> (fsal)
     CAVAGLIERI_4_2_3, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (explicit part)
-    ARK324L2SA_ERK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
-    ZONNEVELD_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
-    ARK436L2SA_ERK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
-    SAYFY_ABURUB_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy-Aburub-6-3-4</a>
+    ARK324L2SA_ERK_4_2_3,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-4-2-3 (explicit)</a>
+    ZONNEVELD_5_3_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Zonneveld-5-3-4</a>
+    ARK436L2SA_ERK_6_3_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-6-3-4 (explicit)</a>
+    SAYFY_ABURUB_6_3_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Sayfy-Aburub-6-3-4</a>
     CASH_KARP_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp-6-4-5</a>
     FEHLBERG_6_4_5,//!< <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Fehlberg-6-4-5</a>
     DORMAND_PRINCE_7_4_5,//!< <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince-7-4-5</a> (fsal)
@@ -1349,7 +1349,7 @@ enum tableau_identifier{
     ARK548L2SA_ERK_8_4_5,//!< <a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (explicit part)
     VERNER_9_5_6,//!< <a href="http://people.math.sfu.ca/~jverner/RKV65.IIIXb.Efficient.00000144617.081204.CoeffsOnlyFLOAT">Verner-9-5-6</a> (fsal)
     VERNER_10_6_7,//!< <a href="http://people.math.sfu.ca/~jverner/RKV76.IIa.Efficient.00001675585.081206.CoeffsOnlyFLOAT">Verner-10-6-7</a>
-    FEHLBERG_13_7_8,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
+    FEHLBERG_13_7_8,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Fehlberg-13-7-8</a>
     DORMAND_PRINCE_13_7_8,//!< [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
     FEAGIN_17_8_10,//!< <a href="http://sce.uhcl.edu/rungekutta/">Feagin-17-8-10</a>
     //implicit ARKode tableaus
@@ -1358,20 +1358,20 @@ enum tableau_identifier{
     TRAPEZOIDAL_2_2,//!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a>
     SDIRK_2_1_2, //!<  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a>
     CAVAGLIERI_IMPLICIT_3_1_2, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a>
-    BILLINGTON_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a>
-    TRBDF2_3_3_2,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>
+    BILLINGTON_3_3_2,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Billington-3-3-2</a>
+    TRBDF2_3_3_2,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">TRBDF2-3-3-2</a>
     SANCHEZ_3_3,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-3-3</a>
-    KVAERNO_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>
+    KVAERNO_4_2_3,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Kvaerno-4-2-3</a>
     SDIRK_4_2_3,//!< <a href="https://doi.org/10.1016/S0168-9274(01)00142-8">Cameron2002</a>
     CAVAGLIERI_IMPLICIT_4_2_3, //!< <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (implicit part)
-    ARK324L2SA_DIRK_4_2_3,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a>
+    ARK324L2SA_DIRK_4_2_3,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-4-2-3 (implicit)</a>
     SANCHEZ_3_4,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-3-4</a>
-    CASH_5_2_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a>
-    CASH_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a>
-    SDIRK_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a>
-    KVAERNO_5_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a>
-    ARK436L2SA_DIRK_6_3_4,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a>
-    KVAERNO_7_4_5,//!< <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a>
+    CASH_5_2_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Cash-5-2-4</a>
+    CASH_5_3_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Cash-5-3-4</a>
+    SDIRK_5_3_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">SDIRK-5-3-4</a>
+    KVAERNO_5_3_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Kvaerno-5-3-4</a>
+    ARK436L2SA_DIRK_6_3_4,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-6-3-4 (implicit)</a>
+    KVAERNO_7_4_5,//!< <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Kvaerno-7-4-5</a>
     SANCHEZ_6_5,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-6-5</a>
     ARK548L2SA_DIRK_8_4_5,//!< <a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (implicit part)
     SANCHEZ_7_6,//!< <a href="https://doi.org/10.1016/j.jcp.2017.09.010">Sanchez-7-6</a>
@@ -1602,7 +1602,7 @@ ButcherTableau<real_type> tableau( std::string name)
 
 /*! @class hide_explicit_butcher_tableaus
  *
- * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+ * We follow the naming convention of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html (They also provide nice stability plots for their methods)
  * as **NAME-S-P-Q** or **NAME-S-Q**, where
  *  - NAME is the author or name of the method
  *  - S is the number of stages in the method
@@ -1626,10 +1626,10 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Fehlberg-4-2-3 | dg::FEHLBERG_4_2_3 | The original uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987] (fsal)
  *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a> (fsal)
  *   Cavaglieri-4-2-3 (explicit) | dg::CAVAGLIERI_4_2_3 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (explicit part)
- *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (explicit)</a>
- *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Zonneveld-5-3-4</a>
- *   ARK-6-3-4 (explicit)   | dg::ARK436L2SA_ERK_6_3_4   | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (explicit)</a>
- *   Sayfy_Aburub-6-3-4     | dg::SAYFY_ABURUB_6_3_4     | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Sayfy_Aburub_6_3_4</a>
+ *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-4-2-3 (explicit)</a>
+ *   Zonneveld-5-3-4        | dg::ZONNEVELD_5_3_4        | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Zonneveld-5-3-4</a>
+ *   ARK-6-3-4 (explicit)   | dg::ARK436L2SA_ERK_6_3_4   | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-6-3-4 (explicit)</a>
+ *   Sayfy_Aburub-6-3-4     | dg::SAYFY_ABURUB_6_3_4     | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Sayfy_Aburub_6_3_4</a>
  *   Cash_Karp-6-4-5        | dg::CASH_KARP_6_4_5        | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
  *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
  *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a> (fsal)
@@ -1638,7 +1638,7 @@ ButcherTableau<real_type> tableau( std::string name)
  *   ARK-8-4-5 (explicit)   | dg::ARK548L2SA_ERK_8_4_5   |<a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (explicit part)
  *   Verner-9-5-6           | dg::VERNER_9_5_6           |<a href="http://people.math.sfu.ca/~jverner/RKV65.IIIXb.Efficient.00000144617.081204.CoeffsOnlyFLOAT">Verner-9-5-6</a> (fsal)
  *   Verner-10-6-7          | dg::VERNER_10_6_7           |<a href="http://people.math.sfu.ca/~jverner/RKV76.IIa.Efficient.00001675585.081206.CoeffsOnlyFLOAT">Verner-10-6-7</a>
- *   Fehlberg-13-7-8        | dg::FEHLBERG_13_7_8        | <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Fehlberg-13-7-8</a>
+ *   Fehlberg-13-7-8        | dg::FEHLBERG_13_7_8        | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Fehlberg-13-7-8</a>
  *   Dormand-Prince-13-7-8   | dg::DORMAND_PRINCE_13_7_8   | [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
  *   Feagin-17-8-10         | dg::FEAGIN_17_8_10         | <a href="http://sce.uhcl.edu/rungekutta/">Feagin</a> (The RK10(8) method)
  *
@@ -1646,7 +1646,7 @@ ButcherTableau<real_type> tableau( std::string name)
 
 /*! @class hide_implicit_butcher_tableaus
  *
- * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+ * We follow the naming convention of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html (They also provide nice stability plots for their methods)
  * as **NAME-S-P-Q** or **NAME-S-Q**, where
  *  - NAME is the author or name of the method
  *  - S is the number of stages in the method
@@ -1660,21 +1660,21 @@ ButcherTableau<real_type> tableau( std::string name)
  *   Trapezoidal-2-2     | dg::TRAPEZOIDAL_2_2     |  <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Crank-Nicolson method</a> \f$ a_{11} = 0\ a_{22} = 0.5 \f$
  *   SDIRK-2-1-2          | dg::SDIRK_2_1_2            | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">generic 2nd order A and L-stable</a> \f$ a_{ii} = 0.29 \f$
  *   Cavaglieri-3-1-2 (implicit) | dg::CAVAGLIERI_IMPLICIT_3_1_2 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> IMEXRKCB2 scheme \f$ a_{11} = 0 \f$
- *   Billington-3-3-2     | dg::BILLINGTON_3_3_2       |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Billington-3-3-2</a> \f$ a_{ii} = 0.29\f$
- *   TRBDF2-3-3-2         | dg::TRBDF2_3_3_2           |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">TRBDF2-3-3-2</a>  \f$ a_{11} = 0\f$
+ *   Billington-3-3-2     | dg::BILLINGTON_3_3_2       |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Billington-3-3-2</a> \f$ a_{ii} = 0.29\f$
+ *   TRBDF2-3-3-2         | dg::TRBDF2_3_3_2           |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">TRBDF2-3-3-2</a>  \f$ a_{11} = 0\f$
  *   Sanchez-3-3        | dg::SANCHEZ_3_3          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
- *   Kvaerno-4-2-3        | dg::KVAERNO_4_2_3          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-4-2-3</a>  \f$ a_{11} = 0\ a_{ii} = 0.44 \f$
+ *   Kvaerno-4-2-3        | dg::KVAERNO_4_2_3          |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Kvaerno-4-2-3</a>  \f$ a_{11} = 0\ a_{ii} = 0.44 \f$
  *   SDIRK-4-2-3        | dg::SDIRK_4_2_3          |  <a href="https://doi.org/10.1016/S0168-9274(01)00142-8">Cameron2002</a> \f$ a_{ii}=0.25\f$
  *   Cavaglieri-4-2-3 (implicit) | dg::CAVAGLIERI_IMPLICIT_4_2_3 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (implicit part) \f$ a_{11} = 0 \f$
- *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-4-2-3 (implicit)</a> \f$ a_{11} = 0\ a_{ii} = 0.44 \f$
+ *   ARK-4-2-3 (implicit) | dg::ARK324L2SA_DIRK_4_2_3  |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-4-2-3 (implicit)</a> \f$ a_{11} = 0\ a_{ii} = 0.44 \f$
  *   Sanchez-3-4        | dg::SANCHEZ_3_4          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
- *   Cash-5-2-4           | dg::CASH_5_2_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-2-4</a> \f$ a_{ii} = 0.44 \f$
- *   Cash-5-3-4           | dg::CASH_5_3_4             |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Cash-5-3-4</a> \f$ a_{ii} = 0.44 \f$
- *   SDIRK-5-3-4          | dg::SDIRK_5_3_4            |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">SDIRK-5-3-4</a> \f$ a_{ii} = 0.25\f$
- *   Kvaerno-5-3-4        | dg::KVAERNO_5_3_4          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-5-3-4</a> \f$ a_{11} = 0\ a_{ii} = 0.44\f$
- *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4  |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">ARK-6-3-4 (implicit)</a> \f$ a_{11} = 0\ a_{ii} = 0.25\f$
+ *   Cash-5-2-4           | dg::CASH_5_2_4             |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Cash-5-2-4</a> \f$ a_{ii} = 0.44 \f$
+ *   Cash-5-3-4           | dg::CASH_5_3_4             |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Cash-5-3-4</a> \f$ a_{ii} = 0.44 \f$
+ *   SDIRK-5-3-4          | dg::SDIRK_5_3_4            |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">SDIRK-5-3-4</a> \f$ a_{ii} = 0.25\f$
+ *   Kvaerno-5-3-4        | dg::KVAERNO_5_3_4          |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Kvaerno-5-3-4</a> \f$ a_{11} = 0\ a_{ii} = 0.44\f$
+ *   ARK-6-3-4 (implicit) | dg::ARK436L2SA_DIRK_6_3_4  |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-6-3-4 (implicit)</a> \f$ a_{11} = 0\ a_{ii} = 0.25\f$
  *   Sanchez-6-5        | dg::SANCHEZ_6_5          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
- *   Kvaerno-7-4-5        | dg::KVAERNO_7_4_5          |  <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html">Kvaerno-7-4-5</a> \f$ a_{11} = 0 \ a_{ii} = 0.26\f$
+ *   Kvaerno-7-4-5        | dg::KVAERNO_7_4_5          |  <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Kvaerno-7-4-5</a> \f$ a_{11} = 0 \ a_{ii} = 0.26\f$
  *   ARK-8-4-5 (implicit)   | dg::ARK548L2SA_DIRK_8_4_5   |<a href="https://doi.org/10.1016/j.apnum.2018.10.007">Kennedy and Carpenter (2019)</a> Optimum ARK_2 method (implicit part) \f$ a_{11} = 0\ a_{ii} = 0.22\f$
  *   Sanchez-7-6        | dg::SANCHEZ_7_6          |  <a href="https://doi.org/10.1016/j.jcp.2017.09.010">symplectic DIRK</a>
  *
