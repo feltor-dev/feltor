@@ -10,13 +10,14 @@
 # and use menubar.css for some custom code colors
 # and header.html with some additions to make the menubar and activate doxygen-awesome extensions
 
+# The online documentation is hosted on the https://github.com/mwiesenberger/feltor fork
 # To update the online documentation we use ghp-import with the -o option, such
 # that the gh-pages always
 # contains only a single commit (to save space; and the history of documentation
 # is contained in the main branch anyway).
 #```bash
 #pip install ghp-import
-#cd path/to/feltor-dev/doc
+#cd path/to/feltor/doc
 #make clean
 #make doc
 #cd ..
