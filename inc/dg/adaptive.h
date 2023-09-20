@@ -157,7 +157,7 @@ struct Tolerance
  */
 
 //%%%%%%%%%%%%%%%%%%%Adaptive%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-/*!@brief Driver class for adaptive timestep integration
+/*!@brief Driver class for adaptive timestep ODE integration
  *
  * In order to build an adaptive ODE integrator you basically need three
  * ingredients: a \c Stepper, a \c ControlFunction and an \c ErrorNorm.

@@ -31,7 +31,7 @@ struct FilteredExplicitMultistep;
 ///@{
 
 /**
-* @brief General explicit linear multistep time-integration
+* @brief General explicit linear multistep ODE integrator
 * \f$
 * \begin{align}
     v^{n+1} = \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right)
@@ -115,7 +115,7 @@ struct ExplicitMultistep
 
 
 /**
- * @brief Semi-implicit multistep time-integration
+ * @brief Semi-implicit multistep ODE integrator
  * \f$
  * \begin{align}
      v^{n+1} = \sum_{q=0}^{s-1} a_q v^{n-q} + \Delta t\left[\left(\sum_{q=0}^{s-1}b_q  \hat E(t^{n}-q\Delta t, v^{n-q}) + \sum_{q=1}^{s} c_q \hat I( t^n - q\Delta t, v^{n-q})\right) + c_0\hat I(t^{n}+\Delta t, v^{n+1})\right]
@@ -313,7 +313,7 @@ void ImExMultistep<ContainerType>::step( const std::tuple<RHS, Diffusion, Solver
 ///@endcond
 
 /**
-* @brief Implicit multistep time-integration
+* @brief Implicit multistep ODE integrator
 * \f$
 * \begin{align}
     v^{n+1} &= \sum_{i=0}^{s-1} a_i v^{n-i} + \Delta t \sum_{i=1}^{s} c_i\hat I(t^{n+1-i}, v^{n+1-i}) + \Delta t c_{0} \hat I (t + \Delta t, v^{n+1}) \\
@@ -498,7 +498,7 @@ void ImplicitMultistep<ContainerType>::step(const std::tuple<ImplicitRHS, Solver
 
 
 /**
-* @brief EXPERIMENTAL: General explicit linear multistep time-integration with Limiter / Filter
+* @brief EXPERIMENTAL: General explicit linear multistep ODE integrator with Limiter / Filter
 * \f$
 * \begin{align}
     \tilde v &= \sum_{j=0}^{s-1} a_j v^{n-j} + \Delta t\left(\sum_{j=0}^{s-1}b_j  \hat f\left(t^{n}-j\Delta t, v^{n-j}\right)\right) \\

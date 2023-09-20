@@ -767,7 +767,7 @@ void DIRKStep<ContainerType>::step( const std::tuple<ImplicitRHS,Solver>& ode,  
 ///@endcond
 
 /**
-* @brief Runge-Kutta fixed-step explicit time-integration
+* @brief Runge-Kutta fixed-step explicit ODE integrator
 * \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right) \\
@@ -794,7 +794,7 @@ template<class ContainerType>
 using RungeKutta = ERKStep<ContainerType>;
 
 /**
-* @brief Filtered Runge-Kutta fixed-step explicit time-integration
+* @brief Filtered Runge-Kutta fixed-step explicit ODE integrator
 * \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right]\right) \\
@@ -807,7 +807,7 @@ template<class ContainerType>
 using FilteredRungeKutta = FilteredERKStep<ContainerType>;
 
 /**
-* @brief Shu-Osher fixed-step explicit time-integration with Slope Limiter / Filter
+* @brief Shu-Osher fixed-step explicit ODE integrator with Slope Limiter / Filter
 * \f$
  \begin{align}
     u_0 &= u_n \\
@@ -921,7 +921,7 @@ struct ShuOsher
     value_type m_t1 = 1e300;
 };
 /**
-* @brief Runge-Kutta fixed-step implicit time-integration
+* @brief Runge-Kutta fixed-step implicit ODE integrator
 * \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
