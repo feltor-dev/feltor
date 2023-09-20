@@ -11,7 +11,7 @@ namespace dg{
 /*! @brief Manage coefficients of a (extended) Butcher tableau
  *
  * The goal of this class is to represent a Butcher tableau for the use
- * in Runge Kutta type time integrators. See
+ * in Runge Kutta type ODE integrators. See
  * https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
  * for an introduction.
  * The coefficients of the tableau

@@ -7,7 +7,7 @@
 #include "multistep_tableau.h"
 
 /*! @file
-  @brief contains multistep explicit& implicit time-integrators
+  @brief contains multistep explicit& implicit ODE-integrators
   */
 namespace dg{
 

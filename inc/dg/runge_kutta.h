@@ -12,7 +12,7 @@
 #include "implicit.h"
 
 /*! @file
- * @brief Runge-Kutta explicit time-integrators
+ * @brief Runge-Kutta explicit ODE-integrators
  */
 
 namespace dg{

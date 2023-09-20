@@ -10,7 +10,7 @@
  *
  * These routines form the heart of our container free numerical algorithms.
  * They are called by all our numerical algorithms like conjugate gradient or
- * time integrators.
+ * ODE integrators.
  *     @{
  *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
  *         @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
