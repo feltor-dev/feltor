@@ -7,16 +7,17 @@ namespace dg
 {
 
 /**
- * @brief Compute \f$ a = (B^T B)^{-1} B^T b\f$ for given \f$ B\f$ and \f$ a\f$
+ * @brief Compute \f$ a = (B^T W B)^{-1} WB^T b\f$ for given \f$ B\f$, weights \f$ W\f$ and \f$ b\f$
  *
  * This is the normal form of a least squares problem: given vectors \f$ b_i\f$
  * find coefficients \f$ a_i\f$ such that \f$ a_i b_i\f$ is as close as possible
- * to a target vector \f$ b\f$, i.e. \f$  \min_a || B a - b|| \f$ where the
+ * to a target vector \f$ b\f$, i.e. \f$  \min_a || B a - b||_W \f$ where the
  * \f$ b_i\f$ constitute the columns of the matrix \f$ B\f$
  * This can be transformed into the solution of the *normal equation*
- * \f[ B^T B a = B^T b\f]
+ * \f[ B^T W B a = B^T W b\f]
  * @param bs a number of input vectors all with the same size
  * @param b must have the same size as the bs
+ * @param weights
  * @note With a little trick this function can be used to compute the least squares
  * fit through a given list of points
  *
@@ -33,33 +34,45 @@ auto a = dg::least_squares<dg::HVec>( {x, ones}, y);
  * @return the minimal coefficients a
  * @copydoc hide_ContainerType
  */
-template<class ContainerType0, class ContainerType1>
-std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const ContainerType1 & b)
+template<class ContainerType0, class ContainerType1, class ContainerType2>
+std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const ContainerType1 & b, const ContainerType2& weights)
 {
+    // This implementation should have as many scalar dots as Gram-Schmidt
+    // namely (size^2+size)/2
     // Solve B^T B a = B^T b
     unsigned size = bs.size();
     dg::Operator<double> op( size, 0.); // B^T B
-    thrust::host_vector<double> rhs( size, 0.), opIi(rhs); // B^T b
+    //thrust::host_vector<double> rhs( size, 0.), opIi(rhs); // B^T b
+    std::vector<double> rhs( size, 0.);
     std::vector<double> a(size,0.);
     for( unsigned i=0; i<size; i++)
     {
         for( unsigned j=i; j<size; j++)
-            op(i,j) = dg::blas1::dot( bs[i], bs[j]);
+            op(i,j) = dg::blas2::dot( bs[i], weights, bs[j]);
         for( unsigned j=0; j<i; j++)
             op(i,j) = op(j,i);
-        rhs[i] = dg::blas1::dot( bs[i], b);
+        rhs[i] = dg::blas2::dot( bs[i], weights, b);
     }
-    auto op_inv = dg::create::inverse( op);
-    // a =  op_inv * rhs
-    for( unsigned i=0; i<size; i++)
-    {
-        for( unsigned j=0; j<size; j++)
-            opIi[j] = op_inv(i,j);
-        a[i] = dg::blas1::dot( rhs, opIi) ;
-    }
-    return a;
-}
+    std::vector<unsigned> p;
+    dg::create::lu_pivot( op, p);
+    dg::create::lu_solve<double>( op, p, rhs);
+    return rhs;
 
+    //auto op_inv = dg::create::inverse( op);
+    // a =  op_inv * rhs
+    //for( unsigned i=0; i<size; i++)
+    //{
+    //    for( unsigned j=0; j<size; j++)
+    //        opIi[j] = op_inv(i,j);
+    //    a[i] = dg::blas1::dot( rhs, opIi) ;
+    //}
+    //return a;
+}
+template<class ContainerType0, class ContainerType1>
+std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const ContainerType1 & b)
+{
+    return least_squares( bs, b, 1.);
+}
 /**
  * @brief %Evaluate a least squares fit
  *
@@ -351,6 +364,37 @@ struct Extrapolation
         value_type t = m_t[0] +1.;
         extrapolate( t, new_x);
     }
+
+
+    template<class MatrixType0, class ContainerType0, class ContainerType1>
+    void matrix_extrapolate( MatrixType0&& A, const ContainerType0& b,
+            ContainerType0& new_x, const ContainerType1& weights)
+    {
+        if( m_counter < m_max)
+            extrapolate( new_x);
+        else
+        {
+            // allocate m_b if not yet done
+            if( m_b.empty())
+                m_b = m_x;
+            // First compute bs
+            for( unsigned u=0; u<m_max; u++)
+                dg::apply( A, m_x[u], m_b[u]);
+            // now solve least squares problem
+            try{
+                std::vector<double> a = least_squares( m_b, b, weights);
+                std::vector<const ContainerType*> x_ptrs = dg::asPointers( m_x);
+                // multiply xs
+                dg::blas2::gemv( 1., dg::asDenseMatrix(x_ptrs), a, 0., new_x);
+            }
+            catch( std::runtime_error& err)
+            {
+                std::cerr << "Warning: Matrix singular!\n";
+                return extrapolate( new_x);
+            }
+        }
+
+    }
     /**
     * @brief %Evaluate first derivative of interpolating polynomial (equidistant version)
     * @param dot_x (write only) contains derived value on output
@@ -418,6 +462,7 @@ struct Extrapolation
     unsigned m_max, m_counter;
     std::vector<value_type> m_t;
     std::vector<ContainerType> m_x;
+    std::vector<ContainerType> m_b; //only allocated if matrix extrapolate is used
 };
 
 

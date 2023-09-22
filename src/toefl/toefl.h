@@ -67,7 +67,7 @@ Explicit< Geometry, M, Container>::Explicit( const Geometry& grid, const Paramet
     m_laplaceM( grid,  p.diff_dir),
     m_adv( grid), m_arakawa(grid),
     m_multigrid( grid, p.num_stages),
-    m_old_phi( 2, m_chi), m_old_psi( 2, m_chi), m_old_gammaN( 2, m_chi),
+    m_old_phi( 10, m_chi), m_old_psi( 2, m_chi), m_old_gammaN( 2, m_chi),
     m_p(p)
 {
     m_multi_chi= m_multigrid.project( m_chi);
@@ -181,7 +181,8 @@ void Explicit<G, M, Container>::polarisation( double t,
             dg::blas1::pointwiseDivide( m_omega, m_chi, m_omega);
     //invert
 
-    m_old_phi.extrapolate(t, m_phi[0]);
+    //m_old_phi.extrapolate(t, m_phi[0]);
+    m_old_phi.matrix_extrapolate( m_multi_pol[0], m_omega, m_phi[0], m_multi_pol[0].weights());
     m_multigrid.set_benchmark( true, "Polarisation");
     m_multigrid.solve( m_multi_pol, m_phi[0], m_omega, m_p.eps_pol);
     m_old_phi.update( t, m_phi[0]);
