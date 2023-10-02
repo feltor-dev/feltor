@@ -1,5 +1,6 @@
 #pragma once
 
+// #include <random>
 #include "blas.h"
 #include "topology/operator.h"
 
@@ -7,17 +8,15 @@ namespace dg
 {
 
 /**
- * @brief Compute \f$ a = (B^T W B)^{-1} WB^T b\f$ for given \f$ B\f$, weights \f$ W\f$ and \f$ b\f$
+ * @brief Compute \f$ a = (B^T W B)^{-1} WB^T b\f$ for given \f$ B\f$, weights \f$ W\f$ and right hand side \f$ b\f$
  *
  * This is the normal form of a least squares problem: given vectors \f$ b_i\f$
  * find coefficients \f$ a_i\f$ such that \f$ a_i b_i\f$ is as close as possible
  * to a target vector \f$ b\f$, i.e. \f$  \min_a || B a - b||_W \f$ where the
- * \f$ b_i\f$ constitute the columns of the matrix \f$ B\f$
+ * \f$ b_i\f$ constitute the columns of the matrix \f$ B\f$ and \f$ W\f$ are
+ * weights.
  * This can be transformed into the solution of the *normal equation*
  * \f[ B^T W B a = B^T W b\f]
- * @param bs a number of input vectors all with the same size
- * @param b must have the same size as the bs
- * @param weights
  * @note With a little trick this function can be used to compute the least squares
  * fit through a given list of points
  *
@@ -30,19 +29,26 @@ auto a = dg::least_squares<dg::HVec>( {x, ones}, y);
 // size of a is 2
     @endcode
  *
+ * @note the algorithm used directly computes the components of \f$ B^T W B\f$
+ * followed by an LU decomposition.
  * @ingroup extrapolation
+ * @param bs a number of input vectors all with the same size
+ * @param b must have the same size as the bs
+ * @param weights define the norm that is minimized
  * @return the minimal coefficients a
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1, class ContainerType2>
 std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const ContainerType1 & b, const ContainerType2& weights)
 {
+    // it would be interesting to see how this algorithm fares against
+    // Gram-Schmidt/QR-factorization
     // This implementation should have as many scalar dots as Gram-Schmidt
     // namely (size^2+size)/2
     // Solve B^T B a = B^T b
     unsigned size = bs.size();
+    // B^T B is the "Gram matrix"
     dg::Operator<double> op( size, 0.); // B^T B
-    //thrust::host_vector<double> rhs( size, 0.), opIi(rhs); // B^T b
     std::vector<double> rhs( size, 0.);
     std::vector<double> a(size,0.);
     for( unsigned i=0; i<size; i++)
@@ -53,21 +59,17 @@ std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const 
             op(i,j) = op(j,i);
         rhs[i] = dg::blas2::dot( bs[i], weights, b);
     }
+    // possibly replace with Cholesky factorization?
     std::vector<unsigned> p;
     dg::create::lu_pivot( op, p);
     dg::create::lu_solve<double>( op, p, rhs);
     return rhs;
-
-    //auto op_inv = dg::create::inverse( op);
-    // a =  op_inv * rhs
-    //for( unsigned i=0; i<size; i++)
-    //{
-    //    for( unsigned j=0; j<size; j++)
-    //        opIi[j] = op_inv(i,j);
-    //    a[i] = dg::blas1::dot( rhs, opIi) ;
-    //}
-    //return a;
 }
+
+/**
+ * @brief An alias for <tt> least_squares( bs, b, 1.) </tt>
+ * @ingroup extrapolation
+ */
 template<class ContainerType0, class ContainerType1>
 std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const ContainerType1 & b)
 {
@@ -82,6 +84,10 @@ std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const 
  * \f[ \min ||a_i \vec x_i - \vec x||\f]
  * to get
  * \f[ \vec y = a_i \vec y_i\f]
+ * @note In the context of generating initial guesses for a matrix equation from
+ * previous solutions this method is equivalent to the "rolling QR" algorithm described in https://arxiv.org/pdf/2009.10863.pdf
+ * <a href="https://arxiv.org/pdf/2009.10863.pdf">Austin, A.P. and Chalmers N. and Warburton, T. INITIAL GUESSES FOR SEQUENCES OF LINEAR SYSTEMS IN A
+GPU-ACCELERATED INCOMPRESSIBLE FLOW SOLVER (2021)</a>. This means it works for matrix equations that are constant in time.
  * @note This works best if the unkown function \f$ \vec y = f(\vec x) \f$ is linear and
  * if the \f$ x_i\f$ are orthogonal
  *
@@ -179,6 +185,8 @@ struct LeastSquaresExtrapolation
             for( unsigned j=1; j<size; j++)
                 op(i,j) = m_op(i-1,j-1);
         // test if new value is linearly independent or zero
+        // maybe one can get a better control (with a tolerance value) over
+        // this test
         try{
             op_inv = dg::create::inverse( op);
         }
@@ -366,35 +374,73 @@ struct Extrapolation
     }
 
 
+    /**
+     * @brief EXPERIMENTAL Perform a least squares extrapolation
+     *
+     * This algorithm computes \f$ b_i = A x_i\f$, then solves the least squares
+     * problem \f$ \min_a || B a - b||_W \f$ with \f$ b_i\f$ the columns of
+     * \f$ B\f$ to compute \f$ x_{new} = \sum_i a_i x_i\f$.
+     * @note This is different from \c LeastSquaresExtrapolation if the matrix
+     * \f$ A\f$ is time-dependent.
+     * @note So far this was only tested for toefl simulations with default
+     * parameters where we get mixed results. Depending on the \c max
+     * parameter one can see a slow down or a speed-up. Around 10 we observed a
+     * positive effect of about 10\% acceleration
+     * @param A the matrix
+     * @param b the right hand side
+     * @param new_x Contains initial guess based on a least squares
+     * extrapolation on output
+     * @param weights The weights/volume in which to minimize
+     */
     template<class MatrixType0, class ContainerType0, class ContainerType1>
-    void matrix_extrapolate( MatrixType0&& A, const ContainerType0& b,
+    void extrapolate_least_squares( MatrixType0&& A, const ContainerType0& b,
             ContainerType0& new_x, const ContainerType1& weights)
     {
         if( m_counter < m_max)
-            extrapolate( new_x);
-        else
         {
-            // allocate m_b if not yet done
-            if( m_b.empty())
-                m_b = m_x;
-            // First compute bs
-            for( unsigned u=0; u<m_max; u++)
-                dg::apply( A, m_x[u], m_b[u]);
-            // now solve least squares problem
-            try{
-                std::vector<double> a = least_squares( m_b, b, weights);
-                std::vector<const ContainerType*> x_ptrs = dg::asPointers( m_x);
-                // multiply xs
-                dg::blas2::gemv( 1., dg::asDenseMatrix(x_ptrs), a, 0., new_x);
-            }
-            catch( std::runtime_error& err)
-            {
-                std::cerr << "Warning: Matrix singular!\n";
-                return extrapolate( new_x);
-            }
+            extrapolate( new_x);
+            return;
+        }
+        // allocate m_b if not yet done
+        if( m_b.empty())
+            m_b.assign( m_max, b);
+        std::vector<const ContainerType*> x_ptrs = dg::asPointers( m_x);
+        // An attempt at the algorithm in https://arxiv.org/abs/2309.02156
+        //if( m_b.empty())
+        //    m_b.assign( mm, b);
+        // if( m_zx.empty())
+        //     m_zx.assign( mm, b);
+        // // compress the subspace via random linear combinations
+        // if( mm < m_max)
+        // {
+        //     std::random_device rd{};
+        //     std::mt19937 gen{rd()};
+        //     std::normal_distribution<double> dist{0.0, 1.0};
+        //     std::vector<double> z(m_max);
+        //     for( unsigned i=0; i<mm; i++)
+        //     {
+        //         for( unsigned k=0; k<m_max; k++)
+        //             z[k] = dist(gen);
+        //         dg::blas2::gemv( 1., dg::asDenseMatrix(x_ptrs), z, 0., m_zx[i]);
+        //     }
+        //     x_ptrs = dg::asPointers( m_zx);
+        // }
+        // First compute bs
+        for( unsigned u=0; u<m_max; u++)
+            dg::apply( A, *x_ptrs[u], m_b[u]);
+
+        try{
+            std::vector<double> a = least_squares( m_b, b, weights);
+            dg::blas2::gemv( 1., dg::asDenseMatrix(x_ptrs), a, 0., new_x);
+        }
+        catch( std::runtime_error& err)
+        {
+            return extrapolate( new_x);
         }
 
     }
+
+
     /**
     * @brief %Evaluate first derivative of interpolating polynomial (equidistant version)
     * @param dot_x (write only) contains derived value on output
@@ -462,7 +508,8 @@ struct Extrapolation
     unsigned m_max, m_counter;
     std::vector<value_type> m_t;
     std::vector<ContainerType> m_x;
-    std::vector<ContainerType> m_b; //only allocated if matrix extrapolate is used
+    //only allocated if least squares extrapolate is used
+    std::vector<ContainerType> m_b;
 };
 
 
