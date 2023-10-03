@@ -23,6 +23,44 @@ struct BESSELI0
         return boost::math::cyl_bessel_i(0, x);
     }
 };
+
+/**
+ * @brief \f$ f(x) = J_n (x)\f$ with \f$J_n\f$ the n-th order modified Bessel function
+ *
+ * @tparam T value type
+ */
+template< class T = double >
+struct BesselJ
+{
+    BesselJ(unsigned n): m_n(n) {}
+
+    T operator() ( T x) const
+    {
+        return boost::math::cyl_bessel_j(m_n, x);
+    }
+    private:
+    	unsigned m_n;
+};
+
+/**
+ * @brief \f$ f(x) = L_n (x)\f$ with \f$L_n\f$ the n-th order Laguerre polynomial
+ *
+ * @tparam T value type
+ */
+template< class T = double >
+struct LaguerreL
+{
+    LaguerreL(unsigned n): m_n(n) {}
+
+    T operator() ( T x) const
+    {
+        return boost::math::laguerre(m_n, x);
+    }
+    private:
+        unsigned m_n;
+};
+
+
 /**
  * @brief \f$ f(x) = \Gamma_0 (x) := I_0 (x) exp(x) \f$ with \f$I_0\f$ the zeroth order modified Bessel function
  *
@@ -104,6 +142,22 @@ T phi4( T x){
         return 1./24. + x*(1./120.+x*(1./720. + x/5040));
     return ((((exp( x) - 1)/x - 1)/x-1./2.)/x-1./6.)/x;
 }
+
+/**
+ * @brief \f$ f(x) = (-a*x)^n/n! exp(a*x) \f$
+ *
+ * @tparam T value type
+ */
+template<class T = double>
+struct GyrolagK
+{
+    GyrolagK(double n, double a): m_n(n), m_a(a) {}
+
+    T  operator()(double x) const { return pow(-x*m_a,m_n)/tgamma(m_n+1)*exp(x*m_a); }
+
+    private:
+        double  m_n, m_a;
+};
 
 }//namespace mat
 }//namespace dg
