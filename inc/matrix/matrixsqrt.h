@@ -306,7 +306,7 @@ struct ProductMatrixFunction
         dg::Timer t;
         t.tic();
         auto func = make_FuncEigen_Te1( [&](value_type x) {return op(1., x);});
-        auto T = m_lanczos.tridiag( x, func, std::forward<MatrixType>(A),
+        auto T = m_lanczos.tridiag( func, std::forward<MatrixType>(A),
                 b, weights, eps, nrmb_correction,
                 "universal", 1.0, 2);
         compute_vlcl( op, diag, std::forward<MatrixType>(A), T, x, b,
@@ -359,7 +359,7 @@ struct ProductMatrixFunction
         dg::Timer t;
         t.tic();
         auto func = make_FuncEigen_Te1( [&](value_type x) {return op( x, 1.);});
-        auto T = m_lanczos.tridiag( x, func, std::forward<MatrixType>(A),
+        auto T = m_lanczos.tridiag( func, std::forward<MatrixType>(A),
                 b, weights, eps, nrmb_correction,
                 "universal", 1.0, 2);
         compute_vlcl_adjoint( op, std::forward<MatrixType>(A), diag, T, x, b,
