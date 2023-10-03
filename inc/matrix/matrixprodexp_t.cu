@@ -11,8 +11,6 @@
 #include "matrixfunction.h"
 #include "matrixsqrt.h"
 
-#include "gl_quadrature.h"
-
 #include <cusp/transpose.h>
 #include <cusp/array1d.h>
 #include <cusp/array2d.h>
@@ -23,7 +21,7 @@
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::PER;
+dg::bc bcy = dg::DIR;
 // const double m=3./2.;
 // const double n=4.;
 // const double m=1./2.;
@@ -100,11 +98,6 @@ int main(int argc, char * argv[])
 
     dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> A( {g, dg::centered, 1.0});
 
-    std::vector< std::function<double (double)>> funcs{
-        [](double x) { return dg::mat::GyrolagK<double>(0.,-alpha)(x);},
-//        [](double x) { return dg::mat::GyrolagK<double>(1.,-alpha)(x);},
-//        [](double x) { return dg::mat::GyrolagK<double>(2.,-alpha)(x);},
-    };
     std::vector<std::string> outs_k = {
         "K_0",
         //"K_1",
@@ -139,6 +132,7 @@ int main(int argc, char * argv[])
     for( unsigned k=0; k<outs_k.size(); k++)
     for( unsigned u=0; u<outs.size(); u++)
     {
+        dg::mat::GyrolagK<double> func(k, -alpha);
         std::cout << "\n#Compute x = "<<outs_k[k]<<outs[u]<<" b " << std::endl;
 
         Container x = dg::evaluate(lhs, g), x_exac(x), x_h(x), b(x), error(x);
@@ -153,7 +147,7 @@ int main(int argc, char * argv[])
 //         Container d = dg::evaluate(sin2, g);
 
         //initialize d = heaviside bump function
-        Container d = dg::evaluate(dg::Cauchy(lx/2., ly/2., 3., 3., amp), g);
+        Container d = dg::evaluate(dg::Cauchy(lx/2., ly/2., 2., 3., amp), g);
 //         b_h = dg::evaluate(dg::SinXSinY(amp, 0.0, 4.0, 4.0), g); //superimpose sinxsiny
 //         dg::blas1::pointwiseDot(b_h,b_h,b_h);
 //         dg::blas1::pointwiseDot(d,b_h,d);
@@ -173,31 +167,30 @@ int main(int argc, char * argv[])
         dg::mat::UniversalLanczos<Container> krylovfunceigend( x, max_iter);
         dg::mat::ProductMatrixFunction<Container> krylovproduct( x, max_iter);
 
-        auto func = dg::mat::make_FuncEigen_Te1( funcs[k]);
-        double time = t.diff();
+        auto funcE1 = dg::mat::make_FuncEigen_Te1( func);
         unsigned iter_sum=0;
+        double time = 0;
 
         //MLanczos-universal
         if (u==0)
         {
             t.tic();
-            iter= krylovfunceigen.solve(x, func, A, b, w2d, eps, 1., "universal");
+            std::cout << sqrt(dg::blas2::dot(b, w2d, b));
+            iter= krylovfunceigen.solve(x, funcE1, A, b, w2d, eps, 1., "universal");
             t.toc();
             time = t.diff();
         }
         if (u==1)
         {
             t.tic();
-            auto binary_op = [&](double x, double y){ return funcs[k](x*y);};
-            iter = krylovproduct.apply( x, binary_op, d, A, b, w2d, eps, 1.);
+            iter = krylovproduct.apply( x, func, d, A, b, w2d, eps, 1.);
             t.toc();
             time = t.diff();
         }
         if (u==2)
         {
             t.toc();
-            auto binary_op = [&](double x, double y){ return funcs[k](x*y);};
-            iter = krylovproduct.apply_adjoint( x, binary_op, A, d, b, w2d, eps, 1.);
+            iter = krylovproduct.apply_adjoint( x, func, A, d, b, w2d, eps, 1.);
             time = t.diff();
         }
 //         if (u==3) 
@@ -208,7 +201,7 @@ int main(int argc, char * argv[])
 //             {
 //                 lambda_d = d[k];
 //                 A.set_chi(lambda_d);
-//                 iter = krylovfunceigen.solve(x_h, func, A, b, w2d, eps, 1., "universal");
+//                 iter = krylovfunceigen.solve(x_h, funcE1, A, b, w2d, eps, 1., "universal");
 //                 iter_sum+=iter;
 //                 x[k] = x_h[k];
 //             }
@@ -229,7 +222,7 @@ int main(int argc, char * argv[])
 //                 A.set_chi(lambda_d);
 //                 dg::blas1::scal(b_h, 0.0);
 //                 b_h[k] = b[k]; //instead of b
-//                 iter = krylovfunceigen.solve(x_h, func, A, b_h, w2d, eps, 1.0, "universal");
+//                 iter = krylovfunceigen.solve(x_h, funcE1, A, b_h, w2d, eps, 1.0, "universal");
 //                 iter_sum+=iter;
 //                 dg::blas1::axpby(1.0, x_h, 1.0, x);
 //             }
@@ -241,7 +234,7 @@ int main(int argc, char * argv[])
         {
             Wrapper<Container> wrap( A, one, d);
             t.tic();
-            iter= krylovfunceigen.solve(x, func, wrap, b, w2d_DA, eps, 1., "universal"); 
+            iter= krylovfunceigen.solve(x, funcE1, wrap, b, w2d_DA, eps, 1., "universal"); 
             t.toc();
             time = t.diff();
         }
@@ -249,7 +242,7 @@ int main(int argc, char * argv[])
         {
             Wrapper<Container> wrap( A, d, one);
             t.tic();            
-            iter= krylovfunceigen.solve(x, func, wrap, b, w2d_AD, eps, 1., "universal"); 
+            iter= krylovfunceigen.solve(x, funcE1, wrap, b, w2d_AD, eps, 1., "universal"); 
             //weights of adjoint missing?
             t.toc();
             time = t.diff();
@@ -260,7 +253,7 @@ int main(int argc, char * argv[])
         //Compute errors
         if (u==0)
         {
-            dg::blas1::scal(x_exac, funcs[k](ell_fac));
+            dg::blas1::scal(x_exac, func(ell_fac));
         }
         else 
         {

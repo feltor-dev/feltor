@@ -468,7 +468,7 @@ struct ProductMatrixFunction
             {
                 dg::blas1::evaluate( m_f, dg::equals(), op, evals[k], diag);
                 dg::blas1::pointwiseDot( m_f, m_v, m_f);
-                alpha( k,i) = dg::blas2::dot( m_f, weights, b);
+                alpha( k,i+1) = dg::blas2::dot( m_f, weights, b);
             }
         }
         // compute E_li E_ki alpha_ik v_l

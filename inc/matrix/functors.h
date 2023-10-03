@@ -153,7 +153,8 @@ struct GyrolagK
 {
     GyrolagK(double n, double a): m_n(n), m_a(a) {}
 
-    T  operator()(double x) const { return pow(-x*m_a,m_n)/tgamma(m_n+1)*exp(x*m_a); }
+    T  DG_DEVICE operator()(double x) const { return pow(-x*m_a,m_n)/tgamma(m_n+1)*exp(x*m_a); }
+    T  DG_DEVICE operator()(double x, double y) const { return this->operator()(x*y); }
 
     private:
         double  m_n, m_a;
