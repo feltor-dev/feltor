@@ -286,10 +286,11 @@ struct ProductMatrixFunction
      * @param eps relative accuracy of residual in Lanczos iteration
      * @param nrmb_correction the absolute error \c C in units of \c eps to be
      * respected
+     * @return The number of Lanczos iterations used
      */
     template<class ContainerType0, class BinaryOp, class ContainerType1,
         class MatrixType, class ContainerType2, class ContainerType3>
-    void apply(
+    unsigned apply(
             ContainerType0& x,
             BinaryOp op,
             const ContainerType1& diag,
@@ -314,6 +315,7 @@ struct ProductMatrixFunction
         t.toc();
         if( m_benchmark)
             DG_RANK0 std::cout << "# `"<<m_message<<"` solve with {"<<T.num_rows<<"} iterations took "<<t.diff()<<"s\n";
+        return T.num_rows;
     }
     /**
      * @brief Compute \f$ \vec x = f(A, \vec d) \vec b = E_{A} (F^T \odot   E^T_{A}M^T) b\f$
@@ -338,10 +340,11 @@ struct ProductMatrixFunction
      * @param eps relative accuracy of residual in Lanczos iteration
      * @param nrmb_correction the absolute error \c C in units of \c eps to be
      * respected
+     * @return The number of Lanczos iterations used
      */
     template<class ContainerType0, class BinaryOp, class MatrixType,
         class ContainerType1, class ContainerType2, class ContainerType3>
-    void apply_adjoint(
+    unsigned apply_adjoint(
             ContainerType0& x,
             BinaryOp op,
             MatrixType&& A,
@@ -351,6 +354,7 @@ struct ProductMatrixFunction
             value_type eps,
             value_type nrmb_correction = 1.)
     {
+        // Should this be another class?
         // if A does not change Lanczos iterations could be reused from apply function!?
 #ifdef MPI_VERSION
         int rank;
@@ -368,6 +372,7 @@ struct ProductMatrixFunction
         t.toc();
         if( m_benchmark)
             DG_RANK0 std::cout << "# `"<<m_message<<"` solve with {"<<T.num_rows<<"} iterations took "<<t.diff()<<"s\n";
+        return T.num_rows;
     }
 
     private:
@@ -413,7 +418,7 @@ struct ProductMatrixFunction
             for ( unsigned k=0; k<iter; k++)
             {
                 dg::blas1::evaluate( m_f, dg::equals(), op, diag, evals[k]);
-                dg::blas1::pointwiseDot( bnorm*evecs(i+1, k)*evecs(i+1,k), m_f, m_v,
+                dg::blas1::pointwiseDot( bnorm*evecs(0, k)*evecs(i+1,k), m_f, m_v,
                         1., x);
             }
         }
