@@ -14,7 +14,6 @@
 #include <cusp/transpose.h>
 #include <cusp/array1d.h>
 #include <cusp/array2d.h>
-#include <cusp/print.h>
 
 #include <cusp/lapack/lapack.h>
 
@@ -189,11 +188,12 @@ int main(int argc, char * argv[])
         }
         if (u==2)
         {
-            t.toc();
+            t.tic();
             iter = krylovproduct.apply_adjoint( x, func, A, d, b, w2d, eps, 1.);
+            t.toc();
             time = t.diff();
         }
-//         if (u==3) 
+//         if (u==3)
 //         {
 //             t.tic();
 //             double lambda_d = 0.;
@@ -209,7 +209,7 @@ int main(int argc, char * argv[])
 //             time = t.diff();
 //             A.set_chi(one);
 //         }
-//         if (u==4) 
+//         if (u==4)
 //         {
 //             dg::blas1::scal(x, 0.0);
 //             double lambda_d = 0.;
@@ -234,31 +234,31 @@ int main(int argc, char * argv[])
         {
             Wrapper<Container> wrap( A, one, d);
             t.tic();
-            iter= krylovfunceigen.solve(x, funcE1, wrap, b, w2d_DA, eps, 1., "universal"); 
+            iter= krylovfunceigen.solve(x, funcE1, wrap, b, w2d_DA, eps, 1., "universal");
             t.toc();
             time = t.diff();
         }
         if (u==4)
         {
             Wrapper<Container> wrap( A, d, one);
-            t.tic();            
-            iter= krylovfunceigen.solve(x, funcE1, wrap, b, w2d_AD, eps, 1., "universal"); 
+            t.tic();
+            iter= krylovfunceigen.solve(x, funcE1, wrap, b, w2d_AD, eps, 1., "universal");
             //weights of adjoint missing?
             t.toc();
             time = t.diff();
         }
         //write solution into file
         dg::assign( x, transferH);
-        dg::file::put_vara_double( ncid, dataIDs[u], start, g, transferH);      
+        dg::file::put_vara_double( ncid, dataIDs[u], start, g, transferH);
         //Compute errors
         if (u==0)
         {
             dg::blas1::scal(x_exac, func(ell_fac));
         }
-        else 
+        else
         {
             Container fd(d); // helper variable
-            //Compute absolute and relative error in adjointness 
+            //Compute absolute and relative error in adjointness
             if (u==2 || u==4)
             {
                 x_h = dg::evaluate(lhss, g); // -> g
@@ -273,7 +273,7 @@ int main(int argc, char * argv[])
                 std::cout << "    <exp(-alpha A, d)f, g> = " << gOadjf << std::endl;
 
                 double eabs_adj = fOg-gOadjf; // <f,exp(d,-alpha A) g> -<exp(-alpha A, d)f, g>
-                std::cout << "    universal-abserror-adjointness: "<< eabs_adj  << "\n"; 
+                std::cout << "    universal-abserror-adjointness: "<< eabs_adj  << "\n";
                 std::cout << "    universal-relerror-adjointness: "<< eabs_adj/fOg  << "\n";
             }
             //Compute exact error for product exponential (is used also for adjoint product exponential since we have no analytical solution there)

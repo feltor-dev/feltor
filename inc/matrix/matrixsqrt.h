@@ -471,6 +471,7 @@ struct ProductMatrixFunction
                 alpha( k,i+1) = dg::blas2::dot( m_f, weights, b);
             }
         }
+        // Observation: With an exponential function the lines of alpha get extremely small (because exp(lambda) gets very small ... so maybe one can save a few scalar products
         // compute E_li E_ki alpha_ik v_l
         std::vector<double> cl( iter, 0.0);
         for( unsigned l=0; l<iter; l++)
