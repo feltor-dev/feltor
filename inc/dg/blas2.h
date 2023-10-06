@@ -351,7 +351,7 @@ dg::blas1::parallel_for( [&]DG_DEVICE( unsigned i, const double* x, double* y){
  * this function only works for containers with the \c dg::SharedVectorTag and sclar types.
  * The reason it cannot work for MPI is that the stencil (and thus the
  * communication pattern) is unkown. However, it can serve as an important
- * building block for other parallel functions like \c dg::blas2::parallel_for.
+ * building block for other parallel functions like \c dg::blas2::stencil.
  * @note This is the closest function we have to <tt> kokkos::parallel_for</tt> of the <a href="https://github.com/kokkos/kokkos">Kokkos library</a>.
  *
  * @param f the loop body
