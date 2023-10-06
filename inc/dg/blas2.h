@@ -331,7 +331,7 @@ inline void gemv( MatrixType&& M,
  * It is equivalent to the following
  * @code
  * for(unsigned i=0; i<N; i++)
- *     f( i, *x_0[0], *x_1[0], ...);
+ *     f( i, &x_0[0], &x_1[0], ...);
  * @endcode
  * With this function very general for-loops can be parallelized like for example a forward finite difference:
 @code{.cpp}
