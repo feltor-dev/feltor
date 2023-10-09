@@ -179,7 +179,6 @@ int main(int argc, char * argv[])
             std::cout << sqrt(dg::blas2::dot(b, w2d, b));
             //iter= krylovfunceigen.solve(x, funcE1, A, b, w2d, eps, 1., "universal");
             iter= laplaceM.matrix_function(x, func, b, eps, 1.);
-            std::cout << "Iter is "<<iter<<"\n";
             
             t.toc();
             time = t.diff();
@@ -189,7 +188,6 @@ int main(int argc, char * argv[])
             t.tic();
             //iter = krylovproduct.apply( x, func, d, A, b, w2d, eps, 1.);
             iter= laplaceM.product_function(x, func, d, b, eps, 1.);
-            std::cout << "Iter is "<<iter<<"\n";
             t.toc();
             time = t.diff();
         }
@@ -198,7 +196,6 @@ int main(int argc, char * argv[])
             t.tic();
             //iter = krylovproduct.apply_adjoint( x, func, A, d, b, w2d, eps, 1.);
             iter= laplaceM.product_function_adjoint(x, func, d, b, eps, 1.);
-            std::cout << "Iter is "<<iter<<"\n";
             t.toc();
             time = t.diff();
         }
