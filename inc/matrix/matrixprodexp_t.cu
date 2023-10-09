@@ -176,7 +176,6 @@ int main(int argc, char * argv[])
         if (u==0)
         {
             t.tic();
-            std::cout << sqrt(dg::blas2::dot(b, w2d, b));
             //iter= krylovfunceigen.solve(x, funcE1, A, b, w2d, eps, 1., "universal");
             iter= laplaceM.matrix_function(x, func, b, eps, 1.);
             
