@@ -8,6 +8,7 @@
 
 #include "lanczos.h"
 #include "mcg.h"
+#include "outer.h"
 #include "matrixfunction.h"
 #include "matrixsqrt.h"
 
@@ -96,6 +97,7 @@ int main(int argc, char * argv[])
     const Container w2d = dg::create::weights( g);//=M
 
     dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> A( {g, dg::centered, 1.0});
+    dg::LaplaceDecomposition<Container> laplaceM{g, bcx, bcy, dg::centered, 1.0};
 
     std::vector<std::string> outs_k = {
         "K_0",
@@ -175,21 +177,28 @@ int main(int argc, char * argv[])
         {
             t.tic();
             std::cout << sqrt(dg::blas2::dot(b, w2d, b));
-            iter= krylovfunceigen.solve(x, funcE1, A, b, w2d, eps, 1., "universal");
+            //iter= krylovfunceigen.solve(x, funcE1, A, b, w2d, eps, 1., "universal");
+            iter= laplaceM.matrix_function(x, func, b, eps, 1.);
+            std::cout << "Iter is "<<iter<<"\n";
+            
             t.toc();
             time = t.diff();
         }
         if (u==1)
         {
             t.tic();
-            iter = krylovproduct.apply( x, func, d, A, b, w2d, eps, 1.);
+            //iter = krylovproduct.apply( x, func, d, A, b, w2d, eps, 1.);
+            iter= laplaceM.product_function(x, func, d, b, eps, 1.);
+            std::cout << "Iter is "<<iter<<"\n";
             t.toc();
             time = t.diff();
         }
         if (u==2)
         {
             t.tic();
-            iter = krylovproduct.apply_adjoint( x, func, A, d, b, w2d, eps, 1.);
+            //iter = krylovproduct.apply_adjoint( x, func, A, d, b, w2d, eps, 1.);
+            iter= laplaceM.product_function_adjoint(x, func, d, b, eps, 1.);
+            std::cout << "Iter is "<<iter<<"\n";
             t.toc();
             time = t.diff();
         }
