@@ -97,7 +97,7 @@ int main(int argc, char * argv[])
     const Container w2d = dg::create::weights( g);//=M
 
     dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> A( {g, dg::centered, 1.0});
-    dg::LaplaceDecomposition<Container> laplaceM{g, bcx, bcy, dg::centered, 1.0};
+    dg::mat::LaplaceDecomposition<Container> laplaceM{g, bcx, bcy, dg::centered, 1.0};
 
     std::vector<std::string> outs_k = {
         "K_0",
