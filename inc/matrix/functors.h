@@ -151,13 +151,21 @@ T phi4( T x){
 template<class T = double>
 struct GyrolagK
 {
-    GyrolagK(double n, double a): m_n(n), m_a(a) {}
+    GyrolagK(T n, T a): m_n (n), m_a(a) {}
 
-    T  DG_DEVICE operator()(double x) const { return pow(-x*m_a,m_n)/tgamma(m_n+1)*exp(x*m_a); }
-    T  DG_DEVICE operator()(double x, double y) const { return this->operator()(x*y); }
+    T  DG_DEVICE operator()(T x) const {
+        if( m_n == 0)
+            return exp(x*m_a); // faster to evaluate than tgamma and pow ...
+        if( m_n == 1)
+            return (-x*m_a)*exp( x*m_a);
+        if( m_n == 2)
+            return 0.5*(x*x*m_a*m_a)*exp( x*m_a);
+        return pow(-x*m_a,m_n)/tgamma(m_n+1)*exp(x*m_a);
+    }
+    T  DG_DEVICE operator()(T x, T y) const { return this->operator()(x*y); }
 
     private:
-        double  m_n, m_a;
+    T m_n, m_a;
 };
 
 }//namespace mat
