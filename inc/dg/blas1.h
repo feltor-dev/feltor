@@ -109,6 +109,15 @@ hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
     dg::ISNFINITE<double>());
 std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
 @endcode
+or finding minimum / maximum
+@code{.cpp}
+// Find minimum and maximum of a vector
+thrust::device_vector<double> x( 100);
+// ... fill x with values
+double min = dg::blas1::reduce( x, +1e308, thrust::minimum<double>());
+double max = dg::blas1::reduce( x, -1e308, thrust::maximum<double>());
+// Notice the zero elements of the min and max functions
+@endcode
  * @param x Container to reduce
  * @param zero The neutral element with respect to binary_op that is
  * <tt> x == binary_op( zero, x) </tt>. Determines the \c OutputType so make
