@@ -135,7 +135,23 @@ struct Fpsi
 /**
  * @brief A symmetry flux generator
  *
- * Symmetry flux coordinates fulfill the condition \f$\sqrt{g} = \frac{R}{I}\f$
+ * The radial coordinate is given by \f$ \zeta = f_0 (\psi_p - \psi_0)\f$.
+ *
+ * The poloidal coordinate lines are obtained by integrating
+ * \f{align}{
+   \frac{d R}{d \eta}   &=   \frac{B^R}{B^\eta} =  \frac{q R}{I} \frac{\partial \psi_p}{\partial Z} \\
+   \frac{d Z}{d \eta}   &=   \frac{B^Z}{B^\eta} = -\frac{q R}{I} \frac{\partial \psi_p}{\partial R} \f},
+ * i.e. is obtained from a magnetic field where the \f$ B^\varphi\f$ component is scaled
+ * by the safety factor \f$ q(\psi_p)\f$, which can here be understood as the normalisation constant
+ * that makes the poloidal \f$ \eta\f$ coordinate go from 0 to \f$2\pi\f$.
+ * Symmetry flux coordinates fulfill the condition \f$\sqrt{g} = \frac{R}{I}\f$.
+ *
+ * When an "equalarc" adaption is chosen then the integration is changed to
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial R} \f},
+ * where \f$ f(\psi_p)\f$ is the normalization constant now.
+ *
  * The symmetry refers to the symmetry in the toroidal angle while flux coordinates allow the representation
  * of the magnetic field in Clebsch form
  * @ingroup generators_geo
@@ -230,7 +246,21 @@ struct FluxGenerator : public aGenerator2d
 };
 
 /**
- * @brief Same as the Ribeiro class just but uses psi as a flux label directly
+ * @brief Same as the Ribeiro class but uses \f$ \zeta = f_0 (\psi_p - \psi_0)\f$ as a flux label directly
+ *
+ * The radial coordinate is given by \f$ \zeta = f_0 (\psi_p - \psi_0)\f$.
+ *
+ * The poloidal coordinate lines are given by
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)(\nabla\psi_p)^2} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)(\nabla\psi_p)^2} \frac{\partial \psi_p}{\partial R} \f},
+ * where \f$ f(\psi_p)\f$ is the normalisation constant
+ * that makes the poloidal \f$ \eta\f$ coordinate go from 0 to \f$2\pi\f$.
+ *
+ * When an "equalarc" adaption is chosen then the integration is changed to
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial R} \f},
  * @ingroup generators_geo
  * @snippet flux_t.cu doxygen
  */

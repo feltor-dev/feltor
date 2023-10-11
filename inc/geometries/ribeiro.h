@@ -200,6 +200,20 @@ struct FieldFinv
 
 /**
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010
+ *
+ * The radial coordinate is given by \f$ \zeta = -\int_{\psi_0}^{\psi} f(\psi') d\psi'\f$
+ *
+ * The poloidal coordinate lines are given by
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)(\nabla\psi_p)^2} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)(\nabla\psi_p)^2} \frac{\partial \psi_p}{\partial R} \f},
+ * where \f$ f(\psi_p)\f$ is the normalisation constant
+ * that makes the poloidal \f$ \eta\f$ coordinate go from 0 to \f$2\pi\f$.
+ *
+ * When an "equalarc" adaption is chosen then the integration is changed to
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial R} \f},
  * @ingroup generators_geo
  * @snippet flux_t.cu doxygen
  */

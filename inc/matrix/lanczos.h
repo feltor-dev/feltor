@@ -165,7 +165,7 @@ class UniversalLanczos
         return m_iter;
     }
     /**
-     * @brief Tridiagonalization of A using Lanczos method with \f$ f(x) = x^{-1}.
+     * @brief Tridiagonalization of A using Lanczos method with \f$ f(x) = x^{-1}\f$.
      *
      * @note Just calls the general \c tridiag method with the function \f$ f(x) = x^{-1}\f$. Useful if one wants to compute the extreme Eigenvalues of \f$A\f$
  * @code{.cpp}

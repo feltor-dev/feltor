@@ -1,12 +1,12 @@
 #error Documentation only
 /*!
  *
- * @defgroup generators_geo 1. Grid generators
+ * @defgroup grids 1. General Curvilinear grids
+ * @defgroup generators_geo 2. Curvilinear grid generators
  * @brief \f$( x,\ y,\ \zeta_x,\ \zeta_y,\ \eta_x,\ \eta_y)\f$ dg::geo::Hector
  *
  *      All the grids introduced by this extension can be constructed with
  *      generator classes.
- * @defgroup grids 2. New geometric grids
  * @defgroup geom_functors 3. New functors surrounding the magnetic field geometry
  * @brief \f$ f(R,Z,\varphi)\f$
 
