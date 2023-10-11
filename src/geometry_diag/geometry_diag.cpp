@@ -11,15 +11,6 @@
 #include "dg/file/file.h"
 #include "dg/geometries/geometries.h"
 
-// The purpose of this program is to diagnose geometry.json files with
-// as little effort as possible. This program should also remain
-// independent of any specific code and therefore does not test or output
-// any initialization related functions that require specific parameters in
-// the input file
-// We currently just
-// - write magnetic functions into file
-// - compute Flux - surface averages and write into file
-//
 
 int main( int argc, char* argv[])
 {
@@ -76,28 +67,50 @@ int main( int argc, char* argv[])
 
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
     dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
-    double psipO = dg::blas1::reduce( psipog2d, 0., thrust::minimum<double>());
-    double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>());
+    double RO = mag.R0(), ZO = 0.;
+    double psipO = dg::blas1::reduce( psipog2d, +1e308, thrust::minimum<double>());
+    double psipmax = dg::blas1::reduce( psipog2d, -1e308, thrust::maximum<double>());
+    // find O-point
     if( mag_description == dg::geo::description::standardX ||
         mag_description == dg::geo::description::standardO ||
         mag_description == dg::geo::description::square ||
         mag_description == dg::geo::description::doubleX
         )
     {
-        //Find O-point
-        double RO = mag.R0(), ZO = 0.;
-        int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        psipO = mag.psip()( RO, ZO);
-        std::cout << "O-point found at "<<RO<<" "<<ZO
-                  <<" with Psip "<<psipO<<std::endl;
-        if( point == 1 )
-            std::cout << " (minimum)"<<std::endl;
-        if( point == 2 )
-            std::cout << " (maximum)"<<std::endl;
-        double psip0 = mag.psip()(mag.R0(), 0);
-        std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
-        double fx_0 = 0.125; // must evenly divide Npsi
-        psipmax = -fx_0/(1.-fx_0)*psipO;
+        try
+        {
+            int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+            psipO = mag.psip()( RO, ZO);
+            std::cout << "O-point found at "<<RO<<" "<<ZO
+                      <<" with Psip "<<psipO<<std::endl;
+            if( point == 1 )
+                std::cout << " (minimum)"<<std::endl;
+            if( point == 2 )
+                std::cout << " (maximum)"<<std::endl;
+            double psip0 = mag.psip()(mag.R0(), 0);
+            std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
+            double fx_0 = 0.125; // must evenly divide Npsi
+            psipmax = -fx_0/(1.-fx_0)*psipO;
+        } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
+    }
+    double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+    double ZX = -1.1*mag.params().elongation()*mag.params().a();
+    double Z2X = Zmax, R2X = RX;
+    // find X-point
+    if( mag_description == dg::geo::description::standardX
+        || mag_description == dg::geo::description::doubleX)
+    {
+        try{
+            dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+            std::cout << "X-point found at "<<RX<<" "<<ZX<<std::endl;
+            if( mag_description == dg::geo::description::doubleX)
+            {
+                R2X = RX;
+                Z2X = -ZX;
+                dg::geo::findXpoint( mag.get_psip(), R2X, Z2X);
+                std::cout << "2nd X-point found at "<<R2X<<" "<<Z2X<<std::endl;
+            }
+        } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
     }
     double width_factor = js.get("width-factor",1.0).asDouble();
     dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag, width_factor);
@@ -335,16 +348,7 @@ int main( int argc, char* argv[])
         if( mag_description == dg::geo::description::standardX
             || mag_description == dg::geo::description::doubleX)
         {
-            double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-            double ZX = -1.1*mag.params().elongation()*mag.params().a();
             try{
-                dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-                double Z2X = Zmax;
-                if( mag_description == dg::geo::description::doubleX)
-                {
-                    Z2X = -ZX;
-                    dg::geo::findXpoint( mag.get_psip(), RX, Z2X);
-                }
                 dg::Grid2d grid2d_tmp(Rmin,Rmax,ZX,Z2X, n,Nx,Ny);
                 double width_factor = js.get("width-factor",0.03).asDouble();
                 dg::geo::SafetyFactorAverage qprof_avg(grid2d_tmp, mag, width_factor);
@@ -429,6 +433,29 @@ int main( int argc, char* argv[])
     for( auto pair : att)
         err = nc_put_att_text( ncid, NC_GLOBAL,
             pair.first.data(), pair.second.size(), pair.second.data());
+
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
+    {
+        double point[2] = {RO,ZO};
+        nc_put_att_double( ncid, NC_GLOBAL,
+            "O-point", NC_DOUBLE, 2, point);
+        if( mag_description == dg::geo::description::standardX
+            || mag_description == dg::geo::description::doubleX)
+        {
+            double point[2] = {RX,ZX};
+            nc_put_att_double( ncid, NC_GLOBAL,
+                    "X-point", NC_DOUBLE, 2, point);
+            point[0] = R2X, point[1] = Z2X;
+            if( mag_description == dg::geo::description::doubleX)
+                nc_put_att_double( ncid, NC_GLOBAL,
+                    "2nd X-point", NC_DOUBLE, 2, point);
+        }
+    }
+
 
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
     if( compute_fsa &&

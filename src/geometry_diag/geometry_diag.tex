@@ -14,7 +14,13 @@
 \maketitle
 
 \begin{abstract}
-  This is a program for 1d, 2d and 3d diagnostics of magnetic field geometry in Feltor
+  This is a program for 1d, 2d and 3d diagnostics of magnetic field geometry in
+  Feltor The purpose of this program is to diagnose geometry.json files with as
+  little effort as possible. This program should also remain independent of any
+  specific code and therefore does not test or output any initialization
+  related functions that require specific parameters in the input file.  We
+  currently just write magnetic functions into file and optionally also flux -
+  surface averages, the q-profile and sheath coordinates.
 \end{abstract}
 \tableofcontents
 
@@ -56,17 +62,26 @@ We use an equal number of Gaussian nodes in $x$ and $y$.
     "scaleZ"  : [1.2,1.1], // $[\varepsilon_{Z-}, \varepsilon_{Z+}]$ scale lower and upper boundary in Z in Eq.\eqref{eq:box}
 }
 \end{minted}
-Furthermore, a user can specify which kind of diagnostics quantities should be computed and how:
 \begin{minted}[texcomments]{js}
 "grid" :
 {
     // for flux surface average computations
+    "npsi" : 3 // The number of Gaussian nodes in psi and eta
     "Npsi": 64, // resolution of X-point grid for fsa
     "Neta": 640, // resolution of X-point grid for fsa
     "fx_0" : 0.125, // where the separatrix is in relation to the $\zeta$ coordinate
 }
 \end{minted}
 \subsection{Diagnostics}
+A user can specify which kind of diagnostics quantities should be computed and
+how.
+\begin{tcolorbox}[title=Note]
+The motivation not to compute all diagnositics is that computing flux
+surface averages and sheath coordinates may take a few minutes (as opposed to a
+few seconds that the remaining program runs).
+Further, there is a risk that
+the program fails if the magnetic field parameters are not setup consistently.
+\end{tcolorbox}
 
 By default only the standard basic diagnostics is run that has little danger of failing.
 ALL of the following can fail and should only be attempted once the parameters are tuned!
@@ -82,8 +97,10 @@ The diagnostics field is a list of flags that can be empty
 \end{minted}
 
 \subsection{Magnetic field} \label{sec:geometry_file}
-The json structure of the geometry parameters depends on which expansion for $\psi_p$ is chosen Eq.~\eqref{eq:solovev} or Eq.~\eqref{eq:polynomial}.\cite{Cerfon2010}
-In addition we have an option to read the geometry parameters either from an external
+The json structure of the geometry parameters depends on which expansion for
+$\psi_p$ is chosen. Here, read the documentation of
+\href{https://mwiesenberger.github.io/feltor/geometries/html/group__geom.html#gaa0da1d1c2db65f1f4b28d77307ad238b}{`dg::geo::createMagneticField`} and \cite{Cerfon2010}
+In addition, we have an option to read the geometry parameters either from an external
 file or directly from a field in the input file.
 \begin{minted}[texcomments]{js}
 "magnetic_field":
@@ -115,6 +132,11 @@ Setting the boundary conditions in an appropriate manner is probably the most
 fiddly task in setting up a simulation.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{The wall region}\label{sec:wall}
+We refer to the documentation of
+\href{
+https://mwiesenberger.github.io/feltor/geometries/html/group__wall.html#gac47e668c6483d6cebfc9d6c798737b58
+}{dg::geo::createModifiedField} for details on how the magnetic field is modified
+and how a wall region can be setup.
 \begin{minted}[texcomments]{js}
 "boundary":
 {
@@ -124,42 +146,6 @@ fiddly task in setting up a simulation.
         "type" : "none"
     }
 }
-\end{minted}
-Being a box, our computational domain is in particular not aligned with the
-magnetic flux surfaces. This means that particularly in the corners of
-the domain the field lines inside the domain are very short (in the
-sense that the distance between the entry point and leave point is short).
-It turns out that this behaviour is numerically disadvantageous (may
-blow up the simulation in the worst case) in the
-computation of parallel derivatives.
-In order to remedy this situation
-we propose a penalization method to model the actual physical wall.
-We define an approximation to the step function with a transition layer of radius $a$
-around the origin
-\begin{align}
-\Theta_a(x) := \begin{cases}
-    0 & \text{ for } x \leq -a  \\
-    \frac{1}{32 a^7}  \left(16 a^3-29 a^2 x+20 a x^2-5 x^3\right) (a+x)^4
-    &\text{ for } -a<x\leq a \\
-    1 & \text{ for } x > a
-\end{cases}
-    \approx H(x)
-\label{eq:approx_heaviside}
-\end{align}
-where $H(x)$ is the Heaviside step function.
-
-We now use the region defined by
-\begin{align}\label{eq:wall}
-    \chi_w(R,Z,\varphi):=\Theta_{\alpha/2}\left(\psi_{p,b} + \frac{\alpha}{2} - \psi \right) \approx H(\psi_{p,b}-\psi)
-\end{align}
-to define the wall region.
-In order to simplify the setup of this region we give $\psi_{p,b}$ and $\alpha$ in terms of
-$\rho_p$ and $\alpha_p$ via $\psi_{p,b} = (1-\rho_{p,b}^2)\psi_{p,O}$ and $\alpha = -(2\rho_{p,b} \alpha_p + \alpha_p^2)\psi_{p,O}$. In case we change the sign
-of $\psi_p$ via $\mathcal P_\psi$ (to make it concave) note that $\alpha$ becomes
-negative and $\psi_{p,O}$ is positive).
-We then need to point mirror Eq.~\eqref{eq:wall} at $\psi_{p,b}+\frac{\alpha}{2}$.
-
-\begin{minted}[texcomments]{js}
 "boundary":
 {
     "wall" :
@@ -167,11 +153,13 @@ We then need to point mirror Eq.~\eqref{eq:wall} at $\psi_{p,b}+\frac{\alpha}{2}
         // Simple flux aligned wall above a threshold value
         "type" : "heaviside",
         "boundary" : 1.2, // wall region boundary $\rho_{p,b}$
-        // yields $\psi_0 = (1-\rho_{p,b}^2)\psi_{p,O}$ in Eq.\eqref{eq:wall}.
-        "alpha" : 0.25, // Transition width $\alpha_p$: yields
-        // $\alpha=-2\rho_{p,b}\alpha_p+\alpha_p^2)\psi_{p,O}$ for the Heaviside
-        // in the wall function \eqref{eq:wall}.
-
+        "alpha" : 0.25, // Transition width $\alpha_p$
+    }
+}
+"boundary":
+{
+    "wall" :
+    {
         // Double flux aligned wall above and below a threshold value
         "type" : "sol_pfr",
         "boundary" : [1.2, 0.8],
@@ -184,6 +172,10 @@ We then need to point mirror Eq.~\eqref{eq:wall} at $\psi_{p,b}+\frac{\alpha}{2}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{The sheath region}\label{sec:sheath}
+We refer to the documentation of \href{https://mwiesenberger.github.io/feltor/geometries/html/group__wall.html#gad4fce2a87b624a0d4df4c2431706988f}{dg::geo::createSheathRegion}
+and
+\href{https://mwiesenberger.github.io/feltor/geometries/html/structdg_1_1geo_1_1_wall_fieldline_coordinate.html}{dg::geo::WallSheathCoordinate}
+for details on how we setup the sheath and the Sheath coordinates
 \begin{minted}[texcomments]{js}
 "boundary":
 {
@@ -193,20 +185,6 @@ We then need to point mirror Eq.~\eqref{eq:wall} at $\psi_{p,b}+\frac{\alpha}{2}
         "type" : "none",
     }
 }
-\end{minted}
-In order to define sheath boundary conditions we first define a sheath region
-and then determine whether the field lines point toward the wall or away from it.
-We define as sheath any part on the bounding box that is not included in the wall
-penalization. Then we check for each point in the box the poloidal distance (in
-terms of angle $\varphi$) to the sheath wall and if the poloidal field points
-toward or away from the wall closest to it.
-We then take $\theta_{\alpha/2}\left( 2\pi(\eps_s - \frac{\alpha}{2}) - d(R,Z)\right)$
-and take the set intersection of that region and the ``not wall'' region to
-determine the sheath penalization region:
-\begin{align}\label{eq:sheath}
-\chi_s := \left(1-\chi_w(R,Z,\varphi)\right) \theta_{\alpha/2}\left( 2\pi\left(\eps_s - \frac{\alpha}{2}\right) - d(R,Z)\right)
-\end{align}
-\begin{minted}[texcomments]{js}
 "boundary" :
 {
     "sheath" :
@@ -224,6 +202,146 @@ determine the sheath penalization region:
 \end{minted}
 \noindent
 
+\section{Output} \label{sec:output_file}
+Output file format: \href{https://www.unidata.ucar.edu/software/netcdf/docs/}{netcdf-4/hdf5};
+
+A \textit{coordinate variable (Coord. Var.)} is a Dataset with the same name as a dimension.
+We follow
+\href{http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html}{CF Conventions CF-1.7}
+and write according attributes into the file.
+
+\begin{tcolorbox}[title=Note]
+    The command \mintinline{bash}{ncdump -h output.nc} gives a full list of what a file contains.
+\end{tcolorbox}
+Here, we list the content without attributes
+since the internal netcdf information does not display equations.
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &     text attribute & - & verbose input file as a string (valid JSON, C-style comments are allowed but discarded) \\
+x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
+z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
+xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
+yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
+zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
+BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
+BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
+BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
+zeta             & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( default size: $3\cdot 64$) \\
+eta              & Coord. Var. & 1 (eta) & $\eta$-coordinate ( default size: $3\cdot 640$) \\
+xcc              & Dataset & 2 (eta,zeta) & Cartesian x-coordinate of the FSA grid \\
+ycc              & Dataset & 2 (eta,zeta) & Cartesian y-coordinate of the FSA grid\\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
+dvdpsip          & Dataset & 1 (zeta) & $\d v/\d\psi_p$ \\
+psi\_vol         & Dataset & 1 (zeta) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\
+psi\_area        & Dataset & 1 (zeta) & The area of the flux surfaces $A(\psi_p) = 2\pi \int_\Omega |\vn\psi_p| \delta(\psi_p - \psi_{p0}) H(Z-Z_X) R\d R\d Z$ \\
+dvdpsip          & Dataset & 1 (zeta) & $\d v/\d\psi_p$ (in the 2d poloidal plane) \\
+q-profile        & Dataset & 1 (zeta) & The safety factor $q(\psi_p)$ \eqref{eq:safety_factor} using direct integration ( accurate but we assign random values outside separatrix) \\
+psit1d           & Dataset & 1 (zeta) & Toroidal flux (integrated q-profile) $\psi_t = \int^{\psi_p} \d\psi_p q(\psi_p)$ \\
+rho              & Dataset & 1 (zeta) & Transformed flux label $\rho:= 1 - \psi_p/\psi_{p,O}$ \\
+rho\_p           & Dataset & 1 (zeta) & poloidal flux label $\rho_p:= \sqrt{1 - \psi_p/\psi_{p,O}}$  ( see Section~\ref{sec:alternative}\\
+rho\_t           & Dataset & 1 (zeta) & Toroidal flux label $\rho_t :=
+\sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$ (is similar to $\rho$ in the edge but
+$\rho_t$ is nicer in the core domain, because equidistant $\rho_t$ make
+more equidistant flux-surfaces, see Section~\ref{sec:alternative} )\\
+X      & Dataset & 2 (y,x) & 2d version of quantity X \\
+X3d    & Dataset & 3 (z,y,x) & 3d version of quantity X \\
+X\_fsa & Dataset & 1 (zeta) & flux surface average of quantity X (if "fsa" diagnostics)\\
+X\_ifs & Dataset & 1 (zeta) & flux surface integral of quantity X (if "fsa" diagnostics)\\
+X\_dfs & Dataset & 1 (zeta) & flux surface derivative of quantity X (if "fsa" diagnostics)\\
+\bottomrule
+\end{longtable}
+
+The O-point and X-point(s) are written as global attributes "O-point", "X-point" and "2nd X-point" (if exists).
+
+X lies in (search
+\href{https://mwiesenberger.github.io/feltor/geometries/html/modules.html}{documentation} for X for further details)
+\begin{minted}[texcomments]{cpp}
+    {"Psip", "Flux function", mag.psip()},
+    {"PsipR", "Flux function derivative in R", mag.psipR()},
+    {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
+    {"PsipRR", "Flux function derivative in RR", mag.psipRR()},
+    {"PsipRZ", "Flux function derivative in RZ", mag.psipRZ()},
+    {"PsipZZ", "Flux function derivative in ZZ", mag.psipZZ()},
+    {"Ipol", "Poloidal current", mag.ipol()},
+    {"IpolR", "Poloidal current derivative in R", mag.ipolR()},
+    {"IpolZ", "Poloidal current derivative in Z", mag.ipolZ()},
+    {"Rho_p", "Normalized Poloidal flux label", dg::geo::RhoP(mag)},
+    {"LaplacePsip", "Laplace of flux function", dg::geo::LaplacePsip(mag)},
+    {"Bmodule", "Magnetic field strength", dg::geo::Bmodule(mag)},
+    {"InvB", "Inverse of Bmodule", dg::geo::InvB(mag)},
+    {"LnB", "Natural logarithm of Bmodule", dg::geo::LnB(mag)},
+    {"GradLnB", "The parallel derivative of LnB", dg::geo::GradLnB(mag)},
+    {"Divb", "The divergence of the magnetic unit vector", dg::geo::Divb(mag)},
+    {"B_R", "Derivative of Bmodule in R", dg::geo::BR(mag)},
+    {"B_Z", "Derivative of Bmodule in Z", dg::geo::BZ(mag)},
+    {"CurvatureNablaBR",  "R-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBR(mag,+1)},
+    {"CurvatureNablaBZ",  "Z-component of the (toroidal) Nabla B curvature vector", dg::geo::CurvatureNablaBZ(mag,+1)},
+    {"CurvatureKappaR",   "R-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaR(mag,+1)},
+    {"CurvatureKappaZ",   "Z-component of the (toroidal) Kappa B curvature vector", dg::geo::CurvatureKappaZ(mag,+1)},
+    {"DivCurvatureKappa", "Divergence of the (toroidal) Kappa B curvature vector", dg::geo::DivCurvatureKappa(mag,+1)},
+    {"DivCurvatureNablaB","Divergence of the (toroidal) Nabla B curvature vector", dg::geo::DivCurvatureNablaB(mag,+1)},
+    {"TrueCurvatureNablaBR", "R-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBR(mag)},
+    {"TrueCurvatureNablaBZ", "Z-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBZ(mag)},
+    {"TrueCurvatureNablaBP", "Contravariant Phi-component of the (true) Nabla B curvature vector", dg::geo::TrueCurvatureNablaBP(mag)},
+    {"TrueCurvatureKappaR", "R-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaR(mag)},
+    {"TrueCurvatureKappaZ", "Z-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaZ(mag)},
+    {"TrueCurvatureKappaP", "Contravariant Phi-component of the (true) Kappa B curvature vector", dg::geo::TrueCurvatureKappaP(mag)},
+    {"TrueDivCurvatureKappa", "Divergence of the (true) Kappa B curvature vector", dg::geo::TrueDivCurvatureKappa(mag)},
+    {"TrueDivCurvatureNablaB","Divergence of the (true) Nabla B curvature vector",  dg::geo::TrueDivCurvatureNablaB(mag)},
+    {"BFieldR", "R-component of the magnetic field vector", dg::geo::BFieldR(mag)},
+    {"BFieldZ", "Z-component of the magnetic field vector", dg::geo::BFieldZ(mag)},
+    {"BFieldP", "Contravariant Phi-component of the magnetic field vector", dg::geo::BFieldP(mag)},
+    {"BHatR", "R-component of the magnetic field unit vector", dg::geo::BHatR(mag)},
+    {"BHatZ", "Z-component of the magnetic field unit vector", dg::geo::BHatZ(mag)},
+    {"BHatP", "Contravariant Phi-component of the magnetic field unit vector", dg::geo::BHatP(mag)},
+    {"BHatRR", "R derivative of BHatR", dg::geo::BHatRR(mag)},
+    {"BHatZR", "R derivative of BHatZ", dg::geo::BHatZR(mag)},
+    {"BHatPR", "R derivative of BHatP", dg::geo::BHatPR(mag)},
+    {"BHatRZ", "Z derivative of BHatR", dg::geo::BHatRZ(mag)},
+    {"BHatZZ", "Z derivative of BHatZ", dg::geo::BHatZZ(mag)},
+    {"BHatPZ", "Z derivative of BHatP", dg::geo::BHatPZ(mag)},
+    {"NormGradPsip", "Norm of gradient of Psip", dg::geo::SquareNorm( dg::geo::createGradPsip(mag), dg::geo::createGradPsip(mag))},
+    {"SquareGradPsip", "Norm of gradient of Psip", dg::geo::ScalarProduct( dg::geo::createGradPsip(mag), dg::geo::createGradPsip(mag))},
+    {"CurvatureNablaBGradPsip", "(Toroidal) Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureNablaB(mag, +1), dg::geo::createGradPsip(mag))},
+    {"CurvatureKappaGradPsip", "(Toroidal) Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createCurvatureKappa(mag, +1), dg::geo::createGradPsip(mag))},
+    {"TrueCurvatureNablaBGradPsip", "True Nabla B curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureNablaB(mag), dg::geo::createGradPsip(mag))},
+    {"TrueCurvatureKappaGradPsip", "True Kappa curvature dot the gradient of Psip", dg::geo::ScalarProduct( dg::geo::createTrueCurvatureKappa(mag), dg::geo::createGradPsip(mag))},
+    //////////////////////////////////
+    {"Iris", "A flux aligned Iris", dg::compose( dg::Iris( 0.5, 0.7), dg::geo::RhoP(mag))},
+    {"Pupil", "A flux aligned Pupil", dg::compose( dg::Pupil(0.7), dg::geo::RhoP(mag)) },
+    {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( 1.03), dg::geo::RhoP(mag) )},
+    {"MagneticTransition", "The region where the magnetic field is modified", transition},
+    {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, deltaPsi, 1./(sqrt(2.*M_PI)*deltaPsi)), mag.psip())},
+    ////
+    { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) },
+    {"Wall", "Penalization region that acts as the wall", wall },
+    {"WallDistance", "Distance to closest wall", dg::geo::CylindricalFunctor( dg::WallDistance( sheath_walls)) }
+\end{minted}
+
+If the "sheath" diagnostics is activated then additionally the following fields are computed
+\begin{minted}{cpp}
+    {"WallFieldlineAnglePDistance", "Distance to wall along fieldline",
+        dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                sheath_walls, maxPhi, 1e-6, "phi") },
+    {"WallFieldlineAngleMDistance", "Distance to wall along fieldline",
+        dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                sheath_walls, -maxPhi, 1e-6, "phi") },
+    {"WallFieldlineSPDistance", "Distance to wall along fieldline",
+        dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                sheath_walls, maxPhi, 1e-6, "s") },
+    {"WallFieldlineSMDistance", "Distance to wall along fieldline",
+        dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
+                sheath_walls, -maxPhi, 1e-6, "s") },
+    {"Sheath", "Sheath region", sheath},
+    {"SheathDirection", "Direction of magnetic field relative to sheath", dg::geo::WallDirection(mag, sheath_walls) },
+    {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, maxPhi, 1e-6, "s")}
+\end{minted}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
