@@ -442,17 +442,18 @@ int main( int argc, char* argv[])
     {
         double point[2] = {RO,ZO};
         nc_put_att_double( ncid, NC_GLOBAL,
-            "O-point", NC_DOUBLE, 2, point);
-        if( mag_description == dg::geo::description::standardX
-            || mag_description == dg::geo::description::doubleX)
+            "opoint", NC_DOUBLE, 2, point);
+        if( mag_description == dg::geo::description::standardX)
         {
             double point[2] = {RX,ZX};
             nc_put_att_double( ncid, NC_GLOBAL,
-                    "X-point", NC_DOUBLE, 2, point);
-            point[0] = R2X, point[1] = Z2X;
-            if( mag_description == dg::geo::description::doubleX)
-                nc_put_att_double( ncid, NC_GLOBAL,
-                    "2nd X-point", NC_DOUBLE, 2, point);
+                "xpoint", NC_DOUBLE, 2, point);
+        }
+        if( mag_description == dg::geo::description::doubleX)
+        {
+            double point[4] = {RX,ZX, R2X, Z2X};
+            nc_put_att_double( ncid, NC_GLOBAL,
+                "xpoint", NC_DOUBLE, 4, point);
         }
     }
 
