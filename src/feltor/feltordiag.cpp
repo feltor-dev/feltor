@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
@@ -45,20 +44,20 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
     err = nc_close( ncid_in);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.asJson() <<  std::endl;
     dg::file::WrappedJsonValue config( dg::file::error::is_warning);
     try{
-        dg::file::file2Json( argv[1], config.asJson(),
+        config.asJson() = dg::file::file2Json( argv[1],
                 dg::file::comments::are_discarded, dg::file::error::is_warning);
     } catch( std::exception& e) {
         DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
         DG_RANK0 std::cerr << e.what()<<std::endl;
         return -1;
     }
-    std::string configfile = config.asJson().toStyledString();
+    std::string configfile = config.asJson().dump(4);
     std::cout << configfile <<  std::endl;
 
     //-------------------Construct grids-------------------------------------//
@@ -213,7 +212,7 @@ int main( int argc, char* argv[])
 
 
     std::vector<std::vector<feltor::Record>> equation_list;
-    bool equation_list_exists = js["output"].asJson().isMember("equations");
+    bool equation_list_exists = js["output"].asJson().contains("equations");
     if( equation_list_exists)
     {
         for( unsigned i=0; i<js["output"]["equations"].size(); i++)
@@ -260,7 +259,7 @@ int main( int argc, char* argv[])
         {"ifs_norm", {" (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)",1, dim_ids, false}},
         {"std_fsa", {" (Flux surface average standard deviation on outboard midplane.)", 2, dim_ids2d, false}}
     };
-    bool diagnostics_list_exists = config.asJson().isMember("diagnostics");
+    bool diagnostics_list_exists = config.asJson().contains("diagnostics");
     if( diagnostics_list_exists)
     {
         for( unsigned i=0; i<config["diagnostics"].size(); i++)

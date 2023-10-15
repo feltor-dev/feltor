@@ -2,7 +2,7 @@
 #define _DG_PARAMETERS_
 #include <string>
 #include "dg/enums.h"
-#include "json/json.h"
+#include "dg/file/json_utilities.h"
 
 namespace eule{
 /**
@@ -34,7 +34,7 @@ struct Parameters
     double omega_source,sourceb,sourcew;
     enum dg::bc bc_x,bc_y,bc_x_phi;
 
-    Parameters(const Json::Value& js)        {
+    Parameters(dg::file::WrappedJsonValue js)        {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();

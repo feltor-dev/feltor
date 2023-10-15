@@ -30,18 +30,13 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Value js;
-    Json::CharReaderBuilder parser;
-    parser["collectComments"] = false;
-    std::string errs;
     if( argc != 3)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
-    else 
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
-    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    auto js = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
+    std::string input = js.dump(4); //save input without comments, which is important if netcdf file is later read by another parser
     const eule::Parameters p( js);
     if(rank==0)p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////

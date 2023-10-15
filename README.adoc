@@ -181,14 +181,14 @@ number of OpenMP threads with e.g. `export OMP_NUM_THREADS=2`.
 Now, we want to compile and run a simulation program. To this end, we have to
 download and install some additional libraries for I/O-operations.
 
-First, we need to install jsoncpp (distributed under the MIT License),
-which on linux is available as `libjsoncpp-dev` through the package managment system.
-For a manual build check the instructions on https://www.github.com/open-source-parsers/jsoncpp[JsonCpp].
+First, we need to install Niels Lohmann's popular json library (header-only, distributed under the MIT License),
+which on linux is available as `nlohmann-json3-dev` through the package managment system.
+For a manual build check the instructions on https://www.github.com/nlohmann/json[JsonCpp].
 [source,sh]
 ----
-# You may have to manually link the include path
+git clone https://www.github.com/nlohmann/json
 cd ~/include
-ln -s /usr/include/jsoncpp/json
+ln -s path/to/json/include
 ----
 
 For data output we use the
@@ -368,17 +368,17 @@ INCLUDE+=-I$(FELTOR_PATH)/inc/
 
 all: toefl toefl_hpc toefl_mpi
 
-# shared memory version using glfw, jsoncpp and netcdf
+# shared memory version using glfw and netcdf
 toefl: toefl.cpp toefl.h parameters.h diag.h
-    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -DWITH_GLFW -g
+    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) -DWITH_GLFW -g
 
-# shared memory version using jsoncpp and netcdf without glfw
+# shared memory version using netcdf without glfw
 toefl_hpc: toefl.cpp toefl.h parameters.h diag.h
-    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
+    $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 
-# mpi version using jsoncpp and netcdf without glfw
+# mpi version using netcdf without glfw
 toefl_mpi: toefl.cpp toefl.h parameters.h diag.h
-    $(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)
+    $(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS)
 
 .PHONY: clean
 
@@ -454,23 +454,17 @@ ____
 
 ===== Advanced simulation projects
 
-Our simulation codes typically depend on jsoncpp for parameter input,
+Our simulation codes typically depend on json for parameter input,
 glfw3 for plotting or
 netcdf-4 for file output and come with a LaTeX file containing documentation.
 You will need to download these additional libraries and adapt the project
 properties accordingly.
 
-jsoncpp::
+json::
 
-* Download and Install https://www.anaconda.com/download[Anaconda].
-(to get a working python3 installation)
-* In Github desktop: `File -> Clone repository...` clone `https://github.com/open-source-parsers/jsoncpp`
-* Execute the file `path\to\jsconcpp\amalgamate.py`. The only way
-to confirm its success is to look for a `dist` folder containing `jsconcpp.cpp`
-and a folder containing two header files.
-* Add `path\to\jsoncpp\dist` to `Properties -> VC++ Directories -> Include Directories`
-* In the Solution Explorer Right click
- `Source Files -> Add -> Existing Item` and select `path\to\jsconcpp\dist\jsoncpp.cpp`
+* In Github desktop: `File -> Clone repository...` clone `https://github.com/nlohmann/json`
+* In `VC++ Directories -> Include Directories` click on `Edit` Then add the line
+`path\to\json\include`
 
 Glfw3::
 

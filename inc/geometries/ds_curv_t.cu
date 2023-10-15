@@ -1,11 +1,9 @@
 #include <iostream>
 
 #include <cusp/print.h>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "ds.h"
-#include "solovev.h"
 #include "flux.h"
 #include "guenter.h"
 #include "toroidal.h"
@@ -15,37 +13,6 @@
 int main(int argc, char * argv[])
 {
     std::cout << "# Test DS on flux grid (No Boundary conditions)!\n";
-    Json::Value js;
-    //std::stringstream ss;
-    //ss << "{"
-    //   << "    \"A\" : 0.0,"
-    //   << "    \"PP\": 1,"
-    //   << "    \"PI\": 1,"
-    //   << "    \"c\" :[  0.07350114445500399706283007092406934834526,"
-    //   << "           -0.08662417436317227513877947632069712210813,"
-    //   << "           -0.1463931543401102620740934776490506239925,"
-    //   << "           -0.07631237100536276213126232216649739043965,"
-    //   << "            0.09031790113794227394476271394334515457567,"
-    //   << "           -0.09157541239018724584036670247895160625891,"
-    //   << "           -0.003892282979837564486424586266476650443202,"
-    //   << "            0.04271891225076417603805495295590637082745,"
-    //   << "            0.2275545646002791311716859154040182853650,"
-    //   << "           -0.1304724136017769544849838714185080700328,"
-    //   << "           -0.03006974108476955225335835678782676287818,"
-    //   << "            0.004212671892103931178531621087067962015783 ],"
-    //   << "    \"R_0\"                : 547.891714877869,"
-    //   << "    \"inverseaspectratio\" : 0.41071428571428575,"
-    //   << "    \"elongation\"         : 1.75,"
-    //   << "    \"triangularity\"      : 0.47,"
-    //   << "    \"equilibrium\"  : \"solovev\","
-    //   << "    \"description\" : \"standardX\""
-    //   << "}";
-    //ss >> js;
-    //dg::geo::solovev::Parameters gp(js);
-    //dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
-    //double psi_0 = -20, psi_1 = -4;
-    //const double R_0 = gp.R_0;
-    //const double a = gp.a;
     const double R_0 = 3;
     const double I_0 = 10; //q factor at r=1 is I_0/R_0
     const double a  = 1; //small radius

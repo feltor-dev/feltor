@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
@@ -44,12 +43,12 @@ int main( int argc, char* argv[])
     std::string inputfile(length, 'x');
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     const feltor::Parameters p(js);
-    std::cout << js.asJson().toStyledString() << std::endl;
+    std::cout << js.asJson().dump(4) << std::endl;
     dg::file::WrappedJsonValue config( dg::file::error::is_warning);
     try{
-        dg::file::file2Json( argv[1], config.asJson(),
+        config.asJson() = dg::file::file2Json( argv[1],
                 dg::file::comments::are_discarded, dg::file::error::is_warning);
     } catch( std::exception& e) {
         DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;

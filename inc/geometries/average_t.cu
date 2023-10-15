@@ -1,29 +1,18 @@
 #include <iostream>
 #include <iomanip>
 
-#include "json/json.h"
 
 #include "dg/algorithm.h"
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "solovev.h"
 #include "average.h"
 //#include "taylor.h"
 #include "magnetic_field.h"
+
 int main( int argc, char* argv[])
 {
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is("geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
-
+    auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     const dg::geo::solovev::Parameters gp(js);
     const dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField(gp);
     double R_O = gp.R_0, Z_O = 0.;

@@ -18,13 +18,12 @@
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Value js;
+    dg::file::WrappedJsonValue ws;
     if( argc == 1)
-        dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
+        ws.asJson() = dg::file::file2Json( "input/default.json", dg::file::comments::are_discarded);
     else
-        dg::file::file2Json( argv[1], js);
-    std::cout << js <<std::endl;
-    dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
+        ws.asJson() = dg::file::file2Json( argv[1]);
+    std::cout << ws.asJson().dump(4) <<std::endl;
 
     /////////////////////////////////////////////////////////////////
     dg::CartesianGrid2d grid = shu::createGrid( ws["grid"]);
@@ -210,7 +209,7 @@ int main( int argc, char* argv[])
 #endif //WITHOUT_GLFW
     if( "netcdf" == output)
     {
-        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string inputfile = ws.asJson().dump(4); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc == 1 || argc == 2)
             outputfile = "shu.nc";

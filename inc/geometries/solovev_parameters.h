@@ -1,9 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
-#ifdef JSONCPP_VERSION_STRING
 #include <dg/file/json_utilities.h>
-#endif
+
 /*!@file
  *
  * Geometry parameters
@@ -40,7 +39,6 @@ namespace solovev
 /**
  * @brief Constructs and display geometric parameters for the solovev and taylor fields
  * @ingroup solovev
- * @note include \c json/json.h before \c geometries.h in order to activate json functionality
  */
 struct Parameters
 {
@@ -53,7 +51,7 @@ struct Parameters
            triangularity; //!< triangularity of the magnetic surfaces
     std::vector<double> c;  //!< 12 coefficients for the solovev equilibrium;
     std::string description;
-#ifdef JSONCPP_VERSION_STRING
+    Parameters() = default;
     /**
      * @brief Construct from Json dataset
      * @copydoc hide_solovev_json
@@ -61,7 +59,6 @@ struct Parameters
      * @note the \c dg::geo::taylor field is chosen by setting "taylor" in the equilibrium field (but also note that you need to include boost for the taylor field)
      * @param js valid Json object (see code above to see the valid key : value pairs)
      * @note the default values in brackets are taken if the variables are not found in the input file
-     * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
     Parameters( const dg::file::WrappedJsonValue& js) {
         A   = js.get("A", 0).asDouble();
@@ -91,14 +88,13 @@ struct Parameters
      * @brief Put values into a json string
      *
      * @return Json value
-     * @attention This member is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
-    Json::Value dump( ) const
+    dg::file::WrappedJsonValue dump( ) const
     {
         // There seems to be a jsoncpp bug where the move assignment is missing
         // libjsoncpp-dev-1.7.4 from the package sources
         // Let's for now wait if a later version fixes it
-        Json::Value js;
+        nlohmann::json js;
         js["A"] = A;
         js["PP"] = pp;
         js["PI"] = pi;
@@ -111,7 +107,6 @@ struct Parameters
         js[ "description"] = description;
         return js;
     }
-#endif // JSONCPP_VERSION_STRING
     /**
     * @brief True if any coefficient \c c_i!=0 with \c 7<=i<12
     *
@@ -141,21 +136,10 @@ struct Parameters
     ///Write variables as a formatted string
     void display( std::ostream& os = std::cout ) const
     {
+        auto js = dump();
         os << "Solovev Geometrical parameters are: \n"
-            <<" A               = "<<A<<"\n"
-            <<" Prefactor Psi   = "<<pp<<"\n"
-            <<" Prefactor I     = "<<pi<<"\n";
-        for( unsigned i=0; i<12; i++)
-            os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
-
-        os  <<" R0            = "<<R_0<<"\n"
-            <<" a             = "<<a<<"\n"
-            <<" epsilon_a     = "<<a/R_0<<"\n"
-            <<" description   = "<<description<<"\n"
-            <<" elongation    = "<<elongation<<"\n"
-            <<" triangularity = "<<triangularity<<"\n";
+            <<js.asJson().dump(4);
         os << std::flush;
-
     }
 };
 } //namespace solovev

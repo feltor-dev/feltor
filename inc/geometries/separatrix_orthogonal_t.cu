@@ -4,7 +4,6 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
-#include "json/json.h"
 
 #include "dg/functors.h"
 
@@ -19,7 +18,7 @@
 #include "testfunctors.h"
 #include "fluxfunctions.h"
 
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 
 double sine( double x) {return sin(x);}
@@ -78,17 +77,7 @@ int main( int argc, char* argv[])
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "Typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<"\n";
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is("geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+    auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     //dg::geo::taylor::Parameters gp(js);
     //dg::geo::TokamakMagneticField mag = dg::geo::createTaylorField(gp);
     dg::geo::solovev::Parameters gp(js);

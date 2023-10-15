@@ -6,7 +6,6 @@
 #include <cmath>
 
 #include <mpi.h>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "mpi_curvilinear.h"
@@ -16,7 +15,7 @@
 #include "simple_orthogonal.h"
 //#include "ds.h"
 
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
@@ -41,17 +40,7 @@ int main( int argc, char* argv[])
         MPI_Finalize();
         return 0;
     }
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is("geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+    auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     dg::geo::solovev::Parameters gp(js);
     dg::geo::CylindricalFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     if(rank==0)std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";

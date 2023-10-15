@@ -11,13 +11,13 @@ INCLUDE+= -I../../inc   # other project libraries
 all: toefl toefl_hpc toefl_mpi
 
 toefl: toefl.cpp toefl.h parameters.h diag.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -DWITH_GLFW -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(VERSION_FLAGS) -DWITH_GLFW -g
 
 toefl_hpc: toefl.cpp toefl.h parameters.h diag.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(VERSION_FLAGS) -g
 
 toefl_mpi: toefl.cpp toefl.h parameters.h diag.h
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(VERSION_FLAGS)
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(VERSION_FLAGS)
 
 doc:
 	pdflatex -shell-escape ./toefl.tex;

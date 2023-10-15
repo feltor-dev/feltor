@@ -30,11 +30,11 @@ int main( int argc, char* argv[])
 #endif //WITH_MPI
 
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Value js;
+    nlohmann::json js;
     if( argc == 1)
-        dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
+        js = dg::file::file2Json( "input/default.json", dg::file::comments::are_discarded);
     else
-        dg::file::file2Json( argv[1], js);
+        js = dg::file::file2Json( argv[1]);
     DG_RANK0 std::cout << js <<std::endl;
 
     const asela::Parameters p( js);
@@ -115,7 +115,7 @@ int main( int argc, char* argv[])
     if( "glfw" == output)
     {
         /////////glfw initialisation ////////////////////////////////////////////
-        dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
+        dg::file::WrappedJsonValue js = dg::file::file2Json( "window_params.json");
         GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
         draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
         //create visualisation vectors
@@ -222,7 +222,7 @@ int main( int argc, char* argv[])
         att["git-branch"] = GIT_BRANCH;
         att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
-        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string inputfile = js.dump(4); //save input without comments, which is important if netcdf file is later read by another parser
         att["inputfile"] = inputfile;
         for( auto pair : att)
             DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,

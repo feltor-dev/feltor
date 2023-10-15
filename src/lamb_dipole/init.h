@@ -2,7 +2,7 @@
 
 #include <map>
 #include <functional>
-#include "json/json.h"
+#include <nlohmann/json.hpp>
 #include "dg/algorithm.h"
 #include "dg/file/json_utilities.h"
 

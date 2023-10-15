@@ -13,16 +13,14 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Value js;
     if( argc != 3 && argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
         std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
-    else 
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
-    std::string input = js.toStyledString(); 
+    auto js = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
+    std::string input = js.dump(4); 
     const eule::Parameters p( js);
     p.display( std::cout);
 
@@ -82,8 +80,7 @@ int main( int argc, char* argv[])
         errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
         std::string inputIN(length, 'x');
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
-        Json::Value jsIN;
-        dg::file::string2Json(inputIN, jsIN, dg::file::comments::are_forbidden);
+        auto jsIN = dg::file::string2Json(inputIN, dg::file::comments::are_forbidden);
 
         const eule::Parameters pIN(  jsIN);
         std::cout << "[input.nc] file parameters" << std::endl;

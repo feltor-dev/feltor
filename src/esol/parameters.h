@@ -3,8 +3,7 @@
 #include "dg/enums.h"
 
 // #include "dg/algorithm.h"
-#include "json/json.h"
-// #include "dg/file/json_utilities.h"
+#include "dg/file/json_utilities.h"
 namespace esol{
 /**
  * @brief Provide a mapping between input file and named parameters

@@ -3,7 +3,7 @@
 
 #include <exception>
 
-#include "json/json.h"
+#include <nlohmann/json.hpp>
 #include "dg/file/json_utilities.h"
 #include "dg/algorithm.h"
 #include "init.h"

@@ -4,7 +4,6 @@
 #include <string>
 #include <cmath>
 
-#include "json/json.h"
 #include "dg/file/json_utilities.h"
 
 namespace feltor{
@@ -214,7 +213,7 @@ struct Parameters
         }
 
         //Probes
-        probes = js.asJson().isMember("probes");
+        probes = js.asJson().contains("probes");
         if(probes)
         {
             num_pins = js["probes"]["num_pins"].asUInt();

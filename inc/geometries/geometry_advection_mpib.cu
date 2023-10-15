@@ -2,9 +2,9 @@
 #include <iomanip>
 
 #include <mpi.h>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
+#include "dg/file/json_utilities.h"
 
 #include "solovev.h"
 #include "testfunctors.h"
@@ -96,17 +96,7 @@ int main(int argc, char** argv)
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is("geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+    auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
     if(rank==0)std::cout << "Psi min "<<mag.psip()(gp.R_0, 0)<<"\n";

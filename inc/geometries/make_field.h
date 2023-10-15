@@ -1,4 +1,3 @@
-#ifdef JSONCPP_VERSION_STRING
 #include "magnetic_field.h"
 #include "solovev.h"
 #include "guenter.h"
@@ -69,7 +68,6 @@ namespace geo{
  * i.e. "solovev", "polynomial", .... After that the respective parameters are created,
  * for example if "solovev", then the dg::geo::solovev::Parameters( gs) is called and forwarded to dg::geo::createSolovevField(gp); similar for the rest
  * @return A magnetic field object
- * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
  * @ingroup geom
  */
 static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
@@ -185,7 +183,6 @@ or with additional modification in the private flux region "sol_pfr"
  * is the FCI scheme, which does not play well with field-lines that intersect
  * the boundary of our simulation domain. In such a case it is advantageous to
  * smoothly bend the magnetic field-lines to a purely toroidal field.
- * @attention This function is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
 
  * @param gs forwarded to \c dg::geo::createMagneticField
  * @param jsmod contains the fields described below to steer the creation of the modification and wall region
@@ -470,4 +467,3 @@ static inline void createSheathRegion(
 
 } //namespace geo
 }//namespace dg
-#endif //JSONCPP_VERSION_STRING

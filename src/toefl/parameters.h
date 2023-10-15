@@ -2,7 +2,6 @@
 #include <string>
 #include "dg/algorithm.h"
 #include "dg/file/json_utilities.h"
-#include "json/json.h"
 
 namespace toefl{
 

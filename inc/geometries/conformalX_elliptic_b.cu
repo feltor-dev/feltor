@@ -1,5 +1,4 @@
 #include <iostream>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 
@@ -82,17 +81,7 @@ int main(int argc, char**argv)
     unsigned nIter = 3;
     std::cout << "type # iterations! (6)\n";
     std::cin >> nIter;
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is( "geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+    auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     ////////////////construct Generator////////////////////////////////////

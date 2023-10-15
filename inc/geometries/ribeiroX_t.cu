@@ -4,10 +4,9 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "solovev.h"
 #include "taylor.h"
@@ -70,18 +69,7 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz (Nx must be divided by 4 and Ny by 10) \n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    Json::Value js;
-    if( argc==1)
-    {
-        //std::ifstream is("geometry_params_Xpoint_taylor.json");
-        std::ifstream is("geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+    auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     dg::geo::solovev::Parameters gp(js);
     dg::Timer t;
     std::cout << "Type psi_0 \n";

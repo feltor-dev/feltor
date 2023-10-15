@@ -58,7 +58,7 @@ int main( int argc, char* argv[])
         dg::abort_program();
     }
     try{
-        dg::file::file2Json( argv[1], js.asJson(),
+        js.asJson() = dg::file::file2Json( argv[1],
                 dg::file::comments::are_discarded, dg::file::error::is_throw);
         feltor::Parameters p( js);
     } catch( std::exception& e) {
@@ -71,7 +71,7 @@ int main( int argc, char* argv[])
     {
         std::string path = js["magnetic_field"]["file"].asString();
         try{
-            dg::file::file2Json( path, js.asJson()["magnetic_field"]["params"],
+            js.asJson()["magnetic_field"]["params"] = dg::file::file2Json( path,
                     dg::file::comments::are_discarded, dg::file::error::is_throw);
         }catch(std::runtime_error& e)
         {
@@ -87,8 +87,8 @@ int main( int argc, char* argv[])
         dg::abort_program();
     }
     const feltor::Parameters p( js);
-    DG_RANK0 std::cout << js.asJson() <<  std::endl;
-    std::string inputfile = js.asJson().toStyledString();
+    std::string inputfile = js.asJson().dump(4);
+    DG_RANK0 std::cout << inputfile <<  std::endl;
     dg::geo::TokamakMagneticField mag, mod_mag, unmod_mag;
     dg::geo::CylindricalFunctor wall, transition, sheath, sheath_coordinate =
         [](double x, double y){return 0.;};
@@ -504,7 +504,7 @@ int main( int argc, char* argv[])
         }
 
         std::vector<std::vector<feltor::Record>> equation_list;
-        bool equation_list_exists = js["output"].asJson().isMember("equations");
+        bool equation_list_exists = js["output"].asJson().contains("equations");
         if( equation_list_exists)
         {
             for( unsigned i=0; i<js["output"]["equations"].size(); i++)

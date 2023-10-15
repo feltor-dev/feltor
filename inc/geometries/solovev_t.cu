@@ -1,8 +1,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "json/json.h"
-
 #include "dg/algorithm.h"
 
 #include "solovev.h"
@@ -22,9 +20,8 @@ struct JPhi
 
 int main( int argc, char* argv[])
 {
-    dg::file::WrappedJsonValue js( dg::file::error::is_throw);
     std::string input = argc==1 ? "geometry_params_Xpoint.json" : argv[1];
-    dg::file::file2Json( input, js.asJson(), dg::file::comments::are_discarded);
+    dg::file::WrappedJsonValue js = dg::file::file2Json( input);
 
     std::string e = js.get( "equilibrium", "solovev" ).asString();
     dg::geo::equilibrium equi = dg::geo::str2equilibrium.at( e);

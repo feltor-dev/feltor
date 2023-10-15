@@ -4,7 +4,6 @@
 #include <sstream>
 #include <cmath>
 #include <csignal>
-// #define DG_DEBUG
 
 #include <mpi.h> //activate mpi
 
@@ -53,16 +52,14 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Value js;
     if( argc != 3 && argc != 4)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
         if(rank==0)std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
-    else 
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
-    std::string input = js.toStyledString(); 
+    auto js = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
+    std::string input = js.dump(4);
     const eule::Parameters p( js);
     if(rank==0) p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////
@@ -159,7 +156,7 @@ int main( int argc, char* argv[])
         errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
         std::string inputIN(length, 'x');
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
-        Json::Value jsIN;
+        nlohmann::json jsIN;
         dg::file::string2Json(inputIN, jsIN, dg::file::comments::are_forbidden);
         const eule::Parameters pIN(  jsIN);    
         if(rank==0) std::cout << "[input.nc] file parameters" << std::endl;

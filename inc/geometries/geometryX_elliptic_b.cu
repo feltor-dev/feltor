@@ -1,9 +1,7 @@
 #include <iostream>
 
-#include "json/json.h"
-
 #include "dg/algorithm.h"
-#include "dg/file/nc_utilities.h"
+#include "dg/file/file.h"
 
 #include "solovev.h"
 //#include "taylor.h"
@@ -23,17 +21,7 @@ int main(int argc, char**argv)
     std::cout << "Type psi_0 (-15)! \n";
     double psi_0, psi_1;
     std::cin >> psi_0;
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is(parameters);
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
+    auto js = dg::file::file2Json( argc == 1 ? parameters : argv[1]);
     //dg::geo::taylor::Parameters gp(js);
     //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
     dg::geo::solovev::Parameters gp(js);

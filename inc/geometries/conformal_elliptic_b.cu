@@ -1,7 +1,7 @@
 #include <iostream>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
+#include "dg/file/json_utilities.h"
 
 //Grids
 #include "curvilinear.h"
@@ -81,18 +81,8 @@ int main(int argc, char**argv)
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
-    Json::Value js;
-    if( argc==1)
-    {
-        std::ifstream is("geometry_params_Xpoint.json");
-        is >> js;
-    }
-    else
-    {
-        std::ifstream is(argv[1]);
-        is >> js;
-    }
     //write parameters from file into variables
+    auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     dg::geo::solovev::Parameters gp(js);
     gp.display( std::cout);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);

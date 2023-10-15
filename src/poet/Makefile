@@ -11,13 +11,13 @@ INCLUDE+= -I../../inc   # other project libraries
 all: poet poet_hpc poet_mpi
 
 poet: poet.cu poet.h init.h diag.h parameters.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK  -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(LAPACKLIB) -DDG_BENCHMARK  -g
 
 poet_hpc: poet.cu poet.h init.h diag.h parameters.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK -DWITHOUT_GLFW
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(LAPACKLIB) -DDG_BENCHMARK -DWITHOUT_GLFW
 
 poet_mpi: poet.cu poet.h init.h diag.h parameters.h
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DWITH_MPI -DDG_BENCHMARK -DWITHOUT_GLFW
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(LAPACKLIB) -DWITH_MPI -DDG_BENCHMARK -DWITHOUT_GLFW
 
 doc:
 	pdflatex --shell-escape ./poet.tex;

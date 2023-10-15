@@ -7,8 +7,6 @@
 int main()
 {
 
-    Json::Value js;
-    dg::file::file2Json( "test.json", js);
     std::cout << "\n\n";
     using dg::file::error;
 
@@ -21,7 +19,8 @@ int main()
             std::cerr << "**Warning**\n";
         else if( mode == error::is_throw)
             std::cerr << "**Throw**\n";
-        dg::file::WrappedJsonValue ws( js, mode);
+        dg::file::WrappedJsonValue ws = dg::file::file2Json( "test.json",
+                dg::file::comments::are_discarded, mode);
         try{
             std::string hello = ws[ "hell"].asString( "default");
             std::cerr << "Hello "<<hello<<"\n";
@@ -70,7 +69,7 @@ int main()
     std::cout << "\n\n";
     {
         std::cout << "Test correct access:\n";
-        dg::file::WrappedJsonValue ws( js);
+        dg::file::WrappedJsonValue ws = dg::file::file2Json( "test.json");
         std::string hello = ws["hello"].asString();
         assert( hello == "world");
         int idx0 = ws[ "array"][0].asInt(0);
@@ -78,7 +77,7 @@ int main()
         assert( idx0 == 42);
         idx0 = ws[ "array"].get(0,0).asInt();
         assert( idx0 == 42);
-        int idx1 = ws["array"][1].asInt();
+        double idx1 = ws["array"][1].asDouble();
         assert( idx1 == 73);
         double hi = ws[ "nested"][ "hi"].asDouble();
         assert( hi == 38);

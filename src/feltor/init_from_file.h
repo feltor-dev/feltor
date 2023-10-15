@@ -22,12 +22,11 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     dg::file::NC_Error_Handle errIN;
     int ncidIN;
     errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
-    dg::file::WrappedJsonValue jsIN;
     size_t length;
     errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
     std::string input(length, 'x');
     errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
-    dg::file::string2Json( input, jsIN.asJson(), dg::file::comments::are_forbidden);
+    dg::file::WrappedJsonValue jsIN = dg::file::string2Json( input, dg::file::comments::are_forbidden);
     feltor::Parameters pIN( jsIN);
     unsigned  pINn  = pIN.n;
     unsigned  pINNx = pIN.Nx;

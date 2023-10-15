@@ -3,7 +3,7 @@
 #include "dg/enums.h"
 
 // #include "dg/algorithm.h"
-#include "json/json.h"
+#include <nlohmann/json.hpp>
 // #include "dg/file/json_utilities.h"
 namespace poet{
 /**

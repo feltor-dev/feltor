@@ -45,16 +45,14 @@ double cosineY( double x, double y) {return sin(x)*cos(y);}
 
 int main( int argc, char* argv[])
 {
-    dg::file::WrappedJsonValue js( dg::file::error::is_throw);
     std::string input = argc==1 ? "flux.json" : argv[1];
-    dg::file::file2Json( input, js.asJson(), dg::file::comments::are_discarded);
+    dg::file::WrappedJsonValue js = dg::file::file2Json(input);
 
     std::string geometry_params = js["magnetic_field"]["input"].asString();
     if( geometry_params == "file")
     {
         std::string path = js["magnetic_field"]["file"].asString();
-        dg::file::file2Json( path, js.asJson()["magnetic_field"]["params"],
-                dg::file::comments::are_discarded);
+        js.asJson()["magnetic_field"]["params"] = dg::file::file2Json( path);
     }
     else if( geometry_params != "params")
     {

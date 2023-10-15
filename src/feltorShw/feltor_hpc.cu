@@ -3,7 +3,6 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
-// #define DG_DEBUG
 #include "dg/file/file.h"
 
 #include "feltor.cuh"
@@ -13,25 +12,23 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Value js;
     if( argc != 3 && argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
-    else 
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
-    std::string input = js.toStyledString(); 
+    auto js = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
+    std::string input = js.dump(4);
     const eule::Parameters p( js);
     p.display( std::cout);
 
     //Make grid
     dg::Grid2d grid( 0., p.lx, 0., p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::Grid2d grid_out( 0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
+    dg::Grid2d grid_out( 0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     // Grid for radial probe location. This is used only in netcdf output, probe positioning is still hard-coded
     dg::Grid1d grid_probe(0, p.lx, 1, 8, p.bc_x);
-    //create RHS 
+    //create RHS
     std::cout << "Constructing Explicit...\n";
     eule::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
     std::cout << "Constructing Implicit...\n";
@@ -39,13 +36,13 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
     /////////////////////The initial field///////////////////////////////////////////
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
-    std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
-    
+    std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0);
+
     dg::HVec temp(dg::evaluate(dg::zero,grid));
     double time = 0;
 
     if (argc ==3){
-      if (p.initmode == 0) { 
+      if (p.initmode == 0) {
         dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
         y1[1] = dg::evaluate( init0, grid);
       }
@@ -60,22 +57,22 @@ int main( int argc, char* argv[])
         dg::DVec  dampl = dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
         dg::blas1::pointwiseDot(y1[1],dampr,y1[1]);
         dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);
-      
-      }  
-        
+
+      }
+
       if (p.modelmode==0 || p.modelmode==1)
       {
         dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
         dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
         std::cout << "intiialize ne" << std::endl;
-        feltor.initializene( y0[1], y0[0]);    
+        feltor.initializene( y0[1], y0[0]);
         std::cout << "Done!\n";
       }
       if (p.modelmode==2) {
         std::cout << "intiialize ne" << std::endl;
         dg::blas1::axpby(1.0,y1[1],0.,y0[1],y0[1]);
-        feltor.initializene( y1[1], y0[0]);    
+        feltor.initializene( y1[1], y0[0]);
         std::cout << "Done!\n";
       }
       if (p.modelmode==3) {
@@ -106,13 +103,12 @@ int main( int argc, char* argv[])
         errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
         std::string inputIN(length, 'x');
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);
-        Json::Value jsIN;
-        dg::file::string2Json(inputIN, jsIN, dg::file::comments::are_forbidden);
+        auto jsIN = dg::file::string2Json(inputIN, dg::file::comments::are_forbidden);
 
-        const eule::Parameters pIN(  jsIN);    
+        const eule::Parameters pIN(  jsIN);
         std::cout << "[input.nc] file parameters" << std::endl;
-        pIN.display( std::cout);       
-        
+        pIN.display( std::cout);
+
         dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
         dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
         size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};

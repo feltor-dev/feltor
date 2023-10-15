@@ -16,14 +16,14 @@ int main( int argc, char* argv[])
 {
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
     std::string inputfile = argc==1 ? "geometry_diag.json" : argv[1];
-    dg::file::file2Json( inputfile, js.asJson(),
+    js.asJson() = dg::file::file2Json( inputfile,
             dg::file::comments::are_discarded);
 
     std::string geometry_params = js["magnetic_field"]["input"].asString();
     if( geometry_params == "file")
     {
         std::string path = js["magnetic_field"]["file"].asString();
-        dg::file::file2Json( path, js.asJson()["magnetic_field"]["file"],
+        js.asJson()["magnetic_field"]["file"] = dg::file::file2Json( path,
                 dg::file::comments::are_discarded);
     }
     //Test coefficients
@@ -428,7 +428,7 @@ int main( int argc, char* argv[])
     att["git-branch"] = GIT_BRANCH;
     att["compile-time"] = COMPILE_TIME;
     att["references"] = "https://github.com/feltor-dev/feltor";
-    std::string input = js.asJson().toStyledString();
+    std::string input = js.asJson().dump(4);
     att["inputfile"] = input;
     for( auto pair : att)
         err = nc_put_att_text( ncid, NC_GLOBAL,

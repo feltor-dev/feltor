@@ -4,7 +4,6 @@
 #include <sstream>
 #include <cmath>
 // #define DG_DEBUG
-#include "json/json.h"
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
@@ -19,16 +18,16 @@ int main( int argc, char* argv[])
 {
     //-------Parameter initialisation------------------
     std::stringstream title;
-    Json::Value js, gs;
+    dg::file::WrappedJsonValue js, gs;
     if( argc == 1)
     {
-        dg::file::file2Json("input/default.json", js, dg::file::comments::are_discarded);
-        dg::file::file2Json("geometry/geometry_params.json", gs, dg::file::comments::are_discarded);
+        js.asJson() = dg::file::file2Json("input/default.json", dg::file::comments::are_discarded);
+        gs.asJson() = dg::file::file2Json("geometry/geometry_params.json", dg::file::comments::are_discarded);
     }
     else if( argc == 3)
     {
-        dg::file::file2Json(argv[1], js, dg::file::comments::are_forbidden);
-        dg::file::file2Json(argv[2], gs, dg::file::comments::are_forbidden);
+        js.asJson() = dg::file::file2Json(argv[1], dg::file::comments::are_forbidden);
+        gs.asJson() = dg::file::file2Json(argv[2], dg::file::comments::are_forbidden);
     }
     else
     {
@@ -53,7 +52,7 @@ int main( int argc, char* argv[])
     std::cout << "Initialize implicit" << std::endl;
     heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > im( grid, p, mag);
     /////////glfw initialisation ////////////////////////////////////////
-    dg::file::file2Json("window_params.json", js, dg::file::comments::are_discarded);
+    js.asJson() = dg::file::file2Json("window_params.json", dg::file::comments::are_discarded);
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
     //////////////////////////////////////////////////////////////////////

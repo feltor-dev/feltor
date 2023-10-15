@@ -1,6 +1,5 @@
 #pragma once
 #include "dg/enums.h"
-#include "json/json.h"
 
 namespace heat{
 struct Parameters
@@ -19,7 +18,7 @@ struct Parameters
     enum dg::bc bcx, bcy;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
     double eps_time, rtol, rk4eps;
-    Parameters( const Json::Value& js) {
+    Parameters( dg::file::WrappedJsonValue js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();

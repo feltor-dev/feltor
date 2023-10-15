@@ -1,12 +1,11 @@
 #include <iostream>
 #include <iomanip>
-#include "json/json.h"
 
 #include "mpi.h"
 #include "dg/algorithm.h"
 #include "testfunctors.h"
 #include "ds.h"
-#include "solovev.h"
+#include "guenter.h"
 #include "flux.h"
 #include "toroidal.h"
 #include "mpi_curvilinear.h"
@@ -36,38 +35,14 @@ int main(int argc, char * argv[])
         std::cout << "# Create parallel Derivative!\n";
     }
     MPI_Bcast( mx, 2, MPI_INT, 0, MPI_COMM_WORLD);
-    Json::Value js;
-    std::stringstream ss;
-    ss << "{"
-       << "    \"A\" : 0.0,"
-       << "    \"PP\": 1,"
-       << "    \"PI\": 1,"
-       << "    \"c\" :[  0.07350114445500399706283007092406934834526,"
-       << "           -0.08662417436317227513877947632069712210813,"
-       << "           -0.1463931543401102620740934776490506239925,"
-       << "           -0.07631237100536276213126232216649739043965,"
-       << "            0.09031790113794227394476271394334515457567,"
-       << "           -0.09157541239018724584036670247895160625891,"
-       << "           -0.003892282979837564486424586266476650443202,"
-       << "            0.04271891225076417603805495295590637082745,"
-       << "            0.2275545646002791311716859154040182853650,"
-       << "           -0.1304724136017769544849838714185080700328,"
-       << "           -0.03006974108476955225335835678782676287818,"
-       << "            0.004212671892103931178531621087067962015783 ],"
-       << "    \"R_0\"                : 547.891714877869,"
-       << "    \"inverseaspectratio\" : 0.41071428571428575,"
-       << "    \"elongation\"         : 1.75,"
-       << "    \"triangularity\"      : 0.47,"
-       << "    \"equilibrium\"  : \"solovev\","
-       << "    \"description\" : \"standardX\""
-       << "}";
-    ss >> js;
-    dg::geo::solovev::Parameters gp(js);
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
+    const double R_0 = 3;
+    const double I_0 = 10; //q factor at r=1 is I_0/R_0
+    const double a  = 1; //small radius
+    const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField(R_0, I_0);
     double psi_0 = -20, psi_1 = -4;
     dg::Timer t;
     t.tic();
-    dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, R_0, 0., 1);
     if(rank==0)std::cout << "# Constructing Grid..."<<std::endl;
     dg::geo::CurvilinearProductMPIGrid3d g3d(flux, n, Nx, Ny,Nz, dg::NEU, dg::PER, dg::PER, comm);
     if(rank==0)std::cout << "# Constructing Fieldlines..."<<std::endl;
@@ -79,7 +54,7 @@ int main(int argc, char * argv[])
     if(rank==0)std::cout << "# Construction took "<<t.diff()<<"s\n";
     ///##########################################################///
     //(MIND THE PULLBACK!)
-    auto ff = dg::geo::TestFunctionPsi2(mag,gp.a);
+    auto ff = dg::geo::TestFunctionPsi2(mag,a);
     const dg::MDVec fun = dg::pullback( ff, g3d);
     dg::MDVec derivative(fun);
     dg::MDVec sol0 = dg::pullback( dg::geo::DsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);

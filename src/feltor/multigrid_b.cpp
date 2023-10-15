@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
@@ -33,7 +32,7 @@ int main( int argc, char* argv[])
     std::string inputfile(length, 'x');
     err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.asJson() <<  std::endl;

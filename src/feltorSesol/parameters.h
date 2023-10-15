@@ -1,8 +1,8 @@
 #ifndef _DG_PARAMETERS_ 
 #define _DG_PARAMETERS_
 #include <string>
+#include "dg/file/json_utilities.h"
 #include "dg/enums.h"
-#include "json/json.h"
 namespace eule{
 /**
  * @brief Provide a mapping between input file and named parameters
@@ -42,7 +42,7 @@ struct Parameters
      *
      * @param js json object
      */
-    Parameters(const Json::Value& js)        {
+    Parameters(dg::file::WrappedJsonValue js)        {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();

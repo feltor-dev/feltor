@@ -5,8 +5,8 @@
 #include <string>
 #include <sstream>
 #include <stdexcept> //std::runtime_error
+#include <nlohmann/json.hpp>
 
-#include "json/json.h"
 /*!@file
  *
  * Json utility functions
@@ -19,8 +19,8 @@ namespace dg
 namespace file
 {
 /**
- * @defgroup json JsonCPP utilities
- * \#include "dg/file/json_utilities.h" (link -ljsoncpp)
+ * @defgroup json Json utilities
+ * \#include "dg/file/json_utilities.h"
  *
  * @addtogroup json
  * @{
@@ -44,21 +44,19 @@ enum class comments{
  * @brief Wrapped Access to Json values with error handling
  *
  * The purpose of this class is to wrap the
- * access to a Json::Value with guards that raise exceptions or display
+ * access to a nlohmann::json with guards that raise exceptions or display
  * warnings in case an error occurs, for example when a key is misspelled,
  * missing or has the wrong type.
  * The goal is the composition of a good error message that helps a user
  * quickly debug the input (file).
  *
- * The Wrapper is necessary because Jsoncpp by default silently
+ * The Wrapper is necessary because json by default silently
  * generates a new key in case it is not present which in our scenario is an
  * invitation for stupid mistakes.
  *
- * You can use the \c WrappedJsonValue like a \c Json::Value with read-only access:
+ * You can use the \c WrappedJsonValue like a \c nlohmann::json with read-only access:
  * @code
-Json::Value js;
-dg::file::file2Json( "test.json", js);
-dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
+dg::file::WrappedJsonValue ws = dg::file::file2Json("test.json");
 try{
     std::string hello = ws.get( "hello", "").asString();
     // the following access will throw
@@ -96,20 +94,20 @@ struct WrappedJsonValue
     WrappedJsonValue( error mode): m_js(0), m_mode( mode) {}
     ///@brief By default the error mode is \c error::is_throw
     ///@param js The Json value that will be guarded
-    WrappedJsonValue(Json::Value js): m_js(js), m_mode( error::is_throw) {}
+    WrappedJsonValue(nlohmann::json js): m_js(js), m_mode( error::is_throw) {}
     ///@brief Construct with Json value and error mode
     ///@param js The Json value that will be guarded
     ///@param mode The error mode
-    WrappedJsonValue(Json::Value js, error mode): m_js(js), m_mode( mode) {}
+    WrappedJsonValue(nlohmann::json js, error mode): m_js(js), m_mode( mode) {}
     ///@brief Change the error mode
     ///@param new_mode The new error mode
     void set_mode( error new_mode){
         m_mode = new_mode;
     }
     ///Read access to the raw Json value
-    const Json::Value& asJson( ) const{ return m_js;}
+    const nlohmann::json& asJson( ) const{ return m_js;}
     ///Write access to the raw Json value (if you know what you are doing)
-    Json::Value& asJson( ) { return m_js;}
+    nlohmann::json& asJson( ) { return m_js;}
 
     /*! @brief The creation history of the object
      *
@@ -118,69 +116,69 @@ struct WrappedJsonValue
      */
     std::string access_string() const {return m_access_str;}
 
-    // //////////Members imitating the original Json::Value///////////////
-    /// Wrap the corresponding Json::Value function with error handling
+    // //////////Members imitating the original nlohmann::json///////////////
+    /// Wrap the corresponding nlohmann::json function with error handling
     WrappedJsonValue operator[](std::string key) const{
-        return get( key, Json::ValueType::objectValue, "empty object ");
+        return get( key, nlohmann::json::object(), "empty object ");
     }
-    /// Wrap the corresponding Json::Value function with error handling
-    WrappedJsonValue get( std::string key, const Json::Value& value) const{
+    /// Wrap the corresponding nlohmann::json function with error handling
+    WrappedJsonValue get( std::string key, const nlohmann::json& value) const{
         std::stringstream default_str;
         default_str << "value "<<value;
         return get( key, value, default_str.str());
     }
-    /// Wrap the corresponding Json::Value function with error handling
+    /// Wrap the corresponding nlohmann::json function with error handling
     WrappedJsonValue operator[]( unsigned idx) const{
-        return get( idx, Json::ValueType::objectValue, "empty array");
+        return get( idx, nlohmann::json::object(), "empty array");
     }
-    /// Wrap the corresponding Json::Value function with error handling
-    WrappedJsonValue get( unsigned idx, const Json::Value& value) const{
+    /// Wrap the corresponding nlohmann::json function with error handling
+    WrappedJsonValue get( unsigned idx, const nlohmann::json& value) const{
         std::stringstream default_str;
         default_str << "value "<<value;
         return get( idx, value, default_str.str());
     }
-    /// Wrap the corresponding Json::Value function with error handling
+    /// Wrap the corresponding nlohmann::json function with error handling
     unsigned size() const{
         return m_js.size();
     }
-    /// Wrap the corresponding Json::Value function with error handling
+    /// Wrap the corresponding nlohmann::json function with error handling
     double asDouble( double value = 0) const{
-        if( m_js.isDouble())
-            return m_js.asDouble();
+        if( m_js.is_number())
+            return m_js.template get<double>();
         return type_error<double>( value, "a Double");
     }
-    /// Wrap the corresponding Json::Value function with error handling
+    /// Wrap the corresponding nlohmann::json function with error handling
     unsigned asUInt( unsigned value = 0) const{
-        if( m_js.isUInt())
-            return m_js.asUInt();
+        if( m_js.is_number())
+            return m_js.template get<unsigned>();
         return type_error<unsigned>( value, "an Unsigned");
     }
-    /// Wrap the corresponding Json::Value function with error handling
+    /// Wrap the corresponding nlohmann::json function with error handling
     int asInt( int value = 0) const{
-        if( m_js.isInt())
-            return m_js.asInt();
+        if( m_js.is_number())
+            return m_js.template get<int>();
         return type_error<int>( value, "an Int");
     }
-    /// Wrap the corresponding Json::Value function with error handling
+    /// Wrap the corresponding nlohmann::json function with error handling
     bool asBool( bool value = false) const{
-        if( m_js.isBool())
-            return m_js.asBool();
+        if( m_js.is_boolean())
+            return m_js.template get<bool>();
         return type_error<bool>( value, "a Bool");
     }
-    /// Wrap the corresponding Json::Value function with error handling
+    /// Wrap the corresponding nlohmann::json function with error handling
     std::string asString( std::string value = "") const{
         //return m_js["hhaha"].asString(); //does not throw
-        if( m_js.isString())
-            return m_js.asString();
+        if( m_js.is_string())
+            return m_js.template get<std::string>();
         return type_error<std::string>( value, "a String");
     }
     private:
-    WrappedJsonValue(Json::Value js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
-    WrappedJsonValue get( std::string key, const Json::Value& value, std::string default_str) const
+    WrappedJsonValue(nlohmann::json js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
+    WrappedJsonValue get( std::string key, const nlohmann::json& value, std::string default_str) const
     {
         std::string access = m_access_str + "\""+key+"\": ";
         std::stringstream message;
-        if( !m_js.isObject( ) || !m_js.isMember(key))
+        if( !m_js.is_object( ) || !m_js.contains(key))
         {
             message <<"*** Key error: "<<access<<" not found.";
             raise_error( message.str(), default_str);
@@ -188,10 +186,10 @@ struct WrappedJsonValue
         }
         return WrappedJsonValue(m_js[key], m_mode, access);
     }
-    WrappedJsonValue get( unsigned idx, const Json::Value& value, std::string default_str) const
+    WrappedJsonValue get( unsigned idx, const nlohmann::json& value, std::string default_str) const
     {
         std::string access = m_access_str + "["+std::to_string(idx)+"] ";
-        if( !m_js.isArray() || !m_js.isValidIndex(idx))
+        if( !m_js.is_array() || !(idx < m_js.size()))
         {
             std::stringstream message;
             //if( !m_js.isArray())
@@ -224,39 +222,25 @@ struct WrappedJsonValue
         else
             ;
     }
-    Json::Value m_js;
+    nlohmann::json m_js;
     error m_mode;
     std::string m_access_str = "";
 };
 
 /**
- * @brief Convenience wrapper to open a file and parse it into a Json::Value
+ * @brief Convenience wrapper to open a file and parse it into a nlohmann::json
  *
  * @note included in \c json_utilities.h
  * @param filename Name of the JSON file to parse
- * @param js Contains all the found Json variables on output
  * @param comm determines the handling of comments in the Json file
  * @param err determines how parser errors are handled by the function
  * \c error::is_throw:  throw a \c std::runtime_error containing an error message on any error that occurs on parsing;
  * \c error::is_warning: write the error message to std::cerr and return;
  * \c error::is_silent: silently return
+ * @return Contains all the found Json variables on output (error mode is \c err)
  */
-static inline void file2Json(std::string filename, Json::Value& js, enum comments comm = file::comments::are_discarded, enum error err = file::error::is_throw)
+static inline nlohmann::json file2Json(std::string filename, enum comments comm = file::comments::are_discarded, enum error err = file::error::is_throw)
 {
-    Json::CharReaderBuilder parser;
-    if( comments::are_forbidden == comm )
-        Json::CharReaderBuilder::strictMode( &parser.settings_);
-    else if( comments::are_discarded == comm )
-    {
-        Json::CharReaderBuilder::strictMode( &parser.settings_);
-        // workaround for a linker bug in jsoncpp from package manager
-        Json::Value js_true (true);
-        Json::Value js_false (false);
-        parser.settings_["allowComments"].swap( js_true);
-        parser.settings_["collectComments"].swap(js_false);
-    }
-    else
-        Json::CharReaderBuilder::setDefaults( &parser.settings_);
 
     std::ifstream isI( filename);
     if( !isI.good())
@@ -269,61 +253,53 @@ static inline void file2Json(std::string filename, Json::Value& js, enum comment
             std::cerr << "WARNING: "<<message<<std::endl;
         else
             ;
-        return;
+        return nlohmann::json();
     }
-    std::string errs;
-    if( !parseFromStream( parser, isI, &js, &errs) )
+    bool ignore_comments = false, allow_exceptions = false;
+    if ( comm == file::comments::are_discarded)
+        ignore_comments =  true;
+    if ( err == error::is_throw)
+        allow_exceptions = true; //throws nlohmann::json::parse_error
+
+
+    nlohmann::json js = nlohmann::json::parse( isI, nullptr, allow_exceptions, ignore_comments);
+    if( !allow_exceptions && err == error::is_warning && js.is_discarded())
     {
-        std::string message = "An error occured while parsing "+filename+"\n"+errs;
-        if( err == error::is_throw)
-            throw std::runtime_error( message);
-        else if (err == error::is_warning)
-            std::cerr << "WARNING: "<<message<<std::endl;
-        else
-            ;
-        return;
+        std::string message = "An error occured while parsing "+filename+"\n";
+        std::cerr << "WARNING: "<<message<<std::endl;
     }
+    return js;
 }
 /**
- * @brief Convenience wrapper to parse a string into a Json::Value
+ * @brief Convenience wrapper to parse a string into a nlohmann::json
  *
  * Parse a string into a Json Value
  * @attention This function will throw a \c std::runtime_error with the Json error string on any error that occurs on parsing.
  * @note included in \c json_utilities.h
  * @param input The string to interpret as a Json string
- * @param js Contains all the found Json variables on output
  * @param comm determines the handling of comments in the Json string
  * @param err determines how parser errors are handled by the function
  * \c error::is_throw:  throw a \c std::runtime_error containing an error message on any error that occurs on parsing;
  * \c error::is_warning: write the error message to std::cerr and return;
  * \c error::is_silent: silently return
+ * @return Contains all the found Json variables on output
  */
-static inline void string2Json(std::string input, Json::Value& js, enum comments comm = file::comments::are_discarded, enum error err = file::error::is_throw)
+static inline nlohmann::json string2Json(std::string input, enum comments comm = file::comments::are_discarded, enum error err = file::error::is_throw)
 {
-    Json::CharReaderBuilder parser;
-    if( comments::are_forbidden == comm )
-        Json::CharReaderBuilder::strictMode( &parser.settings_);
-    else if( comments::are_discarded == comm )
-    {
-        Json::CharReaderBuilder::strictMode( &parser.settings_);
-        parser.settings_["allowComments"] = true;
-        parser.settings_["collectComments"] = false;
-    }
-    else
-        Json::CharReaderBuilder::setDefaults( &parser.settings_);
+    bool ignore_comments = false, allow_exceptions = false;
+    if ( comm == file::comments::are_discarded)
+        ignore_comments =  true;
+    if ( err == error::is_throw)
+        allow_exceptions = true; //throws nlohmann::json::parse_error
 
-    std::string errs;
-    std::stringstream ss(input);
-    if( !parseFromStream( parser, ss, &js, &errs) )
+
+    nlohmann::json js = nlohmann::json::parse( input, nullptr, allow_exceptions, ignore_comments);
+    if( !allow_exceptions && err == error::is_warning && js.is_discarded())
     {
-        if( err == error::is_throw)
-            throw std::runtime_error( errs);
-        else if (err == error::is_warning)
-            std::cerr << "WARNING: "<<errs<<std::endl;
-        else
-            ;
-        return;
+        std::string message = "An error occured while parsing \n";
+        std::cerr << "WARNING: "<<message<<std::endl;
     }
+    return js;
 }
 
 ///@}

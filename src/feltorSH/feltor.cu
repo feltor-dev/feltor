@@ -3,7 +3,6 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
-// #define DG_DEBUG
 
 #include "draw/host_window.h"
 #include "dg/file/json_utilities.h"
@@ -15,21 +14,21 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Value js;
+    std::string input;
     if( argc == 1)
-        dg::file::file2Json( "input.json", js, dg::file::comments::are_forbidden);
+        input = "input.json";
     else if( argc == 2)
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_forbidden);
+        input = argv[1];
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const eule::Parameters p(  js);
+    const eule::Parameters p(  dg::file::file2Json(input));
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
-    dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
     std::stringstream title;
+    dg::file::WrappedJsonValue js = dg::file::file2Json( "window_params.json");
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
     draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     //////////////////////////////////////////////////////////////////////////
@@ -207,11 +206,8 @@ int main( int argc, char* argv[])
             std::cout << " Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
- 
-                                     std::cout << E1 << std::endl;
-
+            std::cout << E1 << std::endl;
             E0 = E1;
-
         }
 #ifdef DG_BENCHMARK
         t.toc();
