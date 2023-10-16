@@ -28,7 +28,7 @@ namespace polynomial
 
 /**
  * @brief \f$ \psi_p(R,Z) =
-      R_0P_{\psi}\Bigg\{ \sum_i \sum_j c_{i*N+j} \bar R^i \bar Z^j \Bigg\}
+      R_0P_{\psi}\Bigg\{ \sum_{i=0}^{M-1} \sum_{j=0}^{N-1} c_{iN+j} \bar R^i \bar Z^j \Bigg\}
       \f$
 
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
@@ -159,7 +159,15 @@ static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
 /**
  * @brief Create a Polynomial Magnetic field
  *
- * Based on \c dg::geo::polynomial::Psip(gp) and \c dg::geo::polynomial::Ipol(gp)
+ * \f[ \psi_p(R,Z) =
+      R_0P_{\psi}\Bigg\{ \sum_{i=0}^{M-1} \sum_{j=0}^{N-1} c_{iN+j} \bar R^i \bar Z^j \Bigg\}
+  \f]
+  \f[
+  I = P_I
+  \f]
+  with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
+ *
+ * Based on \c dg::geo::polynomial::Psip(gp) and  \c dg::Constant(gp.pi)
  * @param gp Polynomial parameters
  * @return A magnetic field object
  * @ingroup polynomial

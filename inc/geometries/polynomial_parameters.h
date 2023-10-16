@@ -86,7 +86,7 @@ struct Parameters
         js["N"] = N;
         js["PP"] = pp;
         js["PI"] = pi;
-        for (unsigned i=0;i<N*N;i++) js["c"][i] = c[i];
+        for (unsigned i=0;i<M*N;i++) js["c"][i] = c[i];
         js["R_0"] = R_0;
         js["inverseaspectratio"] = a/R_0;
         js["elongation"] = elongation;
