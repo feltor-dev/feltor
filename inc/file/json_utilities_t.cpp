@@ -4,12 +4,10 @@
 #include "json_utilities.h"
 
 
-int main(int argc, char* argv[])
+int main()
 {
 
     auto js = dg::file::file2Json( "test.json");
-    dg::file::WrappedJsonValue ws = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
-    dg::file::WrappedJsonValue vs = dg::file::file2Json( argv[2], dg::file::comments::are_forbidden);
     std::cout << "\n\n";
     using dg::file::error;
 
