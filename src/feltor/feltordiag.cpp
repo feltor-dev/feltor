@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
     js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
-    std::cout << js.asJson() <<  std::endl;
+    std::cout << js.toStyledString() <<  std::endl;
     dg::file::WrappedJsonValue config( dg::file::error::is_warning);
     try{
         config.asJson() = dg::file::file2Json( argv[1],
@@ -57,7 +57,7 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cerr << e.what()<<std::endl;
         return -1;
     }
-    std::string configfile = config.asJson().dump(4);
+    std::string configfile = config.toStyledString();
     std::cout << configfile <<  std::endl;
 
     //-------------------Construct grids-------------------------------------//

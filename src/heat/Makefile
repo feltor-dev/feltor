@@ -11,10 +11,10 @@ INCLUDE+= -I../../inc   # other project libraries
 all: heat heat_hpc heat_hpc
 
 heat: heat.cu heat.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK  -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) $(GLFLAGS) -DDG_BENCHMARK  -g
 
 heat_hpc: heat_hpc.cu heat.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) $(LIBS) -DDG_BENCHMARK
 
 .PHONY: clean
 

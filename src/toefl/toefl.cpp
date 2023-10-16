@@ -28,14 +28,14 @@ int main( int argc, char* argv[])
     dg::file::WrappedJsonValue js( dg::file::error::is_throw);
     toefl::Parameters p;
     try{
-        js.asJson() = dg::file::file2Json( argc == 1 ? "input/default.json" : argv[1]);
+        js = dg::file::file2Json( argc == 1 ? "input/default.json" : argv[1]);
         p = { js};
     } catch( std::exception& e) {
         DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
         DG_RANK0 std::cerr << e.what()<<std::endl;
         dg::abort_program();
     }
-    DG_RANK0 std::cout << js.asJson().dump(4) << std::endl;
+    DG_RANK0 std::cout << js.toStyledString() << std::endl;
     DG_RANK0 p.display(std::cout);
 
     //Construct grid
@@ -216,7 +216,7 @@ int main( int argc, char* argv[])
         att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
         // Here we put the inputfile as a string without comments so that it can be read later by another parser
-        att["inputfile"] = js.asJson().dump(4);
+        att["inputfile"] = js.toStyledString();
         for( auto pair : att)
             DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
                 pair.first.data(), pair.second.size(), pair.second.data());

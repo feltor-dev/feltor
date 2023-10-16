@@ -23,7 +23,7 @@ int main( int argc, char* argv[])
         ws.asJson() = dg::file::file2Json( "input/default.json", dg::file::comments::are_discarded);
     else
         ws.asJson() = dg::file::file2Json( argv[1]);
-    std::cout << ws.asJson().dump(4) <<std::endl;
+    std::cout << ws.toStyledString() <<std::endl;
 
     /////////////////////////////////////////////////////////////////
     dg::CartesianGrid2d grid = shu::createGrid( ws["grid"]);
@@ -209,7 +209,7 @@ int main( int argc, char* argv[])
 #endif //WITHOUT_GLFW
     if( "netcdf" == output)
     {
-        std::string inputfile = ws.asJson().dump(4); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string inputfile = ws.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc == 1 || argc == 2)
             outputfile = "shu.nc";

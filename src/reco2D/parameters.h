@@ -1,6 +1,5 @@
 #pragma once
 #include "dg/enums.h"
-#include <nlohmann/json.hpp>
 
 namespace asela{
 /**

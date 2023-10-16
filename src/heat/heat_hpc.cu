@@ -25,8 +25,8 @@ int main( int argc, char* argv[])
         std::cerr << "OR "<< argv[0]<<" [inputfile] [geomfile] [output.nc] \n";
         return -1;
     }
-    auto js = dg::file::file2Json(argv[1], dg::file::comments::are_forbidden);
-    auto gs = dg::file::file2Json(argv[2], dg::file::comments::are_forbidden);
+    dg::file::WrappedJsonValue js = dg::file::file2Json(argv[1], dg::file::comments::are_forbidden);
+    dg::file::WrappedJsonValue gs = dg::file::file2Json(argv[2], dg::file::comments::are_forbidden);
     const heat::Parameters p( js); p.display( std::cout);
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
     ////////////////////////////set up computations//////////////////////
@@ -61,8 +61,8 @@ int main( int argc, char* argv[])
         errin = nc_inq_attlen( ncidin, NC_GLOBAL, "geomfile", &length);
         std::string geomin(length, 'x');
         errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
-        auto js = dg::file::string2Json(inputin, dg::file::comments::are_forbidden);
-        auto gs = dg::file::string2Json(geomin, dg::file::comments::are_forbidden);
+        dg::file::WrappedJsonValue js = dg::file::string2Json(inputin, dg::file::comments::are_forbidden);
+        dg::file::WrappedJsonValue gs = dg::file::string2Json(geomin, dg::file::comments::are_forbidden);
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
         const heat::Parameters pin(js);
@@ -132,9 +132,9 @@ int main( int argc, char* argv[])
     dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
-    std::string input = js.dump(4);
+    std::string input = js.toStyledString();
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    std::string geom = gs.dump(4);
+    std::string geom = gs.toStyledString();
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
     err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);

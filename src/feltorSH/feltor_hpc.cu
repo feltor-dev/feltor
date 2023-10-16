@@ -19,8 +19,8 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
-    auto js = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
-    std::string input = js.dump(4); //save input without comments, which is important if netcdf file is later read by another parser
+    dg::file::WrappedJsonValue js = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
+    std::string input = js.toStyledString();
     const eule::Parameters p( js);
     p.display( std::cout);
 

@@ -38,7 +38,7 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif //WITH_MPI
 
-    DG_RANK0 std::cout << ws.asJson().dump(4) <<std::endl;
+    DG_RANK0 std::cout << ws.toStyledString() <<std::endl;
 
     ///////MAKE GRID///////////////////////////////////////////////
     dg::x::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y
@@ -206,7 +206,7 @@ int main( int argc, char* argv[])
 #endif //WITHOT_GLFW    
     if( "netcdf" == p.output)
     {
-        std::string inputfile = ws.asJson().dump(4); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string inputfile = ws.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc==1 || argc == 2 )
             outputfile = "esol.nc";

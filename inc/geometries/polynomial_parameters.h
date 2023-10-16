@@ -81,7 +81,7 @@ struct Parameters
      */
     dg::file::WrappedJsonValue dump( ) const
     {
-        nlohmann::json js;
+        dg::file::JsonType js;
         js["M"] = M;
         js["N"] = N;
         js["PP"] = pp;
@@ -110,7 +110,7 @@ struct Parameters
     {
         auto js = dump();
         os << "Polynomial Geometrical parameters are: \n"
-            <<js.asJson().dump(4);
+            <<js.toStyledString();
         os << std::flush;
 
     }

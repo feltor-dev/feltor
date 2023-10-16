@@ -30,15 +30,14 @@ int main( int argc, char* argv[])
 #endif //WITH_MPI
 
     ////Parameter initialisation ////////////////////////////////////////////
-    nlohmann::json js;
+    dg::file::WrappedJsonValue ws( dg::file::error::is_throw);
     if( argc == 1)
-        js = dg::file::file2Json( "input/default.json", dg::file::comments::are_discarded);
+        ws = dg::file::file2Json( "input/default.json", dg::file::comments::are_discarded);
     else
-        js = dg::file::file2Json( argv[1]);
-    DG_RANK0 std::cout << js <<std::endl;
+        ws = dg::file::file2Json( argv[1]);
+    DG_RANK0 std::cout << ws.toStyledString() <<std::endl;
 
-    const asela::Parameters p( js);
-    dg::file::WrappedJsonValue ws ( js, dg::file::error::is_throw);
+    const asela::Parameters p( ws);
 
     //////////////////////////////////////////////////////////////////////////
     //Make grid
@@ -115,9 +114,9 @@ int main( int argc, char* argv[])
     if( "glfw" == output)
     {
         /////////glfw initialisation ////////////////////////////////////////////
-        dg::file::WrappedJsonValue js = dg::file::file2Json( "window_params.json");
-        GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
-        draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+        ws = dg::file::file2Json( "window_params.json", dg::file::comments::are_discarded);
+        GLFWwindow* w = draw::glfwInitAndCreateWindow( ws["width"].asDouble(), ws["height"].asDouble(), "");
+        draw::RenderHostData render(ws["rows"].asDouble(), ws["cols"].asDouble());
         //create visualisation vectors
         dg::DVec visual( grid.size()), temp(visual);
         dg::HVec hvisual( grid.size());
@@ -222,7 +221,7 @@ int main( int argc, char* argv[])
         att["git-branch"] = GIT_BRANCH;
         att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
-        std::string inputfile = js.dump(4); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string inputfile = ws.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         att["inputfile"] = inputfile;
         for( auto pair : att)
             DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,

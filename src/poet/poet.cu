@@ -25,15 +25,8 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
-    nlohmann::json js;
-    if( argc == 1)
-        js = dg::file::file2Json( "/input/default.json", dg::file::comments::are_discarded);
-    else
-    {
-        js = dg::file::file2Json( argv[1], dg::file::comments::are_discarded);
-    }
-    const poet::Parameters p( js);
-    dg::file::WrappedJsonValue ws ( js, dg::file::error::is_throw);  
+    dg::file::WrappedJsonValue ws = dg::file::file2Json( argc == 1 ? "input/default.json" : argv[1]);
+    const poet::Parameters p( ws);
     
 #ifdef WITH_MPI
     ////////////////////////////////setup MPI///////////////////////////////
@@ -44,7 +37,7 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif //WITH_MPI
 
-    DG_RANK0 std::cout << js.dump(4) <<std::endl;
+    DG_RANK0 std::cout << ws.toStyledString() <<std::endl;
 
     ///////MAKE GRID///////////////////////////////////////////////
     dg::x::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y
@@ -210,7 +203,7 @@ int main( int argc, char* argv[])
 #endif //WITHOT_GLFW    
     if( "netcdf" == p.output)
     {
-        std::string inputfile = js.dump(4); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string inputfile = ws.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc==1 || argc == 2 )
             outputfile = "poet.nc";

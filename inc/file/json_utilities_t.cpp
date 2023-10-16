@@ -4,9 +4,12 @@
 #include "json_utilities.h"
 
 
-int main()
+int main(int argc, char* argv[])
 {
 
+    auto js = dg::file::file2Json( "test.json");
+    dg::file::WrappedJsonValue ws = dg::file::file2Json( argv[1], dg::file::comments::are_forbidden);
+    dg::file::WrappedJsonValue vs = dg::file::file2Json( argv[2], dg::file::comments::are_forbidden);
     std::cout << "\n\n";
     using dg::file::error;
 
@@ -19,8 +22,7 @@ int main()
             std::cerr << "**Warning**\n";
         else if( mode == error::is_throw)
             std::cerr << "**Throw**\n";
-        dg::file::WrappedJsonValue ws = dg::file::file2Json( "test.json",
-                dg::file::comments::are_discarded, mode);
+        dg::file::WrappedJsonValue ws( js, mode);
         try{
             std::string hello = ws[ "hell"].asString( "default");
             std::cerr << "Hello "<<hello<<"\n";
@@ -69,7 +71,7 @@ int main()
     std::cout << "\n\n";
     {
         std::cout << "Test correct access:\n";
-        dg::file::WrappedJsonValue ws = dg::file::file2Json( "test.json");
+        dg::file::WrappedJsonValue ws( js);
         std::string hello = ws["hello"].asString();
         assert( hello == "world");
         int idx0 = ws[ "array"][0].asInt(0);
@@ -77,7 +79,7 @@ int main()
         assert( idx0 == 42);
         idx0 = ws[ "array"].get(0,0).asInt();
         assert( idx0 == 42);
-        double idx1 = ws["array"][1].asDouble();
+        int idx1 = ws["array"][1].asInt();
         assert( idx1 == 73);
         double hi = ws[ "nested"][ "hi"].asDouble();
         assert( hi == 38);

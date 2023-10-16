@@ -94,7 +94,7 @@ struct Parameters
         // There seems to be a jsoncpp bug where the move assignment is missing
         // libjsoncpp-dev-1.7.4 from the package sources
         // Let's for now wait if a later version fixes it
-        nlohmann::json js;
+        dg::file::JsonType js;
         js["A"] = A;
         js["PP"] = pp;
         js["PI"] = pi;
@@ -138,7 +138,7 @@ struct Parameters
     {
         auto js = dump();
         os << "Solovev Geometrical parameters are: \n"
-            <<js.asJson().dump(4);
+            <<js.toStyledString();
         os << std::flush;
     }
 };

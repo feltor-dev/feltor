@@ -39,7 +39,7 @@ int main( int argc, char* argv[])
     js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
-    std::cout << js.asJson().dump(4) <<  std::endl;
+    std::cout << js.toStyledString() <<  std::endl;
 
     //-------------------Construct grids-------------------------------------//
     dg::geo::TokamakMagneticField mag;

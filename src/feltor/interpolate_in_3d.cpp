@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
     js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     const feltor::Parameters p(js);
-    std::cout << js.asJson().dump(4) << std::endl;
+    std::cout << js.toStyledString() << std::endl;
     dg::file::WrappedJsonValue config( dg::file::error::is_warning);
     try{
         config.asJson() = dg::file::file2Json( argv[1],

@@ -11,13 +11,13 @@ INCLUDE+= -I../../inc   # other project libraries
 all: esol esol_hpc esol_mpi
 
 esol: esol.cu esol.h init.h diag.h parameters.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(LAPACKLIB) -DDG_BENCHMARK  -g
-	
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK  -g
+
 esol_hpc: esol.cu esol.h init.h diag.h parameters.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(LAPACKLIB) -DDG_BENCHMARK -DWITHOUT_GLFW
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK -DWITHOUT_GLFW
 
 esol_mpi: esol.cu esol.h init.h diag.h parameters.h
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(LAPACKLIB) -DWITH_MPI -DDG_BENCHMARK -DWITHOUT_GLFW
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DWITH_MPI -DDG_BENCHMARK -DWITHOUT_GLFW
 
 doc:
 	pdflatex -shell-escape esol.tex;

@@ -33,6 +33,7 @@ Within the file you can overwrite or add to any of the following variables:
 |                                          |                                          |     |
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
 |   LIBS    | -lnetcdf -lhdf5_serial -ldhf5_serial_hl                | netcdf and hdf5 library. Normally, we would use -lhdf5 and -lhdf5_hl but the libhdf5-dev package installs them with "_serial". |
+|  JSONLIB  | -ljsoncpp          | the JSON library, the default is assumed to be jsoncpp; if instead `-DDG_USE_JSONHPP` is set then the (header-only) nlohmann-json library is used                       |
 |  LAPACKLIB  | -llapacke | the lapack library                      |
 |  GLFLAGS  | $$(pkg-config --static --libs glfw3)     | glfw3 installation (if glfw3 was installed correctly the default should work) |
 
