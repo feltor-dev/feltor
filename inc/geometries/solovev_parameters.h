@@ -89,11 +89,8 @@ struct Parameters
      *
      * @return Json value
      */
-    dg::file::WrappedJsonValue dump( ) const
+    dg::file::JsonType dump( ) const
     {
-        // There seems to be a jsoncpp bug where the move assignment is missing
-        // libjsoncpp-dev-1.7.4 from the package sources
-        // Let's for now wait if a later version fixes it
         dg::file::JsonType js;
         js["A"] = A;
         js["PP"] = pp;

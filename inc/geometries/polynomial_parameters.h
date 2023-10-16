@@ -79,7 +79,7 @@ struct Parameters
      *
      * @return Json value
      */
-    dg::file::WrappedJsonValue dump( ) const
+    dg::file::JsonType dump( ) const
     {
         dg::file::JsonType js;
         js["M"] = M;
