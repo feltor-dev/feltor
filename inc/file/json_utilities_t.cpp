@@ -22,7 +22,7 @@ int main()
             std::cerr << "**Throw**\n";
         dg::file::WrappedJsonValue ws( js, mode);
         try{
-            std::string hello = ws[ "hell"].asString( );
+            std::string hello = ws[ "hell"].asString( "default" );
             std::cerr << "Hello "<<hello<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
@@ -50,7 +50,7 @@ int main()
             std::cerr << "hi "<<hi<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            bool test = ws[ "nested"]["bol"].asBool( );
+            bool test = ws[ "nested"]["bol"].asBool( true);
             std::cerr << "bool "<<test<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
@@ -81,7 +81,7 @@ int main()
         assert( idx1 == 73);
         double hi = ws[ "nested"][ "hi"].asDouble();
         assert( hi == 38);
-        bool test = ws[ "nested"]["bool"].asBool();
+        bool test = ws[ "nested"]["bool"].asBool(true);
         assert( test == true);
         unsigned uint = ws["nested"]["another_nest"]["number"].asUInt();
         assert( uint == 7);

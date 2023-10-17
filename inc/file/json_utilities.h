@@ -209,7 +209,7 @@ struct WrappedJsonValue
         return m_js.size();
     }
     /// Wrap the corresponding JsonType function with error handling
-    double asDouble( ) const{
+    double asDouble( double value = 0) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_number()) // we just want anything that can be cast to double
             return m_js.template get<double>();
@@ -217,10 +217,10 @@ struct WrappedJsonValue
         if( m_js.isDouble())
             return m_js.asDouble();
 #endif
-        return type_error<double>( 0, "a Double");
+        return type_error<double>( value, "a Double");
     }
     /// Wrap the corresponding JsonType function with error handling
-    unsigned asUInt( ) const{
+    unsigned asUInt( unsigned value = 0) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_number()) // check for sign?
             return m_js.template get<unsigned>();
@@ -228,10 +228,10 @@ struct WrappedJsonValue
         if( m_js.isUInt())
             return m_js.asUInt();
 #endif
-        return type_error<unsigned>( 0, "an Unsigned");
+        return type_error<unsigned>( value, "an Unsigned");
     }
     /// Wrap the corresponding JsonType function with error handling
-    int asInt( ) const{
+    int asInt( int value = 0) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_number())
             return m_js.template get<int>();
@@ -239,10 +239,10 @@ struct WrappedJsonValue
         if( m_js.isInt())
             return m_js.asInt();
 #endif
-        return type_error<int>( 0, "an Int");
+        return type_error<int>( value, "an Int");
     }
     /// Wrap the corresponding JsonType function with error handling
-    bool asBool( ) const{
+    bool asBool( bool value = false) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_boolean())
             return m_js.template get<bool>();
@@ -250,10 +250,10 @@ struct WrappedJsonValue
         if( m_js.isBool())
             return m_js.asBool();
 #endif
-        return type_error<bool>( false, "a Bool");
+        return type_error<bool>( value, "a Bool");
     }
     /// Wrap the corresponding JsonType function with error handling
-    std::string asString( ) const{
+    std::string asString( std::string value = "") const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_string())
             return m_js.template get<std::string>();
@@ -262,7 +262,7 @@ struct WrappedJsonValue
         if( m_js.isString())
             return m_js.asString();
 #endif
-        return type_error<std::string>( "", "a String");
+        return type_error<std::string>( value, "a String");
     }
     private:
     WrappedJsonValue(JsonType js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
