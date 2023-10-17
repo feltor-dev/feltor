@@ -13,7 +13,7 @@ int main()
 
     for( auto mode : {error::is_silent, error::is_warning, error::is_throw})
     {
-        std::cerr << "Display possible error messages for ";
+        std::cerr << "\nDisplay possible error messages for ";
         if( mode == error::is_silent)
             std::cerr << "**Silent**\n";
         else if( mode == error::is_warning)
@@ -22,7 +22,7 @@ int main()
             std::cerr << "**Throw**\n";
         dg::file::WrappedJsonValue ws( js, mode);
         try{
-            std::string hello = ws[ "hell"].asString( "default");
+            std::string hello = ws[ "hell"].asString( );
             std::cerr << "Hello "<<hello<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
@@ -30,7 +30,7 @@ int main()
             std::cerr << "Hello "<<hello<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            int idx0 = ws[ "array"][2].asInt(0);
+            int idx0 = ws[ "array"][2].asInt();
             std::cerr << "array 0 "<<idx0<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
@@ -38,31 +38,31 @@ int main()
             std::cerr << "array 0 "<<idx0<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            int idx0 = ws["hello"].asInt(0);
+            int idx0 = ws["hello"].asInt();
             std::cerr << "array 0 "<<idx0<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            int idx1 = ws[ "arr"][1].asInt( 0);
+            int idx1 = ws[ "arr"][1].asInt( );
             std::cerr << "array 1 "<<idx1<<"\n";
         }catch( std::exception& e){ std::cerr << e.what() <<std::endl; }
         try{
-            double hi = ws[ "neted"]["hi"].asDouble( 0);
+            double hi = ws[ "neted"]["hi"].asDouble( );
             std::cerr << "hi "<<hi<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            bool test = ws[ "nested"]["bol"].asBool( true);
+            bool test = ws[ "nested"]["bol"].asBool( );
             std::cerr << "bool "<<test<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            unsigned uint = ws["nested"]["another_net"]["number"].asUInt(0);
+            unsigned uint = ws["nested"]["another_net"]["number"].asUInt();
             std::cerr << "number "<<uint<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            unsigned uint = ws["hello"]["another_net"]["number"].asUInt(0);
+            unsigned uint = ws["hello"]["another_net"]["number"].asUInt();
             std::cerr << "number "<<uint<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
         try{
-            unsigned uint = ws[0][2]["number"].asUInt(0);
+            unsigned uint = ws[0][2]["number"].asUInt();
             std::cerr << "number "<<uint<<"\n";
         }catch( std::exception& e){ std::cout << e.what() <<std::endl; }
     }
@@ -72,7 +72,7 @@ int main()
         dg::file::WrappedJsonValue ws( js);
         std::string hello = ws["hello"].asString();
         assert( hello == "world");
-        int idx0 = ws[ "array"][0].asInt(0);
+        int idx0 = ws[ "array"][0].asInt();
         assert( ws["array"].size() == 2);
         assert( idx0 == 42);
         idx0 = ws[ "array"].get(0,0).asInt();
@@ -81,9 +81,9 @@ int main()
         assert( idx1 == 73);
         double hi = ws[ "nested"][ "hi"].asDouble();
         assert( hi == 38);
-        bool test = ws[ "nested"]["bool"].asBool(true);
+        bool test = ws[ "nested"]["bool"].asBool();
         assert( test == true);
-        unsigned uint = ws["nested"]["another_nest"]["number"].asUInt(0);
+        unsigned uint = ws["nested"]["another_nest"]["number"].asUInt();
         assert( uint == 7);
         std::cout << "TEST PASSED!\n";
         std::cout << "Test access string\n";

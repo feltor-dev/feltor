@@ -24,12 +24,12 @@ namespace file
 {
 
 #ifdef DG_USE_JSONHPP
-using JsonType = nlohmann::json;
+using JsonType = nlohmann::json; //!< json type for Niels Lohmann's library
 #else
-using JsonType = Json::Value;
+using JsonType = Json::Value; //!< json type for jsoncpp library
 #endif
 /**
- * @defgroup json JsonCPP utilities
+ * @defgroup json Json utilities
  * \#include "dg/file/json_utilities.h" (link -ljsoncpp)
  *
  * @addtogroup json
@@ -53,18 +53,19 @@ enum class comments{
 /**
  * @brief Wrapped Access to Json values with error handling
  *
- * The purpose of this class is to wrap the
- * access to a JsonType with guards that raise exceptions or display
- * warnings in case an error occurs, for example when a key is misspelled,
+ * The purpose of this class is to serve as an extremely pedantic access
+ * guard to a Json file, in the sense that it will raise exceptions at
+ * the slightest misstep, for example when a key is misspelled,
  * missing or has the wrong type.
- * The goal is the composition of a good error message that helps a user
+ * It will then compose an error message that shows where exactly
+ * the access in the file went wrong and thus help a user
  * quickly debug the input (file).
  *
- * The Wrapper is necessary because Jsoncpp by default silently
- * generates a new key in case it is not present which in our scenario is an
- * invitation for stupid mistakes.
+ * This is necessary if the cost of a faulty input file with silly mistakes
+ * like misspelling could lead to potentially large (computational) costs if
+ * uncaught.
  *
- * You can use the \c WrappedJsonValue like a \c JsonType with read-only access:
+ * The interface of \c WrappedJsonValue is modelled after jsoncpp's \c Json::Value:
  * @code
 auto js = dg::file::file2Json( "test.json", js);
 dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
@@ -94,6 +95,25 @@ try{
 //The what string knows that "some_non_existent_key" is expected to be
 //contained in the "nested" key.
  * @endcode
+ *
+ * The caveat of this class is that once a json value is wrapped it is somewhat
+ * awkward to change its value (because it is what the class wants to prevent)
+ * @attention This class is only for read access. If you must change a value do
+ * so on the raw \c JsonType accesible with the \c asJson() method
+ * @attention Do not assign to a key like this:
+ * @code
+ * dg::file::WrappedJsonValue ws;
+ * ws["hello"]["world"] = dg::file::file2Json("test.json");
+ * // NOT WHAT YOU EXPECT!
+ * // it just assigns to a copy that goes out of scope
+ * // instead you need to work on the unwrapped json directly
+ * auto js = ws.asJson();
+ * js["hello"]["world"] = dg::file::file2Json("test.json")
+ * @endcode
+ *
+ * @note If the Marco \c DG_USE_JSONHPP is defined, the <tt> \#include <nlohmann/json.hpp> </tt>
+ * parser is used instead of <tt> \#include <json/json.h> </tt> Since the former is header-only
+ * no additional linker options must be present at compilation.
  */
 struct WrappedJsonValue
 {
@@ -140,6 +160,7 @@ struct WrappedJsonValue
 #endif
     }
 
+    /// Return true if key is a Member of the json value
     bool isMember(std::string key) const{
 #ifdef DG_USE_JSONHPP
         return m_js.contains(key);
@@ -150,6 +171,7 @@ struct WrappedJsonValue
 
     // //////////Members imitating the original JsonType///////////////
     /// Wrap the corresponding JsonType function with error handling
+    /// @attention Do not assign to this! You will assign to a copy
     WrappedJsonValue operator[](std::string key) const{
 #ifdef DG_USE_JSONHPP
         return get( key, nlohmann::json::object(), "empty object ");
@@ -157,9 +179,10 @@ struct WrappedJsonValue
         return get( key, Json::ValueType::objectValue, "empty object ");
 #endif
     }
-//    /// Assign to the internally held json value
+//    The problem with this is that if key is misspelled then
+//    it will silently generate it
 //    JsonType& operator[]( std::string key){
-//        m_js[key];
+//        return m_js[key];
 //    }
     /// Wrap the corresponding JsonType function with error handling
     WrappedJsonValue get( std::string key, const JsonType& value) const{
@@ -175,10 +198,6 @@ struct WrappedJsonValue
         return get( idx, Json::ValueType::objectValue, "empty array");
 #endif
     }
-//    /// Assign to the internally held json value
-//    JsonType& operator[]( unsigned idx){
-//        m_js[idx];
-//    }
     /// Wrap the corresponding JsonType function with error handling
     WrappedJsonValue get( unsigned idx, const JsonType& value) const{
         std::stringstream default_str;
@@ -190,7 +209,7 @@ struct WrappedJsonValue
         return m_js.size();
     }
     /// Wrap the corresponding JsonType function with error handling
-    double asDouble( double value = 0) const{
+    double asDouble( ) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_number()) // we just want anything that can be cast to double
             return m_js.template get<double>();
@@ -198,10 +217,10 @@ struct WrappedJsonValue
         if( m_js.isDouble())
             return m_js.asDouble();
 #endif
-        return type_error<double>( value, "a Double");
+        return type_error<double>( 0, "a Double");
     }
     /// Wrap the corresponding JsonType function with error handling
-    unsigned asUInt( unsigned value = 0) const{
+    unsigned asUInt( ) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_number()) // check for sign?
             return m_js.template get<unsigned>();
@@ -209,10 +228,10 @@ struct WrappedJsonValue
         if( m_js.isUInt())
             return m_js.asUInt();
 #endif
-        return type_error<unsigned>( value, "an Unsigned");
+        return type_error<unsigned>( 0, "an Unsigned");
     }
     /// Wrap the corresponding JsonType function with error handling
-    int asInt( int value = 0) const{
+    int asInt( ) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_number())
             return m_js.template get<int>();
@@ -220,10 +239,10 @@ struct WrappedJsonValue
         if( m_js.isInt())
             return m_js.asInt();
 #endif
-        return type_error<int>( value, "an Int");
+        return type_error<int>( 0, "an Int");
     }
     /// Wrap the corresponding JsonType function with error handling
-    bool asBool( bool value = false) const{
+    bool asBool( ) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_boolean())
             return m_js.template get<bool>();
@@ -231,10 +250,10 @@ struct WrappedJsonValue
         if( m_js.isBool())
             return m_js.asBool();
 #endif
-        return type_error<bool>( value, "a Bool");
+        return type_error<bool>( false, "a Bool");
     }
     /// Wrap the corresponding JsonType function with error handling
-    std::string asString( std::string value = "") const{
+    std::string asString( ) const{
 #ifdef DG_USE_JSONHPP
         if( m_js.is_string())
             return m_js.template get<std::string>();
@@ -243,7 +262,7 @@ struct WrappedJsonValue
         if( m_js.isString())
             return m_js.asString();
 #endif
-        return type_error<std::string>( value, "a String");
+        return type_error<std::string>( "", "a String");
     }
     private:
     WrappedJsonValue(JsonType js, error mode, std::string access):m_js(js), m_mode( mode), m_access_str(access) {}
