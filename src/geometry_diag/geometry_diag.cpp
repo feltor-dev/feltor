@@ -16,7 +16,7 @@ int main( int argc, char* argv[])
 {
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
     std::string inputfile = argc==1 ? "geometry_diag.json" : argv[1];
-    js = dg::file::file2Json( inputfile);
+    js.asJson() = dg::file::file2Json( inputfile);
 
     std::string geometry_params = js["magnetic_field"]["input"].asString();
     if( geometry_params == "file")
@@ -69,6 +69,8 @@ int main( int argc, char* argv[])
     double RO = mag.R0(), ZO = 0.;
     double psipO = dg::blas1::reduce( psipog2d, +1e308, thrust::minimum<double>());
     double psipmax = dg::blas1::reduce( psipog2d, -1e308, thrust::maximum<double>());
+    if ( psipmax == psipO) // toroidal field
+        psipmax += 1;
     // find O-point
     if( mag_description == dg::geo::description::standardX ||
         mag_description == dg::geo::description::standardO ||
@@ -309,6 +311,7 @@ int main( int argc, char* argv[])
         }
     }
     /// --------- More flux labels --------------------------------
+
     dg::Grid1d grid1d(psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO, npsi, Npsi,dg::DIR_NEU); //inner value is always zero
     if( compute_q &&
