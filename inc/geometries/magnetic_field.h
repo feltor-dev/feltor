@@ -934,7 +934,8 @@ inline CylindricalVectorLvl1 createBHat( const TokamakMagneticField& mag){
            );
 }
 
-/*@brief \f$ \sqrt{1. - \psi_p/ \psi_{p,O}} \f$
+/**
+ * @brief \f$ \sqrt{1. - \psi_p/ \psi_{p,O}} \f$
  *
  * @attention undefined if there is no O-point near [R_0 , 0], except for
  * \c description::centeredX when we take psipO = -10
