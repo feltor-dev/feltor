@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include "dg/algorithm.h"
 #include "fluxfunctions.h"
 #include "ribeiro.h"
@@ -28,7 +29,9 @@ struct Fpsi
     {
         //Find O-point
         double R_O = x0, Z_O = y0;
-        dg::geo::findOpoint( psip, R_O, Z_O);
+        m_opoint = dg::geo::findOpoint( psip, R_O, Z_O);
+        m_ovalue = psip.f()(R_O,Z_O);
+
         //define angle with respect to O-point
         fieldRZYT_ = dg::geo::flux::FieldRZYT(psip, ipol, R_O, Z_O);
         X_init = x0, Y_init = y0;
@@ -38,6 +41,9 @@ struct Fpsi
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0)
     {
+        if( ((m_opoint == 1) && (psi < m_ovalue +1e-10)) ||
+            ((m_opoint == 2) && (psi > m_ovalue -1e-10)))
+            throw std::runtime_error( "GradPsi integrator cannot integrate beyond or so close to O-point!");
         unsigned N = 50;
         std::array<double, 2> begin2d{ {0,0} }, end2d(begin2d), end2d_old(begin2d);
         if(m_verbose)std::cout << "In init function\n";
@@ -87,6 +93,10 @@ struct Fpsi
 
     double operator()( double psi)
     {
+        // This is to make the SafetyFactor nothrow
+        if( ((m_opoint == 1) && (psi < m_ovalue +1e-10)) ||
+            ((m_opoint == 2) && (psi > m_ovalue -1e-10)))
+            return std::nan("");
         double R_0, Z_0;
         return construct_f( psi, R_0, Z_0);
     }
@@ -120,6 +130,8 @@ struct Fpsi
     }
 
     private:
+    int m_opoint;
+    double m_ovalue;
     double X_init, Y_init;
     CylindricalFunctorsLvl1 psip_;
     dg::geo::flux::FieldRZYT fieldRZYT_;
