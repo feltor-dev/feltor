@@ -5,7 +5,6 @@ include ../../config/default.mk
 include ../../config/version.mk
 include ../../config/*.mk
 include ../../config/devices/devices.mk
-#JSONLIB=-DDG_USE_JSONHPP
 
 INCLUDE+= -I../../inc   # other project libraries
 

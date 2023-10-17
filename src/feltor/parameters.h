@@ -213,7 +213,7 @@ struct Parameters
         }
 
         //Probes
-        probes = js.asJson().contains("probes");
+        probes = js.isMember("probes");
         if(probes)
         {
             num_pins = js["probes"]["num_pins"].asUInt();

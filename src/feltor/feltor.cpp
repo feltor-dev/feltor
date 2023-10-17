@@ -504,7 +504,7 @@ int main( int argc, char* argv[])
         }
 
         std::vector<std::vector<feltor::Record>> equation_list;
-        bool equation_list_exists = js["output"].asJson().contains("equations");
+        bool equation_list_exists = js["output"].isMember("equations");
         if( equation_list_exists)
         {
             for( unsigned i=0; i<js["output"]["equations"].size(); i++)

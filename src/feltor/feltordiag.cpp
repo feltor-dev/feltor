@@ -212,7 +212,7 @@ int main( int argc, char* argv[])
 
 
     std::vector<std::vector<feltor::Record>> equation_list;
-    bool equation_list_exists = js["output"].asJson().contains("equations");
+    bool equation_list_exists = js["output"].isMember("equations");
     if( equation_list_exists)
     {
         for( unsigned i=0; i<js["output"]["equations"].size(); i++)
@@ -259,7 +259,7 @@ int main( int argc, char* argv[])
         {"ifs_norm", {" (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)",1, dim_ids, false}},
         {"std_fsa", {" (Flux surface average standard deviation on outboard midplane.)", 2, dim_ids2d, false}}
     };
-    bool diagnostics_list_exists = config.asJson().contains("diagnostics");
+    bool diagnostics_list_exists = config.isMember("diagnostics");
     if( diagnostics_list_exists)
     {
         for( unsigned i=0; i<config["diagnostics"].size(); i++)

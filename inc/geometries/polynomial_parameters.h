@@ -108,7 +108,7 @@ struct Parameters
     ///Write variables as a formatted string
     void display( std::ostream& os = std::cout ) const
     {
-        auto js = dump();
+        dg::file::WrappedJsonValue js = dump();
         os << "Polynomial Geometrical parameters are: \n"
             <<js.toStyledString();
         os << std::flush;

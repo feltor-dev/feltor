@@ -4,7 +4,6 @@ device = omp
 include ../config/default.mk
 include ../config/*.mk
 include ../config/devices/devices.mk
-JSONLIB=-DDG_USE_JSONHPP
 
 INCLUDE+= -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code

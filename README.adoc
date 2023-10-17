@@ -190,19 +190,6 @@ For a manual build check the instructions on https://www.github.com/open-source-
 cd ~/include
 ln -s /usr/include/jsoncpp/json
 ----
-____
-Alternatively to the jsoncpp library, one can also use Niels Lohmann's popular
-json parser, which is header-only (and also distributed under an MIT License).
-On linux it is available through the `nlohmann-json3-dev` package or one can simply
-download
-[source,sh]
-----
-git clone https://www.github.com/nlohmann/json
-cd ~/include
-ln -s path/to/json/include
-----
-Then, one needs to overwrite `JSONLIB=-DDG_USE_JSONHPP` in the Makefile
-____
 
 For data output we use the
 http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
@@ -381,15 +368,15 @@ INCLUDE+=-I$(FELTOR_PATH)/inc/
 
 all: toefl toefl_hpc toefl_mpi
 
-# shared memory version using glfw, json and netcdf
+# shared memory version using glfw, jsoncpp and netcdf
 toefl: toefl.cpp toefl.h parameters.h diag.h
     $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -DWITH_GLFW -g
 
-# shared memory version using json and netcdf without glfw
+# shared memory version using jsoncpp and netcdf without glfw
 toefl_hpc: toefl.cpp toefl.h parameters.h diag.h
     $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
-# mpi version using json and netcdf without glfw
+# mpi version using jsoncpp and netcdf without glfw
 toefl_mpi: toefl.cpp toefl.h parameters.h diag.h
     $(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)
 
@@ -467,7 +454,7 @@ ____
 
 ===== Advanced simulation projects
 
-Our simulation codes typically depend on json for parameter input,
+Our simulation codes typically depend on jsoncpp for parameter input,
 glfw3 for plotting or
 netcdf-4 for file output and come with a LaTeX file containing documentation.
 You will need to download these additional libraries and adapt the project

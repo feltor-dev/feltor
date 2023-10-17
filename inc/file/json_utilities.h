@@ -140,6 +140,14 @@ struct WrappedJsonValue
 #endif
     }
 
+    bool isMember(std::string key) const{
+#ifdef DG_USE_JSONHPP
+        return m_js.contains(key);
+#else
+        return m_js.isMember(key);
+#endif
+    }
+
     // //////////Members imitating the original JsonType///////////////
     /// Wrap the corresponding JsonType function with error handling
     WrappedJsonValue operator[](std::string key) const{
@@ -149,6 +157,10 @@ struct WrappedJsonValue
         return get( key, Json::ValueType::objectValue, "empty object ");
 #endif
     }
+//    /// Assign to the internally held json value
+//    JsonType& operator[]( std::string key){
+//        m_js[key];
+//    }
     /// Wrap the corresponding JsonType function with error handling
     WrappedJsonValue get( std::string key, const JsonType& value) const{
         std::stringstream default_str;
@@ -163,6 +175,10 @@ struct WrappedJsonValue
         return get( idx, Json::ValueType::objectValue, "empty array");
 #endif
     }
+//    /// Assign to the internally held json value
+//    JsonType& operator[]( unsigned idx){
+//        m_js[idx];
+//    }
     /// Wrap the corresponding JsonType function with error handling
     WrappedJsonValue get( unsigned idx, const JsonType& value) const{
         std::stringstream default_str;
