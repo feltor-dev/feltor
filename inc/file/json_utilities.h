@@ -38,7 +38,7 @@ using JsonType = Json::Value; //!< json type for jsoncpp library
 
 ///@brief Switch between how to handle errors in a Json utitlity functions
 enum class error{
-    is_throw, //!< throw an error
+    is_throw, //!< throw an error (\c std::runtime_error)
     is_warning, //!< Handle the error by writing a warning to \c std::cerr
     is_silent //!< Ignore the error and silently continue execution
 };
@@ -71,7 +71,7 @@ auto js = dg::file::file2Json( "test.json", js);
 dg::file::WrappedJsonValue ws( js, dg::file::error::is_throw);
 try{
     std::string hello = ws.get( "hello", "").asString();
-    // the following access will throw
+    // the following access will throw a std::runtime_error
     int idx0 = ws[ "array" ][out_of_bounds_index].asInt();
 } catch ( std::exception& e){
     std::cerr << "Error in file test.json\n";
