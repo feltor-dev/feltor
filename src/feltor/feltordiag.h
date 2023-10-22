@@ -1736,34 +1736,119 @@ std::vector<Record> COCEDiagnostics2d_list = { // 16
 };
 
 std::vector<Record> probe_list = {
-     {"electrons_probe", "probe measurement of electron density", false,
+     {"ne", "probe measurement of electron density", false,
          []( dg::x::DVec& result, Variables& v ) {
               dg::blas1::copy(v.f.density(0), result);
          }
      },
-     {"ions_probe", "probe measurement of ion density", false,
+     {"ni", "probe measurement of ion density", false,
          []( dg::x::DVec& result, Variables& v ) {
               dg::blas1::copy(v.f.density(1), result);
          }
      },
-     {"Ue_probe", "probe measurement of parallel electron velocity", false,
+     {"ue", "probe measurement of parallel electron velocity", false,
          []( dg::x::DVec& result, Variables& v ) {
               dg::blas1::copy(v.f.velocity(0), result);
          }
      },
-     {"Ui_probe", "probe measurement of parallel ion velocity", false,
+     {"ui", "probe measurement of parallel ion velocity", false,
          []( dg::x::DVec& result, Variables& v ) {
               dg::blas1::copy(v.f.velocity(1), result);
          }
      },
-     {"potential_probe", "probe measurement of electric potential", false,
+     {"phi", "probe measurement of electric potential", false,
          []( dg::x::DVec& result, Variables& v ) {
               dg::blas1::copy(v.f.potential(0), result);
          }
      },
-     {"aparallel_probe", "probe measurement of parallel magnetic potential", false,
+     {"apar", "probe measurement of parallel magnetic potential", false,
          []( dg::x::DVec& result, Variables& v ) {
               dg::blas1::copy(v.f.aparallel(), result);
+         }
+     },
+     {"neR", "probe measurement of d/dR electron density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradN(0)[0], result);
+         }
+     },
+     {"niR", "probe measurement of d/dR ion density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradN(1)[0], result);
+         }
+     },
+     {"ueR", "probe measurement of d/dR parallel electron velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradU(0)[0], result);
+         }
+     },
+     {"uiR", "probe measurement of d/dR parallel ion velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradU(1)[0], result);
+         }
+     },
+     {"phiR", "probe measurement of d/dR electric potential", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradP(0)[0], result);
+         }
+     },
+     {"aparR", "probe measurement of d/dR parallel magnetic potential", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradA()[0], result);
+         }
+     },
+     {"neZ", "probe measurement of d/dZ electron density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradN(0)[1], result);
+         }
+     },
+     {"niZ", "probe measurement of d/dZ ion density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradN(1)[1], result);
+         }
+     },
+     {"ueZ", "probe measurement of d/dZ parallel electron velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradU(0)[1], result);
+         }
+     },
+     {"uiZ", "probe measurement of d/dZ parallel ion velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradU(1)[1], result);
+         }
+     },
+     {"phiZ", "probe measurement of d/dZ electric potential", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradP(0)[1], result);
+         }
+     },
+     {"aparZ", "probe measurement of d/dZ parallel magnetic potential", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.gradA()[1], result);
+         }
+     },
+     {"nePar", "probe measurement of d/dPar electron density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.dsN(0), result);
+         }
+     },
+     {"niPar", "probe measurement of d/dPar ion density", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.dsN(1), result);
+         }
+     },
+     {"uePar", "probe measurement of d/dPar parallel electron velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.dsU(0), result);
+         }
+     },
+     {"uiPar", "probe measurement of d/dPar parallel ion velocity", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.dsU(1), result);
+         }
+     },
+     {"phiPar", "probe measurement of d/dPar electric potential", false,
+         []( dg::x::DVec& result, Variables& v ) {
+              dg::blas1::copy(v.f.dsP(0), result);
          }
      }
  };

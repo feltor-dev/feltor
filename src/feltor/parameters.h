@@ -216,10 +216,23 @@ struct Parameters
         probes = js.isMember("probes");
         if(probes)
         {
-            num_pins = js["probes"]["num_pins"].asUInt();
+            //num_pins = js["probes"]["num_pins"].asUInt();
+            num_pins = js["probes"]["R"].size();
+            unsigned num_pinsZ = js["probes"]["Z"].size();
+            unsigned num_pinsP = js["probes"]["P"].size();
+            if( num_pins != num_pinsZ)
+                throw std::runtime_error( "Size of Z probes array ("
+                        +std::to_string(num_pinsZ)+") does not match that of R ("
+                        +std::to_string(num_pins)+")!");
+            if( num_pins != num_pinsP)
+                throw std::runtime_error( "Size of P probes array ("
+                        +std::to_string(num_pinsP)+") does not match that of R ("
+                        +std::to_string(num_pins)+")!");
         }
         else
             num_pins = 0;
+        if( js.isMember("probe"))
+            throw std::runtime_error( "Field <probe> found! Did you mean <probes>?");
     }
 };
 

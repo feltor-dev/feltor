@@ -759,7 +759,7 @@ file or directly from a field in the input file.
     "curvmode": "low beta",
 
     // Tells the parser that the geometry parameters are located in an
-    // external file the json file (relative to where the program is
+    // external json file (relative to where the program is
     //  executed) containing the geometry parameters to read
     "input": "file",
     "file": "path/to/geometry.json",
@@ -778,9 +778,7 @@ contains
 {
     "PP" : 1.0,  // Prefactor $\mathcal P_\psi$ for $\psi_p$
     "PI" : 1.0,  // Prefactor $\mathcal P_I$ for $I$
-    "R_0" : 200.0,
-    //  Major radius $R_0$ in units of $\rho_s$ (This is the only geometry
-    // quantity to change if $\rho_s$ changes)
+    "R_0" : 200.0, // Major radius $R_0$. (see remark below for unit)
     "elongation" : 1.0,
     // Elongation $e$, used in the initial guess for the location of the
     // X-point $Z_X = -1.1 ea$
@@ -808,6 +806,18 @@ contains
     "c" : [ /* MN real coefficients in Eq. \eqref{eq:polynomial} */]
 }
 \end{minted}
+\begin{tcolorbox}[title=Unit of $R_0$]
+If the magnetic parameters are read from an external file (i.e. the "input"
+parameter is set to "file") then the unit of $R_0$ is assumed to be meter. In
+that case the "physical" field (described in Section~\ref{sec:physical}) needs
+to contain the field "rhos" where $\rho_s$ in meters is given which will be
+used to convert $R_0$ from meter to $\rho_s$.
+
+If the "input" parameter is set to "params" then $R_0$ is assumed to already be
+in units of $\rho_s$. The field "rhos" does not need to be present in the "physical"
+field then.
+\end{tcolorbox}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Spatial grid} \label{sec:spatial}
 We define the simulation box as
@@ -1760,7 +1770,7 @@ simulations crash. See also~\ref{sec:troubleshooting}
 
 % Check periodify field
 
-\subsection{Parameters in equations}
+\subsection{Parameters in equations} \label{sec:physical}
 \begin{minted}[texcomments]{js}
 "physical":
 {
@@ -1779,6 +1789,9 @@ simulations crash. See also~\ref{sec:troubleshooting}
     // same for electrons and ions
     "viscosity" : "value",
     "nu_parallel" : [400,400] // first for electrons, second for ions
+
+    // only if either magnetic or probes parameters are read from file
+    "rhos" : 1e-3 // $\rho_s$ in units of meter
 }
 \end{minted}
 These parameters, together with the $R_0$ parameter in the magnetic field,
@@ -2020,20 +2033,46 @@ definitions are in the equations titles.
     If the "equations" field does not exist, the default selection is ["Basic", "Mass-conserv", "Energy-theorem","Toroidal-momemtum","Parallel-momentum","Zonal-Flow-Energy"]
 \end{tcolorbox}
 
-\subsection{[Optional] Probes}
-FELTOR has the possibility of getting the output of the computational fields in time at any grid location, as if a probe measurement was done. This output is defined with time outputs at the integration time intervals $\Delta T_{int}$. In the input file, it is required to define the number of pins "num\_pins", and the R, Z and plane position "R\_probe", "Z\_probe" and "phi\_probe" arrays, for each of the probes included. The R and Z values are introduced in $\rho_s$ units, while the plane is defined by the integer number of the plane we want to position the probe. The user should make certain that the length of the position arrays matches "num\_pins".
+\subsection{[Optional] Probes (synthetic diagnostics)}
+FELTOR has the possibility of getting the output of the computational fields
+($n_e$, $N_i$, $u_{\parallel,e}$, $U_{\parallel,i}$, $\phi$ and $A_\parallel$)
+including their first derivatives $\partial_R$, $\partial_Z$, $\npar$) in time
+interpolated to any grid location (as if a measurement was done at that
+location). The output interval is defined at the integration time intervals
+$\Delta T_{int}$. The output is described in Section~\ref{sec:probes-output}.
+
+In the input file, it is required to define the R, Z and phi position "R", "Z"
+and "P" arrays, for each of the probes included. The R and Z values are
+introduced in $\rho_s$ units, while the toroidal angle is given in radian. The
+user should make certain that the length of the position arrays match each
+other.
+There is no limit on the size of the arrays; they are typically not performance
+relevant unless the size exceeds $10^4$.
 \begin{minted}[texcomments]{js}
 "probes":
 {
-    "num_pins": 3,
-    "R_probe": [90, 95, 100],
-    "Z_probe": [0, 0, 0],
-    "phi_probe": [0, 0, 3]
+    "R": [90, 95, 100], // R coordinate in rhos
+    "Z": [0, 0, 0], // Z coordinate in rhos
+    "P": [0, 0, 3] // phi coordinate in radian
 }
 \end{minted}
 \begin{tcolorbox}[title=Note]
- If the user does not want to use any probes, the entire "probes" input field can be left away. No probes will be written into the output file then.
+ If the user does not want to use any probes, the entire "probes" input field
+ can be left away. No probes will be written into the output file then.  Be
+ sure not to have any spelling mistakes on "probes" if you do want them though.
 \end{tcolorbox}
+Alternatively the "R", "Z" and "P" fields can be read from an external json file
+\begin{minted}[texcomments]{js}
+"probes": "path/to/probes.json"
+\end{minted}
+\begin{tcolorbox}[title=Units of $R$ and $Z$]
+Similar to the magnetic parameters, in this case the "R" and "Z" values are
+assume to have unit "meter".
+In that case the "physical" field (described in Section~\ref{sec:physical}) needs
+to contain the field "rhos" where $\rho_s$ in meters is given which will be
+used to convert $R$, $Z$ from meter to $\rho_s$.
+\end{tcolorbox}
+
 \subsection{[Optional] Computational flags}
 We can simplify the full simulation in a few ways:
 \begin{minted}[texcomments]{js}
@@ -2609,6 +2648,56 @@ where we neglected the term $\RA{n\vec u\cn \mathcal I_0}$ in the continuity equ
     snei0\_tt & $S_{n_e } \mathcal I_0$ \\
 \bottomrule
 \end{longtable}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Probes Output}\label{sec:probes-output}
+The probes output is stored in a netcdf group called "probes" in the main output file
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+x                & Coord. Var. & 1 (x) & index-like-coordinate $\in [0,1]$ \\
+time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: itstp*maxout$+1$, dimension size: unlimited) \\
+X                & Dataset & 1 (x) & Static field data \\
+Y                & Dataset & 2 (time,x) & Dynamic measurements \\
+\bottomrule
+\end{longtable}
+where $X\in $["R","Z","P", "a collection of magnetic field quantities (check output file for details"]
+    and $Y\in $
+\begin{longtable}{llllll}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Equation} & \textbf{Name} &  \textbf{Equation} & \textbf{Name} & \textbf{Equation}\\
+\midrule
+    ne &$n_e$ &
+    ni &$N_i$ &
+    ue &$u_{\parallel,e}$ \\
+    ui &$U_{\parallel,i}$ &
+    phi &$\phi$ &
+    apar &$A_\parallel$ \\
+    neR &$\partial_R n_e$ &
+    niR &$\partial_R N_i$ &
+    ueR &$\partial_R u_{\parallel,e}$ \\
+    uiR &$\partial_R U_{\parallel,i}$ &
+    phiR &$\partial_R \phi$ &
+    aparR &$\partial_R A_\parallel$ \\
+    neZ &$\partial_Z n_e$ &
+    niZ &$\partial_Z N_i$ &
+    ueZ &$\partial_Z u_{\parallel,e}$ \\
+    uiZ &$\partial_Z U_{\parallel,i}$ &
+    phiZ &$\partial_Z \phi$ &
+    aparZ &$\partial_Z A_\parallel$ \\
+    nePar &$\npar n_e$ &
+    niPar &$\npar N_i$ &
+    uePar &$\npar u_{\parallel,e}$ \\
+    uiPar &$\npar U_{\parallel,i}$ &
+    phiPar &$\npar \phi$ &
+     & \\
+\bottomrule
+\end{longtable}
+with all these quantities available most other quantities (flux, energy, etc.)
+can be computed in post processing.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
