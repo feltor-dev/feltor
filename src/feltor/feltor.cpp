@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
             js.asJson()["magnetic_field"]["params"] = dg::file::file2Json( path,
                     dg::file::comments::are_discarded, dg::file::error::is_throw);
             // convert unit to rhos
-            double rhos = js["physical"]["rhos"].asDouble();
+            double rhos = js["physical"]["rho_s"].asDouble();
             double R0 = js["magnetic_field"]["params"]["R_0"].asDouble();
             js.asJson()["magnetic_field"]["params"]["R_0"] = R0/rhos;
         }catch(std::runtime_error& e)
@@ -102,7 +102,7 @@ int main( int argc, char* argv[])
                 js.asJson()["probes"] = dg::file::file2Json( path,
                         dg::file::comments::are_discarded, dg::file::error::is_throw);
                 // convert unit to rhos
-                double rhos = js["physical"]["rhos"].asDouble();
+                double rhos = js["physical"]["rho_s"].asDouble();
                 for( unsigned i=0; i<js.asJson()["probes"]["R"].size(); i++)
                     js.asJson()["probes"]["R"][i] =
                         js["probes"]["R"][i].asDouble() / rhos;

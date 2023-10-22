@@ -810,11 +810,11 @@ contains
 If the magnetic parameters are read from an external file (i.e. the "input"
 parameter is set to "file") then the unit of $R_0$ is assumed to be meter. In
 that case the "physical" field (described in Section~\ref{sec:physical}) needs
-to contain the field "rhos" where $\rho_s$ in meters is given which will be
+to contain the field "rho_s" where $\rho_s$ in meters is given which will be
 used to convert $R_0$ from meter to $\rho_s$.
 
 If the "input" parameter is set to "params" then $R_0$ is assumed to already be
-in units of $\rho_s$. The field "rhos" does not need to be present in the "physical"
+in units of $\rho_s$. The field "rho_s" does not need to be present in the "physical"
 field then.
 \end{tcolorbox}
 
@@ -1791,7 +1791,7 @@ simulations crash. See also~\ref{sec:troubleshooting}
     "nu_parallel" : [400,400] // first for electrons, second for ions
 
     // only if either magnetic or probes parameters are read from file
-    "rhos" : 1e-3 // $\rho_s$ in units of meter
+    "rho_s" : 1e-3 // $\rho_s$ in units of meter
 }
 \end{minted}
 These parameters, together with the $R_0$ parameter in the magnetic field,
@@ -2051,8 +2051,8 @@ relevant unless the size exceeds $10^4$.
 \begin{minted}[texcomments]{js}
 "probes":
 {
-    "R": [90, 95, 100], // R coordinate in rhos
-    "Z": [0, 0, 0], // Z coordinate in rhos
+    "R": [90, 95, 100], // R coordinate in rho_s
+    "Z": [0, 0, 0], // Z coordinate in rho_s
     "P": [0, 0, 3] // phi coordinate in radian
 }
 \end{minted}
@@ -2069,7 +2069,7 @@ Alternatively the "R", "Z" and "P" fields can be read from an external json file
 Similar to the magnetic parameters, in this case the "R" and "Z" values are
 assume to have unit "meter".
 In that case the "physical" field (described in Section~\ref{sec:physical}) needs
-to contain the field "rhos" where $\rho_s$ in meters is given which will be
+to contain the field "rho_s" where $\rho_s$ in meters is given which will be
 used to convert $R$, $Z$ from meter to $\rho_s$.
 \end{tcolorbox}
 
