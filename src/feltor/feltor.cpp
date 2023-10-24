@@ -90,34 +90,6 @@ int main( int argc, char* argv[])
                            << geometry_params<<"'. Exit now!\n";
         dg::abort_program();
     }
-    if( js.isMember("probes"))
-    {
-        std::string path;
-        try{
-            bool file = true;
-            try{ path = js["probes"].asString();
-            }catch ( std::runtime_error& e) { file = false; }
-            if ( file)
-            {
-                js.asJson()["probes"] = dg::file::file2Json( path,
-                        dg::file::comments::are_discarded, dg::file::error::is_throw);
-                // convert unit to rhos
-                double rhos = js["physical"]["rho_s"].asDouble();
-                for( unsigned i=0; i<js.asJson()["probes"]["R"].size(); i++)
-                    js.asJson()["probes"]["R"][i] =
-                        js["probes"]["R"][i].asDouble() / rhos;
-                for( unsigned i=0; i<js.asJson()["probes"]["Z"].size(); i++)
-                    js.asJson()["probes"]["Z"][i] =
-                        js["probes"]["Z"][i].asDouble() / rhos;
-            }
-        }
-        catch(std::runtime_error& e)
-        {
-            DG_RANK0 std::cerr << "ERROR in probes file "<<path<<std::endl;
-            DG_RANK0 std::cerr << e.what()<<std::endl;
-            dg::abort_program();
-        }
-    }
     const feltor::Parameters p( js);
     std::string inputfile = js.toStyledString();
     DG_RANK0 std::cout << inputfile <<  std::endl;
@@ -276,16 +248,43 @@ int main( int argc, char* argv[])
 
 
     ///PROBE ADDITIONS!!!
-    dg::HVec R_probe(p.num_pins), Z_probe(p.num_pins), P_probe(p.num_pins);
+    dg::HVec R_probe, Z_probe, P_probe;
+    unsigned num_pins=0;
+    dg::file::WrappedJsonValue js_probes( dg::file::error::is_throw);
     if( p.probes)
     {
-        dg::file::WrappedJsonValue js_probes = js["probes"];
-        for(unsigned i = 0 ; i < p.num_pins; i++){
-            // is this slow? Because of access checks
-            R_probe[i] = js_probes["R"][i].asDouble();
-            Z_probe[i] = js_probes["Z"][i].asDouble();
-            P_probe[i] = js_probes["P"][i].asDouble();
+        std::string path;
+        bool file = true;
+        try{
+            try{ path = js["probes"].asString();
+            }catch ( std::runtime_error& e) { file = false; }
+            if ( file)
+                js_probes.asJson() = dg::file::file2Json( path,
+                        dg::file::comments::are_discarded, dg::file::error::is_throw);
+            else
+                js_probes.asJson() = js.asJson()["probes"];
         }
+        catch(std::runtime_error& e)
+        {
+            DG_RANK0 std::cerr << "ERROR in probes file "<<path<<std::endl;
+            DG_RANK0 std::cerr << e.what()<<std::endl;
+            dg::abort_program();
+        }
+        double rhos = file ? js["physical"]["rho_s"].asDouble() : 1.;
+        R_probe = feltor::read_probes( js_probes, "R", rhos);
+        Z_probe = feltor::read_probes( js_probes, "Z", rhos);
+        P_probe = feltor::read_probes( js_probes, "P", 1.);
+        num_pins = R_probe.size();
+        unsigned num_pinsZ = Z_probe.size();
+        unsigned num_pinsP = P_probe.size();
+        if( num_pins != num_pinsZ)
+            throw std::runtime_error( "Size of Z probes array ("
+                    +std::to_string(num_pinsZ)+") does not match that of R ("
+                    +std::to_string(num_pins)+")!");
+        if( num_pins != num_pinsP)
+            throw std::runtime_error( "Size of P probes array ("
+                    +std::to_string(num_pinsP)+") does not match that of R ("
+                    +std::to_string(num_pins)+")!");
     }
     // create interpolation matrix
     dg::x::IHMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, P_probe, grid);
@@ -294,7 +293,7 @@ int main( int argc, char* argv[])
     // every processor gets the probes (slightly inefficient...)
     dg::MHVec simple_probes(R_probe, grid.communicator());
 #else //WITH_MPI
-    dg::HVec simple_probes(p.num_pins);
+    dg::HVec simple_probes(num_pins);
 #endif
     std::map<std::string, std::vector<dg::x::HVec>> simple_probes_intern;
     for( auto& record : feltor::probe_list)
@@ -604,13 +603,18 @@ int main( int argc, char* argv[])
         //Probes:
         int probe_grp_id;
         if( p.probes)
+        {
             DG_RANK0 err = nc_def_grp(ncid,"probes",&probe_grp_id);
+            std::string format = js_probes["format"].toStyledString();
+            DG_RANK0 err = nc_put_att_text( probe_grp_id, NC_GLOBAL,
+                "format", format.size(), format.data());
+        }
         int probe_dim_ids[2];
         int probe_timevarID;
         std::map<std::string, int> probe_id_field;
         if( p.probes)
         {
-            dg::Grid1d g1d( 0,1,1,p.num_pins);
+            dg::Grid1d g1d( 0,1,1,num_pins);
             DG_RANK0 err = dg::file::define_dimensions( probe_grp_id,
                     probe_dim_ids, &probe_timevarID, g1d, {"time", "x"});
             int R_pin_id, Z_pin_id, P_pin_id;
@@ -722,7 +726,7 @@ int main( int argc, char* argv[])
 
         /// Probes FIRST output ///
         size_t probe_start[] = {0, 0};
-        size_t probe_count[] = {1, p.num_pins};
+        size_t probe_count[] = {1, num_pins};
         time_intern[0]=time;
         if(p.probes)
         {
