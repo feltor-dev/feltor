@@ -35,11 +35,6 @@ struct Parameters
     std::string slope_limiter;
 
     double source_rate, nwall, uwall, wall_rate;
-    double sheath_rate, sheath_max_angle;
-    std::string sheath_coord;
-
-    double boxscaleRm, boxscaleRp;
-    double boxscaleZm, boxscaleZp;
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP, bcxA, bcyA;
     enum dg::direction pol_dir;
@@ -47,8 +42,8 @@ struct Parameters
     std::string sheath_bc;
     std::string fci_bc;
     std::string output;
-    bool symmetric, calibrate, periodify;
-    bool penalize_wall, penalize_sheath, modify_B;
+    bool symmetric, calibrate;
+    bool penalize_wall, penalize_sheath;
     bool partitioned;
     //bool mass_conserv, energy_theorem, toroidal_mom, parallel_mom, parallel_e_force, zonal_flow, COCE_GF, COCE_fluid; //To define which variable to be saved in the output (from input)
     bool probes;
@@ -61,10 +56,6 @@ struct Parameters
         Nx          = js["grid"].get("Nx", 0).asUInt();
         Ny          = js["grid"].get("Ny", 0).asUInt();
         Nz          = js["grid"].get("Nz", 0).asUInt();
-        boxscaleRm  = js["grid"][ "scaleR"].get( 0u, 1.05).asDouble();
-        boxscaleRp  = js["grid"][ "scaleR"].get( 1u, 1.05).asDouble();
-        boxscaleZm  = js["grid"][ "scaleZ"].get( 0u, 1.05).asDouble();
-        boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
         tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
         timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
@@ -96,7 +87,6 @@ struct Parameters
         my          = js["FCI"]["refine"].get( 1u, 1).asUInt();
         rk4eps      = js["FCI"].get( "rk4eps", 1e-6).asDouble();
         interpolation_method = js["FCI"].get("interpolation-method", "dg").asString();
-        periodify   = js["FCI"].get( "periodify", true).asBool();
         fci_bc      = js["FCI"].get( "bc", "along_field").asString();
 
         diff_order  = js["regularization"].get( "order", 2).asUInt();
@@ -170,12 +160,10 @@ struct Parameters
 
 
         curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
-        modify_B = penalize_wall = penalize_sheath = false;
-        nwall = uwall = wall_rate = sheath_rate = sheath_max_angle = 0.;
-        sheath_coord = "s";
+        penalize_wall = penalize_sheath = false;
+        nwall = uwall = wall_rate = 0.;
         if( js["boundary"]["wall"].get("type","none").asString() != "none")
         {
-            modify_B = js["boundary"]["wall"].get( "modify-B", false).asBool();
             penalize_wall = js["boundary"]["wall"].get( "penalize-rhs",
                     false).asBool();
             wall_rate = js ["boundary"]["wall"].get( "penalization",
@@ -183,14 +171,10 @@ struct Parameters
             nwall = js["boundary"]["wall"].get( "nwall", 1.0).asDouble();
             uwall = js["boundary"]["wall"].get( "uwall", 0.0).asDouble();
         }
-        if( js["boundary"]["sheath"].get("type","none").asString() != "none")
+        if( sheath_bc != "none")
         {
             penalize_sheath = js["boundary"]["sheath"].get( "penalize-rhs",
                     false).asBool();
-            sheath_rate = js ["boundary"]["sheath"].get( "penalization",
-                    0.).asDouble();
-            sheath_coord = js["boundary"]["sheath"].get( "coordinate", "s").asString();
-            sheath_max_angle = js["boundary"]["sheath"].get( "max_angle", 4).asDouble()*2.*M_PI;
         }
 
         // Computing flags
@@ -217,14 +201,5 @@ struct Parameters
             throw std::runtime_error( "Field <probe> found! Did you mean <probes>?");
     }
 };
-
-dg::HVec read_probes( const dg::file::WrappedJsonValue& probes, std::string x, double rhos)
-{
-    unsigned size = probes[x].size();
-    dg::HVec out(size);
-    for( unsigned i=0; i<size; i++)
-        out[i] = probes.asJson()[i].asDouble()/rhos;
-    return out;
-}
 
 }//namespace feltor

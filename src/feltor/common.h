@@ -303,3 +303,285 @@ std::vector<std::tuple<std::string, dg::HVec, std::string> >
 }
 
 }//namespace feltor
+namespace common
+{
+#ifdef WITH_MPI
+// A signal handler is called if the os sends a signal to the process!
+// I am currently not sure what advantage we have from using the following or if it will
+// always work
+// ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
+void sigterm_handler(int signal)
+{
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    std::cout << " pid "<<rank<<" sigterm_handler, got signal " << signal << std::endl;
+    MPI_Finalize();
+    exit(signal);
+}
+#endif //WITH_MPI
+
+template<class Parameters>
+void parse_input_file( int argc, char* argv[], dg::file::WrappedJsonValue& js)
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+    if( argc != 2 && argc != 3 && argc != 4)
+    {
+        DG_RANK0 std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
+                << argv[0]<<" [input.json] \n OR \n"
+                << argv[0]<<" [input.json] [output.nc]\n OR \n"
+                << argv[0]<<" [input.json] [output.nc] [initial.nc] "<<std::endl;
+        dg::abort_program();
+    }
+    try{
+        js = dg::file::file2Json( argv[1],
+                dg::file::comments::are_discarded, dg::file::error::is_throw);
+        Parameters p( js);
+    } catch( std::exception& e) {
+        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
+        DG_RANK0 std::cerr << e.what()<<std::endl;
+        dg::abort_program();
+    }
+}
+void parse_geometry_file( std::string argv1, dg::file::WrappedJsonValue& js)
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+    std::string geometry_params = js["magnetic_field"]["input"].asString();
+    if( geometry_params == "file")
+    {
+        std::string path = js["magnetic_field"]["file"].asString();
+        double rhos = 0;
+        try{
+            rhos = js["physical"]["rho_s"].asDouble();
+        } catch( std::exception& e) {
+            DG_RANK0 std::cerr << "rho_s needs to be present in input file "<<argv1<<" if magnetic field from file\n";
+            DG_RANK0 std::cerr << e.what()<<std::endl;
+            dg::abort_program();
+        }
+        try{
+            js.asJson()["magnetic_field"]["params"] = dg::file::file2Json( path,
+                    dg::file::comments::are_discarded, dg::file::error::is_throw);
+            // convert unit to rhos
+            double R0 = js["magnetic_field"]["params"]["R_0"].asDouble();
+            js.asJson()["magnetic_field"]["params"]["R_0"] = R0/rhos;
+        }catch(std::runtime_error& e)
+        {
+            DG_RANK0 std::cerr << "ERROR in geometry file "<<path<<std::endl;
+            DG_RANK0 std::cerr << e.what()<<std::endl;
+            dg::abort_program();
+        }
+    }
+    else if( geometry_params != "params")
+    {
+        DG_RANK0 std::cerr << "Error: Unknown magnetic field input '"
+                           << geometry_params<<"'. Exit now!\n";
+        dg::abort_program();
+    }
+}
+
+// this may even go into dg::geo
+std::map<std::string,double> box( const dg::file::WrappedJsonValue& js)
+{
+    double boxscaleRm, boxscaleRp;
+    boxscaleRm  = js["grid"][ "scaleR"].get( 0u, 1.05).asDouble();
+    boxscaleRp  = js["grid"][ "scaleR"].get( 1u, 1.05).asDouble();
+    double R0 = js["magnetic_field"]["params"]["R_0"].asDouble();
+    double a =  js["magnetic_field"]["params"]["inverseaspectratio"].asDouble()*R0;
+    const double Rmin=R0-boxscaleRm*a;
+    const double Rmax=R0+boxscaleRp*a;
+    double boxscaleZm, boxscaleZp;
+    boxscaleZm  = js["grid"][ "scaleZ"].get( 0u, 1.05).asDouble();
+    boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
+    const double Zmin=-boxscaleZm*a;
+    const double Zmax=boxscaleZp*a;
+
+    return std::map<std::string, double>{
+        {"Rmin", Rmin},{"Rmax",Rmax}, {"Zmin", Zmin},{"Zmax",Zmax}
+    };
+}
+
+
+void create_mag_wall(
+        const std::string argv1,
+        const dg::file::WrappedJsonValue& js,
+        dg::geo::TokamakMagneticField& mag,
+        dg::geo::TokamakMagneticField& mod_mag,
+        dg::geo::TokamakMagneticField& unmod_mag,
+        dg::geo::CylindricalFunctor& wall,
+        dg::geo::CylindricalFunctor& transition
+        )
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+    bool periodify = false, modify_B = false;
+    std::map<std::string,double> box;
+    try{
+        mag = unmod_mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
+        mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
+                js["boundary"]["wall"], wall, transition);
+        periodify   = js["FCI"].get( "periodify", true).asBool();
+        modify_B = js["boundary"]["wall"].get( "modify-B", false).asBool();
+        box = common::box( js);
+    }catch(std::runtime_error& e)
+    {
+        DG_RANK0 std::cerr << "ERROR in input file "<<argv1<<std::endl;
+        DG_RANK0 std::cerr <<e.what()<<std::endl;
+        dg::abort_program();
+    }
+    if( periodify)
+    {
+        unmod_mag = dg::geo::periodify( unmod_mag, box.at("Rmin"),
+                box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), dg::NEU,
+                dg::NEU);
+        mod_mag = dg::geo::periodify( mod_mag, box.at("Rmin"),
+                box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), dg::NEU,
+                dg::NEU);
+    }
+    if( modify_B)
+        mag = mod_mag;
+    else
+        mag = unmod_mag;
+}
+
+#ifdef WITH_MPI
+void check_Nz( unsigned Nz, MPI_Comm comm)
+{
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( comm, 3, dims, periods, coords);
+    if( dims[2] >= (int)Nz)
+    {
+        DG_RANK0 std::cerr << "ERROR: Number of processes in z "<<dims[2]
+                    <<" may not be larger or equal Nz "<<Nz<<std::endl;
+        dg::abort_program();
+    }
+}
+#endif //WITH_MPI
+
+template<class Geometry, class Equations>
+void create_and_set_sheath(
+        const std::string argv1,
+        const dg::file::WrappedJsonValue& js,
+        const dg::geo::TokamakMagneticField& mag, // after modification...
+        const dg::geo::CylindricalFunctor& wall,
+        dg::geo::CylindricalFunctor& sheath,
+        dg::geo::CylindricalFunctor& sheath_coordinate,
+        const Geometry& grid,
+        Equations& feltor
+        )
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+    dg::Timer t;
+    t.tic();
+    DG_RANK0 std::cout << "# Compute Sheath coordinates \n";
+    double sheath_rate = 0.;
+    try{
+        auto box = common::box( js);
+        dg::Grid2d sheath_walls( box.at("Rmin"), box.at("Rmax"),
+                box.at("Zmin"), box.at("Zmax"), 1, 1, 1);
+        dg::geo::createSheathRegion( js["boundary"]["sheath"],
+            dg::geo::createMagneticField(js["magnetic_field"]["params"]),
+            wall, sheath_walls, sheath);
+        double sheath_max_angle = js["boundary"]["sheath"].get( "max_angle",
+                4).asDouble()*2.*M_PI; std::string sheath_coord =
+            js["boundary"]["sheath"].get( "coordinate", "s").asString();
+        // sheath is created on feltor magnetic field
+        sheath_coordinate = dg::geo::WallFieldlineCoordinate(
+                dg::geo::createBHat( mag), sheath_walls,
+                sheath_max_angle, 1e-6, sheath_coord);
+        sheath_rate = js ["boundary"]["sheath"].get( "penalization",
+                0.).asDouble();
+    }catch(std::runtime_error& e)
+    {
+        DG_RANK0 std::cerr << "ERROR in input file "<<argv1<<std::endl;
+        DG_RANK0 std::cerr <<e.what()<<std::endl;
+        dg::abort_program();
+    }
+    dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *grid.perp_grid());
+    dg::x::DVec coord3d;
+    dg::assign3dfrom2d( coord2d, coord3d, grid);
+    feltor.set_sheath(
+            sheath_rate,
+            dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
+            coord3d);
+    t.toc();
+    DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
+}
+
+dg::HVec read_probes( const dg::file::WrappedJsonValue& probes, std::string x,
+        double rhos)
+{
+    unsigned size = probes[x].size();
+    dg::HVec out(size);
+    for( unsigned i=0; i<size; i++)
+        out[i] = probes.asJson()[i].asDouble()/rhos;
+    return out;
+}
+
+void parse_probes( std::string argv1,
+        const dg::file::WrappedJsonValue& js,
+        dg::file::WrappedJsonValue& js_probes,
+        dg::HVec& R_probe, dg::HVec& Z_probe, dg::HVec& P_probe
+        )
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+    std::string path;
+    bool file = true;
+    try{
+        try{ path = js["probes"].asString();
+        }catch ( std::runtime_error& e) { file = false; }
+        if ( file)
+            js_probes.asJson() = dg::file::file2Json( path,
+                    dg::file::comments::are_discarded, dg::file::error::is_throw);
+        else
+            js_probes.asJson() = js.asJson()["probes"];
+    }
+    catch(std::runtime_error& e)
+    {
+        DG_RANK0 std::cerr << "ERROR in probes file "<<path<<std::endl;
+        DG_RANK0 std::cerr << e.what()<<std::endl;
+        dg::abort_program();
+    }
+    double rhos = 1.;
+    if( file)
+    {
+        try{
+            rhos = js["physical"]["rho_s"].asDouble();
+        } catch( std::exception& e) {
+            DG_RANK0 std::cerr << "rho_s needs to be present in input file "<<argv1<<" if magnetic field from file\n";
+            DG_RANK0 std::cerr << e.what()<<std::endl;
+            dg::abort_program();
+        }
+    }
+    R_probe = read_probes( js_probes, "R", rhos);
+    Z_probe = read_probes( js_probes, "Z", rhos);
+    P_probe = read_probes( js_probes, "P", 1.);
+    unsigned num_pins = R_probe.size();
+    unsigned num_pinsZ = Z_probe.size();
+    unsigned num_pinsP = P_probe.size();
+    if( num_pins != num_pinsZ)
+        throw std::runtime_error( "Size of Z probes array ("
+                +std::to_string(num_pinsZ)+") does not match that of R ("
+                +std::to_string(num_pins)+")!");
+    if( num_pins != num_pinsP)
+        throw std::runtime_error( "Size of P probes array ("
+                +std::to_string(num_pinsP)+") does not match that of R ("
+                +std::to_string(num_pins)+")!");
+}
+
+
+}//namespace common

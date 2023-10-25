@@ -20,17 +20,6 @@
 #include "feltordiag.h"
 #include "init_from_file.h"
 
-#ifdef WITH_MPI
-//ATTENTION: in slurm should be used with --signal=SIGINT@30 (<signal>@<time in seconds>)
-void sigterm_handler(int signal)
-{
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    std::cout << " pid "<<rank<<" sigterm_handler, got signal " << signal << std::endl;
-    MPI_Finalize();
-    exit(signal);
-}
-#endif //WITH_MPI
 
 using Vector = std::array<std::array<dg::x::DVec, 2>,2>;
 
@@ -44,101 +33,44 @@ int main( int argc, char* argv[])
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    std::signal(SIGINT, sigterm_handler);
-    std::signal(SIGTERM, sigterm_handler);
+    std::signal(SIGINT, common::sigterm_handler);
+    std::signal(SIGTERM, common::sigterm_handler);
 #endif //WITH_MPI
     ////////////////////////Parameter initialisation//////////////////////////
+
     dg::file::WrappedJsonValue js( dg::file::error::is_throw);
-    if( argc != 2 && argc != 3 && argc != 4)
-    {
-        DG_RANK0 std::cerr << "ERROR: Wrong number of arguments!\nUsage: "
-                << argv[0]<<" [input.json] \n OR \n"
-                << argv[0]<<" [input.json] [output.nc]\n OR \n"
-                << argv[0]<<" [input.json] [output.nc] [initial.nc] "<<std::endl;
-        dg::abort_program();
-    }
-    try{
-        js = dg::file::file2Json( argv[1],
-                dg::file::comments::are_discarded, dg::file::error::is_throw);
-        feltor::Parameters p( js);
-    } catch( std::exception& e) {
-        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
-        DG_RANK0 std::cerr << e.what()<<std::endl;
-        dg::abort_program();
-    }
-    std::string geometry_params = js["magnetic_field"]["input"].asString();
-    if( geometry_params == "file")
-    {
-        std::string path = js["magnetic_field"]["file"].asString();
-        try{
-            js.asJson()["magnetic_field"]["params"] = dg::file::file2Json( path,
-                    dg::file::comments::are_discarded, dg::file::error::is_throw);
-            // convert unit to rhos
-            double rhos = js["physical"]["rho_s"].asDouble();
-            double R0 = js["magnetic_field"]["params"]["R_0"].asDouble();
-            js.asJson()["magnetic_field"]["params"]["R_0"] = R0/rhos;
-        }catch(std::runtime_error& e)
-        {
-            DG_RANK0 std::cerr << "ERROR in geometry file "<<path<<std::endl;
-            DG_RANK0 std::cerr << e.what()<<std::endl;
-            dg::abort_program();
-        }
-    }
-    else if( geometry_params != "params")
-    {
-        DG_RANK0 std::cerr << "Error: Unknown magnetic field input '"
-                           << geometry_params<<"'. Exit now!\n";
-        dg::abort_program();
-    }
+
+    common::parse_input_file<feltor::Parameters>( argc, argv, js);
+
+    common::parse_geometry_file( argv[1], js);
+
     const feltor::Parameters p( js);
+
     std::string inputfile = js.toStyledString();
     DG_RANK0 std::cout << inputfile <<  std::endl;
-    dg::geo::TokamakMagneticField mag, mod_mag, unmod_mag;
-    dg::geo::CylindricalFunctor wall, transition, sheath, sheath_coordinate =
-        [](double x, double y){return 0.;};
-    try{
-        mag = unmod_mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
-        mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
-                js["boundary"]["wall"], wall, transition);
-    }catch(std::runtime_error& e)
-    {
-        DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
-        DG_RANK0 std::cerr <<e.what()<<std::endl;
-        dg::abort_program();
-    }
 
-    ////////////////////////////////set up computations///////////////////////////
+    // create a timer
+    dg::Timer t;
+
+    dg::geo::TokamakMagneticField mag, mod_mag, unmod_mag;
+    dg::geo::CylindricalFunctor wall, transition;
+    common::create_mag_wall( argv[1], js, mag, mod_mag, unmod_mag, wall, transition);
 #ifdef WITH_MPI
-    int dims[3], periods[3], coords[3];
-    MPI_Cart_get( comm, 3, dims, periods, coords);
-    if( dims[2] >= (int)p.Nz)
-    {
-        DG_RANK0 std::cerr << "ERROR: Number of processes in z "<<dims[2]
-                    <<" may not be larger or equal Nz "<<p.Nz<<std::endl;
-        dg::abort_program();
-    }
+    common::check_Nz( p.Nz, comm);
 #endif //WITH_MPI
+
     //Make grids
-    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    const double Zmin=-p.boxscaleZm*mag.params().a();
-    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    const double Zmax=p.boxscaleZp*mag.params().a();
-    dg::x::CylindricalGrid3d grid( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
+    auto box = common::box( js);
+    dg::x::CylindricalGrid3d grid( box.at("Rmin"), box.at("Rmax"),
+            box.at("Zmin"), box.at("Zmax"), 0, 2.*M_PI,
         p.n, p.Nx, p.Ny, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER
         #ifdef WITH_MPI
         , comm
         #endif //WITH_MPI
         );
 
-    if( p.periodify)
-    {
-        unmod_mag = dg::geo::periodify( unmod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
-        mod_mag = dg::geo::periodify( mod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
-    }
-    if( p.modify_B)
-        mag = mod_mag;
-    else
-        mag = unmod_mag;
+    ////////////////////////////////set up computations///////////////////////////
+
 
     DG_RANK0 std::cout << "# Constructing Feltor...\n";
     //feltor::Filter<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DVec> filter( grid, js);
@@ -148,35 +80,13 @@ int main( int argc, char* argv[])
 
     feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
                     wall, grid)), p.nwall, p.uwall );
-    dg::Timer t;
+
+    dg::geo::CylindricalFunctor sheath, sheath_coordinate =
+        [](double x, double y){return 0.;};
     if( p.sheath_bc != "none")
     {
-        t.tic();
-        DG_RANK0 std::cout << "# Compute Sheath coordinates \n";
-        try{
-            dg::Grid2d sheath_walls( Rmin, Rmax, Zmin, Zmax, 1, 1, 1);
-            dg::geo::createSheathRegion( js["boundary"]["sheath"],
-                dg::geo::createMagneticField(js["magnetic_field"]["params"]),
-                wall, sheath_walls, sheath);
-            // sheath is created on feltor magnetic field
-            sheath_coordinate = dg::geo::WallFieldlineCoordinate(
-                    dg::geo::createBHat( mag), sheath_walls,
-                    p.sheath_max_angle, 1e-6, p.sheath_coord);
-        }catch(std::runtime_error& e)
-        {
-            DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
-            DG_RANK0 std::cerr <<e.what()<<std::endl;
-            dg::abort_program();
-        }
-        dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *grid.perp_grid());
-        dg::x::DVec coord3d;
-        dg::assign3dfrom2d( coord2d, coord3d, grid);
-        feltor.set_sheath(
-                p.sheath_rate,
-                dg::construct<dg::x::DVec>(dg::pullback( sheath, grid)),
-                coord3d);
-        t.toc();
-        DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
+        common::create_and_set_sheath( argv[1], js, mag, wall, sheath,
+                sheath_coordinate, grid, feltor);
     }
 
     DG_RANK0 std::cout << "# Set Source \n";
@@ -199,16 +109,6 @@ int main( int argc, char* argv[])
     /// /////////////The initial field//////////////////////////////////////////
     double time = 0.;
     Vector y0;
-    std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
-    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
-    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
-    gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
-    unsigned failed =0;
-    feltor::Variables var{
-        feltor, y0, p, mag, gradPsip, gradPsip, gradPsip, gradPsip,
-        0., // duration
-        &failed // nfailed
-    };
     DG_RANK0 std::cout << "# Set Initial conditions ... \n";
     t.tic();
     if( argc == 4 )
@@ -249,43 +149,13 @@ int main( int argc, char* argv[])
 
     ///PROBE ADDITIONS!!!
     dg::HVec R_probe, Z_probe, P_probe;
-    unsigned num_pins=0;
     dg::file::WrappedJsonValue js_probes( dg::file::error::is_throw);
     if( p.probes)
     {
-        std::string path;
-        bool file = true;
-        try{
-            try{ path = js["probes"].asString();
-            }catch ( std::runtime_error& e) { file = false; }
-            if ( file)
-                js_probes.asJson() = dg::file::file2Json( path,
-                        dg::file::comments::are_discarded, dg::file::error::is_throw);
-            else
-                js_probes.asJson() = js.asJson()["probes"];
-        }
-        catch(std::runtime_error& e)
-        {
-            DG_RANK0 std::cerr << "ERROR in probes file "<<path<<std::endl;
-            DG_RANK0 std::cerr << e.what()<<std::endl;
-            dg::abort_program();
-        }
-        double rhos = file ? js["physical"]["rho_s"].asDouble() : 1.;
-        R_probe = feltor::read_probes( js_probes, "R", rhos);
-        Z_probe = feltor::read_probes( js_probes, "Z", rhos);
-        P_probe = feltor::read_probes( js_probes, "P", 1.);
-        num_pins = R_probe.size();
-        unsigned num_pinsZ = Z_probe.size();
-        unsigned num_pinsP = P_probe.size();
-        if( num_pins != num_pinsZ)
-            throw std::runtime_error( "Size of Z probes array ("
-                    +std::to_string(num_pinsZ)+") does not match that of R ("
-                    +std::to_string(num_pins)+")!");
-        if( num_pins != num_pinsP)
-            throw std::runtime_error( "Size of P probes array ("
-                    +std::to_string(num_pinsP)+") does not match that of R ("
-                    +std::to_string(num_pins)+")!");
+        common::parse_probes( argv[1], js, js_probes, R_probe, Z_probe, P_probe);
     }
+
+    unsigned num_pins=R_probe.size();
     // create interpolation matrix
     dg::x::IHMatrix probe_interpolate = dg::create::interpolation( R_probe, Z_probe, P_probe, grid);
     // Create helper storage probe variables
@@ -304,6 +174,16 @@ int main( int argc, char* argv[])
 
 
     ///////////////////////////////////////////////////////////////////////////
+    std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
+    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+    gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
+    unsigned failed =0;
+    feltor::Variables var{
+        feltor, y0, p, mag, gradPsip, gradPsip, gradPsip, gradPsip,
+        0., // duration
+        &failed // nfailed
+    };
     DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
     dg::ExplicitMultistep< Vector> multistep;
     dg::Adaptive< dg::ERKStep< Vector>> adapt;
@@ -360,7 +240,7 @@ int main( int argc, char* argv[])
         unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
         unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
         unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy, Nz_out = p.Nz;
-        dg::x::CylindricalGrid3d g3d_out( Rmin, Rmax, Zmin, Zmax, 0, 2.*M_PI,
+        dg::x::CylindricalGrid3d g3d_out( grid.x0(), grid.x1(), grid.y0(), grid.y1(), 0, 2.*M_PI,
             n_out, Nx_out, Ny_out, p.symmetric ? 1 : Nz_out, p.bcxN, p.bcyN, dg::PER
             #ifdef WITH_MPI
             , comm
