@@ -508,6 +508,20 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
      * @brief Construct using a \c std::function
      *
      * @param step Called in the timeloop as <tt> step( t0, u1, t0, u1, dt) </tt>. Has to advance the ode in-place by \c dt and suggest a new \c dt for the next step.
+     * @note Useful if you want to do special things in every step
+     * @code
+    auto step = [=, &ode, &nfailed, adapt = dg::Adaptive<dg::ERKStep<Vec>(tableau, y0) ](
+        auto t0, auto y0, auto& t, auto& y, auto& dt) mutable
+    {
+        adapt.step( ode, t0, y0, t, y, dt, control, norm,
+                rtol, atol, reject_limit);
+        // do more things here ... for example:
+        if ( adapt.failed() )
+            nfailed ++;
+            // ...
+    };
+    dg::AdaptiveTimeloop<Vec>  timeloop(step);
+       @endcode
      */
     AdaptiveTimeloop( std::function<void (value_type, const ContainerType&,
                 value_type&, ContainerType&, value_type&)> step)  :
