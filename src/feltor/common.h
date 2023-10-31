@@ -584,4 +584,52 @@ void parse_probes( std::string argv1,
 }
 
 
+template<class Vector, class Explicit>
+std::unique_ptr<dg::aTimeloop<Vector>> init_timestepper(
+    const dg::file::WrappedJsonValue& js, Explicit& feltor, double time, const Vector& y0,
+    bool& adaptive, unsigned& nfailed)
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+    DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
+    auto odeint = std::unique_ptr<dg::aTimeloop<Vector>>();
+    std::string tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
+    std::string timestepper = js["timestepper"].get("type", "multistep").asString();
+    if( timestepper == "multistep")
+    {
+        double dt = js[ "timestepper"]["dt"].asDouble( 0.01);
+        odeint = std::make_unique<dg::MultistepTimeloop<Vector>>(
+            dg::ExplicitMultistep<Vector>(tableau,y0), feltor, time, y0, dt);
+    }
+    else if (timestepper == "adaptive")
+    {
+        //adapt.stepper().ignore_fsal();
+        double rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
+        double atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
+        double reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
+        auto step = [=, &feltor, &nfailed, adapt = dg::Adaptive<dg::ERKStep<Vector>>(tableau, y0) ](
+        auto t0, auto y0, auto& t, auto& y, auto& dt) mutable
+        {
+            adapt.step( feltor, t0, y0, t, y, dt, dg::pid_control, dg::l2norm,
+                    rtol, atol, reject_limit);
+            // do more things here ...
+            if ( adapt.failed() )
+                nfailed ++;
+        };
+        odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>(step);
+    }
+    else
+    {
+        DG_RANK0 std::cerr << "Error: Unrecognized timestepper: '"
+                           << timestepper << "'! Exit now!\n";
+        dg::abort_program();
+    }
+    DG_RANK0 std::cout << "Done!\n";
+    return odeint;
+
+}
+
+
 }//namespace common

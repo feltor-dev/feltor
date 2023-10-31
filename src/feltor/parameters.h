@@ -11,7 +11,6 @@ namespace feltor{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
-    std::string tableau, timestepper;
 
     unsigned itstp;
 
@@ -56,8 +55,6 @@ struct Parameters
         Nx          = js["grid"].get("Nx", 0).asUInt();
         Ny          = js["grid"].get("Ny", 0).asUInt();
         Nz          = js["grid"].get("Nz", 0).asUInt();
-        tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
-        timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
         itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();

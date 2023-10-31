@@ -184,38 +184,9 @@ int main( int argc, char* argv[])
         0., // duration
         &failed // nfailed
     };
-    DG_RANK0 std::cout << "# Initialize Timestepper" << std::endl;
-    dg::ExplicitMultistep< Vector> multistep;
-    dg::Adaptive< dg::ERKStep< Vector>> adapt;
-    auto odeint = std::unique_ptr<dg::aTimeloop<Vector>>();
-    double rtol = 0., atol = 0., dt = 0., reject_limit = 2;
-    if( p.timestepper == "multistep")
-    {
-        multistep = { p.tableau, y0};
-        dt = js[ "timestepper"]["dt"].asDouble( 0.01);
-        odeint = std::make_unique<dg::MultistepTimeloop<Vector>>( multistep,
-            feltor, time, y0, dt);
-    }
-    else if (p.timestepper == "adaptive")
-    {
-        adapt = {p.tableau, y0};
-        //adapt.stepper().ignore_fsal();
-        rtol = js[ "timestepper"][ "rtol"].asDouble( 1e-7);
-        atol = js[ "timestepper"][ "atol"].asDouble( 1e-10);
-        reject_limit = js["timestepper"].get("reject-limit", 2).asDouble();
-        odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>( adapt,
-            //std::tie(feltor, filter), dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
-            feltor, dg::pid_control, dg::l2norm, rtol, atol, reject_limit);
-        var.nfailed = &adapt.nfailed();
-    }
-    else
-    {
-        DG_RANK0 std::cerr << "Error: Unrecognized timestepper: '"
-                           << p.timestepper << "'! Exit now!\n";
-        dg::abort_program();
-    }
-    DG_RANK0 std::cout << "Done!\n";
     double t_output = time;
+    bool adaptive = false;
+    auto odeint = common::init_timestepper<Vector>( js, feltor, time, y0, adaptive, failed);
 
     unsigned maxout = js["output"].get( "maxout", 0).asUInt();
     std::string output_mode = js["timestepper"].get(
@@ -700,9 +671,9 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                 feltor.velocity(0), 0., dg::AbsMax<double>() );
                 DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive" )
+                if( adaptive )
                 {
-                    DG_RANK0 std::cout << "\tdt "<<dt<<"\n";
+                    DG_RANK0 std::cout << "\tdt "<<odeint->get_dt()<<"\n";
                     DG_RANK0 std::cout << "\tfailed "<<*var.nfailed<<"\n";
                 }
                 tti.toc();
@@ -917,7 +888,7 @@ int main( int argc, char* argv[])
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
                 std::cout << "\tMaximum ue "<<max_ue<<"\n";
-                if( p.timestepper == "adaptive" )
+                if( adaptive )
                 {
                     std::cout << "\tdt "<<odeint->get_dt()<<"\n";
                     std::cout << "\tfailed "<<*var.nfailed<<"\n";
