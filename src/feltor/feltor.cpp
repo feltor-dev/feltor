@@ -148,6 +148,7 @@ int main( int argc, char* argv[])
 
 
     ///PROBE ADDITIONS!!!
+    // This should be a class ...
     dg::HVec R_probe, Z_probe, P_probe;
     dg::file::WrappedJsonValue js_probes( dg::file::error::is_throw);
     if( p.probes)
@@ -170,9 +171,6 @@ int main( int argc, char* argv[])
         simple_probes_intern[record.name] = std::vector<dg::x::HVec>(p.itstp, simple_probes);
     std::vector<double> time_intern(p.itstp);
 
-
-
-
     ///////////////////////////////////////////////////////////////////////////
     std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
     gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
@@ -188,22 +186,6 @@ int main( int argc, char* argv[])
     bool adaptive = false;
     auto odeint = common::init_timestepper<Vector>( js, feltor, time, y0, adaptive, failed);
 
-    unsigned maxout = js["output"].get( "maxout", 0).asUInt();
-    std::string output_mode = js["timestepper"].get(
-            "output-mode", "Tend").asString();
-    double Tend = 0, deltaT = 0.;
-    if( output_mode == "Tend")
-    {
-        Tend = js["timestepper"].get( "Tend", 1).asDouble();
-        deltaT = Tend/(double)(maxout*p.itstp);
-    }
-    else if( output_mode == "deltaT")
-    {
-        deltaT = js["timestepper"].get( "deltaT", 1).asDouble()/(double)(p.itstp);
-        Tend = deltaT*(double)(maxout*p.itstp);
-    }
-    else
-        throw std::runtime_error( "timestepper: output-mode "+output_mode+" not recognized!\n");
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
     {
@@ -607,14 +589,14 @@ int main( int argc, char* argv[])
 
         t.tic();
         bool abort = false;
-        for( unsigned i=1; i<=maxout; i++)
+        for( unsigned i=1; i<=p.maxout; i++)
         {
             dg::Timer ti;
             ti.tic();
             for( unsigned j=1; j<=p.itstp; j++)
             {
                 try{
-                    odeint->integrate( time, y0, t_output + j*deltaT, y0,
+                    odeint->integrate( time, y0, t_output + j*p.deltaT, y0,
                         j<p.itstp ? dg::to::at_least :  dg::to::exact);
                 }
                 catch( dg::Fail& fail){ // a specific exception
@@ -682,7 +664,7 @@ int main( int argc, char* argv[])
             }
             ti.toc();
             var.duration = ti.diff();
-            t_output += p.itstp*deltaT;
+            t_output += p.itstp*p.deltaT;
             // Does not work due to direct application of Laplace
             // The Laplacian of Aparallel looks smooth in paraview
             ////----------------Test if ampere equation holds
@@ -696,7 +678,7 @@ int main( int argc, char* argv[])
             //    double error = dg::blas2::dot( resultD, feltor.vol3d(), resultD);
             //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
             //}
-            DG_RANK0 std::cout << "\n\t Step: Time "<<time <<" of " << Tend;
+            DG_RANK0 std::cout << "\n\t Step: Time "<<time <<" of " << p.Tend;
             DG_RANK0 std::cout << "\n\t Average time for one inner loop: "
                         << var.duration/(double)p.itstp<<"s";
 
@@ -799,7 +781,7 @@ int main( int argc, char* argv[])
         double second = t.diff() - hour*3600 - minute*60;
         DG_RANK0 std::cout << std::fixed << std::setprecision(2) <<std::setfill('0');
         DG_RANK0 std::cout <<"Computation Time \t"<<hour<<":"<<std::setw(2)<<minute<<":"<<second<<"\n";
-        DG_RANK0 std::cout <<"which is         \t"<<t.diff()/p.itstp/maxout<<"s/inner loop\n";
+        DG_RANK0 std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/inner loop\n";
     }
 #ifndef WITHOUT_GLFW
     if( p.output == "glfw")
@@ -881,9 +863,9 @@ int main( int argc, char* argv[])
             t.tic();
             for( unsigned i=1; i<=p.itstp; i++)
             {
-                odeint->integrate( time, y0, t_output + i*deltaT, y0,
+                odeint->integrate( time, y0, t_output + i*p.deltaT, y0,
                          i<p.itstp ? dg::to::at_least :  dg::to::exact);
-                std::cout << "Time "<<time<<" t_out "<<t_output<<" deltaT "<<deltaT<<" i "<<i<<" itstp "<<p.itstp<<"\n";
+                std::cout << "Time "<<time<<" t_out "<<t_output<<" deltaT "<<p.deltaT<<" i "<<i<<" itstp "<<p.itstp<<"\n";
 
                 double max_ue = dg::blas1::reduce(
                     feltor.velocity(0), 0., dg::AbsMax<double>() );
@@ -907,9 +889,9 @@ int main( int argc, char* argv[])
                 //    DG_RANK0 std::cout << "\tRel. Error Ampere "<<sqrt(error/norm) <<"\n";
                 //}
             }
-            t_output += p.itstp*deltaT;
+            t_output += p.itstp*p.deltaT;
             t.toc();
-            std::cout << "\n\t Time  "<<time<<" of "<<Tend;
+            std::cout << "\n\t Time  "<<time<<" of "<<p.Tend;
             std::cout << "\n\t Average time for one inner loop: "<<t.diff()/(double)p.itstp<<"\n\n";
         }
         glfwTerminate();

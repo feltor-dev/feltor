@@ -12,7 +12,8 @@ struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
 
-    unsigned itstp;
+    unsigned itstp, maxout;
+    double Tend, deltaT;
 
     std::vector<double> eps_pol;
     double jfactor;
@@ -56,7 +57,6 @@ struct Parameters
         Ny          = js["grid"].get("Ny", 0).asUInt();
         Nz          = js["grid"].get("Nz", 0).asUInt();
         partitioned = false;
-        itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
             throw std::runtime_error( "Output type "+output+" not recognized!\n");
@@ -196,6 +196,27 @@ struct Parameters
         probes = js.isMember("probes");
         if( js.isMember("probe"))
             throw std::runtime_error( "Field <probe> found! Did you mean <probes>?");
+        // output frequencies
+        maxout = js["output"].get( "maxout", 0).asUInt();
+        std::string output_mode = js["timestepper"].get(
+                "output-mode", "Tend").asString();
+        Tend = 0, deltaT = 0.;
+        itstp       = js["output"].get("itstp", 0).asUInt();
+        if( output_mode == "Tend")
+        {
+            Tend = js["timestepper"].get( "Tend", 1).asDouble();
+            deltaT = Tend/(double)(maxout*itstp);
+        }
+        else if( output_mode == "deltaT")
+        {
+            deltaT = js["timestepper"].get( "deltaT", 1).asDouble()/(double)(itstp);
+            Tend = deltaT*(double)(maxout*itstp);
+        }
+        else
+        {
+            throw std::runtime_error( "Error: Unrecognized timestepper: output-mode: '"
+                               + output_mode);
+        }
     }
 };
 
