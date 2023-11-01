@@ -46,8 +46,6 @@ struct Parameters
     bool symmetric, calibrate;
     bool penalize_wall, penalize_sheath;
     bool partitioned;
-    //bool mass_conserv, energy_theorem, toroidal_mom, parallel_mom, parallel_e_force, zonal_flow, COCE_GF, COCE_fluid; //To define which variable to be saved in the output (from input)
-    bool probes;
     //
 
     Parameters() = default;
@@ -195,10 +193,6 @@ struct Parameters
                 throw std::runtime_error( "Flag "+flag+" not recognized!\n");
         }
 
-        //Probes
-        probes = js.isMember("probes");
-        if( js.isMember("probe"))
-            throw std::runtime_error( "Field <probe> found! Did you mean <probes>?");
         // output frequencies
         maxout = js["output"].get( "maxout", 0).asUInt();
         std::string output_mode = js["timestepper"].get(
