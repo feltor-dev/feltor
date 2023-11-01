@@ -1875,32 +1875,5 @@ std::vector<Record1d> diagnostics1d_list = {
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-std::vector<Record> restart3d_list = {
-    {"restart_electrons", "electron density", false,
-        []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.restart_density(0), result);
-        }
-    },
-    {"restart_ions", "ion density", false,
-        []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.restart_density(1), result);
-        }
-    },
-    {"restart_Ue", "parallel electron velocity", false,
-        []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.restart_velocity(0), result);
-        }
-    },
-    {"restart_Ui", "parallel ion velocity", false,
-        []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.restart_velocity(1), result);
-        }
-    },
-    {"restart_aparallel", "parallel magnetic potential", false,
-        []( dg::x::DVec& result, Variables& v ) {
-             dg::blas1::copy(v.f.restart_aparallel(), result);
-        }
-    }
-};
 
 }//namespace feltor

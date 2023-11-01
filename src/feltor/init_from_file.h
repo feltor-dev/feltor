@@ -3,6 +3,7 @@
 
 #include "dg/file/nc_utilities.h"
 #include "parameters.h"
+#include "feltor.h"
 
 namespace feltor
 {//We use the typedefs and DG_RANK0
@@ -124,4 +125,78 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     dg::assign( transferOUTvec[3], y0[1][1]); //Wi
     return y0;
 }
+
+struct RestartFileOutput
+{
+    using Feltor = feltor::Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>;
+    RestartFileOutput() = default;
+    template<class Geometry>
+    RestartFileOutput( int ncid, const Geometry& grid): m_ncid(ncid){
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        dg::file::NC_Error_Handle err;
+        DG_RANK0 err = dg::file::define_dimensions( ncid, m_restart_dim_ids, grid,
+                {"zr", "yr", "xr"});
+        for( auto& record : m_restart3d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            m_restart_ids[name] = 0;//creates a new entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    m_restart_dim_ids, &m_restart_ids.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, m_restart_ids.at(name),
+                    "long_name", long_name.size(), long_name.data());
+        }
+    }
+
+    template<class Geometry, class ContainerType>
+    void write( const Geometry& grid, ContainerType& resultD, dg::x::HVec& resultH, Feltor& feltor )
+    {
+        for( auto& record : m_restart3d_list)
+        {
+            record.function( resultD, feltor);
+            dg::assign( resultD, resultH);
+            dg::file::put_var_double( m_ncid, m_restart_ids.at(record.name), grid, resultH);
+        }
+    }
+
+    private:
+    int m_ncid;
+    int m_restart_dim_ids[3];
+    std::map<std::string, int> m_restart_ids;
+    struct Record{
+        std::string name;
+        std::string long_name;
+        std::function<void( dg::x::DVec&, Feltor&)> function;
+    };
+    std::vector<Record> m_restart3d_list = {
+        {"restart_electrons", "electron density",
+            []( dg::x::DVec& result, Feltor& f ) {
+                 dg::blas1::copy(f.restart_density(0), result);
+            }
+        },
+        {"restart_ions", "ion density",
+            []( dg::x::DVec& result, Feltor& f ) {
+                 dg::blas1::copy(f.restart_density(1), result);
+            }
+        },
+        {"restart_Ue", "parallel electron velocity",
+            []( dg::x::DVec& result, Feltor& f ) {
+                 dg::blas1::copy(f.restart_velocity(0), result);
+            }
+        },
+        {"restart_Ui", "parallel ion velocity",
+            []( dg::x::DVec& result, Feltor& f ) {
+                 dg::blas1::copy(f.restart_velocity(1), result);
+            }
+        },
+        {"restart_aparallel", "parallel magnetic potential",
+            []( dg::x::DVec& result, Feltor& f ) {
+                 dg::blas1::copy(f.restart_aparallel(), result);
+            }
+        }
+    };
+};
 }//namespace feltor

@@ -190,9 +190,7 @@ int main( int argc, char* argv[])
     if( p.output == "netcdf")
     {
         // helper variables for output computations
-        unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
-        unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
-        unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy, Nz_out = p.Nz;
+        unsigned n_out = p.n, Nx_out = p.Nx/p.cx, Ny_out = p.Ny/p.cy, Nz_out = p.Nz;
         dg::x::CylindricalGrid3d g3d_out( grid.x0(), grid.x1(), grid.y0(), grid.y1(), 0, 2.*M_PI,
             n_out, Nx_out, Ny_out, p.symmetric ? 1 : Nz_out, p.bcxN, p.bcyN, dg::PER
             #ifdef WITH_MPI
@@ -211,9 +209,9 @@ int main( int argc, char* argv[])
         std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
         dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
         dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
-            dg::create::fast_projection( grid, 1, cx, cy);
+            dg::create::fast_projection( grid, 1, p.cx, p.cy);
         dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
-            dg::create::fast_projection( grid, 1, cx, cy);
+            dg::create::fast_projection( grid, 1, p.cx, p.cy);
         dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
         dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
         dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
@@ -232,8 +230,10 @@ int main( int argc, char* argv[])
         int ncid=-1;
         try{
             DG_RANK0 err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+            DG_RANK0 common::write_global_attributes( ncid, argc, argv, inputfile);
 #ifdef WRITE_POL_FILE
             DG_RANK0 err_pol = nc_create( "polarisation.nc", NC_NETCDF4|NC_CLOBBER, &ncid_pol);
+            DG_RANK0 common::write_global_attributes( ncid_pol, argc, argv, inputfile);
 #endif
 
         }catch( std::exception& e)
@@ -242,42 +242,14 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cerr << e.what()<<std::endl;
             dg::abort_program();
         }
-        /// Set global attributes
-        std::map<std::string, std::string> att;
-        att["title"] = "Output file of feltor/src/feltor/feltor.cu";
-        att["Conventions"] = "CF-1.8";
-        ///Get local time and begin file history
-        auto ttt = std::time(nullptr);
-        std::ostringstream oss;
-        ///time string  + program-name + args
-        oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
-        for( int i=0; i<argc; i++) oss << " "<<argv[i];
-        att["history"] = oss.str();
-        att["comment"] = "Find more info in feltor/src/feltor/feltor.tex";
-        att["source"] = "FELTOR";
-        att["git-hash"] = GIT_HASH;
-        att["git-branch"] = GIT_BRANCH;
-        att["compile-time"] = COMPILE_TIME;
-        att["references"] = "https://github.com/feltor-dev/feltor";
-        att["inputfile"] = inputfile;
-        for( auto pair : att)
-        {
-            DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
-                pair.first.data(), pair.second.size(), pair.second.data());
-#ifdef WRITE_POL_FILE
-            DG_RANK0 err_pol = nc_put_att_text( ncid_pol, NC_GLOBAL,
-                pair.first.data(), pair.second.size(), pair.second.data());
-#endif
-        }
 
+        feltor::RestartFileOutput restart( ncid, grid);
         // Define dimensions (t,z,y,x)
-        int dim_ids[4], restart_dim_ids[3], tvarID;
+        int dim_ids[4], tvarID;
         DG_RANK0 err = dg::file::define_dimensions( ncid, &dim_ids[1], g3d_out,
                 {"z", "y", "x"});
         if( !p.calibrate)
             DG_RANK0 err = dg::file::define_time( ncid, "time", dim_ids, &tvarID);
-        DG_RANK0 err = dg::file::define_dimensions( ncid, restart_dim_ids, grid,
-                {"zr", "yr", "xr"});
 #ifdef WRITE_POL_FILE
         DG_RANK0 err_pol = dg::file::define_dimensions( ncid_pol, dim_ids_pol, grid,
                 {"z", "y", "x"});
@@ -342,7 +314,7 @@ int main( int argc, char* argv[])
 
         //Create field IDs
         // the vector ids
-        std::map<std::string, int> id1d, id3d, id4d, restart_ids;
+        std::map<std::string, int> id1d, id3d, id4d;
         for( auto& record : feltor::diagnostics3d_list)
         {
             std::string name = record.name;
@@ -352,16 +324,6 @@ int main( int argc, char* argv[])
                 &id4d.at(name));
             DG_RANK0 err = nc_put_att_text( ncid, id4d.at(name), "long_name", long_name.size(),
                 long_name.data());
-        }
-        for( auto& record : feltor::restart3d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            restart_ids[name] = 0;//creates a new entry for all processes
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
-                    restart_dim_ids, &restart_ids.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, restart_ids.at(name),
-                    "long_name", long_name.size(), long_name.data());
         }
 
         std::vector<std::vector<feltor::Record>> equation_list;
@@ -512,12 +474,7 @@ int main( int argc, char* argv[])
             dg::assign( transferD, transferH);
             dg::file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
         }
-        for( auto& record : feltor::restart3d_list)
-        {
-            record.function( resultD, var);
-            dg::assign( resultD, resultH);
-            dg::file::put_var_double( ncid, restart_ids.at(record.name), grid, resultH);
-        }
+        restart.write( grid, resultD, resultH, feltor);
 
         for( auto& m_list : equation_list)
         {
@@ -695,13 +652,7 @@ int main( int argc, char* argv[])
                 dg::file::put_vara_double( ncid, id4d.at(record.name), start,
                         g3d_out, transferH);
             }
-            for( auto& record : feltor::restart3d_list)
-            {
-                record.function( resultD, var);
-                dg::assign( resultD, resultH);
-                dg::file::put_var_double( ncid, restart_ids.at(record.name),
-                        grid, resultH);
-            }
+            restart.write( grid, resultD, resultH, feltor);
             for( auto& m_list : equation_list)
             {
             for( auto& record : m_list)
