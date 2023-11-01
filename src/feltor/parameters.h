@@ -14,6 +14,7 @@ struct Parameters
 
     unsigned itstp, maxout;
     double Tend, deltaT;
+    unsigned cx, cy;
 
     std::vector<double> eps_pol;
     double jfactor;
@@ -64,6 +65,8 @@ struct Parameters
         if( "glfw" == output)
             throw std::runtime_error( "Output type glfw not possible without glfw compiled!\n");
 #endif
+        cx = js["output"]["compression"].get(0u,1).asUInt();
+        cy = js["output"]["compression"].get(1u,1).asUInt();
 
         stages      = js["elliptic"].get( "stages", 3).asUInt();
         eps_pol.resize(stages);
