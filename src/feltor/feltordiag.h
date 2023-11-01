@@ -174,29 +174,6 @@ std::vector<Record_static> diagnostics3d_static_list = {
         }
     },
 };
-void write_diagnostics3d_static_list(int ncid, int* dim_ids_zyx, Variables& var,
-const dg::x::CylindricalGrid3d& g3d_out)
-{
-#ifdef WITH_MPI
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //WITH_MPI
-    dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
-    dg::file::NC_Error_Handle err;
-    for ( auto& record : diagnostics3d_static_list)
-    {
-        int vecID;
-        DG_RANK0 err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 3,
-            dim_ids_zyx, &vecID);
-        DG_RANK0 err = nc_put_att_text( ncid, vecID,
-            "long_name", record.long_name.size(), record.long_name.data());
-        DG_RANK0 std::cout << "#Computing "<<record.name<<"\n";
-        record.function( transferH, var, g3d_out);
-        //record.function( resultH, var, grid);
-        //dg::blas2::symv( projectH, resultH, transferH);
-        dg::file::put_var_double( ncid, vecID, g3d_out, transferH);
-    }
-}
 
 std::array<std::tuple<std::string, std::string, dg::x::HVec>, 3> generate_cyl2cart( dg::x::CylindricalGrid3d& grid)
 {
@@ -428,52 +405,6 @@ std::vector<Record_static> diagnostics2d_static_list = {
         }
     },
 };
-void write_diagnostics2d_static_list(int ncid, int* dim_ids_yx, Variables& var,
-const dg::x::CylindricalGrid3d& grid, const dg::x::CylindricalGrid3d& g3d_out,
-dg::geo::CylindricalFunctor transition)
-{
-    bool write2d = true;
-    dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
-    dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
-    dg::file::NC_Error_Handle err;
-#ifdef WITH_MPI
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    //only the globally first slice should write
-    if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
-#endif //WITH_MPI
-    std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
-        g2d_out_ptr  ( dynamic_cast<typename
-                dg::x::CylindricalGrid3d::perpendicular_grid*>(
-                    g3d_out.perp_grid()));
-    dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
-            dg::create::fast_projection( grid, 1, var.p.cx, var.p.cy);
-    //create & output static 2d variables into file
-    for ( auto& record : feltor::diagnostics2d_static_list)
-    {
-        int vecID;
-        DG_RANK0 err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 2,
-            dim_ids_yx, &vecID);
-        DG_RANK0 err = nc_put_att_text( ncid, vecID,
-            "long_name", record.long_name.size(), record.long_name.data());
-        DG_RANK0 std::cout << "Computing2d "<<record.name<<"\n";
-        //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal variables return full grid functions
-        record.function( resultH, var, grid);
-        dg::blas2::symv( projectH, resultH, transferH);
-        if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
-    }
-    // transition has to be done by hand
-    int vecID;
-    DG_RANK0 err = nc_def_var( ncid, "MagneticTransition", NC_DOUBLE, 2,
-        dim_ids_yx, &vecID);
-    std::string long_name = "The region where the magnetic field is modified";
-    DG_RANK0 err = nc_put_att_text( ncid, vecID,
-        "long_name", long_name.size(), long_name.data());
-    DG_RANK0 std::cout << "Computing2d MagneticTransition\n";
-    resultH = dg::pullback( transition, grid);
-    dg::blas2::symv( projectH, resultH, transferH);
-    if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
-}
 
 // and here are all the 2d outputs we want to produce (currently ~ 150)
 std::vector<Record> basicDiagnostics2d_list = { // 22
@@ -1824,9 +1755,398 @@ std::vector<Record1d> diagnostics1d_list = {
         }
     }
 };
+///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+void write_diagnostics3d_static_list(int ncid, int* dim_ids_zyx, Variables& var,
+const dg::x::CylindricalGrid3d& g3d_out)
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+    dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+    dg::file::NC_Error_Handle err;
+    for ( auto& record : diagnostics3d_static_list)
+    {
+        int vecID;
+        DG_RANK0 err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 3,
+            dim_ids_zyx, &vecID);
+        DG_RANK0 err = nc_put_att_text( ncid, vecID,
+            "long_name", record.long_name.size(), record.long_name.data());
+        DG_RANK0 std::cout << "#Computing "<<record.name<<"\n";
+        record.function( transferH, var, g3d_out);
+        //record.function( resultH, var, grid);
+        //dg::blas2::symv( projectH, resultH, transferH);
+        dg::file::put_var_double( ncid, vecID, g3d_out, transferH);
+    }
+}
 
-///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+void write_diagnostics2d_static_list(int ncid, int* dim_ids_yx, Variables& var,
+const dg::x::CylindricalGrid3d& grid, const dg::x::CylindricalGrid3d& g3d_out,
+dg::geo::CylindricalFunctor transition)
+{
+    bool write2d = true;
+    dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
+    dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+    dg::file::NC_Error_Handle err;
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    //only the globally first slice should write
+    if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
+#endif //WITH_MPI
+    std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
+        g2d_out_ptr  ( dynamic_cast<typename
+                dg::x::CylindricalGrid3d::perpendicular_grid*>(
+                    g3d_out.perp_grid()));
+    dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
+            dg::create::fast_projection( grid, 1, var.p.cx, var.p.cy);
+    //create & output static 2d variables into file
+    for ( auto& record : feltor::diagnostics2d_static_list)
+    {
+        int vecID;
+        DG_RANK0 err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 2,
+            dim_ids_yx, &vecID);
+        DG_RANK0 err = nc_put_att_text( ncid, vecID,
+            "long_name", record.long_name.size(), record.long_name.data());
+        DG_RANK0 std::cout << "Computing2d "<<record.name<<"\n";
+        //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal variables return full grid functions
+        record.function( resultH, var, grid);
+        dg::blas2::symv( projectH, resultH, transferH);
+        if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
+    }
+    // transition has to be done by hand
+    int vecID;
+    DG_RANK0 err = nc_def_var( ncid, "MagneticTransition", NC_DOUBLE, 2,
+        dim_ids_yx, &vecID);
+    std::string long_name = "The region where the magnetic field is modified";
+    DG_RANK0 err = nc_put_att_text( ncid, vecID,
+        "long_name", long_name.size(), long_name.data());
+    DG_RANK0 std::cout << "Computing2d MagneticTransition\n";
+    resultH = dg::pullback( transition, grid);
+    dg::blas2::symv( projectH, resultH, transferH);
+    if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
+}
+
+struct WriteDiagnostics1dList
+{
+    WriteDiagnostics1dList() = default;
+    WriteDiagnostics1dList(int ncid, int* dim_ids)
+    {
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        dg::file::NC_Error_Handle err;
+        for( auto& record : feltor::diagnostics1d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            m_id1d[name] = 0;
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1,
+                &dim_ids[0], &m_id1d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, m_id1d.at(name), "long_name",
+                long_name.size(), long_name.data());
+        }
+    }
+    void write( int ncid, size_t start, size_t count, Variables& var)
+    {
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        for( auto& record : feltor::diagnostics1d_list)
+        {
+            double result = record.function( var);
+            DG_RANK0 nc_put_vara_double( ncid, m_id1d.at(record.name), &start, &count, &result);
+        }
+    }
+    private:
+    std::map<std::string, int> m_id1d;
+};
+
+struct WriteDiagnostics3dList
+{
+    WriteDiagnostics3dList() = default;
+    WriteDiagnostics3dList(int ncid, int * dim_ids)
+    {
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        dg::file::NC_Error_Handle err;
+        for( auto& record : feltor::diagnostics3d_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            m_id4d[name] = 0;//creates a new id4d entry for all processes
+            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids,
+                &m_id4d.at(name));
+            DG_RANK0 err = nc_put_att_text( ncid, m_id4d.at(name), "long_name", long_name.size(),
+                long_name.data());
+        }
+    }
+    void write( int ncid, size_t start, const dg::x::CylindricalGrid3d& grid,
+        const dg::x::CylindricalGrid3d& g3d_out, Variables& var)
+    {
+        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
+        dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+        dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
+            dg::create::fast_projection( grid, 1, var.p.cx, var.p.cy);
+        for( auto& record : feltor::diagnostics3d_list)
+        {
+            record.function( resultD, var);
+            dg::blas2::symv( projectD, resultD, transferD);
+            dg::assign( transferD, transferH);
+            dg::file::put_vara_double( ncid, m_id4d.at(record.name), start, g3d_out, transferH);
+        }
+    }
+    private:
+    std::map<std::string, int> m_id4d;
+};
+
+struct WriteDiagnostics2dList
+{
+    WriteDiagnostics2dList() = default;
+    WriteDiagnostics2dList( const dg::file::WrappedJsonValue& js , int ncid, int* dim_ids3d)
+    {
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        std::vector<std::vector<feltor::Record>> equation_list;
+        bool equation_list_exists = js["output"].isMember("equations");
+        if( equation_list_exists)
+        {
+            for( unsigned i=0; i<js["output"]["equations"].size(); i++)
+            {
+                std::string eqn = js["output"]["equations"][i].asString();
+                if( eqn == "Basic")
+                    m_equation_list.push_back(feltor::basicDiagnostics2d_list);
+                else if( eqn == "Mass-conserv")
+                    m_equation_list.push_back(feltor::MassConsDiagnostics2d_list);
+                else if( eqn == "Energy-theorem")
+                    m_equation_list.push_back(feltor::EnergyDiagnostics2d_list);
+                else if( eqn == "Toroidal-momentum")
+                    m_equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
+                else if( eqn == "Parallel-momentum")
+                    m_equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
+                else if( eqn == "Zonal-Flow-Energy")
+                    m_equation_list.push_back(feltor::RSDiagnostics2d_list);
+                else if( eqn == "COCE")
+                    m_equation_list.push_back(feltor::COCEDiagnostics2d_list);
+                else
+                    throw std::runtime_error( "output: equations: "+eqn+" not recognized!\n");
+            }
+        }
+        else // default diagnostics
+        {
+            m_equation_list.push_back(feltor::basicDiagnostics2d_list);
+            m_equation_list.push_back(feltor::MassConsDiagnostics2d_list);
+            m_equation_list.push_back(feltor::EnergyDiagnostics2d_list);
+            m_equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
+            m_equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
+            m_equation_list.push_back(feltor::RSDiagnostics2d_list);
+        }
+        dg::file::NC_Error_Handle err;
+        for( auto& list : m_equation_list)
+        {
+            for( auto& record : list)
+            {
+                std::string name = record.name + "_ta2d";
+                std::string long_name = record.long_name + " (Toroidal average)";
+                m_id3d[name] = 0;//creates a new id3d entry for all processes
+                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
+                    &m_id3d.at(name));
+                DG_RANK0 err = nc_put_att_text( ncid, m_id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+
+                name = record.name + "_2d";
+                long_name = record.long_name + " (Evaluated on phi = 0 plane)";
+                m_id3d[name] = 0;
+                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
+                    dim_ids3d, &m_id3d.at(name));
+                DG_RANK0 err = nc_put_att_text( ncid, m_id3d.at(name), "long_name",
+                    long_name.size(), long_name.data());
+            }
+        }
+    }
+    void first_write( int ncid, size_t start, double time, const dg::x::CylindricalGrid3d& grid,
+        const dg::x::CylindricalGrid3d& g3d_out, Variables& var)
+    {
+        bool write2d = true;
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //only the globally first slice should write
+        if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
+#endif //WITH_MPI
+        std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
+            g2d_out_ptr  ( dynamic_cast<typename
+                    dg::x::CylindricalGrid3d::perpendicular_grid*>(
+                        g3d_out.perp_grid()));
+#ifdef WITH_MPI
+        unsigned local_size2d = g2d_out_ptr->local().size();
+#else
+        unsigned local_size2d = g2d_out_ptr->size();
+#endif
+        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
+        dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+        dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
+            dg::create::fast_projection( grid, 1, var.p.cx, var.p.cy);
+        dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
+        for( auto& list : m_equation_list)
+        {
+            for( auto& record : list)
+            {
+                dg::Timer tti;
+                tti.tic();
+                record.function( resultD, var);
+                dg::blas2::symv( projectD, resultD, transferD);
+                //toroidal average
+                std::string name = record.name + "_ta2d";
+                dg::assign( transferD, transferH);
+                toroidal_average( transferH, transferH2d, false);
+                //create and init Simpsons for time integrals
+                if( record.integral) m_time_integrals[name].init( time, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+                tti.tic();
+                if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+                tti.tic();
+                // add a slice
+                name = record.name + "_2d";
+                feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                dg::assign( transferD2d, transferH2d);
+                if( record.integral) m_time_integrals[name].init( time, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name), start, *g2d_out_ptr, transferH2d);
+                tti.toc();
+                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+            }
+        }
+    }
+
+    void save( double time, const dg::x::CylindricalGrid3d& grid,
+        const dg::x::CylindricalGrid3d& g3d_out, Variables& var)
+    {
+        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
+        dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+        dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
+            dg::create::fast_projection( grid, 1, var.p.cx, var.p.cy);
+        std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
+            g2d_out_ptr  ( dynamic_cast<typename
+                    dg::x::CylindricalGrid3d::perpendicular_grid*>(
+                        g3d_out.perp_grid()));
+#ifdef WITH_MPI
+        unsigned local_size2d = g2d_out_ptr->local().size();
+#else
+        unsigned local_size2d = g2d_out_ptr->size();
+#endif
+        dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
+        for( auto& list : m_equation_list)
+        {
+            for( auto& record : list)
+            {
+                if( record.integral)
+                {
+                    record.function( resultD, var);
+                    dg::blas2::symv( projectD, resultD, transferD);
+                    //toroidal average and add to time integral
+                    dg::assign( transferD, transferH);
+                    toroidal_average( transferH, transferH2d, false);
+                    m_time_integrals.at(record.name+"_ta2d").add( time,
+                        transferH2d);
+                    // 2d data of plane varphi = 0
+                    feltor::slice_vector3d( transferD, transferD2d,
+                        local_size2d);
+                    dg::assign( transferD2d, transferH2d);
+                    m_time_integrals.at(record.name+"_2d").add( time,
+                        transferH2d);
+                }
+            }
+        }
+    }
+    void write( int ncid, int start, const dg::x::CylindricalGrid3d& grid,
+        const dg::x::CylindricalGrid3d& g3d_out, Variables& var)
+    {
+        bool write2d = true;
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //only the globally first slice should write
+        if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
+#endif //WITH_MPI
+        std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
+            g2d_out_ptr  ( dynamic_cast<typename
+                    dg::x::CylindricalGrid3d::perpendicular_grid*>(
+                        g3d_out.perp_grid()));
+#ifdef WITH_MPI
+        unsigned local_size2d = g2d_out_ptr->local().size();
+#else
+        unsigned local_size2d = g2d_out_ptr->size();
+#endif
+        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
+        dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+        dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
+            dg::create::fast_projection( grid, 1, var.p.cx, var.p.cy);
+        dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
+        dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
+        for( auto& list : m_equation_list)
+        {
+        for( auto& record : list)
+        {
+            if(record.integral) // we already computed the output...
+            {
+                std::string name = record.name+"_ta2d";
+                transferH2d = m_time_integrals.at(name).get_integral();
+                m_time_integrals.at(name).flush();
+                if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name),
+                        start, *g2d_out_ptr, transferH2d);
+
+                name = record.name+"_2d";
+                transferH2d = m_time_integrals.at(name).get_integral( );
+                m_time_integrals.at(name).flush();
+                if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name),
+                        start, *g2d_out_ptr, transferH2d);
+            }
+            else // compute from scratch
+            {
+                record.function( resultD, var);
+                dg::blas2::symv( projectD, resultD, transferD);
+                std::string name = record.name + "_ta2d";
+                dg::assign( transferD, transferH);
+                toroidal_average( transferH, transferH2d, false);
+                if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name),
+                        start, *g2d_out_ptr, transferH2d);
+
+                // 2d data of plane varphi = 0
+                name = record.name+"_2d";
+                feltor::slice_vector3d( transferD, transferD2d, local_size2d);
+                dg::assign( transferD2d, transferH2d);
+                if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name),
+                        start, *g2d_out_ptr, transferH2d);
+            }
+        }
+        }
+    }
+    private:
+    std::map<std::string, int> m_id3d;
+    std::vector<std::vector<feltor::Record>> m_equation_list;
+    std::map<std::string, dg::Simpsons<dg::x::HVec>> m_time_integrals;
+
+};
+
 
 }//namespace feltor

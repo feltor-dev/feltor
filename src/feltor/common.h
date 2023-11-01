@@ -345,6 +345,7 @@ void parse_input_file( int argc, char* argv[], dg::file::WrappedJsonValue& js)
         dg::abort_program();
     }
 }
+
 void parse_geometry_file( std::string argv1, dg::file::WrappedJsonValue& js)
 {
 #ifdef WITH_MPI
@@ -404,7 +405,6 @@ std::map<std::string,double> box( const dg::file::WrappedJsonValue& js)
         {"Rmin", Rmin},{"Rmax",Rmax}, {"Zmin", Zmin},{"Zmax",Zmax}
     };
 }
-
 
 void create_mag_wall(
         const std::string argv1,
@@ -518,7 +518,6 @@ void create_and_set_sheath(
     t.toc();
     DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
 }
-
 
 template<class Vector, class Explicit>
 std::unique_ptr<dg::aTimeloop<Vector>> init_timestepper(

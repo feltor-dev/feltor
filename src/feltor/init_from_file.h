@@ -151,9 +151,11 @@ struct RestartFileOutput
         }
     }
 
-    template<class Geometry, class ContainerType>
-    void write( const Geometry& grid, ContainerType& resultD, dg::x::HVec& resultH, Feltor& feltor )
+    template<class Geometry>
+    void write( const Geometry& grid, Feltor& feltor )
     {
+        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         for( auto& record : m_restart3d_list)
         {
             record.function( resultD, feltor);

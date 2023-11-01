@@ -151,50 +151,14 @@ int main( int argc, char* argv[])
 
 
     ///////////////////////////////////////////////////////////////////////////
-    std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
-    gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
-    gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
-    gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
-    unsigned failed =0;
-    feltor::Variables var{
-        feltor, y0, p, mag, gradPsip, gradPsip, gradPsip, gradPsip,
-        0., // duration
-        &failed // nfailed
-    };
     double t_output = time;
+    unsigned failed =0;
     bool adaptive = false;
     auto odeint = common::init_timestepper<Vector>( js, feltor, time, y0, adaptive, failed);
 
     /// //////////////////////////set up netcdf/////////////////////////////////////
     if( p.output == "netcdf")
     {
-        // helper variables for output computations
-        unsigned n_out = p.n, Nx_out = p.Nx/p.cx, Ny_out = p.Ny/p.cy, Nz_out = p.Nz;
-        dg::x::CylindricalGrid3d g3d_out( grid.x0(), grid.x1(), grid.y0(), grid.y1(), 0, 2.*M_PI,
-            n_out, Nx_out, Ny_out, p.symmetric ? 1 : Nz_out, p.bcxN, p.bcyN, dg::PER
-            #ifdef WITH_MPI
-            , comm
-            #endif //WITH_MPI
-            );
-        std::unique_ptr<typename dg::x::CylindricalGrid3d::perpendicular_grid>
-            g2d_out_ptr  ( dynamic_cast<typename
-                    dg::x::CylindricalGrid3d::perpendicular_grid*>(
-                        g3d_out.perp_grid()));
-#ifdef WITH_MPI
-        unsigned local_size2d = g2d_out_ptr->local().size();
-#else
-        unsigned local_size2d = g2d_out_ptr->size();
-#endif
-        std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
-        dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
-        dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
-            dg::create::fast_projection( grid, 1, p.cx, p.cy);
-        dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
-        dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
-        dg::x::HVec transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
-        dg::x::DVec transferD2d = dg::evaluate( dg::zero, *g2d_out_ptr);
-        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
-        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
         if( argc != 3 && argc != 4)
         {
             DG_RANK0 std::cerr << "ERROR: Wrong number of arguments for netcdf output!\nUsage: "
@@ -220,7 +184,14 @@ int main( int argc, char* argv[])
             dg::abort_program();
         }
 
-        feltor::RestartFileOutput restart( ncid, grid);
+        // helper variables for output computations
+        dg::x::CylindricalGrid3d g3d_out( grid.x0(), grid.x1(), grid.y0(), grid.y1(), 0, 2.*M_PI,
+            p.n, p.Nx/p.cx, p.Ny/p.cy, p.symmetric ? 1 : p.Nz, p.bcxN, p.bcyN, dg::PER
+            #ifdef WITH_MPI
+            , comm
+            #endif //WITH_MPI
+            );
+
         // Define dimensions (t,z,y,x)
         int dim_ids[4], tvarID;
         DG_RANK0 err = dg::file::define_dimensions( ncid, &dim_ids[1], g3d_out,
@@ -232,11 +203,16 @@ int main( int argc, char* argv[])
                 {"z", "y", "x"});
 #endif
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
-        bool write2d = true;
-#ifdef WITH_MPI
-        //only the globally first slice should write
-        if( !(g3d_out.local().z0() - g3d_out.global().z0() < 1e-14) ) write2d = false;
-#endif //WITH_MPI
+
+        std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
+        gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
+        gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
+        gradPsip[2] =  dg::evaluate( dg::zero, grid); //zero
+        feltor::Variables var{
+            feltor, y0, p, mag, gradPsip, gradPsip, gradPsip, gradPsip,
+            0., // duration
+            &failed // nfailed
+        };
 
         //create & output static 3d variables into file
         feltor::write_diagnostics3d_static_list( ncid, &dim_ids[1], var, g3d_out);
@@ -252,88 +228,10 @@ int main( int argc, char* argv[])
             return 0;
         }
 
-        //Create field IDs
-        // the vector ids
-        std::map<std::string, int> id1d, id3d, id4d;
-        for( auto& record : feltor::diagnostics3d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            id4d[name] = 0;//creates a new id4d entry for all processes
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids,
-                &id4d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id4d.at(name), "long_name", long_name.size(),
-                long_name.data());
-        }
-
-        std::vector<std::vector<feltor::Record>> equation_list;
-        bool equation_list_exists = js["output"].isMember("equations");
-        if( equation_list_exists)
-        {
-            for( unsigned i=0; i<js["output"]["equations"].size(); i++)
-            {
-                std::string eqn = js["output"]["equations"][i].asString();
-                if( eqn == "Basic")
-                    equation_list.push_back(feltor::basicDiagnostics2d_list);
-                else if( eqn == "Mass-conserv")
-                    equation_list.push_back(feltor::MassConsDiagnostics2d_list);
-                else if( eqn == "Energy-theorem")
-                    equation_list.push_back(feltor::EnergyDiagnostics2d_list);
-                else if( eqn == "Toroidal-momentum")
-                    equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
-                else if( eqn == "Parallel-momentum")
-                    equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
-                else if( eqn == "Zonal-Flow-Energy")
-                    equation_list.push_back(feltor::RSDiagnostics2d_list);
-                else if( eqn == "COCE")
-                    equation_list.push_back(feltor::COCEDiagnostics2d_list);
-                else
-                    throw std::runtime_error( "output: equations: "+eqn+" not recognized!\n");
-            }
-        }
-        else // default diagnostics
-        {
-            equation_list.push_back(feltor::basicDiagnostics2d_list);
-            equation_list.push_back(feltor::MassConsDiagnostics2d_list);
-            equation_list.push_back(feltor::EnergyDiagnostics2d_list);
-            equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
-            equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
-            equation_list.push_back(feltor::RSDiagnostics2d_list);
-        }
-
-        std::string m_list;
-        for( auto& m_list : equation_list)
-        {
-            for( auto& record : m_list)
-            {
-                std::string name = record.name + "_ta2d";
-                std::string long_name = record.long_name + " (Toroidal average)";
-                id3d[name] = 0;//creates a new id3d entry for all processes
-                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids3d,
-                    &id3d.at(name));
-                DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
-                    long_name.size(), long_name.data());
-
-                name = record.name + "_2d";
-                long_name = record.long_name + " (Evaluated on phi = 0 plane)";
-                id3d[name] = 0;
-                DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
-                    dim_ids3d, &id3d.at(name));
-                DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
-                    long_name.size(), long_name.data());
-            }
-        }
-
-        for( auto& record : feltor::diagnostics1d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            id1d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1,
-                &dim_ids[0], &id1d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
-                long_name.size(), long_name.data());
-        }
+        feltor::WriteDiagnostics1dList diag1d( ncid, dim_ids);
+        feltor::WriteDiagnostics2dList diag2d( js, ncid, dim_ids3d);
+        feltor::WriteDiagnostics3dList diag3d( ncid, dim_ids);
+        feltor::RestartFileOutput restart( ncid, grid);
 
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "First output ... \n";
@@ -352,51 +250,11 @@ int main( int argc, char* argv[])
 
         size_t start = 0, count = 1;
         DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-        for( auto& record : feltor::diagnostics3d_list)
-        {
-            record.function( resultD, var);
-            dg::blas2::symv( projectD, resultD, transferD);
-            dg::assign( transferD, transferH);
-            dg::file::put_vara_double( ncid, id4d.at(record.name), start, g3d_out, transferH);
-        }
-        restart.write( grid, resultD, resultH, feltor);
+        restart.write( grid, feltor);
 
-        for( auto& m_list : equation_list)
-        {
-            for( auto& record : m_list)
-            {
-                dg::Timer tti;
-                tti.tic();
-                record.function( resultD, var);
-                dg::blas2::symv( projectD, resultD, transferD);
-                //toroidal average
-                std::string name = record.name + "_ta2d";
-                dg::assign( transferD, transferH);
-                toroidal_average( transferH, transferH2d, false);
-                //create and init Simpsons for time integrals
-                if( record.integral) time_integrals[name].init( time, transferH2d);
-                tti.toc();
-                DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
-                tti.tic();
-                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
-                tti.toc();
-                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
-                tti.tic();
-                // add a slice
-                name = record.name + "_2d";
-                feltor::slice_vector3d( transferD, transferD2d, local_size2d);
-                dg::assign( transferD2d, transferH2d);
-                if( record.integral) time_integrals[name].init( time, transferH2d);
-                if(write2d) dg::file::put_vara_double( ncid, id3d.at(name), start, *g2d_out_ptr, transferH2d);
-                tti.toc();
-                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
-            }
-        }
-        for( auto& record : feltor::diagnostics1d_list)
-        {
-            double result = record.function( var);
-            DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
-        }
+        diag1d.write( ncid, start, count, var);
+        diag2d.first_write( ncid, start, time, grid, g3d_out, var );
+        diag3d.write( ncid, start, grid, g3d_out, var);
 
 
         probes.set_probe_group( ncid);
@@ -435,32 +293,11 @@ int main( int argc, char* argv[])
 
 
                 probes.save(var,time,j-1);
-                for( auto& m_list : equation_list)
-                {
-                    for( auto& record : m_list)
-                    {
-                        if( record.integral)
-                        {
-                            record.function( resultD, var);
-                            dg::blas2::symv( projectD, resultD, transferD);
-                            //toroidal average and add to time integral
-                            dg::assign( transferD, transferH);
-                            toroidal_average( transferH, transferH2d, false);
-                            time_integrals.at(record.name+"_ta2d").add( time,
-                                transferH2d);
-                            // 2d data of plane varphi = 0
-                            feltor::slice_vector3d( transferD, transferD2d,
-                                local_size2d);
-                            dg::assign( transferD2d, transferH2d);
-                            time_integrals.at(record.name+"_2d").add( time,
-                                transferH2d);
-                        }
-                    }
-                }
+                diag2d.save( time, grid, g3d_out, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
                 double max_ue = dg::blas1::reduce(
-                feltor.velocity(0), 0., dg::AbsMax<double>() );
+                    feltor.velocity(0), 0., dg::AbsMax<double>() );
                 DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
                 if( adaptive )
                 {
@@ -496,58 +333,11 @@ int main( int argc, char* argv[])
             start = i;
             DG_RANK0 err = nc_open(file_name.data(), NC_WRITE, &ncid);
             DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-            for( auto& record : feltor::diagnostics3d_list)
-            {
-                record.function( resultD, var);
-                dg::blas2::symv( projectD, resultD, transferD);
-                dg::assign( transferD, transferH);
-                dg::file::put_vara_double( ncid, id4d.at(record.name), start,
-                        g3d_out, transferH);
-            }
-            restart.write( grid, resultD, resultH, feltor);
-            for( auto& m_list : equation_list)
-            {
-            for( auto& record : m_list)
-            {
-                if(record.integral) // we already computed the output...
-                {
-                    std::string name = record.name+"_ta2d";
-                    transferH2d = time_integrals.at(name).get_integral();
-                    time_integrals.at(name).flush();
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
-                            start, *g2d_out_ptr, transferH2d);
+            diag3d.write( ncid, start, grid, g3d_out, var);
+            restart.write( grid, feltor);
+            diag2d.write( ncid, start, grid, g3d_out, var );
 
-                    name = record.name+"_2d";
-                    transferH2d = time_integrals.at(name).get_integral( );
-                    time_integrals.at(name).flush();
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
-                            start, *g2d_out_ptr, transferH2d);
-                }
-                else // compute from scratch
-                {
-                    record.function( resultD, var);
-                    dg::blas2::symv( projectD, resultD, transferD);
-                    std::string name = record.name + "_ta2d";
-                    dg::assign( transferD, transferH);
-                    toroidal_average( transferH, transferH2d, false);
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
-                            start, *g2d_out_ptr, transferH2d);
-
-                    // 2d data of plane varphi = 0
-                    name = record.name+"_2d";
-                    feltor::slice_vector3d( transferD, transferD2d, local_size2d);
-                    dg::assign( transferD2d, transferH2d);
-                    if(write2d) dg::file::put_vara_double( ncid, id3d.at(name),
-                            start, *g2d_out_ptr, transferH2d);
-                }
-            }
-            }
-
-            for( auto& record : feltor::diagnostics1d_list)
-            {
-                double result = record.function( var);
-                DG_RANK0 nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
-            }
+            diag1d.write( ncid, start, count, var);
             probes.write_after_save( var);
 
             DG_RANK0 err = nc_close(ncid);
@@ -653,7 +443,7 @@ int main( int argc, char* argv[])
                 if( adaptive )
                 {
                     std::cout << "\tdt "<<odeint->get_dt()<<"\n";
-                    std::cout << "\tfailed "<<*var.nfailed<<"\n";
+                    std::cout << "\tfailed "<<failed<<"\n";
                 }
                 //----------------Test if ampere equation holds
                 // Does not work due to direct application of Laplace
