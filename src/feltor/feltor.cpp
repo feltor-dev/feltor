@@ -208,8 +208,6 @@ int main( int argc, char* argv[])
 #endif
         std::map<std::string, dg::Simpsons<dg::x::HVec>> time_integrals;
         dg::Average<dg::x::HVec> toroidal_average( g3d_out, dg::coo3d::z, "simple");
-        dg::MultiMatrix<dg::x::HMatrix,dg::x::HVec> projectH =
-            dg::create::fast_projection( grid, 1, p.cx, p.cy);
         dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
             dg::create::fast_projection( grid, 1, p.cx, p.cy);
         dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
@@ -262,46 +260,9 @@ int main( int argc, char* argv[])
 #endif //WITH_MPI
 
         //create & output static 3d variables into file
-        for ( auto& record : feltor::diagnostics3d_static_list)
-        {
-            int vecID;
-            DG_RANK0 err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 3,
-                &dim_ids[1], &vecID);
-            DG_RANK0 err = nc_put_att_text( ncid, vecID,
-                "long_name", record.long_name.size(), record.long_name.data());
-            DG_RANK0 std::cout << "Computing "<<record.name<<"\n";
-            record.function( transferH, var, g3d_out);
-            //record.function( resultH, var, grid);
-            //dg::blas2::symv( projectH, resultH, transferH);
-            dg::file::put_var_double( ncid, vecID, g3d_out, transferH);
-        }
+        feltor::write_diagnostics3d_static_list( ncid, &dim_ids[1], var, g3d_out);
         //create & output static 2d variables into file
-        for ( auto& record : feltor::diagnostics2d_static_list)
-        {
-            int vecID;
-            DG_RANK0 err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 2,
-                &dim_ids[2], &vecID);
-            DG_RANK0 err = nc_put_att_text( ncid, vecID,
-                "long_name", record.long_name.size(), record.long_name.data());
-            DG_RANK0 std::cout << "Computing2d "<<record.name<<"\n";
-            //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal variables return full grid functions
-            record.function( resultH, var, grid);
-            dg::blas2::symv( projectH, resultH, transferH);
-            if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
-        }
-        {
-            // transition has to be done by hand
-            int vecID;
-            DG_RANK0 err = nc_def_var( ncid, "MagneticTransition", NC_DOUBLE, 2,
-                &dim_ids[2], &vecID);
-            std::string long_name = "The region where the magnetic field is modified";
-            DG_RANK0 err = nc_put_att_text( ncid, vecID,
-                "long_name", long_name.size(), long_name.data());
-            DG_RANK0 std::cout << "Computing2d MagneticTransition\n";
-            resultH = dg::pullback( transition, grid);
-            dg::blas2::symv( projectH, resultH, transferH);
-            if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
-        }
+        feltor::write_diagnostics2d_static_list( ncid, &dim_ids[2], var, grid, g3d_out, transition);
 
         if( p.calibrate)
         {
