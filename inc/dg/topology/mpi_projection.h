@@ -268,6 +268,13 @@ dg::MIHMatrix_t<real_type> projection( const aRealMPITopology3d<real_type>&
 /**
  * @brief Create an MPI row distributed interpolation 2d matrix
  *
+ * @note In the MPI version each process creates a local interpolation matrix
+ * with local row and global column indices using the given points and
+ * @code
+ * auto mat = dg::create::interpolation ( x,y, g.global(), bcx, bcy, method);
+ * return dg::convert( mat, g);
+ * @endcode
+ *
  * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc,std::string)
  */
 template<class real_type>
@@ -285,6 +292,13 @@ dg::MIHMatrix_t<real_type> interpolation(
 
 /**
  * @brief Create an MPI row distributed interpolation 3d matrix
+ *
+ * @note In the MPI version each process creates a local interpolation matrix
+ * with local row and global column indices using the given points
+ * @code
+ * auto mat = dg::create::interpolation ( x,y,z, g.global(), bcx, bcy, bcz, method);
+ * return dg::convert( mat, g);
+ * @endcode
  *
  * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology3d<real_type>&,dg::bc,dg::bc,dg::bc,std::string)
  */

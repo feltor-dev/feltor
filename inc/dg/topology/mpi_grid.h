@@ -47,6 +47,8 @@ struct aRealMPITopology2d
     /// The host vector type used by host functions like evaluate
     using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
     using host_grid = RealMPIGrid2d<real_type>;
+    /// @brief number of dimensions : 2
+    constexpr static unsigned ndim() {return 2;}
 
     /**
      * @brief Return global x0
@@ -331,6 +333,8 @@ struct aRealMPITopology3d
     /// The host vector type used by host functions like evaluate
     using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
     using host_grid = RealMPIGrid3d<real_type>;
+    /// @brief number of dimensions : 3
+    constexpr static unsigned ndim() {return 3;}
 
     /**
      * @brief Return global x0

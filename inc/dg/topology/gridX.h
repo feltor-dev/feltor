@@ -70,6 +70,8 @@ struct RealGridX1d
     /// The host vector type used by host functions like evaluate
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGridX1d<real_type>;
+    /// @brief number of dimensions : 1
+    constexpr static unsigned ndim() {return 1;}
     /**
      * @brief 1D X-point grid
      *
@@ -259,6 +261,8 @@ struct aRealTopologyX2d
     /// The host vector type used by host functions like evaluate
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGridX2d<real_type>;
+    /// @brief number of dimensions : 2
+    constexpr unsigned ndim() const {return 2;}
 
     /**
      * @brief Left boundary in x
@@ -543,6 +547,8 @@ struct aRealTopologyX3d
     /// The host vector type used by host functions like evaluate
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGridX3d<real_type>;
+    /// @brief number of dimensions : 3
+    constexpr static unsigned ndim() {return 3;}
     /**
      * @brief left boundary in x
      *
