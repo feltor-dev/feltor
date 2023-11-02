@@ -4,18 +4,74 @@
 
 namespace feltor
 {
+
+template<class Geometry, unsigned ndim>
+struct CreateInterpolation{};
+
+
+template<class Geometry>
+struct CreateInterpolation<Geometry,1>
+{
+    auto call( const std::vector<dg::HVec>& x, const Geometry& g)
+    {
+        return dg::create::interpolation( x[0], g, g.bcx());
+
+    }
+};
+template<class Geometry>
+struct CreateInterpolation<Geometry,2>
+{
+auto call( const std::vector<dg::HVec>& x, const Geometry& g)
+{
+    return dg::create::interpolation( x[0], x[1], g, g.bcx(), g.bcy());
+
+}
+};
+template<class Geometry>
+struct CreateInterpolation<Geometry,3>
+{
+auto call( const std::vector<dg::HVec>& x, const Geometry& g)
+{
+    return dg::create::interpolation( x[0], x[1], x[2], g, g.bcx(), g.bcy(), g.bcz());
+
+}
+};
+
+
+
 struct Probes
 {
     Probes() = default;
-    Probes( std::string argv1, const dg::file::WrappedJsonValue& js, const dg::x::CylindricalGrid3d& grid)
+    template<class Geometry>
+    Probes(
+        int ncid,
+        unsigned itstp,
+        const dg::file::WrappedJsonValue& js,
+        const Geometry& grid,
+        std::vector<std::string> coords_names,
+        std::vector<bool> normalize)
     {
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
         m_probes = js.isMember("probes");
         if( js.isMember("probe"))
-            throw std::runtime_error( "Field <probe> found! Did you mean <probes>?");
+            throw std::runtime_error( "Field <probe> found! Did you mean \"probes\"?");
+
         if(m_probes)
         {
-            parse_probes( argv1, js);
-            m_probe_interpolate = dg::create::interpolation( m_R, m_Z, m_P, grid);
+            auto js_probes = dg::file::WrappedJsonValue( dg::file::error::is_throw);
+            auto coords = parse_probes( js, js_probes, coords_names, normalize);
+            if ( coords_names.size() != grid.ndim())
+                throw std::runtime_error( "Need "+std::to_string(grid.ndim())+" values in coords_names!");
+            if ( normalize.size() != grid.ndim())
+                throw std::runtime_error( "Need "+std::to_string(grid.ndim())+" values in normalize!");
+
+            static_assert( grid.ndim() == 3);
+
+            m_probe_interpolate = CreateInterpolation<Geometry, Geometry::ndim()>().call( coords, grid);
+
             // Create helper storage probe variables
 #ifdef WITH_MPI
             // every processor gets the probes (slightly inefficient...)
@@ -23,38 +79,27 @@ struct Probes
 #else //WITH_MPI
             m_simple_probes = dg::HVec(m_num_pins);
 #endif
-            unsigned itstp       = js["output"].get("itstp", 0).asUInt();
             for( auto& record : m_probe_list)
                 m_simple_probes_intern[record.name] = std::vector<dg::x::HVec>(itstp, m_simple_probes);
             m_time_intern.resize(itstp);
             m_resultD = dg::evaluate( dg::zero, grid);
             m_resultH = dg::evaluate( dg::zero, grid);
-        }
-    }
-    void set_probe_group( int ncid)
-    {
-#ifdef WITH_MPI
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //WITH_MPI
-        //Probes:
-        if( m_probes)
-        {
+
             dg::file::NC_Error_Handle err;
             DG_RANK0 err = nc_def_grp(ncid,"probes",&m_probe_grp_id);
-            std::string format = m_js["format"].toStyledString();
+            std::string format = js_probes["format"].toStyledString();
             DG_RANK0 err = nc_put_att_text( m_probe_grp_id, NC_GLOBAL,
                 "format", format.size(), format.data());
             dg::Grid1d g1d( 0,1,1,m_num_pins);
             DG_RANK0 err = dg::file::define_dimensions( m_probe_grp_id,
                     m_probe_dim_ids, &m_probe_timevarID, g1d, {"time", "x"});
-            int R_pin_id, Z_pin_id, P_pin_id;
-            DG_RANK0 err = nc_def_var(m_probe_grp_id, "R", NC_DOUBLE, 1, &m_probe_dim_ids[1], &R_pin_id);
-            DG_RANK0 err = nc_def_var(m_probe_grp_id, "Z", NC_DOUBLE, 1, &m_probe_dim_ids[1], &Z_pin_id);
-            DG_RANK0 err = nc_def_var(m_probe_grp_id, "P", NC_DOUBLE, 1, &m_probe_dim_ids[1], &P_pin_id);
-            DG_RANK0 err = nc_put_var_double( m_probe_grp_id, R_pin_id, m_R.data());
-            DG_RANK0 err = nc_put_var_double( m_probe_grp_id, Z_pin_id, m_Z.data());
-            DG_RANK0 err = nc_put_var_double( m_probe_grp_id, P_pin_id, m_P.data());
+            std::vector<int> pin_id;
+            for( unsigned i=0; i<grid.ndim(); i++)
+            {
+                int pin_id;
+                DG_RANK0 err = nc_def_var(m_probe_grp_id, coords_names[i].data(), NC_DOUBLE, 1, &m_probe_dim_ids[1], &pin_id);
+                DG_RANK0 err = nc_put_var_double( m_probe_grp_id, pin_id, coords[i].data());
+            }
             for( auto& record : m_probe_list)
             {
                 std::string name = record.name;
@@ -178,7 +223,6 @@ struct Probes
     std::map<std::string, int> m_probe_id_field;
     dg::HVec m_R, m_Z, m_P;
     unsigned m_num_pins;
-    dg::file::WrappedJsonValue m_js;
     dg::x::IHMatrix m_probe_interpolate;
     dg::x::HVec m_simple_probes;
     std::map<std::string, std::vector<dg::x::HVec>> m_simple_probes_intern;
@@ -196,55 +240,49 @@ struct Probes
             out[i] = probes.asJson()[i].asDouble()/rhos;
         return out;
     }
-    void parse_probes( std::string argv1, const dg::file::WrappedJsonValue& js){
+    std::vector<dg::HVec> parse_probes( const dg::file::WrappedJsonValue& js,
+        dg::file::WrappedJsonValue& js_probes,
+        std::vector<std::string> coords_names, std::vector<bool> normalize){
 #ifdef WITH_MPI
         int rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif //WITH_MPI
-        m_js = dg::file::WrappedJsonValue( dg::file::error::is_throw);
         std::string path;
         bool file = true;
         try{
-            try{ path = js["probes"].asString();
-            }catch ( std::runtime_error& e) { file = false; }
-            if ( file)
-                m_js.asJson() = dg::file::file2Json( path,
-                        dg::file::comments::are_discarded, dg::file::error::is_throw);
-            else
-                m_js.asJson() = js.asJson()["probes"];
-        }
-        catch(std::runtime_error& e)
-        {
-            DG_RANK0 std::cerr << "ERROR in probes file "<<path<<std::endl;
-            DG_RANK0 std::cerr << e.what()<<std::endl;
-            dg::abort_program();
-        }
+            path = js["probes"].asString();
+        }catch ( std::runtime_error& e) { file = false; }
+        if ( file)
+            js_probes.asJson() = dg::file::file2Json( path,
+                    dg::file::comments::are_discarded, dg::file::error::is_throw);
+        else
+            js_probes.asJson() = js.asJson()["probes"];
         double rhos = 1.;
         if( file)
         {
-            try{
+            //try{
                 rhos = js["physical"]["rho_s"].asDouble();
-            } catch( std::exception& e) {
-                DG_RANK0 std::cerr << "rho_s needs to be present in input file "<<argv1<<" if magnetic field from file\n";
-                DG_RANK0 std::cerr << e.what()<<std::endl;
-                dg::abort_program();
-            }
+            //} catch( std::exception& e) {
+            //    DG_RANK0 std::cerr << "rho_s needs to be present in input file "<<argv1<<" if magnetic field from file\n";
+            //    DG_RANK0 std::cerr << e.what()<<std::endl;
+            //    dg::abort_program();
+            //}
         }
-        m_R = read_probes( m_js, "R", rhos);
-        m_Z = read_probes( m_js, "Z", rhos);
-        m_P = read_probes( m_js, "P", 1.);
-        m_num_pins = m_R.size();
-        unsigned num_pinsZ = m_Z.size();
-        unsigned num_pinsP = m_P.size();
-        if( m_num_pins != num_pinsZ)
-            throw std::runtime_error( "Size of Z probes array ("
-                    +std::to_string(num_pinsZ)+") does not match that of R ("
-                    +std::to_string(m_num_pins)+")!");
-        if( m_num_pins != num_pinsP)
-            throw std::runtime_error( "Size of P probes array ("
-                    +std::to_string(num_pinsP)+") does not match that of R ("
-                    +std::to_string(m_num_pins)+")!");
+        std::vector<dg::HVec> coords( coords_names.size());
+        for( unsigned i=0; i<coords_names.size(); i++)
+            coords[i] = read_probes( js_probes, coords_names[i], normalize[i] ? rhos : 1);
+        m_num_pins = coords[0].size();
+        for( unsigned i=1; i<coords_names.size(); i++)
+        {
+            unsigned num_pins = coords[i].size();
+            if( m_num_pins != num_pins)
+                throw std::runtime_error( "Size of "+coords_names[i] +" probes array ("
+                        +std::to_string(num_pins)+") does not match that of "+coords_names[0]+" ("
+                        +std::to_string(m_num_pins)+")!");
+        }
+        return coords;
     }
+
     // probes list
 struct Record{
     std::string name;

@@ -147,8 +147,6 @@ int main( int argc, char* argv[])
     t.toc();
     DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
 
-    feltor::Probes probes( argv[1], js, grid);
-
 
     ///////////////////////////////////////////////////////////////////////////
     double t_output = time;
@@ -228,6 +226,7 @@ int main( int argc, char* argv[])
             return 0;
         }
 
+        feltor::Probes probes( ncid, p.itstp, js, grid, {"R","Z","P"}, {true,true,false});
         feltor::WriteDiagnostics1dList diag1d( ncid, dim_ids);
         feltor::WriteDiagnostics2dList diag2d( js, ncid, dim_ids3d);
         feltor::WriteDiagnostics3dList diag3d( ncid, dim_ids);
@@ -257,7 +256,7 @@ int main( int argc, char* argv[])
         diag3d.write( ncid, start, grid, g3d_out, var);
 
 
-        probes.set_probe_group( ncid);
+
         probes.first_write( var, time, grid);
 
         DG_RANK0 err = nc_close(ncid);
