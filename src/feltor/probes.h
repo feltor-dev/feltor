@@ -1,10 +1,11 @@
 #pragma once
 
-#include "feltordiag.h"
-
 namespace feltor
 {
 
+namespace detail
+{
+// helpers to define a C++-17 if constexpr
 template<class Geometry, unsigned ndim>
 struct CreateInterpolation{};
 
@@ -36,20 +37,23 @@ auto call( const std::vector<dg::HVec>& x, const Geometry& g)
 
 }
 };
+}
 
 
 
 struct Probes
 {
     Probes() = default;
-    template<class Geometry>
+    template<class Geometry, class ListClass>
     Probes(
         int ncid,
         unsigned itstp,
         const dg::file::WrappedJsonValue& js,
         const Geometry& grid,
         std::vector<std::string> coords_names,
-        std::vector<bool> normalize)
+        std::vector<bool> normalize,
+        const ListClass& probe_list
+        )
     {
 #ifdef WITH_MPI
         int rank;
@@ -62,79 +66,49 @@ struct Probes
         if(m_probes)
         {
             auto js_probes = dg::file::WrappedJsonValue( dg::file::error::is_throw);
+            // only master thread reads probes
             auto coords = parse_probes( js, js_probes, coords_names, normalize);
             if ( coords_names.size() != grid.ndim())
                 throw std::runtime_error( "Need "+std::to_string(grid.ndim())+" values in coords_names!");
             if ( normalize.size() != grid.ndim())
                 throw std::runtime_error( "Need "+std::to_string(grid.ndim())+" values in normalize!");
 
-            static_assert( grid.ndim() == 3);
-
-            m_probe_interpolate = CreateInterpolation<Geometry, Geometry::ndim()>().call( coords, grid);
+            m_probe_interpolate = detail::CreateInterpolation<Geometry, Geometry::ndim()>().call( coords, grid);
 
             // Create helper storage probe variables
 #ifdef WITH_MPI
-            // every processor gets the probes (slightly inefficient...)
-            m_simple_probes = dg::MHVec(m_R, grid.communicator());
+            if(rank==0) m_simple_probes = dg::MHVec(coords[0], grid.communicator());
 #else //WITH_MPI
             m_simple_probes = dg::HVec(m_num_pins);
 #endif
-            for( auto& record : m_probe_list)
+            for( auto& record : probe_list)
                 m_simple_probes_intern[record.name] = std::vector<dg::x::HVec>(itstp, m_simple_probes);
             m_time_intern.resize(itstp);
             m_resultD = dg::evaluate( dg::zero, grid);
             m_resultH = dg::evaluate( dg::zero, grid);
-
-            dg::file::NC_Error_Handle err;
-            DG_RANK0 err = nc_def_grp(ncid,"probes",&m_probe_grp_id);
-            std::string format = js_probes["format"].toStyledString();
-            DG_RANK0 err = nc_put_att_text( m_probe_grp_id, NC_GLOBAL,
-                "format", format.size(), format.data());
-            dg::Grid1d g1d( 0,1,1,m_num_pins);
-            DG_RANK0 err = dg::file::define_dimensions( m_probe_grp_id,
-                    m_probe_dim_ids, &m_probe_timevarID, g1d, {"time", "x"});
-            std::vector<int> pin_id;
-            for( unsigned i=0; i<grid.ndim(); i++)
-            {
-                int pin_id;
-                DG_RANK0 err = nc_def_var(m_probe_grp_id, coords_names[i].data(), NC_DOUBLE, 1, &m_probe_dim_ids[1], &pin_id);
-                DG_RANK0 err = nc_put_var_double( m_probe_grp_id, pin_id, coords[i].data());
-            }
-            for( auto& record : m_probe_list)
-            {
-                std::string name = record.name;
-                std::string long_name = record.long_name;
-                m_probe_id_field[name] = 0;//creates a new id4d entry for all processes
-                DG_RANK0 err = nc_def_var( m_probe_grp_id, name.data(),
-                        NC_DOUBLE, 2, m_probe_dim_ids,
-                        &m_probe_id_field.at(name));
-                DG_RANK0 err = nc_put_att_text( m_probe_grp_id,
-                        m_probe_id_field.at(name), "long_name", long_name.size(),
-                        long_name.data());
-            }
+            define_nc_variables( ncid, js_probes, coords, coords_names, probe_list);
         }
     }
 
-    void first_write( Variables& var, double time, const dg::x::CylindricalGrid3d& grid)
+    // record.name, record.long_name, record.function( resultH, ps...)
+    template<class ListClass, class ...Params>
+    void static_write( const ListClass& diag_static_list, Params&& ... ps)
     {
 #ifdef WITH_MPI
         int rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif //WITH_MPI
-        /// Probes FIRST output ///
-        size_t probe_count[] = {1, m_num_pins};
-        m_time_intern[0]=time;
         if(m_probes)
         {
             dg::file::NC_Error_Handle err;
-            for ( auto& record : feltor::diagnostics2d_static_list)
+            for ( auto& record : diag_static_list)
             {
                 int vecID;
                 DG_RANK0 err = nc_def_var( m_probe_grp_id, record.name.data(), NC_DOUBLE, 1,
                     &m_probe_dim_ids[1], &vecID);
                 DG_RANK0 err = nc_put_att_text( m_probe_grp_id, vecID,
                     "long_name", record.long_name.size(), record.long_name.data());
-                record.function( m_resultH, var, grid);
+                record.function( m_resultH, std::forward<Params>(ps)...);
                 dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
                 DG_RANK0 nc_put_var_double( m_probe_grp_id, vecID,
 #ifdef WITH_MPI
@@ -144,12 +118,27 @@ struct Probes
 #endif
                         );
             }
-            DG_RANK0 err = nc_put_vara_double( m_probe_grp_id, m_probe_timevarID,
-                    &m_probe_start[0], &probe_count[0], &m_time_intern[0]);
+        }
+    }
 
-            for( auto& record : m_probe_list)
+    // record.name, record.long_name, record.function( resultH, ps...)
+    template<class ListClass, class ...Params>
+    void write( double time, const ListClass& probe_list, Params&& ... ps)
+    {
+        dg::file::NC_Error_Handle err;
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        /// Probes FIRST output ///
+        size_t probe_count[] = {1, m_num_pins};
+        if(m_probes)
+        {
+            DG_RANK0 err = nc_put_vara_double( m_probe_grp_id, m_probe_timevarID,
+                    &m_probe_start[0], &probe_count[0], &time);
+            for( auto& record : probe_list)
             {
-                record.function( m_resultD, var);
+                record.function( m_resultD, std::forward<Params>(ps)...);
                 dg::assign( m_resultD, m_resultH);
                 dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
                 DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
@@ -166,13 +155,14 @@ struct Probes
 
     }
     // is thought to be called itstp times before write
-    void save( Variables& var, double time, unsigned iter)
+    template<class ListClass, class ...Params>
+    void save( double time, unsigned iter, const ListClass& list, Params&& ... ps)
     {
         if(m_probes)
         {
-            for( auto& record : m_probe_list)
+            for( auto& record : list)
             {
-                record.function( m_resultD, var);
+                record.function( m_resultD, std::forward<Params>(ps)...);
                 dg::assign( m_resultD, m_resultH);
                 dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
                 m_simple_probes_intern.at(record.name)[iter]=m_simple_probes;
@@ -180,7 +170,7 @@ struct Probes
             }
         }
     }
-    void write_after_save( Variables& var)
+    void write_after_save()
     {
 #ifdef WITH_MPI
         int rank;
@@ -197,19 +187,17 @@ struct Probes
                 DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
                         m_probe_timevarID, &m_probe_start[0] , &probe_count[0],
                         &m_time_intern[j]);
-                for( auto& record : m_probe_list)
+                for( auto& field : m_simple_probes_intern)
                 {
+                    DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
+                            m_probe_id_field.at(field.first), m_probe_start,
+                            probe_count,
 #ifdef WITH_MPI
-                    DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
-                            m_probe_id_field.at(record.name), m_probe_start,
-                            probe_count,
-                            m_simple_probes_intern.at(record.name)[j].data().data());
+                            field.second[j].data().data()
 #else
-                    DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
-                            m_probe_id_field.at(record.name), m_probe_start,
-                            probe_count,
-                            m_simple_probes_intern.at(record.name)[j].data());
+                            field.second[j].data()
 #endif
+                            );
                 }
             }
         }
@@ -221,7 +209,6 @@ struct Probes
     int m_probe_dim_ids[2];
     int m_probe_timevarID;
     std::map<std::string, int> m_probe_id_field;
-    dg::HVec m_R, m_Z, m_P;
     unsigned m_num_pins;
     dg::x::IHMatrix m_probe_interpolate;
     dg::x::HVec m_simple_probes;
@@ -242,10 +229,15 @@ struct Probes
     }
     std::vector<dg::HVec> parse_probes( const dg::file::WrappedJsonValue& js,
         dg::file::WrappedJsonValue& js_probes,
-        std::vector<std::string> coords_names, std::vector<bool> normalize){
+        std::vector<std::string> coords_names, std::vector<bool> normalize)
+    {
+
+        std::vector<dg::HVec> coords( coords_names.size());
 #ifdef WITH_MPI
         int rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if( rank == 0)
+        {
 #endif //WITH_MPI
         std::string path;
         bool file = true;
@@ -268,7 +260,6 @@ struct Probes
             //    dg::abort_program();
             //}
         }
-        std::vector<dg::HVec> coords( coords_names.size());
         for( unsigned i=0; i<coords_names.size(); i++)
             coords[i] = read_probes( js_probes, coords_names[i], normalize[i] ? rhos : 1);
         m_num_pins = coords[0].size();
@@ -280,132 +271,51 @@ struct Probes
                         +std::to_string(num_pins)+") does not match that of "+coords_names[0]+" ("
                         +std::to_string(m_num_pins)+")!");
         }
+#ifdef WITH_MPI
+        }
+#endif //WITH_MPI
         return coords;
     }
 
-    // probes list
-struct Record{
-    std::string name;
-    std::string long_name;
-    std::function<void( dg::x::DVec&, Variables&)> function;
-};
-std::vector<Record> m_probe_list = {
-     {"ne", "probe measurement of electron density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.density(0), result);
-         }
-     },
-     {"ni", "probe measurement of ion density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.density(1), result);
-         }
-     },
-     {"ue", "probe measurement of parallel electron velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.velocity(0), result);
-         }
-     },
-     {"ui", "probe measurement of parallel ion velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.velocity(1), result);
-         }
-     },
-     {"phi", "probe measurement of electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.potential(0), result);
-         }
-     },
-     {"apar", "probe measurement of parallel magnetic potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.aparallel(), result);
-         }
-     },
-     {"neR", "probe measurement of d/dR electron density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradN(0)[0], result);
-         }
-     },
-     {"niR", "probe measurement of d/dR ion density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradN(1)[0], result);
-         }
-     },
-     {"ueR", "probe measurement of d/dR parallel electron velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradU(0)[0], result);
-         }
-     },
-     {"uiR", "probe measurement of d/dR parallel ion velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradU(1)[0], result);
-         }
-     },
-     {"phiR", "probe measurement of d/dR electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradP(0)[0], result);
-         }
-     },
-     {"aparR", "probe measurement of d/dR parallel magnetic potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradA()[0], result);
-         }
-     },
-     {"neZ", "probe measurement of d/dZ electron density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradN(0)[1], result);
-         }
-     },
-     {"niZ", "probe measurement of d/dZ ion density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradN(1)[1], result);
-         }
-     },
-     {"ueZ", "probe measurement of d/dZ parallel electron velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradU(0)[1], result);
-         }
-     },
-     {"uiZ", "probe measurement of d/dZ parallel ion velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradU(1)[1], result);
-         }
-     },
-     {"phiZ", "probe measurement of d/dZ electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradP(0)[1], result);
-         }
-     },
-     {"aparZ", "probe measurement of d/dZ parallel magnetic potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradA()[1], result);
-         }
-     },
-     {"nePar", "probe measurement of d/dPar electron density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsN(0), result);
-         }
-     },
-     {"niPar", "probe measurement of d/dPar ion density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsN(1), result);
-         }
-     },
-     {"uePar", "probe measurement of d/dPar parallel electron velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsU(0), result);
-         }
-     },
-     {"uiPar", "probe measurement of d/dPar parallel ion velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsU(1), result);
-         }
-     },
-     {"phiPar", "probe measurement of d/dPar electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsP(0), result);
-         }
-     }
- };
+    template<class ListClass>
+    void define_nc_variables( int ncid, const dg::file::WrappedJsonValue& js_probes,
+    const std::vector<dg::HVec>& coords, const std::vector<std::string> & coords_names,
+    const ListClass& probe_list)
+    {
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        dg::file::NC_Error_Handle err;
+        DG_RANK0 err = nc_def_grp(ncid,"probes",&m_probe_grp_id);
+        std::string format = js_probes["format"].toStyledString();
+        DG_RANK0 err = nc_put_att_text( m_probe_grp_id, NC_GLOBAL,
+            "format", format.size(), format.data());
+        dg::Grid1d g1d( 0,1,1,m_num_pins);
+        DG_RANK0 err = dg::file::define_dimensions( m_probe_grp_id,
+                m_probe_dim_ids, &m_probe_timevarID, g1d, {"time", "x"});
+        std::vector<int> pin_id;
+        for( unsigned i=0; i<coords.size(); i++)
+        {
+            int pin_id;
+            DG_RANK0 err = nc_def_var(m_probe_grp_id, coords_names[i].data(),
+                NC_DOUBLE, 1, &m_probe_dim_ids[1], &pin_id);
+            DG_RANK0 err = nc_put_var_double( m_probe_grp_id, pin_id, coords[i].data());
+        }
+        for( auto& record : probe_list)
+        {
+            std::string name = record.name;
+            std::string long_name = record.long_name;
+            m_probe_id_field[name] = 0;//creates a new id4d entry for all processes
+            DG_RANK0 err = nc_def_var( m_probe_grp_id, name.data(),
+                    NC_DOUBLE, 2, m_probe_dim_ids,
+                    &m_probe_id_field.at(name));
+            DG_RANK0 err = nc_put_att_text( m_probe_grp_id,
+                    m_probe_id_field.at(name), "long_name", long_name.size(),
+                    long_name.data());
+        }
+    }
+
 };
 
 } //namespace feltor

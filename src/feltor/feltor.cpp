@@ -226,7 +226,8 @@ int main( int argc, char* argv[])
             return 0;
         }
 
-        feltor::Probes probes( ncid, p.itstp, js, grid, {"R","Z","P"}, {true,true,false});
+        feltor::Probes probes( ncid, p.itstp, js, grid, {"R","Z","P"},
+            {true,true,false}, feltor::probe_list);
         feltor::WriteDiagnostics1dList diag1d( ncid, dim_ids);
         feltor::WriteDiagnostics2dList diag2d( js, ncid, dim_ids3d);
         feltor::WriteDiagnostics3dList diag3d( ncid, dim_ids);
@@ -256,8 +257,8 @@ int main( int argc, char* argv[])
         diag3d.write( ncid, start, grid, g3d_out, var);
 
 
-
-        probes.first_write( var, time, grid);
+        probes.static_write( feltor::diagnostics2d_static_list, var, grid);
+        probes.write( time, feltor::probe_list, var);
 
         DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
@@ -291,7 +292,7 @@ int main( int argc, char* argv[])
                 tti.tic();
 
 
-                probes.save(var,time,j-1);
+                probes.save(time,j-1, feltor::probe_list, var);
                 diag2d.save( time, grid, g3d_out, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
@@ -337,7 +338,7 @@ int main( int argc, char* argv[])
             diag2d.write( ncid, start, grid, g3d_out, var );
 
             diag1d.write( ncid, start, count, var);
-            probes.write_after_save( var);
+            probes.write_after_save( );
 
             DG_RANK0 err = nc_close(ncid);
             ti.toc();
