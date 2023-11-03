@@ -1952,88 +1952,110 @@ dg::geo::CylindricalFunctor transition)
     if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
 }
 
-struct WriteDiagnostics1dList
+template<unsigned N, class ListClass>
+std::map<std::string, int> create_ids( int ncid, int* dim_ids, const ListClass& diag_list)
 {
-    WriteDiagnostics1dList() = default;
-    WriteDiagnostics1dList(int ncid, int* dim_ids)
-    {
 #ifdef WITH_MPI
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif //WITH_MPI
-        dg::file::NC_Error_Handle err;
-        for( auto& record : feltor::diagnostics1d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            m_id1d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1,
-                &dim_ids[0], &m_id1d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, m_id1d.at(name), "long_name",
-                long_name.size(), long_name.data());
-        }
-    }
-    void write( int ncid, size_t start, size_t count, Variables& var)
+    dg::file::NC_Error_Handle err;
+    std::map<std::string, int> ids;
+    for( auto& record : diag_list)
     {
-#ifdef WITH_MPI
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //WITH_MPI
-        for( auto& record : feltor::diagnostics1d_list)
-        {
-            double result = record.function( var);
-            DG_RANK0 nc_put_vara_double( ncid, m_id1d.at(record.name), &start, &count, &result);
-        }
+        std::string name = record.name;
+        std::string long_name = record.long_name;
+        ids[name] = 0;
+        DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, N,
+            dim_ids, &ids.at(name));
+        DG_RANK0 err = nc_put_att_text( ncid, ids.at(name), "long_name",
+            long_name.size(), long_name.data());
     }
-    private:
-    std::map<std::string, int> m_id1d;
-};
+    return ids;
+}
 
-struct WriteDiagnostics3dList
+template<unsigned N>
+struct WriteDiagnosticsList
 {
-    WriteDiagnostics3dList() = default;
-    WriteDiagnostics3dList(int ncid, int * dim_ids)
+    WriteDiagnosticsList() = default;
+    template<class ListClass>
+    WriteDiagnosticsList( int ncid, int* dim_ids, const ListClass& diag_list) : m_start(0)
     {
-#ifdef WITH_MPI
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //WITH_MPI
-        dg::file::NC_Error_Handle err;
-        for( auto& record : feltor::diagnostics3d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            m_id4d[name] = 0;//creates a new id4d entry for all processes
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 4, dim_ids,
-                &m_id4d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, m_id4d.at(name), "long_name", long_name.size(),
-                long_name.data());
-        }
+        m_ids = create_ids<N>( ncid, dim_ids, diag_list);
     }
-    void write( int ncid, size_t start, const dg::x::CylindricalGrid3d& grid,
-        const dg::x::CylindricalGrid3d& g3d_out, Variables& var)
+    template<class Geometry, class ListClass, class ... Params >
+    void project_write( int ncid, const Geometry& grid, const Geometry& grid_out, const
+    ListClass& diag_list, Params&& ...ps)
     {
+        static_assert( N>1);
         dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
-        dg::x::DVec transferD( dg::evaluate(dg::zero, g3d_out));
-        dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+        dg::x::DVec transferD( dg::evaluate(dg::zero, grid_out));
+        dg::x::HVec transferH( dg::evaluate(dg::zero, grid_out));
         dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> projectD =
-            dg::create::fast_projection( grid, 1, var.p.cx, var.p.cy);
-        for( auto& record : feltor::diagnostics3d_list)
+            dg::create::fast_projection( grid, grid.n()/grid_out.n(),
+                grid.Nx()/grid_out.Nx(), grid.Ny()/grid_out.Ny());
+        for( auto& record : diag_list)
         {
-            record.function( resultD, var);
+            record.function( resultD, std::forward<Params>(ps)...);
             dg::blas2::symv( projectD, resultD, transferD);
             dg::assign( transferD, transferH);
-            dg::file::put_vara_double( ncid, m_id4d.at(record.name), start, g3d_out, transferH);
+            dg::file::put_vara_double( ncid, m_ids.at(record.name), m_start, grid_out, transferH);
+            m_start++;
+        }
+    }
+    template<class Geometry, class ListClass, class ... Params >
+    void write( int ncid, const Geometry& grid, const
+        ListClass& diag_list, Params&& ...ps)
+    {
+        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
+        for( auto& record : diag_list)
+        {
+            record.function( resultD, std::forward<Params>(ps)...);
+            dg::assign( resultD, resultH);
+            dg::file::put_vara_double( ncid, m_ids.at(record.name), m_start, grid, resultH);
+            m_start++;
         }
     }
     private:
-    std::map<std::string, int> m_id4d;
+    size_t m_start;
+    std::map<std::string, int> m_ids;
 };
 
-struct WriteDiagnostics2dList
+template<>
+struct WriteDiagnosticsList<1>
 {
-    WriteDiagnostics2dList() = default;
-    WriteDiagnostics2dList( const dg::file::WrappedJsonValue& js , int ncid, int* dim_ids3d)
+    WriteDiagnosticsList() = default;
+    template<class ListClass>
+    WriteDiagnosticsList( int ncid, int* dim_ids, const ListClass& diag_list) : m_start(0)
+    {
+        m_ids = create_ids<1>( ncid, dim_ids, diag_list);
+    }
+    template<class ListClass, class ...Params>
+    void write( int ncid, const ListClass& diag_list, Params&& ... ps)
+    {
+#ifdef WITH_MPI
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //WITH_MPI
+        size_t count = 1;
+        for( auto& record : diag_list)
+        {
+            double result = record.function( std::forward<Params>(ps)...);
+            DG_RANK0 nc_put_vara_double( ncid, m_ids.at(record.name), &m_start, &count, &result);
+            m_start++;
+        }
+    }
+    private:
+    size_t m_start;
+    std::map<std::string, int> m_ids;
+};
+
+
+struct WriteIntegrateDiagnostics2dList
+{
+    WriteIntegrateDiagnostics2dList() = default;
+    WriteIntegrateDiagnostics2dList( const dg::file::WrappedJsonValue& js , int ncid, int* dim_ids3d)
     {
 #ifdef WITH_MPI
         int rank;

@@ -200,7 +200,6 @@ int main( int argc, char* argv[])
         DG_RANK0 err_pol = dg::file::define_dimensions( ncid_pol, dim_ids_pol, grid,
                 {"z", "y", "x"});
 #endif
-        int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
 
         std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
         gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
@@ -228,9 +227,10 @@ int main( int argc, char* argv[])
 
         feltor::Probes probes( ncid, p.itstp, js, grid, {"R","Z","P"},
             {true,true,false}, feltor::probe_list);
-        feltor::WriteDiagnostics1dList diag1d( ncid, dim_ids);
-        feltor::WriteDiagnostics2dList diag2d( js, ncid, dim_ids3d);
-        feltor::WriteDiagnostics3dList diag3d( ncid, dim_ids);
+        feltor::WriteDiagnosticsList<1> diag1d( ncid, dim_ids, feltor::diagnostics1d_list);
+        int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
+        feltor::WriteIntegrateDiagnostics2dList diag2d( js, ncid, dim_ids3d);
+        feltor::WriteDiagnosticsList<4> diag4d( ncid, dim_ids, feltor::diagnostics3d_list);
         feltor::RestartFileOutput restart( ncid, grid);
 
         ///////////////////////////////////first output/////////////////////////
@@ -252,9 +252,9 @@ int main( int argc, char* argv[])
         DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
         restart.write( grid, feltor);
 
-        diag1d.write( ncid, start, count, var);
+        diag1d.write( ncid, feltor::diagnostics1d_list, var);
         diag2d.first_write( ncid, start, time, grid, g3d_out, var );
-        diag3d.write( ncid, start, grid, g3d_out, var);
+        diag4d.project_write( ncid, grid, g3d_out, feltor::diagnostics3d_list, var);
 
 
         probes.static_write( feltor::diagnostics2d_static_list, var, grid);
@@ -333,11 +333,11 @@ int main( int argc, char* argv[])
             start = i;
             DG_RANK0 err = nc_open(file_name.data(), NC_WRITE, &ncid);
             DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-            diag3d.write( ncid, start, grid, g3d_out, var);
+            diag4d.project_write( ncid, grid, g3d_out, feltor::diagnostics3d_list, var);
             restart.write( grid, feltor);
             diag2d.write( ncid, start, grid, g3d_out, var );
 
-            diag1d.write( ncid, start, count, var);
+            diag1d.write( ncid, feltor::diagnostics1d_list, var);
             probes.write_after_save( );
 
             DG_RANK0 err = nc_close(ncid);
