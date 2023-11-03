@@ -19,7 +19,6 @@
 #include "init.h"
 #include "feltordiag.h"
 #include "init_from_file.h"
-#include "probes.h"
 
 
 using Vector = std::array<std::array<dg::x::DVec, 2>,2>;
@@ -212,7 +211,8 @@ int main( int argc, char* argv[])
         };
 
         //create & output static 3d variables into file
-        feltor::write_static_list( ncid, &dim_ids[1], g3d_out, feltor::diagnostics3d_static_list, var, g3d_out);
+        dg::file::write_static_records_list<3>( ncid, &dim_ids[1], g3d_out,
+            feltor::diagnostics3d_static_list, var, g3d_out);
         //create & output static 2d variables into file
         feltor::write_diagnostics2d_static_list( ncid, &dim_ids[2], var, grid, g3d_out, transition);
 
@@ -225,12 +225,12 @@ int main( int argc, char* argv[])
             return 0;
         }
 
-        feltor::Probes probes( ncid, p.itstp, js, grid, {"R","Z","P"},
+        dg::file::Probes probes( ncid, p.itstp, js, grid, {"R","Z","P"},
             {true,true,false}, feltor::probe_list);
-        feltor::WriteDiagnosticsList<1> diag1d( ncid, dim_ids, feltor::diagnostics1d_list);
+        dg::file::WriteRecordsList<1> diag1d( ncid, dim_ids, feltor::diagnostics1d_list);
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
         feltor::WriteIntegrateDiagnostics2dList diag2d( js, ncid, dim_ids3d);
-        feltor::WriteDiagnosticsList<4> diag4d( ncid, dim_ids, feltor::diagnostics3d_list);
+        dg::file::WriteRecordsList<4> diag4d( ncid, dim_ids, feltor::diagnostics3d_list);
         feltor::RestartFileOutput restart( ncid, grid);
 
         ///////////////////////////////////first output/////////////////////////

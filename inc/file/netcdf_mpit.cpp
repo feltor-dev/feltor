@@ -8,6 +8,37 @@
 #include "nc_utilities.h"
 
 double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
+double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
+double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
+double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
+
+struct Record
+{
+    std::string name;
+    std::string long_name;
+    std::function<void (dg::x::DVec&, const dg::MPIGrid3d&, double)> function;
+};
+
+std::vector<Record> records_list = {
+    {"vectorX", "X-component of vector",
+        [] ( dg::x::DVec& resultD, const dg::MPIGrid3d& g, double time){
+            resultD = dg::evaluate( gradientX, g);
+            dg::blas1::scal( resultD, cos( time));
+        }
+    },
+    {"vectorY", "Y-component of vector",
+        [] ( dg::x::DVec& resultD, const dg::MPIGrid3d& g, double time){
+            resultD = dg::evaluate( gradientY, g);
+            dg::blas1::scal( resultD, cos( time));
+        }
+    },
+    {"vectorZ", "Z-component of vector",
+        [] ( dg::x::DVec& resultD, const dg::MPIGrid3d& g, double time){
+            resultD = dg::evaluate( gradientZ, g);
+            dg::blas1::scal( resultD, cos( time));
+        }
+    }
+};
 
 int main(int argc, char* argv[])
 {
@@ -40,6 +71,7 @@ int main(int argc, char* argv[])
     if(rank==0)err = dg::file::define_dimensions( ncid, dimids, &tvarID, grid);
     int dataID;
     if(rank==0)err = nc_def_var( ncid, "data", NC_DOUBLE, 4, dimids, &dataID);
+    dg::file::WriteRecordsList<4> records( ncid, dimids, records_list);
 
     /* Write metadata to file. */
     size_t Tcount=1, Tstart=0;
@@ -52,6 +84,7 @@ int main(int argc, char* argv[])
         Tstart = i;
         data = dg::evaluate( function, grid);
         dg::blas1::scal( data, cos( time));
+        records.write( ncid, grid, records_list, grid, time);
         //write dataset (one timeslice)
         dg::file::put_vara_double( ncid, dataID, i, grid, data, false);
         if(rank==0)err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);

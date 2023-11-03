@@ -1,4 +1,4 @@
-device=omp
+device=cpp
 #configure machine
 include ../../config/default.mk
 include ../../config/*.mk

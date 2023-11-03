@@ -1,8 +1,17 @@
 #pragma once
 
-namespace feltor
+#include "nc_utilities.h"
+#include "json_utilities.h"
+#ifdef MPI_VERSION
+#include "dg/topology/mpi_projection.h"
+#endif //MPI_VERSION
+
+namespace dg
+{
+namespace file
 {
 
+///@cond
 namespace detail
 {
 // helpers to define a C++-17 if constexpr
@@ -38,8 +47,7 @@ auto call( const std::vector<dg::HVec>& x, const Geometry& g)
 }
 };
 }
-
-
+///@endcond
 
 struct Probes
 {
@@ -156,11 +164,11 @@ struct Probes
     }
     // is thought to be called itstp times before write
     template<class ListClass, class ...Params>
-    void save( double time, unsigned iter, const ListClass& list, Params&& ... ps)
+    void save( double time, unsigned iter, const ListClass& probe_list, Params&& ... ps)
     {
         if(m_probes)
         {
-            for( auto& record : list)
+            for( auto& record : probe_list)
             {
                 record.function( m_resultD, std::forward<Params>(ps)...);
                 dg::assign( m_resultD, m_resultH);
@@ -318,4 +326,5 @@ struct Probes
 
 };
 
-} //namespace feltor
+} //namespace file
+}//namespace dg

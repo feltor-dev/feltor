@@ -10,9 +10,11 @@
 #include "dg/topology/evaluation.h"
 #ifdef MPI_VERSION
 #include "dg/topology/mpi_grid.h"
+#include "dg/topology/mpi_evaluation.h"
 #endif //MPI_VERSION
 
 #include "easy_output.h"
+#include "writer.h"
 
 /*!@file
  *

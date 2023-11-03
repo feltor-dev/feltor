@@ -12,6 +12,34 @@ double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
 double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
+struct Record
+{
+    std::string name;
+    std::string long_name;
+    std::function<void (dg::x::DVec&, const dg::Grid3d&, double)> function;
+};
+
+std::vector<Record> records_list = {
+    {"vectorX", "X-component of vector",
+        [] ( dg::x::DVec& resultD, const dg::Grid3d& g, double time){
+            resultD = dg::evaluate( gradientX, g);
+            dg::blas1::scal( resultD, cos( time));
+        }
+    },
+    {"vectorY", "Y-component of vector",
+        [] ( dg::x::DVec& resultD, const dg::Grid3d& g, double time){
+            resultD = dg::evaluate( gradientY, g);
+            dg::blas1::scal( resultD, cos( time));
+        }
+    },
+    {"vectorZ", "Z-component of vector",
+        [] ( dg::x::DVec& resultD, const dg::Grid3d& g, double time){
+            resultD = dg::evaluate( gradientZ, g);
+            dg::blas1::scal( resultD, cos( time));
+        }
+    }
+};
+
 typedef thrust::host_vector<double> HVec;
 
 int main()
@@ -34,12 +62,11 @@ int main()
     int dim_ids[4], tvarID;
     err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, g);
 
-    int dataID, scalarID, vectorID[3];
+    int dataID, scalarID;
     err = nc_def_var( ncid, "data", NC_DOUBLE, 1, dim_ids, &dataID);
     err = nc_def_var( ncid, "scalar", NC_DOUBLE, 4, dim_ids, &scalarID);
-    err = nc_def_var( ncid, "vectorX", NC_DOUBLE, 4, dim_ids, &vectorID[0]);
-    err = nc_def_var( ncid, "vectorY", NC_DOUBLE, 4, dim_ids, &vectorID[1]);
-    err = nc_def_var( ncid, "vectorZ", NC_DOUBLE, 4, dim_ids, &vectorID[2]);
+
+    dg::file::WriteRecordsList<4> records( ncid, dim_ids, records_list);
     size_t count[4] = {g.nz(), g.Nz(), g.ny()*g.Ny(), g.nx()*g.Nx()};
     size_t start[4] = {0, 0, 0, 0};
     for(unsigned i=0; i<=NT; i++)
@@ -56,15 +83,7 @@ int main()
         //write scalar field
         err = nc_put_vara_double( ncid, scalarID, start, count, data.data());
         //write vector field
-        HVec dataX = dg::evaluate( gradientX, g);
-        HVec dataY = dg::evaluate( gradientY, g);
-        HVec dataZ = dg::evaluate( gradientZ, g);
-        dg::blas1::scal( dataX, cos( time));
-        dg::blas1::scal( dataY, cos( time));
-        dg::blas1::scal( dataZ, cos( time));
-        dg::file::put_vara_double( ncid, vectorID[0], i, g, dataX);
-        dg::file::put_vara_double( ncid, vectorID[1], i, g, dataY);
-        dg::file::put_vara_double( ncid, vectorID[2], i, g, dataZ);
+        records.write( ncid, g, records_list, g, time);
         //write time
         err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
     }
