@@ -1881,30 +1881,33 @@ std::vector<Record1d> diagnostics1d_list = {
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-void write_diagnostics3d_static_list(int ncid, int* dim_ids_zyx, Variables& var,
-const dg::x::CylindricalGrid3d& g3d_out)
+// called only by master thread
+void write_global_attributes( int ncid, int argc, char* argv[], std::string inputfile)
 {
-#ifdef WITH_MPI
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //WITH_MPI
-    dg::x::HVec transferH( dg::evaluate(dg::zero, g3d_out));
+    std::map<std::string, std::string> att;
+    att["title"] = "Output file of feltor/src/feltor/feltor.cpp";
+    att["Conventions"] = "CF-1.8";
+    ///Get local time and begin file history
+    auto ttt = std::time(nullptr);
+    std::ostringstream oss;
+    ///time string  + program-name + args
+    oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
+    for( int i=0; i<argc; i++) oss << " "<<argv[i];
+    att["history"] = oss.str();
+    att["comment"] = "Find more info in feltor/src/feltor/feltor.tex";
+    att["source"] = "FELTOR";
+    att["git-hash"] = GIT_HASH;
+    att["git-branch"] = GIT_BRANCH;
+    att["compile-time"] = COMPILE_TIME;
+    att["references"] = "https://github.com/feltor-dev/feltor";
+    att["inputfile"] = inputfile;
     dg::file::NC_Error_Handle err;
-    for ( auto& record : diagnostics3d_static_list)
+    for( auto pair : att)
     {
-        int vecID;
-        DG_RANK0 err = nc_def_var( ncid, record.name.data(), NC_DOUBLE, 3,
-            dim_ids_zyx, &vecID);
-        DG_RANK0 err = nc_put_att_text( ncid, vecID,
-            "long_name", record.long_name.size(), record.long_name.data());
-        DG_RANK0 std::cout << "#Computing "<<record.name<<"\n";
-        record.function( transferH, var, g3d_out);
-        //record.function( resultH, var, grid);
-        //dg::blas2::symv( projectH, resultH, transferH);
-        dg::file::put_var_double( ncid, vecID, g3d_out, transferH);
+        err = nc_put_att_text( ncid, NC_GLOBAL,
+            pair.first.data(), pair.second.size(), pair.second.data());
     }
 }
-
 void write_diagnostics2d_static_list(int ncid, int* dim_ids_yx, Variables& var,
 const dg::x::CylindricalGrid3d& grid, const dg::x::CylindricalGrid3d& g3d_out,
 dg::geo::CylindricalFunctor transition)
@@ -1974,9 +1977,24 @@ std::map<std::string, int> create_ids( int ncid, int* dim_ids, const ListClass& 
     return ids;
 }
 
+template<unsigned N, class Geometry, class ListClass, class ...Params>
+static void write_static_list( int ncid, int* dim_ids, const Geometry& grid_out,
+    const ListClass& diag_list, Params&& ... ps)
+{
+    auto ids = create_ids( ncid, diag_list);
+    dg::x::HVec transferH( dg::evaluate(dg::zero, grid_out));
+    dg::file::NC_Error_Handle err;
+    for ( auto& record : diag_list)
+    {
+        record.function( transferH, std::forward<Params>(ps)...);
+        dg::file::put_var_double( ncid, ids.at(record.name), grid_out, transferH);
+    }
+}
+
 template<unsigned N>
 struct WriteDiagnosticsList
 {
+
     WriteDiagnosticsList() = default;
     template<class ListClass>
     WriteDiagnosticsList( int ncid, int* dim_ids, const ListClass& diag_list) : m_start(0)

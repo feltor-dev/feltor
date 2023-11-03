@@ -169,10 +169,10 @@ int main( int argc, char* argv[])
         int ncid=-1;
         try{
             DG_RANK0 err = nc_create( file_name.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
-            DG_RANK0 common::write_global_attributes( ncid, argc, argv, inputfile);
+            DG_RANK0 feltor::write_global_attributes( ncid, argc, argv, inputfile);
 #ifdef WRITE_POL_FILE
             DG_RANK0 err_pol = nc_create( "polarisation.nc", NC_NETCDF4|NC_CLOBBER, &ncid_pol);
-            DG_RANK0 common::write_global_attributes( ncid_pol, argc, argv, inputfile);
+            DG_RANK0 feltor::write_global_attributes( ncid_pol, argc, argv, inputfile);
 #endif
 
         }catch( std::exception& e)
@@ -212,7 +212,7 @@ int main( int argc, char* argv[])
         };
 
         //create & output static 3d variables into file
-        feltor::write_diagnostics3d_static_list( ncid, &dim_ids[1], var, g3d_out);
+        feltor::write_static_list( ncid, &dim_ids[1], g3d_out, feltor::diagnostics3d_static_list, var, g3d_out);
         //create & output static 2d variables into file
         feltor::write_diagnostics2d_static_list( ncid, &dim_ids[2], var, grid, g3d_out, transition);
 

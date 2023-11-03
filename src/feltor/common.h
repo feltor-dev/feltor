@@ -566,32 +566,5 @@ std::unique_ptr<dg::aTimeloop<Vector>> init_timestepper(
 
 }
 
-// called only by master thread
-void write_global_attributes( int ncid, int argc, char* argv[], std::string inputfile)
-{
-    std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor/feltor.cpp";
-    att["Conventions"] = "CF-1.8";
-    ///Get local time and begin file history
-    auto ttt = std::time(nullptr);
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/feltor/feltor.tex";
-    att["source"] = "FELTOR";
-    att["git-hash"] = GIT_HASH;
-    att["git-branch"] = GIT_BRANCH;
-    att["compile-time"] = COMPILE_TIME;
-    att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = inputfile;
-    dg::file::NC_Error_Handle err;
-    for( auto pair : att)
-    {
-        err = nc_put_att_text( ncid, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
-    }
-}
 
 }//namespace common
