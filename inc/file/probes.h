@@ -64,7 +64,7 @@ struct Probes
     template<class Geometry, class ListClass>
     Probes(
         int ncid,
-        unsigned itstp,
+        unsigned buffer_size,
         const Geometry& grid,
         const ProbesParams& params, // do nothing if probes is false
         const ListClass& probe_list
@@ -91,8 +91,8 @@ struct Probes
         m_simple_probes = dg::HVec(m_num_pins);
 #endif
         for( auto& record : probe_list)
-            m_simple_probes_intern[record.name] = std::vector<dg::x::HVec>(itstp, m_simple_probes);
-        m_time_intern.resize(itstp);
+            m_simple_probes_intern[record.name] = std::vector<dg::x::HVec>(buffer_size, m_simple_probes);
+        m_time_intern.resize(buffer_size);
         m_resultD = dg::evaluate( dg::zero, grid);
         m_resultH = dg::evaluate( dg::zero, grid);
         define_nc_variables( ncid, params.format, params.coords, params.coords_names,
@@ -100,8 +100,8 @@ struct Probes
     }
 
     // record.name, record.long_name, record.function( resultH, ps...)
-    template<class ListClass, class ...Params>
-    void static_write( const ListClass& diag_static_list, Params&& ... ps)
+    template<class HostListClass, class ...Params>
+    void static_write( const HostListClass& diag_static_list, Params&& ... ps)
     {
         if(!m_probes) return;
 #ifdef MPI_VERSION
@@ -128,78 +128,55 @@ struct Probes
         }
     }
 
-    // record.name, record.long_name, record.function( resultH, ps...)
-    template<class ListClass, class ...Params>
-    void write( double time, const ListClass& probe_list, Params&& ... ps)
+    template<class DeviceListClass, class ...Params>
+    void write( double time, const DeviceListClass& probe_list, Params&& ... ps)
     {
         if(!m_probes) return;
-        dg::file::NC_Error_Handle err;
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //MPI_VERSION
-        /// Probes FIRST output ///
-        size_t probe_count[] = {1, m_num_pins};
-        DG_RANK0 err = nc_put_vara_double( m_probe_grp_id, m_probe_timevarID,
-                &m_probe_start[0], &probe_count[0], &time);
+        if( m_probe_start[0] == 0)
+        {
+            first_write( time, probe_list, std::forward<Params>(ps)...);
+            return;
+        }
+        unsigned buffer_size = m_time_intern.size();
+        unsigned fill = m_iter % buffer_size;
+        // fill buffer until full
         for( auto& record : probe_list)
         {
             record.function( m_resultD, std::forward<Params>(ps)...);
             dg::assign( m_resultD, m_resultH);
             dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
-            DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
-                    m_probe_id_field.at(record.name), m_probe_start, probe_count,
-#ifdef MPI_VERSION
-                    m_simple_probes.data().data()
-#else
-                    m_simple_probes.data()
-#endif
-            );
+            m_simple_probes_intern.at(record.name)[fill]=m_simple_probes;
+            m_time_intern[fill]=time;
         }
-         /// End probes output ///
+        m_iter ++;
+        if( fill == buffer_size -1 ) // buffer full ! write to file
+        {
+            // else we write the internal buffer to file
+#ifdef MPI_VERSION
+            int rank;
+            MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //MPI_VERSION
+            size_t probe_count[] = {1, m_num_pins};
+            dg::file::NC_Error_Handle err;
 
-    }
-    // is thought to be called itstp times before write
-    template<class ListClass, class ...Params>
-    void save( double time, unsigned iter, const ListClass& probe_list, Params&& ... ps)
-    {
-        if(!m_probes) return;
-        for( auto& record : probe_list)
-        {
-            record.function( m_resultD, std::forward<Params>(ps)...);
-            dg::assign( m_resultD, m_resultH);
-            dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
-            m_simple_probes_intern.at(record.name)[iter]=m_simple_probes;
-            m_time_intern[iter]=time;
-        }
-    }
-    void write_after_save()
-    {
-        if( !m_probes) return;
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //MPI_VERSION
-        size_t probe_count[] = {1, m_num_pins};
-        //OUTPUT OF PROBES
-        dg::file::NC_Error_Handle err;
-        for( unsigned j=0; j<m_time_intern.size(); j++)
-        {
-            m_probe_start[0] += 1;
-            DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
-                    m_probe_timevarID, &m_probe_start[0] , &probe_count[0],
-                    &m_time_intern[j]);
-            for( auto& field : m_simple_probes_intern)
+            for( unsigned j=0; j<buffer_size; j++)
             {
                 DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
-                        m_probe_id_field.at(field.first), m_probe_start,
-                        probe_count,
+                        m_probe_timevarID, &m_probe_start[0] , &probe_count[0],
+                        &m_time_intern[j]);
+                for( auto& field : m_simple_probes_intern)
+                {
+                    DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
+                            m_probe_id_field.at(field.first), m_probe_start,
+                            probe_count,
 #ifdef MPI_VERSION
-                        field.second[j].data().data()
+                            field.second[j].data().data()
 #else
-                        field.second[j].data()
+                            field.second[j].data()
 #endif
-                        );
+                            );
+                }
+                m_probe_start[0] += 1;
             }
         }
     }
@@ -217,7 +194,8 @@ struct Probes
     std::vector<double> m_time_intern;
     dg::x::DVec m_resultD;
     dg::x::HVec m_resultH;
-    size_t m_probe_start[2] = {0,0};
+    size_t m_probe_start[2] = {0,0}; // always point to where we currently can write
+    unsigned m_iter = 0; // the number of calls to write
 
     template<class ListClass>
     void define_nc_variables( int ncid, const std::string& format,
@@ -228,34 +206,69 @@ struct Probes
 #ifdef MPI_VERSION
         int rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if( rank == 0)
+        {
 #endif //MPI_VERSION
+
         dg::file::NC_Error_Handle err;
-        DG_RANK0 err = nc_def_grp(ncid,"probes",&m_probe_grp_id);
-        DG_RANK0 err = nc_put_att_text( m_probe_grp_id, NC_GLOBAL,
+        err = nc_def_grp(ncid,"probes",&m_probe_grp_id);
+        err = nc_put_att_text( m_probe_grp_id, NC_GLOBAL,
             "format", format.size(), format.data());
         dg::Grid1d g1d( 0,1,1,m_num_pins);
-        DG_RANK0 err = dg::file::define_dimensions( m_probe_grp_id,
-                m_probe_dim_ids, &m_probe_timevarID, g1d, {"time", "x"});
+        err = dg::file::define_dimensions( m_probe_grp_id,
+                m_probe_dim_ids, &m_probe_timevarID, g1d, {"time", "probe_dim"});
         std::vector<int> pin_id;
         for( unsigned i=0; i<coords.size(); i++)
         {
             int pin_id;
-            DG_RANK0 err = nc_def_var(m_probe_grp_id, coords_names[i].data(),
+            err = nc_def_var(m_probe_grp_id, coords_names[i].data(),
                 NC_DOUBLE, 1, &m_probe_dim_ids[1], &pin_id);
-            DG_RANK0 err = nc_put_var_double( m_probe_grp_id, pin_id, coords[i].data());
+            err = nc_put_var_double( m_probe_grp_id, pin_id, coords[i].data());
         }
         for( auto& record : probe_list)
         {
             std::string name = record.name;
             std::string long_name = record.long_name;
             m_probe_id_field[name] = 0;//creates a new id4d entry for all processes
-            DG_RANK0 err = nc_def_var( m_probe_grp_id, name.data(),
+            err = nc_def_var( m_probe_grp_id, name.data(),
                     NC_DOUBLE, 2, m_probe_dim_ids,
                     &m_probe_id_field.at(name));
-            DG_RANK0 err = nc_put_att_text( m_probe_grp_id,
+            err = nc_put_att_text( m_probe_grp_id,
                     m_probe_id_field.at(name), "long_name", long_name.size(),
                     long_name.data());
         }
+#ifdef MPI_VERSION
+        }
+#endif // MPI_VERSION
+    }
+    // record.name, record.long_name, record.function( resultH, ps...)
+    template<class DeviceListClass, class ...Params>
+    void first_write( double time, const DeviceListClass& probe_list, Params&& ... ps)
+    {
+        if(!m_probes) return;
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif //MPI_VERSION
+        size_t probe_count[] = {1, m_num_pins};
+        dg::file::NC_Error_Handle err;
+        DG_RANK0 err = nc_put_vara_double( m_probe_grp_id, m_probe_timevarID,
+                &m_probe_start[0], &probe_count[0], &time);
+        for( auto& record : probe_list)
+        {
+            record.function( m_resultD, std::forward<Params>(ps)...);
+            dg::assign( m_resultD, m_resultH);
+            dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
+            DG_RANK0 err = nc_put_vara_double( m_probe_grp_id,
+                    m_probe_id_field.at(record.name), m_probe_start, probe_count,
+#ifdef MPI_VERSION
+                    m_simple_probes.data().data()
+#else
+                    m_simple_probes.data()
+#endif
+            );
+        }
+        m_probe_start[0] ++;
     }
 
 };

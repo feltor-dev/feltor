@@ -292,7 +292,7 @@ int main( int argc, char* argv[])
                 tti.tic();
 
 
-                probes.save(time,j-1, feltor::probe_list, var);
+                probes.write(time, feltor::probe_list, var);
                 diag2d.save( time, grid, g3d_out, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
@@ -338,7 +338,6 @@ int main( int argc, char* argv[])
             diag2d.write( ncid, start, grid, g3d_out, var );
 
             diag1d.write( ncid, feltor::diagnostics1d_list, var);
-            probes.write_after_save( );
 
             DG_RANK0 err = nc_close(ncid);
             ti.toc();
