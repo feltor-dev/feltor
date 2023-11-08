@@ -225,8 +225,9 @@ int main( int argc, char* argv[])
             return 0;
         }
 
-        dg::file::Probes probes( ncid, p.itstp, js, grid, {"R","Z","P"},
-            {true,true,false}, feltor::probe_list);
+        dg::file::ProbesParams probes_coords( js);
+        dg::file::Probes probes( ncid, p.itstp, grid, probes_coords,
+                feltor::probe_list);
         dg::file::WriteRecordsList<1> diag1d( ncid, dim_ids, feltor::diagnostics1d_list);
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
         feltor::WriteIntegrateDiagnostics2dList diag2d( js, ncid, dim_ids3d);
