@@ -100,14 +100,14 @@ ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif // MPI_VERSION
-    if( probes_err == file::error::is_silent && !js.isMember( "probes"))
+    if( (probes_err == file::error::is_silent) && !js.isMember( "probes"))
         return out;
-    else if( probes_err == file::error::is_warning && !js.isMember( "probes"))
+    else if( (probes_err == file::error::is_warning) && !js.isMember( "probes"))
     {
         DG_RANK0 std::cerr << "WARNING: probes field not found.  No probes written to file!\n";
         return out;
     }
-    else
+    else if ( !js.isMember("probes"))
         throw std::runtime_error( "\"probes\" field not found!");
 
     // test if parameters are file or direct
@@ -133,19 +133,14 @@ ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
     unsigned ndim = js_probes["coords-names"].size();
 
     std::string first = js_probes["coords-names"][0].asString();
-    std::vector< double> scale;
     out.coords_names.resize(ndim);
     out.coords.resize(ndim);
     for( unsigned i=0; i<ndim; i++)
     {
         out.coords_names[i] = js_probes["coords-names"][i].asString();
         out.coords[i] = dg::HVec();
-        scale[i] = 1.;
-        if( type == "file")
-            scale[i] = js_probes["scale"][i].asDouble();
     }
-    unsigned num_pins = out.get_coords_sizes();
-    out.format = js_probes["format"].toStyledString();
+    unsigned num_pins = js_probes[out.coords_names[0]].size();
     out.probes = (num_pins > 0);
 
 #ifdef MPI_VERSION
@@ -155,14 +150,20 @@ ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
 #endif  //MPI_VERSION
     for( unsigned i=0; i<ndim; i++)
     {
+        unsigned num_pins = js_probes[out.coords_names[i]].size();
         out.coords[i].resize(num_pins);
+        double scale = 1.;
+        if( type == "file")
+            scale = probes_params["scale"][i].asDouble();
         for( unsigned k=0; k<num_pins; k++)
             out.coords[i][k] = js_probes.asJson()[out.coords_names[i]][k].asDouble()
-                *scale[i];
+                *scale;
     }
 #ifdef MPI_VERSION
     }
 #endif //MPI_VERSION
+    // does not check that all probes have same size
+    out.format = js_probes["format"].asString();
     return out;
 }
 

@@ -15,6 +15,11 @@ netcdf_t: netcdf_t.cpp nc_utilities.h easy_output.h
 netcdf_mpit: netcdf_mpit.cpp nc_utilities.h easy_output.h
 	$(MPICC) $< -o $@ $(MPICFLAGS) $(INCLUDE) $(LIBS)
 
+probes_t: probes_t.cpp probes_params.h json_probes.h
+	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB)
+probes_mpit: probes_t.cpp probes_params.h json_probes.h
+	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(JSONLIB) -DWITH_MPI
+
 jsoncpp_utilities_t: json_utilities_t.cpp json_utilities.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB)
 
