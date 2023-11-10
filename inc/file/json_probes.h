@@ -57,7 +57,6 @@ The "coords" field can be read from an external json file alternatively using
  *  No probes will be written into the output file then.  Be
  *  sure not to have any spelling mistakes on "probes" if you do want them though.
  *
- * \paragraph{format}
  * All measurements from points, lines, surfaces and volumes with different
  * purposes and different diagnostics, must be concatenated and flattened into the
  * one-dimensional coordinate arrays and the measurements are written to file
@@ -85,7 +84,7 @@ for f in format:
 @endcode
  *
  * @param js input json value
- * @param err what to do if "probes" is missing from \c js (overwrites js error mode)
+ * @param probes_err what to do if "probes" is missing from \c js (overwrites js error mode)
  * If silent, the ProbesParams remain empty if the field is absent
  * @return parsed values
  * @attention In MPI only the master thread will read in the probes the others

@@ -9,6 +9,8 @@ namespace dg
 namespace file
 {
 
+///@addtogroup netcdf
+///@{
 
 /**
  * @brief Create netcdf variable ids from records list
@@ -205,6 +207,7 @@ struct WriteRecordsList<1>
     size_t m_start;
     std::map<std::string, int> m_ids;
 };
+///@}
 
 }//namespace file
 }//namespace dg
