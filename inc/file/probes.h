@@ -66,7 +66,7 @@ struct Probes
      * @brief Construct from parameter struct and allocate internal buffer
      *
      * @param ncid netcdf id a "probes" group will be generated that contains all fields this class writes to file
-     * (probe dimensions are called "time" and "probe_dim")
+     * (probe dimensions are called "time" and "dim")
      * @param buffer_size Instead of writing to file every time, an internal
      * buffer stores the probe values when the \c write member is called. File
      * writes happen only at the first call to write, then at the \c buffer_size'th
@@ -232,7 +232,7 @@ struct Probes
             "format", format.size(), format.data());
         dg::Grid1d g1d( 0,1,1,m_num_pins);
         err = dg::file::define_dimensions( m_probe_grp_id,
-                m_probe_dim_ids, &m_probe_timevarID, g1d, {"time", "probe_dim"});
+                m_probe_dim_ids, &m_probe_timevarID, g1d, {"time", "dim"});
         std::vector<int> pin_id;
         for( unsigned i=0; i<coords.size(); i++)
         {
