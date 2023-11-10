@@ -55,12 +55,28 @@ auto call( const std::vector<dg::HVec>& x, const Geometry& g)
  * @brief Facilitate output at selected points
  *
  * This class is a high level synthetic diagnostics package
+ * Typically it works together with the \c dg::file::parse_probes function
  * @ingroup netcdf
  */
 struct Probes
 {
     Probes() = default;
     // if coords[i] are empty then all functions simply return immediately only master threads coords count
+    /**
+     * @brief Construct from parameter struct and allocate internal buffer
+     *
+     * @param ncid netcdf id a "probes" group will be generated that contains all fields this class writes to file
+     * (probe dimensions are called "time" and "probe_dim")
+     * @param buffer_size Instead of writing to file every time, an internal
+     * buffer stores the probe values when the \c write member is called. File
+     * writes happen only at the first call to write, then at the \c buffer_size'th
+     * call to write then at the next \c buffer_size'th call and so forth
+     * @param grid The interpolation matrix is generated with the \c grid and \c paraams.coords . \c grid.ndim
+     * must equal \c param.coords.size()
+     * @param params Typically read in from file with \c dg::file::parse_probes
+     * @param probe_list The list of variables later used in \c write
+     *
+     */
     template<class Geometry, class ListClass>
     Probes(
         int ncid,
