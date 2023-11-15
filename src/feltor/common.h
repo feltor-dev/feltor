@@ -356,9 +356,9 @@ void parse_geometry_file( std::string argv1, dg::file::WrappedJsonValue& js)
     if( geometry_params == "file")
     {
         std::string path = js["magnetic_field"]["file"].asString();
-        double rhos = 0;
+        double scale = 1;
         try{
-            rhos = js["magnetic_field"]["scale"].asDouble();
+            scale = js["magnetic_field"]["scale"].asDouble();
         } catch( std::exception& e) {
             DG_RANK0 std::cerr << "scale needs to be present in input file "<<argv1<<" if magnetic field from file\n";
             DG_RANK0 std::cerr << e.what()<<std::endl;
@@ -369,7 +369,7 @@ void parse_geometry_file( std::string argv1, dg::file::WrappedJsonValue& js)
                     dg::file::comments::are_discarded, dg::file::error::is_throw);
             // convert unit to rhos
             double R0 = js["magnetic_field"]["params"]["R_0"].asDouble();
-            js.asJson()["magnetic_field"]["params"]["R_0"] = R0/rhos;
+            js.asJson()["magnetic_field"]["params"]["R_0"] = R0*scale;
         }catch(std::runtime_error& e)
         {
             DG_RANK0 std::cerr << "ERROR in geometry file "<<path<<std::endl;
