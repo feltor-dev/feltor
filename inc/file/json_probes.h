@@ -162,7 +162,7 @@ ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
     }
 #endif //MPI_VERSION
     // does not check that all probes have same size
-    out.format = js_probes["format"].asString();
+    out.format = js_probes["format"].toStyledString();
     return out;
 }
 
