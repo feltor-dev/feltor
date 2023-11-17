@@ -64,10 +64,10 @@ The "coords" field can be read from an external json file alternatively using
  * to which diagnostics and is neighbor to which other point" may become
  * challening. This is why the "format" field exists.
  *
- * The format value is a user-defined json value that is ignored by feltor and
- * copied "as-is" as a string attribute to the probes group in the output file.
- * Its purpose is to hold parsing information for the (flat) $R$, $Z$, $P$ arrays
- * for post-processing. For example
+ * The format value is a user-defined json value that is ignored by feltor,
+ * converted to a styled string and then stored as an attribute to the probes
+ * group in the output file.  Its purpose is to hold parsing information for
+ * the (flat) $R$, $Z$, $P$ arrays for post-processing. For example
 @code
 "format" : [
 {"name" : "x-probe", "pos" : [0,10], "shape" : [10]},

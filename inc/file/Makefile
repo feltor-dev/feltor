@@ -39,4 +39,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t
+	rm -f netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t probes_parser_t probes_parser_mpit probes_t probes_mpit
