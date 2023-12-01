@@ -79,7 +79,7 @@ inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID
  * called a coordinate variable.  The CF conventions dictate that the units
  * attribute must be defined for a time variable: we give it the value "time
  * since start"
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param name Name of time variable (variable names are not standardized)
  * @param dimID time-dimension ID
  * @param tvarID time-variable ID (for a time variable of type \c NC_DOUBLE)
@@ -100,7 +100,7 @@ static inline int define_time( int ncid, const char* name, int* dimID, int* tvar
  * called a coordinate variable.  The CF conventions dictate that the units
  * attribute must be defined for a time variable: we give it the value "time
  * since start"
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param name Name of the time variable (usually "time")
  * @param size The number of timesteps
  * @param dimID time-dimension ID
@@ -124,7 +124,7 @@ static inline int define_limited_time( int ncid, const char* name, int size, int
  * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
  * a variable with the same name as a dimension is
  * called a coordinate variable.
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param dimID dimension ID (output)
  * @param g The 1d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
  * @param name_dim Name of dimension and coordinate variable (input)
@@ -143,8 +143,8 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
     int varID;
     if( (retval = nc_def_var( ncid, name_dim.data(), getNCDataType<T>(), 1, dimID, &varID))){return retval;}
     if( (retval = put_var_T<T>( ncid, varID, points.data())) ){ return retval;}
-    retval = nc_put_att_text( ncid, *dimID, "axis", axis.size(), axis.data());
-    retval = nc_put_att_text( ncid, *dimID, "long_name", long_name.size(), long_name.data());
+    if( (retval = nc_put_att_text( ncid, varID, "axis", axis.size(), axis.data())) ){return retval;}
+    retval = nc_put_att_text( ncid, varID, "long_name", long_name.size(), long_name.data());
     return retval;
 }
 
@@ -161,7 +161,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
  * define_dimension( ncid, &dimsIDs[1], g, name_dims[1]);
  * @endcode
  * Dimensions have attribute of (time, X)
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param dimsIDs dimension IDs (time, X)
  * @param tvarID time coordinate variable ID (unlimited)
  * @param g The 1d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
@@ -187,7 +187,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Rea
  * called a coordinate variable.
  *
  * Dimensions have attributes of (Y, X)
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) 2D array of dimension IDs (Y,X)
  * @param g The 2d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g) in each dimension
  * @param name_dims Names for the dimension variables
@@ -220,7 +220,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology2d<
  * define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2]});
  * @endcode
  * Dimensions have attributes of (time, Y, X)
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (time, Y,X)
  * @param tvarID (write - only) The ID of the time variable ( unlimited)
  * @param g The 2d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g) in each dimension
@@ -253,7 +253,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aRe
  * define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2]});
  * @endcode
  * Dimensions have attributes of (time, Y, X)
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (time, Y,X)
  * @param size The size of the time variable
  * @param tvarID (write - only) The ID of the time variable (limited)
@@ -281,7 +281,7 @@ inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, con
  * called a coordinate variable.
  *
  * Dimensions have attributes ( Z, Y, X)
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (Z,Y,X)
  * @param g The 3d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g) in each dimension
  * @param name_dims Names for the dimension variables ( Z, Y, X)
@@ -319,7 +319,7 @@ inline int define_dimensions( int ncid, int* dimsIDs, const dg::aRealTopology3d<
  * define_dimensions( ncid, &dimsIDs[1], g, {name_dims[1], name_dims[2], name_dims[3]});
  * @endcode
  * Dimensions have attributes ( time, Z, Y, X)
- * @param ncid file ID
+ * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) 4D array of dimension IDs (time, Z,Y,X)
  * @param tvarID (write - only) The ID of the time variable ( unlimited)
  * @param g The 3d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g) in each dimension

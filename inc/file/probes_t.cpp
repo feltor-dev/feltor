@@ -60,6 +60,9 @@ int main(int argc, char* argv[])
     , comm
 #endif
     );
+    int dim_ids[3], tvarID;
+    // This caught an error in define_dimensions
+    DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
 
     dg::file::Probes probes( ncid, 5, grid, params, records_list);
 
