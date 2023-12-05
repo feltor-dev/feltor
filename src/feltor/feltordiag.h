@@ -1936,7 +1936,7 @@ dg::geo::CylindricalFunctor transition)
             dim_ids_yx, &vecID);
         DG_RANK0 err = nc_put_att_text( ncid, vecID,
             "long_name", record.long_name.size(), record.long_name.data());
-        DG_RANK0 std::cout << "Computing2d "<<record.name<<"\n";
+        //DG_RANK0 std::cout << "Computing2d "<<record.name<<"\n";
         //record.function( transferH, var, g3d_out); //ATTENTION: This does not work because feltor internal variables return full grid functions
         record.function( resultH, var, grid);
         dg::blas2::symv( projectH, resultH, transferH);
@@ -1949,7 +1949,7 @@ dg::geo::CylindricalFunctor transition)
     std::string long_name = "The region where the magnetic field is modified";
     DG_RANK0 err = nc_put_att_text( ncid, vecID,
         "long_name", long_name.size(), long_name.data());
-    DG_RANK0 std::cout << "Computing2d MagneticTransition\n";
+    //DG_RANK0 std::cout << "Computing2d MagneticTransition\n";
     resultH = dg::pullback( transition, grid);
     dg::blas2::symv( projectH, resultH, transferH);
     if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
@@ -2063,11 +2063,11 @@ struct WriteIntegrateDiagnostics2dList
                 //create and init Simpsons for time integrals
                 if( record.integral) m_time_integrals[name].init( time, transferH2d);
                 tti.toc();
-                DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
+                //DG_RANK0 std::cout<< name << " Computing average took "<<tti.diff()<<"\n";
                 tti.tic();
                 if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name), start, *g2d_out_ptr, transferH2d);
                 tti.toc();
-                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+                //DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
                 tti.tic();
                 // add a slice
                 name = record.name + "_2d";
@@ -2076,7 +2076,7 @@ struct WriteIntegrateDiagnostics2dList
                 if( record.integral) m_time_integrals[name].init( time, transferH2d);
                 if(write2d) dg::file::put_vara_double( ncid, m_id3d.at(name), start, *g2d_out_ptr, transferH2d);
                 tti.toc();
-                DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
+                //DG_RANK0 std::cout<< name << " 2d output took "<<tti.diff()<<"\n";
             }
         }
     }

@@ -250,16 +250,23 @@ int main( int argc, char* argv[])
 
         size_t start = 0, count = 1;
         DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
+        DG_RANK0 std::cout << "Write restart ...\n";
         restart.write( grid, feltor);
 
+        DG_RANK0 std::cout << "Write diag1d ...\n";
         diag1d.write( ncid, feltor::diagnostics1d_list, var);
+        DG_RANK0 std::cout << "Write diag2d ...\n";
         diag2d.first_write( ncid, start, time, grid, g3d_out, var );
+        DG_RANK0 std::cout << "Write diag4d ...\n";
         diag4d.project_write( ncid, grid, g3d_out, feltor::diagnostics3d_list, var);
 
 
+        DG_RANK0 std::cout << "Write static probes ...\n";
         probes.static_write( feltor::diagnostics2d_static_list, var, grid);
+        DG_RANK0 std::cout << "Write probes ...\n";
         probes.write( time, feltor::probe_list, var);
 
+        DG_RANK0 std::cout << "Close file ...\n";
         DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
@@ -292,7 +299,10 @@ int main( int argc, char* argv[])
                 tti.tic();
 
 
+                // maybe a file handle that tracks when the file is open is preferable here...
+                DG_RANK0 err = nc_open(file_name.data(), NC_WRITE, &ncid);
                 probes.write(time, feltor::probe_list, var);
+                DG_RANK0 err = nc_close(ncid);
                 diag2d.save( time, grid, g3d_out, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";

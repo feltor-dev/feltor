@@ -101,7 +101,7 @@ struct Probes
                             Geometry::ndim()>().call( params.coords, grid);
         // Create helper storage probe variables
 #ifdef MPI_VERSION
-        if(rank==0) m_simple_probes = dg::MHVec(params.coords[0],
+        m_simple_probes = dg::MHVec(params.coords[0],
                 grid.communicator());
 #else //MPI_VERSION
         m_simple_probes = dg::HVec(m_num_pins);
@@ -144,6 +144,7 @@ struct Probes
         }
     }
 
+    // netcdf file must be open for this
     template<class DeviceListClass, class ...Params>
     void write( double time, const DeviceListClass& probe_list, Params&& ... ps)
     {
