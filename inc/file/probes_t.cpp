@@ -11,12 +11,19 @@
 double function( double x, double y){return sin(x)*sin(y);}
 double gradientX(double x, double y){return cos(x)*sin(y);}
 double gradientY(double x, double y){return sin(x)*cos(y);}
+double cosine( double x, double y){return cos(x)*cos(y);}
 
 struct Record
 {
     std::string name;
     std::string long_name;
     std::function<void (dg::x::DVec&, const dg::x::Grid2d&, double)> function;
+};
+struct StaticRecord
+{
+    std::string name;
+    std::string long_name;
+    std::function<void (dg::x::HVec&, const dg::x::Grid2d&)> function;
 };
 
 std::vector<Record> records_list = {
@@ -30,6 +37,19 @@ std::vector<Record> records_list = {
         [] ( dg::x::DVec& resultD, const dg::x::Grid2d& g, double time){
             resultD = dg::evaluate( gradientY, g);
             dg::blas1::scal( resultD, cos( time));
+        }
+    }
+};
+
+std::vector<StaticRecord> records_static_list = {
+    {"Sine", "A Sine function",
+        [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
+            resultH = dg::evaluate( function, g);
+        }
+    },
+    {"Cosine", "A Cosine function",
+        [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
+            resultH = dg::evaluate( cosine, g);
         }
     }
 };
@@ -65,6 +85,7 @@ int main(int argc, char* argv[])
     DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
 
     dg::file::Probes probes( ncid, 5, grid, params, records_list);
+    probes.static_write( records_static_list, grid);
 
     double Tmax=2.*M_PI;
     double NT = 10;
