@@ -18,17 +18,17 @@ namespace file
  * For each record in \c record_list create a variable named \c record.name with
  * attribute \c record.long_name of dimension \c ndim in group \c ncid with
  * dimensions given by \c dim_ids
- * @tparam ndim Number of dimensions of variables
  * @tparam ListClass
  * @param ncid root or group id in a netcdf file
- * @param dim_ids ndim dimension ids associated to each variable
+ * @param ndim Number of dimensions of variables
+ * @param dim_ids (read-only) ndim dimension ids associated to each variable
  * @param record_list list of records to put into ncid
  *
  * @note in an MPI program all processes have to call this function. The
  * function automatically takes care of which threads write to file.
  */
-template<unsigned ndim, class ListClass>
-std::map<std::string, int> create_varids( int ncid, int* dim_ids, const ListClass& record_list)
+template<class ListClass>
+std::map<std::string, int> create_varids( int ncid, unsigned ndim, int* dim_ids, const ListClass& record_list)
 {
 #ifdef MPI_VERSION
     int rank;
@@ -56,24 +56,22 @@ std::map<std::string, int> create_varids( int ncid, int* dim_ids, const ListClas
  * attribute \c record.long_name of dimension \c ndim in group \c ncid with
  * dimensions given by \c dim_ids and data given by \c record.function( resultH, ps ...)
  * where \c resultH is a host vector given by \c grid_out
- * @tparam ndim Number of dimensions of variables
  * @tparam Geometry A topology with ndim dimensions
  * @tparam ListClass
  * @tparam Params
  * @param ncid root or group id in a netcdf file
- * @param dim_ids ndim dimension ids associated to each variable
+ * @param dim_ids (read-only) ndim dimension ids associated to each variable
  * @param grid gives the shape of the output variable (shape must be consistent with \c dim_ids)
  * @param record_list list of records to put into ncid
  * @param ps Parameters forwarded to \c record.function( resultH, ps...)
  * @note in an MPI program all processes have to call this function. The
  * function automatically takes care of which threads write to file.
  */
-template<unsigned ndim, class Geometry, class ListClass, class ...Params>
+template<class Geometry, class ListClass, class ...Params>
 void write_static_records_list( int ncid, int* dim_ids, const Geometry& grid,
     const ListClass& record_list, Params&& ... ps)
 {
-    static_assert( ndim == Geometry::ndim());
-    auto ids = create_varids<ndim,ListClass>( ncid, dim_ids, record_list);
+    auto ids = create_varids<ListClass>( ncid, Geometry::ndim(), dim_ids, record_list);
     auto transferH = dg::evaluate(dg::zero, grid);
     for ( auto& record : record_list)
     {
@@ -84,7 +82,7 @@ void write_static_records_list( int ncid, int* dim_ids, const Geometry& grid,
 
 /**
  * @brief A class to write time-dependent variables from a record list into a netcdf file
- * @tparam ndim Number of dimensions of variables
+ * @tparam ndim Number of dimensions of variables plus time
  * @note in an MPI program all processes have to create the class and call its methods. The
  * class automatically takes care of which threads write to file.
  */
@@ -103,13 +101,13 @@ struct WriteRecordsList
      * dimensions given by \c dim_ids
      * @tparam ListClass
      * @param ncid root or group id in a netcdf file
-     * @param dim_ids ndim dimension ids associated to each variable
+     * @param dim_ids (read-only) ndim dimension ids associated to each variable
      * @param record_list list of records to put into ncid
      */
     template<class ListClass>
     WriteRecordsList( int ncid, int* dim_ids, const ListClass& record_list) : m_start(0)
     {
-        m_ids = create_varids<ndim>( ncid, dim_ids, record_list);
+        m_ids = create_varids( ncid, ndim, dim_ids, record_list);
     }
 
     /**
@@ -186,6 +184,7 @@ struct WriteRecordsList
 };
 
 /// @brief A specialisation for 0-dimensional time-dependent data
+/// The difference to the general case is that the \c record.function is supposed to return a double
 template<>
 struct WriteRecordsList<1>
 {
@@ -193,7 +192,7 @@ struct WriteRecordsList<1>
     template<class ListClass>
     WriteRecordsList( int ncid, int* dim_ids, const ListClass& record_list) : m_start(0)
     {
-        m_ids = create_varids<1>( ncid, dim_ids, record_list);
+        m_ids = create_varids( ncid, 1, dim_ids, record_list);
     }
     template<class ListClass, class ...Params>
     void write( int ncid, const ListClass& record_list, Params&& ... ps)

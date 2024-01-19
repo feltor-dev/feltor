@@ -211,7 +211,7 @@ int main( int argc, char* argv[])
         };
 
         //create & output static 3d variables into file
-        dg::file::write_static_records_list<3>( ncid, &dim_ids[1], g3d_out,
+        dg::file::write_static_records_list( ncid, &dim_ids[1], g3d_out,
             feltor::diagnostics3d_static_list, var, g3d_out);
         //create & output static 2d variables into file
         feltor::write_diagnostics2d_static_list( ncid, &dim_ids[2], var, grid, g3d_out, transition);
@@ -225,7 +225,7 @@ int main( int argc, char* argv[])
             return 0;
         }
 
-        dg::file::Probes probes( ncid, p.itstp, grid, dg::file::parse_probes(js),
+        dg::file::Probes probes( ncid, grid, dg::file::parse_probes(js),
                 feltor::probe_list);
         dg::file::WriteRecordsList<1> diag1d( ncid, dim_ids, feltor::diagnostics1d_list);
         int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
@@ -298,11 +298,7 @@ int main( int argc, char* argv[])
                 dg::Timer tti;
                 tti.tic();
 
-
-                // maybe a file handle that tracks when the file is open is preferable here...
-                DG_RANK0 err = nc_open(file_name.data(), NC_WRITE, &ncid);
-                probes.write(time, feltor::probe_list, var);
-                DG_RANK0 err = nc_close(ncid);
+                probes.buffer(time, feltor::probe_list, var);
                 diag2d.save( time, grid, g3d_out, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
@@ -344,6 +340,7 @@ int main( int argc, char* argv[])
             DG_RANK0 err = nc_open(file_name.data(), NC_WRITE, &ncid);
             DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
             diag4d.project_write( ncid, grid, g3d_out, feltor::diagnostics3d_list, var);
+            probes.flush();
             restart.write( grid, feltor);
             diag2d.write( ncid, start, grid, g3d_out, var );
 
