@@ -23,8 +23,9 @@ namespace file
  * @param ncid root or group id in a netcdf file
  * @param dim_ids ndim dimension ids associated to each variable
  * @param record_list list of records to put into ncid
- * @note This function compiles for MPI automatically if the macro
- * \c MPI_VERSION is defined. Then only the master rank 0 writes to file
+ *
+ * @note in an MPI program all processes have to call this function. The
+ * function automatically takes care of which threads write to file.
  */
 template<unsigned ndim, class ListClass>
 std::map<std::string, int> create_varids( int ncid, int* dim_ids, const ListClass& record_list)
@@ -64,6 +65,8 @@ std::map<std::string, int> create_varids( int ncid, int* dim_ids, const ListClas
  * @param grid gives the shape of the output variable (shape must be consistent with \c dim_ids)
  * @param record_list list of records to put into ncid
  * @param ps Parameters forwarded to \c record.function( resultH, ps...)
+ * @note in an MPI program all processes have to call this function. The
+ * function automatically takes care of which threads write to file.
  */
 template<unsigned ndim, class Geometry, class ListClass, class ...Params>
 void write_static_records_list( int ncid, int* dim_ids, const Geometry& grid,
@@ -82,6 +85,8 @@ void write_static_records_list( int ncid, int* dim_ids, const Geometry& grid,
 /**
  * @brief A class to write time-dependent variables from a record list into a netcdf file
  * @tparam ndim Number of dimensions of variables
+ * @note in an MPI program all processes have to create the class and call its methods. The
+ * class automatically takes care of which threads write to file.
  */
 template<unsigned ndim>
 struct WriteRecordsList
@@ -141,8 +146,8 @@ struct WriteRecordsList
             dg::blas2::symv( projectD, resultD, transferD);
             dg::assign( transferD, transferH);
             dg::file::put_vara_double( ncid, m_ids.at(record.name), m_start, grid_out, transferH);
-            m_start++;
         }
+        m_start++;
     }
     /**
      * @brief Write variables created from record list
@@ -163,6 +168,8 @@ struct WriteRecordsList
     void write( int ncid, const Geometry& grid, const
         ListClass& record_list, Params&& ...ps)
     {
+        static_assert( ndim>1);
+        static_assert( ndim == Geometry::ndim() +1);
         dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         for( auto& record : record_list)
@@ -170,8 +177,8 @@ struct WriteRecordsList
             record.function( resultD, std::forward<Params>(ps)...);
             dg::assign( resultD, resultH);
             dg::file::put_vara_double( ncid, m_ids.at(record.name), m_start, grid, resultH);
-            m_start++;
         }
+        m_start++;
     }
     private:
     size_t m_start;
@@ -200,8 +207,8 @@ struct WriteRecordsList<1>
         {
             double result = record.function( std::forward<Params>(ps)...);
             DG_RANK0 nc_put_vara_double( ncid, m_ids.at(record.name), &m_start, &count, &result);
-            m_start++;
         }
+        m_start++;
     }
     private:
     size_t m_start;

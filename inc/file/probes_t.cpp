@@ -5,6 +5,7 @@
 #endif
 #include "dg/algorithm.h"
 
+#define _FILE_INCLUDED_BY_DG_
 #include "json_probes.h"
 #include "probes.h"
 
@@ -73,7 +74,14 @@ int main(int argc, char* argv[])
 
     int ncid=0;
     dg::file::NC_Error_Handle err;
-    DG_RANK0 err = nc_create( "probes.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+#ifdef WITH_MPI
+    std::string filename = "probesmpi.nc";
+#else
+    std::string filename = "probes.nc";
+#endif
+    DG_RANK0 std::cout << "WRITE A TIMEDEPENDENT VECTOR FIELD AND PROBE DATA TO NETCDF4 FILE "
+                       << filename<<"\n";
+    DG_RANK0 err = nc_create( filename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
     double x0 = 0., x1 = 2.*M_PI;
     dg::x::Grid2d grid( x0,x1,x0,x1,3,100,100, dg::PER, dg::PER
 #ifdef WITH_MPI
@@ -83,8 +91,9 @@ int main(int argc, char* argv[])
     int dim_ids[3], tvarID;
     // This caught an error in define_dimensions
     DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    dg::file::WriteRecordsList<3> records( ncid, dim_ids, records_list);
 
-    dg::file::Probes probes( ncid, 5, grid, params, records_list);
+    dg::file::Probes probes( ncid, grid, params, records_list);
     probes.static_write( records_static_list, grid);
 
     double Tmax=2.*M_PI;
@@ -93,11 +102,36 @@ int main(int argc, char* argv[])
     double time = 0;
     for(unsigned i=0; i<=NT; i++)
     {
-        DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
         time = i*dt;
-        probes.write( time, records_list, grid, time);
+        if( i <= 3)
+        {
+            DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
+            probes.write( time, records_list, grid, time);
+        }
+        else
+        {
+            if( i % 2)
+            {
+                DG_RANK0 std::cout<<"Buffer timestep "<<i<<"\n";
+                probes.buffer( time, records_list, grid, time);
+            }
+            else
+            {
+                DG_RANK0 std::cout<<"Buffer & Flush timestep "<<i<<"\n";
+                probes.buffer( time, records_list, grid, time);
+                probes.flush();
+            }
+        }
+        //write vector field
+        records.write( ncid, grid, records_list, grid, time);
+        //write time
+        const size_t Tcount = 1;
+        const size_t Tstart = i;
+        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
     }
 
+
+    DG_RANK0 err = nc_close(ncid);
 #ifdef WITH_MPI
     MPI_Finalize();
 #endif
