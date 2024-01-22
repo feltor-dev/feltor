@@ -72,7 +72,6 @@ dg: exblas.tag geometries.tag matrix.tag
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
-		echo "HTML_COLORSTYLE = LIGHT";\
 		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html" ../../doc/matrix.tag=../../matrix/html) | doxygen - ;
 
 geometries: dg.tag
@@ -85,7 +84,6 @@ geometries: dg.tag
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
-		echo "HTML_COLORSTYLE = LIGHT";\
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
 
 matrix: dg.tag
@@ -98,7 +96,6 @@ matrix: dg.tag
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
-		echo "HTML_COLORSTYLE = LIGHT";\
 		echo "TAGFILES = ../../doc/dg.tag=../../dg/html") | doxygen - ;
 
 file:
@@ -111,7 +108,6 @@ file:
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../doc/menubar.css";\
-		echo "HTML_COLORSTYLE = LIGHT";\
 		echo ) | doxygen - ;
 
 exblas:
@@ -124,7 +120,6 @@ exblas:
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/doxygen-awesome-sidebar-only.css";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/doxygen-awesome-fragment-copy-button.js";\
 		echo "HTML_EXTRA_STYLESHEET += ../../../../doc/menubar.css";\
-		echo "HTML_COLORSTYLE = LIGHT";\
 		echo ) | doxygen - ;
 
 
