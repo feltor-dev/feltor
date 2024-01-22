@@ -62,39 +62,24 @@ int main( int argc, char* argv[])
 
     //-------------------Construct grids-------------------------------------//
 
-    dg::geo::CylindricalFunctor wall, transition;
-    dg::geo::TokamakMagneticField mag, mod_mag;
-    try{
-        mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
-        mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
-                js["boundary"]["wall"], wall, transition);
-    }catch(std::runtime_error& e)
-    {
-        std::cerr << "ERROR in input file "<<argv[2]<<std::endl;
-        std::cerr <<e.what()<<std::endl;
-        return -1;
-    }
-
-    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    const double Zmin=-p.boxscaleZm*mag.params().a();
-    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    const double Zmax=p.boxscaleZp*mag.params().a();
+    auto box = common::box( js);
     const unsigned FACTOR=config.get( "Kphi", 10).asUInt();
 
     unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
     unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
     unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy;
-    dg::Grid2d g2d_out( Rmin,Rmax, Zmin,Zmax,
+    dg::Grid2d g2d_out( box.at("Rmin"),box.at("Rmax"), box.at("Zmin"),box.at("Zmax"),
         n_out, Nx_out, Ny_out, p.bcxN, p.bcyN);
     /////////////////////////////////////////////////////////////////////////
-    dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g3d( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
         n_out, Nx_out, Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::CylindricalGrid3d g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g3d_fine( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
         n_out, Nx_out, Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
-    //create RHS
-    if( p.periodify)
-        mod_mag = dg::geo::periodify( mod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
+    dg::geo::TokamakMagneticField mag, mod_mag, unmod_mag;
+    dg::geo::CylindricalFunctor wall, transition;
+    common::create_mag_wall( argv[2], js, mag, mod_mag, unmod_mag, wall, transition);
+
     dg::HVec psipog2d = dg::evaluate( mod_mag.psip(), g2d_out);
     // Construct weights and temporaries
 
@@ -127,7 +112,7 @@ int main( int argc, char* argv[])
 
     /// Set global attributes
     std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor/feltordiag.cu";
+    att["title"] = "Output file of feltor/src/feltor/feltordiag.cpp";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
     auto ttt = std::time(nullptr);

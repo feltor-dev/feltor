@@ -73,7 +73,7 @@ int main( int argc, char* argv[])
 
     /// Set global attributes
     std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor/interpolate_in_3d.cu";
+    att["title"] = "Output file of feltor/src/feltor/interpolate_in_3d.cpp";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
     auto ttt = std::time(nullptr);
@@ -93,32 +93,29 @@ int main( int argc, char* argv[])
 
     //-------------------Construct grids-------------------------------------//
 
-    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    const double Zmin=-p.boxscaleZm*mag.params().a();
-    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    const double Zmax=p.boxscaleZp*mag.params().a();
+    auto box = common::box( js);
 
     unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
     unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
     unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy, Nz_out = p.Nz;
-    dg::RealCylindricalGrid3d<double> g3d_in( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
+    dg::RealCylindricalGrid3d<double> g3d_in( box.at("Rmin"),box.at("Rmax"), box.at("Zmin"),box.at("Zmax"), 0, 2*M_PI,
         n_out, Nx_out, Ny_out, Nz_out, p.bcxN, p.bcyN, dg::PER);
-    dg::RealCylindricalGrid3d<double> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2*M_PI,
+    dg::RealCylindricalGrid3d<double> g3d_out( box.at("Rmin"),box.at("Rmax"), box.at("Zmin"),box.at("Zmax"), 0, 2*M_PI,
         n_out, Nx_out, Ny_out, INTERPOLATE*Nz_out, p.bcxN, p.bcyN, dg::PER);
-    dg::RealCylindricalGrid3d<double> g3d_out_equidistant( Rmin,Rmax,
-            Zmin,Zmax, 0, 2*M_PI, 1, n_out*Nx_out, n_out*Ny_out,
+    dg::RealCylindricalGrid3d<double> g3d_out_equidistant( box.at("Rmin"),box.at("Rmax"),
+            box.at("Zmin"),box.at("Zmax"), 0, 2*M_PI, 1, n_out*Nx_out, n_out*Ny_out,
             INTERPOLATE*Nz_out, p.bcxN, p.bcyN, dg::PER);
-    dg::RealCylindricalGrid3d<float> g3d_out_periodic( Rmin,Rmax, Zmin,Zmax, 0,
+    dg::RealCylindricalGrid3d<float> g3d_out_periodic( box.at("Rmin"),box.at("Rmax"), box.at("Zmin"),box.at("Zmax"), 0,
             2*M_PI+g3d_out.hz(), n_out, Nx_out, Ny_out, INTERPOLATE*Nz_out+1,
             p.bcxN, p.bcyN, dg::PER);
-    dg::RealCylindricalGrid3d<float> g3d_out_periodic_equidistant( Rmin,Rmax,
-            Zmin,Zmax, 0, 2*M_PI+g3d_out.hz(), 1, n_out*Nx_out, n_out*Ny_out,
+    dg::RealCylindricalGrid3d<float> g3d_out_periodic_equidistant( box.at("Rmin"),box.at("Rmax"),
+            box.at("Zmin"),box.at("Zmax"), 0, 2*M_PI+g3d_out.hz(), 1, n_out*Nx_out, n_out*Ny_out,
             INTERPOLATE*Nz_out+1, p.bcxN, p.bcyN, dg::PER);
     // For field-aligned output
-    dg::RealCylindricalGrid3d<double> g3d_out_fieldaligned( Rmin,Rmax,
-            Zmin,Zmax, -2*M_PI, 2*M_PI, 1, n_out*Nx_out, n_out*Ny_out, 2*Nz_out,
+    dg::RealCylindricalGrid3d<double> g3d_out_fieldaligned( box.at("Rmin"),box.at("Rmax"),
+            box.at("Zmin"),box.at("Zmax"), -2*M_PI, 2*M_PI, 1, n_out*Nx_out, n_out*Ny_out, 2*Nz_out,
             p.bcxN, p.bcyN, dg::PER);
-    dg::RealGrid2d<double> g2d( Rmin,Rmax,Zmin,Zmax, 1, n_out*Nx_out,
+    dg::RealGrid2d<double> g2d( box.at("Rmin"),box.at("Rmax"),box.at("Zmin"),box.at("Zmax"), 1, n_out*Nx_out,
             n_out*Ny_out, p.bcxN, p.bcyN);
 
 
