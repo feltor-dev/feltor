@@ -7,7 +7,7 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../../ # other project libraries
 INCLUDE+= -I../    # other project libraries
 
-all: netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t probes_parser_t probes_parser_mpit probes_t probes_mpit
+all: netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t probes_parser_t probes_parser_mpit probes_t probes_mpit jsoncpp_netcdf_t jsonhpp_netcdf_t
 
 netcdf_t: netcdf_t.cpp nc_utilities.h easy_output.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS)
@@ -32,6 +32,12 @@ jsoncpp_utilities_t: json_utilities_t.cpp json_utilities.h
 
 jsonhpp_utilities_t: json_utilities_t.cpp json_utilities.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) -DDG_USE_JSONHPP
+
+jsoncpp_netcdf_t: json_netcdf_t.cpp json_netcdf.h
+	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS)
+
+jsonhpp_netcdf_t: json_netcdf_t.cpp json_netcdf.h
+	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS) -DDG_USE_JSONHPP
 
 .PHONY: doc clean
 
