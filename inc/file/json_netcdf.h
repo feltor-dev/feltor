@@ -33,7 +33,7 @@ namespace file
  * Furthermore, all elements of an array must have the same type.
  * @note In an MPI program only one thread can call this function!
  * @note boolean values are mapped to int netcdf attributes
- * @param atts A Json Dictionary containing all the attributes for the variable or file
+ * @param atts A Json Dictionary containing all the attributes for the variable or file. \c atts can be empty in which case no attribute is written.
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID, or NC_GLOBAL for a global attribute
  */

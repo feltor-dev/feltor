@@ -54,6 +54,9 @@ int main(int argc, char* argv[])
     err = nc_create( "atts.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     std::cout << dg::file::WrappedJsonValue(att).toStyledString()<<"\n";
     dg::file::json2nc_attributes( att, ncid, NC_GLOBAL);
+    // TEST EMPTY Value
+    att = dg::file::JsonType();
+    dg::file::json2nc_attributes( att, ncid, NC_GLOBAL);
     nc_close(ncid);
     std::cout << "\n\nTEST BY USING ncdump -h atts.nc\n\n";
 
