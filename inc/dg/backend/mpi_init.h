@@ -46,10 +46,105 @@ static inline void mpi_init( int argc, char* argv[])
 /** @class hide_cart_warning
 * @attention Before creating a second Cartesian communicator consider freeing existing ones with \c MPI_Comm_free. (Using \c mpi_init2d and \c mpi_init3d in the same program has sometimes led to Segmentation faults in the past)
   */
+/** @class hide_gpu
+ *
+ *@note
+* Also sets the GPU a process should use via <tt> cudaSetDevice( rank \%
+* num_devices_per_node) </tt> if <tt>
+* THRUST_DEVICE_SYSTEM == THRUST_DEVICE_SYSTEM_CUDA </tt>.
+* We assume that the number of GPUs per node is fixed.
+*/
+
+/**
+* @brief Create 1d Cartesian MPI communicator from MPI_COMM_WORLD
+*
+* @copydoc hide_gpu
+* @param bcx if \c bcx==dg::PER then the communicator is periodic in x
+* @param comm (write only) \c MPI_COMM_WORLD as a 1d Cartesian MPI communicator
+* @param verbose If true, rank 0 prints queries and information on \c std::cout
+* @ingroup misc
+* @copydoc hide_cart_warning
+*/
+static inline void mpi_init1d( dg::bc bcx, MPI_Comm& comm, bool verbose = true  )
+{
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    int periods[1] = {false};
+    if( bcx == dg::PER) periods[0] = true;
+    int np[1] = {size};
+    if( rank == 0)
+    {
+        int num_threads = 1;
+#ifdef _OPENMP
+        num_threads = omp_get_max_threads( );
+#endif //omp
+        if(verbose) std::cout << "# Computing with "
+                  << size << " processes x "
+                  << num_threads<<" threads = "
+                  <<size*num_threads<<" total"<<std::endl;
+    }
+    MPI_Cart_create( MPI_COMM_WORLD, 1, np, periods, true, &comm);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices == 0)
+    {
+        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
+        MPI_Abort(MPI_COMM_WORLD, -1);
+        exit(-1);
+    }
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
+    cudaSetDevice( device);
+#endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+}
+/**
+* @brief Read in number of grid points and broadcast to process group
+*
+* @param n  rank 0 reads in from \c is and broadcasts to all processes in \c comm
+* @param N  rank 0 reads in from \c is and broadcasts to all processes in \c comm
+* @param comm (read only) a MPI communicator
+* @param is Input stream rank 0 reads parameters (\c n, \c N)
+* @param verbose If true, rank 0 prints queries and information on \c std::cout
+* @ingroup misc
+*/
+static inline void mpi_init1d(unsigned& n, unsigned& N, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
+{
+    int rank;
+    MPI_Comm_rank( comm, &rank);
+    if( rank == 0)
+    {
+        if(verbose)std::cout << "# Type n, N \n";
+        is >> n >> N;
+        if(verbose)std::cout<< "# On the grid "<<n <<" x "<<N<<std::endl;
+    }
+    MPI_Bcast( &n,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &N,1 , MPI_UNSIGNED, 0, comm);
+}
+
+/**
+* @brief Read in number of grid points and create Cartesian MPI communicator
+*
+* @copydoc hide_gpu
+* @param bcx if \c bcx==dg::PER then the communicator is periodic in x
+* @param n  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
+* @param N  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
+* @param comm (write only) \c MPI_COMM_WORLD as a 1d Cartesian MPI communicator
+* @param is Input stream rank 0 reads parameters (\c n, \c N)
+* @param verbose If true, rank 0 prints queries and information on \c std::cout
+* @ingroup misc
+* @copydoc hide_cart_warning
+*/
+static inline void mpi_init1d( dg::bc bcx, unsigned& n, unsigned& N, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+{
+    mpi_init1d( bcx,  comm, verbose);
+    mpi_init1d( n, N, comm, is, verbose);
+}
 /**
 * @brief Read in number of processses and create Cartesian MPI communicator
 *
-* Also sets the GPU a process should use via \c rank\% num_devices_per_node if \c THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param comm (write only) \c MPI_COMM_WORLD as a 2d Cartesian MPI communicator
@@ -105,12 +200,12 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istr
 #endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 /**
-* @brief Read in number of processes and broadcast to process group
+* @brief Read in number of grid points and broadcast to process group
 *
 * @param n  rank 0 reads in from \c is and broadcasts to all processes in \c comm
 * @param Nx rank 0 reads in from \c is and broadcasts to all processes in \c comm
 * @param Ny rank 0 reads in from \c is and broadcasts to all processes in \c comm
-* @param comm (read only) a 2d Cartesian MPI communicator
+* @param comm (read only) a MPI communicator
 * @param is Input stream rank 0 reads parameters (\c n, \c Nx, \c Ny)
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
@@ -133,7 +228,7 @@ static inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm 
 /**
 * @brief Read in number of processses and grid size and create Cartesian MPI communicator
 *
-* Also sets the GPU a process should use via \c rank\% num_devices_per_node if \c THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param n  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
@@ -155,7 +250,7 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx
 /**
 * @brief Read in number of processses and create Cartesian MPI communicator
 *
-* Also sets the GPU a process should use via \c rank\% num_devices_per_node if \c THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param bcz if \c bcz==dg::PER then the communicator is periodic in z
@@ -211,13 +306,13 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& com
 #endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 /**
-* @brief Read in number of processes and broadcast to process group
+* @brief Read in number of grid points and broadcast to process group
 *
 * @param n  rank 0 reads in from \c is and broadcasts to all processes in \c comm
 * @param Nx rank 0 reads in from \c is and broadcasts to all processes in \c comm
 * @param Ny rank 0 reads in from \c is and broadcasts to all processes in \c comm
 * @param Nz rank 0 reads in from \c is and broadcasts to all processes in \c comm
-* @param comm (read only) a 3d Cartesian MPI communicator
+* @param comm (read only) a MPI communicator
 * @param is Input stream rank 0 reads parameters (\c n, \c Nx, \c Ny, \c Nz )
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
@@ -232,16 +327,16 @@ static inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned&
         is >> n >> Nx >> Ny >> Nz;
         if(verbose)std::cout<< "# On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<std::endl;
     }
-    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Nz,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, comm);
+    MPI_Bcast( &Nz,1 , MPI_UNSIGNED, 0, comm);
 }
 
 /**
 * @brief Read in number of processses and grid size and create Cartesian MPI communicator
 *
-* Also sets the GPU via \c rank\% num_devices_per_node a process should use if \c THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param bcz if \c bcz==dg::PER then the communicator is periodic in z

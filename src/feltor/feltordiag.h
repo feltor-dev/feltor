@@ -1955,6 +1955,7 @@ dg::geo::CylindricalFunctor transition)
     if(write2d)dg::file::put_var_double( ncid, vecID, *g2d_out_ptr, transferH);
 }
 
+// There is a performance/memory problem with this class insofar all groups get the 2d slice and integrate them in time when only the root group needs to do so (because it writes to file)
 struct WriteIntegrateDiagnostics2dList
 {
     WriteIntegrateDiagnostics2dList() = default;

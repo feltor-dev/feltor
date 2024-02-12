@@ -111,6 +111,7 @@ void jacobian(
 }//namespace routines
 
 // take first 2d plane out of a 3d vector
+// why should all groups have a slice though?
 template<class Container>
 void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)
 {
