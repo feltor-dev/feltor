@@ -59,7 +59,7 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
  * @param g The grid that defines the computational space on which to evaluate f
  *
  * @return The output vector \c v as a host vector
- * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d() ) to generate the list of grid coordinates
+ * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d ) to generate the list of grid coordinates
  * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa \c dg::pullback if you want to evaluate a function in physical space
  */

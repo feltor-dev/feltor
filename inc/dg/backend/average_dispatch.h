@@ -21,6 +21,7 @@ The equivalent of
  * @param ny number of rows in input vector /columns in output vector
  * @param in input
  * @param out output (may not alias in)
+ * @attention Implemented using \c dg::blas2::parallel_for so **no MPI**, **no Recursive**
 */
 template<class ContainerType>
 void transpose( unsigned nx, unsigned ny, const ContainerType& in, ContainerType& out)
@@ -42,6 +43,7 @@ void transpose( unsigned nx, unsigned ny, const ContainerType& in, ContainerType
  * @param ny number of rows in output vector
  * @param in input (size \c nx)
  * @param out output (size \c nx*ny; may not alias in)
+ * @attention Implemented using \c dg::blas2::parallel_for so **no MPI**, **no Recursive**
 */
 template<class ContainerType>
 void extend_line( unsigned nx, unsigned ny, const ContainerType& in, ContainerType& out)
@@ -62,6 +64,7 @@ void extend_line( unsigned nx, unsigned ny, const ContainerType& in, ContainerTy
  * @param ny size of input vector, number of rows in output vector
  * @param in input (size \c ny)
  * @param out output (size \c nx*ny may not alias in)
+ * @attention Implemented using \c dg::blas2::parallel_for so **no MPI**, **no Recursive**
 */
 template<class ContainerType>
 void extend_column( unsigned nx, unsigned ny, const ContainerType& in, ContainerType& out)

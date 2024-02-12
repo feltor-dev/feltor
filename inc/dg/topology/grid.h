@@ -69,6 +69,13 @@ struct RealGrid2d;
 template<class real_type>
 struct RealGrid3d;
 ///@endcond
+//
+/// Just a tag (used e.g. in netcdf output to indicate 0-dimensional (point) data)
+template<class real_type>
+struct RealGrid0d{
+    /// @brief number of dimensions : 0
+    constexpr static unsigned ndim() {return 0;}
+};
 
 /**
 * @brief 1D grid
@@ -891,6 +898,7 @@ using get_host_grid = typename Topology::host_grid;
 
 ///@addtogroup gridtypes
 ///@{
+using Grid0d        = dg::RealGrid0d<double>;
 using Grid1d        = dg::RealGrid1d<double>;
 using Grid2d        = dg::RealGrid2d<double>;
 using Grid3d        = dg::RealGrid3d<double>;
@@ -898,6 +906,7 @@ using aTopology2d   = dg::aRealTopology2d<double>;
 using aTopology3d   = dg::aRealTopology3d<double>;
 #ifndef MPI_VERSION
 namespace x {
+using Grid0d        = Grid0d      ;
 using Grid1d        = Grid1d      ;
 using Grid2d        = Grid2d      ;
 using Grid3d        = Grid3d      ;
