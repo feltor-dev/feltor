@@ -13,15 +13,15 @@ namespace dg
 namespace create
 {
 template<class real_type>
-thrust::host_vector<real_type> mpi_abscissas( const RealGrid1d<real_type>& l, real_type global_x0, int mpi_coord)
+thrust::host_vector<real_type> mpi_abscissas( const RealGrid1d<real_type>& l, real_type global_x0, real_type global_hx, int mpi_coord)
 {
     thrust::host_vector<real_type> abs(l.size());
     for( unsigned i=0; i<l.N(); i++)
         for( unsigned j=0; j<l.n(); j++)
         {
             unsigned coord = i+l.N()*mpi_coord;
-            real_type xmiddle = DG_FMA( l.h(), (real_type)(coord), global_x0);
-            real_type h2 = l.h()/2.;
+            real_type xmiddle = DG_FMA( global_hx, (real_type)(coord), global_x0);
+            real_type h2 = global_hx/2.;
             real_type absj = 1.+l.dlt().abscissas()[j];
             abs[i*l.n()+j] = DG_FMA( h2, absj, xmiddle);
         }
@@ -66,7 +66,7 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( const UnaryOp& f, const Re
     RealGrid1d<real_type> l = g.local();
     int dims[1], periods[1], coords[1];
     MPI_Cart_get( g.communicator(), 1, dims, periods, coords);
-    thrust::host_vector<real_type> absx( create::mpi_abscissas( l, g.x0(), coords[0]));
+    thrust::host_vector<real_type> absx( create::mpi_abscissas( l, g.x0(), g.h(), coords[0]));
 
     thrust::host_vector<real_type> w( l.size());
     for( unsigned j=0; j<l.N(); j++)
@@ -109,8 +109,8 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( const BinaryOp& f, const a
     RealGrid2d<real_type> l = g.local();
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( g.communicator(), 2, dims, periods, coords);
-    thrust::host_vector<real_type> absx( create::mpi_abscissas( l.gx(), g.x0(), coords[0]));
-    thrust::host_vector<real_type> absy( create::mpi_abscissas( l.gy(), g.y0(), coords[1]));
+    thrust::host_vector<real_type> absx( create::mpi_abscissas( l.gx(), g.x0(), g.hx(), coords[0]));
+    thrust::host_vector<real_type> absy( create::mpi_abscissas( l.gy(), g.y0(), g.hy(), coords[1]));
 
     thrust::host_vector<real_type> w( l.size());
     for( unsigned i=0; i<l.Ny(); i++)
@@ -156,9 +156,9 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( const TernaryOp& f, const 
     RealGrid3d<real_type> l = g.local();
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( g.communicator(), 3, dims, periods, coords);
-    thrust::host_vector<real_type> absx( create::mpi_abscissas( l.gx(), g.x0(), coords[0]));
-    thrust::host_vector<real_type> absy( create::mpi_abscissas( l.gy(), g.y0(), coords[1]));
-    thrust::host_vector<real_type> absz( create::mpi_abscissas( l.gz(), g.z0(), coords[2]));
+    thrust::host_vector<real_type> absx( create::mpi_abscissas( l.gx(), g.x0(), g.hx(), coords[0]));
+    thrust::host_vector<real_type> absy( create::mpi_abscissas( l.gy(), g.y0(), g.hy(), coords[1]));
+    thrust::host_vector<real_type> absz( create::mpi_abscissas( l.gz(), g.z0(), g.hz(), coords[2]));
 
     thrust::host_vector<real_type> w( l.size());
     for( unsigned s=0; s<l.Nz(); s++)
