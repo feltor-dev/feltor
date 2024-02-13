@@ -45,9 +45,9 @@ thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
 
 
 /**
- * @brief Evaluate a 1d function on grid coordinates
+ * @brief %Evaluate a 1d function on grid coordinates
  *
- * Evaluate is equivalent to the following:
+ * %Evaluate is equivalent to the following:
  *
  * -# generate a list of grid coordinates \f$ x_i\f$ representing the given computational space discretization (the grid)
  * -# evaluate the given function or functor at these coordinates and store the result
@@ -82,9 +82,9 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGri
 
 
 /**
- * @brief Evaluate a 2d function on grid coordinates
+ * @brief %Evaluate a 2d function on grid coordinates
  *
- * Evaluate is equivalent to the following:
+ * %Evaluate is equivalent to the following:
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$ representing the given computational space discretization (the grid)
  * -# evaluate the given function or functor at these coordinates and store the result
@@ -124,9 +124,9 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
 ///@endcond
 
 /**
- * @brief Evaluate a 3d function on grid coordinates
+ * @brief %Evaluate a 3d function on grid coordinates
  *
- * Evaluate is equivalent to the following:
+ * %Evaluate is equivalent to the following:
  *
  * -# generate the list of grid coordinates \f$ x_i\f$, \f$ y_i\f$, \f$ z_i \f$ representing the given computational space discretization (the grid)
  * -# evaluate the given function or functor at these coordinates and store the result

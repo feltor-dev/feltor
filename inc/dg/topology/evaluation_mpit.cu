@@ -33,7 +33,10 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
     unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
     if(rank==0)std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
-    MPI_Comm comm2d, comm3d;
+    MPI_Comm comm1d, comm2d, comm3d;
+    mpi_init1d( dg::PER, comm1d);
+    dg::MPIGrid1d g1d( 1, 2, n, 12, dg::PER, comm1d);
+
     mpi_init2d( dg::PER, dg::PER, comm2d);
     dg::MPIGrid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
     //dg::MPIGrid2d g2d( {0.0, 6.2831853071795862, 3, 48}, {0.0, 6.2831853071795862, 5, 28}, comm2d);
@@ -43,14 +46,22 @@ int main(int argc, char** argv)
     //dg::MPIGrid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx}, comm3d);
 
     //test evaluation and expand functions
+    dg::MDVec func1d = dg::construct<dg::MDVec>(dg::evaluate( exp, g1d));
     dg::MDVec func2d = dg::construct<dg::MDVec>(dg::evaluate( function<double>, g2d));
     dg::fMDVec funcf2d = dg::construct<dg::fMDVec>(dg::evaluate( function<float>, gf2d));
     dg::MDVec func3d = dg::construct<dg::MDVec>(dg::evaluate( function, g3d));
     //test weights
+    const dg::MDVec w1d = dg::construct<dg::MDVec>( dg::create::weights(g1d));
     const dg::MDVec w2d = dg::construct<dg::MDVec>(dg::create::weights(g2d));
     const dg::fMDVec wf2d = dg::construct<dg::fMDVec>(dg::create::weights(gf2d));
     const dg::MDVec w3d = dg::construct<dg::MDVec>(dg::create::weights(g3d));
     dg::exblas::udouble res;
+
+    double integral = dg::blas1::dot( w1d, func1d); res.d = integral;
+    if(rank==0)std::cout << "1D integral               "<<std::setw(6)<<integral <<"\t" << res.i - 4616944842743393935  << "\n";
+    double sol = (exp(2.) -exp(1));
+    if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
+    if(rank==0)std::cout << "Relative 1d error is      "<<(integral-sol)/sol<<"\n\n";
 
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
     if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i + 4823280491526356992<< "\n";

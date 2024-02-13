@@ -55,8 +55,16 @@ struct RealMPIGrid1d
 
     ///@copydoc RealGrid1d::RealGrid1d
     RealMPIGrid1d() = default;
-    ///@copydoc RealGrid1d::RealGrid1d(real_type,real_type,unsigned,unsigned)
-    ///@copydoc hide_comm_parameters1d
+    /**
+     * @brief 1D grid
+     *
+     * @param x0 left boundary
+     * @param x1 right boundary
+     * @param n # of polynomial coefficients
+     *  (1<=n<=20, note that the library is optimized for n=3 )
+     * @param N # of cells
+     * @copydoc hide_comm_parameters1d
+     */
     RealMPIGrid1d( real_type x0, real_type x1, unsigned n, unsigned N, MPI_Comm comm): m_comm(comm)
     {
         set(x0,x1,n,N,dg::PER);
