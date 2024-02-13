@@ -12,13 +12,17 @@
 namespace dg
 {
 
+/*! @class hide_comm_parameters1d
+ * @param comm a one-dimensional Cartesian communicator
+ * @note the parameters given in the constructor are global parameters
+ */
 /*! @class hide_comm_parameters2d
  * @param comm a two-dimensional Cartesian communicator
- * @note the paramateres given in the constructor are global parameters
+ * @note the parameters given in the constructor are global parameters
  */
 /*! @class hide_comm_parameters3d
  * @param comm a three-dimensional Cartesian communicator
- * @note the paramateres given in the constructor are global parameters
+ * @note the parameters given in the constructor are global parameters
  */
 
 ///@cond
@@ -27,6 +31,170 @@ struct RealMPIGrid2d;
 template<class real_type>
 struct RealMPIGrid3d;
 ///@endcond
+/// Just a tag (used e.g. in netcdf output to indicate 0-dimensional (point) data)
+template<class real_type>
+struct RealMPIGrid0d{
+    /// @brief number of dimensions : 0
+    constexpr static unsigned ndim() {return 0;}
+};
+
+/**
+* @brief 1D MPI grid
+* @ingroup grid
+* @copydoc hide_code_evaluate1d
+*/
+template<class real_type>
+struct RealMPIGrid1d
+{
+    using value_type = real_type;
+    /// The host vector type used by host functions like evaluate
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid1d<real_type>;
+    /// @brief number of dimensions : 1
+    constexpr static unsigned ndim() {return 1;}
+
+    ///@copydoc RealGrid1d::RealGrid1d
+    RealMPIGrid1d() = default;
+    ///@copydoc RealGrid1d::RealGrid1d(real_type,real_type,unsigned,unsigned)
+    ///@copydoc hide_comm_parameters1d
+    RealMPIGrid1d( real_type x0, real_type x1, unsigned n, unsigned N, MPI_Comm comm): m_comm(comm)
+    {
+        set(x0,x1,n,N,dg::PER);
+    }
+    ///@copydoc RealGrid1d::RealGrid1d(real_type,real_type,unsigned,unsigned,bc)
+    ///@copydoc hide_comm_parameters1d
+    RealMPIGrid1d( real_type x0, real_type x1, unsigned n, unsigned N, bc bcx, MPI_Comm comm): m_comm(comm)
+    {
+        set(x0,x1,n,N,bcx);
+    }
+    //////////////////////////////////////////get/////////////////////////////
+
+    ///@copydoc aRealMPITopology3d::x0()
+    real_type x0() const {return m_g.x0();}
+    ///@copydoc aRealMPITopology3d::x1()
+    real_type x1() const {return m_g.x1();}
+    ///@copydoc aRealMPITopology3d::lx()
+    real_type lx() const {return m_g.lx();}
+    ///@copydoc aRealMPITopology3d::hx()
+    real_type h() const {return m_g.h();}
+    ///@copydoc aRealMPITopology3d::Nx()
+    unsigned N() const {return m_g.N();}
+    ///@copydoc aRealMPITopology3d::n()
+    unsigned n() const {return m_g.n();}
+    ///@copydoc aRealMPITopology3d::bcx()
+    bc bcx() const {return m_g.bcx();}
+    //////////////////////////////////////////set/////////////////////////////
+
+    ///@copydoc RealGrid1d::set(real_type,real_type,bc)
+    void set(real_type x0, real_type x1, bc bcx)
+    {
+        m_g.set( x0, x1, bcx);
+        update_local();
+    }
+    ///@copydoc RealGrid1d::set(unsigned,unsigned)
+    void set( unsigned n, unsigned N)
+    {
+        check_division( N, m_g.bcx());
+        m_g.set( n, N);
+        update_local();
+    }
+    ///@copydoc RealGrid1d::set(real_type,real_type,unsigned,unsigned,bc)
+    void set( real_type x0, real_type x1, unsigned n, unsigned N, bc bcx)
+    {
+        check_division( N, bcx);
+        m_g.set( x0, x1, n, N, bcx);
+        update_local();
+    }
+    /////////////////////////////////////////convencience//////////////////////////////
+    /**
+     * @brief Return one-dimensional Cartesian mpi communicator that is used in this grid
+     *
+     * @return Communicator
+     */
+    MPI_Comm communicator() const{return m_comm;}
+
+    /// @brief <tt> n()* N()</tt> (Global Total number of grid points)
+    unsigned size() const { return m_g.size();}
+    /// @brief Local number of grid points
+    unsigned local_size() const { return m_l.size();}
+    ///@copydoc RealGrid1d::dlt()const
+    const DLT<real_type>& dlt() const {return m_g.dlt();}
+
+    ///@copydoc aRealMPITopology3d::display(std::ostream&)const
+    void display( std::ostream& os = std::cout) const
+    {
+        os << "GLOBAL GRID \n";
+        m_g.display();
+        os << "LOCAL GRID \n";
+        m_l.display();
+    }
+    /**
+     * @brief Returns the pid of the process that holds the local grid surrounding the given point
+     *
+     * @param x X-coord
+     *
+     * @return pid of a process, or -1 if non of the grids matches
+     */
+    int pidOf( real_type x) const;
+
+    ///@copydoc aRealMPITopology2d::local2globalIdx(int,int,int&)const
+    bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
+    {
+        if( localIdx < 0 || localIdx >= (int)size()) return -1;
+        int coords[1];
+        if( MPI_Cart_coords( m_comm, PID, 1, coords) != MPI_SUCCESS)
+            return false;
+        globalIdx = coords[0]*m_l.nx()*m_l.Nx()+localIdx;
+        return true;
+    }
+    ///@copydoc aRealMPITopology2d::global2localIdx(int,int&,int&)const
+    bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
+    {
+        if( globalIdx < 0 || globalIdx >= (int)m_g.size()) return -1;
+        int coords[1];
+        coords[0] = globalIdx/(m_l.nx()*m_l.Nx());
+        localIdx  = globalIdx%(m_l.nx()*m_l.Nx());
+        if( MPI_Cart_rank( m_comm, coords, &PID) == MPI_SUCCESS )
+            return true;
+        else
+        {
+            std::cout<<"Failed "<<PID<<"\n";
+            return false;
+        }
+    }
+    ///@copydoc aRealMPITopology2d::local()const
+    const RealGrid1d<real_type>& local() const {return m_l;}
+     ///@copydoc aRealMPITopology2d::global()const
+    const RealGrid1d<real_type>& global() const {return m_g;}
+
+  private:
+    void check_division( unsigned Nx, bc bcx)
+    {
+        int rank, dims[1], periods[1], coords[1];
+        MPI_Cart_get( m_comm, 1, dims, periods, coords);
+        MPI_Comm_rank( m_comm, &rank);
+        if( rank == 0)
+        {
+            if(Nx%dims[0]!=0)
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if( bcx == dg::PER) assert( periods[0] == true);
+            else assert( periods[0] == false);
+        }
+    }
+    void update_local(){
+        int dims[1], periods[1], coords[1];
+        MPI_Cart_get( m_comm, 1, dims, periods, coords);
+        real_type x0 = m_g.x0() + m_g.lx()/(real_type)dims[0]*(real_type)coords[0];
+        real_type x1 = m_g.x0() + m_g.lx()/(real_type)dims[0]*(real_type)(coords[0]+1);
+        if( coords[0] == dims[0]-1)
+            x1 = m_g.x1();
+        unsigned Nx = m_g.N()/dims[0];
+        m_l = RealGrid1d<real_type> { x0, x1, m_g.n(), Nx, m_g.bcx()};
+    }
+    RealGrid1d<real_type> m_g, m_l; // global and local grid
+    MPI_Comm m_comm;
+};
 
 
 /**
@@ -639,6 +807,20 @@ struct aRealMPITopology3d
 };
 ///@cond
 template<class real_type>
+int RealMPIGrid1d<real_type>::pidOf( real_type x) const
+{
+    int dims[1], periods[1], coords[1];
+    MPI_Cart_get( m_comm, 1, dims, periods, coords);
+    coords[0] = (unsigned)floor( (x-m_g.x0())/m_g.lx()*(real_type)dims[0] );
+    //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
+    coords[0]=(coords[0]==dims[0]) ? coords[0]-1 :coords[0];
+    int rank;
+    if( MPI_Cart_rank( m_comm, coords, &rank) == MPI_SUCCESS )
+        return rank;
+    else
+        return -1;
+}
+template<class real_type>
 int aRealMPITopology2d<real_type>::pidOf( real_type x, real_type y) const
 {
     int dims[2], periods[2], coords[2];
@@ -682,6 +864,18 @@ void aRealMPITopology3d<real_type>::do_set( unsigned nx, unsigned Nx, unsigned n
     g.set(nx,Nx,ny,Ny,nz,Nz);
     update_local();
 }
+
+template<class real_type>
+std::vector<unsigned> shape( const dg::RealMPIGrid0d<real_type>& g) { return {1};}
+template<class real_type>
+std::vector<unsigned> shape( const dg::RealMPIGrid1d<real_type>& g) { return {g.size()};}
+template<class real_type>
+std::vector<unsigned> shape( const dg::aRealMPITopology2d<real_type>& g) { return {g.nx()*g.Nx(), g.ny()*g.Ny()};}
+template<class real_type>
+std::vector<unsigned> shape( const dg::aRealMPITopology3d<real_type>& g) { return {g.nx()*g.Nx(), g.ny()*g.Ny(), g.nz()*g.Nz()};}
+
+template<class Grid>
+using is_mpi_grid = std::is_same< get_host_vector<Grid>, MPI_Vector<thrust::host_vector<typename Grid::value_type>>>;
 
 ///@endcond
 
@@ -755,11 +949,15 @@ struct RealMPIGrid3d : public aRealMPITopology3d<real_type>
 
 ///@addtogroup gridtypes
 ///@{
+using MPIGrid0d         = dg::RealMPIGrid0d<double>;
+using MPIGrid1d         = dg::RealMPIGrid1d<double>;
 using MPIGrid2d         = dg::RealMPIGrid2d<double>;
 using MPIGrid3d         = dg::RealMPIGrid3d<double>;
 using aMPITopology2d    = dg::aRealMPITopology2d<double>;
 using aMPITopology3d    = dg::aRealMPITopology3d<double>;
 namespace x{
+using Grid0d          = MPIGrid0d      ;
+using Grid1d          = MPIGrid1d      ;
 using Grid2d          = MPIGrid2d      ;
 using Grid3d          = MPIGrid3d      ;
 using aTopology2d     = aMPITopology2d ;
