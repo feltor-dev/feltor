@@ -894,6 +894,20 @@ using get_host_vector = typename Topology::host_vector;
 template<class Topology>
 using get_host_grid = typename Topology::host_grid;
 
+template<class Grid>
+using is_shared_grid = std::is_same< get_host_vector<Grid>, thrust::host_vector<typename Grid::value_type>>;
+
+// Let's see how useful these are
+// Fastest index comes first
+template<class real_type>
+std::vector<unsigned> shape( const dg::RealGrid0d<real_type>& g) { return {1};}
+template<class real_type>
+std::vector<unsigned> shape( const dg::RealGrid1d<real_type>& g) { return {g.size()};}
+template<class real_type>
+std::vector<unsigned> shape( const dg::aRealTopology2d<real_type>& g) { return {g.nx()*g.Nx(), g.ny()*g.Ny()};}
+template<class real_type>
+std::vector<unsigned> shape( const dg::aRealTopology3d<real_type>& g) { return {g.nx()*g.Nx(), g.ny()*g.Ny(), g.nz()*g.Nz()};}
+
 ///@endcond
 
 ///@addtogroup gridtypes
