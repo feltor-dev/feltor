@@ -7,7 +7,6 @@
 
 #include "backend/timer.h"
 #include "topology/evaluation.h"
-#include "topology/derivatives.h"
 #include "topology/split_and_join.h"
 
 #include "pcg.h"

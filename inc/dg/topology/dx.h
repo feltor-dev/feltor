@@ -429,21 +429,6 @@ EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, bc bcx, directi
     return dx_normed( g.n(), g.N(), g.h(), bcx, dir);
 }
 
-/**
-* @brief Create and assemble a host Matrix for the derivative in 1d
-*
-* Take the boundary condition from the grid
-* @ingroup create
-* @param g 1D grid
-* @param dir The direction of the first derivative
-*
-* @return Host Matrix
-*/
-template<class real_type>
-EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, direction dir = centered)
-{
-    return dx( g, g.bcx(), dir);
-}
 
 /**
 * @brief Create and assemble a host Matrix for the jump in 1d
@@ -455,25 +440,21 @@ EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, direction dir =
 * @return Host Matrix
 */
 template<class real_type>
+EllSparseBlockMat<real_type> jumpX( const RealGrid1d<real_type>& g, bc bcx)
+{
+    return jump( g.n(), g.N(), g.h(), bcx);
+}
+
+///@}
+
+///@cond
+/// DEPRECATED
+template<class real_type>
 EllSparseBlockMat<real_type> jump( const RealGrid1d<real_type>& g, bc bcx)
 {
     return jump( g.n(), g.N(), g.h(), bcx);
 }
-/**
-* @brief Create and assemble a host Matrix for the jump in 1d
-*
-* Take the boundary condition from the grid
-* @ingroup create
-* @param g 1D grid
-*
-* @return Host Matrix
-*/
-template<class real_type>
-EllSparseBlockMat<real_type> jump( const RealGrid1d<real_type>& g)
-{
-    return jump( g, g.bcx());
-}
-///@}
+///@endcond
 
 
 } //namespace create

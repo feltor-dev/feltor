@@ -30,10 +30,10 @@ int main ()
     std::cout << "TEST NORMAL TOPOLOGY: YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
     for( unsigned i=0; i<5; i++)
     {
-        Matrix hs = dg::create::dx( g[i], dg::centered);
-        Matrix hf = dg::create::dx( g[i], dg::forward);
-        Matrix hb = dg::create::dx( g[i], dg::backward);
-        Matrix js = dg::create::jump( g[i].n(), g[i].N(), g[i].h(), g[i].bcx());
+        Matrix hs = dg::create::dx( g[i], g[i].bcx(), dg::centered);
+        Matrix hf = dg::create::dx( g[i], g[i].bcx(), dg::forward);
+        Matrix hb = dg::create::dx( g[i], g[i].bcx(), dg::backward);
+        Matrix js = dg::create::jumpX( g[i], g[i].bcx());
         const Vector func = dg::evaluate( function, g[i]);
         Vector error = func;
         const Vector w1d = dg::create::weights( g[i]);

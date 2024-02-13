@@ -39,20 +39,6 @@ EllSparseBlockMat<real_type> dx( const aRealTopology2d<real_type>& g, bc bcx, di
 }
 
 /**
- * @brief Create 2d derivative in x-direction
- *
- * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- * @copydoc hide_code_blas2_symv
- */
-template<class real_type>
-EllSparseBlockMat<real_type> dx( const aRealTopology2d<real_type>& g, direction dir = centered) {
-    return dx( g, g.bcx(), dir);
-}
-
-/**
  * @brief Create 2d derivative in y-direction
  *
  * @param g The grid on which to create dy
@@ -68,19 +54,6 @@ EllSparseBlockMat<real_type> dy( const aRealTopology2d<real_type>& g, bc bcy, di
     dy = dx_normed( g.ny(), g.Ny(), g.hy(), bcy, dir);
     dy.set_right_size( g.nx()*g.Nx());
     return dy;
-}
-
-/**
- * @brief Create 2d derivative in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> dy( const aRealTopology2d<real_type>& g, direction dir = centered){
-    return dy( g, g.bcy(), dir);
 }
 
 /**
@@ -117,29 +90,6 @@ EllSparseBlockMat<real_type> jumpY( const aRealTopology2d<real_type>& g, bc bcy)
     return jy;
 }
 
-/**
- * @brief Matrix that contains 2d jump terms in X direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> jumpX( const aRealTopology2d<real_type>& g) {
-    return jumpX( g, g.bcx());
-}
-
-/**
- * @brief Matrix that contains 2d jump terms in Y direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> jumpY( const aRealTopology2d<real_type>& g) {
-    return jumpY( g, g.bcy());
-}
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
 //jumpX, jumpY, jumpZ, dx, dy, dz
@@ -196,18 +146,6 @@ EllSparseBlockMat<real_type> jumpZ( const aRealTopology3d<real_type>& g, bc bcz)
 }
 
 /**
- * @brief Matrix that contains 3d jump terms in X direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> jumpX( const aRealTopology3d<real_type>& g) {
-    return jumpX( g, g.bcx());
-}
-
-/**
  * @brief Matrix that contains 3d jump terms in Y direction taking boundary conditions from the grid
  *
  * @param g grid
@@ -217,18 +155,6 @@ EllSparseBlockMat<real_type> jumpX( const aRealTopology3d<real_type>& g) {
 template<class real_type>
 EllSparseBlockMat<real_type> jumpY( const aRealTopology3d<real_type>& g) {
     return jumpY( g, g.bcy());
-}
-
-/**
- * @brief Matrix that contains 3d jump terms in Z direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> jumpZ( const aRealTopology3d<real_type>& g) {
-    return jumpZ( g, g.bcz());
 }
 
 
@@ -251,19 +177,6 @@ EllSparseBlockMat<real_type> dx( const aRealTopology3d<real_type>& g, bc bcx, di
 }
 
 /**
- * @brief Create 3d derivative in x-direction
- *
- * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> dx( const aRealTopology3d<real_type>& g, direction dir = centered) {
-    return dx( g, g.bcx(), dir);
-}
-
-/**
  * @brief Create 3d derivative in y-direction
  *
  * @param g The grid on which to create dy
@@ -283,19 +196,6 @@ EllSparseBlockMat<real_type> dy( const aRealTopology3d<real_type>& g, bc bcy, di
 }
 
 /**
- * @brief Create 3d derivative in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> dy( const aRealTopology3d<real_type>& g, direction dir = centered){
-    return dy( g, g.bcy(), dir);
-}
-
-/**
  * @brief Create 3d derivative in z-direction
  *
  * @param g The grid on which to create dz
@@ -312,19 +212,6 @@ EllSparseBlockMat<real_type> dz( const aRealTopology3d<real_type>& g, bc bcz, di
     dz.set_right_size( g.nx()*g.ny()*g.Nx()*g.Ny());
     return dz;
 
-}
-
-/**
- * @brief Create 3d derivative in z-direction
- *
- * @param g The grid on which to create dz (boundary condition is taken from here)
- * @param dir The direction of the stencil
- *
- * @return A host matrix
- */
-template<class real_type>
-EllSparseBlockMat<real_type> dz( const aRealTopology3d<real_type>& g, direction dir = centered){
-    return dz( g, g.bcz(), dir);
 }
 
 

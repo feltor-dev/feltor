@@ -20,6 +20,25 @@ double integral = dg::blas1::dot( w1d, vec);
 // integral is now: e^2-1
 @endcode
 
+ * @class hide_code_mpi_evaluate1d
+ * This code snippet demonstrates how to discretize and integrate a function on a distributed memory system
+@code{.cpp}
+// create a one-dimensional grid on the domain [0,2] with 3 polynomial coefficients and 20 cells
+//... use MPI_Cart_create to create 1d Cartesian communicator
+dg::MPIGrid1d g1d( 0, 2, 3, 20, comm1d);
+
+// create the Gaussian weights (volume form) for the integration
+const dg::MHVec w1d = dg::create::weights( g1d);
+
+// discretize the exponential function on the grid
+const dg::MHVec vec = dg::evaluate( exp, g1d);
+
+// now compute the scalar product (the integral)
+double integral = dg::blas1::dot( w1d, vec);
+
+// integral is now: e^2-1
+@endcode
+
  * @class hide_code_evaluate2d
  * This code snippet demonstrates how to discretize and compute the norm of a function on a shared memory system
 @code{.cpp}

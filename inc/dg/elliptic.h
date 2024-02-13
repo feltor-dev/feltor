@@ -4,9 +4,8 @@
 #include "enums.h"
 #include "backend/memory.h"
 #include "topology/evaluation.h"
-#include "topology/derivatives.h"
+#include "topology/derivativesA.h"
 #ifdef MPI_VERSION
-#include "topology/mpi_derivatives.h"
 #include "topology/mpi_evaluation.h"
 #endif
 #include "topology/geometry.h"

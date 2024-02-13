@@ -2,6 +2,7 @@
 
 #include "dg/backend/sparseblockmat.h"
 #include "dg/backend/mpi_matrix.h"
+#include "dg/backend/typedefs.h"
 #include "functions.h"
 #include "derivatives.h"
 #include "mpi_grid.h"
@@ -126,177 +127,123 @@ EllSparseBlockMat<real_type> distribute_rows( const EllSparseBlockMat<real_type>
 ///@endcond
 ///@addtogroup creation
 ///@{
-
+//
 /**
-* @brief Create a 2d derivative in the x-direction for mpi
+* @brief Create a derivative in the x-direction for mpi
 *
-* @param g A 2D mpi grid
+* @param g A mpi grid
 * @param bcx boundary condition
 * @param dir centered, forward or backward
 *
 * @return  A mpi matrix
 */
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dx( const aRealMPITopology2d<real_type>& g, bc bcx, direction dir = centered)
+template<class MPITopology, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+dg::MHMatrix_t<typename MPITopology::value_type> dx(
+    const MPITopology& g, bc bcx, direction dir = centered)
 {
+    using real_type = typename MPITopology::value_type;
     EllSparseBlockMat<real_type> matrix = dg::create::dx( g.global(), bcx, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 2);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int dims[g.ndim()], periods[g.ndim()], coords[g.ndim()];
+    MPI_Cart_get( g.communicator(), g.ndim(), dims, periods, coords);
+    int howmany[] = {1, dims[0], 1}; //left, middle, right
+    for( unsigned i=1; i<g.ndim(); i++)
+        howmany[0] *= dims[i];
 
-    int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
     //distribute_rows, collective and save_outer_values are aware of howmany[1] == 1
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
+    NNCH<real_type> c( g.n(), dg::shape(g.local()), g.communicator(), 0);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
+    return { inner, outer, c};
 }
-
 /**
-* @brief Create a 2d derivative in the y-direction for mpi
+* @brief Create a jump in the x-direction for mpi
 *
-* @param g A 2D mpi grid
-* @param bcy boundary condition
-* @param dir centered, forward or backward
-*
-* @return  A mpi matrix
-*/
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dy( const aRealMPITopology2d<real_type>& g, bc bcy, direction dir = centered)
-{
-    EllSparseBlockMat<real_type> matrix = dg::create::dy( g.global(), bcy, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 2);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-
-    int howmany[] = {1, dims[1], dims[0]};
-    EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
-
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
-}
-
-/**
-* @brief Create a 2d jump in the x-direction for mpi
-*
-* @param g A 2D mpi grid
+* @param g A mpi grid
 * @param bcx boundary condition
 *
 * @return  A mpi matrix
 */
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpX( const aRealMPITopology2d<real_type>& g, bc bcx)
+template<class MPITopology, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+dg::MHMatrix_t<typename MPITopology::value_type> jumpX(
+    const MPITopology& g, bc bcx)
 {
+    using real_type = typename MPITopology::value_type;
     EllSparseBlockMat<real_type> matrix = dg::create::jumpX( g.global(), bcx);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 2);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    int dims[g.ndim()], periods[g.ndim()], coords[g.ndim()];
+    MPI_Cart_get( g.communicator(), g.ndim(), dims, periods, coords);
+    int howmany[] = {1, dims[0], 1}; //left, middle, right
+    for( unsigned i=1; i<g.ndim(); i++)
+        howmany[0] *= dims[i];
 
-    int howmany[] = {dims[1], dims[0], 1}; //left, middle, right
+    //distribute_rows, collective and save_outer_values are aware of howmany[1] == 1
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
+    NNCH<real_type> c( g.n(), dg::shape(g.local()), g.communicator(), 0);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
+    return { inner, outer, c};
 }
+
+
 /**
-* @brief Create a 2d jump in the y-direction for mpi
+* @brief Create a derivative in the y-direction for mpi
 *
-* @param g A 2D mpi grid
+* @param g A mpi grid
 * @param bcy boundary condition
+* @param dir centered, forward or backward
 *
 * @return  A mpi matrix
 */
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpY( const aRealMPITopology2d<real_type>& g, bc bcy)
+template<class MPITopology, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+dg::MHMatrix_t<typename MPITopology::value_type> dy(
+    const MPITopology& g, bc bcy, direction dir = centered)
 {
-    EllSparseBlockMat<real_type> matrix = dg::create::jumpY( g.global(), bcy);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), 1}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 2);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    using real_type = typename MPITopology::value_type;
+    EllSparseBlockMat<real_type> matrix = dg::create::dy( g.global(), bcy, dir);
+    assert( g.ndim() >= 2);
+    int dims[g.ndim()], periods[g.ndim()], coords[g.ndim()];
+    MPI_Cart_get( g.communicator(), g.ndim(), dims, periods, coords);
 
     int howmany[] = {1, dims[1], dims[0]};
+    for( unsigned i=2; i<g.ndim(); i++)
+        howmany[0] *=dims[i];
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
+    NNCH<real_type> c( g.ny(), dg::shape(g.local()), g.communicator(), 1);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
+    return { inner, outer, c};
 }
 
 /**
-* @brief Create a 3d derivative in the x-direction for mpi
+* @brief Create a jump in the y-direction for mpi
 *
-* @param g A 3D mpi grid
-* @param bcx boundary condition
-* @param dir centered, forward or backward
-*
-* @return  A mpi matrix
-*/
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dx( const aRealMPITopology3d<real_type>& g, bc bcx, direction dir = centered)
-{
-    EllSparseBlockMat<real_type> matrix = dg::create::dx( g.global(), bcx, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 3);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-
-    int howmany[] = {dims[2]*dims[1], dims[0], 1};
-    EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
-
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
-}
-/**
-* @brief Create a 3d derivative in the y-direction for mpi
-*
-* @param g A 3D mpi grid
+* @param g A mpi grid
 * @param bcy boundary condition
-* @param dir centered, forward or backward
 *
 * @return  A mpi matrix
 */
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dy( const aRealMPITopology3d<real_type>& g, bc bcy, direction dir = centered)
+template<class MPITopology, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+dg::MHMatrix_t<typename MPITopology::value_type> jumpY(
+    const MPITopology& g, bc bcy)
 {
-    EllSparseBlockMat<real_type> matrix = dg::create::dy( g.global(), bcy, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 3);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
+    using real_type = typename MPITopology::value_type;
+    EllSparseBlockMat<real_type> matrix = dg::create::jumpY( g.global(), bcy);
+    assert( g.ndim() >= 2);
+    int dims[g.ndim()], periods[g.ndim()], coords[g.ndim()];
+    MPI_Cart_get( g.communicator(), g.ndim(), dims, periods, coords);
 
-    int howmany[] = {dims[2], dims[1], dims[0]};
+    int howmany[] = {1, dims[1], dims[0]};
+    for( unsigned i=2; i<g.ndim(); i++)
+        howmany[0] *=dims[i];
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
+    NNCH<real_type> c( g.ny(), dg::shape(g.local()), g.communicator(), 1);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
+    return { inner, outer, c};
 }
+
+
+
 /**
 * @brief Create a 3d derivative in the z-direction for mpi
 *
@@ -307,10 +254,9 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 * @return  A mpi matrix
 */
 template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dz( const aRealMPITopology3d<real_type>& g, bc bcz, direction dir = centered)
+dg::MHMatrix_t<real_type> dz( const aRealMPITopology3d<real_type>& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::dz( g.global(), bcz, dir);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -320,67 +266,12 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[2], howmany);
-    NNCH<real_type> c( g.nz(), vector_dimensions, comm, 2);
+    NNCH<real_type> c( g.nz(), dg::shape(g.local()), comm, 2);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
+    return  {inner, outer, c};
 }
 
-/**
-* @brief Create a 3d jump in the x-direction for mpi
-*
-* @param g A 3D mpi grid
-* @param bcx boundary condition
-*
-* @return  A mpi matrix
-*/
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpX( const aRealMPITopology3d<real_type>& g, bc bcx)
-{
-    EllSparseBlockMat<real_type> matrix = dg::create::jumpX( g.global(), bcx);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 3);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-
-    int howmany[] = {dims[2]*dims[1], dims[0], 1};
-    EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[0], howmany);
-    NNCH<real_type> c( g.nx(), vector_dimensions, comm, 0);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
-
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
-}
-
-/**
-* @brief Create a 3d jump in the y-direction for mpi
-*
-* @param g A 3D mpi grid
-* @param bcy boundary condition
-*
-* @return  A mpi matrix
-*/
-template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpY( const aRealMPITopology3d<real_type>& g, bc bcy)
-{
-    EllSparseBlockMat<real_type> matrix = dg::create::jumpY( g.global(), bcy);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
-    MPI_Comm comm = g.communicator();
-    int ndims;
-    MPI_Cartdim_get( comm, &ndims);
-    assert( ndims == 3);
-    int dims[ndims], periods[ndims], coords[ndims];
-    MPI_Cart_get( comm, ndims, dims, periods, coords);
-
-    int howmany[] = {dims[2], dims[1], dims[0]};
-    EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[1], howmany);
-    NNCH<real_type> c( g.ny(), vector_dimensions, comm, 1);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
-
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
-}
 /**
 * @brief Create a 3d jump in the z-direction for mpi
 *
@@ -390,10 +281,9 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 * @return  A mpi matrix
 */
 template<class real_type>
-RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpZ( const aRealMPITopology3d<real_type>& g, bc bcz)
+dg::MHMatrix_t<real_type> jumpZ( const aRealMPITopology3d<real_type>& g, bc bcz)
 {
     EllSparseBlockMat<real_type> matrix = dg::create::jumpZ( g.global(), bcz);
-    unsigned vector_dimensions[] = {(unsigned)(g.nx()*g.local().Nx()), (unsigned)(g.ny()*g.local().Ny()), (unsigned)(g.nz()*g.local().Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -403,146 +293,11 @@ RowColDistMat< EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<
 
     int howmany[] = {1, dims[2], dims[1]*dims[0]};
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix, coords[2], howmany);
-    NNCH<real_type> c( g.nz(), vector_dimensions, comm, 2);
+    NNCH<real_type> c( g.nz(), dg::shape(g.local()), comm, 2);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
-    return RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>>( inner, outer, c);
+    return { inner, outer, c};
 }
-
-/**
- * @brief Create 2d derivative in x-direction
- *
- * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dx( const aRealMPITopology2d<real_type>& g, direction dir = centered)
-{
-    return dx( g, g.bcx(), dir);
-}
-
-/**
- * @brief Create 3d derivative in x-direction
- *
- * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dx( const aRealMPITopology3d<real_type>& g, direction dir = centered)
-{
-    return dx( g, g.bcx(), dir);
-}
-/**
- * @brief Create 2d jump in x-direction
- *
- * @param g The grid on which to create jump (boundary condition is taken from here)
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpX( const aRealMPITopology2d<real_type>& g)
-{
-    return jumpX( g, g.bcx());
-}
-
-/**
- * @brief Create 3d jump in x-direction
- *
- * @param g The grid on which to create jump (boundary condition is taken from here)
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpX( const aRealMPITopology3d<real_type>& g)
-{
-    return jumpX( g, g.bcx());
-}
-
-/**
- * @brief Create 2d derivative in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dy( const aRealMPITopology2d<real_type>& g, direction dir = centered)
-{
-    return dy( g, g.bcy(), dir);
-}
-
-/**
- * @brief Create 3d derivative in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dy( const aRealMPITopology3d<real_type>& g, direction dir = centered)
-{
-    return dy( g, g.bcy(), dir);
-}
-
-/**
- * @brief Create 2d jump in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpY( const aRealMPITopology2d<real_type>& g)
-{
-    return jumpY( g, g.bcy());
-}
-
-/**
- * @brief Create 3d jump in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpY( const aRealMPITopology3d<real_type>& g)
-{
-    return jumpY( g, g.bcy());
-}
-
-/**
- * @brief Create 3d derivative in z-direction
- *
- * @param g The grid on which to create dz (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> dz( const aRealMPITopology3d<real_type>& g, direction dir = centered)
-{
-    return dz( g, g.bcz(), dir);
-}
-
-/**
- * @brief Create 3d jump in z-direction
- *
- * @param g The grid on which to create dz (boundary condition is taken from here)
- *
- * @return A mpi matrix
- */
-template<class real_type>
-RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> jumpZ( const aRealMPITopology3d<real_type>& g)
-{
-    return jumpZ( g, g.bcz());
-}
-
 
 ///@}
 

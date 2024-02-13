@@ -29,10 +29,10 @@ int main()
     dg::RealGrid2d<value_t> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
 
-    Matrix dx2 = dg::create::dx( g2d, dg::forward);
-    Matrix dy2 = dg::create::dy( g2d, dg::centered);
-    Matrix jx2 = dg::create::jumpX( g2d);
-    Matrix jy2 = dg::create::jumpY( g2d);
+    Matrix dx2 = dg::create::dx( g2d, g2d.bcx(), dg::forward);
+    Matrix dy2 = dg::create::dy( g2d, g2d.bcy(), dg::centered);
+    Matrix jx2 = dg::create::jumpX( g2d, g2d.bcx());
+    Matrix jy2 = dg::create::jumpY( g2d, g2d.bcy());
     Matrix m2[] = {dx2, dy2, jx2, jy2};
     const Vector f2d = dg::evaluate( sine, g2d);
     const Vector dx2d = dg::evaluate( cosx, g2d);
@@ -53,12 +53,12 @@ int main()
     }
     dg::RealGrid3d<value_t> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
-    Matrix dx3 = dg::create::dx( g3d, dg::forward);
-    Matrix dy3 = dg::create::dy( g3d, dg::centered);
-    Matrix dz3 = dg::create::dz( g3d, dg::backward);
-    Matrix jx3 = dg::create::jumpX( g3d);
-    Matrix jy3 = dg::create::jumpY( g3d);
-    Matrix jz3 = dg::create::jumpZ( g3d);
+    Matrix dx3 = dg::create::dx( g3d, g3d.bcx(), dg::forward);
+    Matrix dy3 = dg::create::dy( g3d, g3d.bcy(), dg::centered);
+    Matrix dz3 = dg::create::dz( g3d, g3d.bcz(), dg::backward);
+    Matrix jx3 = dg::create::jumpX( g3d, g3d.bcx());
+    Matrix jy3 = dg::create::jumpY( g3d, g3d.bcy());
+    Matrix jz3 = dg::create::jumpZ( g3d, g3d.bcz());
     Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
     const Vector f3d = dg::evaluate( sine, g3d);
     const Vector dx3d = dg::evaluate( cosx, g3d);

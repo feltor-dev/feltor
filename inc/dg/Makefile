@@ -25,6 +25,9 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -g
 
+cluster_mpib: cluster_mpib.cu
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -g
+
 bathRZ_t: bathRZ_t.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)  -g
 

@@ -6,7 +6,7 @@
 #include "backend/timer.h"
 #include "blas.h"
 #include "topology/filter.h"
-#include "topology/derivatives.h"
+#include "topology/derivativesA.h"
 #include "topology/evaluation.h"
 #include "topology/fast_interpolation.h"
 #include "topology/stencil.h"

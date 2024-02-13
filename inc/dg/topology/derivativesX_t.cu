@@ -58,13 +58,13 @@ int main()
     //dg::GridX2d g2d( -2.*M_PI, M_PI/2., 0., 2*M_PI, 1./5., 0., n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
 
-    Matrix dx2 = dg::create::dx( g2d, dg::forward);
-    Matrix dy2 = dg::create::dy( g2d, dg::centered);
+    Matrix dx2 = dg::create::dx( g2d, g2d.bcx(), dg::forward);
+    Matrix dy2 = dg::create::dy( g2d, g2d.bcy(), dg::centered);
     //dy2.m1.trivial = false;
     //dy2.m2.trivial = false;
     //dy2.display( std::cout );
-    Matrix jx2 = dg::create::jumpX( g2d);
-    Matrix jy2 = dg::create::jumpY( g2d);
+    Matrix jx2 = dg::create::jumpX( g2d, g2d.bcx());
+    Matrix jy2 = dg::create::jumpY( g2d, g2d.bcy());
     Matrix m2[] = {dx2, dy2, jx2, jy2};
     const Vector f2d = dg::evaluate( sin, g2d);
     const Vector dx2d = dg::evaluate( cosx, g2d);
@@ -90,12 +90,12 @@ int main()
     //dg::GridX3d g3d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 0., 2.*M_PI, 1./5., 1./4., n, Nx, Ny, Nz, bcx, bcy, bcz);
     dg::GridX3d g3d( -2.*M_PI, M_PI, 0., 2*M_PI, 0., 2.*M_PI, 1./3., 0., n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
-    Matrix dx3 = dg::create::dx( g3d, dg::forward);
-    Matrix dy3 = dg::create::dy( g3d, dg::backward);
-    Matrix dz3 = dg::create::dz( g3d, dg::centered);
-    Matrix jx3 = dg::create::jumpX( g3d);
-    Matrix jy3 = dg::create::jumpY( g3d);
-    Matrix jz3 = dg::create::jumpZ( g3d);
+    Matrix dx3 = dg::create::dx( g3d, g3d.bcx(), dg::forward);
+    Matrix dy3 = dg::create::dy( g3d, g3d.bcy(), dg::backward);
+    Matrix dz3 = dg::create::dz( g3d, g3d.bcz(), dg::centered);
+    Matrix jx3 = dg::create::jumpX( g3d, g3d.bcx());
+    Matrix jy3 = dg::create::jumpY( g3d, g3d.bcy());
+    Matrix jz3 = dg::create::jumpZ( g3d, g3d.bcz());
     Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
     const Vector f3d = dg::evaluate( sin, g3d);
     const Vector dx3d = dg::evaluate( cosx, g3d);

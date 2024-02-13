@@ -186,6 +186,8 @@ struct NearestNeighborComm
     ///@brief no communication
     ///@param comm optional MPI communicator: the purpose is to be able to store MPI communicator even if no communication is involved in order to construct MPI_Vector with it
     NearestNeighborComm( MPI_Comm comm = MPI_COMM_NULL){
+        m_n = 0;
+        m_dim[0] = m_dim[1] = m_dim[2] = 0;
         m_comm = comm;
         m_silent = true;
     }
@@ -193,7 +195,7 @@ struct NearestNeighborComm
     * @brief Construct
     *
     * @param n depth of the halo
-    * @param vector_dimensions {x, y, z} dimension (total number of points)
+    * @param vector_dimensions {x, y, z} dimension (Local number of points)
     * @param comm the (cartesian) communicator
     * @param direction 0 is x, 1 is y, 2 is z
     */
@@ -201,6 +203,34 @@ struct NearestNeighborComm
     {
         static_assert( std::is_same<const_pointer_type, get_value_type<Buffer>>::value, "Must be same pointer types");
         construct( n, vector_dimensions, comm, direction);
+    }
+    /**
+    * @brief Construct
+    *
+    * @param n depth of the halo
+    * @param shape Local number of points per dimension: Can be of size 1, 2 or 3 with index 0 -> x, 1-> y, 2->z
+    * @param comm the (cartesian) communicator
+    * @param direction 0 is x, 1 is y, 2 is z
+    */
+    NearestNeighborComm( unsigned n, const std::vector<unsigned> shape, MPI_Comm comm, unsigned direction)
+    {
+        static_assert( std::is_same<const_pointer_type, get_value_type<Buffer>>::value, "Must be same pointer types");
+        std::vector<unsigned> vdims;
+        switch( shape.size())
+        {
+            case 1:
+                vdims = {shape[0],1,1};
+                break;
+            case 2:
+                vdims = {shape[0],shape[1],1};
+                break;
+            case 3:
+                vdims = {shape[0],shape[1],shape[2]};
+                break;
+            default:
+                throw std::runtime_error("Dimension not implemented yet!");
+        }
+        construct( n, &vdims[0], comm, direction);
     }
 
     /**
@@ -352,7 +382,7 @@ struct NearestNeighborComm
 
     unsigned m_n, m_dim[3]; //deepness, dimensions
     MPI_Comm m_comm;
-    unsigned m_direction;
+    unsigned m_direction = 0;
     bool m_silent, m_trivial=false; //silent -> no comm, m_trivial-> comm in last dim
     unsigned m_outer_size = 1; //size of vector in units of buffer_size
     Index m_gather_map_middle;

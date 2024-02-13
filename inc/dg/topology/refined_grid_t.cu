@@ -80,8 +80,8 @@ int main ()
 
     //also test P D^f_x Q f_c = D^c_x f
     std::cout << "TEST OF P D_x^f Q = D_x^c\n";
-    const dg::HMatrix dx_f = dg::create::dx( g2d_f);
-    const dg::HMatrix dx_c = dg::create::dx( g2d_c);
+    const dg::HMatrix dx_f = dg::create::dx( g2d_f, g2d_f.bcx());
+    const dg::HMatrix dx_c = dg::create::dx( g2d_c, g2d_c.bcx());
     vec_c = dg::evaluate( function, g2d_c);
     dg::HVec deri_num(vec_c);
     dg::blas2::symv( dx_c, vec_c, deri_num);
