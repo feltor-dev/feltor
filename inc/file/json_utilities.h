@@ -474,6 +474,32 @@ static inline void string2Json(std::string input, JsonType& js, enum comments co
 {
     js = string2Json( input, comm, err);
 }
+
+/**
+ * @brief convert a vector to a json arrray
+ *
+ * @param shared Any shared memory container that allows range based for loops
+ */
+template<class ContainerType>
+static dg::file::JsonType vec2json( const ContainerType& shared)
+{
+#ifdef DG_USE_JSONHPP
+    return nlohmann::json(shared);
+#else
+    Json::Value val;
+    for( const auto& value : shared)
+        val.append(value);
+    return val;
+#endif
+}
+
+/// Specialization for intitializer list
+template<class T>
+static dg::file::JsonType vec2json( std::initializer_list<T> shared)
+{
+    std::vector<T> cc( shared);
+    return vec2json(cc);
+}
 ///@}
 }//namespace file
 }//namespace dg

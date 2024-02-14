@@ -91,5 +91,11 @@ int main()
                   <<" (nested: another_nest: number)\n";
     }
 
+    std::cout << "Test Vector 2 Json:\n";
+    dg::file::WrappedJsonValue ws( dg::file::vec2json( {42, 73}));
+    assert( ws.get( 0,0).asInt() == 42);
+    assert( ws.get( 1,0).asInt() == 73);
+    std::cout << "TEST PASSED\n";
+
     return 0;
 }
