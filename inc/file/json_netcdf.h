@@ -8,10 +8,8 @@ namespace dg
 {
 namespace file
 {
-
-/*! @brief Write a json dictionary as attributes of a netcdf variable or file
- *
- * Example code
+/**
+ * @class hide_json_netcdf_example
  * @code
     dg::file::JsonType atts;
     atts["text"] = "Hello World!";
@@ -19,25 +17,37 @@ namespace file
     atts["int"] = -1;
     atts["uint"] = 10;
     atts["bool"] = true;
-    atts["realarray"] = {-1.1, 42.3}; // works for nlohmann::json
+    atts["realarray"] = dg::file::vec2json({-1.1, 42.3});
     dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( "atts.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::json2nc_attributes( ncid, NC_GLOBAL, atts);
-    nc_close(ncid);
+    dg::file::json2nc_attrs( atts, ncid, NC_GLOBAL);
+    err = nc_close(ncid);
+    // read attributes back to json
+    err = nc_open( "atts.nc", 0, &ncid);
+    dg::file::JsonType read = dg::file::nc_attrs2json( ncid, NC_GLOBAL);
+    // read and atts are the same now
+    err = nc_close(ncid);
  * @endcode
+ */
+
+/*! @brief Write a json dictionary as attributes of a netcdf variable or file
+ *
+ * Example code
+ * @copydoc hide_json_netcdf_example
  * @attention The json values cannot be nested, only primitive variables or
  * arrays thereof can be written i.e. something like
  * <tt> value["test"]["nested"] = 42 </tt> in the above example will throw an
  * error.  This is because netcdf attributes cannot be nested.
  * Furthermore, all elements of an array must have the same type.
  * @note In an MPI program only one thread can call this function!
- * @note boolean values are mapped to int netcdf attributes
- * @param atts A Json Dictionary containing all the attributes for the variable or file. \c atts can be empty in which case no attribute is written.
+ * @note boolean values are mapped to byte netcdf attributes (0b for true, 1b for false)
+ * @param atts A Json Dictionary containing all the attributes for the variable
+ * or file. \c atts can be empty in which case no attribute is written.
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID, or NC_GLOBAL for a global attribute
  */
-static void json2nc_attributes( const dg::file::JsonType& atts, int ncid, int varid )
+static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid )
 {
     NC_Error_Handle err;
 #ifdef DG_USE_JSONHPP
@@ -61,8 +71,8 @@ static void json2nc_attributes( const dg::file::JsonType& atts, int ncid, int va
         }
         else if ( value.is_boolean() )
         {
-            int convert = value.template get<bool>(); // converts false to 0; true to 1
-            err = nc_put_att_int( ncid, varid, it.key().data(), NC_INT, 1, &convert);
+            signed char convert = value.template get<bool>(); // converts false to 0; true to 1
+            err = nc_put_att_schar( ncid, varid, it.key().data(), NC_BYTE, 1, &convert);
         }
         else if( value.is_string())
         {
@@ -98,10 +108,10 @@ static void json2nc_attributes( const dg::file::JsonType& atts, int ncid, int va
             }
             else if ( valz.is_boolean() )
             {
-                std::vector<int> data(size);
+                std::vector<signed char> data(size);
                 for( int i=0; i<size; i++)
                     data[i] = value[i].template get<bool>();
-                err = nc_put_att_int( ncid, varid, it.key().data(), NC_INT, size, data.data());
+                err = nc_put_att_schar( ncid, varid, it.key().data(), NC_BYTE, size, data.data());
             }
             else if( valz.is_string())
             {
@@ -135,8 +145,8 @@ static void json2nc_attributes( const dg::file::JsonType& atts, int ncid, int va
         }
         else if ( value.isBool() )
         {
-            int convert = value.asBool(); // converts false to 0; true to 1
-            err = nc_put_att_int( ncid, varid, it.name().data(), NC_INT, 1, &convert);
+            signed char convert = value.asBool(); // converts false to 0; true to 1
+            err = nc_put_att_schar( ncid, varid, it.name().data(), NC_BYTE, 1, &convert);
         }
         else if( value.isString())
         {
@@ -172,10 +182,10 @@ static void json2nc_attributes( const dg::file::JsonType& atts, int ncid, int va
             }
             else if ( valz.isBool() )
             {
-                std::vector<int> data(size);
+                std::vector<signed char> data(size);
                 for( int i=0; i<size; i++)
                     data[i] = value[i].asBool();
-                err = nc_put_att_int( ncid, varid, it.name().data(), NC_INT, size, data.data());
+                err = nc_put_att_schar( ncid, varid, it.name().data(), NC_BYTE, size, data.data());
             }
             else if( valz.isString())
             {
@@ -191,6 +201,72 @@ static void json2nc_attributes( const dg::file::JsonType& atts, int ncid, int va
 #endif
 
 }
+
+/*! @brief Read netcdf attributes into a json dictionary
+ *
+ * Example code
+ * @copydoc hide_json_netcdf_example
+ * @note In an MPI program only one thread can call this function!
+ * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
+ * @return A Json Dictionary containing all the attributes for the variable
+ * or file. Can be empty if no attribute is present.
+ * @param ncid NetCDF file or group ID
+ * @param varid Variable ID, or NC_GLOBAL for a global attribute
+ */
+static dg::file::JsonType nc_attrs2json(int ncid, int varid)
+{
+    NC_Error_Handle err;
+    int number;
+
+    if( varid == NC_GLOBAL)
+        err = nc_inq_natts( ncid, &number);
+    else
+        err = nc_inq_varnatts( ncid, varid, &number);
+    dg::file::JsonType json;
+    for( int i=0; i<number; i++)
+    {
+        char name[NC_MAX_NAME]; // 256
+        err = nc_inq_attname( ncid, varid, i, name);
+        nc_type att_type;
+        size_t att_length;
+        err = nc_inq_att( ncid, varid, name, &att_type, &att_length);
+        if( att_type == NC_INT)
+        {
+            std::vector<int> att( att_length);
+            err = nc_get_att_int( ncid, varid, name, &att[0]);
+            json[name] = att_length == 1 ? dg::file::JsonType(att[0]) : vec2json(att);
+        }
+        else if( att_type == NC_UINT)
+        {
+            std::vector<unsigned> att( att_length);
+            err = nc_get_att_uint( ncid, varid, name, &att[0]);
+            json[name] = att_length == 1 ? dg::file::JsonType(att[0]) : vec2json(att);
+        }
+        else if( att_type == NC_DOUBLE)
+        {
+            std::vector<double> att( att_length);
+            err = nc_get_att_double( ncid, varid, name, &att[0]);
+            json[name] = att_length == 1 ? dg::file::JsonType(att[0]) : vec2json(att);
+        }
+        else if( att_type == NC_BYTE)
+        {
+            std::vector<signed char> att( att_length);
+            err = nc_get_att_schar( ncid, varid, name, &att[0]);
+            std::vector<bool> att_as_bool( att.begin(), att.end());
+            json[name] = att_length == 1 ? dg::file::JsonType((bool)att[0]) : vec2json(att_as_bool);
+        }
+        else if( att_type == NC_STRING || att_type == NC_CHAR)
+        {
+            std::string att( att_length, 'x');
+            err = nc_get_att_text( ncid, varid, name, &att[0]);
+            json[name] = att;
+        }
+        else
+            throw std::runtime_error( "Data type "+std::to_string(att_type)+" not supported by our converter\n");
+    }
+    return json;
+}
+
 
 }//namespace file
 }//namespace dg

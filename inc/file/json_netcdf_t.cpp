@@ -4,7 +4,7 @@
 
 #define _FILE_INCLUDED_BY_DG_
 #include "json_netcdf.h"
-#include "nc_utilities.h"
+//#include "nc_utilities.h"
 
 
 int main(int argc, char* argv[])
@@ -19,21 +19,12 @@ int main(int argc, char* argv[])
     att["int"] = -1;
     att["uint"] = 10;
     att["bool"] = true;
-#ifdef DG_USE_JSONHPP
-    att["realarray"] = {-1.1, 42.3};
-    att["intarray"] = {-11, 423};
-    att["uintarray"] = {11, 423};
-    att["boolarray"] = {true, false};
-#else
-    att["realarray"].append(-1.1);
-    att["realarray"].append(42.3);
-    att["intarray"].append(11);
-    att["intarray"].append(-423);
-    att["uintarray"].append(11);
-    att["uintarray"].append(423);
-    att["boolarray"].append(true);
-    att["boolarray"].append(false);
-#endif
+    att["realarray"] = dg::file::vec2json({-1.1, 42.3});
+    att["realarray"] = dg::file::vec2json({-1.1, 42.3});
+    att["realnumber"] = dg::file::vec2json({-1.1});
+    att["intarray"] = dg::file::vec2json({-11, 423});
+    att["uintarray"] = dg::file::vec2json({11, 423});
+    att["boolarray"] = dg::file::vec2json({true, false});
 
     att["title"] = "Output file of feltor/src/toefl/toefl.cpp";
     att["Conventions"] = "CF-1.8";
@@ -53,12 +44,18 @@ int main(int argc, char* argv[])
     int ncid;
     err = nc_create( "atts.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     std::cout << dg::file::WrappedJsonValue(att).toStyledString()<<"\n";
-    dg::file::json2nc_attributes( att, ncid, NC_GLOBAL);
+    dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
     // TEST EMPTY Value
     att = dg::file::JsonType();
-    dg::file::json2nc_attributes( att, ncid, NC_GLOBAL);
-    nc_close(ncid);
+    dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
+    err = nc_close(ncid);
     std::cout << "\n\nTEST BY USING ncdump -h atts.nc\n\n";
+
+    std::cout << "NOW test reading of attributes\n";
+    err = nc_open( "atts.nc", 0, &ncid);
+    dg::file::JsonType read = dg::file::nc_attrs2json( ncid, NC_GLOBAL);
+    std::cout << dg::file::WrappedJsonValue(read).toStyledString()<<"\n";
+    err = nc_close(ncid);
 
 
     return 0;
