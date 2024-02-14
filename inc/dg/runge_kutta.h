@@ -947,7 +947,7 @@ using ImplicitRungeKutta = DIRKStep<ContainerType>;
 /// @ingroup misc
 inline bool is_same( double x, double y, double eps = 1e-15)
 {
-    return fabs(x - y) < std::max(1.0, std::max( fabs(x), fabs(y)));
+    return fabs(x - y) < eps * std::max(1.0, std::max( fabs(x), fabs(y)));
 }
 /// Checks if two number are same within accuracy
 /// @ingroup misc

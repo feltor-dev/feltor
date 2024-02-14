@@ -26,6 +26,16 @@ int main()
 {
     std::cout << "Program to test correct implementation of Runge Kutta methods in runge_kutta.h at the example of the damped driven harmonic oscillator. Errors should be small! \n";
     std::cout << std::scientific;
+    std::cout << "First a small test of is_same and is_divisable\n";
+    assert(  dg::is_same ( 3.3, 3.3) );
+    assert( !dg::is_same ( 3.3, 4.0) );
+    assert(  dg::is_same ( (float)3, (float)3) );
+    assert( !dg::is_same ( (float)3, (float)4) );
+    assert(  dg::is_divisable ( (float)12, (float)3) );
+    assert( !dg::is_divisable ( (float)12, (float)5) );
+    assert(  dg::is_divisable ( (double)12, (double)3) );
+    assert( !dg::is_divisable ( (double)12, (double)3.1) );
+    std::cout << "PASSED!\n";
     //![doxygen]
     //... in main
     //set start and end time, number of steps and timestep
