@@ -37,6 +37,7 @@ dg::blas1::copy( 7., view); //elements of vector now equal 7 instead of 20
  * \c MPI_Vector of \c View
  * @tparam ThrustVector \c TensorTraits exists for this class and the
  * \c tensor_category derives from \c ThrustVectorTag
+ * @sa \c dg::split
  */
 template<class ThrustVector >
 struct View

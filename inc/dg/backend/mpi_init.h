@@ -44,7 +44,13 @@ static inline void mpi_init( int argc, char* argv[])
 }
 
 /** @class hide_cart_warning
-* @attention Before creating a second Cartesian communicator consider freeing existing ones with \c MPI_Comm_free. (Using \c mpi_init2d and \c mpi_init3d in the same program has sometimes led to Segmentation faults in the past)
+ * @note The ranks within the newly created communicator may be reordered wrt.
+ * \c MPI_COMM_WORLD because we set \c reorder=true in \c MPI_Cart_create. No
+ * current MPI library actualy does that but do not rely on the fact that ranks
+ * are the same just in case.
+* @attention Before creating a second Cartesian communicator consider freeing
+* existing ones with \c MPI_Comm_free. (Using \c mpi_init2d and \c mpi_init3d
+* in the same program has sometimes led to Segmentation faults in the past)
   */
 /** @class hide_gpu
  *

@@ -110,6 +110,10 @@ struct aRealProductMPIGeometry3d : public aRealMPIGeometry3d<real_type>
      *
      * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
      * @return A newly constructed perpendicular grid
+     * @attention The user takes ownership of the newly allocated grid
+     * @code
+     * dg::ClonePtr<aRealMPIGeometry2d<real_type>> perp_ptr = grid.perp_grid();
+     * @endcode
      */
     aRealMPIGeometry2d<real_type>* perp_grid()const{
         return do_perp_grid();
