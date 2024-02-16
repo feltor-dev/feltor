@@ -361,4 +361,34 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, 
     mpi_init3d( bcx, bcy, bcz, comm, is, verbose);
     mpi_init3d( n, Nx, Ny, Nz, comm, is, verbose);
 }
+
+/**
+ * @brief Convert a global rank to a rank within a given communicator
+ *
+ * Essentially a utility wrapper around \c MPI_Group_translate_ranks
+ * This function can be used to determine if the world_rank 0 (the "master" process)
+ * belongs to the communicator of the calling process or not
+ * @code
+ * int local_master_rank = dg::mpi_comm_global2local_rank( comm, 0);
+ * if ( local_master_rank == MPI_UNDEFINED)
+ * // master process is not part of group
+ * else
+ * // do something
+ * @endcode
+ * @param comm The communicator / process group. Must be sub-group of \c global_comm
+ * @param global_rank a rank within \c global_comm
+ * @param global_comm the communicator, which \c global_rank refers to
+ * @return rank of \c global_comm, \c global_rank in \c comm, \c MPI_UNDEFINED
+ * if \c global_rank is not part of \c comm
+ */
+static int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_Comm global_comm = MPI_COMM_WORLD )
+{
+    MPI_Group local_group, global_group;
+    MPI_Comm_group(comm, &local_group);//local call
+    MPI_Comm_group(MPI_COMM_WORLD, &global_group);//local call
+    int local_root_rank;
+    MPI_Group_translate_ranks(global_group, 1, &global_rank, local_group, &local_root_rank);
+    return local_root_rank;
+}
+
 } //namespace dg
