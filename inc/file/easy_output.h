@@ -21,10 +21,7 @@ namespace dg
 namespace file
 {
 /**
- * @defgroup netcdf NetCDF utilities
- * \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5[_serial] -lhdf5[_serial]_hl)
- *
- * @addtogroup netcdf
+ * @addtogroup Output
  * @{
  * @class hide_master_comment
  * @note In serial netcdf only a single "master" process can operate on the
@@ -183,7 +180,9 @@ void put_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 
 /**
 *
-* @brief Convenience wrapper around \c nc_put_var
+* @brief Write an array to netcdf file
+*
+* Convenience wrapper around \c nc_put_var
 *
 * The purpose of this function is mainly to simplify output in an MPI environment and to provide
 * the same interface also in a shared memory system for uniform programming.
@@ -191,8 +190,11 @@ void put_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 * i.e. writes a single variable in one go and is actually equivalent
 * to \c nc_put_var. The dimensionality is given by the grid.
 * @note This function throws a \c dg::file::NC_Error if an error occurs
-* @tparam host_vector Type with \c data() member that returns pointer to first
-* element in CPU (host) adress space, meaning it cannot be a GPU vector.
+* @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
+* Determines if shared memory or MPI version is called
+* @tparam host_vector For shared Topology: Type with \c data() member that
+* returns pointer to first element in CPU (host) adress space, meaning it
+* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
@@ -209,7 +211,9 @@ void put_var( int ncid, int varid, const Topology& grid,
 }
 
 /**
-* @brief Convenience wrapper around \c nc_put_vara
+* @brief Write an array to netcdf file
+*
+* Convenience wrapper around \c nc_put_vara
 *
 * The purpose of this function is mainly to simplify output in an MPI environment and to provide
 * the same interface also in a shared memory system for uniform programming.
@@ -217,8 +221,11 @@ void put_var( int ncid, int varid, const Topology& grid,
 * i.e. writes a single time-slice into the file.
 * The dimensionality is given by the grid.
 * @note This function throws a \c dg::file::NC_Error if an error occurs
-* @tparam host_vector Type with \c data() member that returns pointer to first
-* element in CPU (host) adress space, meaning it cannot be a GPU vector
+* @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
+* Determines if shared memory or MPI version is called
+* @tparam host_vector For shared Topology: Type with \c data() member that
+* returns pointer to first element in CPU (host) adress space, meaning it
+* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
@@ -246,9 +253,11 @@ void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
  * @brief Write a scalar to the netcdf file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
+ * @tparam T Determines data type to write
+ * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
- * @param varid Variable ID
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function)
+ * @param varid Variable ID (Note that in netcdf variables without dimensions are scalars)
+ * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
  * @param parallel This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes can call this function but only the master thread writes.
@@ -265,10 +274,12 @@ void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @brief Write a scalar to the netcdf file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
+ * @tparam T Determines data type to write
+ * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
- * @param varid Variable ID
+ * @param varid Variable ID (Note that in netcdf variables without dimensions are scalars)
  * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function)
+ * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
  * @param parallel This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes can call this function but only the master thread writes.
@@ -285,10 +296,10 @@ void put_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>&
 }
 
 
+///@cond
 #ifdef MPI_VERSION
 
 // array data
-///@copydoc put_var(int,int,const Topology&,const host_vector&,bool)
 template<class host_vector, class MPITopology>
 void put_var(int ncid, int varid, const MPITopology& grid,
     const dg::MPI_Vector<host_vector>& data, bool parallel = false)
@@ -296,7 +307,6 @@ void put_var(int ncid, int varid, const MPITopology& grid,
     detail::put_vara_detail( ncid, varid, 0, grid, data, false, parallel);
 }
 
-///@copydoc put_vara(int,int,unsigned,const Topology&,const host_vector&,bool)
 template<class host_vector, class MPITopology>
 void put_vara(int ncid, int varid, unsigned slice,
     const MPITopology& grid, const dg::MPI_Vector<host_vector>& data,
@@ -306,7 +316,6 @@ void put_vara(int ncid, int varid, unsigned slice,
 }
 // scalar data
 
-///@copydoc put_var(int,int,const RealGrid0d<real_type>&,T,bool)
 template<class T, class real_type>
 void put_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
     T data, bool parallel = false)
@@ -316,7 +325,6 @@ void put_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
     if( rank == 0)
         put_var( ncid, varid, dg::RealGrid0d<real_type>(), data, parallel);
 }
-///@copydoc put_vara(int,int,unsigned,const RealGrid0d<real_type>&,T,bool)
 template<class T, class real_type>
 void put_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& grid,
     T data, bool parallel = false)
@@ -346,6 +354,7 @@ void put_vara_double(int ncid, int varid, unsigned slice, const Topology& grid,
 {
     put_vara( ncid, varid, slice, grid, data, parallel);
 }
+///@endcond
 
 ///@}
 }//namespace file

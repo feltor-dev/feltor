@@ -81,14 +81,14 @@ inline static void assign_defaults( std::vector<std::string>& name_dims, const s
 } // namespace detail
 ///@endcond
 
-///@addtogroup netcdf
+///@addtogroup Dimensions
 ///@{
 
 /**
  * @brief Check if an unlimited dimension exists as if \c define_real_time was called
  *
  * This function returns false if the dimension with the given name does not exist.
- * .
+ *
  * This function throws \c std::runtime_error if
  *  - The dimension exists but is not unlimited
  *  - The dimension variable has wrong type or dimensions
@@ -199,7 +199,7 @@ static inline int define_limited_time( int ncid, const char* name, int size, int
  * @brief Check if a dimension exists as if \c define_dimension was called
  *
  * This function returns false if the dimension with the given name does not exist.
- * .
+ *
  * This function throws \c std::runtime_error if
  *  - The length of the dimension does not match the grid size
  *  - The dimension variable has wrong type or dimensions

@@ -21,10 +21,7 @@ namespace dg
 namespace file
 {
 /**
- * @defgroup netcdf NetCDF utilities
- * \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5[_serial] -lhdf5[_serial]_hl)
- *
- * @addtogroup netcdf
+ * @addtogroup Input
  * @{
  */
 
@@ -151,8 +148,11 @@ void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 * i.e. readas a single variable in one go and is actually equivalent
 * to \c nc_get_var. The dimensionality is given by the grid.
 * @note This function throws a \c dg::file::NC_Error if an error occurs
-* @tparam host_vector Type with \c data() member that returns pointer to first
-* element in CPU (host) adress space, meaning it cannot be a GPU vector.
+* @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
+* Determines if shared memory or MPI version is called
+* @tparam host_vector For shared Topology: Type with \c data() member that
+* returns pointer to first element in CPU (host) adress space, meaning it
+* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_get_vara
@@ -177,8 +177,11 @@ void get_var( int ncid, int varid, const Topology& grid,
 * i.e. reads a single time-slice from the file.
 * The dimensionality is given by the grid.
 * @note This function throws a \c dg::file::NC_Error if an error occurs
-* @tparam host_vector Type with \c data() member that returns pointer to first
-* element in CPU (host) adress space, meaning it cannot be a GPU vector
+* @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
+* Determines if shared memory or MPI version is called
+* @tparam host_vector For shared Topology: Type with \c data() member that
+* returns pointer to first element in CPU (host) adress space, meaning it
+* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param slice The number of the time-slice to read (first element of the \c startp array in \c nc_get_vara)
@@ -206,13 +209,15 @@ void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
  * @brief Read a scalar from the netcdf file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
+ * @tparam T Determines data type to read
+ * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID
- * @param grid a Tag to signify scalar input (and help the compiler choose this
- * function over the array output function)
+ * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array input function). Can be of type <tt> dg::RealMPIGrid0d<real_type> </tt>
  * @param data The (single) datum read from file.
  * @param parallel This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes can call this function but only the master thread reads.
+ * Result is broadcast to all processes in \c MPI_COMM_WORLD
  * @copydoc hide_master_comment
  */
 template<class T, class real_type>
@@ -226,13 +231,16 @@ void get_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @brief Read a scalar to the netcdf file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
+ * @tparam T Determines data type to read
+ * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID
  * @param slice The number of the time-slice to read (first element of the \c startp array in \c nc_put_vara)
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function)
+ * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array input function). Can be of type <tt> dg::RealMPIGrid0d<real_type> </tt>
  * @param data The (single) datum to read.
  * @param parallel This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes can call this function but only the master thread reads.
+ * Result is broadcast to all processes in \c MPI_COMM_WORLD
  * @copydoc hide_master_comment
  */
 template<class T, class real_type>
@@ -246,9 +254,9 @@ void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>&
 }
 
 
+///@cond
 #ifdef MPI_VERSION
 
-///@copydoc get_var()
 template<class host_vector, class MPITopology>
 void get_var(int ncid, int varid, const MPITopology& grid,
     dg::MPI_Vector<host_vector>& data, bool parallel = false)
@@ -256,7 +264,6 @@ void get_var(int ncid, int varid, const MPITopology& grid,
     detail::get_vara_detail( ncid, varid, 0, grid, data, false, parallel);
 }
 
-///@copydoc get_vara()
 template<class host_vector, class MPITopology>
 void get_vara(int ncid, int varid, unsigned slice,
     const MPITopology& grid, dg::MPI_Vector<host_vector>& data,
@@ -267,7 +274,6 @@ void get_vara(int ncid, int varid, unsigned slice,
 
 // scalar data
 
-///@copydoc get_var()
 template<class T, class real_type>
 void get_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
     T& data, bool parallel = false)
@@ -284,7 +290,6 @@ void get_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
     MPI_Bcast( &data, 1, dg::getMPIDataType<T>, 0, MPI_COMM_WORLD);
 }
 
-///@copydoc get_vara()
 template<class T, class real_type>
 void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& grid,
     T& data, bool parallel = false)
@@ -301,6 +306,7 @@ void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_typ
     MPI_Bcast( &data, 1, dg::getMPIDataType<T>, 0, MPI_COMM_WORLD);
 }
 #endif //MPI_VERSION
+///@endcond
 
 ///@}
 }//namespace file
