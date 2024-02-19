@@ -7,25 +7,19 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../../ # other project libraries
 INCLUDE+= -I../    # other project libraries
 
-all: netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t probes_parser_t probes_parser_mpit probes_t probes_mpit jsoncpp_netcdf_t jsonhpp_netcdf_t
+all: easy_dims_t easy_dims_mpit easy_output_t easy_output_mpit easy_input_t easy_input_mpit netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t probes_parser_t probes_parser_mpit probes_t probes_mpit jsoncpp_netcdf_t jsonhpp_netcdf_t
 
-netcdf_t: netcdf_t.cpp nc_utilities.h easy_output.h
+%_t: %_t.cpp %.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS)
 
-netcdf_mpit: netcdf_t.cpp nc_utilities.h easy_output.h
-	$(MPICC) $< -o $@ $(MPICFLAGS) $(INCLUDE) $(LIBS) -DWITH_MPI
+%_mpit: %_t.cpp %.h
+	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) -DWITH_MPI
 
 probes_parser_t: probes_parser_t.cpp probes_params.h json_probes.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB)
 
 probes_parser_mpit: probes_parser_t.cpp probes_params.h json_probes.h
 	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(JSONLIB) -DWITH_MPI
-
-probes_t: probes_t.cpp probes_params.h probes.h json_probes.h
-	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB) $(LIBS)
-
-probes_mpit: probes_t.cpp probes_params.h probes.h json_probes.h
-	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(JSONLIB) $(LIBS) -DWITH_MPI
 
 jsoncpp_utilities_t: json_utilities_t.cpp json_utilities.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB)
