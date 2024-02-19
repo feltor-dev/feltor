@@ -34,8 +34,14 @@ struct RealMPIGrid3d;
 /// Just a tag (used e.g. in netcdf output to indicate 0-dimensional (point) data)
 template<class real_type>
 struct RealMPIGrid0d{
+    using value_type = real_type;
+    /// Used to identify MPI grid
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid = RealMPIGrid0d<real_type>;
     /// @brief number of dimensions : 0
     constexpr static unsigned ndim() {return 0;}
+
+    RealGrid0d<real_type> global() const { return RealGrid0d<real_type>();}
 };
 
 /**

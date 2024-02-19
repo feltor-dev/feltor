@@ -381,7 +381,7 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, 
  * @return rank of \c global_comm, \c global_rank in \c comm, \c MPI_UNDEFINED
  * if \c global_rank is not part of \c comm
  */
-static int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_Comm global_comm = MPI_COMM_WORLD )
+static inline int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_Comm global_comm = MPI_COMM_WORLD )
 {
     MPI_Group local_group, global_group;
     MPI_Comm_group(comm, &local_group);//local call

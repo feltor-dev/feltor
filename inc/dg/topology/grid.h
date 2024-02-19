@@ -73,6 +73,9 @@ struct RealGrid3d;
 /// Just a tag (used e.g. in netcdf output to indicate 0-dimensional (point) data)
 template<class real_type>
 struct RealGrid0d{
+    using value_type = real_type;
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid = RealGrid0d<real_type>;
     /// @brief number of dimensions : 0
     constexpr static unsigned ndim() {return 0;}
 };
