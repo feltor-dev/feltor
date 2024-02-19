@@ -419,7 +419,6 @@ bool check_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
 template<class Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value, bool > = true>
 bool check_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, std::vector<std::string> name_dims = {})
 {
-    int retval = NC_NOERR;
     auto default_names = detail::dim_names(g);
     default_names.insert( default_names.begin(), "time");
     detail::assign_defaults( name_dims, default_names);

@@ -48,7 +48,6 @@ int main(int argc, char* argv[])
     );
     dg::ClonePtr<dg::x::aGeometry2d> perp_grid_ptr = grid.perp_grid();
     dg::x::Grid2d grid2d = (dg::x::Grid2d)*perp_grid_ptr;
-    std::string hello = "Hello world\n";
     dg::x::HVec data = dg::evaluate( function, grid);
     auto sliced_data = dg::split( data, grid); // a vector of views
 
@@ -56,6 +55,7 @@ int main(int argc, char* argv[])
     int ncid;
     dg::file::NC_Error_Handle err;
     DG_RANK0 err = nc_create( filename.data(), NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
+    std::string hello = "Hello world\n";
     DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL, "hello", hello.size(), hello.data());
 
     int dim_ids[4], tvarID;
