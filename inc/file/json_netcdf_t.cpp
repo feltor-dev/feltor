@@ -2,9 +2,7 @@
 #include <ctime>
 #include <iomanip>
 
-#define _FILE_INCLUDED_BY_DG_
 #include "json_netcdf.h"
-//#include "nc_utilities.h"
 
 
 int main(int argc, char* argv[])

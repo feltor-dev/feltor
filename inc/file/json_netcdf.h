@@ -1,13 +1,19 @@
 #pragma once
 
 #include <netcdf.h>
+#include "nc_error.h"
 #include "json_utilities.h"
-#include "nc_utilities.h"
+
+/*!@file
+ *
+ * Define attributes
+ */
 
 namespace dg
 {
 namespace file
 {
+
 /**
  * @class hide_json_netcdf_example
  * @code
@@ -46,11 +52,14 @@ namespace file
  * or file. \c atts can be empty in which case no attribute is written.
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID, or NC_GLOBAL for a global attribute
+ * @ingroup Attributes
  */
-static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid )
+static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid );
+
+#ifdef DG_USE_JSONHPP
+static void json2nc_attrs( const nlohmann::json& atts, int ncid, int varid )
 {
     NC_Error_Handle err;
-#ifdef DG_USE_JSONHPP
     for (auto it = atts.begin(); it != atts.end();  ++it )
     {
         auto & value = *it;
@@ -124,7 +133,11 @@ static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid )
         else
             throw std::runtime_error( "Data type not supported by netcdf\n");
     }
+}
 #else
+static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
+{
+    NC_Error_Handle err;
     for (auto it = atts.begin(); it != atts.end();  ++it )
     {
         auto & value = *it;
@@ -198,9 +211,9 @@ static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid )
         else
             throw std::runtime_error( "Data type not supported by netcdf\n");
     }
-#endif
-
 }
+#endif // DG_USE_JSONHPP
+
 
 /*! @brief Read netcdf attributes into a json dictionary
  *
@@ -212,6 +225,7 @@ static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid )
  * or file. Can be empty if no attribute is present.
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID, or NC_GLOBAL for a global attribute
+ * @ingroup Attributes
  */
 static dg::file::JsonType nc_attrs2json(int ncid, int varid)
 {
