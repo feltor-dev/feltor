@@ -1,6 +1,6 @@
 #pragma once
 
-#include <netcdf.h>
+#include <NetCDF.h>
 #include "nc_error.h"
 #include "json_utilities.h"
 
@@ -15,7 +15,7 @@ namespace file
 {
 
 /**
- * @class hide_json_netcdf_example
+ * @class hide_json_NetCDF_example
  * @code
     dg::file::JsonType atts;
     atts["text"] = "Hello World!";
@@ -37,22 +37,25 @@ namespace file
  * @endcode
  */
 
-/*! @brief Write a json dictionary as attributes of a netcdf variable or file
+/*! @brief Write a json dictionary as attributes of a NetCDF variable or file
  *
  * Example code
- * @copydoc hide_json_netcdf_example
+ * @copydoc hide_json_NetCDF_example
  * @attention The json values cannot be nested, only primitive variables or
  * arrays thereof can be written i.e. something like
  * <tt> value["test"]["nested"] = 42 </tt> in the above example will throw an
- * error.  This is because netcdf attributes cannot be nested.
+ * error.  This is because NetCDF attributes cannot be nested.
  * Furthermore, all elements of an array must have the same type.
  * @note In an MPI program only one thread can call this function!
- * @note boolean values are mapped to byte netcdf attributes (0b for true, 1b for false)
+ * @note boolean values are mapped to byte NetCDF attributes (0b for true, 1b for false)
  * @param atts A Json Dictionary containing all the attributes for the variable
  * or file. \c atts can be empty in which case no attribute is written.
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID, or NC_GLOBAL for a global attribute
  * @ingroup Attributes
+ * @attention in an MPI program and serial NetCDF only the master process should call
+ * this function
+ * @copydoc hide_master_comment
  */
 static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid );
 
@@ -92,7 +95,7 @@ static void json2nc_attrs( const nlohmann::json& atts, int ncid, int varid )
         {
             int size = value.size();
             if ( size == 0 )
-                throw std::runtime_error( "Can't write a zero sized array attribute to netcdf");
+                throw std::runtime_error( "Can't write a zero sized array attribute to NetCDF");
             dg::file::JsonType valz = value[0];
             if ( valz.is_number_integer())
             {
@@ -124,14 +127,14 @@ static void json2nc_attrs( const nlohmann::json& atts, int ncid, int varid )
             }
             else if( valz.is_string())
             {
-                throw std::runtime_error( "Can't write a string array attribute to netcdf");
+                throw std::runtime_error( "Can't write a string array attribute to NetCDF");
             }
 
         }
         else if( value.is_object())
-            throw std::runtime_error( "Can't write Json object as netcdf attribute\n");
+            throw std::runtime_error( "Can't write Json object as NetCDF attribute\n");
         else
-            throw std::runtime_error( "Data type not supported by netcdf\n");
+            throw std::runtime_error( "Data type not supported by NetCDF\n");
     }
 }
 #else
@@ -170,7 +173,7 @@ static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
         {
             int size = value.size();
             if ( size == 0 )
-                throw std::runtime_error( "Can't write a zero sized array attribute to netcdf");
+                throw std::runtime_error( "Can't write a zero sized array attribute to NetCDF");
             Json::Value valz = value[0];
             if ( valz.isInt())
             {
@@ -202,23 +205,23 @@ static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
             }
             else if( valz.isString())
             {
-                throw std::runtime_error( "Can't write a string array attribute to netcdf");
+                throw std::runtime_error( "Can't write a string array attribute to NetCDF");
             }
 
         }
         else if( value.isObject())
-            throw std::runtime_error( "Can't write Json object as netcdf attribute\n");
+            throw std::runtime_error( "Can't write Json object as NetCDF attribute\n");
         else
-            throw std::runtime_error( "Data type not supported by netcdf\n");
+            throw std::runtime_error( "Data type not supported by NetCDF\n");
     }
 }
 #endif // DG_USE_JSONHPP
 
 
-/*! @brief Read netcdf attributes into a json dictionary
+/*! @brief Read NetCDF attributes into a json dictionary
  *
  * Example code
- * @copydoc hide_json_netcdf_example
+ * @copydoc hide_json_NetCDF_example
  * @note In an MPI program only one thread can call this function!
  * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
  * @return A Json Dictionary containing all the attributes for the variable
@@ -226,6 +229,7 @@ static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID, or NC_GLOBAL for a global attribute
  * @ingroup Attributes
+ * @copydoc hide_parallel_read
  */
 static dg::file::JsonType nc_attrs2json(int ncid, int varid)
 {

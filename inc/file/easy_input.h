@@ -76,17 +76,18 @@ inline int get_vara_T<unsigned>( int ncid, int varID, const size_t* startp, cons
 #ifdef MPI_VERSION
 
 template<class host_vector, class MPITopology>
-void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& grid, MPI_Vector<host_vector>& data, bool vara, bool parallel = false)
+void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& grid, MPI_Vector<host_vector>& data, bool vara, bool parallel = true)
 {
     MPI_Comm comm = grid.communicator();
     int local_root_rank = dg::mpi_comm_global2local_rank(comm);
     if (local_root_rank == MPI_UNDEFINED)
         return;
     unsigned grid_ndims = grid.ndim();
-    auto count = shape( grid.local());
-    std::reverse( count.begin(), count.end());
+    auto cc = shape( grid.local());
+    std::reverse( cc.begin(), cc.end());
     if( vara)
-        count.insert( count.begin(), 1);
+        cc.insert( cc.begin(), 1);
+    std::vector<size_t> count( cc.begin(), cc.end());
     int rank, size;
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &size);
@@ -94,7 +95,6 @@ void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
     if( vara)
         start[0] = slice;
     file::NC_Error_Handle err;
-    data.communicator() = grid.communicator();
     if( parallel)
     {
         int coords[grid_ndims];
@@ -123,7 +123,7 @@ void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
                     err = detail::get_vara_T( ncid, varid, &start[0], &count[0],
                         to_send.data()); // read data to send
                     MPI_Send( to_send.data(), local_size, dg::getMPIDataType<get_value_type<host_vector>>(),
-                          rrank, rrank, comm, &status);
+                          rrank, rrank, comm);
                 }
                 else // read own data
                     err = detail::get_vara_T( ncid, varid, &start[0], &count[0], data.data().data());
@@ -131,7 +131,7 @@ void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
         }
         else
             MPI_Recv( data.data().data(), local_size, dg::getMPIDataType<get_value_type<host_vector>>(),
-                      local_root_rank, rank, comm);
+                      local_root_rank, rank, comm, &status);
         MPI_Barrier( comm);
     }
 }
@@ -145,7 +145,7 @@ void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 * The purpose of this function is mainly to simplify input in an MPI environment and to provide
 * the same interface also in a shared memory system for uniform programming.
 * This version is for a time-independent variable,
-* i.e. readas a single variable in one go and is actually equivalent
+* i.e. reads a single variable in one go and is actually equivalent
 * to \c nc_get_var. The dimensionality is given by the grid.
 * @note This function throws a \c dg::file::NC_Error if an error occurs
 * @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
@@ -159,10 +159,11 @@ void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 * @param data contains the read data on return (must be of size \c grid.size() )
 * @copydoc hide_parallel_param
 * @copydoc hide_master_comment
+* @copydoc hide_parallel_read
 */
 template<class host_vector, class Topology>
 void get_var( int ncid, int varid, const Topology& grid,
-    host_vector& data, bool parallel = false)
+    host_vector& data, bool parallel = true)
 {
     file::NC_Error_Handle err;
     err = detail::get_var_T( ncid, varid, data.data());
@@ -189,10 +190,11 @@ void get_var( int ncid, int varid, const Topology& grid,
 * @param data contains the read data on return (must be of size \c grid.size() )
 * @copydoc hide_parallel_param
 * @copydoc hide_master_comment
+* @copydoc hide_parallel_read
 */
 template<class host_vector, class Topology>
 void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
-    host_vector& data, bool parallel = false)
+    host_vector& data, bool parallel = true)
 {
     file::NC_Error_Handle err;
     auto cc = shape( grid);
@@ -216,13 +218,12 @@ void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
  * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array input function). Can be of type <tt> dg::RealMPIGrid0d<real_type> </tt>
  * @param data The (single) datum read from file.
  * @param parallel This parameter is ignored in both serial and MPI versions.
- * In an MPI program all processes can call this function but only the master thread reads.
- * Result is broadcast to all processes in \c MPI_COMM_WORLD
- * @copydoc hide_master_comment
+ * In an MPI program all processes call this function and all processes read.
+ * @copydoc hide_parallel_read
  */
 template<class T, class real_type>
 void get_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
-    T& data, bool parallel = false)
+    T& data, bool parallel = true)
 {
     file::NC_Error_Handle err;
     err = detail::get_var_T( ncid, varid, &data);
@@ -239,13 +240,13 @@ void get_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array input function). Can be of type <tt> dg::RealMPIGrid0d<real_type> </tt>
  * @param data The (single) datum to read.
  * @param parallel This parameter is ignored in both serial and MPI versions.
- * In an MPI program all processes can call this function but only the master thread reads.
- * Result is broadcast to all processes in \c MPI_COMM_WORLD
+ * In an MPI program all processes call this function and all processes read.
  * @copydoc hide_master_comment
+ * @copydoc hide_parallel_read
  */
 template<class T, class real_type>
 void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& grid,
-    T& data, bool parallel = false)
+    T& data, bool parallel = true)
 {
     file::NC_Error_Handle err;
     size_t count = 1;
@@ -259,7 +260,7 @@ void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>&
 
 template<class host_vector, class MPITopology>
 void get_var(int ncid, int varid, const MPITopology& grid,
-    dg::MPI_Vector<host_vector>& data, bool parallel = false)
+    dg::MPI_Vector<host_vector>& data, bool parallel = true)
 {
     detail::get_vara_detail( ncid, varid, 0, grid, data, false, parallel);
 }
@@ -267,7 +268,7 @@ void get_var(int ncid, int varid, const MPITopology& grid,
 template<class host_vector, class MPITopology>
 void get_vara(int ncid, int varid, unsigned slice,
     const MPITopology& grid, dg::MPI_Vector<host_vector>& data,
-    bool parallel = false)
+    bool parallel = true)
 {
     detail::get_vara_detail( ncid, varid, 0, grid, data, true, parallel);
 }
@@ -276,34 +277,16 @@ void get_vara(int ncid, int varid, unsigned slice,
 
 template<class T, class real_type>
 void get_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
-    T& data, bool parallel = false)
+    T& data, bool parallel = true)
 {
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( parallel)
-    {
-        get_var( ncid, varid, dg::RealGrid0d<real_type>(), data, parallel);
-        return;
-    }
-    if( rank == 0)
-        get_var( ncid, varid, dg::RealGrid0d<real_type>(), data, parallel);
-    MPI_Bcast( &data, 1, dg::getMPIDataType<T>, 0, MPI_COMM_WORLD);
+    get_var( ncid, varid, dg::RealGrid0d<real_type>(), data, parallel);
 }
 
 template<class T, class real_type>
 void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& grid,
-    T& data, bool parallel = false)
+    T& data, bool parallel = true)
 {
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( parallel )
-    {
-        get_vara( ncid, varid, slice, dg::RealGrid0d<real_type>(), data, parallel);
-        return;
-    }
-    if( rank == 0)
-        get_vara( ncid, varid, slice, dg::RealGrid0d<real_type>(), data, parallel);
-    MPI_Bcast( &data, 1, dg::getMPIDataType<T>, 0, MPI_COMM_WORLD);
+    get_vara( ncid, varid, slice, dg::RealGrid0d<real_type>(), data, parallel);
 }
 #endif //MPI_VERSION
 ///@endcond

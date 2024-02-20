@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     //create NetCDF File
     int ncid;
     dg::file::NC_Error_Handle err;
-    DG_RANK0 err = nc_open( filename.data(), 0, &ncid);
+    err = nc_open( filename.data(), 0, &ncid);
 
     int dim_ids[4], tvarID;
     bool exists = dg::file::check_dimensions( ncid, dim_ids, &tvarID, grid);
@@ -61,12 +61,12 @@ int main(int argc, char* argv[])
         std::cerr << "Dimensions do not exist!\n";
 
     int scalarID, arrayID, subArrayID;
-    DG_RANK0 err = nc_inq_varid( ncid, "scalar", &scalarID);
-    DG_RANK0 err = nc_inq_varid( ncid, "array", &arrayID);
-    DG_RANK0 err = nc_inq_varid( ncid, "sub-array", &subArrayID);
+    err = nc_inq_varid( ncid, "scalar", &scalarID);
+    err = nc_inq_varid( ncid, "array", &arrayID);
+    err = nc_inq_varid( ncid, "sub-array", &subArrayID);
 
     int staticArrayID;
-    DG_RANK0 err = nc_inq_varid( ncid, "static-array", &staticArrayID);
+    err = nc_inq_varid( ncid, "static-array", &staticArrayID);
     dg::file::get_var( ncid, staticArrayID, grid, data);
 
     for(unsigned i=0; i<=NT; i++)

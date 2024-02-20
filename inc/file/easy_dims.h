@@ -486,25 +486,21 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const MPITopo
     else
         return NC_NOERR;
 }
-/// All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+/// All processes may call this and all will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+///@copydoc hide_parallel_read
 template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
 inline bool check_dimensions( int ncid, int* dimsIDs, const MPITopology& g, std::vector<std::string> name_dims = {})
 {
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( rank==0) return check_dimensions( ncid, dimsIDs, g.global(), name_dims);
-    else
-        return false;
+    // all processes can read NetCDF in parallel by default
+    return check_dimensions( ncid, dimsIDs, g.global(), name_dims);
 }
-/// All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+/// All processes may call this and all will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+///@copydoc hide_parallel_read
 template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
 inline bool check_dimensions( int ncid, int* dimsIDs, int* tvarID, const MPITopology& g, std::vector<std::string> name_dims = {})
 {
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( rank==0) return check_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
-    else
-        return false;
+    // all processes can read NetCDF in parallel by default
+    return check_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
 }
 #endif //MPI_VERSION
 

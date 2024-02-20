@@ -24,12 +24,10 @@ namespace file
  * @addtogroup Output
  * @{
  * @class hide_master_comment
- * @note In serial netcdf only a single "master" process can operate on the
- * netcdf file (creation, open, defining dimension ids, variables ids, reading,
- * writing etc).  The "master" thread is assumed to be the process with \c rank==0
+ * @note The "master" thread is assumed to be the process with \c rank==0
  * in \c MPI_COMM_WORLD.  The \c MPI_COMM_WORLD rank of a process is usually the
  * same in a Cartesian communicator of the same size but is not guaranteed. So
- * always check \c MPI_COMM_WORLD ranks for file operations.
+ * always check \c MPI_COMM_WORLD ranks for file write operations.
  *
  * @class hide_parallel_param
  * @param parallel This parameter is ignored in the serial version.
@@ -37,24 +35,47 @@ namespace file
  * reads/writes to the file independently in parallel (\c true)
  * or each process funnels its data through the master rank (\c false),
  * which involves communication but may be faster than the former method.
- * @attention In the MPI version (i) all processes must call this function,
- * (ii) processes that do not belong to the same communicator as the master process
- * return immediately and
- * (iii) if \c parallel==true a **parallel netcdf and hdf5** must be linked, the
- * file opened with the \c NC_MPIIO flag from the \c netcdf_par.h header and the
- * variable be marked with \c NC_COLLECTIVE access while if \c parallel==false
- * we need **serial netcdf and hdf5** and only the master thread needs to open
- * and access the file.  Note that serious performance penalties have been
- * observed on some platforms for parallel netcdf.
+ *
+ * @note
+ * In an MPI environment
+ *  - all processes must call this function,
+ *  - processes that do not belong to the same communicator as the master process
+ * return immediately
+ * .
  * @note In an MPI program it may happen that the data to read/write is partitioned among
  * a process group smaller than \c MPI_COMM_WORLD, e.g. when reading/writing a 2d slice of a 3d vector.
  * In this example case \c grid.communicator() is only 2d not 3d. Remember that **only
  * the group containing the master process reads/writes its data to the file**, while all other processes
  * immediately return.
  * There are two ways to relyable read/write the data in such a case:
- * (i) Manually assemble the data on the master process OR
- * (ii) Manually assemble the data on the MPI group that contains the master process
+ *  - Manually assemble the data on the master process OR
+ *  - Manually assemble the data on the MPI group that contains the master process
+ *  .
  * @sa \c dg::mpi_comm_global2local_rank
+ * @class hide_parallel_write
+ * @attention With the serial NetCDF library only a single "master" process can **write** in a
+ * NetCDF file (creation, defining dimension ids, variables ids, writing etc).
+ * Thus, in an MPI program
+ *  - \c parallel should be \c false
+ *  - the program links to **serial NetCDF and hdf5**
+ *  .
+ *  There is a parallel NetCDF library where all processes can have write
+ *  access in parallel. In this case
+ *  - \c parallel should be \c true
+ *  - the program links to **parallel NetCDF and hdf5**
+ *  - the file must be opened with the \c NC_MPIIO flag from the \c NetCDF_par.h header and the
+ * variable be marked with \c NC_COLLECTIVE access
+ *  .
+ * Note that serious performance penalties have been
+ * observed on some platforms for parallel writing NetCDF.
+ *
+ * @class hide_parallel_read
+ * @note In contrast to writing, reading a NetCDF-4 file can always be done in parallel
+ *  See https://docs.h5py.org/en/stable/mpi.html So all processes in MPI
+ *  **can** open a file, get variable ids and subsequently read it, etc. even if only
+ *  serial NetCDF is used. The default for \c parallel is always \c true in which
+ *  case all processes all processes **must** have previously opened the file
+ *  and inquire e.g. the varid
  */
 
 ///@cond
@@ -180,7 +201,7 @@ void put_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 
 /**
 *
-* @brief Write an array to netcdf file
+* @brief Write an array to NetCDF file
 *
 * Convenience wrapper around \c nc_put_var
 *
@@ -198,9 +219,10 @@ void put_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
-* @param data data to be written to the netcdf file
+* @param data data to be written to the NetCDF file
 * @copydoc hide_parallel_param
 * @copydoc hide_master_comment
+* @copydoc hide_parallel_write
 */
 template<class host_vector, class Topology>
 void put_var( int ncid, int varid, const Topology& grid,
@@ -211,7 +233,7 @@ void put_var( int ncid, int varid, const Topology& grid,
 }
 
 /**
-* @brief Write an array to netcdf file
+* @brief Write an array to NetCDF file
 *
 * Convenience wrapper around \c nc_put_vara
 *
@@ -230,9 +252,10 @@ void put_var( int ncid, int varid, const Topology& grid,
 * @param varid Variable ID
 * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
-* @param data data to be written to the netcdf file
+* @param data data to be written to the NetCDF file
 * @copydoc hide_parallel_param
 * @copydoc hide_master_comment
+* @copydoc hide_parallel_write
 */
 template<class host_vector, class Topology>
 void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
@@ -250,13 +273,13 @@ void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
 // scalar data
 
 /**
- * @brief Write a scalar to the netcdf file
+ * @brief Write a scalar to the NetCDF file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
  * @tparam T Determines data type to write
  * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
- * @param varid Variable ID (Note that in netcdf variables without dimensions are scalars)
+ * @param varid Variable ID (Note that in NetCDF variables without dimensions are scalars)
  * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
  * @param parallel This parameter is ignored in both serial and MPI versions.
@@ -271,13 +294,13 @@ void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
     err = detail::put_var_T( ncid, varid, &data);
 }
 /**
- * @brief Write a scalar to the netcdf file
+ * @brief Write a scalar to the NetCDF file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
  * @tparam T Determines data type to write
  * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
- * @param varid Variable ID (Note that in netcdf variables without dimensions are scalars)
+ * @param varid Variable ID (Note that in NetCDF variables without dimensions are scalars)
  * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
  * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
