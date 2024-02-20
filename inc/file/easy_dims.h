@@ -21,10 +21,10 @@
 namespace dg
 {
 /**
-* @brief Namespace for netCDF output related classes and functions following the
+* @brief Namespace for NetCDF output related classes and functions following the
  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html">CF-conventions</a>
  and
- <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  @sa @ref json and @ref netcdf
 */
 namespace file
@@ -138,7 +138,7 @@ bool check_real_time( int ncid, const char* name, int* dimID, int* tvarID)
 /**
  * @brief Define an unlimited time dimension and coordinate variable
  *
- * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
  * called a coordinate variable.  The CF conventions dictate that the "units"
  * attribute must be defined for a time variable: we give it the value "time
@@ -148,12 +148,16 @@ bool check_real_time( int ncid, const char* name, int* dimID, int* tvarID)
  * @param dimID (write-only) time-dimension ID
  * @param tvarID (write-only) time-variable ID (for a time variable of type \c T)
  * @tparam T determine type of dimension variable
+ * @param full_check If true, will call \c check_real_time before definition.
  *
  * @return NetCDF error code if any
  */
 template<class T>
-inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID)
+inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID, bool full_check = false)
 {
+    if( full_check)
+        if( check_real_time<T>( ncid, name, dimID, tvarID))
+            return NC_NOERR;
     int retval;
     if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
     if( (retval = nc_def_var( ncid, name, getNCDataType<T>(), 1, dimID, tvarID))){return retval;}
@@ -172,7 +176,7 @@ static inline int define_time( int ncid, const char* name, int* dimID, int* tvar
 /**
  * @brief DEPRECATED Define a limited time dimension and coordinate variable
  *
- * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
  * called a coordinate variable.  The CF conventions dictate that the units
  * attribute must be defined for a time variable: we give it the value "time
@@ -252,7 +256,7 @@ bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::str
 /**
  * @brief Define a 1d dimension and associated coordinate variable
  *
- * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
  * called a coordinate variable.
  * @param ncid NetCDF file or group ID
@@ -261,12 +265,16 @@ bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::str
  * @param name_dim Name of dimension and coordinate variable (input)
  * @param axis The axis attribute (input), ("X", "Y" or "Z")
  * @tparam T determines the datatype of the dimension variables
+ * @param full_check If true, will call \c check_dimension before definition.
  *
  * @return NetCDF error code if any
  */
 template<class T>
-inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::string name_dim = "x", std::string axis = "X")
+inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::string name_dim = "x", std::string axis = "X", bool full_check = false)
 {
+    if( full_check)
+        if( check_dimension( ncid, dimID, g, name_dim, axis))
+            return NC_NOERR;
     int retval;
     std::string long_name = name_dim+"-coordinate in Computational coordinate system";
     thrust::host_vector<T> points = dg::create::abscissas( g);
@@ -282,7 +290,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
 /**
  * @brief Define dimensions and associated coordiante variables
  *
- * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
  * called a coordinate variable.
  *
@@ -292,26 +300,23 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
  * @param name_dims Names for the dimension and coordinate variables (Must have size <tt> g.ndim() </tt>)  **in numpy python ordering** e.g. in 3d we have <tt> {"z", "y", "x"}</tt>; If \c name_dims.empty() then default names in <tt> {"z", "y", "x"} </tt> will be used
  * @tparam Topology <tt> typename Topology::value_type </tt> determines the datatype of the dimension variables
  * @note For a 0d grid, the function does nothing
+ * @param full_check If true, will call \c check_dimensions before definition.
+ * In this case dimensions can already exist in the file and will not trigger a
+ * throw (it is also possible for some dimensions to exist while other do not)
  *
- * @return if anything goes wrong, return the netCDF error code, else NC_NOERR
+ * @return if anything goes wrong, return the NetCDF error code, else NC_NOERR
  */
 template<class Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value,bool > = true>
-int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<std::string> name_dims = {})
+int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     int retval = NC_NOERR;
     auto grids = detail::grids( g);
     auto default_names = detail::dim_names(g);
     auto axis_names = detail::axis_names(g);
-    //if( g.ndim() == 0) //Artificially make one (DON'T DO IT, BREAKS SYMMETRY
-    //{
-    //    grids.push_back({0,1,1,1});
-    //    default_names.push_back("i");
-    //    axis_names.push_back("I");
-    //}
     detail::assign_defaults( name_dims, default_names);
     for ( unsigned i=0; i<grids.size(); i++)
     {
-        retval = define_dimension( ncid, &dimsIDs[i], grids[i], name_dims[i], axis_names[i]);
+        retval = define_dimension( ncid, &dimsIDs[i], grids[i], name_dims[i], axis_names[i], full_check);
         if( retval)
             return retval;
     }
@@ -321,7 +326,7 @@ int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
 /**
  * @brief Define an unlimited time and grid dimensions together with their coordinate variables
  *
- * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
  * called a coordinate variable.
  *
@@ -340,23 +345,27 @@ int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
  * @param name_dims Names for the dimension and coordinate variables (Must have size <tt> g.ndim()+1 </tt>)  **in numpy python ordering** e.g. in 3d we have <tt> {"time", "z", "y", "x"}</tt>; If \c name_dims.empty() then default names in <tt> {"time", "z", "y", "x"} </tt> will be used
  * @tparam Topology <tt> typename Topology::value_type </tt> determines the datatype of the dimension variables
  * @note For 0d grids only the "time" dimension is defined, no spatial dimension
+ * @param full_check If true, will call \c check_dimensions before definition.
+ * In this case dimensions can already exist in the file and will not trigger a
+ * throw (it is also possible for some dimensions to exist while other do not)
  *
- * @return if anything goes wrong, return the netCDF error code, else NC_NOERR
+ * @return if anything goes wrong, return the NetCDF error code, else NC_NOERR
  */
 template<class Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value, bool > = true>
-int define_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, std::vector<std::string> name_dims = {})
+int define_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     auto default_names = detail::dim_names(g);
     default_names.insert( default_names.begin(), "time");
     detail::assign_defaults( name_dims, default_names);
 
-    int retval = define_real_time<typename Topology::value_type>( ncid, name_dims[0].data(), &dimsIDs[0], tvarID);
+    int retval = define_real_time<typename Topology::value_type>( ncid, name_dims[0].data(), &dimsIDs[0], tvarID, full_check);
     if(retval)
         return retval;
-    return define_dimensions( ncid, &dimsIDs[1], g, {name_dims.begin()+1, name_dims.end()});
+    return define_dimensions( ncid, &dimsIDs[1], g, {name_dims.begin()+1, name_dims.end()}, full_check);
 }
+
 /**
- * @brief Check if dimensions exist as if \c define_dimension was called
+ * @brief Check if dimensions exist as if \c define_dimensions was called
  *
  * This function checks if the given file contains dimensions and their associated dimension variables
  * in the same way that the corresponding \c define_dimensions creates them. If anything is amiss, an error
@@ -378,12 +387,6 @@ bool check_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
     auto grids = detail::grids( g);
     auto default_names = detail::dim_names(g);
     auto axis_names = detail::axis_names(g);
-    //if( g.ndim() == 0) //Artificially make one (DON'T DO IT, BREAKS SYMMETRY
-    //{
-    //    grids.push_back({0,1,1,1});
-    //    default_names.push_back("i");
-    //    axis_names.push_back("I");
-    //}
     detail::assign_defaults( name_dims, default_names);
     for ( unsigned i=0; i<grids.size(); i++)
     {
@@ -394,7 +397,7 @@ bool check_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
 }
 
 /**
- * @brief Check if dimensions exist as if \c define_dimension was called
+ * @brief Check if dimensions exist as if \c define_dimensions was called
  *
  * Semantically equivalent to the following:
  * @code
@@ -433,7 +436,7 @@ bool check_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, s
 /**
  * @brief DEPRECATED Define a limited time and 2 dimensions and associated coordinate variables
  *
- * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
  * called a coordinate variable.
  *
@@ -451,7 +454,7 @@ bool check_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, s
  * @param name_dims Names for the dimension variables (time, Y, X)
  * @tparam T determines the datatype of the dimension variables
  *
- * @return if anything goes wrong it returns the netCDF code, else SUCCESS
+ * @return if anything goes wrong it returns the NetCDF code, else SUCCESS
  * @note File stays in define mode
  */
 template<class T>
@@ -468,21 +471,21 @@ inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, con
 #ifdef MPI_VERSION
 /// All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
 template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
-inline int define_dimensions( int ncid, int* dimsIDs, const MPITopology& g, std::vector<std::string> name_dims = {})
+inline int define_dimensions( int ncid, int* dimsIDs, const MPITopology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( rank==0) return define_dimensions( ncid, dimsIDs, g.global(), name_dims);
+    if( rank==0) return define_dimensions( ncid, dimsIDs, g.global(), name_dims, full_check);
     else
         return NC_NOERR;
 }
 /// All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
 template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
-inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const MPITopology& g, std::vector<std::string> name_dims = {})
+inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const MPITopology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( rank==0) return define_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims);
+    if( rank==0) return define_dimensions( ncid, dimsIDs, tvarID, g.global(), name_dims, full_check);
     else
         return NC_NOERR;
 }

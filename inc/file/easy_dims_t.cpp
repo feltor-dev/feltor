@@ -53,12 +53,22 @@ int main(int argc, char* argv[])
     }
     catch ( dg::file::NC_Error& err)
     {
+        std::cerr << "EXPECTED ERROR: ";
         std::cerr << err.what()<<"\n";
     }
     try
     {
         bool exists = dg::file::check_dimensions( ncid, dim2_ids, *grid2d_ptr);
         std::cout << "All dimensions exist "<<std::boolalpha<<exists<<"\n";
+    }
+    catch ( dg::file::NC_Error& err)
+    {
+        std::cerr << err.what()<<"\n";
+    }
+    try
+    {
+        int tvarID;
+        err = dg::file::define_dimensions( ncid, dim2_ids, &tvarID, *grid2d_ptr, {"time", "x", "y"}, true);
     }
     catch ( dg::file::NC_Error& err)
     {
