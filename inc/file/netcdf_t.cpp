@@ -8,22 +8,16 @@
 #endif
 
 #include "dg/algorithm.h"
-#define _FILE_INCLUDED_BY_DG_
-#include "nc_utilities.h"
+#include "writer.h"
+#include "reader.h"
 
 double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
 double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
 double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
-struct Record
-{
-    std::string name;
-    std::string long_name;
-    std::function<void (dg::x::DVec&, const dg::x::Grid3d&, double)> function;
-};
 
-std::vector<Record> records_list = {
+std::vector<dg::file::Record<void(dg::x::DVec&, const dg::x::Grid3d&, double)>> records = {
     {"vectorX", "X-component of vector",
         [] ( dg::x::DVec& resultD, const dg::x::Grid3d& g, double time){
             resultD = dg::evaluate( gradientX, g);
@@ -69,48 +63,73 @@ int main(int argc, char* argv[])
     double NT = 10;
     double h = Tmax/NT;
     double x0 = 0., x1 = 2.*M_PI;
-    dg::x::Grid3d grid( x0,x1,x0,x1,x0,x1,3,10,10,20
+    dg::x::Grid3d grid( x0,x1,x0,x1,x0,x1,3,20,20,20
 #ifdef WITH_MPI
     , comm
 #endif
     );
-    std::string hello = "Hello world\n";
-    dg::x::HVec data = dg::evaluate( function, grid);
-
     //create NetCDF File
     int ncid;
     dg::file::NC_Error_Handle err;
     DG_RANK0 err = nc_create( filename.data(), NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
-    DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
 
-    int dim_ids[4], tvarID;
-    DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    dg::file::Writer<dg::x::Grid0d> write0d( ncid, {}, {"time"});
+    write0d.def( "time"); // just to check that it works
+    write0d.def( "Energy");
+    dg::file::WriteRecordsList<dg::x::Grid3d> write3d( ncid, grid, {"time", "z", "y", "x"}, records);
+    auto grid_out = grid;
+    grid_out.multiplyCellNumbers( 0.5, 0.5);
+    int grpid =0;
+    DG_RANK0 err = nc_def_grp( ncid, "projected", &grpid);
+    dg::file::ProjectRecordsList<dg::x::Grid3d, dg::x::DMatrix, dg::x::DVec> project3d( grpid, grid, grid_out, {"timer", "zr", "yr", "xr"}, records);
+    dg::file::Writer<dg::x::Grid0d> project0d( grpid, {}, {"timer"});
 
-    int dataID, scalarID;
-    DG_RANK0 err = nc_def_var( ncid, "data", NC_DOUBLE, 1, dim_ids, &dataID);
-    DG_RANK0 err = nc_def_var( ncid, "scalar", NC_DOUBLE, 4, dim_ids, &scalarID);
-
-    dg::file::WriteRecordsList<4> records( ncid, dim_ids, records_list);
     for(unsigned i=0; i<=NT; i++)
     {
         DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
         double time = i*h;
-        const size_t Tcount = 1;
-        const size_t Tstart = i;
-        data = dg::evaluate( function, grid);
+        auto data = dg::evaluate( function, grid);
         dg::blas1::scal( data, cos( time));
         double energy = dg::blas1::dot( data, data);
-        //write scalar data point
-        DG_RANK0 err = nc_put_vara_double( ncid, dataID, &Tstart, &Tcount, &energy);
-        //write scalar field
-        dg::file::put_vara_double( ncid, scalarID, Tstart, grid, data);
-        //write vector field
-        records.write( ncid, grid, records_list, grid, time);
-        //write time
-        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
+        write0d.put( "time", time, i);
+        write0d.put( "Energy", energy, i);
+        write3d.write( records, grid, time);
+        project0d.put( "timer", time, i);
+        project3d.write( records, grid, time);
     }
 
     DG_RANK0 err = nc_close(ncid);
+#ifdef WITH_MPI
+    MPI_Barrier( MPI_COMM_WORLD);
+#endif
+
+    // open and read back in
+    err = nc_open ( filename.data(), 0, &ncid); // all processes read
+    err = nc_inq_grp_ncid( ncid, "projected", &grpid);
+    dg::file::Reader<dg::x::Grid0d> read0d( ncid, {}, {"time"});
+    dg::file::Reader<dg::x::Grid3d> read3d( ncid, grid, {"time", "z", "y", "x"});
+    dg::file::Reader<dg::x::Grid3d> readP3d( grpid, grid_out, {"timer", "zr", "yr", "xr"});
+    for( auto name : read0d.names())
+        DG_RANK0 std::cout << "Found 0d name "<<name<<"\n";
+    for( auto name : read3d.names())
+        DG_RANK0 std::cout << "Found 3d name "<<name<<"\n";
+    for( auto name : readP3d.names())
+        DG_RANK0 std::cout << "Found Projected 3d name "<<name<<"\n";
+    unsigned num_slices = read0d.size();
+    assert(num_slices == NT+1);
+    auto data = dg::evaluate( function, grid);
+    auto dataP = dg::evaluate( function, grid_out);
+    for(unsigned i=0; i<num_slices; i++)
+    {
+        DG_RANK0 std::cout<<"Read timestep "<<i<<"\n";
+        double time, energy;
+        read0d.get("time", time, i);
+        read0d.get("Energy", energy, i);
+        read3d.get( "vectorX", data, i);
+        readP3d.get( "vectorX", dataP, i);
+    }
+    err = nc_close(ncid);
+
 #ifdef WITH_MPI
     MPI_Finalize();
 #endif

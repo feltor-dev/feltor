@@ -8,7 +8,8 @@
 #include "easy_dims.h"
 #include "easy_output.h"
 #include "easy_input.h"
-//#include "writer.h"
+#include "writer.h" // requires json
+#include "reader.h" // requires json
 
 /*!@file
  *
@@ -21,11 +22,9 @@
  *      @defgroup Attributes Json as Attributes utilities
  *      @defgroup Input Read variable utilities
  *      @defgroup Output Write variable utilities
+ *      @defgroup Cpp A high level C++ interface
  * @}
- *
- *
  */
-
 
 namespace dg
 {
