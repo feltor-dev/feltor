@@ -41,7 +41,7 @@ namespace file
  *  - all processes must call this function,
  *  - processes that do not belong to the same communicator as the master process
  * return immediately
- * .
+ *  .
  * @note In an MPI program it may happen that the data to read/write is partitioned among
  * a process group smaller than \c MPI_COMM_WORLD, e.g. when reading/writing a 2d slice of a 3d vector.
  * In this example case \c grid.communicator() is only 2d not 3d. Remember that **only
@@ -59,8 +59,8 @@ namespace file
  *  - \c parallel should be \c false
  *  - the program links to **serial NetCDF and hdf5**
  *  .
- *  There is a parallel NetCDF library where all processes can have write
- *  access in parallel. In this case
+ * There is a parallel NetCDF library where all processes can have write
+ * access in parallel. In this case
  *  - \c parallel should be \c true
  *  - the program links to **parallel NetCDF and hdf5**
  *  - the file must be opened with the \c NC_MPIIO flag from the \c NetCDF_par.h header and the

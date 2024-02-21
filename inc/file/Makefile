@@ -7,13 +7,29 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../../ # other project libraries
 INCLUDE+= -I../    # other project libraries
 
-all: easy_dims_t easy_dims_mpit easy_output_t easy_output_mpit easy_input_t easy_input_mpit netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t probes_parser_t probes_parser_mpit probes_t probes_mpit jsoncpp_netcdf_t jsonhpp_netcdf_t
+TARGETS=easy_dims_t easy_dims_mpit\
+easy_output_t easy_output_mpit\
+easy_input_t easy_input_mpit\
+netcdf_t netcdf_mpit\
+probes_parser_t probes_parser_mpit\
+probes_t probes_mpit\
+jsoncpp_utilities_t jsonhpp_utilities_t\
+jsoncpp_netcdf_t jsonhpp_netcdf_t\
+
+
+all: $(TARGETS)
 
 %_t: %_t.cpp %.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS)
 
 %_mpit: %_t.cpp %.h
 	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) -DWITH_MPI
+
+netcdf_t: netcdf_t.cpp
+	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) $(JSONLIB)
+
+netcdf_mpit: netcdf_t.cpp
+	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) -DWITH_MPI $(JSONLIB)
 
 probes_parser_t: probes_parser_t.cpp probes_params.h json_probes.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB)
@@ -39,4 +55,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f netcdf_t netcdf_mpit jsoncpp_utilities_t jsonhpp_utilities_t probes_parser_t probes_parser_mpit probes_t probes_mpit
+	rm -f $(TARGETS)

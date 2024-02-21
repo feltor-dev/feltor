@@ -103,6 +103,7 @@ inline static void assign_defaults( std::vector<std::string>& name_dims, const s
  * @param tvarID (write-only) time-variable ID (for a time variable of type \c T)
  * @tparam T determine type of dimension variable
  * @return False if dimension with given name does not exist, if no errors are thrown True
+ * @attention Dimensions in the parent group are visible in groups, but variables are not, so groups should have separate time dimension https://docs.unidata.ucar.edu/netcdf-c/current/group__groups.html
  */
 template<class T>
 bool check_real_time( int ncid, const char* name, int* dimID, int* tvarID)

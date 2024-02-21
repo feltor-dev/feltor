@@ -1,6 +1,6 @@
 #pragma once
 
-#include <NetCDF.h>
+#include <netcdf.h>
 #include "nc_error.h"
 #include "json_utilities.h"
 
