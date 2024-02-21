@@ -91,8 +91,9 @@ int main(int argc, char* argv[])
         auto data = dg::evaluate( function, grid);
         dg::blas1::scal( data, cos( time));
         double energy = dg::blas1::dot( data, data);
+        if( i%2)
+            write0d.put( "Energy", energy, i);
         write0d.put( "time", time, i);
-        write0d.put( "Energy", energy, i);
         write3d.write( records, grid, time);
         project0d.put( "timer", time, i);
         project3d.write( records, grid, time);
@@ -116,7 +117,6 @@ int main(int argc, char* argv[])
     for( auto name : readP3d.names())
         DG_RANK0 std::cout << "Found Projected 3d name "<<name<<"\n";
     unsigned num_slices = read0d.size();
-    assert(num_slices == NT+1);
     auto data = dg::evaluate( function, grid);
     auto dataP = dg::evaluate( function, grid_out);
     for(unsigned i=0; i<num_slices; i++)
@@ -125,10 +125,12 @@ int main(int argc, char* argv[])
         double time, energy;
         read0d.get("time", time, i);
         read0d.get("Energy", energy, i);
+        std::cout << "Enery "<<energy<<"\n";
         read3d.get( "vectorX", data, i);
         readP3d.get( "vectorX", dataP, i);
     }
     err = nc_close(ncid);
+    assert(num_slices == NT+1);
 
 #ifdef WITH_MPI
     MPI_Finalize();
