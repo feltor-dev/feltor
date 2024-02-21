@@ -23,6 +23,21 @@ namespace file
 /**
  * @addtogroup Output
  * @{
+ * @class hide_tparam_host_vector
+ * @tparam host_vector For shared Topology: Type with \c data() member that
+ * returns pointer to first element in CPU (host) adress space, meaning it
+ * cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
+ * \c host_vector::value_type must match data type of variable in file.
+ *
+ * @class hide_comment_slice
+ * @note In NetCDF all variables that share an unlimited dimension are considered to have
+ * the same size in that dimension. In fact,
+ * the size of the unlimited dimension is the maximum of the sizes of all the variables
+ * sharing that unlimited dimension. All variables are artificially filled up with Filler
+ * Values to match that maximum size. It is entirely possible to skip writing data for some
+ * variables for some times. It is possible to write data to variables at \c slice==size but not after and
+ * it is not possible to read data at \c slice>=size
+ *
  * @class hide_master_comment
  * @note The "master" thread is assumed to be the process with \c rank==0
  * in \c MPI_COMM_WORLD.  The \c MPI_COMM_WORLD rank of a process is usually the
@@ -213,9 +228,7 @@ void put_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 * @note This function throws a \c dg::file::NC_Error if an error occurs
 * @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
 * Determines if shared memory or MPI version is called
-* @tparam host_vector For shared Topology: Type with \c data() member that
-* returns pointer to first element in CPU (host) adress space, meaning it
-* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
+* @copydoc hide_tparam_host_vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
@@ -245,12 +258,11 @@ void put_var( int ncid, int varid, const Topology& grid,
 * @note This function throws a \c dg::file::NC_Error if an error occurs
 * @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
 * Determines if shared memory or MPI version is called
-* @tparam host_vector For shared Topology: Type with \c data() member that
-* returns pointer to first element in CPU (host) adress space, meaning it
-* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
+* @copydoc hide_tparam_host_vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
+* @copydoc hide_comment_slice
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
 * @param data data to be written to the NetCDF file
 * @copydoc hide_parallel_param
@@ -302,6 +314,7 @@ void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID (Note that in NetCDF variables without dimensions are scalars)
  * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
+ * @copydoc hide_comment_slice
  * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
  * @param parallel This parameter is ignored in both serial and MPI versions.

@@ -150,9 +150,7 @@ void get_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
 * @note This function throws a \c dg::file::NC_Error if an error occurs
 * @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
 * Determines if shared memory or MPI version is called
-* @tparam host_vector For shared Topology: Type with \c data() member that
-* returns pointer to first element in CPU (host) adress space, meaning it
-* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
+* @copydoc hide_tparam_host_vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_get_vara
@@ -180,9 +178,7 @@ void get_var( int ncid, int varid, const Topology& grid,
 * @note This function throws a \c dg::file::NC_Error if an error occurs
 * @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
 * Determines if shared memory or MPI version is called
-* @tparam host_vector For shared Topology: Type with \c data() member that
-* returns pointer to first element in CPU (host) adress space, meaning it
-* cannot be a GPU vector. For MPI Topology: must be \c MPI_Vector
+* @copydoc hide_tparam_host_vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
 * @param slice The number of the time-slice to read (first element of the \c startp array in \c nc_get_vara)
