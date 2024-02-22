@@ -63,8 +63,9 @@ namespace file
  * the group containing the master process reads/writes its data to the file**, while all other processes
  * immediately return.
  * There are two ways to relyable read/write the data in such a case:
- *  - Manually assemble the data on the master process OR
- *  - Manually assemble the data on the MPI group that contains the master process
+ *  - Manually assemble the data on the master process and construct an MPI
+ *  grid with a Cartesian communicator containing only one process (using e.g. \c MPI_Comm_split on \c MPI_COMM_WORLD followed by \c MPI_Cart_create)
+ *  - Manually assemble the data on the MPI group that contains the master process (cf \c MPI_Cart_sub)
  *  .
  * @sa \c dg::mpi_comm_global2local_rank
  * @class hide_parallel_write

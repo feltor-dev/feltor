@@ -31,6 +31,12 @@ netcdf_t: netcdf_t.cpp
 netcdf_mpit: netcdf_t.cpp
 	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) -DWITH_MPI $(JSONLIB)
 
+probes_t: probes_t.cpp
+	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) $(JSONLIB)
+
+probes_mpit: probes_t.cpp
+	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) -DWITH_MPI $(JSONLIB)
+
 probes_parser_t: probes_parser_t.cpp probes_params.h json_probes.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB)
 

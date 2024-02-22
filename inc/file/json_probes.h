@@ -87,16 +87,16 @@ for f in format:
  * @param probes_err what to do if "probes" is missing from \c js (overwrites js error mode)
  * If silent, the ProbesParams remain empty if the field is absent
  * @return parsed values
- * @attention In MPI only the master thread will read in the probes the others
- * return empty vectors
+ * @attention In MPI all threads will read in the probes. Only the master thread
+ * stores the coordinates in \c ProbesParams.coords[i] the others are empty
  * @ingroup json
 */
 ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
     probes_err = file::error::is_silent)
 {
     ProbesParams out;
+    int rank = 0;
 #ifdef MPI_VERSION
-    int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif // MPI_VERSION
     if( (probes_err == file::error::is_silent) && !js.isMember( "probes"))
@@ -110,59 +110,54 @@ ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
         throw std::runtime_error( "\"probes\" field not found!");
 
     // test if parameters are file or direct
-    auto probes_params = js["probes"];
-    std::string type = probes_params["input"].asString();
+    auto jsprobes = js["probes"];
+    std::string type = jsprobes["input"].asString();
     if( type == "file")
     {
-        std::string path = probes_params["file"].asString();
-
-        probes_params.asJson()["coords"] = dg::file::file2Json( path,
+        std::string path = jsprobes["file"].asString();
+        // everyone reads the file
+        jsprobes.asJson()["coords"] = dg::file::file2Json( path,
                 dg::file::comments::are_discarded, dg::file::error::is_throw);
     }
     else if( type != "coords")
     {
-        throw std::runtime_error( "Error: Unknown magnetic field input '"
+        throw std::runtime_error( "Error: Unknown coordinates input '"
                + type + "'.");
     }
 
-    auto js_probes = probes_params["coords"];
+    auto coords = jsprobes["coords"];
 
     // read in parameters
 
-    unsigned ndim = js_probes["coords-names"].size();
+    unsigned ndim = coords["coords-names"].size();
 
-    std::string first = js_probes["coords-names"][0].asString();
+    std::string first = coords["coords-names"][0].asString();
     out.coords_names.resize(ndim);
     out.coords.resize(ndim);
     for( unsigned i=0; i<ndim; i++)
     {
-        out.coords_names[i] = js_probes["coords-names"][i].asString();
-        out.coords[i] = dg::HVec();
+        out.coords_names[i] = coords["coords-names"][i].asString();
     }
-    unsigned num_pins = js_probes[out.coords_names[0]].size();
+    unsigned num_pins = coords[out.coords_names[0]].size();
     out.probes = (num_pins > 0);
 
-#ifdef MPI_VERSION
     if( rank == 0)
     {
     // only master thread reads probes
-#endif  //MPI_VERSION
     for( unsigned i=0; i<ndim; i++)
     {
-        unsigned num_pins = js_probes[out.coords_names[i]].size();
+        unsigned num_pins = coords[out.coords_names[i]].size();
         out.coords[i].resize(num_pins);
         double scale = 1.;
         if( type == "file")
-            scale = probes_params["scale"][i].asDouble();
+            scale = jsprobes["scale"][i].asDouble();
         for( unsigned k=0; k<num_pins; k++)
-            out.coords[i][k] = js_probes.asJson()[out.coords_names[i]][k].asDouble()
+            out.coords[i][k] = coords.asJson()[out.coords_names[i]][k].asDouble()
                 *scale;
     }
-#ifdef MPI_VERSION
     }
-#endif //MPI_VERSION
     // does not check that all probes have same size
-    out.format = js_probes["format"].toStyledString();
+    out.format = coords["format"].toStyledString();
     return out;
 }
 

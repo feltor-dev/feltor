@@ -25,6 +25,7 @@ namespace file
 template<class Topology>
 struct Reader
 {
+    Reader() = default;
     /**
      * @brief Consruct a Reader
      *

@@ -54,12 +54,16 @@ namespace file
  * dimensions. For each set of such variables a new instance of the class
  * should be created.
  * @note In an MPI program all processes must construct the class.
+ * Also the \c parallel=false parameter is used in the \c dg::file::put_var and
+ * \c dg::file::put_vara functions meaning only the master thread will write
+ * to file.
  * @copydoc hide_topology_tparam
  * @note A 0d Writer can write the time dimension variable
  */
 template<class Topology>
 struct Writer
 {
+    Writer() = default;
     /**
      * @brief Consruct a Writer
      *
@@ -130,6 +134,9 @@ struct Writer
     void put( std::string name, const host_vector& data, unsigned slice=0) const
     {
         static_assert( std::is_same< dg::get_value_type<host_vector>, typename Topology::value_type>::value, "Grid and Host vector must have same value type");
+        using tensor_category = dg::get_tensor_category<typename Topology::host_vector>;
+        static_assert( dg::is_scalar_or_same_base_category<host_vector, tensor_category>::value, "Data type must have same Tensor category as Topology::host_vector");
+
         // it is possible to skip writes but not write beyond current_max + 1
         if( m_grid.ndim() == m_dims.size())
             dg::file::put_var( *m_ncid, m_varids.at(name), m_grid, data);
@@ -259,6 +266,7 @@ struct Record
 template<class Topology>
 struct WriteRecordsList
 {
+    WriteRecordsList() = default;
     /**
      * @brief Create variables ids
      *
@@ -273,9 +281,7 @@ struct WriteRecordsList
     {
         for( auto& record : records)
         {
-            dg::file::JsonType att;
-            att["long_name"] = record.long_name;
-            m_writer.def( record.name, att);
+            m_writer.def( record.name, dg::file::long_name( record.long_name));
         }
     }
 
@@ -347,6 +353,8 @@ struct WriteRecordsList
 template<class Topology, class MatrixType, class ContainerType>
 struct ProjectRecordsList
 {
+    ProjectRecordsList() =  default;
+
     template<class ListClass>
     ProjectRecordsList( const int& ncid, const Topology& grid, const Topology& grid_out, std::vector<std::string> dim_names, const ListClass& records): m_writer( ncid, grid_out, dim_names)
     {
@@ -357,9 +365,7 @@ struct ProjectRecordsList
         m_transferD = dg::evaluate(dg::zero, grid_out);
         for( auto& record : records)
         {
-            dg::file::JsonType att;
-            att["long_name"] = record.long_name;
-            m_writer.def( record.name, att);
+            m_writer.def( record.name, dg::file::long_name( record.long_name));
         }
     }
     template<class ListClass, class ... Params >

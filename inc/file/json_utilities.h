@@ -481,7 +481,7 @@ static inline void string2Json(std::string input, JsonType& js, enum comments co
  * @param shared Any shared memory container that allows range based for loops
  */
 template<class ContainerType>
-static dg::file::JsonType vec2json( const ContainerType& shared)
+dg::file::JsonType vec2json( const ContainerType& shared)
 {
 #ifdef DG_USE_JSONHPP
     return nlohmann::json(shared);
@@ -495,11 +495,21 @@ static dg::file::JsonType vec2json( const ContainerType& shared)
 
 /// Specialization for intitializer list
 template<class T>
-static dg::file::JsonType vec2json( std::initializer_list<T> shared)
+dg::file::JsonType vec2json( std::initializer_list<T> shared)
 {
     std::vector<T> cc( shared);
     return vec2json(cc);
 }
+
+///Convert a string to a json object with <tt> att["long_name"] = long_name </tt>
+static inline dg::file::JsonType long_name( const std::string& long_name)
+{
+    dg::file::JsonType att;
+    att["long_name"] = long_name;
+    return att;
+}
+
+
 ///@}
 }//namespace file
 }//namespace dg

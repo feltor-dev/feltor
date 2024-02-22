@@ -81,8 +81,8 @@ int main(int argc, char* argv[])
     grid_out.multiplyCellNumbers( 0.5, 0.5);
     int grpid =0;
     DG_RANK0 err = nc_def_grp( ncid, "projected", &grpid);
-    dg::file::ProjectRecordsList<dg::x::Grid3d, dg::x::DMatrix, dg::x::DVec> project3d( grpid, grid, grid_out, {"timer", "zr", "yr", "xr"}, records);
-    dg::file::Writer<dg::x::Grid0d> project0d( grpid, {}, {"timer"});
+    dg::file::ProjectRecordsList<dg::x::Grid3d, dg::x::DMatrix, dg::x::DVec> project3d( grpid, grid, grid_out, {"ptime", "zr", "yr", "xr"}, records);
+    dg::file::Writer<dg::x::Grid0d> project0d( grpid, {}, {"ptime"});
 
     for(unsigned i=0; i<=NT; i++)
     {
@@ -95,7 +95,8 @@ int main(int argc, char* argv[])
             write0d.put( "Energy", energy, i);
         write0d.put( "time", time, i);
         write3d.write( records, grid, time);
-        project0d.put( "timer", time, i);
+        project0d.put( "ptime", time, i);
+        project0d.put( "ptime", time, i); // test if values can be overwritten
         project3d.write( records, grid, time);
     }
 
@@ -109,7 +110,7 @@ int main(int argc, char* argv[])
     err = nc_inq_grp_ncid( ncid, "projected", &grpid);
     dg::file::Reader<dg::x::Grid0d> read0d( ncid, {}, {"time"});
     dg::file::Reader<dg::x::Grid3d> read3d( ncid, grid, {"time", "z", "y", "x"});
-    dg::file::Reader<dg::x::Grid3d> readP3d( grpid, grid_out, {"timer", "zr", "yr", "xr"});
+    dg::file::Reader<dg::x::Grid3d> readP3d( grpid, grid_out, {"ptime", "zr", "yr", "xr"});
     for( auto name : read0d.names())
         DG_RANK0 std::cout << "Found 0d name "<<name<<"\n";
     for( auto name : read3d.names())
