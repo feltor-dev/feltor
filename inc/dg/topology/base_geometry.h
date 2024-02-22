@@ -217,6 +217,7 @@ struct aRealProductGeometry3d : public aRealGeometry3d<real_type>
 template<class real_type>
 struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
 {
+    RealCartesianGrid2d() = default;
     ///@copydoc RealGrid2d::RealGrid2d()
     RealCartesianGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometry2d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy}){}
 
@@ -243,6 +244,7 @@ template<class real_type>
 struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
 {
     using perpendicular_grid = RealCartesianGrid2d<real_type>;
+    RealCartesianGrid3d() = default;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     RealCartesianGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aRealProductGeometry3d<real_type>({x0,x1,n,Nx,bcx}, {y0,y1,n,Ny,bcy},{z0,z1,1,Nz,bcz}){}
@@ -274,6 +276,7 @@ template<class real_type>
 struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
 {
     using perpendicular_grid = RealCartesianGrid2d<real_type>;
+    RealCylindricalGrid3d() = default;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R

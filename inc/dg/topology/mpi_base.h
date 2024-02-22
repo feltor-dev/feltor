@@ -143,6 +143,7 @@ struct aRealProductMPIGeometry3d : public aRealMPIGeometry3d<real_type>
 template<class real_type>
 struct RealCartesianMPIGrid2d : public aRealMPIGeometry2d<real_type>
 {
+    RealCartesianMPIGrid2d() = default;
     ///@copydoc hide_grid_parameters2d
     ///@copydoc hide_comm_parameters2d
     RealCartesianMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): aRealMPIGeometry2d<real_type>( {x0, x1, n, Nx, dg::PER}, {y0, y1, n, Ny, dg::PER}, comm){}
@@ -176,6 +177,7 @@ template<class real_type>
 struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
 {
     using perpendicular_grid = RealCartesianMPIGrid2d<real_type>;
+    RealCartesianMPIGrid3d() = default;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_comm_parameters3d
     RealCartesianMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): aRealProductMPIGeometry3d<real_type>( {x0, x1, n, Nx, dg::PER}, {y0, y1, n, Ny, dg::PER}, {z0, z1, 1, Nz, dg::PER}, comm){}
@@ -215,6 +217,7 @@ template<class real_type>
 struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
 {
     using perpendicular_grid = RealCartesianMPIGrid2d<real_type>;
+    RealCylindricalMPIGrid3d() = default;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@copydoc hide_comm_parameters3d

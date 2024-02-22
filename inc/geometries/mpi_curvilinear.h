@@ -24,6 +24,7 @@ struct RealCurvilinearProductMPIGrid3d;
 template<class real_type>
 struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
 {
+    RealCurvilinearMPIGrid2d() = default;
     /// @copydoc hide_grid_parameters2d
     /// @param comm a two-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters
@@ -105,6 +106,7 @@ template<class real_type>
 struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<real_type>
 {
     typedef dg::geo::RealCurvilinearMPIGrid2d<real_type> perpendicular_grid; //!< the two-dimensional grid
+    RealCurvilinearProductMPIGrid3d() = default;
     /// @copydoc hide_grid_parameters3d
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters

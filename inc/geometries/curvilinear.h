@@ -111,6 +111,7 @@ dg::SparseTensor<host_vector> square( const dg::SparseTensor<host_vector >& jac,
 template<class real_type>
 struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
 {
+    RealCurvilinearGrid2d() = default;
     ///@copydoc hide_grid_parameters2d
     RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
         RealCurvilinearGrid2d( generator, {n,Nx,bcx}, {n,Ny,bcy}){}
@@ -159,6 +160,7 @@ template<class real_type>
 struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_type>
 {
     using perpendicular_grid = RealCurvilinearGrid2d<real_type>;
+    RealCurvilinearProductGrid3d() = default;
 
     ///@copydoc hide_grid_parameters3d
     RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):

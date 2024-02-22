@@ -801,6 +801,8 @@ struct aRealTopology3d
     protected:
     ///disallow deletion through base class pointer
     ~aRealTopology3d() = default;
+    /// default constructor
+    aRealTopology3d() = default;
     /**
      * @brief Construct a 3d topology as the product of three 1d grids
      *
@@ -833,6 +835,7 @@ struct aRealTopology3d
 template<class real_type>
 struct RealGrid2d : public aRealTopology2d<real_type>
 {
+    RealGrid2d() = default;
     ///@copydoc hide_grid_parameters2d
     ///@copydoc hide_bc_parameters2d
     RealGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
@@ -859,6 +862,7 @@ struct RealGrid2d : public aRealTopology2d<real_type>
 template<class real_type>
 struct RealGrid3d : public aRealTopology3d<real_type>
 {
+    RealGrid3d() = default;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     RealGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):

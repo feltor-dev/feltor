@@ -72,6 +72,7 @@ struct RealGridX1d
     using host_grid = RealGridX1d<real_type>;
     /// @brief number of dimensions : 1
     constexpr static unsigned ndim() {return 1;}
+    RealGridX1d() = default;
     /**
      * @brief 1D X-point grid
      *
@@ -483,6 +484,7 @@ struct aRealTopologyX2d
   protected:
     ///disallow destruction through base class pointer
     ~aRealTopologyX2d() = default;
+    aRealTopologyX2d() = default;
     ///@copydoc hide_gridX_parameters2d
     ///@copydoc hide_bc_parameters2d
     aRealTopologyX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
@@ -777,6 +779,7 @@ struct aRealTopologyX3d
   protected:
     ///disallow destruction through base class pointer
     ~aRealTopologyX3d() = default;
+    aRealTopologyX3d() = default;
     ///@copydoc hide_gridX_parameters3d
     ///@copydoc hide_bc_parameters3d
     aRealTopologyX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):

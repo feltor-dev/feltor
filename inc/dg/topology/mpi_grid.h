@@ -448,6 +448,7 @@ struct aRealMPITopology2d
     ///disallow deletion through base class pointer
     ~aRealMPITopology2d() = default;
 
+    aRealMPITopology2d() = default;
     ///@copydoc aRealTopology2d::aRealTopology2d(RealGrid1d,RealGrid1d)
     ///@copydoc hide_comm_parameters2d
     aRealMPITopology2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, MPI_Comm comm): g( gx, gy), l(gx, gy), comm(comm){
@@ -498,7 +499,7 @@ struct aRealMPITopology2d
                 { y0, y1, g.ny(), Ny, g.bcy()});
     }
     RealGrid2d<real_type> g, l; //global and local grid
-    MPI_Comm comm; //just an integer...
+    MPI_Comm comm; //just an integer... (No, more like an address)
 };
 
 
@@ -750,6 +751,8 @@ struct aRealMPITopology3d
     ///disallow deletion through base class pointer
     ~aRealMPITopology3d() = default;
 
+    aRealMPITopology3d() = default;
+
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
     ///@copydoc hide_comm_parameters3d
     aRealMPITopology3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz, MPI_Comm comm): g( gx, gy, gz), l(gx, gy, gz), comm(comm){
@@ -817,7 +820,7 @@ struct aRealMPITopology3d
                 { z0, z1, g.nz(), Nz, g.bcz()});
     }
     RealGrid3d<real_type> g, l; //global grid
-    MPI_Comm comm, planeComm; //just an integer...
+    MPI_Comm comm, planeComm; //just an integer...(No, more like an address)
 };
 ///@cond
 template<class real_type>
@@ -901,6 +904,7 @@ using is_mpi_grid = std::is_same< get_host_vector<Grid>, MPI_Vector<thrust::host
 template<class real_type>
 struct RealMPIGrid2d: public aRealMPITopology2d<real_type>
 {
+    RealMPIGrid2d() = default;
     /**
      * @copydoc hide_grid_parameters2d
      * @copydoc hide_comm_parameters2d
@@ -937,6 +941,7 @@ struct RealMPIGrid2d: public aRealMPITopology2d<real_type>
 template<class real_type>
 struct RealMPIGrid3d : public aRealMPITopology3d<real_type>
 {
+    RealMPIGrid3d() = default;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_comm_parameters3d
     RealMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
