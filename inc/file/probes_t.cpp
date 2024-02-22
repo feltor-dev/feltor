@@ -14,20 +14,7 @@ double gradientX(double x, double y){return cos(x)*sin(y);}
 double gradientY(double x, double y){return sin(x)*cos(y);}
 double cosine( double x, double y){return cos(x)*cos(y);}
 
-struct Record
-{
-    std::string name;
-    std::string long_name;
-    std::function<void (dg::x::DVec&, const dg::x::Grid2d&, double)> function;
-};
-struct StaticRecord
-{
-    std::string name;
-    std::string long_name;
-    std::function<void (dg::x::HVec&, const dg::x::Grid2d&)> function;
-};
-
-std::vector<Record> records_list = {
+std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid2d&,double)>> records_list = {
     {"vectorX", "X-component of vector",
         [] ( dg::x::DVec& resultD, const dg::x::Grid2d& g, double time){
             resultD = dg::evaluate( gradientX, g);
@@ -42,7 +29,7 @@ std::vector<Record> records_list = {
     }
 };
 
-std::vector<StaticRecord> records_static_list = {
+std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&)>> records_static_list = {
     {"Sine", "A Sine function",
         [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
             resultH = dg::evaluate( function, g);
@@ -91,9 +78,9 @@ int main(int argc, char* argv[])
     int dim_ids[3], tvarID;
     // This caught an error in define_dimensions
     DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
-    dg::file::WriteRecordsList<3> records( ncid, dim_ids, records_list);
+    dg::file::WriteRecordsList<dg::x::Grid2d> records( ncid, grid, {"time","y","x"}, records_list);
 
-    dg::file::Probes probes( ncid, grid, params, records_list);
+    dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, params, records_list);
     probes.static_write( records_static_list, grid);
 
     double Tmax=2.*M_PI;
@@ -123,7 +110,7 @@ int main(int argc, char* argv[])
             }
         }
         //write vector field
-        records.write( ncid, grid, records_list, grid, time);
+        records.write( records_list, grid, time);
         //write time
         const size_t Tcount = 1;
         const size_t Tstart = i;
