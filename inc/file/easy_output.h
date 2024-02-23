@@ -6,6 +6,7 @@
 #ifdef MPI_VERSION
 #include "dg/backend/mpi_vector.h"
 #include "dg/topology/mpi_grid.h"
+#include "dg/backend/mpi_init.h"
 #endif //MPI_VERSION
 #include "nc_error.h"
 

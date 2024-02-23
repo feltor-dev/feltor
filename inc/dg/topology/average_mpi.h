@@ -43,6 +43,7 @@ void simple_mpi_average( unsigned nx, unsigned ny, const container& in0, const c
 template< class container>
 struct Average<MPI_Vector<container> >
 {
+    Average() = default;
 
     /**
      * @brief Prepare internal workspace

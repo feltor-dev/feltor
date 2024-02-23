@@ -3,6 +3,7 @@
 #include <netcdf.h>
 #include "thrust/host_vector.h"
 
+#include "dg/runge_kutta.h" // for dg::is_same
 #include "dg/topology/grid.h"
 #include "dg/topology/evaluation.h"
 #ifdef MPI_VERSION
@@ -249,7 +250,7 @@ bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::str
     thrust::host_vector<T> data( points);
     err = nc_get_var( ncid, varID, data.data());
     for( unsigned i=0; i<data.size(); i++)
-        if( fabs( data[i] - points[i]) > 1e-15 * std::max( 1.0, std::max( fabs(data[i]), fabs(points[i]))))
+        if( !dg::is_same( data[i], points[i]))
             throw std::runtime_error( "Dimension variable "+name_dim+" has values different from grid!\n");
     return true;
 }
