@@ -254,12 +254,12 @@ using get_result_type_t = typename std::function<Signature>::result_type;
  *
  * Supposed to be used in connection with a Records writer like \c WriteRecordList
  * @snippet netcdf_t.cpp doxygen
-   @tparam Signature Signature of the callable function
+   @tparam SignatureType Signature of the callable function
  */
-template<class Signature>
+template<class SignatureType>
 struct Record
 {
-    using SignatureType = Signature; //!< Signature of the \c function
+    using Signature = SignatureType; //!< Signature of the \c function
     std::string name; //!< Name of the variable to create
     std::string long_name; //!< Attribute "long_name" of the variable
     std::function<Signature> function; //!< The function to call that generates data for the variable
@@ -330,12 +330,12 @@ struct WriteRecordsList
     }
     private:
     template< class ListClass, class ... Params >
-    std::enable_if_t<std::is_same<detail::get_result_type_t<typename ListClass::value_type::SignatureType> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
+    std::enable_if_t<std::is_same<detail::get_result_type_t<typename ListClass::value_type::Signature> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
     {
         auto resultH = dg::evaluate( dg::zero, m_writer.grid());
         //vector write
         auto resultD =
-            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::SignatureType>>(
+            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>>(
                 resultH);
         for( auto& record : records)
         {
@@ -346,7 +346,7 @@ struct WriteRecordsList
         m_start++;
     }
     template< class ListClass, class ... Params >
-    std::enable_if_t<!std::is_same<detail::get_result_type_t<typename ListClass::value_type::SignatureType> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
+    std::enable_if_t<!std::is_same<detail::get_result_type_t<typename ListClass::value_type::Signature> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
     {
         // scalar writes
         for( auto& record : records)
@@ -397,7 +397,7 @@ struct ProjectRecordsList
     template<class ListClass>
     ProjectRecordsList( const int& ncid, const Topology& grid, const Topology& grid_out, std::vector<std::string> dim_names, const ListClass& records): m_writer( ncid, grid_out, dim_names)
     {
-        static_assert( std::is_same<get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
+        static_assert( std::is_same<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
         m_projectD =
             dg::create::fast_projection( grid, grid.n()/grid_out.n(),
                 grid.Nx()/grid_out.Nx(), grid.Ny()/grid_out.Ny());
@@ -425,7 +425,7 @@ struct ProjectRecordsList
     template<class ListClass, class ... Params >
     void write( const ListClass& records, Params&& ...ps)
     {
-        static_assert( std::is_same<get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
+        static_assert( std::is_same<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
         auto transferH = dg::evaluate(dg::zero, m_writer.grid());
         for( auto& record : records)
         {
