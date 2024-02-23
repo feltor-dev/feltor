@@ -52,6 +52,7 @@ template< class ContainerType>
 struct Average
 {
     using container_type = ContainerType;
+    Average() = default;
     /**
      * @brief Prepare internal workspace
      *

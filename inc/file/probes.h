@@ -212,6 +212,7 @@ struct Probes
      * long name as attribute ("long_name") and the "dim" probes dimension.
      * @note The netcdf file must be open when this method is called.
      * @note If \c param.probes was \c false in the constructor this function returns immediately
+     * @copydoc hide_tparam_listclass
      */
     template<class ListClass, class ...Params>
     void static_write( const ListClass& records, Params&& ... ps)
@@ -221,7 +222,7 @@ struct Probes
         typename detail::Helper<Topology>::Writer1d
             write( m_probe_grp_id, m_writer1d.grid(), {"pdim"});
         auto result =
-            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::SignatureType>>(
+            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>>(
                 m_resultH);
         for ( auto& record : records)
         {
@@ -252,7 +253,7 @@ struct Probes
         if(!m_probes) return;
         m_time_intern.push_back(time);
         auto result =
-            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::SignatureType>>(
+            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>>(
                 m_resultH);
         for( auto& record : probe_list)
         {

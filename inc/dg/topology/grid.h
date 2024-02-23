@@ -503,6 +503,7 @@ struct aRealTopology2d
     protected:
     ///disallow destruction through base class pointer
     ~aRealTopology2d() = default;
+    aRealTopology2d() = default;
     /**
      * @brief Construct a 2d grid as the product of two 1d grids
      *

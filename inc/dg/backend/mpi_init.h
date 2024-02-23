@@ -380,6 +380,7 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, 
  * @param global_comm the communicator, which \c global_rank refers to
  * @return rank of \c global_comm, \c global_rank in \c comm, \c MPI_UNDEFINED
  * if \c global_rank is not part of \c comm
+* @ingroup misc
  */
 static inline int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_Comm global_comm = MPI_COMM_WORLD )
 {
