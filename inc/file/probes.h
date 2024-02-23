@@ -19,54 +19,54 @@ namespace file
 namespace detail
 {
 // helpers to define a C++-17 if constexpr
-template<class Geometry, unsigned ndim>
+template<class Topology, unsigned ndim>
 struct CreateInterpolation{};
 
 
-template<class Geometry>
-struct CreateInterpolation<Geometry,1>
+template<class Topology>
+struct CreateInterpolation<Topology,1>
 {
-    static auto call( const std::vector<dg::HVec>& x, const Geometry& g)
+    static auto call( const std::vector<dg::HVec>& x, const Topology& g)
     {
         return dg::create::interpolation( x[0], g, g.bcx());
 
     }
 };
-template<class Geometry>
-struct CreateInterpolation<Geometry,2>
+template<class Topology>
+struct CreateInterpolation<Topology,2>
 {
-static auto call( const std::vector<dg::HVec>& x, const Geometry& g)
+static auto call( const std::vector<dg::HVec>& x, const Topology& g)
 {
     return dg::create::interpolation( x[0], x[1], g, g.bcx(), g.bcy());
 
 }
 };
-template<class Geometry>
-struct CreateInterpolation<Geometry,3>
+template<class Topology>
+struct CreateInterpolation<Topology,3>
 {
-static auto call( const std::vector<dg::HVec>& x, const Geometry& g)
+static auto call( const std::vector<dg::HVec>& x, const Topology& g)
 {
     return dg::create::interpolation( x[0], x[1], x[2], g, g.bcx(), g.bcy(), g.bcz());
 
 }
 };
 
-template<class Geometry, class Enable = void>
+template<class Topology, class Enable = void>
 class Helper {};
 
-template<class Geometry>
-struct Helper<Geometry, std::enable_if_t<dg::is_shared_grid<Geometry>::value >>
+template<class Topology>
+struct Helper<Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value >>
 {
-    using IHMatrix = dg::IHMatrix_t<typename Geometry::value_type>;
-    using Writer0d = dg::file::Writer<dg::RealGrid0d<typename Geometry::value_type>>;
-    using Writer1d = dg::file::Writer<dg::RealGrid1d<typename Geometry::value_type>>;
-    static dg::RealGrid1d<typename Geometry::value_type> create( unsigned num_pins)
+    using IHMatrix = dg::IHMatrix_t<typename Topology::value_type>;
+    using Writer0d = dg::file::Writer<dg::RealGrid0d<typename Topology::value_type>>;
+    using Writer1d = dg::file::Writer<dg::RealGrid1d<typename Topology::value_type>>;
+    static dg::RealGrid1d<typename Topology::value_type> create( unsigned num_pins)
     {
         return {0,1,1,num_pins};
     }
-    static typename Geometry::host_vector probes_vec( const dg::HVec& coord, const Geometry& grid)
+    static typename Topology::host_vector probes_vec( const dg::HVec& coord, const Topology& grid)
     {
-        return typename Geometry::host_vector(coord.size());
+        return typename Topology::host_vector(coord.size());
     }
     static void def_group( int ncid, std::string format, int& grpid)
     {
@@ -83,13 +83,13 @@ struct Helper<Geometry, std::enable_if_t<dg::is_shared_grid<Geometry>::value >>
 };
 
 #ifdef MPI_VERSION
-template<class Geometry>
-struct Helper<Geometry, std::enable_if_t<dg::is_mpi_grid<Geometry>::value >>
+template<class Topology>
+struct Helper<Topology, std::enable_if_t<dg::is_mpi_grid<Topology>::value >>
 {
-    using IHMatrix = dg::MIHMatrix_t<typename Geometry::value_type>;
-    using Writer0d = dg::file::Writer<dg::RealMPIGrid0d<typename Geometry::value_type>>;
-    using Writer1d = dg::file::Writer<dg::RealMPIGrid1d<typename Geometry::value_type>>;
-    static dg::RealMPIGrid1d<typename Geometry::value_type> create( unsigned num_pins)
+    using IHMatrix = dg::MIHMatrix_t<typename Topology::value_type>;
+    using Writer0d = dg::file::Writer<dg::RealMPIGrid0d<typename Topology::value_type>>;
+    using Writer1d = dg::file::Writer<dg::RealMPIGrid1d<typename Topology::value_type>>;
+    static dg::RealMPIGrid1d<typename Topology::value_type> create( unsigned num_pins)
     {
         int rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &rank); // a private variable
@@ -101,16 +101,16 @@ struct Helper<Geometry, std::enable_if_t<dg::is_mpi_grid<Geometry>::value >>
         dg::MPIGrid1d g1d ( 0,1,1, rank == 0 ? num_pins : 1, comm_cart1d);
         return g1d;
     }
-    static typename Geometry::host_vector probes_vec( const dg::HVec& coord, const Geometry& grid)
+    static typename Topology::host_vector probes_vec( const dg::HVec& coord, const Topology& grid)
     {
-        typename Geometry::host_vector::container_type vec(coord.size());
-        return typename Geometry::host_vector(vec, grid.communicator());
+        typename Topology::host_vector::container_type vec(coord.size());
+        return typename Topology::host_vector(vec, grid.communicator());
     }
     static void def_group( int ncid, std::string format, int& grpid)
     {
         int rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        DG_RANK0 Helper<dg::RealGrid1d<typename Geometry::value_type>>::def_group(ncid, format, grpid);
+        DG_RANK0 Helper<dg::RealGrid1d<typename Topology::value_type>>::def_group(ncid, format, grpid);
     }
     static void open_group( int ncid, int& grpid)
     {
@@ -135,9 +135,13 @@ struct Helper<Geometry, std::enable_if_t<dg::is_mpi_grid<Geometry>::value >>
  * writes happen only when calling \c flush
  * @note in an MPI program all processes have to create the class and call its methods.
  * Only the master thread writes to file and needs to open the file
+ * @copydoc hide_tparam_topology
+ * @note It is the topology of the simulation grid that is needed here, i.e.
+ * the Topology **from which** to interpolate, not the topology of the 1d probe
+ * array. The class automatically constructs the latter itself.
  * @ingroup Cpp
  */
-template<class Geometry>
+template<class Topology>
 struct Probes
 {
     Probes() = default;
@@ -154,7 +158,7 @@ struct Probes
     template<class ListClass>
     Probes(
         const int& ncid,
-        const Geometry& grid,
+        const Topology& grid,
         const ProbesParams& params, // do nothing if probes is false
         const ListClass& probe_list
         ) : m_ncid(&ncid)
@@ -166,22 +170,22 @@ struct Probes
             throw std::runtime_error( "Need "+std::to_string(grid.ndim())+" values in coords!");
         unsigned num_pins = params.get_coords_sizes();
 
-        m_probe_interpolate = detail::CreateInterpolation<Geometry,
-                            Geometry::ndim()>::call( params.coords, grid);
+        m_probe_interpolate = detail::CreateInterpolation<Topology,
+                            Topology::ndim()>::call( params.coords, grid);
         // Create helper storage probe variables
-        m_simple_probes = detail::Helper<Geometry>::probes_vec( params.coords[0], grid);
+        m_simple_probes = detail::Helper<Topology>::probes_vec( params.coords[0], grid);
         for( auto& record : probe_list)
-            m_simple_probes_intern[record.name] = std::vector<typename Geometry::host_vector>(); // empty vectors
+            m_simple_probes_intern[record.name] = std::vector<typename Topology::host_vector>(); // empty vectors
         m_resultH = dg::evaluate( dg::zero, grid);
 
-        detail::Helper<Geometry>::def_group( ncid, params.format, m_probe_grp_id);
+        detail::Helper<Topology>::def_group( ncid, params.format, m_probe_grp_id);
 
-        auto g1d = detail::Helper<Geometry>::create( num_pins);
-        typename detail::Helper<Geometry>::Writer1d
+        auto g1d = detail::Helper<Topology>::create( num_pins);
+        typename detail::Helper<Topology>::Writer1d
             writer_coords( m_probe_grp_id, g1d, {"pdim"});
         for( unsigned i=0; i<params.coords.size(); i++)
             writer_coords.def_and_put( params.coords_names[i], {},
-                detail::Helper<Geometry>::probes_vec( params.coords[i], grid));
+                detail::Helper<Topology>::probes_vec( params.coords[i], grid));
         m_writer0d = { m_probe_grp_id, {}, {"ptime"}};
         m_writer1d = { m_probe_grp_id, g1d, {"ptime", "pdim"}};
         for( auto& record : probe_list)
@@ -214,7 +218,7 @@ struct Probes
     {
         if(!m_probes) return;
 
-        typename detail::Helper<Geometry>::Writer1d
+        typename detail::Helper<Topology>::Writer1d
             write( m_probe_grp_id, m_writer1d.grid(), {"pdim"});
         auto result =
             dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::SignatureType>>(
@@ -269,7 +273,7 @@ struct Probes
     void flush()
     {
         if(!m_probes) return;
-        detail::Helper<Geometry>::open_group( *m_ncid, m_probe_grp_id);
+        detail::Helper<Topology>::open_group( *m_ncid, m_probe_grp_id);
 
         // else we write the internal buffer to file
         for( unsigned j=0; j<m_time_intern.size(); j++)
@@ -300,17 +304,17 @@ struct Probes
     }
 
     private:
-    typename detail::Helper<Geometry>::Writer1d m_writer1d;
-    typename detail::Helper<Geometry>::Writer0d m_writer0d;
+    typename detail::Helper<Topology>::Writer1d m_writer1d;
+    typename detail::Helper<Topology>::Writer0d m_writer0d;
     bool m_probes = false;
     const int* m_ncid;
     int m_probe_grp_id;
-    typename detail::Helper<Geometry>::IHMatrix m_probe_interpolate;
-    typename Geometry::host_vector m_simple_probes;
-    std::map<std::string, std::vector<typename Geometry::host_vector>> m_simple_probes_intern;
+    typename detail::Helper<Topology>::IHMatrix m_probe_interpolate;
+    typename Topology::host_vector m_simple_probes;
+    std::map<std::string, std::vector<typename Topology::host_vector>> m_simple_probes_intern;
     std::vector<double> m_time_intern;
     //Container m_resultD;
-    typename Geometry::host_vector m_resultH;
+    typename Topology::host_vector m_resultH;
     size_t m_probe_start = 0; // always point to where we currently can write
 };
 

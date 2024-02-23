@@ -8,7 +8,7 @@ namespace file
 
 /**
  * @brief Parameter struct for probe values
- * @ingroup netcdf
+ * @ingroup Cpp
  */
 struct ProbesParams
 {

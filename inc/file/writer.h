@@ -18,13 +18,13 @@ namespace file
 ///@addtogroup Cpp
 ///@{
 /**
- * @class hide_ncid_param
+ * @class hide_param_ncid
  * @param ncid A reference to a NetCDF file or group ID. The user is responsible to ensure
  * that the referenced id is valid (i.e. the file is open) any time a member function of \c Writer is called.
  * The reason we need to store a reference is that the ncid of a file can change (e.g. by closing
  * and re-opening) https://docs.unidata.ucar.edu/netcdf-c/current/tutorial_ncids.html
  *
- * @class hide_topology_tparam
+ * @class hide_tparam_topology
  * @tparam Topology Any topology or geometry class.
  * This class constructs and stores a member \c Topology::host_grid
  *
@@ -41,8 +41,8 @@ namespace file
  * In other cases an error is thrown.
  *
  * @class hide_g_param
- * @param g Used to construct \c Topology::host_grid. Determines the spatial shape and data type of
- * all variable this class writes to file
+ * @param g Used to construct a \c Topology::host_grid. Determines the spatial shape and data type of
+ * all variables this class writes to file
  */
 
 /**
@@ -57,7 +57,7 @@ namespace file
  * Also the \c parallel=false parameter is used in the \c dg::file::put_var and
  * \c dg::file::put_vara functions meaning only the master thread will write
  * to file.
- * @copydoc hide_topology_tparam
+ * @copydoc hide_tparam_topology
  * @note A 0d Writer can write the time dimension variable
  */
 template<class Topology>
@@ -67,7 +67,7 @@ struct Writer
     /**
      * @brief Consruct a Writer
      *
-     * @copydoc hide_ncid_param
+     * @copydoc hide_param_ncid
      * @copydoc hide_g_param
      * @copydoc hide_dim_names_param
      */
@@ -249,19 +249,37 @@ using get_result_type_t = typename std::function<Signature>::result_type;
 }//namespace detail
 ///@endcond
 
+/**
+ * @brief A realisation of the Record concept. Helper to generate NetCDF variables.
+ *
+ * Supposed to be used in connection with a Records writer like \c WriteRecordList
+ * @snippet netcdf_t.cpp doxygen
+   @tparam Signature Signature of the callable function
+ */
 template<class Signature>
 struct Record
 {
-    using SignatureType = Signature;
-    std::string name, long_name;
-    std::function<Signature> function;
+    using SignatureType = Signature; //!< Signature of the \c function
+    std::string name; //!< Name of the variable to create
+    std::string long_name; //!< Attribute "long_name" of the variable
+    std::function<Signature> function; //!< The function to call that generates data for the variable
 };
 
+/**
+ * @class hide_tparam_listclass
+ * A ContainerType with <tt> ListClass::value_type </tt> a Record class (e.g. \c dg::file::Record)
+ * The Signature <tt> ListClass::value_type::Signature </tt> must have either \c void as return type
+ * or a primitive type. The latter indicates a scalar output and must coincide
+ * with <tt> Topology::ndim() == 0</tt>. If the return type is void then the
+ * **first argument type** must be a Vector type constructible from \c
+ * Topology::host_vector e.g. a \c dg::DVec.
+ */
 
 /**
- * @brief A class to write (time-dependent) variables from a record list into a netcdf file
+ * @brief A class to generate and write variables from a record list into a netcdf file
  * @note in an MPI program all processes have to create the class and call its methods. The
  * class automatically takes care of which threads write to file.
+ * @copydoc hide_tparam_topology
  */
 template<class Topology>
 struct WriteRecordsList
@@ -270,10 +288,13 @@ struct WriteRecordsList
     /**
      * @brief Create variables ids
      *
-     * For each record in \c records create a variable named \c record.name with
-     * attribute \c record.long_name of dimension \c ndim in group \c ncid with
-     * dimensions given by \c dim_ids
-     * @tparam ListClass
+     * For each record in \c records create a variable named \c record.name
+     * with attribute \c record.long_name of dimensions \c dim_names with shape
+     * given by \c g in group \c ncid
+     * @copydoc hide_param_ncid
+     * @copydoc hide_g_param
+     * @copydoc hide_dim_names_param
+     * @copydoc hide_tparam_listclass
      * @param records list of records to put into ncid
      */
     template<class ListClass>
@@ -288,13 +309,19 @@ struct WriteRecordsList
     /**
      * @brief Write variables created from record list
      *
-     * For each record in \c records call \c record.function( resultD, ps...)
-     * where \c resultD is a \c dg::x::DVec of size given by \c grid and write
-     * into \c ncid
-     * @tparam ListClass
-     * @tparam Params
+     * There are two ways the function handles the \c records:
+     *  - For each record in \c records call \c record.function( result, ps...)
+     *  where \c result is of type <tt>
+     *  first_argument_t<ListClass::value_type::Signature></tt>  of size given
+     *  by \c grid, assign to a host vector of type \c Topology::host_vector
+     *  and write into \c ncid (from constructor).
+     *  - If <tt> return_type<ListClass::value_type::Signature> != void </tt> then
+     *  call <tt> result = record.function( ps...) </tt> and write directly into \c ncid
+     *  .
+     * @copydoc hide_tparam_listclass
      * @param records list of records to put into ncid
-     * @param ps Parameters forwarded to \c record.function( resultD, ps...) or \c result = record.function( ps...)
+     * @tparam Params The \c ListClass::value_type::Signature without the first argument
+     * @param ps Parameters forwarded to \c record.function( result, ps...) or \c result = record.function( ps...)
      */
     template< class ListClass, class ... Params >
     void write( const ListClass& records, Params&& ...ps)
@@ -305,11 +332,11 @@ struct WriteRecordsList
     template< class ListClass, class ... Params >
     std::enable_if_t<std::is_same<detail::get_result_type_t<typename ListClass::value_type::SignatureType> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
     {
+        auto resultH = dg::evaluate( dg::zero, m_writer.grid());
         //vector write
         auto resultD =
             dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::SignatureType>>(
-                dg::evaluate( dg::zero, m_writer.grid()));
-        auto resultH = dg::evaluate( dg::zero, m_writer.grid());
+                resultH);
         for( auto& record : records)
         {
             record.function( resultD, std::forward<Params>(ps)...);
@@ -337,27 +364,40 @@ struct WriteRecordsList
 /**
  * @brief Write variables created from record list and projected to smaller grid
  *
- * For each record in \c records call \c record.function( resultD, ps...)
- * where \c resultD is a \c dg::x::DVec of size given by \c grid and write
- * its projection to \c grid_out into \c ncid
- * @tparam Topology A topology
- * @tparam ListClass
- * @tparam Params
- * @param ncid root or group id in a netcdf file
- * @param grid gives the shape of the result of \c record.function
- * @param grid_out gives the shape of the output variable (shape must be
- * consistent with \c dim_ids in constructor)
- * @param records list of records to put into ncid
- * @param ps Parameters forwarded to \c record.function( resultD, ps...)
+ * @copydoc hide_tparam_topology
+ * @tparam MatrixType First type of fast projection type <tt> dg::MultiMatrix<MatrixType,ContainerType> </tt> to use in class
+ * @tparam ContainerType Seoncd type in fast projection type <tt>
+ * dg::MultiMatrix<MatrixType,ContainerType> </tt> to use in class \c
+ * ContainerType must equal <tt>
+ * first_argument_t<ListClass::value_type::Signature></tt>
+ * @sa dg::create::fast_projection
  */
 template<class Topology, class MatrixType, class ContainerType>
 struct ProjectRecordsList
 {
     ProjectRecordsList() =  default;
 
+    /**
+     * @brief Create variables ids
+     *
+     * For each record in \c records create a variable named \c record.name
+     * with attribute \c record.long_name of dimensions \c dim_names with shape
+     * given by \c grid_out in group \c ncid
+     *
+     * @copydoc hide_param_ncid
+     * @param grid gives the shape of the first argument of \c record.function
+     * @param grid_out gives the spatial shape and data type of all variables this class writes to file.
+     * Also used to construct the projection matrix. \c grid.Nx() must be divisable by \c grid_out.Nx()
+     * as does \c grid.Ny() by \c grid_out.Ny() and \c grid.n() by \c grid_out.n()
+     * @copydoc hide_dim_names_param
+     * @copydoc hide_tparam_listclass
+     *  The type <tt> first_argument_t<ListClass::value_type::Signature></tt> must equal ContainerType
+     * @param records list of records to put into ncid
+     */
     template<class ListClass>
     ProjectRecordsList( const int& ncid, const Topology& grid, const Topology& grid_out, std::vector<std::string> dim_names, const ListClass& records): m_writer( ncid, grid_out, dim_names)
     {
+        static_assert( std::is_same<get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
         m_projectD =
             dg::create::fast_projection( grid, grid.n()/grid_out.n(),
                 grid.Nx()/grid_out.Nx(), grid.Ny()/grid_out.Ny());
@@ -368,9 +408,24 @@ struct ProjectRecordsList
             m_writer.def( record.name, dg::file::long_name( record.long_name));
         }
     }
+
+    /**
+     * @brief Write variables created from records and projected to smaller grid
+     *
+     * For each record in \c records call \c record.function( result, ps...)
+     * where \c result is of type <tt>
+     * first_argument_t<ListClass::value_type::Signature></tt>  of size given
+     * by \c grid and write its projection to \c grid_out into \c ncid
+     * @copydoc hide_tparam_listclass
+     *  The type <tt> first_argument_t<ListClass::value_type::Signature></tt> must equal ContainerType
+     * @param records list of records to put into ncid
+     * @tparam Params The \c ListClass::value_type::Signature without the first argument
+     * @param ps Parameters forwarded to \c record.function( result, ps...)
+     */
     template<class ListClass, class ... Params >
     void write( const ListClass& records, Params&& ...ps)
     {
+        static_assert( std::is_same<get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
         auto transferH = dg::evaluate(dg::zero, m_writer.grid());
         for( auto& record : records)
         {

@@ -17,6 +17,7 @@ double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
 
+/// [doxygen]
 std::vector<dg::file::Record<void(dg::x::DVec&, const dg::x::Grid3d&, double)>> records = {
     {"vectorX", "X-component of vector",
         [] ( dg::x::DVec& resultD, const dg::x::Grid3d& g, double time){
@@ -37,6 +38,7 @@ std::vector<dg::file::Record<void(dg::x::DVec&, const dg::x::Grid3d&, double)>> 
         }
     }
 };
+/// [doxygen]
 
 int main(int argc, char* argv[])
 {

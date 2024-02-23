@@ -18,7 +18,7 @@ namespace file
 /**
  * @brief Manage dimensions and variable ids for reading
  *
- * @copydoc hide_topology_tparam
+ * @copydoc hide_tparam_topology
  * @note In an MPI program all processes must construct the class.
  * @copydoc hide_parallel_read
  */
@@ -29,7 +29,7 @@ struct Reader
     /**
      * @brief Consruct a Reader
      *
-     * @copydoc hide_ncid_param
+     * @copydoc hide_param_ncid
      * @copydoc hide_g_param
      * @copydoc hide_dim_names_param
      */
