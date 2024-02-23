@@ -8,18 +8,34 @@
 int main()
 {
 
-    std::vector<double> test( 100, 3.);
+    std::vector<double> test( 100);
+    for( unsigned i=0; i<100; i++)
+        test[i] = i;
 
-    dg::View<thrust::host_vector<double>> view( test.data(), test.size());
-    dg::blas1::copy( 7., view);
+    dg::View<dg::HVec> view( test.data(), test.size());
+    std::cout << "The view has size "<<view.size()<<" (100)\n";
+    dg::blas1::plus( view, 7);
     std::cout << "The original now has "<<test[0]<<" (7)\n";
     view.construct( &test[50], 50);
-    dg::blas1::copy( 3., view);
-    std::cout << "The original now has "<<test[0]<<" (7) and "<<test[50]<<" (3)\n";
-    const std::vector<double> const_test( 100, 42);
-    const dg::View<const thrust::host_vector<double>> const_view( const_test.data(), 50);
+    dg::blas1::plus( view, 3);
+    // test now contains original plus 10
+    std::cout << "The original now has "<<test[0]<<" (7) and "<<test[50]<<" (60)\n";
+    std::vector<double> const_test( 75);
+    for( unsigned i=0; i<75; i++)
+        const_test[i] = i;
+    const dg::View<const dg::HVec> const_view( const_test.data(), 50);
+    dg::HVec construct = dg::construct<dg::HVec>( const_view);
+    std::cout << "Constructed vector has "<<construct.size()<<" (50) elements\n";
+    std::cout << "Constructed vector element "<<construct[41]<<" (41)\n";
+    dg::HVec assign;
+    dg::assign( const_view, assign);
+    std::cout << "Assigned vector element "<<assign[42]<<" (42)\n";
+    std::cout << "Assigned vector has "<<construct.size()<<" (50) elements\n";
+
+    std::cout << "Const View has "<<const_view.size()<<" (50) elements\n";
+    view = dg::View<dg::HVec>( test.data(), const_view.size());
     dg::blas1::copy( const_view, view);
-    std::cout << "The original now has "<<test[50]<<" (42)\n";
+    std::cout << "The original now has "<<test[49]<<" (49)\n";
 
     return 0;
 }

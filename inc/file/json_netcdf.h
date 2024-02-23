@@ -46,7 +46,6 @@ namespace file
  * <tt> value["test"]["nested"] = 42 </tt> in the above example will throw an
  * error.  This is because NetCDF attributes cannot be nested.
  * Furthermore, all elements of an array must have the same type.
- * @note In an MPI program only one thread can call this function!
  * @note boolean values are mapped to byte NetCDF attributes (0b for true, 1b for false)
  * @param atts A Json Dictionary containing all the attributes for the variable
  * or file. \c atts can be empty in which case no attribute is written.

@@ -46,8 +46,8 @@ int main(int argc, char* argv[])
     , comm
 #endif
     );
-    dg::ClonePtr<dg::x::aGeometry2d> perp_grid_ptr = grid.perp_grid();
-    dg::x::Grid2d grid2d = (dg::x::Grid2d)*perp_grid_ptr;
+    std::unique_ptr<dg::x::aGeometry2d> perp_grid_ptr( grid.perp_grid());
+    //dg::ClonePtr<dg::x::aGeometry2d> perp_grid_ptr = grid.perp_grid();
     dg::x::HVec data = dg::evaluate( function, grid);
     auto sliced_data = dg::split( data, grid); // a vector of views
 
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
         dg::file::put_vara( ncid, arrayID, Tstart, grid, data);
         //write sub array
         dg::split( data, sliced_data, grid);
-        dg::file::put_vara( ncid, subArrayID, Tstart, grid2d, sliced_data[0]);
+        dg::file::put_vara( ncid, subArrayID, Tstart, *perp_grid_ptr, sliced_data[0]);
         //write time
         dg::file::put_vara( ncid, tvarID, Tstart, dg::x::Grid0d(), time);
     }
