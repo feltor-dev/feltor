@@ -110,25 +110,6 @@ void jacobian(
 }
 }//namespace routines
 
-// take first 2d plane out of a 3d vector
-// why should all groups have a slice though?
-template<class Container>
-void slice_vector3d( const Container& transfer, Container& transfer2d, size_t local_size2d)
-{
-#ifdef WITH_MPI
-    thrust::copy(
-        transfer.data().begin(),
-        transfer.data().begin() + local_size2d,
-        transfer2d.data().begin()
-    );
-#else
-    thrust::copy(
-        transfer.begin(),
-        transfer.begin() + local_size2d,
-        transfer2d.begin()
-    );
-#endif
-}
 
 // generate a Curvilinear flux aligned grid
 // config contains configuration parameters from input file
@@ -509,7 +490,8 @@ void create_and_set_sheath(
         DG_RANK0 std::cerr <<e.what()<<std::endl;
         dg::abort_program();
     }
-    dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *grid.perp_grid());
+    std::unique_ptr<dg::x::aGeometry2d> perp_grid_ptr( grid.perp_grid());
+    dg::x::HVec coord2d = dg::pullback( sheath_coordinate, *perp_grid_ptr);
     dg::x::DVec coord3d;
     dg::assign3dfrom2d( coord2d, coord3d, grid);
     feltor.set_sheath(

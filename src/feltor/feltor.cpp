@@ -189,17 +189,6 @@ int main( int argc, char* argv[])
             #endif //WITH_MPI
             );
 
-        // Define dimensions (t,z,y,x)
-        int dim_ids[4], tvarID;
-        DG_RANK0 err = dg::file::define_dimensions( ncid, &dim_ids[1], g3d_out,
-                {"z", "y", "x"});
-        if( !p.calibrate)
-            DG_RANK0 err = dg::file::define_time( ncid, "time", dim_ids, &tvarID);
-#ifdef WRITE_POL_FILE
-        DG_RANK0 err_pol = dg::file::define_dimensions( ncid_pol, dim_ids_pol, grid,
-                {"z", "y", "x"});
-#endif
-
         std::array<dg::x::DVec, 3> gradPsip; //referenced by Variables
         gradPsip[0] =  dg::evaluate( mag.psipR(), grid);
         gradPsip[1] =  dg::evaluate( mag.psipZ(), grid);
@@ -210,11 +199,14 @@ int main( int argc, char* argv[])
             &failed // nfailed
         };
 
+        // STATIC OUTPUT
         //create & output static 3d variables into file
-        dg::file::write_static_records_list( ncid, &dim_ids[1], g3d_out,
-            feltor::diagnostics3d_static_list, var, g3d_out);
+        dg::file::WriteRecordsList<dg::x::CylindricalGrid3d>(ncid, g3d_out,
+            {"z", "y", "x"}, feltor::diagnostics3d_static_list
+            ).write( feltor::diagnostics3d_static_list, var, g3d_out );
         //create & output static 2d variables into file
-        feltor::write_diagnostics2d_static_list( ncid, &dim_ids[2], var, grid, g3d_out, transition);
+        feltor::write_static_list( ncid, feltor::diagnostics2d_static_list,
+            var, grid, g3d_out, transition);
 
         if( p.calibrate)
         {
@@ -224,14 +216,17 @@ int main( int argc, char* argv[])
 #endif //WITH_MPI
             return 0;
         }
+        // DYNAMIC OUTPUT
 
-        dg::file::Probes probes( ncid, grid, dg::file::parse_probes(js),
+        dg::file::WriteRecordsList<dg::x::Grid0d> diag1d( ncid, {}, {"time"}, feltor::diagnostics1d_list);
+        feltor::WriteIntegrateDiagnostics2dList diag2d( ncid, grid, g3d_out,
+            feltor::generate_equation_list( js));
+        dg::file::ProjectRecordsList<dg::x::CylindricalGrid3d, dg::x::DMatrix, dg::x::DVec> diag4d(
+            ncid, grid, g3d_out, {"time", "z", "y", "x"}, feltor::diagnostics3d_list);
+        dg::file::Probes<dg::x::CylindricalGrid3d> probes( ncid, grid, dg::file::parse_probes(js),
                 feltor::probe_list);
-        dg::file::WriteRecordsList<1> diag1d( ncid, dim_ids, feltor::diagnostics1d_list);
-        int dim_ids3d[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
-        feltor::WriteIntegrateDiagnostics2dList diag2d( js, ncid, dim_ids3d);
-        dg::file::WriteRecordsList<4> diag4d( ncid, dim_ids, feltor::diagnostics3d_list);
-        feltor::RestartFileOutput restart( ncid, grid);
+        dg::file::WriteRecordsList<dg::x::CylindricalGrid3d> restart( ncid,
+            grid, {"zr", "yr", "xr"}, feltor::restart3d_list);
 
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "First output ... \n";
@@ -248,17 +243,15 @@ int main( int argc, char* argv[])
             }
         }
 
-        size_t start = 0, count = 1;
-        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
         DG_RANK0 std::cout << "Write restart ...\n";
-        restart.write( grid, feltor);
+        restart.write( feltor::restart3d_list, feltor);
 
         DG_RANK0 std::cout << "Write diag1d ...\n";
-        diag1d.write( ncid, feltor::diagnostics1d_list, var);
+        diag1d.write( feltor::diagnostics1d_list, var, time);
         DG_RANK0 std::cout << "Write diag2d ...\n";
-        diag2d.first_write( ncid, start, time, grid, g3d_out, var );
+        diag2d.write( time, var );
         DG_RANK0 std::cout << "Write diag4d ...\n";
-        diag4d.project_write( ncid, grid, g3d_out, feltor::diagnostics3d_list, var);
+        diag4d.write( feltor::diagnostics3d_list, var);
 
 
         DG_RANK0 std::cout << "Write static probes ...\n";
@@ -299,7 +292,7 @@ int main( int argc, char* argv[])
                 tti.tic();
 
                 probes.buffer(time, feltor::probe_list, var);
-                diag2d.save( time, grid, g3d_out, var);
+                diag2d.buffer( time, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
                 double max_ue = dg::blas1::reduce(
@@ -336,15 +329,14 @@ int main( int argc, char* argv[])
 
             ti.tic();
             //////////////////////////write fields////////////////////////
-            start = i;
             DG_RANK0 err = nc_open(file_name.data(), NC_WRITE, &ncid);
-            DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-            diag4d.project_write( ncid, grid, g3d_out, feltor::diagnostics3d_list, var);
             probes.flush();
-            restart.write( grid, feltor);
-            diag2d.write( ncid, start, grid, g3d_out, var );
+            diag2d.flush( var);
 
-            diag1d.write( ncid, feltor::diagnostics1d_list, var);
+            restart.write( feltor::restart3d_list, feltor);
+
+            diag1d.write( feltor::diagnostics1d_list, var, time);
+            diag4d.write( feltor::diagnostics3d_list, var);
 
             DG_RANK0 err = nc_close(ncid);
             ti.toc();

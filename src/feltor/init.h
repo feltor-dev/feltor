@@ -428,8 +428,9 @@ std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
             if( !(uprofile == "linear_cs"))
                 throw dg::Error(dg::Message(_ping_)<<"Warning! Unkown velocity profile '"<<uprofile<<"'! I don't know what to do! I exit!\n");
 
+            std::unique_ptr<dg::x::aGeometry2d> perp_grid_ptr( grid.perp_grid());
             dg::x::HVec coord2d = dg::pullback( sheath_coordinate,
-                    *grid.perp_grid());
+                    *perp_grid_ptr);
             dg::x::HVec ui;
             dg::assign3dfrom2d( coord2d, ui, grid);
             dg::blas1::scal( ui, sqrt( 1.0+p.tau[1]));

@@ -6,9 +6,39 @@
 #include "feltor.h"
 
 namespace feltor
-{//We use the typedefs and DG_RANK0
-//
-//everyone reads their portion of the input data
+{
+
+using Feltor = feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
+        dg::x::DMatrix, dg::x::DVec>;
+
+std::vector<dg::file::Record<void(dg::x::DVec&, Feltor&)>> restart3d_list = {
+    {"restart_electrons", "electron density",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_density(0), result);
+        }
+    },
+    {"restart_ions", "ion density",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_density(1), result);
+        }
+    },
+    {"restart_Ue", "parallel electron velocity",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_velocity(0), result);
+        }
+    },
+    {"restart_Ui", "parallel ion velocity",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_velocity(1), result);
+        }
+    },
+    {"restart_aparallel", "parallel magnetic potential",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_aparallel(), result);
+        }
+    }
+};
+
 std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
         const dg::x::CylindricalGrid3d& grid, const Parameters& p,
         double& time)
@@ -23,37 +53,28 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     dg::file::NC_Error_Handle errIN;
     int ncidIN;
     errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
-    size_t length;
-    errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
-    std::string input(length, 'x');
-    errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
-    dg::file::WrappedJsonValue jsIN = dg::file::string2Json( input, dg::file::comments::are_forbidden);
+    dg::file::WrappedJsonValue atts( dg::file::nc_attrs2json( ncidIN, NC_GLOBAL));
+    dg::file::WrappedJsonValue jsIN = dg::file::string2Json(
+        atts["inputfile"].asString(), dg::file::comments::are_forbidden);
     feltor::Parameters pIN( jsIN);
-    unsigned  pINn  = pIN.n;
-    unsigned  pINNx = pIN.Nx;
-    unsigned  pINNy = pIN.Ny;
-    unsigned  pINNz = pIN.Nz;
-    bool      pINsymmetric = pIN.symmetric;
     DG_RANK0 std::cout << "RESTART from file "<<file_name<< std::endl;
     DG_RANK0 std::cout << " file parameters:" << std::endl;
-    DG_RANK0 std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz
-                <<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
+    DG_RANK0 std::cout << pIN.n<<" x "<<pIN.Nx<<" x "<<pIN.Ny<<" x "<<pIN.Nz
+                <<" : symmetric "<<std::boolalpha<<pIN.symmetric<<std::endl;
 
     // Now read in last timestep
     dg::x::CylindricalGrid3d grid_IN( grid.x0(), grid.x1(), grid.y0(),
         grid.y1(), grid.z0(), grid.z1(),
-        pINn, pINNx, pINNy, pINNz, dg::DIR, dg::DIR, dg::PER
+        pIN.n, pIN.Nx, pIN.Ny, pIN.Nz, dg::DIR, dg::DIR, dg::PER
         #ifdef WITH_MPI
         , grid.communicator()
         #endif //WITH_MPI
         );
     dg::x::IHMatrix interpolateIN;
     dg::x::HVec transferIN;
-    if( pINsymmetric)
+    if( pIN.symmetric)
     {
-        std::unique_ptr< typename dg::x::CylindricalGrid3d::perpendicular_grid>
-            grid_perp ( static_cast<typename
-                dg::x::CylindricalGrid3d::perpendicular_grid*>(grid.perp_grid()));
+        std::unique_ptr<dg::x::aGeometry2d> grid_perp( grid.perp_grid());
         interpolateIN = dg::create::interpolation( grid, *grid_perp);
         transferIN = dg::evaluate(dg::zero, *grid_perp);
     }
@@ -62,52 +83,17 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
         interpolateIN = dg::create::interpolation( grid, grid_IN);
         transferIN = dg::evaluate(dg::zero, grid_IN);
     }
-
-    #ifdef WITH_MPI
-    int dimsIN[3],  coordsIN[3];
-    int periods[3] = {false, false, true}; //non-, non-, periodic
-    MPI_Cart_get( grid.communicator(), 3, dimsIN, periods, coordsIN);
-    size_t countIN[3] = {grid_IN.local().Nz(),
-            grid_IN.n()*(grid_IN.local().Ny()),
-            grid_IN.n()*(grid_IN.local().Nx())};
-    size_t startIN[3] = {coordsIN[2]*countIN[0],
-                         coordsIN[1]*countIN[1],
-                         coordsIN[0]*countIN[2]};
-    #else //WITH_MPI
-    size_t startIN[3] = {0, 0, 0};
-    size_t countIN[3] = {grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
-        grid_IN.n()*grid_IN.Nx()};
-    #endif //WITH_MPI
-    if( pINsymmetric)
-    {
-        countIN[0] = 1;
-        startIN[0] = 0;
-    }
     std::vector<dg::x::HVec> transferOUTvec( 5, dg::evaluate( dg::zero, grid));
 
-    std::string namesIN[5] = {"restart_electrons", "restart_ions",
-        "restart_Ue", "restart_Ui", "restart_aparallel"};
-
-    int timeIDIN;
-    size_t size_time, count_time = 1;
+    dg::file::Reader<dg::x::CylindricalGrid3d> restart( ncidIN, grid, {"zr", "yr", "xr"});
+    dg::file::Reader<dg::x::Grid0d> reader0d( ncidIN, {}, {"time"});
     /////////////////////Get time length and initial data///////////////////////////
-    errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
-    errIN = nc_inq_dimlen(ncidIN, timeIDIN, &size_time);
-    errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);
-    size_time -= 1;
-    errIN = nc_get_vara_double( ncidIN, timeIDIN, &size_time, &count_time, &time);
+    unsigned size_time = reader0d.size();
+    reader0d.get( "time", time, size_time-1);
     DG_RANK0 std::cout << " Current time = "<< time <<  std::endl;
-    for( unsigned i=0; i<5; i++)
+    for( unsigned i=0; i<restart3d_list.size(); i++)
     {
-        int dataID;
-        errIN = nc_inq_varid( ncidIN, namesIN[i].data(), &dataID);
-        errIN = nc_get_vara_double( ncidIN, dataID, startIN, countIN,
-            #ifdef WITH_MPI
-                transferIN.data().data()
-            #else //WITH_MPI
-                transferIN.data()
-            #endif //WITH_MPI
-            );
+        restart.get( restart3d_list[i].name, transferIN);
         dg::blas2::gemv( interpolateIN, transferIN, transferOUTvec[i]);
     }
     errIN = nc_close(ncidIN);
@@ -126,79 +112,4 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     return y0;
 }
 
-struct RestartFileOutput
-{
-    using Feltor = feltor::Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>;
-    RestartFileOutput() = default;
-    template<class Geometry>
-    RestartFileOutput( int ncid, const Geometry& grid): m_ncid(ncid){
-#ifdef WITH_MPI
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //WITH_MPI
-        dg::file::NC_Error_Handle err;
-        DG_RANK0 err = dg::file::define_dimensions( ncid, m_restart_dim_ids, grid,
-                {"zr", "yr", "xr"});
-        for( auto& record : m_restart3d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            m_restart_ids[name] = 0;//creates a new entry for all processes
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3,
-                    m_restart_dim_ids, &m_restart_ids.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, m_restart_ids.at(name),
-                    "long_name", long_name.size(), long_name.data());
-        }
-    }
-
-    template<class Geometry>
-    void write( const Geometry& grid, Feltor& feltor )
-    {
-        dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
-        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
-        for( auto& record : m_restart3d_list)
-        {
-            record.function( resultD, feltor);
-            dg::assign( resultD, resultH);
-            dg::file::put_var_double( m_ncid, m_restart_ids.at(record.name), grid, resultH);
-        }
-    }
-
-    private:
-    int m_ncid;
-    int m_restart_dim_ids[3];
-    std::map<std::string, int> m_restart_ids;
-    struct Record{
-        std::string name;
-        std::string long_name;
-        std::function<void( dg::x::DVec&, Feltor&)> function;
-    };
-    std::vector<Record> m_restart3d_list = {
-        {"restart_electrons", "electron density",
-            []( dg::x::DVec& result, Feltor& f ) {
-                 dg::blas1::copy(f.restart_density(0), result);
-            }
-        },
-        {"restart_ions", "ion density",
-            []( dg::x::DVec& result, Feltor& f ) {
-                 dg::blas1::copy(f.restart_density(1), result);
-            }
-        },
-        {"restart_Ue", "parallel electron velocity",
-            []( dg::x::DVec& result, Feltor& f ) {
-                 dg::blas1::copy(f.restart_velocity(0), result);
-            }
-        },
-        {"restart_Ui", "parallel ion velocity",
-            []( dg::x::DVec& result, Feltor& f ) {
-                 dg::blas1::copy(f.restart_velocity(1), result);
-            }
-        },
-        {"restart_aparallel", "parallel magnetic potential",
-            []( dg::x::DVec& result, Feltor& f ) {
-                 dg::blas1::copy(f.restart_aparallel(), result);
-            }
-        }
-    };
-};
 }//namespace feltor

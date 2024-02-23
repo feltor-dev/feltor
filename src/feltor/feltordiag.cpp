@@ -196,41 +196,7 @@ int main( int argc, char* argv[])
     size_t start2d[3] = {0, 0, 0};
 
 
-    std::vector<std::vector<feltor::Record>> equation_list;
-    bool equation_list_exists = js["output"].isMember("equations");
-    if( equation_list_exists)
-    {
-        for( unsigned i=0; i<js["output"]["equations"].size(); i++)
-        {
-            std::string eqn = js["output"]["equations"][i].asString();
-            if( eqn == "Basic")
-                equation_list.push_back(feltor::basicDiagnostics2d_list);
-            else if( eqn == "Mass-conserv")
-                equation_list.push_back(feltor::MassConsDiagnostics2d_list);
-            else if( eqn == "Energy-theorem")
-                equation_list.push_back(feltor::EnergyDiagnostics2d_list);
-            else if( eqn == "Toroidal-momentum")
-                equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
-            else if( eqn == "Parallel-momentum")
-                equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
-            else if( eqn == "Zonal-Flow-Energy")
-                equation_list.push_back(feltor::RSDiagnostics2d_list);
-            else if( eqn == "COCE")
-                equation_list.push_back(feltor::COCEDiagnostics2d_list);
-            else
-                throw std::runtime_error( "output: equations: "+eqn+" not recognized!\n");
-        }
-    }
-    else // default diagnostics
-    {
-        equation_list.push_back(feltor::basicDiagnostics2d_list);
-        equation_list.push_back(feltor::MassConsDiagnostics2d_list);
-        equation_list.push_back(feltor::EnergyDiagnostics2d_list);
-        equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
-        equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
-        equation_list.push_back(feltor::RSDiagnostics2d_list);
-    }
-
+    auto equation_list = feltor::generate_equation_list( js);
 
     std::map<std::string, Entry> diag_list = {
         {"fsa" , {" (Flux surface average.)", 2, dim_ids2d, false}  },
@@ -267,8 +233,7 @@ int main( int argc, char* argv[])
     std::map<std::string, int> IDS;
 
 
-    for(auto& m_list : equation_list) //Loop over the output lists (different equations studied).
-    for( auto& record : m_list) //Loop over the different variables inside each of the lists of outputs.
+    for(auto& record : equation_list)
     for( auto entry : diag_list)
     {
         if( !entry.second.exists)
@@ -340,9 +305,7 @@ int main( int argc, char* argv[])
             std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
             counter++;
             err = nc_put_vara_double( ncid_out, tvarID, start2d_out, count2d, &time);
-            for(auto& m_list : equation_list)
-            {
-            for( auto& record : m_list)
+            for(auto& record : equation_list)
             {
             std::string record_name = record.name;
             if( record_name[0] == 'j')
@@ -564,7 +527,6 @@ int main( int argc, char* argv[])
                     err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_std_fsa"),
                         start1d_out, count1d, transfer1d.data());
                 }
-            }
             }
         }
         } //end timestepping
