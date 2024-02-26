@@ -9,9 +9,9 @@
 
 #ifdef WRITE_POL_FILE
 int ncid_pol;
-int dim_ids_pol[3];
 int counter = 0;
 dg::file::NC_Error_Handle err_pol;
+dg::file::Writer<dg::x::CylindricalGrid3d> pol_writer;
 #endif // WRITE_POL_FILE
 
 
@@ -943,26 +943,26 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         counter++;
     if( counter == 10)
     {
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+
         dg::x::HVec transferH;
-        int vecID;
         std::string names [6] = {"chi", "sol", "rhs", "ne", "Ni", "phiH"};
         const Container* vecs [6] = {&m_multi_chi[0], &phi, &m_temp0, &density[0], &density[1], &m_old_phi.head()};
         for ( unsigned i=0; i<6; i++)
         {
-            DG_RANK0 err_pol = nc_def_var( ncid_pol, names[i].data(), NC_DOUBLE, 3,
-                        dim_ids_pol, &vecID);
             dg::assign (*(vecs[i]), transferH);
-            dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+            pol_writer.def_and_put( names[i], {}, transferH);
         }
-        DG_RANK0 err_pol = nc_def_var( ncid_pol, "phi0", NC_DOUBLE, 3,
-                    dim_ids_pol, &vecID);
         m_old_phi.extrapolate( time, phi);
         dg::assign ( phi, transferH);
-        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
+        pol_writer.def_and_put( "phi0", {}, transferH);
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
         DG_RANK0 err_pol = nc_close(ncid_pol);
+#ifdef MPI_VERSION
         MPI_Barrier( MPI_COMM_WORLD);
+#endif
         dg::abort_program();
     }
 #endif // WRITE_POL_FILE

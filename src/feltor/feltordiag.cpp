@@ -268,6 +268,7 @@ int main( int argc, char* argv[])
         dg::file::Reader<dg::x::Grid0d> read0d( ncid, {},{"time"});
         dg::file::Reader<dg::x::Grid2d> read2d( ncid, g2d_out,{"time","y","x"});
         size_t steps = read0d.size();
+        auto names = read2d.names();
         //steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
         {
@@ -286,7 +287,6 @@ int main( int argc, char* argv[])
                 record_name[1] = 'v';
             //1. Read toroidal average
             bool available = true;
-            auto names = read2d.names();
             if( std::find( names.begin(), names.end(), record.name+"_ta2d") == names.end())
             {
                 if(  i == 0)

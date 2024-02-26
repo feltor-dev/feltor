@@ -27,12 +27,10 @@ int main( int argc, char* argv[])
     dg::file::NC_Error_Handle err;
     int ncid_in;
     err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
-    size_t length;
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-    std::string inputfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
+    dg::file::WrappedJsonValue jsin = dg::file::nc_attrs2json( ncid_in, NC_GLOBAL);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(jsin["inputfile"].asString(),
+            dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.asJson() <<  std::endl;
@@ -48,15 +46,11 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    const double Zmin=-p.boxscaleZm*mag.params().a();
-    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    const double Zmax=p.boxscaleZp*mag.params().a();
-
     /////////////////////////////////////////////////////////////////////////
-    dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    auto box = common::box( js);
+    dg::CylindricalGrid3d g3d( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
         p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::CylindricalGrid3d g2d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g2d( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
     //    p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
         p.n, p.Nx, p.Ny, 1, p.bcxN, p.bcyN, dg::PER);
     std::cout << "Opening file "<<argv[1]<<"\n";

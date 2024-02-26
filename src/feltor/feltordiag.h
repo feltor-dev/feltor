@@ -163,19 +163,6 @@ std::vector<dg::file::Record<void( dg::x::HVec&, Variables&, const dg::x::Cylind
     },
 };
 
-std::array<std::tuple<std::string, std::string, dg::x::HVec>, 3> generate_cyl2cart( dg::x::CylindricalGrid3d& grid)
-{
-    dg::x::HVec xc = dg::evaluate( dg::cooRZP2X, grid);
-    dg::x::HVec yc = dg::evaluate( dg::cooRZP2Y, grid);
-    dg::x::HVec zc = dg::evaluate( dg::cooRZP2Z, grid);
-    std::array<std::tuple<std::string, std::string, dg::x::HVec>, 3> list = {{
-        { "xc", "x-coordinate in Cartesian coordinate system", xc },
-        { "yc", "y-coordinate in Cartesian coordinate system", yc },
-        { "zc", "z-coordinate in Cartesian coordinate system", zc }
-    }};
-    return list;
-}
-
 // Here are all 3d outputs we want to have
 std::vector<dg::file::Record<void(dg::x::DVec&, Variables&)>> diagnostics3d_list = { // 6
     {"electrons", "electron density",

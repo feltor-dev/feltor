@@ -25,6 +25,7 @@ thrust::host_vector<float> append( const thrust::host_vector<float>& in, const d
 //also periodify in 3d and equidistant in RZ
 // Also plot in a fieldaligned coordinate system
 //input should probably better come from another json file
+// depends on diagnostics3d_list and diagnostics3d_static_list
 int main( int argc, char* argv[])
 {
     if( argc != 4)
@@ -38,12 +39,10 @@ int main( int argc, char* argv[])
     dg::file::NC_Error_Handle err;
     int ncid_in;
     err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
-    size_t length;
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-    std::string inputfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
+    dg::file::WrappedJsonValue jsin = dg::file::nc_attrs2json( ncid_in, NC_GLOBAL);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(jsin["inputfile"].asString(),
+        dg::file::comments::are_forbidden);
     const feltor::Parameters p(js);
     std::cout << js.toStyledString() << std::endl;
     dg::file::WrappedJsonValue config( dg::file::error::is_warning);
@@ -72,7 +71,7 @@ int main( int argc, char* argv[])
     err = nc_create(argv[3],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
 
     /// Set global attributes
-    std::map<std::string, std::string> att;
+    dg::file::JsonType att;
     att["title"] = "Output file of feltor/src/feltor/interpolate_in_3d.cpp";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
@@ -86,10 +85,8 @@ int main( int argc, char* argv[])
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = inputfile;
-    for( auto pair : att)
-        err = nc_put_att_text( ncid_out, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
+    att["inputfile"] = jsin["inputfile"].asString();
+    dg::file::json2nc_attrs( att, ncid_out, NC_GLOBAL);
 
     //-------------------Construct grids-------------------------------------//
 
@@ -188,16 +185,6 @@ int main( int argc, char* argv[])
     dg::IHMatrix big_matrix
         = dg::create::interpolation( RR, ZZ, PP, g3d_in, p.bcxN, p.bcyN, dg::PER, "linear");
 
-
-    // define 4d dimension
-    int dim_ids[4], tvarID;
-    err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID,
-            g3d_out_periodic_equidistant, {"time", "z", "y", "x"});
-    int dim_idsF[4], tvarIDF;
-    err = dg::file::define_dimensions( ncid_out, dim_idsF, &tvarIDF,
-            g3d_out_fieldaligned, {"timef", "zf", "yf", "xf"});
-    std::map<std::string, int> id4d;
-
     /////////////////////////////////////////////////////////////////////////
     dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix, dg::HVec> fieldaligned(
         bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
@@ -207,39 +194,35 @@ int main( int argc, char* argv[])
             g3d_out_equidistant, g3d_out);
 
 
+    {
+    dg::file::Writer<dg::RealCylindricalGrid3d<float>> write_periodic_stat(
+        ncid_out, g3d_out_periodic_equidistant, {"z", "y", "x"});
+    dg::file::Reader<dg::RealCylindricalGrid3d<double>> read( ncid_in, g3d_in, {"z", "y", "x"});
+
     for( auto& record : feltor::diagnostics3d_static_list)
     {
         if( record.name != "xc" && record.name != "yc" && record.name != "zc" )
         {
-            int vID;
-            err = nc_def_var( ncid_out, record.name.data(), NC_FLOAT, 3,
-                    &dim_ids[1], &vID);
-            err = nc_put_att_text( ncid_out, vID, "long_name",
-                    record.long_name.size(), record.long_name.data());
+            read.get( record.name, transferH_in);
 
-            int dataID = 0;
-            err = nc_inq_varid(ncid_in, record.name.data(), &dataID);
-            err = nc_get_var_double( ncid_in, dataID, transferH_in.data());
             transferH_out = fieldaligned.interpolate_from_coarse_grid(
                 g3d_in, transferH_in);
             dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
             dg::assign( transferH, transferH_out_float);
-
-            err = nc_put_var_float( ncid_out, vID, append(transferH_out_float,
-                        g3d_out_equidistant).data());
+            write_periodic_stat.def_and_put( record.name, dg::file::long_name(
+                record.long_name), append( transferH_out_float,
+                g3d_out_equidistant));
+        }
+        else
+        {
+            feltor::Variables * ptr = nullptr; // Variables are not actually used
+            record.function ( transferH_out, *ptr, g3d_out_equidistant);
+            dg::assign( transferH_out, transferH_out_float);
+            write_periodic_stat.def_and_put( record.name, dg::file::long_name(
+                record.long_name), append( transferH_out_float,
+                g3d_out_equidistant));
         }
     }
-    for( auto record : feltor::generate_cyl2cart( g3d_out_equidistant) )
-    {
-        int vID;
-        err = nc_def_var( ncid_out, std::get<0>(record).data(), NC_FLOAT, 3,
-                &dim_ids[1], &vID);
-        err = nc_put_att_text( ncid_out, vID, "long_name", std::get<1>(record).size(),
-            std::get<1>(record).data());
-        dg::assign( std::get<2>(record), transferH_out_float);
-        err = nc_put_var_float( ncid_out, vID, append(transferH_out_float,
-                    g3d_out_equidistant).data());
-
     }
     // for fieldaligned output (transform to Cartesian coords)
     {
@@ -248,92 +231,67 @@ int main( int argc, char* argv[])
             return R*sin(P);}, RR, PP);
     dg::blas1::evaluate( YYc, dg::equals(),[] DG_DEVICE (double R, double P){
             return R*cos(P);}, RR, PP);
-    std::array<std::tuple<std::string, std::string, dg::x::HVec>, 3> list = {{
-        { "xfc", "xf-coordinate in Cartesian coordinate system", XXc },
-        { "yfc", "yf-coordinate in Cartesian coordinate system", YYc },
-        { "zfc", "zf-coordinate in Cartesian coordinate system", ZZc }
-    }};
-    for( auto record : list )
-    {
-        int vID;
-        err = nc_def_var( ncid_out, std::get<0>(record).data(), NC_DOUBLE, 3,
-                &dim_idsF[1], &vID);
-        err = nc_put_att_text( ncid_out, vID, "long_name",
-                std::get<1>(record).size(), std::get<1>(record).data());
-        dg::assign( std::get<2>(record), transferH_aligned_out);
-        err = nc_put_var_double( ncid_out, vID, transferH_aligned_out.data());
+    std::vector<dg::file::Record<void( dg::HVec&) >> list = {
+        { "xfc", "xf-coordinate in Cartesian coordinate system",
+            [&]( dg::HVec& result) { result = XXc; }},
+        { "yfc", "yf-coordinate in Cartesian coordinate system",
+            [&]( dg::HVec& result) { result = YYc; }},
+        { "zfc", "zf-coordinate in Cartesian coordinate system",
+            [&]( dg::HVec& result) { result = ZZc; }},
+    };
+    dg::file::WriteRecordsList<dg::RealCylindricalGrid3d<double>> ( ncid_out,
+        g3d_out_fieldaligned, {"zf", "yf", "xf"}, list).write( list);
     }
-    }
+
+    // define 4d dimension
+    dg::file::Writer<dg::RealCylindricalGrid3d<float>> write_periodic(
+        ncid_out, g3d_out_periodic_equidistant, {"time", "z", "y", "x"});
+    dg::file::Writer<dg::RealGrid0d<float>> write0d( ncid_out, {}, {"time"});
+
+    dg::file::Writer<dg::RealCylindricalGrid3d<double>> write_fieldaligned(
+        ncid_out, g3d_out_fieldaligned, {"timef", "zf", "yf", "xf"});
+    dg::file::Writer<dg::RealGrid0d<double>> write0dF( ncid_out, {}, {"timef"});
 
     for( auto& record : feltor::diagnostics3d_list)
     {
-        std::string name = record.name;
-        std::string long_name = record.long_name;
-        err = nc_def_var( ncid_out, name.data(), NC_FLOAT, 4, dim_ids,
-            &id4d[name]);
-        err = nc_put_att_text( ncid_out, id4d[name], "long_name", long_name.size(),
-            long_name.data());
-        // generate variables for aligned as well
-        name = name+"FF";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, 4, dim_idsF,
-            &id4d[name]);
-        err = nc_put_att_text( ncid_out, id4d[name], "long_name", long_name.size(),
-            long_name.data());
+        write_periodic.def( record.name, dg::file::long_name( record.long_name));
+        write_fieldaligned.def( record.name+"FF", dg::file::long_name( record.long_name));
     }
 
-
-
-    int timeID;
     double time=0.;
 
-    size_t steps;
-    err = nc_inq_unlimdim( ncid_in, &timeID);
-    err = nc_inq_dimlen( ncid_in, timeID, &steps);
-    size_t count3d_in[4]  = {1, g3d_in.Nz(), g3d_in.n()*g3d_in.Ny(),
-        g3d_in.n()*g3d_in.Nx()};
-    size_t count3d_out[4] = {1, g3d_out_periodic_equidistant.Nz(),
-        g3d_out_equidistant.n()*g3d_out_equidistant.Ny(),
-        g3d_out_equidistant.n()*g3d_out_equidistant.Nx()};
-    size_t count3d_aligned_out[4] = {1, g3d_out_fieldaligned.Nz(),
-        g3d_out_fieldaligned.n()*g3d_out_fieldaligned.Ny(),
-        g3d_out_fieldaligned.n()*g3d_out_fieldaligned.Nx()};
-    size_t start3d_in[4] = {0, 0, 0, 0};
-    size_t start3d_out[4] = {0, 0, 0, 0};
+    dg::file::Reader<dg::Grid0d> read0d( ncid_in, {}, {"time"});
+    dg::file::Reader<dg::CylindricalGrid3d> read3d( ncid_in, g3d_in, {"time",
+        "z", "y", "x"});
+    size_t steps = read0d.size();
+    auto names = read3d.names();
+
     ///////////////////////////////////////////////////////////////////////
     for( unsigned i=0; i<steps; i+=TIME_FACTOR)//timestepping
     {
         std::cout << "Timestep = "<<i<< "/"<<steps;
-        start3d_in[0] = i;
         // read and write time
-        err = nc_get_vara_double( ncid_in, timeID, start3d_in, count3d_in,
-                &time);
+        read0d.get( "time", time, i);
         std::cout << "  time = " << time << std::endl;
-        start3d_out[0] = i/TIME_FACTOR;
-        err = nc_put_vara_double( ncid_out, tvarID, start3d_out, count3d_out,
-                &time);
-        err = nc_put_vara_double( ncid_out, tvarIDF, start3d_out,
-                count3d_aligned_out, &time);
+        write0d.put(  "time", (float)time,  i/TIME_FACTOR);
+        write0dF.put( "time", time,  i/TIME_FACTOR);
         for( auto& record : feltor::diagnostics3d_list)
         {
             std::string record_name = record.name;
-            int dataID =0;
             bool available = true;
-            try{
-                err = nc_inq_varid(ncid_in, record.name.data(), &dataID);
-            } catch ( dg::file::NC_Error& error)
+
+            if( std::find( names.begin(), names.end(), record.name) == names.end())
             {
                 if(  i == 0)
                 {
-                    std::cerr << error.what() <<std::endl;
-                    std::cerr << "Offending variable is "<<record.name<<"\n";
+                    std::cerr << "Variable "<<record.name<<" not found!" <<std::endl;
                     std::cerr << "Writing zeros ... \n";
                 }
                 available = false;
             }
             if( available)
             {
-                err = nc_get_vara_double( ncid_in, dataID,
-                    start3d_in, count3d_in, transferH_in.data());
+                read3d.get( record.name, transferH_in);
                 transferH_out = fieldaligned.interpolate_from_coarse_grid(
                     g3d_in, transferH_in);
                 dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
@@ -346,12 +304,10 @@ int main( int argc, char* argv[])
                 dg::blas1::scal( transferH_out_float, (float)0);
                 dg::blas1::scal( transferH_aligned_out, (double)0);
             }
-            err = nc_put_vara_float( ncid_out, id4d.at(record.name),
-                    start3d_out, count3d_out, append(transferH_out_float,
-                        g3d_out_equidistant).data());
-            err = nc_put_vara_double( ncid_out, id4d.at(record.name + "FF"),
-                    start3d_out, count3d_aligned_out,
-                    transferH_aligned_out.data());
+            write_periodic.put( record.name, append(transferH_out_float,
+                    g3d_out_equidistant));
+            write_fieldaligned.put( record.name+"FF",
+                    transferH_aligned_out);
         }
 
     } //end timestepping

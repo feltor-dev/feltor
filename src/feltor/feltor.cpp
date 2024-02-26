@@ -172,6 +172,7 @@ int main( int argc, char* argv[])
 #ifdef WRITE_POL_FILE
             DG_RANK0 err_pol = nc_create( "polarisation.nc", NC_NETCDF4|NC_CLOBBER, &ncid_pol);
             DG_RANK0 feltor::write_global_attributes( ncid_pol, argc, argv, inputfile);
+            pol_writer = {ncid_pol, grid, {"z", "y", "x"}};
 #endif
 
         }catch( std::exception& e)
