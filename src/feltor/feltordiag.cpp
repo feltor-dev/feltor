@@ -14,10 +14,10 @@
 struct Entry
 {
     std::string description;
-    int dimension_length;
-    int* dimensions;
     bool exists;
 };
+
+// The only dependence on feltor is through Parameters and equation_list
 
 int main( int argc, char* argv[])
 {
@@ -34,17 +34,14 @@ int main( int argc, char* argv[])
     dg::file::NC_Error_Handle err;
     int ncid_in;
     err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
+    dg::file::WrappedJsonValue jsin = dg::file::nc_attrs2json( ncid_in, NC_GLOBAL);
+    err = nc_close( ncid_in);
     // create output early so that netcdf failures register early
     // and simplesimdb knows that file is under construction
     int ncid_out;
     err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
-    size_t length;
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-    std::string inputfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
-    err = nc_close( ncid_in);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(jsin["inputfile"].asString(), dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.toStyledString() <<  std::endl;
@@ -111,7 +108,7 @@ int main( int argc, char* argv[])
     //-----------------And 1d static output                     ----------//
 
     /// Set global attributes
-    std::map<std::string, std::string> att;
+    dg::file::JsonType att;
     att["title"] = "Output file of feltor/src/feltor/feltordiag.cpp";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
@@ -125,36 +122,22 @@ int main( int argc, char* argv[])
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = inputfile;
+    att["inputfile"] = jsin["inputfile"].asString();
     att["configfile"] = configfile;
-    for( auto pair : att)
-        err = nc_put_att_text( ncid_out, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
+    dg::file::json2nc_attrs( att, ncid_out, NC_GLOBAL);
 
-    int dim_id1d = 0;
-    err = dg::file::define_dimension( ncid_out, &dim_id1d, g1d_out, {"psi"} );
-    int dim_idX[2]= { 0, dim_id1d};
-    err = dg::file::define_dimension( ncid_out, &dim_idX[0], g1d_out_eta, {"eta"} );
+    dg::file::Writer<dg::x::Grid1d> writer_psi( ncid_out, g1d_out, {"psi"});
+    dg::file::Writer<dg::x::Grid2d> writer_X( ncid_out, {g1d_out,g1d_out_eta}, {"eta", "psi"});
     //write 1d static vectors (psi, q-profile, ...) into file
     for( auto tp : map1d)
     {
-        int vid;
-        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
-        err = nc_put_att_text( ncid_out, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef(ncid_out);
-        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid_out);
+        writer_psi.def_and_put( std::get<0>(tp), dg::file::long_name(
+            std::get<2>(tp)), std::get<1>(tp));
     }
     for( auto tp : map2d)
     {
-        int vid;
-        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 2, dim_idX, &vid);
-        err = nc_put_att_text( ncid_out, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef(ncid_out);
-        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid_out);
+        writer_X.def_and_put( std::get<0>(tp), dg::file::long_name(
+            std::get<2>(tp)), std::get<1>(tp));
     }
     if( p.calibrate )
     {
@@ -179,36 +162,28 @@ int main( int argc, char* argv[])
     if( psipO > psipmax)
         dpsi = dg::create::dx( g1d_out, dg::forward);
     //although the first point outside LCFS is still wrong
-    // define 2d and 1d and 0d dimensions and variables
-    int dim_ids[3], tvarID;
-    err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
-
-    int dim_ids2d[2] = {dim_ids[0], dim_id1d}; //time,  psi
-    int dim_ids2dX[3]= {dim_ids[0], dim_idX[0], dim_idX[1]};
+    dg::file::Writer<dg::x::Grid0d> write0d( ncid_out, {}, {"time"});
+    dg::file::Writer<dg::x::Grid2d> writer_g2d( ncid_out, g2d_out,
+        {"time", "y", "x"});
+    writer_psi = {ncid_out, g1d_out, {"time", "psi"}};
+    writer_X = {ncid_out, {g1d_out,g1d_out_eta}, {"time", "eta", "psi"}};
     //Write long description
-    std::string long_name = "Time at which 2d fields are written";
-    err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
-            long_name.data());
-
-    size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
-    size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
-    size_t count2dX[3] = {1, g1d_out_eta.n()*g1d_out_eta.N(), g1d_out.n()*g1d_out.N()};//NEW: Definition of count2dX
-    size_t start2d[3] = {0, 0, 0};
+    write0d.def( "time", dg::file::long_name("Time at which 2d fields are written"));
 
 
     auto equation_list = feltor::generate_equation_list( js);
 
     std::map<std::string, Entry> diag_list = {
-        {"fsa" , {" (Flux surface average.)", 2, dim_ids2d, false}  },
-        {"fsa2d" , {" (Flux surface average interpolated to 2d plane.)", 3, dim_ids, false} },
-        {"cta2d" , {" (Convoluted toroidal average on 2d plane.)", 3, dim_ids, false}},
-        {"cta2dX" , {" (Convoluted toroidal average on magnetic plane.)", 3, dim_ids2dX, false}},
-        {"fluc2d" , {" (Fluctuations wrt fsa on phi = 0 plane.)", 3, dim_ids, false}},
-        {"ifs", { " (wrt. vol integrated flux surface average)", 2, dim_ids2d, false}},
+        {"fsa" , {" (Flux surface average.)", false} },
+        {"fsa2d" , {" (Flux surface average interpolated to 2d plane.)", false} },
+        {"cta2d" , {" (Convoluted toroidal average on 2d plane.)", false}},
+        {"cta2dX" , {" (Convoluted toroidal average on magnetic plane.)", false}},
+        {"fluc2d" , {" (Fluctuations wrt fsa on phi = 0 plane.)", false}},
+        {"ifs", { " (wrt. vol integrated flux surface average)", false}},
         {"ifs_lcfs",
-            { " (wrt. vol integrated flux surface average evaluated on last closed flux surface)", 1, dim_ids, false}},
-        {"ifs_norm", {" (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)",1, dim_ids, false}},
-        {"std_fsa", {" (Flux surface average standard deviation on outboard midplane.)", 2, dim_ids2d, false}}
+            { " (wrt. vol integrated flux surface average evaluated on last closed flux surface)", false}},
+        {"ifs_norm", {" (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)", false}},
+        {"std_fsa", {" (Flux surface average standard deviation on outboard midplane.)", false }}
     };
     bool diagnostics_list_exists = config.isMember("diagnostics");
     if( diagnostics_list_exists)
@@ -230,7 +205,6 @@ int main( int argc, char* argv[])
     else // compute all diagnostics
         for( auto& entry : diag_list)
             entry.second.exists = true;
-    std::map<std::string, int> IDS;
 
 
     for(auto& record : equation_list)
@@ -251,10 +225,15 @@ int main( int argc, char* argv[])
             long_name = record.long_name + " (flux surface average evaluated on the last closed flux surface)";
         if((diag=="ifs_norm") && (record_name[0] == 'j'))
             long_name = record.long_name + " (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, entry.second.dimension_length,
-            entry.second.dimensions, &IDS[name]);
-        err = nc_put_att_text( ncid_out, IDS[name], "long_name", long_name.size(),
-            long_name.data());
+        if( diag == "ifs_norm" || diag == "ifs_lcfs")
+            write0d.def( name, dg::file::long_name(long_name));
+        else if( diag == "fsa" || diag == "ifs" || diag == "std_fsa")
+            writer_psi.def( name, dg::file::long_name(long_name));
+        else if( diag == "cta2dX")
+            writer_X.def( name, dg::file::long_name(long_name));
+        else // fsa2d cta2d fluc2d
+            writer_g2d.def( name, dg::file::long_name(long_name));
+
     }
 
     std::cout << "Construct Fieldaligned derivative ... \n";
@@ -276,8 +255,6 @@ int main( int argc, char* argv[])
     std::cout << "Using flux-surface-average mode: "<<fsa_mode << "\n";
     for( int j=2; j<argc-1; j++)
     {
-        int timeID;
-        size_t steps;
         std::cout << "Opening file "<<argv[j]<<"\n";
         try{
             err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
@@ -288,47 +265,40 @@ int main( int argc, char* argv[])
             std::cerr << "Continue with next file\n";
             continue;
         }
-        err = nc_inq_unlimdim( ncid, &timeID);
-        err = nc_inq_dimlen( ncid, timeID, &steps);
-        err = nc_inq_varid(ncid, "time", &timeID);
+        dg::file::Reader<dg::x::Grid0d> read0d( ncid, {},{"time"});
+        dg::file::Reader<dg::x::Grid2d> read2d( ncid, g2d_out,{"time","y","x"});
+        size_t steps = read0d.size();
         //steps = 3;
         for( unsigned i=0; i<steps; i++)//timestepping
         {
             if( j > 2 && i == 0)
                 continue; // else we duplicate the first timestep
-            start2d[0] = i;
-            size_t start2d_out[3] = {counter, 0,0};
-            size_t start1d_out[2] = {counter, 0};
             // read and write time
             double time=0.;
-            err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
+            read0d.get( "time", time, i);
             std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
             counter++;
-            err = nc_put_vara_double( ncid_out, tvarID, start2d_out, count2d, &time);
+            write0d.put( "time", time, counter);
             for(auto& record : equation_list)
             {
             std::string record_name = record.name;
             if( record_name[0] == 'j')
                 record_name[1] = 'v';
             //1. Read toroidal average
-            int dataID =0;
             bool available = true;
-            try{
-                err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
-            } catch (dg::file::NC_Error& error)
+            auto names = read2d.names();
+            if( std::find( names.begin(), names.end(), record.name+"_ta2d") == names.end())
             {
                 if(  i == 0)
                 {
-                    std::cerr << error.what() <<std::endl;
-                    std::cerr << "Offending variable is "<<record.name+"_ta2d\n";
+                    std::cerr << "Variable "<<record.name<<"_ta2d not found!" <<std::endl;
                     std::cerr << "Writing zeros ... \n";
                 }
                 available = false;
             }
             if( available)
             {
-                err = nc_get_vara_double( ncid, dataID,
-                    start2d, count2d, transferH2d.data());
+                read2d.get( record.name+"_ta2D", transferH2d, i);
                 if( fsa_mode == "convoluted-toroidal-average" || diag_list["cta2d"].exists
                         || diag_list["cta2dX"].exists)
                 {
@@ -369,55 +339,47 @@ int main( int argc, char* argv[])
             }
             if(diag_list["fsa"].exists)
             {
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fsa"),
-                    start1d_out, count1d, fsa1d.data());
+                writer_psi.put( record_name+"_fsa", fsa1d, counter);
             }
             if(diag_list[ "fsa2d"].exists)
             {
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fsa2d"),
-                    start2d_out, count2d, transferH2d.data() );
+                writer_g2d.put( record_name+"_fsa2d", transferH2d, counter);
             }
             if(diag_list["cta2d"].exists)
             {
                 if( record_name[0] == 'j')
                     dg::blas1::pointwiseDot( cta2d_mp, dvdpsip2d, cta2d_mp );//make it jv
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_cta2d"),
-                    start2d_out, count2d, cta2d_mp.data() );
+                writer_g2d.put( record_name+"_cta2d", cta2d_mp, counter);
             }
             if(diag_list["cta2dX"].exists)
             {
                 if( record_name[0] == 'j')
                     record_name[1] = 's';
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_cta2dX"),
-                    start2d_out, count2dX, cta2dX.data() ); //NEW: saving de X_grid data
+                writer_X.put( record_name+"_cta2dX", cta2dX, counter);
                 if( record_name[0] == 'j')
                     record_name[1] = 'v';
             }
             //4. Read 2d variable and compute fluctuations
             available = true;
-            try{
-                err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
-            } catch ( dg::file::NC_Error& error)
+            if( std::find( names.begin(), names.end(), record.name+"_2d") == names.end())
             {
                 if(  i == 0)
                 {
-                    std::cerr << error.what() <<std::endl;
-                    std::cerr << "Offending variable is "<<record.name+"_2d\n";
+                    std::cerr << "Variable "<<record.name<<"_2d not found!" <<std::endl;
                     std::cerr << "Writing zeros ... \n";
                 }
                 available = false;
             }
             if( available)
             {
-                err = nc_get_vara_double( ncid, dataID, start2d, count2d,
-                    cta2d_mp.data());
+                read2d.get( record.name+"_2d", cta2d_mp, i);
                 if( record_name[0] == 'j')
                     dg::blas1::pointwiseDot( cta2d_mp, dvdpsip2d, cta2d_mp );
                 dg::blas1::axpby( 1.0, cta2d_mp, -1.0, transferH2d);
                 if(diag_list["fluc2d"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fluc2d"),
-                        start2d_out, count2d, transferH2d.data() );
+                    writer_g2d.put( record_name+"_fluc2d",
+                        transferH2d, counter);
                 }
                 //5. flux surface integral/derivative
                 double result =0.;
@@ -442,14 +404,12 @@ int main( int argc, char* argv[])
                 }
                 if(diag_list[ "ifs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs"),
-                        start1d_out, count1d, transfer1d.data());
+                    writer_psi.put( record_name+"_ifs", transfer1d, counter);
                 }
                 //flux surface integral/derivative on last closed flux surface
                 if(diag_list[ "ifs_lcfs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_lcfs"),
-                        start2d_out, count2d, &result );
+                    write0d.put( record_name+"_ifs_lcfs", result, counter);
                 }
                 //6. Compute norm of time-integral terms to get relative importance
                 if( record_name[0] == 'j') //j indicates a flux
@@ -474,8 +434,7 @@ int main( int argc, char* argv[])
                 result = sqrt(dg::blas1::dot( temp1, temp2));
                 if(diag_list["ifs_norm"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_norm"),
-                        start2d_out, count2d, &result );
+                    write0d.put( record_name+"_ifs_norm", result, counter);
                 }
                 //7. Compute midplane fluctuation amplitudes
                 dg::blas1::pointwiseDot( transferH2d, transferH2d, transferH2d);
@@ -493,8 +452,7 @@ int main( int argc, char* argv[])
                 dg::blas1::transform ( fsa1d, fsa1d, dg::SQRT<double>() );
                 if(diag_list["std_fsa"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_std_fsa"),
-                        start1d_out, count1d, fsa1d.data());
+                    writer_psi.put( record_name+"_std_fsa", fsa1d, counter);
                 }
             }
             else // make everything zero
@@ -504,28 +462,28 @@ int main( int argc, char* argv[])
                 double result = 0.;
                 if(diag_list["fluc2d"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fluc2d"),
-                        start2d_out, count2d, transferH2d.data() );
+                    writer_g2d.put( record_name+"_fluc2d",
+                        transferH2d, counter);
                 }
                 if(diag_list["ifs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs"),
-                        start1d_out, count1d, transfer1d.data());
+                    writer_psi.put( record_name+"_ifs",
+                        transfer1d, counter);
                 }
                 if(diag_list["ifs_lcfs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_lcfs"),
-                        start2d_out, count2d, &result );
+                    write0d.put( record_name+"_ifs_lcfs",
+                        result, counter);
                 }
                 if(diag_list["ifs_norm"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_norm"),
-                        start2d_out, count2d, &result );
+                    write0d.put( record_name+"_ifs_norm",
+                        result, counter);
                 }
                 if(diag_list["std_fsa"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_std_fsa"),
-                        start1d_out, count1d, transfer1d.data());
+                    writer_psi.put( record_name+"_std_fsa",
+                        transfer1d, counter);
                 }
             }
         }
