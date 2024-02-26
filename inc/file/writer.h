@@ -46,7 +46,9 @@ namespace file
  */
 
 /**
- * @brief Manage dimensions and variable ids for writing
+ * @brief Write variables of equal type and shape
+ *
+ * Manage dimensions and variable ids for writing
  *
  * This class provides a lightweight high-level interface to NetCDF
  * writing.

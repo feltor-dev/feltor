@@ -16,7 +16,9 @@ namespace file
 ///@{
 
 /**
- * @brief Manage dimensions and variable ids for reading
+ * @brief Read variables of equal type and shape
+ *
+ * Manage dimensions and variable ids for reading
  *
  * @copydoc hide_tparam_topology
  * @note In an MPI program all processes must construct the class.
