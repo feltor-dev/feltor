@@ -1674,6 +1674,7 @@ viscosity and thus should not need additional damping.
     // increase this or the resolution if you see vertical or horizontal
     // oscillations in your simulation box, decrease if simulation
     // looks "out of focus"
+    "modify-diff" : false // [OPTIONAL] (see description below)
 }
 \end{minted}
 Simply set the diffusion to 0 if you do not want any regularization.
@@ -1682,6 +1683,13 @@ Simply set the diffusion to 0 if you do not want any regularization.
     is a clear warning that \mintinline{c}{nu_perp} is too large for the
     chosen resolution.
 \end{tcolorbox}
+If the  "modify-diff" parameter is set to true, the parallel and perpendicular
+momentum diffusion parameters $\nu_{U,\perp}$ and $\nu_\parallel$ are
+multiplied by density $N$. This means they must appear inside the
+divergence, e.g. $\npar^\dagger (\nu_{\parallel} \npar U_\parallel)$.
+The hope is that with this modification the minne parameter can be set
+to lower values without the small densities affecting the CFL condition.
+By default this does not happen.
 
 \subsection{Elliptic solvers}
 We discretize all elliptic operators with a local dG method (LDG).  In order to

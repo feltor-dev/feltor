@@ -270,12 +270,19 @@ struct Explicit
                 swap( temp0, temp1);
                 dg::blas2::symv( 1., m_lapperpU, temp1, 0., temp0);
             }
-            dg::blas1::pointwiseDivide( -alpha*m_p.nu_perp_u, temp0, density, beta, result);
+            if( !m_modify_diff)
+                dg::blas1::pointwiseDivide( -alpha*m_p.nu_perp_u, temp0, density, beta, result);
+            else
+                dg::blas1::axpby( -alpha*m_p.nu_perp_u, temp0, beta, result);
         }
         else
             dg::blas1::scal( result, beta);
-        if( m_p.nu_perp_n > 0)
+        double nu = m_p.nu_perp_n;
+        if( m_modify_diff)
+            nu += m_p.nu_perp_u;
+        if( nu > 0 )
         {
+
             dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
             for( unsigned s=0; s<m_p.diff_order-1; s++)
             {
@@ -291,7 +298,7 @@ struct Explicit
                 dg::blas2::symv( m_dxF_N, temp0, temp1);
             else
                 dg::blas2::symv( m_dxB_N, temp0, temp1);
-            dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
+            dg::blas1::pointwiseDivide( -nu, temp1, density, 0., temp1);
             dg::blas2::symv( m_dxB_U, velocity, temp2);
             dg::blas2::symv( m_dxF_U, velocity, temp3);
             dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
@@ -303,13 +310,40 @@ struct Explicit
                 dg::blas2::symv( m_dyF_N, temp0, temp1);
             else
                 dg::blas2::symv( m_dyB_N, temp0, temp1);
-            dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
+            dg::blas1::pointwiseDivide( -nu, temp1, density, 0., temp1);
             dg::blas2::symv( m_dyB_U, velocity, temp2);
             dg::blas2::symv( m_dyF_U, velocity, temp3);
             dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
                     temp1, temp2, temp3);
         }
     }
+
+    bool modify_diff() const {return m_modify_diff;}
+    void compute_parallel_diffusiveN( int i, Container& result)
+    {
+        dg::blas1::axpby( m_p.nu_parallel_n, lapParN(i), 0., result);
+    }
+    void compute_parallel_diffusiveU( int i, Container& result)
+    {
+        double nu = m_p.nu_parallel_n;
+        if( m_modify_diff)
+            nu += m_p.nu_parallel_u[i];
+        if( nu > 0)
+        {
+            dg::blas1::pointwiseDot( dsN(i), dsU(i), result);
+            dg::blas1::pointwiseDivide( nu, result, density(1), 0., result);
+        }
+        else
+            dg::blas1::copy( 0, result);
+        if( m_p.nu_parallel_u[i] > 0)
+        {
+            if( !m_modify_diff)
+                dg::blas1::pointwiseDivide( m_p.nu_parallel_u[i], lapParU(i), density(i), 1., result);
+            else
+                dg::blas1::axpby( m_p.nu_parallel_u[i], lapParU(i), 1., result);
+        }
+    }
+
 
     // Compute divergence using centered derivatives
     // note that no matter how divergence is computed you always loose one order
@@ -622,7 +656,7 @@ struct Explicit
     double m_minne = 0., m_minrate  = 0., m_minalpha = 0.;
     double m_nwall = 0., m_uwall = 0.;
     bool m_fixed_profile = true, m_reversed_field = false, m_compute_in_3d = true;
-    bool m_upToDate = false;
+    bool m_upToDate = false, m_modify_diff = false;
     unsigned m_called = 0;
 
 };
@@ -826,6 +860,9 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);
+    // An optional hidden parameter
+    if( m_js["regularization"].isMember("modify-diff") )
+        m_modify_diff = m_js["regularization"]["modify-diff"].asBool();
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1898,13 +1935,18 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         {
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[i],
                     m_minusU[i], m_zeroU[i], m_plusU[i], 0., m_temp0);
-            dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
+            if( !m_modify_diff)
+                dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
+            else
+                dg::blas1::axpby( 1., m_temp0, 1., yp[i]);
         }
-        if( m_p.nu_parallel_n > 0)
+        double nu = m_p.nu_parallel_n;
+        if( m_modify_diff)
+            nu += m_p.nu_parallel_u[i];
+        if( nu > 0)
         {
             // Add density gradient correction
             double delta = m_fa.deltaPhi();
-            double nu = m_p.nu_parallel_n;
             dg::blas1::subroutine( [delta, nu]DG_DEVICE ( double& WDot,
                         double QN, double PN, double UM, double U0, double UP,
                         double bphi)
