@@ -282,8 +282,8 @@ struct Probes
             m_writer0d.put( "ptime", m_time_intern[j], m_probe_start);
             for( auto& field : m_simple_probes_intern)
                 m_writer1d.put( field.first, field.second[j], m_probe_start);
+            m_probe_start ++;
         }
-        m_probe_start ++;
         // flush internal buffer
         m_time_intern.clear();
         for( auto& field : m_simple_probes_intern)
