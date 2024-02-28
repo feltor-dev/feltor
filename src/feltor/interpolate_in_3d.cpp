@@ -274,7 +274,7 @@ int main( int argc, char* argv[])
         read0d.get( "time", time, i);
         std::cout << "  time = " << time << std::endl;
         write0d.put(  "time", (float)time,  i/TIME_FACTOR);
-        write0dF.put( "time", time,  i/TIME_FACTOR);
+        write0dF.put( "timef", time,  i/TIME_FACTOR);
         for( auto& record : feltor::diagnostics3d_list)
         {
             std::string record_name = record.name;
@@ -305,9 +305,9 @@ int main( int argc, char* argv[])
                 dg::blas1::scal( transferH_aligned_out, (double)0);
             }
             write_periodic.put( record.name, append(transferH_out_float,
-                    g3d_out_equidistant));
+                    g3d_out_equidistant), i/TIME_FACTOR);
             write_fieldaligned.put( record.name+"FF",
-                    transferH_aligned_out);
+                    transferH_aligned_out, i/TIME_FACTOR);
         }
 
     } //end timestepping

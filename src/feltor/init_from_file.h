@@ -70,6 +70,7 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
         , grid.communicator()
         #endif //WITH_MPI
         );
+    // Theoretically we can change resolution
     dg::x::IHMatrix interpolateIN;
     dg::x::HVec transferIN;
     if( pIN.symmetric)
