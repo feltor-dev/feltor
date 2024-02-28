@@ -156,12 +156,13 @@ dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
         dg::geo::CylindricalSymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( mag.get_psip(), RX, ZX) ;
         generator = std::make_unique<dg::geo::SeparatrixOrthogonalAdaptor>(
             mag.get_psip(), monitor_chi,
-            psipO<psipmax ? psipO : psipmax,
+            //psipO<psipmax ? psipO : psipmax,
+            psipO, // must be the closed flux surface (is the sign of f0 still valid?)
             RX, ZX, mag.R0(), 0, 1, false, fx_0);
     }
-    std::cout << "DONE!\n";
     dg::geo::CurvilinearGrid2d gridX2d(*generator,
             npsi, Npsi, Neta, dg::DIR, dg::PER);
+    std::cout << "DONE!\n";
     //f0 makes a - sign if psipmax < psipO
     f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     return gridX2d;

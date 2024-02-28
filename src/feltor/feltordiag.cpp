@@ -269,7 +269,7 @@ int main( int argc, char* argv[])
         dg::file::Reader<dg::x::Grid2d> read2d( ncid, g2d_out,{"time","y","x"});
         size_t steps = read0d.size();
         auto names = read2d.names();
-        //steps = 3;
+        //steps = 2; // for testing
         for( unsigned i=0; i<steps; i++)//timestepping
         {
             if( j > 2 && i == 0)
@@ -278,7 +278,6 @@ int main( int argc, char* argv[])
             double time=0.;
             read0d.get( "time", time, i);
             std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
-            counter++;
             write0d.put( "time", time, counter);
             for(auto& record : equation_list)
             {
@@ -298,7 +297,7 @@ int main( int argc, char* argv[])
             }
             if( available)
             {
-                read2d.get( record.name+"_ta2D", transferH2d, i);
+                read2d.get( record.name+"_ta2d", transferH2d, i);
                 if( fsa_mode == "convoluted-toroidal-average" || diag_list["cta2d"].exists
                         || diag_list["cta2dX"].exists)
                 {
@@ -486,7 +485,8 @@ int main( int argc, char* argv[])
                         transfer1d, counter);
                 }
             }
-        }
+            } // equation_list
+            counter++;
         } //end timestepping
         err = nc_close(ncid);
     }
