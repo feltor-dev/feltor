@@ -545,7 +545,7 @@ std::unique_ptr<dg::aTimeloop<Vector>> init_timestepper(
                            << timestepper << "'! Exit now!\n";
         dg::abort_program();
     }
-    DG_RANK0 std::cout << "Done!\n";
+    DG_RANK0 std::cout << "# Done!\n";
     return odeint;
 
 }

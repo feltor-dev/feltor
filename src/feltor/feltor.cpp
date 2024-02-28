@@ -230,7 +230,7 @@ int main( int argc, char* argv[])
             grid, {"zr", "yr", "xr"}, feltor::restart3d_list);
 
         ///////////////////////////////////first output/////////////////////////
-        DG_RANK0 std::cout << "First output ... \n";
+        DG_RANK0 std::cout << "# First output ... \n";
         //first, update feltor (to get potential etc.)
         {
             std::array<std::array<dg::x::DVec,2>,2> y1(y0);
@@ -244,25 +244,25 @@ int main( int argc, char* argv[])
             }
         }
 
-        DG_RANK0 std::cout << "Write restart ...\n";
+        DG_RANK0 std::cout << "# Write restart ...\n";
         restart.write( feltor::restart3d_list, feltor);
 
-        DG_RANK0 std::cout << "Write diag1d ...\n";
+        DG_RANK0 std::cout << "# Write diag1d ...\n";
         diag1d.write( feltor::diagnostics1d_list, var, time);
-        DG_RANK0 std::cout << "Write diag2d ...\n";
+        DG_RANK0 std::cout << "# Write diag2d ...\n";
         diag2d.write( time, var );
-        DG_RANK0 std::cout << "Write diag4d ...\n";
+        DG_RANK0 std::cout << "# Write diag4d ...\n";
         diag4d.write( feltor::diagnostics3d_list, var);
 
 
-        DG_RANK0 std::cout << "Write static probes ...\n";
+        DG_RANK0 std::cout << "# Write static probes ...\n";
         probes.static_write( feltor::diagnostics2d_static_list, var, grid);
-        DG_RANK0 std::cout << "Write probes ...\n";
+        DG_RANK0 std::cout << "# Write probes ...\n";
         probes.write( time, feltor::probe_list, var);
 
-        DG_RANK0 std::cout << "Close file ...\n";
+        DG_RANK0 std::cout << "# Close file ...\n";
         DG_RANK0 err = nc_close(ncid);
-        DG_RANK0 std::cout << "First write successful!\n";
+        DG_RANK0 std::cout << "# First write successful!\n";
         ///////////////////////////////Timeloop/////////////////////////////////
 
         t.tic();
