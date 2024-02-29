@@ -109,6 +109,7 @@ inline static void assign_defaults( std::vector<std::string>& name_dims, const s
 template<class T>
 bool check_real_time( int ncid, const char* name, int* dimID, int* tvarID)
 {
+    // TODO Axis attribute check is still missing
     file::NC_Error_Handle err;
     // Check that it exists
     int retval = nc_inq_dimid( ncid, name, dimID);
@@ -144,7 +145,8 @@ bool check_real_time( int ncid, const char* name, int* dimID, int* tvarID)
  * a variable with the same name as a dimension is
  * called a coordinate variable.  The CF conventions dictate that the "units"
  * attribute must be defined for a time variable: we give it the value "time
- * since start"
+ * since start". Furthermore, we define the "axis" : "T" attribute to mark
+ * the time dimension.
  * @param ncid NetCDF file or group ID
  * @param name Name of unlimited dimension and associated variable
  * @param dimID (write-only) time-dimension ID
@@ -164,6 +166,8 @@ inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID
     if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
     if( (retval = nc_def_var( ncid, name, getNCDataType<T>(), 1, dimID, tvarID))){return retval;}
     std::string t = "time since start"; //needed for paraview to recognize timeaxis
+    std::string axis = "T";
+    if( (retval = nc_put_att_text(ncid, *tvarID, "axis", axis.size(), axis.data())) ){return retval;}
     if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
     return retval;
 }
@@ -182,7 +186,8 @@ static inline int define_time( int ncid, const char* name, int* dimID, int* tvar
  * a variable with the same name as a dimension is
  * called a coordinate variable.  The CF conventions dictate that the units
  * attribute must be defined for a time variable: we give it the value "time
- * since start"
+ * since start". Furthermore, we define the "axis" : "T" attribute to mark
+ * the time dimension.
  * @param ncid NetCDF file or group ID
  * @param name Name of the time variable (usually "time")
  * @param size The number of timesteps
@@ -197,6 +202,8 @@ static inline int define_limited_time( int ncid, const char* name, int size, int
     if( (retval = nc_def_dim( ncid, name, size, dimID)) ){ return retval;}
     if( (retval = nc_def_var( ncid, name, NC_DOUBLE, 1, dimID, tvarID))){return retval;}
     std::string t = "time since start"; //needed for paraview to recognize timeaxis
+    std::string axis = "T";
+    if( (retval = nc_put_att_text(ncid, *tvarID, "axis", axis.size(), axis.data())) ){return retval;}
     if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}
     return retval;
 }

@@ -139,6 +139,9 @@ struct Helper<Topology, std::enable_if_t<dg::is_mpi_grid<Topology>::value >>
  * @note It is the topology of the simulation grid that is needed here, i.e.
  * the Topology **from which** to interpolate, not the topology of the 1d probe
  * array. The class automatically constructs the latter itself.
+ * @attention Because the paraview NetCDF reader is faulty, it is recommended that
+ * \c Probes is constructed only after all other root dimensions in the file
+ * are defined. This is because of the dimension numbering in NetCDF-4.
  * @ingroup Cpp
  */
 template<class Topology>

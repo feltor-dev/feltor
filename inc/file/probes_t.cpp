@@ -82,6 +82,8 @@ int main(int argc, char* argv[])
 
     dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, params, records_list);
     probes.static_write( records_static_list, grid);
+    // This poses a problem for paraview because root dimensions are not defined in order
+    // dg::file::Writer<dg::x::Grid2d> restart( ncid, grid, {"yr","xr"});
 
     double Tmax=2.*M_PI;
     double NT = 10;
