@@ -224,10 +224,11 @@ int main( int argc, char* argv[])
             feltor::generate_equation_list( js));
         dg::file::ProjectRecordsList<dg::x::CylindricalGrid3d, dg::x::DMatrix, dg::x::DVec> diag4d(
             ncid, grid, g3d_out, {"time", "z", "y", "x"}, feltor::diagnostics3d_list);
-        dg::file::Probes<dg::x::CylindricalGrid3d> probes( ncid, grid, dg::file::parse_probes(js),
-                feltor::probe_list);
         dg::file::WriteRecordsList<dg::x::CylindricalGrid3d> restart( ncid,
             grid, {"zr", "yr", "xr"}, feltor::restart3d_list);
+        // Probes need to be the last because they define dimensions in subgroup
+        dg::file::Probes<dg::x::CylindricalGrid3d> probes( ncid, grid, dg::file::parse_probes(js),
+                feltor::probe_list);
 
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "# First output ... \n";

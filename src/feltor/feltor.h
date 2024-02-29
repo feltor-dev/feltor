@@ -863,6 +863,13 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     // An optional hidden parameter
     if( m_js["regularization"].isMember("modify-diff") )
         m_modify_diff = m_js["regularization"]["modify-diff"].asBool();
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
+    if( m_modify_diff)
+        DG_RANK0 std::cout << "# Optional parameter \"modify-diff\" activated\n";
+
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
