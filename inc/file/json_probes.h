@@ -88,7 +88,7 @@ for f in format:
  * If silent, the ProbesParams remain empty if the field is absent
  * @return parsed values
  * @attention In MPI all threads will read in the probes. Only the master thread
- * stores the coordinates in \c ProbesParams.coords[i] the others are empty
+ * stores the coordinates in <tt>ProbesParams.coords[i]</tt> the others are empty
  * @ingroup Cpp
 */
 inline static ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error

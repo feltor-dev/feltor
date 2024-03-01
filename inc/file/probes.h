@@ -224,7 +224,7 @@ struct Probes
         typename detail::Helper<Topology>::Writer1d
             write( m_probe_grp_id, m_writer1d.grid(), {"pdim"});
         auto result =
-            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>>(
+            dg::construct<get_first_argument_type_t<typename ListClass::value_type::Signature>>(
                 m_resultH);
         for ( auto& record : records)
         {
@@ -255,7 +255,7 @@ struct Probes
         if(!m_probes) return;
         m_time_intern.push_back(time);
         auto result =
-            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>>(
+            dg::construct<get_first_argument_type_t<typename ListClass::value_type::Signature>>(
                 m_resultH);
         for( auto& record : probe_list)
         {

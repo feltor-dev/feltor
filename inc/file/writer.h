@@ -245,13 +245,15 @@ struct get_first_argument_type<R(Arg1, A...)>
 {
     using type = Arg1;
 };
-template<class Signature>
-using get_first_argument_type_t = std::decay_t<typename get_first_argument_type<Signature>::type>;
-
-template<class Signature>
-using get_result_type_t = typename std::function<Signature>::result_type;
 }//namespace detail
 ///@endcond
+/// If <tt> Signature = R(Arg1, A...)</tt> return \c Arg1
+template<class Signature>
+using get_first_argument_type_t = std::decay_t<typename detail::get_first_argument_type<Signature>::type>;
+
+/// If <tt> Signature = R(Arg1, A...)</tt> return \c R
+template<class Signature>
+using get_result_type_t = typename std::function<Signature>::result_type;
 
 /**
  * @brief A realisation of the %Record concept. Helper to generate NetCDF variables.
@@ -321,11 +323,13 @@ struct WriteRecordsList
      * There are two ways the function handles the \c records:
      *  - For each record in \c records call \c record.function( result, ps...)
      *  where \c result is of type <tt>
-     *  first_argument_t<ListClass::value_type::Signature></tt>  of size given
-     *  by \c grid, assign to a host vector of type \c Topology::host_vector
+     *  get_first_argument_type_t<ListClass::value_type::Signature></tt>  of size given
+     *  by \c grid. Finally, call \c dg::assign( resultD, resultH)
+     *  i.e. assign to a host vector of type \c Topology::host_vector
      *  and write into \c ncid (from constructor).
-     *  - If <tt> return_type<ListClass::value_type::Signature> != void </tt> then
-     *  call <tt> result = record.function( ps...) </tt> and write directly into \c ncid
+     *  - If <tt> return_type<ListClass::value_type::Signature> != void </tt>
+     *  then call <tt> auto result = record.function( ps...) </tt> and write
+     *  directly into \c ncid
      *  .
      * @copydoc hide_tparam_listclass
      * @param records list of records to put into ncid
@@ -337,14 +341,76 @@ struct WriteRecordsList
     {
         do_write( records, std::forward<Params>(ps)...);
     }
+
+    /**
+     * @brief Write variables created from record list and transformed using custom operator
+     *
+     * This works only for vector results in \c records:
+     *  - For each record in \c records call \c record.function( result, ps...)
+     *  followed by \c dg::apply(func, result, resultD)
+     *  where \c resultD is of type
+     *  <tt> get_first_argument_type_t<ListClass::value_type::Signature></tt>
+     *  of size given by \c grid. Finally, call \c dg::assign( resultD, resultH)
+     *  i.e. assign to a host vector of type \c Topology::host_vector
+     *  and write into \c ncid (from constructor).
+     *  .
+     * @tparam MatrixType See \c dg::apply
+     * @param func Will be called though \c dg::apply( func, result, resultD)
+     * @copydoc hide_tparam_listclass
+     * @param records list of records to put into ncid
+     * @tparam ContainerType Must equal <tt>get_first_argument_type_t<ListClass::value_type::Signature></tt>
+     * @param result The first argument to \c record.function as well as the first argument
+     * to func. By providing a workspace
+     * the user may avoid the need to allocate space inside the \c record.function
+     * @tparam Params The \c ListClass::value_type::Signature without the first argument
+     * @param ps Parameters forwarded to \c record.function( result, ps...) or \c result = record.function( ps...)
+     */
+    template<class MatrixType, class ListClass, class ... Params>
+    void transform_write( MatrixType&& func, const ListClass& records, get_first_argument_type_t<typename ListClass::value_type::Signature> result, Params&& ... ps)
+    {
+        auto resultH = dg::evaluate( dg::zero, m_writer.grid());
+        //vector write
+        auto transferD =
+            dg::construct<get_first_argument_type_t<typename ListClass::value_type::Signature>>(
+                resultH);
+        for( auto& record : records)
+        {
+            record.function( result, std::forward<Params>(ps)...);
+            dg::apply( std::forward<MatrixType>(func), result, transferD);
+            dg::assign( transferD, resultH);
+            m_writer.put( record.name, resultH, m_start);
+        }
+        m_start++;
+    }
+    /**
+     * @brief Same as \c transform_write but the order of \c dg::assign and \c dg::apply is swapped
+     *
+     * i.e. \c result is first transfered to the host and then \c dg::apply is called.
+     * This effectively means that func works on the host
+     */
+    template<class MatrixType, class ListClass, class ... Params>
+    void host_transform_write( MatrixType&& func, const ListClass& records, get_first_argument_type_t<typename ListClass::value_type::Signature> result, Params&& ... ps)
+    {
+        auto resultH = dg::evaluate( dg::zero, m_writer.grid());
+        auto transferH =
+            dg::construct<typename Topology::host_vector>( result);
+        for( auto& record : records)
+        {
+            record.function( result, std::forward<Params>(ps)...);
+            dg::assign( result, transferH);
+            dg::apply( std::forward<MatrixType>(func), transferH, resultH);
+            m_writer.put( record.name, resultH, m_start);
+        }
+        m_start++;
+    }
     private:
     template< class ListClass, class ... Params >
-    std::enable_if_t<std::is_same<detail::get_result_type_t<typename ListClass::value_type::Signature> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
+    std::enable_if_t<std::is_same<get_result_type_t<typename ListClass::value_type::Signature> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
     {
         auto resultH = dg::evaluate( dg::zero, m_writer.grid());
         //vector write
         auto resultD =
-            dg::construct<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>>(
+            dg::construct<get_first_argument_type_t<typename ListClass::value_type::Signature>>(
                 resultH);
         for( auto& record : records)
         {
@@ -355,7 +421,7 @@ struct WriteRecordsList
         m_start++;
     }
     template< class ListClass, class ... Params >
-    std::enable_if_t<!std::is_same<detail::get_result_type_t<typename ListClass::value_type::Signature> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
+    std::enable_if_t<!std::is_same<get_result_type_t<typename ListClass::value_type::Signature> ,void>::value >  do_write( const ListClass& records, Params&& ...ps)
     {
         // scalar writes
         for( auto& record : records)
@@ -370,90 +436,6 @@ struct WriteRecordsList
     Writer<Topology>  m_writer;
 };
 
-/**
- * @brief Write variables created from record list and projected to smaller grid
- *
- * @copydoc hide_tparam_topology
- * @tparam MatrixType First type of fast projection type <tt> dg::MultiMatrix<MatrixType,ContainerType> </tt> to use in class
- * @tparam ContainerType Seoncd type in fast projection type <tt>
- * dg::MultiMatrix<MatrixType,ContainerType> </tt> to use in class \c
- * ContainerType must equal <tt>
- * first_argument_t<ListClass::value_type::Signature></tt>
- * @sa dg::create::fast_projection
- */
-template<class Topology, class MatrixType, class ContainerType>
-struct ProjectRecordsList
-{
-    ProjectRecordsList() =  default;
-
-    /**
-     * @brief Create variables ids
-     *
-     * For each record in \c records create a variable named \c record.name
-     * with attribute \c record.long_name of dimensions \c dim_names with shape
-     * given by \c grid_out in group \c ncid
-     *
-     * @copydoc hide_param_ncid
-     * @param grid gives the shape of the first argument of \c record.function
-     * @param grid_out gives the spatial shape and data type of all variables this class writes to file.
-     * Also used to construct the projection matrix. \c grid.Nx() must be divisable by \c grid_out.Nx()
-     * as does \c grid.Ny() by \c grid_out.Ny() and \c grid.n() by \c grid_out.n()
-     * @copydoc hide_dim_names_param
-     * @copydoc hide_tparam_listclass
-     *  The type <tt> first_argument_t<ListClass::value_type::Signature></tt> must equal ContainerType
-     * @param records list of records to put into ncid
-     */
-    template<class ListClass>
-    ProjectRecordsList( const int& ncid, const Topology& grid, const Topology& grid_out, std::vector<std::string> dim_names, const ListClass& records): m_writer( ncid, grid_out, dim_names)
-    {
-        static_assert( std::is_same<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
-        m_projectD =
-            dg::create::fast_projection( grid, grid.n()/grid_out.n(),
-                grid.Nx()/grid_out.Nx(), grid.Ny()/grid_out.Ny());
-        m_resultD = dg::evaluate( dg::zero, grid);
-        m_transferD = dg::evaluate(dg::zero, grid_out);
-        for( auto& record : records)
-        {
-            m_writer.def( record.name, dg::file::long_name( record.long_name));
-        }
-    }
-
-    /**
-     * @brief Write variables created from records and projected to smaller grid
-     *
-     * For each record in \c records call \c record.function( result, ps...)
-     * where \c result is of type <tt>
-     * first_argument_t<ListClass::value_type::Signature></tt>  of size given
-     * by \c grid and write its projection to \c grid_out into \c ncid
-     * @copydoc hide_tparam_listclass
-     *  The type <tt> first_argument_t<ListClass::value_type::Signature></tt> must equal ContainerType
-     * @param records list of records to put into ncid
-     * @tparam Params The \c ListClass::value_type::Signature without the first argument
-     * @param ps Parameters forwarded to \c record.function( result, ps...)
-     */
-    template<class ListClass, class ... Params >
-    void write( const ListClass& records, Params&& ...ps)
-    {
-        static_assert( std::is_same<detail::get_first_argument_type_t<typename ListClass::value_type::Signature>, ContainerType>::value, "Signature of ListClass Records must match ContainerType");
-        auto transferH = dg::evaluate(dg::zero, m_writer.grid());
-        for( auto& record : records)
-        {
-            record.function( m_resultD, std::forward<Params>(ps)...);
-            dg::blas2::symv( m_projectD, m_resultD, m_transferD);
-            dg::assign( m_transferD, transferH);
-            m_writer.put( record.name, transferH);
-        }
-        m_start++;
-    }
-
-    private:
-    size_t m_start;
-    typename Topology::host_vector m_resultH;
-    ContainerType m_resultD, m_transferD;
-    dg::file::Writer<Topology> m_writer;
-    dg::MultiMatrix<MatrixType,ContainerType> m_projectD;
-
-};
 ///@}
 
 

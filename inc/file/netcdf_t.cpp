@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
     grid_out.multiplyCellNumbers( 0.5, 0.5);
     int grpid =0;
     DG_RANK0 err = nc_def_grp( ncid, "projected", &grpid);
-    dg::file::ProjectRecordsList<dg::x::Grid3d, dg::x::DMatrix, dg::x::DVec> project3d( grpid, grid, grid_out, {"ptime", "zr", "yr", "xr"}, records);
+    dg::file::WriteRecordsList<dg::x::Grid3d> project3d( grpid, grid_out, {"ptime", "zr", "yr", "xr"}, records);
     dg::file::Writer<dg::x::Grid0d> project0d( grpid, {}, {"ptime"});
 
     // It is possible to write to any index in an unlimited dimension
@@ -102,7 +102,14 @@ int main(int argc, char* argv[])
         write3d.write( records, grid, time);
         project0d.put( "ptime", time, i);
         project0d.put( "ptime", time, i); // test if values can be overwritten
-        project3d.write( records, grid, time);
+        if( i%2)
+            project3d.host_transform_write( dg::MultiMatrix<dg::x::HMatrix, dg::x::HVec>(
+            dg::create::fast_projection( grid, 1, 2, 2) ),
+            records, dg::evaluate( dg::zero, grid), grid, time);
+        else
+            project3d.transform_write( dg::MultiMatrix<dg::x::DMatrix, dg::x::DVec>(
+            dg::create::fast_projection( grid, 1, 2, 2) ),
+            records, dg::evaluate( dg::zero, grid), grid, time);
     }
 
     DG_RANK0 err = nc_close(ncid);

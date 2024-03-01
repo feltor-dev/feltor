@@ -222,8 +222,9 @@ int main( int argc, char* argv[])
         dg::file::WriteRecordsList<dg::x::Grid0d> diag1d( ncid, {}, {"time"}, feltor::diagnostics1d_list);
         feltor::WriteIntegrateDiagnostics2dList diag2d( ncid, grid, g3d_out,
             feltor::generate_equation_list( js));
-        dg::file::ProjectRecordsList<dg::x::CylindricalGrid3d, dg::x::DMatrix, dg::x::DVec> diag4d(
-            ncid, grid, g3d_out, {"time", "z", "y", "x"}, feltor::diagnostics3d_list);
+        dg::file::WriteRecordsList<dg::x::CylindricalGrid3d> diag4d(
+            ncid, g3d_out, {"time", "z", "y", "x"},
+            feltor::diagnostics3d_list);
         dg::file::WriteRecordsList<dg::x::CylindricalGrid3d> restart( ncid,
             grid, {"zr", "yr", "xr"}, feltor::restart3d_list);
         // Probes need to be the last because they define dimensions in subgroup
@@ -253,7 +254,10 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cout << "# Write diag2d ...\n";
         diag2d.write( time, var );
         DG_RANK0 std::cout << "# Write diag4d ...\n";
-        diag4d.write( feltor::diagnostics3d_list, var);
+        diag4d.transform_write(
+            dg::MultiMatrix<dg::x::DMatrix, dg::x::DVec>(
+            dg::create::fast_projection( grid, 1, p.cx, p.cy)),
+            feltor::diagnostics3d_list, dg::evaluate( dg::zero, grid), var);
 
 
         DG_RANK0 std::cout << "# Write static probes ...\n";
@@ -338,7 +342,10 @@ int main( int argc, char* argv[])
             restart.write( feltor::restart3d_list, feltor);
 
             diag1d.write( feltor::diagnostics1d_list, var, time);
-            diag4d.write( feltor::diagnostics3d_list, var);
+            diag4d.transform_write(
+                dg::MultiMatrix<dg::x::DMatrix, dg::x::DVec>(
+                dg::create::fast_projection( grid, 1, p.cx, p.cy)),
+                feltor::diagnostics3d_list, dg::evaluate( dg::zero, grid), var);
 
             DG_RANK0 err = nc_close(ncid);
             ti.toc();
