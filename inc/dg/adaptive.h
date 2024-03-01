@@ -559,7 +559,7 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
         //https://vittorioromeo.info/index/blog/capturing_perfectly_forwarded_objects_in_lambdas.html
 
         m_step = [=, cap = std::tuple<Adaptive, ODE>(std::forward<Adaptive>(adapt),
-                std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t,
+                std::forward<ODE>(ode))  ]( auto t0, const auto& y0, auto& t,
                 auto& y, auto& dt) mutable
         {
             std::get<0>(cap).step( std::get<1>(cap), t0, y0, t, y, dt, control, norm,
