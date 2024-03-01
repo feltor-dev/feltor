@@ -1031,7 +1031,7 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
     {
         // Open/Close Principle (OCP) Software entities should be open for extension but closed for modification
         m_step = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
-                std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t1, auto& y1,
+                std::forward<ODE>(ode))  ]( auto t0, const auto& y0, auto& t1, auto& y1,
                 auto dtt) mutable
         {
             std::get<0>(cap).step( std::get<1>(cap), t0, y0, t1, y1, dtt);
@@ -1079,7 +1079,7 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
         SinglestepTimeloop(*this);}
     private:
     virtual void do_integrate(value_type& t0, const container_type& u0, value_type t1, container_type& u1, enum to mode) const;
-    std::function<void ( value_type, ContainerType, value_type&,
+    std::function<void ( value_type, const ContainerType&, value_type&,
             ContainerType&, value_type)> m_step;
     virtual value_type do_dt( ) const { return m_dt;}
     value_type m_dt;

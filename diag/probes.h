@@ -15,8 +15,8 @@
 
 
 /**
- * @brief Class that takes care of probe output
- * 
+ * @brief DEPRECATED Use \c dg::file::Probes
+ *
  * Upon instantiation, generate N probesm positioned in equidistant radial
  * positions at the vertical center of the simulation domain:
  *

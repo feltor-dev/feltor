@@ -5,6 +5,7 @@
 #include "dg/file/nc_utilities.h"
 
 
+// DEPRECATED: Write a python script!
 //This program reads in two netcdf files and tries to compare the fields 
 //named electrons in both files at the same times.
 //The fields must both be either two or three-dimensional and must
