@@ -13,7 +13,7 @@ easy_input_t easy_input_mpit\
 netcdf_t netcdf_mpit\
 probes_parser_t probes_parser_mpit\
 probes_t probes_mpit\
-jsoncpp_utilities_t jsonhpp_utilities_t\
+jsoncpp_wrapper_t jsonhpp_wrapper_t\
 jsoncpp_netcdf_t jsonhpp_netcdf_t\
 
 
@@ -43,10 +43,10 @@ probes_parser_t: probes_parser_t.cpp probes_params.h json_probes.h
 probes_parser_mpit: probes_parser_t.cpp probes_params.h json_probes.h
 	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(JSONLIB) -DWITH_MPI
 
-jsoncpp_utilities_t: json_utilities_t.cpp json_utilities.h
+jsoncpp_wrapper_t: json_wrapper_t.cpp json_wrapper.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB)
 
-jsonhpp_utilities_t: json_utilities_t.cpp json_utilities.h
+jsonhpp_wrapper_t: json_wrapper_t.cpp json_wrapper.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) -DDG_USE_JSONHPP
 
 jsoncpp_netcdf_t: json_netcdf_t.cpp json_netcdf.h
