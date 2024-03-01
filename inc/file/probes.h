@@ -6,7 +6,6 @@
 #include "dg/topology/mpi_projection.h"
 #endif //MPI_VERSION
 
-#include "nc_utilities.h"
 #include "probes_params.h"
 #include "writer.h"
 

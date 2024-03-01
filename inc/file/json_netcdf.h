@@ -2,11 +2,12 @@
 
 #include <netcdf.h>
 #include "nc_error.h"
-#include "json_utilities.h"
+#include "json_wrapper.h"
 
 /*!@file
  *
  * Define attributes
+ *
  */
 
 namespace dg
@@ -56,10 +57,10 @@ namespace file
  * this function
  * @copydoc hide_master_comment
  */
-static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid );
+inline static void json2nc_attrs( const dg::file::JsonType& atts, int ncid, int varid );
 
 #ifdef DG_USE_JSONHPP
-static void json2nc_attrs( const nlohmann::json& atts, int ncid, int varid )
+inline static void json2nc_attrs( const nlohmann::json& atts, int ncid, int varid )
 {
     NC_Error_Handle err;
     for (auto it = atts.begin(); it != atts.end();  ++it )
@@ -137,7 +138,7 @@ static void json2nc_attrs( const nlohmann::json& atts, int ncid, int varid )
     }
 }
 #else
-static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
+inline static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
 {
     NC_Error_Handle err;
     for (auto it = atts.begin(); it != atts.end();  ++it )
@@ -221,7 +222,6 @@ static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
  *
  * Example code
  * @copydoc hide_json_NetCDF_example
- * @note In an MPI program only one thread can call this function!
  * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
  * @return A Json Dictionary containing all the attributes for the variable
  * or file. Can be empty if no attribute is present.
@@ -230,7 +230,7 @@ static void json2nc_attrs( const Json::Value& atts, int ncid, int varid )
  * @ingroup Attributes
  * @copydoc hide_parallel_read
  */
-static dg::file::JsonType nc_attrs2json(int ncid, int varid)
+inline static dg::file::JsonType nc_attrs2json(int ncid, int varid)
 {
     NC_Error_Handle err;
     int number;

@@ -9,6 +9,7 @@ namespace file
 /**
  * @brief Parameter struct for probe values
  * @ingroup Cpp
+ * @sa \c dg::file::parse_probes and \c dg::file::Probes
  */
 struct ProbesParams
 {

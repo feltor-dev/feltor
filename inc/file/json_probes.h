@@ -1,6 +1,6 @@
 #pragma once
 
-#include "json_utilities.h"
+#include "json_wrapper.h"
 #include "probes_params.h"
 /*!@file
  *
@@ -91,7 +91,7 @@ for f in format:
  * stores the coordinates in \c ProbesParams.coords[i] the others are empty
  * @ingroup Cpp
 */
-ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
+inline static ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
     probes_err = file::error::is_silent)
 {
     ProbesParams out;
@@ -152,7 +152,12 @@ ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
         if( type == "file")
             scale = jsprobes["scale"][i].asDouble();
         for( unsigned k=0; k<num_pins; k++)
-            out.coords[i][k] = coords.asJson()[out.coords_names[i]][k].asDouble()
+            out.coords[i][k] = coords.asJson()[out.coords_names[i]][k]
+#ifdef DG_USE_JSONHPP
+            .template get<double>()
+#else
+            .asDouble()
+#endif
                 *scale;
     }
     }

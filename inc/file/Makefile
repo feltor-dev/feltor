@@ -53,7 +53,7 @@ jsoncpp_netcdf_t: json_netcdf_t.cpp json_netcdf.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS)
 
 jsonhpp_netcdf_t: json_netcdf_t.cpp json_netcdf.h
-	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS) -DDG_USE_JSONHPP
+	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) $(VERSION_FLAGS) -DDG_USE_JSONHPP
 
 .PHONY: doc clean
 

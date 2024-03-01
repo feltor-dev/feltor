@@ -93,9 +93,9 @@ namespace file
  * @note In contrast to writing, reading a NetCDF-4 file can always be done in parallel
  *  See https://docs.h5py.org/en/stable/mpi.html So all processes in MPI
  *  **can** open a file, get variable ids and subsequently read it, etc. even if only
- *  serial NetCDF is used. The default for \c parallel is always \c true in which
- *  case all processes all processes **must** have previously opened the file
- *  and inquire e.g. the varid
+ *  serial NetCDF is used. The default for \c parallel is always \c true in
+ *  which case all processes **must** have previously opened the file and
+ *  inquire e.g. the varid
  */
 
 ///@cond

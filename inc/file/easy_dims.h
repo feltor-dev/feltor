@@ -166,6 +166,7 @@ inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID
     if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
     if( (retval = nc_def_var( ncid, name, getNCDataType<T>(), 1, dimID, tvarID))){return retval;}
     std::string t = "time since start"; //needed for paraview to recognize timeaxis
+    // Update: Actually paraview also recognizes time from the "T" "axis" without "unit"
     std::string axis = "T";
     if( (retval = nc_put_att_text(ncid, *tvarID, "axis", axis.size(), axis.data())) ){return retval;}
     if( (retval = nc_put_att_text(ncid, *tvarID, "units", t.size(), t.data())) ){ return retval;}

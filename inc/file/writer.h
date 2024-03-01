@@ -254,7 +254,7 @@ using get_result_type_t = typename std::function<Signature>::result_type;
 ///@endcond
 
 /**
- * @brief A realisation of the Record concept. Helper to generate NetCDF variables.
+ * @brief A realisation of the %Record concept. Helper to generate NetCDF variables.
  *
  * Supposed to be used in connection with a Records writer like \c WriteRecordList
  * @snippet netcdf_t.cpp doxygen
@@ -271,7 +271,8 @@ struct Record
 
 /**
  * @class hide_tparam_listclass
- * A ContainerType with <tt> ListClass::value_type </tt> a Record class (e.g. \c dg::file::Record)
+ * @tparam ListClass
+ * A Type whose <tt> ListClass::value_type </tt> equals a %Record class (e.g. \c dg::file::Record)
  * The Signature <tt> ListClass::value_type::Signature </tt> must have either \c void as return type
  * or a primitive type. The latter indicates a scalar output and must coincide
  * with <tt> Topology::ndim() == 0</tt>. If the return type is void then the
@@ -281,6 +282,10 @@ struct Record
 
 /**
  * @brief A class to generate and write variables from a record list into a netcdf file
+ *
+ * The idea is that this class manages the \c slice parameter in the \c Write class
+ * and essentially generates and writes a goup of variables that share type and shape in each timestep.
+ *
  * @note in an MPI program all processes have to create the class and call its methods. The
  * class automatically takes care of which threads write to file.
  * @copydoc hide_tparam_topology

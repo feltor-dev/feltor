@@ -1,8 +1,7 @@
 #include <iostream>
 #include <cassert>
 
-#include "json_utilities.h"
-
+#include "json_wrapper.h"
 
 int main()
 {

@@ -120,6 +120,7 @@ struct Reader
      *
      * @param name the name of the variable to define. If the name is not managed by this class we throw.
      * @return All attributes found for given variable
+     * @sa dg::file::nc_attrs2json
      */
     dg::file::JsonType get_attrs( std::string name) const
     {
