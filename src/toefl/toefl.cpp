@@ -198,7 +198,7 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cerr << e.what() << std::endl;
             dg::abort_program();
         }
-        std::map<std::string, std::string> att;
+        dg::file::JsonType att;
         att["title"] = "Output file of feltor/src/toefl/toefl.cpp";
         att["Conventions"] = "CF-1.8";
         ///Get local time and begin file history
@@ -217,9 +217,7 @@ int main( int argc, char* argv[])
         att["references"] = "https://github.com/feltor-dev/feltor";
         // Here we put the inputfile as a string without comments so that it can be read later by another parser
         att["inputfile"] = js.toStyledString();
-        for( auto pair : att)
-            DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
-                pair.first.data(), pair.second.size(), pair.second.data());
+        dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
 
         unsigned n_out     = js[ "output"]["n"].asUInt( 3);
         unsigned Nx_out    = js[ "output"]["Nx"].asUInt( 48);
@@ -232,52 +230,18 @@ int main( int argc, char* argv[])
                     #endif //WITH_MPI
                     );
         dg::x::IHMatrix projection = dg::create::interpolation( grid_out, grid);
-        int dim_ids[3], tvarID;
-        // the dimensions are the ones of grid_out!
-        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out,
-                        {"time", "y", "x"});
-
-        std::map<std::string, int> id3d;
-        for( auto& record : toefl::diagnostics2d_list.at( p.model))
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            id3d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
-                    &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
-                    long_name.size(), long_name.data());
-        }
-        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
-        dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
-        dg::x::DVec resultD = transferH; // transfer to device
-        for( auto& record : toefl::diagnostics2d_static_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            int staticID = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
-                &staticID);
-            DG_RANK0 err = nc_put_att_text( ncid, staticID, "long_name",
-                                           long_name.size(), long_name.data());
-            record.function( resultD, var);
-            dg::assign( resultD, resultH);
-            dg::blas2::gemv( projection, resultH, transferH);
-            dg::file::put_var_double( ncid, staticID, grid_out, transferH);
-        }
+        dg::file::WriteRecordsList<dg::x::CartesianGrid2d> write2d( ncid, grid_out,
+            {"time","y","x"}, toefl::diagnostics2d_list.at(p.model));
+        dg::file::Writer<dg::x::Grid0d> write0d( ncid, {}, {"time"});
+        dg::file::WriteRecordsList<dg::x::CartesianGrid2d> ( ncid, grid_out,
+            {"y", "x"}, toefl::diagnostics2d_static_list).transform_write(
+            projection, toefl::diagnostics2d_static_list,
+            dg::evaluate( dg::zero, grid), var) ;
         dg::x::DVec volume = dg::create::volume( grid);
-        size_t start = {0};
-        size_t count = {1};
-        for( auto& record : toefl::diagnostics2d_list.at( p.model))
-        {
-            record.function( resultD, var);
-            dg::assign( resultD, resultH);
-            dg::blas2::gemv( projection, resultH, transferH);
-            // note that all processes call this function (for MPI)
-            dg::file::put_vara_double( ncid, id3d.at(record.name), start,
-                    grid_out, transferH);
-        }
-        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
+        size_t start = 0;
+        write2d.host_transform_write( projection, toefl::diagnostics2d_list.at(
+            p.model), dg::evaluate( dg::zero, grid), var);
+        write0d.put( "time", time, start);
         DG_RANK0 err = nc_close( ncid);
         double Tend = js["output"].get("tend", 1.0).asDouble();
         unsigned maxout = js["output"].get("maxout", 10).asUInt();
@@ -307,15 +271,9 @@ int main( int argc, char* argv[])
             start = u;
             DG_RANK0 err = nc_open(outputfile.c_str(), NC_WRITE, &ncid);
             // First write the time variable
-            DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-            for( auto& record : toefl::diagnostics2d_list.at(p.model))
-            {
-                record.function( resultD, var);
-                dg::assign( resultD, resultH);
-                dg::blas2::gemv( projection, resultH, transferH);
-                dg::file::put_vara_double( ncid, id3d.at(record.name),
-                                          start, grid_out, transferH);
-            }
+            write0d.put( "time", time, start);
+            write2d.host_transform_write( projection, toefl::diagnostics2d_list.at(
+                p.model), dg::evaluate( dg::zero, grid), var);
             DG_RANK0 err = nc_close( ncid);
             if( abort) break;
         }

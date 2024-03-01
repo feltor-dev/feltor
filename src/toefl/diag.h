@@ -14,35 +14,27 @@ struct Variables
     const Parameters& p;
 };
 
-struct Record
-{
-    std::string name; // variable name in the output file
-    std::string long_name; // longer description as an attribute
-    std::function<void(dg::x::DVec&, Variables&)> function;
-    // function that generates the data points for the variable
-};
-
 // time - independent output (only called once)
-std::vector<Record> diagnostics2d_static_list = {
+std::vector<dg::file::Record<void(dg::x::HVec&,Variables&)>> diagnostics2d_static_list = {
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( dg::x::DVec& result, Variables& v ) {
+        []( dg::x::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.grid);
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( dg::x::DVec& result, Variables& v ) {
+        []( dg::x::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooY2d, v.grid);
         }
     },
     { "weights", "Gaussian Integration weights",
-        []( dg::x::DVec& result, Variables& v ) {
+        []( dg::x::HVec& result, Variables& v ) {
             result = dg::create::weights( v.grid);
         }
     }
 };
 
 // time - dependent output (called periodically)
-std::map<std::string, std::vector<Record>> diagnostics2d_list = {
+std::map<std::string, std::vector<dg::file::Record<void(dg::x::DVec&,Variables&)>>> diagnostics2d_list = {
     { "global", {
     {"ne", "Electron density in 2d",
         []( dg::x::DVec& result, Variables& v) {
