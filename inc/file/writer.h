@@ -124,12 +124,14 @@ struct Writer
     /**
      * @brief Write data for given variable
      *
-     * @param name the name of the variable to write data for (must be registered by a call to \c def prior to this function)
+     * @param name the name of the variable to write data for (must be
+     * registered by a call to \c def prior to this function)
      * @copydoc hide_tparam_host_vector
      * @param data the data to write (must have grid size)
      * @param slice (ignored for time-independent variables). The number of the
      * time-slice to write (first element of the \c startp array in \c
-     * nc_put_vara).
+     * nc_put_vara). It is the user's responsibility to keep track of how big
+     * variables get and which slice to write.
      * @copydoc hide_comment_slice
      */
     template<class host_vector>

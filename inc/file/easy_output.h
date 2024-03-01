@@ -31,13 +31,16 @@ namespace file
  * \c host_vector::value_type must match data type of variable in file.
  *
  * @class hide_comment_slice
- * @note In NetCDF all variables that share an unlimited dimension are considered to have
- * the same size in that dimension. In fact,
- * the size of the unlimited dimension is the maximum of the sizes of all the variables
- * sharing that unlimited dimension. All variables are artificially filled up with Filler
- * Values to match that maximum size. It is entirely possible to skip writing data for some
- * variables for some times. It is possible to write data to variables at \c slice==size but not after and
- * it is not possible to read data at \c slice>=size
+ * @note In NetCDF all variables that share an unlimited dimension are
+ * considered to have the same size in that dimension. In fact, the size of the
+ * unlimited dimension is the maximum of the sizes of all the variables sharing
+ * that unlimited dimension. All variables are artificially filled up with
+ * filler Values to match that maximum size. It is entirely possible to skip
+ * writing data for variables for some times. It is also possible to write data
+ * to unlimited variables at \c slice>=size (in which case all variables
+ * sharing the unlimited dimension will increase in size) but it is not
+ * possible to read data at \c slice>=size. It is the user's responsibility
+ * to manage the slice value across variables.
  *
  * @class hide_master_comment
  * @note The "master" thread is assumed to be the process with \c rank==0

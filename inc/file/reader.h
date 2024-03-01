@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../dg/backend/typedefs.h"
-#include "../dg/topology/fast_interpolation.h"
 
 #include "easy_dims.h"
 #include "easy_input.h"

@@ -86,6 +86,9 @@ int main(int argc, char* argv[])
     dg::file::ProjectRecordsList<dg::x::Grid3d, dg::x::DMatrix, dg::x::DVec> project3d( grpid, grid, grid_out, {"ptime", "zr", "yr", "xr"}, records);
     dg::file::Writer<dg::x::Grid0d> project0d( grpid, {}, {"ptime"});
 
+    // It is possible to write to any index in an unlimited dimension
+    write0d.put("time", Tmax, 5);
+
     for(unsigned i=0; i<=NT; i++)
     {
         DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
@@ -120,6 +123,7 @@ int main(int argc, char* argv[])
     for( auto name : readP3d.names())
         DG_RANK0 std::cout << "Found Projected 3d name "<<name<<"\n";
     unsigned num_slices = read0d.size();
+    DG_RANK0 std::cout << "Found "<<num_slices<<" timesteps in file\n";
     auto data = dg::evaluate( function, grid);
     auto dataP = dg::evaluate( function, grid_out);
     for(unsigned i=0; i<num_slices; i++)
