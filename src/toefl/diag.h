@@ -58,12 +58,14 @@ std::map<std::string, std::vector<dg::file::Record<void(dg::x::DVec&,Variables&)
     },
     {"lapNe", "+Delta ne",
         []( dg::x::DVec& result, Variables& v) {
-            dg::blas2::gemv( -1., v.rhs.laplacianM(), v.rhs.var(0), 0., result);
+            dg::blas1::axpby( 1., v.rhs.var(0), -1., 1., result);
+            dg::blas2::gemv( -1., v.rhs.laplacianM(), result, 0., result);
         }
     },
     {"lapNi", "+Delta ni",
         []( dg::x::DVec& result, Variables& v) {
-            dg::blas2::gemv( -1., v.rhs.laplacianM(), v.rhs.var(1), 0., result);
+            dg::blas1::axpby( 1., v.rhs.var(1), -1., 1., result);
+            dg::blas2::gemv( -1., v.rhs.laplacianM(), result, 0., result);
         }
     },
     {"lapPhi", "+Delta Phi",
