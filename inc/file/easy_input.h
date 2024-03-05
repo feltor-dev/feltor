@@ -266,7 +266,7 @@ void get_vara(int ncid, int varid, unsigned slice,
     const MPITopology& grid, dg::MPI_Vector<host_vector>& data,
     bool parallel = true)
 {
-    detail::get_vara_detail( ncid, varid, 0, grid, data, true, parallel);
+    detail::get_vara_detail( ncid, varid, slice, grid, data, true, parallel);
 }
 
 // scalar data

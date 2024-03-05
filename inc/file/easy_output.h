@@ -353,7 +353,7 @@ void put_vara(int ncid, int varid, unsigned slice,
     const MPITopology& grid, const dg::MPI_Vector<host_vector>& data,
     bool parallel = false)
 {
-    detail::put_vara_detail( ncid, varid, 0, grid, data, true, parallel);
+    detail::put_vara_detail( ncid, varid, slice, grid, data, true, parallel);
 }
 // scalar data
 

@@ -76,7 +76,6 @@ int main(int argc, char* argv[])
         const size_t Tstart = i;
         data = dg::evaluate( function, grid);
         auto sliced_data = dg::split( data, grid); // a vector of views
-        dg::blas1::scal( data, cos( time));
         double energy;
         //read scalar data point
         dg::file::get_vara( ncid, scalarID, Tstart, dg::x::Grid0d(), energy);
@@ -85,6 +84,11 @@ int main(int argc, char* argv[])
         dg::file::get_vara( ncid, arrayID, Tstart, grid, temp);
         //read sub array
         dg::file::get_vara( ncid, subArrayID, Tstart, grid2d, sliced_data[0]);
+#ifdef MPI_VERSION
+        DG_RANK0 std::cout << "data "<<temp.data()[0]<<" dataP "<<sliced_data[0].data().data()[0]<<"\n";
+#else
+        std::cout << "data "<<temp[0]<<" dataP "<<sliced_data[0].data()[0]<<"\n";
+#endif
         //read time
         dg::file::get_vara( ncid, tvarID, Tstart, dg::x::Grid0d(), time);
         DG_RANK0 std::cout << "At time "<<time<<"\n";
