@@ -17,7 +17,7 @@ toefl_hpc: toefl.cpp toefl.h parameters.h diag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS) -g
 
 toefl_mpi: toefl.cpp toefl.h parameters.h diag.h
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS)
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS) -DWITH_MPI
 
 doc:
 	pdflatex -shell-escape ./toefl.tex;
