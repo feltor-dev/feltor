@@ -217,7 +217,7 @@ int main( int argc, char* argv[])
         att["references"] = "https://github.com/feltor-dev/feltor";
         // Here we put the inputfile as a string without comments so that it can be read later by another parser
         att["inputfile"] = js.toStyledString();
-        dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
+        DG_RANK0 dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
 
         unsigned n_out     = js[ "output"]["n"].asUInt( 3);
         unsigned Nx_out    = js[ "output"]["Nx"].asUInt( 48);
@@ -231,17 +231,16 @@ int main( int argc, char* argv[])
                     );
         dg::x::IHMatrix projection = dg::create::interpolation( grid_out, grid);
         dg::file::WriteRecordsList<dg::x::CartesianGrid2d> write2d( ncid, grid_out,
-            {"time","y","x"}, toefl::diagnostics2d_list.at(p.model));
+            {"time","y","x"});
         dg::file::Writer<dg::x::Grid0d> write0d( ncid, {}, {"time"});
         dg::file::WriteRecordsList<dg::x::CartesianGrid2d> ( ncid, grid_out,
-            {"y", "x"}, toefl::diagnostics2d_static_list).transform_write(
+            {"y", "x"}).transform_write(
             projection, toefl::diagnostics2d_static_list,
             dg::evaluate( dg::zero, grid), var) ;
         dg::x::DVec volume = dg::create::volume( grid);
-        size_t start = 0;
         write2d.host_transform_write( projection, toefl::diagnostics2d_list.at(
             p.model), dg::evaluate( dg::zero, grid), var);
-        write0d.put( "time", time, start);
+        write0d.stack( "time", time);
         DG_RANK0 err = nc_close( ncid);
         double Tend = js["output"].get("tend", 1.0).asDouble();
         unsigned maxout = js["output"].get("maxout", 10).asUInt();
@@ -268,10 +267,9 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cout << "\n\t Time "<<time <<" of "<<Tend <<" with current timestep "<<timeloop.get_dt();
             DG_RANK0 std::cout << "\n\t # of rhs calls since last output "<<delta_ncalls;
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)delta_ncalls<<"s\n\n"<<std::flush;
-            start = u;
             DG_RANK0 err = nc_open(outputfile.c_str(), NC_WRITE, &ncid);
             // First write the time variable
-            write0d.put( "time", time, start);
+            write0d.stack( "time", time);
             write2d.host_transform_write( projection, toefl::diagnostics2d_list.at(
                 p.model), dg::evaluate( dg::zero, grid), var);
             DG_RANK0 err = nc_close( ncid);
