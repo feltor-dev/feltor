@@ -73,7 +73,7 @@ ____
 |=======================================================================
 |    | Minimum system requirements  | Recommended system requirements
 | *CPU*     | Any         |support for AVX and FMA instruction set
-| *Compiler*| gcc-5.1 or msvc-15 or icc-17.0 (C{plus}{plus}-14 standard)| gcc-9.3, OpenMP-4 support, avx, fma instruction set flags
+| *Compiler*| gcc-5.1 or msvc-15 or icc-17.0 (C{plus}{plus}-17 standard)| gcc-9.3, OpenMP-4 support, avx, fma instruction set flags
 | *GPU*     | - | NVidia GPU with compute-capability > 6 and nvcc-11.0
 | *MPI*     | - | mpi installation compatible with compiler (ideally cuda-aware in case hybrid MPI+GPU is the target system)
 |=======================================================================
@@ -276,7 +276,7 @@ To compile and run this code for a GPU use (assuming the external libraries are 
 
 [source,sh]
 ----
-nvcc -x cu -std=c++14 --extended-lambda -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+nvcc -x cu -std=c++17 --extended-lambda -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -285,14 +285,14 @@ functions you can also use
 
 [source,sh]
 ----
-g++ -std=c++14 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+g++ -std=c++17 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 export OMP_NUM_THREADS=4
 ./test
 ----
 If you do not want any parallelization, you can use a single thread version
 [source,sh]
 ----
-g++ -std=c++14 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+g++ -std=c++17 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
 ./test
 ----
 
@@ -334,7 +334,7 @@ Compile e.g. for a hybrid MPI {plus} OpenMP hardware platform with
 
 [source,sh]
 ----
-mpic++ -std=c++14 -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test_mpi.cpp -o test_mpi
+mpic++ -std=c++17 -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test_mpi.cpp -o test_mpi
 export OMP_NUM_THREADS=2
 mpirun -n 4 ./test_mpi
 ----
