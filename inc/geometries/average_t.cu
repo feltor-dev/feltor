@@ -137,16 +137,11 @@ int main( int argc, char* argv[])
     int ncid;
     dg::file::NC_Error_Handle err;
     err = nc_create( "average.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim1d;
-    err = dg::file::define_dimension(  ncid, &dim1d, grid1d, "psi");
+    dg::file::Writer<dg::Grid1d> writer( ncid, grid1d, {"psi"});
     for(auto tp : map1d)
     {
-        int vid;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1,
-            &dim1d, &vid);
-        err = nc_put_att_text( ncid, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_put_var_double( ncid, vid, std::get<1>(tp).data() );
+        writer.def_and_put( std::get<0>(tp), dg::file::long_name(
+            std::get<2>(tp)), std::get<1>(tp));
     }
     err = nc_close( ncid);
     std::cout << "FILE average.nc CLOSED AND READY TO USE NOW!\n" <<std::endl;

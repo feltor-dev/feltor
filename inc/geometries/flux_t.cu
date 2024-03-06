@@ -187,20 +187,21 @@ int main( int argc, char* argv[])
     dg::file::NC_Error_Handle err;
     std::string outfile = argc<3 ? "flux.nc" : argv[2];
     err = nc_create( outfile.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim2d[2];
-    err = dg::file::define_dimensions(  ncid, dim2d, g2d_periodic);
-    int coordsID[2];
-    err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    dg::HVec X=g2d->map()[0], Y=g2d->map()[1];
-    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
-    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
+    dg::file::Writer<dg::Grid2d> writer( ncid, g2d_periodic, {"y", "x"});
 
     dg::SparseTensor<dg::HVec > metric = g2d->metric();
     std::map< std::string, std::function< void( dg::HVec&, const
             dg::aGeometry2d&, const dg::geo::TokamakMagneticField&)>
         >
         output = {
+        { "xc", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
+            const dg::geo::TokamakMagneticField& mag){
+            result = g2d.map()[0];
+        }},
+        { "yc", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
+            const dg::geo::TokamakMagneticField& mag){
+            result = g2d.map()[1];
+        }},
         { "Psip", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
             const dg::geo::TokamakMagneticField& mag){
             result = dg::pullback( mag.psip(), g2d);
@@ -273,10 +274,8 @@ int main( int argc, char* argv[])
     dg::HVec temp( g2d->size());
     for( auto pair : output)
     {
-        int varID;
-        err = nc_def_var( ncid, pair.first.data(), NC_DOUBLE, 2, dim2d, &varID);
         pair.second( temp, *g2d, mag);
-        err = nc_put_var_double( ncid, varID, periodify(temp, g2d_periodic).data());
+        writer.def_and_put( pair.first, {}, periodify( temp, g2d_periodic));
     }
     err = nc_close( ncid);
     ///////////////////////some further testing//////////////////////

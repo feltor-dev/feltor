@@ -40,18 +40,10 @@ int main(int argc, char**argv)
     int ncid;
     dg::file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim2d[2];
-    ncerr = dg::file::define_dimensions(  ncid, dim2d, *g2d);
-    int coordsID[2], psiID, functionID, function2ID;
-    ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
-    ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
-    ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
+    dg::file::Writer<dg::aGeometry2d> writer( ncid, *g2d, {"y", "x"});
+    writer.def_and_put( "xc", {}, g2d->map()[0]);
+    writer.def_and_put( "yc", {}, g2d->map()[1]);
 
-    dg::HVec X( g2d->map()[0]), Y(g2d->map()[1]);
-    ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
-    ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x = dg::evaluate( dg::zero, *g2d);
     const dg::DVec b =    dg::pullback( dg::geo::EllipticDirPerM(mag, psi_0, psi_1, 4), *g2d);
@@ -93,13 +85,9 @@ int main(int argc, char**argv)
     double result = dg::blas2::dot( x, vol3d, x);
     std::cout << "               distance to solution "<<sqrt( result)<<std::endl; //don't forget sqrt when comuting errors
 
-    dg::assign( error, X );
-    ncerr = nc_put_var_double( ncid, psiID, X.data());
-    dg::assign( x, X );
-    ncerr = nc_put_var_double( ncid, functionID, X.data());
-    dg::assign( solution, Y );
-    //dg::blas1::axpby( 1., X., -1, Y);
-    ncerr = nc_put_var_double( ncid, function2ID, Y.data());
+    writer.def_and_put( "error", {}, (dg::HVec)error);
+    writer.def_and_put( "num_solution", {}, (dg::HVec)x);
+    writer.def_and_put( "ana_solution", {}, (dg::HVec)solution);
     ncerr = nc_close( ncid);
 
 

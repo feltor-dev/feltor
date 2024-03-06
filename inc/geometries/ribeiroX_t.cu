@@ -100,29 +100,15 @@ int main( int argc, char* argv[])
     int ncid;
     dg::file::NC_Error_Handle err;
     err = nc_create( "ribeiroX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim3d[3], dim1d[1];
-    err = dg::file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
-    //err = dg::file::define_dimensions(  ncid, dim3d, g2d.grid());
-    err = dg::file::define_dimension(  ncid, dim1d, g1d, "i");
-    int coordsID[2], onesID, defID, volID, divBID;
-    int coord1D[5];
-    err = nc_def_var( ncid, "xc", NC_DOUBLE, 3, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "yc", NC_DOUBLE, 3, dim3d, &coordsID[1]);
-    err = nc_def_var( ncid, "x_left", NC_DOUBLE, 1, dim1d, &coord1D[0]);
-    err = nc_def_var( ncid, "y_left", NC_DOUBLE, 1, dim1d, &coord1D[1]);
-    err = nc_def_var( ncid, "x_right", NC_DOUBLE, 1, dim1d, &coord1D[2]);
-    err = nc_def_var( ncid, "y_right", NC_DOUBLE, 1, dim1d, &coord1D[3]);
-    err = nc_def_var( ncid, "f_x", NC_DOUBLE, 1, dim1d, &coord1D[4]);
-    //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
-    err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &onesID);
-    err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);
-    err = nc_def_var( ncid, "volume", NC_DOUBLE, 3, dim3d, &volID);
-    err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
+    dg::file::Writer<dg::GridX3d> writer3d( ncid, g3d_periodic, {"z", "y", "x"});
+    dg::file::Writer<dg::Grid1d> writer1d( ncid, g1d, {"i"});
+    writer1d.def_and_put( "x_left", {}, x_left);
+    writer1d.def_and_put( "x_right", {}, x_right);
+    writer1d.def_and_put( "y_left", {}, y_left);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip.f(), g2d);
     g2d.display();
-    err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
-    //err = nc_put_var_double( ncid, onesID, periodify(g2d.g(), g3d_periodic).data());
+    writer3d.def_and_put( "psi", {}, periodify( psi_p, g3d_periodic));
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
@@ -134,8 +120,8 @@ int main( int argc, char* argv[])
     dg::DVec temp0( g2d.size()), temp1(temp0);
     dg::DVec w2d = dg::create::weights( g2d);
 
-    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g3d_periodic).data());
-    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g3d_periodic).data());
+    writer3d.def_and_put( "xc", {}, periodify( X, g3d_periodic));
+    writer3d.def_and_put( "yc", {}, periodify( X, g3d_periodic));
 
     dg::SparseTensor<dg::DVec> metric = g2d.metric();
     dg::DVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
@@ -144,13 +130,10 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     dg::assign( temp0, X);
-    err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
-    //err = nc_put_var_double( ncid, defID, X.data());
+    writer3d.def_and_put( "deformation", {}, periodify( X, g3d_periodic));
     dg::assign( vol, X);
     dg::assign( g_yy,Y);
     dg::blas1::pointwiseDot( Y, X, X);
-    err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
-    //err = nc_put_var_double( ncid, volID, X.data());
 
     std::cout << "Construction successful!\n";
 
@@ -171,7 +154,7 @@ int main( int argc, char* argv[])
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::assign( temp0, X);
-    err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
+    writer3d.def_and_put( "volume", {}, periodify( X, g3d_periodic));
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";

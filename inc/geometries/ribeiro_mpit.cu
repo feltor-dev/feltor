@@ -62,23 +62,14 @@ int main( int argc, char* argv[])
     int ncid;
     dg::file::NC_Error_Handle err;
     if(rank==0)err = nc_create( "test_mpi.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim3d[2];
-    if(rank==0)err = dg::file::define_dimensions(  ncid, dim3d, *g2d);
-    int coordsID[2], onesID, defID,confID, volID, divBID;
-    if(rank==0)err = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim3d, &coordsID[0]);
-    if(rank==0)err = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim3d, &coordsID[1]);
-    if(rank==0)err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
-    if(rank==0)err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
-    if(rank==0)err = nc_def_var( ncid, "conformal", NC_DOUBLE, 2, dim3d, &confID);
-    if(rank==0)err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
-    if(rank==0)err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
+    dg::file::Writer<dg::aMPIGeometry2d> writer( ncid, *g2d, {"y", "x"});
 
     dg::MHVec psi_p = dg::pullback( psip.f(), *g2d);
     //g.display();
-    dg::file::put_var_double( ncid, onesID, *g2d, psi_p);
+    writer.def_and_put( "psi", {}, psi_p);
     dg::MHVec X = g2d->map()[0], Y = g2d->map()[1];
-    dg::file::put_var_double( ncid, coordsID[0], *g2d, X);
-    dg::file::put_var_double( ncid, coordsID[1], *g2d, Y);
+    writer.def_and_put( "xc", {}, X);
+    writer.def_and_put( "yc", {}, Y);
 
     dg::MHVec temp0( dg::evaluate(dg::zero, *g2d)), temp1(temp0);
     dg::MHVec w2d = dg::create::weights( *g2d);
@@ -89,7 +80,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     const dg::MHVec ones = dg::evaluate( dg::one, *g2d);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    dg::file::put_var_double( ncid, defID, *g2d, temp0);
+    writer.def_and_put( "deformation", {}, temp0);
 
     if(rank==0)std::cout << "Construction successful!\n";
 
@@ -109,7 +100,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::file::put_var_double( ncid, volID, *g2d, temp0);
+    writer.def_and_put( "volume", {}, temp0);
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     if(rank==0)std::cout << "Rel Consistency  of volume is "<<error<<"\n";

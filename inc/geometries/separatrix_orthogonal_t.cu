@@ -169,16 +169,12 @@ int main( int argc, char* argv[])
     int ncid;
     dg::file::NC_Error_Handle err;
     err = nc_create( "orthogonalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim3d[3];
-    err = dg::file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
+    dg::file::Writer<dg::GridX3d> writer( ncid, g3d_periodic, {"z", "y", "x"});
+
     for(auto tp : map2d)
     {
-        int vid;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 3,
-            dim3d, &vid);
-        err = nc_put_att_text( ncid, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_put_var_double( ncid, vid, periodify( std::get<1>(tp), g3d_periodic).data());
+        writer.def_and_put( std::get<0>(tp), dg::file::long_name( std::get<2>(tp)),
+            periodify( std::get<1>(tp), g3d_periodic));
     }
     err = nc_close( ncid);
     std::cout << "FILE orthogonalX.nc CLOSED AND READY TO USE NOW!\n" <<std::endl;

@@ -71,14 +71,7 @@ int main(int argc, char**argv)
     int ncid;
     dg::file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testXrefined.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim2d[2];
-    ncerr = dg::file::define_dimensions(  ncid, dim2d, g2d_fine.grid());
-    int coordsID[2], psiID, functionID, function2ID;
-    ncerr = nc_def_var( ncid, "xc", NC_DOUBLE, 2, dim2d, &coordsID[0]);
-    ncerr = nc_def_var( ncid, "yc", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
-    ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
-    ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
+    dg::file::Writer<dg::geo::CurvilinearRefinedGridX2d> writer( ncid, g2d_fine, {"y", "x"});
 
     dg::HVec X( g2d_fine.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d_fine.size(); i++)
@@ -86,8 +79,8 @@ int main(int argc, char**argv)
         X[i] = g2d_fine.map()[0][i];
         Y[i] = g2d_fine.map()[1][i];
     }
-    ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
-    ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
+    writer.def_and_put( "xc", {}, X);
+    writer.def_and_put( "yc", {}, Y);
     //////////////////blob solution////////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_coarse);
     //const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_fine);
@@ -199,12 +192,12 @@ int main(int argc, char**argv)
     std::cout<<t.diff()/(double)number_di<<"s"<<std::endl;
 
     dg::assign( error_direct, X);
-    ncerr = nc_put_var_double( ncid, psiID, X.data());
+    writer.def_and_put( "error", {}, X);
     dg::assign( x_fine_di, X);
-    ncerr = nc_put_var_double( ncid, functionID, X.data());
+    writer.def_and_put( "num_solution", {}, X);
     dg::assign( solutionFINE, Y);
     //dg::blas1::axpby( 1., X., -1, Y);
-    ncerr = nc_put_var_double( ncid, function2ID, Y.data());
+    writer.def_and_put( "ana_solution", {}, Y);
     ncerr = nc_close( ncid);
 
 
