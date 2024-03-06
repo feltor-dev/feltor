@@ -821,6 +821,12 @@ struct RealGridX3d : public aRealTopologyX3d<real_type>
     explicit RealGridX3d( const aRealTopologyX3d<real_type>& src): aRealTopologyX3d<real_type>(src){}
 };
 
+///@cond
+template<class real_type>
+std::vector<unsigned> shape( const dg::aRealTopologyX2d<real_type>& g) { return {g.n()*g.Nx(), g.n()*g.Ny()};}
+template<class real_type>
+std::vector<unsigned> shape( const dg::aRealTopologyX3d<real_type>& g) { return {g.n()*g.Nx(), g.n()*g.Ny(), g.Nz()};}
+///@endcond
 ///@addtogroup gridtypes
 ///@{
 using GridX1d       = dg::RealGridX1d<double>;

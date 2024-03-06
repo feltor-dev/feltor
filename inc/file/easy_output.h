@@ -78,6 +78,7 @@ namespace file
  * Thus, in an MPI program
  *  - \c parallel should be \c false
  *  - the program links to **serial NetCDF and hdf5**
+ *  - only the master thread needs to know the \c ncid, variable or dimension names, the slice to write etc.
  *  .
  * There is a parallel NetCDF library where all processes can have write
  * access in parallel. In this case
@@ -85,6 +86,7 @@ namespace file
  *  - the program links to **parallel NetCDF and hdf5**
  *  - the file must be opened with the \c NC_MPIIO flag from the \c NetCDF_par.h header and the
  * variable be marked with \c NC_COLLECTIVE access
+ *  - all threads need to know the \c ncid, variable and dimension names, the slice to write etc.
  *  .
  * Note that serious performance penalties have been
  * observed on some platforms for parallel writing NetCDF.
