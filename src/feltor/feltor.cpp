@@ -203,7 +203,7 @@ int main( int argc, char* argv[])
         // STATIC OUTPUT
         //create & output static 3d variables into file
         dg::file::WriteRecordsList<dg::x::CylindricalGrid3d>(ncid, g3d_out,
-            {"z", "y", "x"}, feltor::diagnostics3d_static_list
+            {"z", "y", "x"}
             ).write( feltor::diagnostics3d_static_list, var, g3d_out );
         //create & output static 2d variables into file
         feltor::write_static_list( ncid, feltor::diagnostics2d_static_list,
@@ -219,17 +219,15 @@ int main( int argc, char* argv[])
         }
         // DYNAMIC OUTPUT
 
-        dg::file::WriteRecordsList<dg::x::Grid0d> diag1d( ncid, {}, {"time"}, feltor::diagnostics1d_list);
+        dg::file::WriteRecordsList<dg::x::Grid0d> diag1d( ncid, {}, {"time"});
         feltor::WriteIntegrateDiagnostics2dList diag2d( ncid, grid, g3d_out,
             feltor::generate_equation_list( js));
         dg::file::WriteRecordsList<dg::x::CylindricalGrid3d> diag4d(
-            ncid, g3d_out, {"time", "z", "y", "x"},
-            feltor::diagnostics3d_list);
+            ncid, g3d_out, {"time", "z", "y", "x"});
         dg::file::WriteRecordsList<dg::x::CylindricalGrid3d> restart( ncid,
-            grid, {"zr", "yr", "xr"}, feltor::restart3d_list);
+            grid, {"zr", "yr", "xr"});
         // Probes need to be the last because they define dimensions in subgroup
-        dg::file::Probes<dg::x::CylindricalGrid3d> probes( ncid, grid, dg::file::parse_probes(js),
-                feltor::probe_list);
+        dg::file::Probes<dg::x::CylindricalGrid3d> probes( ncid, grid, dg::file::parse_probes(js));
 
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "# First output ... \n";

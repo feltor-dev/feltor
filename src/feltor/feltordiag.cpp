@@ -250,7 +250,6 @@ int main( int argc, char* argv[])
             config.get("cta-interpolation","dg").asString());
     }
     /////////////////////////////////////////////////////////////////////////
-    size_t counter = 0;
     int ncid;
     std::cout << "Using flux-surface-average mode: "<<fsa_mode << "\n";
     for( int j=2; j<argc-1; j++)
@@ -277,8 +276,8 @@ int main( int argc, char* argv[])
             // read and write time
             double time=0.;
             read0d.get( "time", time, i);
-            std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
-            write0d.put( "time", time, counter);
+            std::cout << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
+            write0d.stack( "time", time);
             for(auto& record : equation_list)
             {
             std::string record_name = record.name;
@@ -338,23 +337,23 @@ int main( int argc, char* argv[])
             }
             if(diag_list["fsa"].exists)
             {
-                writer_psi.put( record_name+"_fsa", fsa1d, counter);
+                writer_psi.stack( record_name+"_fsa", fsa1d);
             }
             if(diag_list[ "fsa2d"].exists)
             {
-                writer_g2d.put( record_name+"_fsa2d", transferH2d, counter);
+                writer_g2d.stack( record_name+"_fsa2d", transferH2d);
             }
             if(diag_list["cta2d"].exists)
             {
                 if( record_name[0] == 'j')
                     dg::blas1::pointwiseDot( cta2d_mp, dvdpsip2d, cta2d_mp );//make it jv
-                writer_g2d.put( record_name+"_cta2d", cta2d_mp, counter);
+                writer_g2d.stack( record_name+"_cta2d", cta2d_mp);
             }
             if(diag_list["cta2dX"].exists)
             {
                 if( record_name[0] == 'j')
                     record_name[1] = 's';
-                writer_X.put( record_name+"_cta2dX", cta2dX, counter);
+                writer_X.stack( record_name+"_cta2dX", cta2dX);
                 if( record_name[0] == 'j')
                     record_name[1] = 'v';
             }
@@ -377,8 +376,8 @@ int main( int argc, char* argv[])
                 dg::blas1::axpby( 1.0, cta2d_mp, -1.0, transferH2d);
                 if(diag_list["fluc2d"].exists)
                 {
-                    writer_g2d.put( record_name+"_fluc2d",
-                        transferH2d, counter);
+                    writer_g2d.stack( record_name+"_fluc2d",
+                        transferH2d);
                 }
                 //5. flux surface integral/derivative
                 double result =0.;
@@ -403,12 +402,12 @@ int main( int argc, char* argv[])
                 }
                 if(diag_list[ "ifs"].exists)
                 {
-                    writer_psi.put( record_name+"_ifs", transfer1d, counter);
+                    writer_psi.stack( record_name+"_ifs", transfer1d);
                 }
                 //flux surface integral/derivative on last closed flux surface
                 if(diag_list[ "ifs_lcfs"].exists)
                 {
-                    write0d.put( record_name+"_ifs_lcfs", result, counter);
+                    write0d.stack( record_name+"_ifs_lcfs", result);
                 }
                 //6. Compute norm of time-integral terms to get relative importance
                 if( record_name[0] == 'j') //j indicates a flux
@@ -433,7 +432,7 @@ int main( int argc, char* argv[])
                 result = sqrt(dg::blas1::dot( temp1, temp2));
                 if(diag_list["ifs_norm"].exists)
                 {
-                    write0d.put( record_name+"_ifs_norm", result, counter);
+                    write0d.stack( record_name+"_ifs_norm", result);
                 }
                 //7. Compute midplane fluctuation amplitudes
                 dg::blas1::pointwiseDot( transferH2d, transferH2d, transferH2d);
@@ -451,7 +450,7 @@ int main( int argc, char* argv[])
                 dg::blas1::transform ( fsa1d, fsa1d, dg::SQRT<double>() );
                 if(diag_list["std_fsa"].exists)
                 {
-                    writer_psi.put( record_name+"_std_fsa", fsa1d, counter);
+                    writer_psi.stack( record_name+"_std_fsa", fsa1d);
                 }
             }
             else // make everything zero
@@ -461,32 +460,31 @@ int main( int argc, char* argv[])
                 double result = 0.;
                 if(diag_list["fluc2d"].exists)
                 {
-                    writer_g2d.put( record_name+"_fluc2d",
-                        transferH2d, counter);
+                    writer_g2d.stack( record_name+"_fluc2d",
+                        transferH2d);
                 }
                 if(diag_list["ifs"].exists)
                 {
-                    writer_psi.put( record_name+"_ifs",
-                        transfer1d, counter);
+                    writer_psi.stack( record_name+"_ifs",
+                        transfer1d);
                 }
                 if(diag_list["ifs_lcfs"].exists)
                 {
-                    write0d.put( record_name+"_ifs_lcfs",
-                        result, counter);
+                    write0d.stack( record_name+"_ifs_lcfs",
+                        result);
                 }
                 if(diag_list["ifs_norm"].exists)
                 {
-                    write0d.put( record_name+"_ifs_norm",
-                        result, counter);
+                    write0d.stack( record_name+"_ifs_norm",
+                        result);
                 }
                 if(diag_list["std_fsa"].exists)
                 {
-                    writer_psi.put( record_name+"_std_fsa",
-                        transfer1d, counter);
+                    writer_psi.stack( record_name+"_std_fsa",
+                        transfer1d);
                 }
             }
             } // equation_list
-            counter++;
         } //end timestepping
         err = nc_close(ncid);
     }
