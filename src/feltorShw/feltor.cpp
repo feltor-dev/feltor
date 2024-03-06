@@ -7,7 +7,7 @@
 #include "draw/host_window.h"
 #include "dg/file/json_utilities.h"
 
-#include "feltor.cuh"
+#include "feltor.h"
 #include "parameters.h"
 #include "../diag/probes.h"
 

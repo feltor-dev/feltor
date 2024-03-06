@@ -5,7 +5,7 @@
 #include <cmath>
 #include "dg/file/file.h"
 
-#include "feltor.cuh"
+#include "feltor.h"
 #include "parameters.h"
 
 

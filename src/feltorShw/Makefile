@@ -10,13 +10,13 @@ INCLUDE+= -I../../inc   # other project libraries
 
 all: feltor feltor_hpc
 
-feltor: feltor.cu feltor.cuh
+feltor: feltor.cpp feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK
 
-feltor_hpc: feltor_hpc.cu feltor.cuh
+feltor_hpc: feltor_hpc.cu feltor.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 
-feltor_mpi: feltor_mpi.cu feltor.cuh
+feltor_mpi: feltor_mpi.cu feltor.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 
 .PHONY: clean
