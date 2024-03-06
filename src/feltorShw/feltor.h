@@ -80,7 +80,6 @@ struct Explicit
     double charge( ) {return charge_;}
 
     std::vector<double> energy_vector( ) {return evec;}
-//     std::vector<container>& probe_vector( ) {return probevec;}
 
     double energy_diffusion( ){ return ediff_;}
     double radial_transport( ){ return gammanex_;}

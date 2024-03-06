@@ -34,6 +34,7 @@ struct Parameters
     double omega_source,sourceb,sourcew;
     enum dg::bc bc_x,bc_y,bc_x_phi;
 
+    Parameters() = default;
     Parameters(dg::file::WrappedJsonValue js)        {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
