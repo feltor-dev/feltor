@@ -23,8 +23,9 @@ struct ProbesParams
      *
      * All lists must have same size. \c coords will be passed to \c
      * dg::create::interpolation function in the \c dg::file::Probes class.
-     * @note only master thread needs to hold non-empty <tt>coords[i]</tt> in
-     * MPI, other processes remain empty
+     * @note In MPI all coordinates from all threads will be interpolated but
+     * only the coordinates that the master thread is holding will be written
+     * to file
      */
     std::vector< dg::HVec> coords;
     std::vector<std::string> coords_names; //!< Name of coordinates (must have same size as \c coords)

@@ -78,12 +78,12 @@ int main(int argc, char* argv[])
     dg::file::Writer<dg::x::Grid0d> write0d( ncid, {}, {"time"});
     write0d.def( "time"); // just to check that it works
     write0d.def( "Energy");
-    dg::file::WriteRecordsList<dg::x::Grid3d> write3d( ncid, grid, {"time", "z", "y", "x"}, records);
+    dg::file::WriteRecordsList<dg::x::Grid3d> write3d( ncid, grid, {"time", "z", "y", "x"});
     auto grid_out = grid;
     grid_out.multiplyCellNumbers( 0.5, 0.5);
     int grpid =0;
     DG_RANK0 err = nc_def_grp( ncid, "projected", &grpid);
-    dg::file::WriteRecordsList<dg::x::Grid3d> project3d( grpid, grid_out, {"ptime", "zr", "yr", "xr"}, records);
+    dg::file::WriteRecordsList<dg::x::Grid3d> project3d( grpid, grid_out, {"ptime", "zr", "yr", "xr"});
     dg::file::Writer<dg::x::Grid0d> project0d( grpid, {}, {"ptime"});
 
     // It is possible to write to any index in an unlimited dimension
@@ -96,9 +96,13 @@ int main(int argc, char* argv[])
         auto data = dg::evaluate( function, grid);
         dg::blas1::scal( data, cos( time));
         double energy = dg::blas1::dot( data, data);
-        if( i%2)
+        if( i%2 == 0)
             write0d.put( "Energy", energy, i);
-        write0d.put( "time", time, i);
+        DG_RANK0 std::cout << "Energy size is "<<write0d.size("Energy")<<"\n";
+        if( i>5)
+            write0d.stack("time", time);
+        else
+            write0d.put( "time", time, i);
         write3d.write( records, grid, time);
         project0d.put( "ptime", time, i);
         project0d.put( "ptime", time, i); // test if values can be overwritten
@@ -116,8 +120,10 @@ int main(int argc, char* argv[])
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
 #endif
+    DG_RANK0 std::cout << "\n\n";
 
     // open and read back in
+    filename = "test.nc";
     err = nc_open ( filename.data(), 0, &ncid); // all processes read
     err = nc_inq_grp_ncid( ncid, "projected", &grpid);
     dg::file::Reader<dg::x::Grid0d> read0d( ncid, {}, {"time"});
@@ -139,9 +145,14 @@ int main(int argc, char* argv[])
         double time, energy;
         read0d.get("time", time, i);
         read0d.get("Energy", energy, i);
-        std::cout << "Enery "<<energy<<"\n";
+        DG_RANK0 std::cout << "Time "<<time<<" Energy "<<energy<<"\t";
         read3d.get( "vectorX", data, i);
         readP3d.get( "vectorX", dataP, i);
+#ifdef MPI_VERSION
+        DG_RANK0 std::cout << "data "<<data.data()[0]<<" dataP "<<dataP.data()[0]<<"\n";
+#else
+        std::cout << "data "<<data[0]<<" dataP "<<dataP[0]<<"\n";
+#endif
     }
     err = nc_close(ncid);
     assert(num_slices == NT+1);

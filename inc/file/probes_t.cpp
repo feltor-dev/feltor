@@ -78,9 +78,9 @@ int main(int argc, char* argv[])
     int dim_ids[3], tvarID;
     // This caught an error in define_dimensions
     DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
-    dg::file::WriteRecordsList<dg::x::Grid2d> records( ncid, grid, {"time","y","x"}, records_list);
+    dg::file::WriteRecordsList<dg::x::Grid2d> records( ncid, grid, {"time","y","x"});
 
-    dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, params, records_list);
+    dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, params);
     probes.static_write( records_static_list, grid);
     // This poses a problem for paraview because root dimensions are not defined in order
     // dg::file::Writer<dg::x::Grid2d> restart( ncid, grid, {"yr","xr"});

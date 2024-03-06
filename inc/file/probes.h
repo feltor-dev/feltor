@@ -155,14 +155,11 @@ struct Probes
      * @param grid The interpolation matrix is generated with the \c grid and \c params.coords . \c grid.ndim
      * must equal \c param.coords.size()
      * @param params Typically read in from file with \c dg::file::parse_probes
-     * @param probe_list The list of variables later used in \c write
      */
-    template<class ListClass>
     Probes(
         const int& ncid,
         const Topology& grid,
-        const ProbesParams& params, // do nothing if probes is false
-        const ListClass& probe_list
+        const ProbesParams& params // do nothing if probes is false
         ) : m_ncid(&ncid)
     {
         m_probes = params.probes;
@@ -176,8 +173,6 @@ struct Probes
                             Topology::ndim()>::call( params.coords, grid);
         // Create helper storage probe variables
         m_simple_probes = detail::Helper<Topology>::probes_vec( params.coords[0], grid);
-        for( auto& record : probe_list)
-            m_simple_probes_intern[record.name] = std::vector<typename Topology::host_vector>(); // empty vectors
         m_resultH = dg::evaluate( dg::zero, grid);
 
         detail::Helper<Topology>::def_group( ncid, params.format, m_probe_grp_id);
@@ -190,8 +185,6 @@ struct Probes
                 detail::Helper<Topology>::probes_vec( params.coords[i], grid));
         m_writer0d = { m_probe_grp_id, {}, {"ptime"}};
         m_writer1d = { m_probe_grp_id, g1d, {"ptime", "pdim"}};
-        for( auto& record : probe_list)
-            m_writer1d.def( record.name, dg::file::long_name( record.long_name));
     }
 
     /*! @brief Directly write results of a list of callback functions to file
@@ -242,7 +235,7 @@ struct Probes
      * the corresponding variables (with one unlimited time-dimension) are created
      *
      * @param time The time value to store
-     * @param probe_list the list of records that was given in the constructor
+     * @param probe_list the list of records to store (variables are defined in file on first write)
      * @param ps The parameters forwarded to the \c record.function( resultD,
      * ps...) The function is supposed to store its result into the given
      * device vector
@@ -257,6 +250,10 @@ struct Probes
         auto result =
             dg::construct<get_first_argument_type_t<typename ListClass::value_type::Signature>>(
                 m_resultH);
+        if( m_simple_probes_intern.empty())
+            init_buffer( probe_list);
+        if( m_probe_start == 0)
+            init_writer( probe_list);
         for( auto& record : probe_list)
         {
             record.function( result, std::forward<Params>(ps)...);
@@ -307,6 +304,19 @@ struct Probes
     }
 
     private:
+    template<class ListClass>
+    void init_buffer( const ListClass& probe_list)
+    {
+        for( auto& record : probe_list)
+            m_simple_probes_intern[record.name] = std::vector<typename Topology::host_vector>(); // empty vectors
+    }
+    template<class ListClass>
+    void init_writer( const ListClass& probe_list)
+    {
+        for( auto& record : probe_list)
+            m_writer1d.def( record.name, dg::file::long_name( record.long_name));
+    }
+
     typename detail::Helper<Topology>::Writer1d m_writer1d;
     typename detail::Helper<Topology>::Writer0d m_writer0d;
     bool m_probes = false;
