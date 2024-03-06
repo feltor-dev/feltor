@@ -5,6 +5,7 @@
 
 #include "dg/runge_kutta.h" // for dg::is_same
 #include "dg/topology/grid.h"
+#include "dg/topology/gridX.h"
 #include "dg/topology/evaluation.h"
 #ifdef MPI_VERSION
 #include "dg/topology/mpi_grid.h"
@@ -55,6 +56,11 @@ std::vector<dg::RealGrid1d<real_type> > grids( const aRealTopology2d<real_type>&
 template<class real_type>
 std::vector<dg::RealGrid1d<real_type> > grids( const aRealTopology3d<real_type>& g ) { return {g.gz(), g.gy(), g.gx()};}
 template<class real_type>
+std::vector<dg::RealGrid1d<real_type> > grids( const aRealTopologyX2d<real_type>& g ) { return grids(g.grid());}
+template<class real_type>
+std::vector<dg::RealGrid1d<real_type> > grids( const aRealTopologyX3d<real_type>& g ) { return grids(g.grid());;}
+
+template<class real_type>
 std::vector<std::string> dim_names( const RealGrid0d<real_type>& ) { return {};}
 template<class real_type>
 std::vector<std::string> dim_names( const RealGrid1d<real_type>& g ) { return {"x"};}
@@ -63,6 +69,10 @@ std::vector<std::string> dim_names( const aRealTopology2d<real_type>& g ) { retu
 template<class real_type>
 std::vector<std::string> dim_names( const aRealTopology3d<real_type>& g ) { return {"z", "y", "x"};}
 template<class real_type>
+std::vector<std::string> dim_names( const aRealTopologyX2d<real_type>& g ) { return {"y", "x"};}
+template<class real_type>
+std::vector<std::string> dim_names( const aRealTopologyX3d<real_type>& g ) { return {"z", "y", "x"};}
+template<class real_type>
 std::vector<std::string> axis_names( const RealGrid0d<real_type>& ) { return {};}
 template<class real_type>
 std::vector<std::string> axis_names( const RealGrid1d<real_type>& g ) { return {"X"};}
@@ -70,6 +80,10 @@ template<class real_type>
 std::vector<std::string> axis_names( const aRealTopology2d<real_type>& g ) { return {"Y", "X"};}
 template<class real_type>
 std::vector<std::string> axis_names( const aRealTopology3d<real_type>& g ) { return {"Z", "Y", "X"};}
+template<class real_type>
+std::vector<std::string> axis_names( const aRealTopologyX2d<real_type>& g ) { return {"Y", "X"};}
+template<class real_type>
+std::vector<std::string> axis_names( const aRealTopologyX3d<real_type>& g ) { return {"Z", "Y", "X"};}
 
 
 inline static void assign_defaults( std::vector<std::string>& name_dims, const std::vector<std::string>& default_names)
