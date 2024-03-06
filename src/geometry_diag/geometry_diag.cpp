@@ -412,7 +412,7 @@ int main( int argc, char* argv[])
     std::string newfilename = argc<3 ? "geometry_diag.nc" : argv[2];
     err = nc_create( newfilename.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
     /// Set global attributes
-    std::map<std::string, std::string> att;
+    dg::file::JsonType att;
     att["title"] = "Output file of feltor/src/geometry_diag/geometry_diag.cpp";
     att["Conventions"] = "CF-1.7";
     ///Get local time and begin file history
@@ -430,11 +430,7 @@ int main( int argc, char* argv[])
     att["git-branch"] = GIT_BRANCH;
     att["compile-time"] = COMPILE_TIME;
     att["references"] = "https://github.com/feltor-dev/feltor";
-    std::string input = js.toStyledString();
-    att["inputfile"] = input;
-    for( auto pair : att)
-        err = nc_put_att_text( ncid, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
+    att["inputfile"] = js.toStyledString();
 
     if( mag_description == dg::geo::description::standardX ||
         mag_description == dg::geo::description::standardO ||
@@ -442,25 +438,15 @@ int main( int argc, char* argv[])
         mag_description == dg::geo::description::doubleX
         )
     {
-        double point[2] = {RO,ZO};
-        nc_put_att_double( ncid, NC_GLOBAL,
-            "opoint", NC_DOUBLE, 2, point);
+        att["opoint"] = dg::file::vec2json( {RO, ZO});
         if( mag_description == dg::geo::description::standardX)
-        {
-            double point[2] = {RX,ZX};
-            nc_put_att_double( ncid, NC_GLOBAL,
-                "xpoint", NC_DOUBLE, 2, point);
-        }
+            att["xpoint"] = dg::file::vec2json( {RX, ZX});
         if( mag_description == dg::geo::description::doubleX)
-        {
-            double point[4] = {RX,ZX, R2X, Z2X};
-            nc_put_att_double( ncid, NC_GLOBAL,
-                "xpoint", NC_DOUBLE, 4, point);
-        }
+            att["xpoint"] = dg::file::vec2json( {RX, ZX, R2X, Z2X});
     }
+    dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
 
 
-    int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
     if( compute_fsa &&
         (
         mag_description == dg::geo::description::standardX ||
@@ -470,52 +456,23 @@ int main( int argc, char* argv[])
         )
         )
     {
-        int dim_idsX[2] = {0,0};
-        //err = dg::file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
-        err = dg::file::define_dimensions( ncid, dim_idsX, *gX2d, {"eta", "zeta"} );
-        std::string long_name = "Flux surface label";
-        err = nc_put_att_text( ncid, dim_idsX[0], "long_name",
-            long_name.size(), long_name.data());
-        long_name = "Flux angle";
-        err = nc_put_att_text( ncid, dim_idsX[1], "long_name",
-            long_name.size(), long_name.data());
-        int xccID, yccID;
-        err = nc_def_var( ncid, "xcc", NC_DOUBLE, 2, dim_idsX, &xccID);
-        err = nc_def_var( ncid, "ycc", NC_DOUBLE, 2, dim_idsX, &yccID);
-        long_name="Cartesian x-coordinate";
-        err = nc_put_att_text( ncid, xccID, "long_name",
-            long_name.size(), long_name.data());
-        long_name="Cartesian y-coordinate";
-        err = nc_put_att_text( ncid, yccID, "long_name",
-            long_name.size(), long_name.data());
-        err = nc_put_var_double( ncid, xccID, gX2d->map()[0].data());
-        err = nc_put_var_double( ncid, yccID, gX2d->map()[1].data());
-        dim1d_ids[0] = dim_idsX[1];
-    }
-    else
-    {
-        err = dg::file::define_dimension( ncid, &dim1d_ids[0], grid1d, "zeta");
-        std::string psi_long_name = "Flux surface label";
-        err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
-            psi_long_name.size(), psi_long_name.data());
+        dg::file::Writer<dg::geo::CurvilinearGrid2d> writer( ncid, *gX2d, {"eta", "zeta"});
+        writer.def_and_put( "xcc", dg::file::long_name("Cartesian x-coordinate"),
+            gX2d->map()[0]);
+        writer.def_and_put( "ycc", dg::file::long_name("Cartesian y-coordinate"),
+            gX2d->map()[1]);
     }
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
-    dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
-
-    err = dg::file::define_dimensions( ncid, &dim3d_ids[0], fgrid3d);
-    dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors
     std::cout << "WRTING 1D FIELDS ... \n";
+    dg::file::Writer<dg::Grid1d> writer1d( ncid, grid1d, {"zeta"});
     for( auto tp : map1d)
     {
-        int vid;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1,
-            &dim1d_ids[0], &vid);
-        err = nc_put_att_double( ncid, vid, "time", NC_DOUBLE, 1, &std::get<3>(tp));
-        err = nc_put_att_text( ncid, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
+        dg::file::JsonType att;
+        att["long_name"] = std::get<2>(tp);
+        att["time"] = std::get<3>(tp);
+        writer1d.def_and_put( std::get<0>(tp), att, std::get<1>(tp));
     }
     //write 2d vectors
     //allocate mem for visual
@@ -523,41 +480,27 @@ int main( int argc, char* argv[])
     dg::HVec hvisual3d = dg::evaluate( dg::zero, grid3d);
     dg::fHVec fvisual, fvisual3d;
     std::cout << "WRTING 2D/3D CYLINDRICAL FIELDS ... \n";
+    dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
+    dg::file::Writer<dg::RealCylindricalGrid3d<float>> fwriter3d( ncid, fgrid3d, {"z", "y", "x"});
+    dg::RealGrid2d<float> fgrid2d( Rmin, Rmax, Zmin,Zmax, n, Nx, Ny);
+    dg::file::Writer<dg::RealGrid2d<float>> fwriter2d( ncid, fgrid2d, {"y", "x"});
     for(auto tp : map)
     {
-        int vectorID, vectorID3d;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 2,
-            &dim2d_ids[0], &vectorID);
-        err = nc_def_var( ncid, (std::get<0>(tp)+"3d").data(), NC_FLOAT, 3,
-            &dim3d_ids[0], &vectorID3d);
-        err = nc_put_att_text( ncid, vectorID, "long_name",
-            std::get<1>(tp).size(), std::get<1>(tp).data());
-        err = nc_put_att_text( ncid, vectorID3d, "long_name",
-            std::get<1>(tp).size(), std::get<1>(tp).data());
-        std::string coordinates = "zc yc xc";
-        err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
         dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
         dg::assign( hvisual, fvisual);
         dg::assign( hvisual3d, fvisual3d);
-        err = nc_put_var_float( ncid, vectorID, fvisual.data());
-        err = nc_put_var_float( ncid, vectorID3d, fvisual3d.data());
+
+        dg::file::JsonType att;
+        att["long_name"] = std::get<1>(tp);
+        fwriter2d.def_and_put( std::get<0>(tp), att, fvisual);
+        att["coordinates"] = "zc yc xc";
+        fwriter3d.def_and_put( std::get<0>(tp)+"3d", att, fvisual3d);
     }
     if( compute_sheath)
     {
         for(auto tp : sheath_map)
         {
-            int vectorID, vectorID3d;
-            err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 2,
-                &dim2d_ids[0], &vectorID);
-            err = nc_def_var( ncid, (std::get<0>(tp)+"3d").data(), NC_FLOAT, 3,
-                &dim3d_ids[0], &vectorID3d);
-            err = nc_put_att_text( ncid, vectorID, "long_name",
-                std::get<1>(tp).size(), std::get<1>(tp).data());
-            err = nc_put_att_text( ncid, vectorID3d, "long_name",
-                std::get<1>(tp).size(), std::get<1>(tp).data());
-            std::string coordinates = "zc yc xc";
-            err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
             dg::Timer t;
             t.tic();
             hvisual = dg::evaluate( std::get<2>(tp), grid2d);
@@ -568,8 +511,12 @@ int main( int argc, char* argv[])
             dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
             dg::assign( hvisual, fvisual);
             dg::assign( hvisual3d, fvisual3d);
-            err = nc_put_var_float( ncid, vectorID, fvisual.data());
-            err = nc_put_var_float( ncid, vectorID3d, fvisual3d.data());
+
+            dg::file::JsonType att;
+            att["long_name"] = std::get<1>(tp);
+            fwriter2d.def_and_put( std::get<0>(tp), att, fvisual);
+            att["coordinates"] = "zc yc xc";
+            fwriter3d.def_and_put( std::get<0>(tp)+"3d", att, fvisual3d);
         }
     }
     std::cout << "WRTING 3D FIELDS ... \n";
@@ -587,19 +534,15 @@ int main( int argc, char* argv[])
     };
     for( auto tp : map3d)
     {
-        int vectorID;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 3,
-            &dim3d_ids[0], &vectorID);
-        err = nc_put_att_text( ncid, vectorID, "long_name",
-            std::get<1>(tp).size(), std::get<1>(tp).data());
+        dg::file::JsonType att;
+        att["long_name"] = std::get<1>(tp);
         if( std::get<1>(tp) != "xc" && std::get<1>(tp) != "yc" &&std::get<1>(tp) != "zc")
         {
-            std::string coordinates = "zc yc xc";
-            err = nc_put_att_text( ncid, vectorID, "coordinates", coordinates.size(), coordinates.data());
+            att["coordinates"] = "zc yc xc";
         }
         hvisual3d = dg::evaluate( std::get<2>(tp), grid3d);
         dg::assign( hvisual3d, fvisual3d);
-        err = nc_put_var_float( ncid, vectorID, fvisual3d.data());
+        fwriter3d.def_and_put( std::get<0>(tp), att, fvisual3d);
     }
     //////////////////////////////Finalize////////////////////////////////////
     err = nc_close(ncid);
