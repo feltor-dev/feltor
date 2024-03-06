@@ -16,19 +16,7 @@ struct Variables{
     dg::file::WrappedJsonValue& js;
 };
 
-struct Record1d{
-    std::string name;
-    std::string long_name;
-    std::function<double( Variables&)> function;
-};
-
-struct Record{
-    std::string name;
-    std::string long_name;
-    std::function<void( dg::DVec&, Variables&)> function;
-};
-
-std::vector<Record> diagnostics2d_list = {
+std::vector<dg::file::Record<void(dg::DVec&, Variables&)>> diagnostics2d_list = {
     {"vorticity", "Vorticity in 2d",
         []( dg::DVec& result, Variables& v ) {
              dg::blas1::copy(v.y0, result);
@@ -41,25 +29,25 @@ std::vector<Record> diagnostics2d_list = {
     },
 };
 
-std::vector<Record> diagnostics2d_static_list = {
+std::vector<dg::file::Record<void(dg::HVec&, Variables&)>> diagnostics2d_static_list = {
     { "weights", "integration weights in Cartesian coordinate system",
-        []( dg::DVec& result, Variables& v ) {
+        []( dg::HVec& result, Variables& v ) {
             result = dg::create::weights( v.grid);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( dg::DVec& result, Variables& v ) {
+        []( dg::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.grid);
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( dg::DVec& result, Variables& v ) {
+        []( dg::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooY2d, v.grid);
         }
     }
 };
 
-std::vector<Record1d> diagnostics1d_list = {
+std::vector<dg::file::Record<double(Variables&)>> diagnostics1d_list = {
     {"vorticity_1d", "Integrated Vorticity",
         []( Variables& v ) {
             return dg::blas1::dot(v.y0, v.weights);
@@ -78,6 +66,11 @@ std::vector<Record1d> diagnostics1d_list = {
     {"time_per_step", "Computation time between outputs",
         []( Variables& v ) {
             return v.duration;
+        }
+    },
+    {"time", "",
+        []( Variables& v) {
+            return v.time;
         }
     },
     {"error", "Relative error to analytical solution (not available for every intitial condition)",

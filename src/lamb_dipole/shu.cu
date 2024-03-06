@@ -227,7 +227,7 @@ int main( int argc, char* argv[])
            return -1;
         }
         /// Set global attributes
-        std::map<std::string, std::string> att;
+        dg::file::JsonType att;
         att["title"] = "Output file of feltor/src/lamb_dipole/shu_b.cu";
         att["Conventions"] = "CF-1.7";
         ///Get local time and begin file history
@@ -243,67 +243,15 @@ int main( int argc, char* argv[])
         att["source"] = "FELTOR";
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = inputfile;
-        for( auto pair : att)
-            err = nc_put_att_text( ncid, NC_GLOBAL,
-                pair.first.data(), pair.second.size(), pair.second.data());
+        dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
+        dg::file::WriteRecordsList<dg::CartesianGrid2d>(ncid, grid, {"y", "x"}).
+            write( shu::diagnostics2d_static_list, var);
 
-        int dim_ids[3], tvarID;
-        std::map<std::string, int> id1d, id3d;
-        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid,
-                {"time", "y", "x"});
-
-        //Create field IDs
-        for( auto& record : shu::diagnostics2d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            id3d[name] = 0;
-            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
-                    &id3d.at(name));
-            err = nc_put_att_text( ncid, id3d.at(name), "long_name", long_name.size(),
-                long_name.data());
-        }
-        for( auto& record : shu::diagnostics1d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            id1d[name] = 0;
-            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
-                &id1d.at(name));
-            err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
-                long_name.data());
-        }
-        // Output static vars
-        dg::DVec resultD = dg::evaluate( dg::zero, grid);
-        dg::HVec resultH( resultD);
-        for( auto& record : shu::diagnostics2d_static_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            int staticID = 0;
-            err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
-                &staticID);
-            err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
-                long_name.data());
-            record.function( resultD, var);
-            dg::assign( resultD, resultH);
-            dg::file::put_var_double( ncid, staticID, grid, resultH);
-        }
-        size_t start[3] = {0, 0, 0};
-        size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
-        ///////////////////////////////////first output/////////////////////////
-        for( auto& record : shu::diagnostics2d_list)
-        {
-            record.function( resultD, var);
-            dg::assign( resultD, resultH);
-            dg::file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
-        }
-        for( auto& record : shu::diagnostics1d_list)
-        {
-            double result = record.function( var);
-            nc_put_vara_double( ncid, id1d.at(record.name), start, count, &result);
-        }
-        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+        dg::file::WriteRecordsList<dg::CartesianGrid2d> writer(ncid, grid, {"time", "y", "x"});
+        dg::file::WriteRecordsList<dg::Grid0d> writ0d(ncid, {}, {"time"});
+        // First output
+        writer.write( shu::diagnostics2d_list, var);
+        writ0d.write( shu::diagnostics1d_list, var);
         ///////////////////////////////////timeloop/////////////////////////
         try{
         for( unsigned u=1; u<=maxout; u++)
@@ -315,19 +263,9 @@ int main( int argc, char* argv[])
             ti.toc();
             var.duration = ti.diff();
             //output all fields
-            start[0] = u;
-            for( auto& record : shu::diagnostics2d_list)
-            {
-                record.function( resultD, var);
-                dg::assign( resultD, resultH);
-                dg::file::put_vara_double( ncid, id3d.at(record.name), start[0], grid, resultH);
-            }
-            for( auto& record : shu::diagnostics1d_list)
-            {
-                double result = record.function( var);
-                nc_put_vara_double( ncid, id1d.at(record.name), start, count, &result);
-            }
-            err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+            writer.write( shu::diagnostics2d_list, var);
+            writ0d.write( shu::diagnostics1d_list, var);
+
             std::cout << "\n\t Step "<<u <<" of "<<maxout <<" at time "<<time;
             std::cout << "\n\t Average time for one step: "<<var.duration<<"s\n\n"<<std::flush;
         }
