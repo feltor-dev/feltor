@@ -13,20 +13,11 @@
 
 #include "dg/file/file.h"
 
+#include "diag.h"
 #include "feltor.h"
 #include "parameters.h"
 
 
-struct Variables
-{
-    eule::Explicit<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& feltor;
-    eule::Implicit<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& rolkar;
-    const dg::x::Grid2d& grid;
-    const eule::Parameters& p;
-    const std::vector<dg::x::DVec>& y0;
-    dg::x::DMatrix dy;
-    const double& time;
-};
 
 int main( int argc, char* argv[])
 {
@@ -353,90 +344,16 @@ int main( int argc, char* argv[])
         DG_RANK0 dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
 
         dg::x::DMatrix dy = dg::create::dy( grid, p.bc_y, dg::centered);
-        Variables var = { feltor, rolkar, grid, p, y0, dy, time};
-        std::vector<dg::file::Record<void( dg::x::DVec& result, Variables&)>> records = {
-            {"electrons", "",
-                []( dg::x::DVec& result, Variables& v) {
-                    dg::blas1::copy( v.y0[0], result);
-                }
-            },
-            {"ions", "",
-                []( dg::x::DVec& result, Variables& v) {
-                    dg::blas1::copy( v.y0[1], result);
-                }
-            },
-            {"potential", "",
-                []( dg::x::DVec& result, Variables& v) {
-                    dg::blas1::copy( v.feltor.potential()[0], result);
-                }
-            },
-            {"vor", "",
-                []( dg::x::DVec& result, Variables& v) {
-                    dg::blas2::gemv(v.rolkar.laplacianM(), v.feltor.potential()[0], result);
-                }
-            }
-        };
+        eule::Variables var = { feltor, rolkar, y0, dy, time};
         dg::x::IHMatrix interpolate = dg::create::interpolation( grid_out, grid);
         dg::file::WriteRecordsList<dg::x::Grid2d> writer(ncid, grid_out, {"time", "y", "x"});
         dg::file::Writer<dg::x::Grid0d> writ0d( ncid, {}, {"time"});
         dg::x::DVec result = dg::evaluate( dg::zero, grid);
         writ0d.stack("time", time);
-        writer.host_transform_write( interpolate, records, result, var);
+        writer.host_transform_write( interpolate, eule::records, result, var);
 
-        std::vector<dg::file::Record<double(Variables&)>> records0d = {
-            {"energy_time", "",
-                []( Variables& v) {
-                    return v.time;
-                }
-            },
-            {"energy", "",
-                []( Variables& v) {
-                    return v.feltor.energy();
-                }
-            },
-            {"mass", "",
-                []( Variables& v) {
-                    return v.feltor.mass();
-                }
-            },
-            {"diffusion", "",
-                []( Variables& v) {
-                    return v.feltor.mass_diffusion();
-                }
-            },
-            {"Se", "",
-                []( Variables& v) {
-                    return v.feltor.energy_vector()[0];
-                }
-            },
-            {"Si", "",
-                []( Variables& v) {
-                    return v.feltor.energy_vector()[1];
-                }
-            },
-            {"Uperp", "",
-                []( Variables& v) {
-                    return v.feltor.energy_vector()[2];
-                }
-            },
-            {"dissipation", "",
-                []( Variables& v) {
-                    return v.feltor.energy_diffusion();
-                }
-            },
-            {"G_nex", "",
-                []( Variables& v) {
-                    return v.feltor.radial_transport();
-                }
-            },
-            {"Coupling", "",
-                []( Variables& v) {
-                    return v.feltor.coupling();
-                }
-            }
-        };
         dg::file::WriteRecordsList<dg::x::Grid0d> writ_records0d(ncid, {}, {"energy_time"});
-        writ_records0d.write( records0d, var);
+        writ_records0d.write( eule::records0d, var);
 
         dg::HVec xprobecoords(7,1.);
         for (unsigned i=0;i<7; i++) {
@@ -448,31 +365,7 @@ int main( int argc, char* argv[])
             coords, {"xprobe", "yprobe"}, "none", true
         };
         dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, probes_params);
-        std::vector<dg::file::Record<void( dg::x::DVec&, Variables&)>> probe_list =
-        {
-            {"electrons", "",
-                [](dg::x::DVec& result, Variables& var){
-                    dg::blas1::copy( var.y0[0], result);
-                }
-            },
-            {"phi", "",
-                [](dg::x::DVec& result, Variables& var){
-                    dg::blas1::copy( var.feltor.potential()[0], result);
-                }
-            },
-            {"phi_y", "Derivative in y direction",
-                [](dg::x::DVec& result, Variables& var){
-                    dg::blas2::gemv( var.dy, var.feltor.potential()[0], result);
-                },
-            },
-            {"gamma_x", "radial particle flux",
-                [](dg::x::DVec& result, Variables& var){
-                    dg::blas2::gemv( var.dy, var.feltor.potential()[0], result);
-                    dg::blas1::pointwiseDot( -1., result, var.y0[0], 0., result);
-                }
-            }
-        };
-        probes.write( time, probe_list, var);
+        probes.write( time, eule::probe_list, var);
         DG_RANK0 std::cout << "First write successful!\n";
         for( unsigned i=1; i<=p.maxout; i++)
         {
@@ -485,10 +378,10 @@ int main( int argc, char* argv[])
                     err = nc_close(ncid);
                     return -1;
                 }
-                probes.write( time, probe_list, var);
-                writ_records0d.write( records0d, var);
+                probes.write( time, eule::probe_list, var);
+                writ_records0d.write( eule::records0d, var);
             }
-            writer.host_transform_write( interpolate, records, result, var);
+            writer.host_transform_write( interpolate, eule::records, result, var);
             writ0d.stack("time", time);
         }
     }

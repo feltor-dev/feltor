@@ -1,6 +1,5 @@
 #pragma once
 // diag.h
-#pragma once
 #include "toefl.h"
 #include "parameters.h"
 
