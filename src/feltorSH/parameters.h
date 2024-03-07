@@ -29,6 +29,7 @@ struct Parameters
     unsigned init, iso, flrmode;
     enum dg::bc bc_x,bc_y; 
 
+    Parameters() = default;
     /**
      * @brief constructor to make a const object
      *
