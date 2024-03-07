@@ -13,6 +13,8 @@ struct Variables
     const std::vector<dg::x::DVec>& y0;
     dg::x::DMatrix dy;
     const double& time;
+    double accuracy;
+    double dEdt;
 };
 std::vector<dg::file::Record<void( dg::x::DVec& result, Variables&)>> records = {
     {"electrons", "",
@@ -85,6 +87,16 @@ std::vector<dg::file::Record<double(Variables&)>> records0d = {
     {"Coupling", "",
         []( Variables& v) {
             return v.feltor.coupling();
+        }
+    },
+    {"dEdt", "",
+        [](Variables& var){
+            return var.dEdt;
+        }
+    },
+    {"accuracy", "",
+        [](Variables& var){
+            return var.accuracy;
         }
     }
 };

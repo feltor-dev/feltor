@@ -177,6 +177,7 @@ int main( int argc, char* argv[])
     std::string output = "netcdf";
     dg::Timer t;
     t.tic();
+    unsigned step=0;
 #ifdef WITH_GLFW
     output = "glfw";
     if( "glfw" == output)
@@ -191,7 +192,6 @@ int main( int argc, char* argv[])
         dg::file::WrappedJsonValue js = dg::file::file2Json( "window_params.json");
         GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
         draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
-        unsigned step=0;
         while ( !glfwWindowShouldClose( w ))
         {
 
@@ -344,7 +344,7 @@ int main( int argc, char* argv[])
         DG_RANK0 dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
 
         dg::x::DMatrix dy = dg::create::dy( grid, p.bc_y, dg::centered);
-        eule::Variables var = { feltor, rolkar, y0, dy, time};
+        eule::Variables var = { feltor, rolkar, y0, dy, time, 0, 0};
         dg::x::IHMatrix interpolate = dg::create::interpolation( grid_out, grid);
         dg::file::WriteRecordsList<dg::x::Grid2d> writer(ncid, grid_out, {"time", "y", "x"});
         dg::file::Writer<dg::x::Grid0d> writ0d( ncid, {}, {"time"});
@@ -369,6 +369,8 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cout << "First write successful!\n";
         for( unsigned i=1; i<=p.maxout; i++)
         {
+            dg::Timer ti;
+            ti.tic();
             for( unsigned j=0; j<p.itstp; j++)
             {
                 try{ karniadakis.step( std::tie(feltor, rolkar, solver), time, y0);}
@@ -378,9 +380,21 @@ int main( int argc, char* argv[])
                     err = nc_close(ncid);
                     return -1;
                 }
+                step++;
+                E1 = feltor.energy();
+                var.dEdt = (E1 - E0)/p.dt;
+                double diss = feltor.energy_diffusion();
+                E0 = E1;
+                var.accuracy = 2.*fabs( (var.dEdt-diss)/(var.dEdt + diss));
+                DG_RANK0 std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
+                DG_RANK0 std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+                DG_RANK0 std::cout <<" d E/dt = " << var.dEdt <<" Lambda = " << diss << " -> Accuracy: "<< var.accuracy << "\n";
                 probes.write( time, eule::probe_list, var);
                 writ_records0d.write( eule::records0d, var);
             }
+            ti.toc();
+            DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
+            DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
             writer.host_transform_write( interpolate, eule::records, result, var);
             writ0d.stack("time", time);
         }
