@@ -18,12 +18,6 @@ namespace dg
 {
 namespace file
 {
-
-#ifdef DG_USE_JSONHPP
-using JsonType = nlohmann::json; //!< json type for Niels Lohmann's library
-#else
-using JsonType = Json::Value; //!< json type for jsoncpp library
-#endif
 /**
  * @defgroup json Json utilities
  * \#include "dg/file/json_utilities.h" (link -ljsoncpp)
@@ -31,6 +25,21 @@ using JsonType = Json::Value; //!< json type for jsoncpp library
  * @addtogroup json
  * @{
  */
+
+#ifdef DG_USE_JSONHPP
+using JsonType = nlohmann::json;
+#else
+/**
+ * @brief Json Type to use in \c dg::file functions and classes
+ *
+ * By default this typedef expands to jsoncpp's \c Json::Value
+ * @note
+ * If the Macro \c DG_USE_JSONHPP is defined before the inclusion of <tt> "dg/file/file.h"</tt>
+ * then the typedef expands to \c nlohmann::json
+ */
+using JsonType = Json::Value;
+#endif
+
 
 ///@brief Switch between how to handle errors in a Json utitlity functions
 enum class error{
@@ -327,13 +336,13 @@ struct WrappedJsonValue
  * @brief Convenience wrapper to open a file and parse it into a JsonType
  *
  * @note included in \c json_utilities.h
- * @param filename Name of the JSON file to parse
+ * @param filename Name of the JSON file to parse (the file path is relative to where the calling program is executed)
  * @param comm determines the handling of comments in the Json file
  * @param err determines how parser errors are handled by the function
  * \c error::is_throw:  throw a \c std::runtime_error containing an error message on any error that occurs on parsing;
  * \c error::is_warning: write the error message to std::cerr and return;
  * \c error::is_silent: silently return
- * @return js Contains all the found Json variables on output
+ * @return js object with all the found variables in \c filename
  */
 static inline JsonType file2Json(std::string filename, enum comments comm =
         file::comments::are_discarded, enum error err = file::error::is_throw)
@@ -396,7 +405,7 @@ static inline JsonType file2Json(std::string filename, enum comments comm =
     return js;
 }
 
-/// @brief Same as \c js = dg::file::file2Json( filename, comm, err)
+/// @brief Same as <tt>js = dg::file::file2Json( filename, comm, err)</tt>
 static inline void file2Json(std::string filename, JsonType& js, enum comments comm = file::comments::are_discarded, enum error err = file::error::is_throw)
 {
     js = file2Json( filename, comm, err);
@@ -415,7 +424,7 @@ static inline void file2Json(std::string filename, JsonType& js, enum comments c
  * \c error::is_throw:  throw a \c std::runtime_error containing an error message on any error that occurs on parsing;
  * \c error::is_warning: write the error message to std::cerr and return;
  * \c error::is_silent: silently return
- * @return js Contains all the found Json variables on output
+ * @return json object with all the found Json variables in \c input
  */
 static inline JsonType string2Json(std::string input, enum comments comm = file::comments::are_discarded, enum error err = file::error::is_throw)
 {
@@ -465,7 +474,7 @@ static inline JsonType string2Json(std::string input, enum comments comm = file:
     return js;
 }
 
-/// @brief Same as \c js = string2Json( input, comm, err)
+/// @brief Same as <tt>js = string2Json( input, comm, err)</tt>
 static inline void string2Json(std::string input, JsonType& js, enum comments comm = file::comments::are_discarded, enum error err = file::error::is_throw)
 {
     js = string2Json( input, comm, err);
@@ -497,7 +506,8 @@ dg::file::JsonType vec2json( std::initializer_list<T> shared)
     return vec2json(cc);
 }
 
-///Convert a string to a json object with <tt> att["long_name"] = long_name </tt>
+///Convert a string to a json object \c js with <tt> js["long_name"] = long_name</tt>
+/// Useful in connection with \c dg::file::Record
 static inline dg::file::JsonType long_name( const std::string& long_name)
 {
     dg::file::JsonType att;

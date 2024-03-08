@@ -71,6 +71,7 @@ struct RealGrid3d;
 ///@endcond
 //
 /// Just a tag (used e.g. in netcdf output to indicate 0-dimensional (point) data)
+/// @ingroup grid
 template<class real_type>
 struct RealGrid0d{
     using value_type = real_type;
