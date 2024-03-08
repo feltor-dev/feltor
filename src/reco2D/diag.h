@@ -25,35 +25,22 @@ struct Variables{
     asela::Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f;
     asela::Parameters p;
     std::array<dg::x::DVec,2> tmp;
-    double duration;
 };
 
-struct Record1d{
-    std::string name;
-    std::string long_name;
-    std::function<double( Variables&)> function;
-};
-
-struct Record{
-    std::string name;
-    std::string long_name;
-    std::function<void( dg::x::DVec&, Variables&)> function;
-};
-
-std::vector<Record> diagnostics2d_static_list = {
+std::vector<dg::file::Record<void(dg::x::HVec&, Variables&)>> diagnostics2d_static_list = {
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( dg::x::DVec& result, Variables& v ) {
+        []( dg::x::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.f.grid());
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( dg::x::DVec& result, Variables& v ) {
+        []( dg::x::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooY2d, v.f.grid());
         }
     }
 };
 
-std::vector<Record> diagnostics2d_list = {
+std::vector<dg::file::Record<void(dg::x::DVec&, Variables&)>> diagnostics2d_list = {
     {"electrons", "Electron density",
         []( dg::x::DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.density(0), result);
@@ -184,19 +171,4 @@ std::vector<Record> diagnostics2d_list = {
     }
 };
 
-std::vector<Record1d> diagnostics1d_list = {
-    //This does unfortunately not work for MPI because we don't have an
-    //implementation of interpolate available for MPI
-    //{"apar00", "Aparallel interpolated at 0,0",
-    //    []( Variables& v ) {
-    //        dg::x::HVec apar = dg::construct<dg::x::HVec>( v.f.aparallel(0));
-    //        return dg::interpolate( dg::xspace, apar, 0.,0., v.f.grid());
-    //    }
-    //},
-    {"time_per_step", "Computation time per step",
-        []( Variables& v ) {
-            return v.duration;
-        }
-    },
-};
 }//namespace asela
