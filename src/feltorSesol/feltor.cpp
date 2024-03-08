@@ -304,6 +304,7 @@ int main( int argc, char* argv[])
         };
         dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, probes_params);
         probes.write( time, eule::probe_list, var);
+        DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         for( unsigned i=1; i<=p.maxout; i++)
         {
@@ -313,10 +314,9 @@ int main( int argc, char* argv[])
             {
                 try{ karniadakis.step( std::tie(feltor, rolkar, solver), time, y0);}
                 catch( dg::Fail& fail) {
-                    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                    std::cerr << "Does Simulation respect CFL condition?\n";
-                    err = nc_close(ncid);
-                    return -1;
+                    DG_RANK0 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                    DG_RANK0 std::cerr << "Does Simulation respect CFL condition?\n";
+                    dg::abort_program();
                 }
                 step++;
                 E1 = feltor.energy();
@@ -327,14 +327,18 @@ int main( int argc, char* argv[])
                 DG_RANK0 std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
                 DG_RANK0 std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
                 DG_RANK0 std::cout <<" d E/dt = " << var.dEdt <<" Lambda = " << diss << " -> Accuracy: "<< var.accuracy << "\n";
+                DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
                 probes.write( time, eule::probe_list, var);
                 writ_records0d.write( eule::records0d, var);
+                DG_RANK0 err = nc_close(ncid);
             }
             ti.toc();
             DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+            DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
             writer.host_transform_write( interpolate, eule::records, result, var);
             writ0d.stack("time", time);
+            DG_RANK0 err = nc_close(ncid);
         }
     }
     ////////////////////////////////////////////////////////////////////

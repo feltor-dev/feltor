@@ -169,7 +169,7 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << "Done!\n";
 
     const double mass0 = feltor.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
-    double E0 = feltor.energy(), energy0 = E0, E1 = 0., diff = 0.;
+    double E0 = feltor.energy(), energy0 = E0, E1 = 0.;
 
     DG_RANK0 std::cout << "Begin computation \n";
     DG_RANK0 std::cout << std::scientific << std::setprecision( 2);
@@ -283,7 +283,7 @@ int main( int argc, char* argv[])
                 step++;
                 std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
                 E1 = feltor.energy();
-                diff = (E1 - E0)/p.dt; //
+                double diff = (E1 - E0)/p.dt; //
                 double diss = feltor.energy_diffusion( );
     //             double coupling = feltor.coupling();
                 std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
@@ -366,6 +366,7 @@ int main( int argc, char* argv[])
         };
         dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, probes_params);
         probes.write( time, eule::probe_list, var);
+        DG_RANK0 err = nc_close(ncid);
         DG_RANK0 std::cout << "First write successful!\n";
         for( unsigned i=1; i<=p.maxout; i++)
         {
@@ -375,10 +376,9 @@ int main( int argc, char* argv[])
             {
                 try{ karniadakis.step( std::tie(feltor, rolkar, solver), time, y0);}
                 catch( dg::Fail& fail) {
-                    std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                    std::cerr << "Does Simulation respect CFL condition?\n";
-                    err = nc_close(ncid);
-                    return -1;
+                    DG_RANK0 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
+                    DG_RANK0 std::cerr << "Does Simulation respect CFL condition?\n";
+                    dg::abort_program();
                 }
                 step++;
                 E1 = feltor.energy();
@@ -386,17 +386,21 @@ int main( int argc, char* argv[])
                 double diss = feltor.energy_diffusion();
                 E0 = E1;
                 var.accuracy = 2.*fabs( (var.dEdt-diss)/(var.dEdt + diss));
-                DG_RANK0 std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
+                DG_RANK0 std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
                 DG_RANK0 std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
                 DG_RANK0 std::cout <<" d E/dt = " << var.dEdt <<" Lambda = " << diss << " -> Accuracy: "<< var.accuracy << "\n";
+                DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
                 probes.write( time, eule::probe_list, var);
                 writ_records0d.write( eule::records0d, var);
+                DG_RANK0 err = nc_close(ncid);
             }
             ti.toc();
             DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
+            DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
             writer.host_transform_write( interpolate, eule::records, result, var);
             writ0d.stack("time", time);
+            DG_RANK0 err = nc_close(ncid);
         }
     }
     ////////////////////////////////////////////////////////////////////
