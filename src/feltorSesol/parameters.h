@@ -36,6 +36,7 @@ struct Parameters
     double omega_sink,sinkb;
     double dampw;
     enum dg::bc bc_x,bc_y,bc_x_phi; 
+    Parameters() = default;
 
     /**
      * @brief constructor to make a const object
