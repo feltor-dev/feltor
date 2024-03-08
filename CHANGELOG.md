@@ -16,6 +16,44 @@ far away from strictly following it really.
 > doxygen documentation, READMEs or tex writeups.
 > As of v7.0 we also stop reporting changes in test and benchmark programs.
 
+## [v7.1] Simple File I/O
+### Added
+ - Add one-dimensional MPI Grid `dg::RealMPIGrid1d` including evaluate, interpolation, projection, weights and derivative generation
+ - Add zero-dimensional Grids `dg::RealGrid0d` and `dg::RealMPIGrid0d` (mostly to indicate 0d writes in file output)
+ - `mpi_init1d` functions
+ - Add ndim method to Grids
+ - Add substantially enhanced Json and NetCDF input and output functionality, notable `dg::file::json2nc_attrs`, `dg::file::nc_attrs2json`, `dg::file::Writer`, `dg::file::Reader`. The only "raw" NetCDF calls necessary are file open, close and group creation functions
+ - Simplify output design with `dg::file::Record` in combination with `dg::file::WriteRecordsList`
+ - Add modular `dg::file::Probes` class with default `dg::file::parse_probes` that can be added to any project
+
+ - Add possibility to use `nlohmann::json` instead of `jsoncpp` using the macro `DG_USE_JSONHPP`
+ - Add default constructors to most classes notably Grid classes
+ - `mpi_comm_global2local_rank` utility function to recognise global master rank
+ - Add shape constructor to NearestNeighborComm
+ - Add optional weights parameter to `dg::least_squares`
+ - Add experimental `extrapolate_least_squares` method to `dg::Extrapolate` (unfortunately not very successful)
+ - Template version of `dg::is_same`
+ - Add more verbose output to `SeparatrixOrthogonal`
+ - Add `dg::mat::BesselJ` and `dg::mat::LaguerreL` and `dg::mat::GyroLagK` functors
+### Changed
+ - **std=c++17** Change default C++ standard in Makefiles to C++-17
+ - `SeparatrixOrthogonal` class only integrates with `1e-11` default accuracy (prior `1e-13`)
+ - `dg/geometries/geometries.h` now automatically incurs `json` dependency
+ - The `tridiag` method of `dg::mat::UniversalLanczos` now returns the tridagonal matrix T
+ - Add experimental `dg::mat::ProductMatrixFunction` class
+ - Add experimental shared memory functionality to store Eigen-decomposition of Laplace operator `dg::mat::LaplaceDecomposition` in `dg::mat`
+ - Restructure feltor, feltorSH, feltorSHp, feltorSesol, feltorShw, toefl programs using new I/O design
+### Deprecated
+### Removed
+ - diag/probes.h is now replaced by dg/file/probes.h
+### Fixed
+ - Fix unnecessary copy in Adaptive and SingleStep timeloop
+ - Fix Broadcase in `mpi_init3d` goes to comm not to world
+ - Fix value init in default constructor of `MPI_Vector`
+ - Fix bug in double version of `dg::is_same`
+ - Fix sign in `SafetyFactor`
+ - Fix grid generation close to O-point
+
 ## [v7.0] Three-dimensional
 ### Added
  - A left looking sparse inverse preconditioner `dg::sainv_precond` (sadly did not yield any benefits over `dg::nested_iterations` in our tests so we did not implement an MPI version)
