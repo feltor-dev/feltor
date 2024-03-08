@@ -279,8 +279,7 @@ int main( int argc, char* argv[])
         att["inputfile"] = js.toStyledString();
         DG_RANK0 dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
 
-        dg::x::DMatrix dy = dg::create::dy( grid, p.bc_y, dg::centered);
-        eule::Variables var = { feltor, rolkar, y0, dy, time, 0, 0};
+        eule::Variables var = { feltor, rolkar, y0, time, 0, 0};
         dg::x::IHMatrix interpolate = dg::create::interpolation( grid_out, grid);
         dg::file::WriteRecordsList<dg::x::Grid2d> writer(ncid, grid_out, {"time", "y", "x"});
         dg::file::Writer<dg::x::Grid0d> writ0d( ncid, {}, {"time"});

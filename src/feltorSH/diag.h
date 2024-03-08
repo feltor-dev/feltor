@@ -11,7 +11,6 @@ struct Variables
     eule::Explicit<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& feltor;
     eule::Implicit<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& rolkar;
     const std::vector<dg::x::DVec>& y0;
-    dg::x::DMatrix dy;
     const double& time;
     double accuracy;
     double dEdt;
