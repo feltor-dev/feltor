@@ -57,8 +57,8 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     dg::file::WrappedJsonValue jsIN = dg::file::string2Json(
         atts["inputfile"].asString(), dg::file::comments::are_forbidden);
     feltor::Parameters pIN( jsIN);
-    DG_RANK0 std::cout << "RESTART from file "<<file_name<< std::endl;
-    DG_RANK0 std::cout << " file parameters:" << std::endl;
+    DG_RANK0 std::cout << "# RESTART from file "<<file_name<< std::endl;
+    DG_RANK0 std::cout << "#  file parameters:" << std::endl;
     DG_RANK0 std::cout << pIN.n<<" x "<<pIN.Nx<<" x "<<pIN.Ny<<" x "<<pIN.Nz
                 <<" : symmetric "<<std::boolalpha<<pIN.symmetric<<std::endl;
 
@@ -91,7 +91,7 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     /////////////////////Get time length and initial data///////////////////////////
     unsigned size_time = reader0d.size();
     reader0d.get( "time", time, size_time-1);
-    DG_RANK0 std::cout << " Current time = "<< time <<  std::endl;
+    DG_RANK0 std::cout << "# Current time = "<< time <<  std::endl;
     for( unsigned i=0; i<restart3d_list.size(); i++)
     {
         restart.get( restart3d_list[i].name, transferIN);

@@ -117,47 +117,47 @@ struct Record{
 ///%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%
 //Here is a list of static (time-independent) 3d variables that go into the output
 //Cannot be feltor internal variables
-std::vector<dg::file::Record<void( dg::x::HVec&, Variables&, const dg::x::CylindricalGrid3d&)>> diagnostics3d_static_list = {
+std::vector<dg::file::Record<void( dg::x::HVec&, const dg::geo::TokamakMagneticField&, const dg::x::CylindricalGrid3d&)>> diagnostics3d_static_list = {
     { "BR", "R-component of magnetic field in cylindrical coordinates",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
-            dg::geo::BFieldR fieldR(v.mag);
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid){
+            dg::geo::BFieldR fieldR(mag);
             result = dg::pullback( fieldR, grid);
         }
     },
     { "BZ", "Z-component of magnetic field in cylindrical coordinates",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
-            dg::geo::BFieldZ fieldZ(v.mag);
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid){
+            dg::geo::BFieldZ fieldZ(mag);
             result = dg::pullback( fieldZ, grid);
         }
     },
     { "BP", "Contravariant P-component of magnetic field in cylindrical coordinates",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
-            dg::geo::BFieldP fieldP(v.mag);
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid){
+            dg::geo::BFieldP fieldP(mag);
             result = dg::pullback( fieldP, grid);
         }
     },
     { "Psip", "Flux-function psi",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
-             result = dg::pullback( v.mag.psip(), grid);
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid){
+             result = dg::pullback( mag.psip(), grid);
         }
     },
     { "vol3d", "Volume form in 3d",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid){
              result = dg::create::volume( grid);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid ){
             result = dg::evaluate( dg::cooRZP2X, grid);
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid ){
             result = dg::evaluate( dg::cooRZP2Y, grid);
         }
     },
     { "zc", "z-coordinate in Cartesian coordinate system",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid ){
             result = dg::evaluate( dg::cooRZP2Z, grid);
         }
     },

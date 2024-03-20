@@ -204,7 +204,7 @@ int main( int argc, char* argv[])
         //create & output static 3d variables into file
         dg::file::WriteRecordsList<dg::x::CylindricalGrid3d>(ncid, g3d_out,
             {"z", "y", "x"}
-            ).write( feltor::diagnostics3d_static_list, var, g3d_out );
+            ).write( feltor::diagnostics3d_static_list, var.mag, g3d_out );
         //create & output static 2d variables into file
         feltor::write_static_list( ncid, feltor::diagnostics2d_static_list,
             var, grid, g3d_out, transition);
