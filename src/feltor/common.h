@@ -374,15 +374,16 @@ std::map<std::string,double> box( const dg::file::WrappedJsonValue& js)
     double boxscaleRm, boxscaleRp;
     boxscaleRm  = js["grid"][ "scaleR"].get( 0u, 1.05).asDouble();
     boxscaleRp  = js["grid"][ "scaleR"].get( 1u, 1.05).asDouble();
-    double R0 = js["magnetic_field"]["params"]["R_0"].asDouble();
-    double a =  js["magnetic_field"]["params"]["inverseaspectratio"].asDouble()*R0;
-    const double Rmin=R0-boxscaleRm*a;
-    const double Rmax=R0+boxscaleRp*a;
+    // easiest way to get correct a for all field types:
+    dg::geo::TokamakMagneticField mag =
+        dg::geo::createMagneticField(js["magnetic_field"]["params"]);
+    const double Rmin=mag.R0()-boxscaleRm*mag.params().a();
+    const double Rmax=mag.R0()+boxscaleRp*mag.params().a();
     double boxscaleZm, boxscaleZp;
     boxscaleZm  = js["grid"][ "scaleZ"].get( 0u, 1.05).asDouble();
     boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
-    const double Zmin=-boxscaleZm*a;
-    const double Zmax=boxscaleZp*a;
+    const double Zmin=-boxscaleZm*mag.params().a();
+    const double Zmax= boxscaleZp*mag.params().a();
 
     return std::map<std::string, double>{
         {"Rmin", Rmin},{"Rmax",Rmax}, {"Zmin", Zmin},{"Zmax",Zmax}
