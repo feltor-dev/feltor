@@ -735,11 +735,11 @@ struct BHatP: public aCylindricalFunctor<BHatP>
 
 
 /**
- * @brief Contravariant components of the unit vector field (0, 0, +/- 1/R)
+ * @brief Contravariant components of the unit vector field (0, 0, \f$\pm 1/R \f$)
  * and its Divergence and derivative (0,0)
  * in cylindrical coordinates.
  * @param sign indicate positive or negative unit vector
- * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$, Constant(0), Constant(0)
+ * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ \pm 1/R \f$
  * @note This is equivalent to inserting a toroidal magnetic field into the \c dg::geo::createBHat function.
  */
 inline CylindricalVectorLvl1 createEPhi( int sign ){

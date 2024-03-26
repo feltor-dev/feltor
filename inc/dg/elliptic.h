@@ -74,6 +74,8 @@ class Elliptic1d
      * @brief Construct from Grid
      *
      * @param g The Grid, boundary conditions are taken from here
+     * (can be 2d or 3d grid, but the volume form is always 1 and the 2nd and
+     * 3rd dimension are trivially parallel)
      * @param dir Direction of the right first derivative in x
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
@@ -87,7 +89,8 @@ class Elliptic1d
 
     /**
      * @brief Construct from grid and boundary conditions
-     * @param g The Grid
+     * @param g The Grid (can be 2d or 3d grid, but the volume form is always 1
+     * and the 2nd and 3rd dimension are trivially parallel)
      * @param bcx boundary condition in x
      * @param dir Direction of the right first derivative in x
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
@@ -238,12 +241,17 @@ class Elliptic2d
     /**
      * @brief Construct from Grid
      *
+     * Initialize \f$ \chi=\sqrt{g}g^{-1}\f$ so that a negative laplacian operator results
+     *
      * @param g The Grid, boundary conditions are taken from here
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
-     * @note chi is assumed the metric per default
+     * @note The grid can be a 3d grid, then the 3rd row and column of \f$
+     * \chi\f$ (and / or the metric) are ignored in the discretization, which
+     * makes the 3rd dimension trivially parallel; the volume form will be the
+     * full 3d volume form though)
      */
     Elliptic2d( const Geometry& g,
         direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
@@ -253,6 +261,8 @@ class Elliptic2d
 
     /**
      * @brief Construct from grid and boundary conditions
+     *
+     * Initialize \f$ \chi=\sqrt{g}g^{-1}\f$ so that a negative laplacian operator results
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
@@ -260,7 +270,10 @@ class Elliptic2d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
-     * @note chi is assumed the metric per default
+     * @note The grid can be a 3d grid, then the 3rd row and column of \f$
+     * \chi\f$ (and / or the metric) are ignored in the discretization, which
+     * makes the 3rd dimension trivially parallel; the volume form will be the
+     * full 3d volume form though)
      */
     Elliptic2d( const Geometry& g, bc bcx, bc bcy,
         direction dir = forward,

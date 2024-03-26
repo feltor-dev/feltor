@@ -90,8 +90,8 @@ MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aR
  *
  * Push forward a vector from cylindrical or Cartesian to a new coordinate system.
  * Applies the Jacobian matrix \f$ {\bar v} = J  v\f$:
- * \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
-       v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
+ * \f{align}{ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
+       v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f}
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
@@ -120,9 +120,11 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
  * @brief \f$ {\bar v} = J  v\f$
  *
  * Push forward a vector from cylindrical or Cartesian to a new coordinate system.
- * Applies the Jacobian matrix \f$ {\bar v} = J  v\f$:
- * \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
-       v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
+ * Applies the Jacobian matrix \f$ {\bar v} = J  v\f$. With \f$ v^R = v^R(R(x,y,z), Z(x,y,z), \varphi(x,y,z))\f$ and analogous \f$ v^Z\f$, \f$ v^\varphi\f$, and the elements of \f$ J = J(x,y,z)\f$:
+ * \f{align}{ v^x(x,y,z) = x_R v^R + x_Z v^Z + x_\varphi v^\varphi\\
+       v^y(x,y,z) = y_Rv^R + y_Z v^Z + y_\varphi v^\varphi \\
+       v^z(x,y,z) = z_Rv^R + z_Z v^Z + z_\varphi v^\varphi
+       \f}
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
@@ -157,11 +159,11 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  *
  * Push forward a symmetric 2d tensor from cylindrical or Cartesian to a new coordinate system.
  * Applies the Jacobian matrix \f$ \bar \chi = J \chi J^T\f$:
- *\f[
+ *\f{align}{
  \chi^{xx}(x,y) = x_R^2 \chi^{RR} + 2x_Rx_Z \chi^{RZ} + x_Z^2\chi^{ZZ} \\
  \chi^{xy}(x,y) = x_Ry_R \chi^{RR} + (x_Ry_Z+y_Rx_Z) \chi^{RZ} + x_Zy_Z\chi^{ZZ} \\
  \chi^{yy}(x,y) = y_R^2 \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Z^2\chi^{ZZ} \\
-               \f]
+               \f}
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam FunctorRR Binary or Ternary functor
  * @tparam FunctorRZ Binary or Ternary functor
