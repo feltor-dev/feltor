@@ -50,7 +50,7 @@ int main(int argc, char * argv[])
     ////////////////////////////////initialze fields /////////////////////
     const dg::CylindricalMPIGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField(R_0, I_0);
-    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix,
+    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix,
         dg::MDVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(),
                 1e-8, mx[0], mx[1], -1., method);
 

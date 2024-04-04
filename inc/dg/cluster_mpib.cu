@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
             dg::geo::createGuenterField(R0, I0);
         dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector>
             dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 5, 5);
-        dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Matrix, Vector>
+        dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Vector>
             ds ( dsFA);
 
         ds.centered(x,y);//warm up

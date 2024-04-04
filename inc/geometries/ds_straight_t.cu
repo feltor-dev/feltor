@@ -40,7 +40,7 @@ int main()
             dg::geo::Constant(0), dg::geo::Constant(1), dg::geo::Constant(1),
             dg::geo::Constant(1));
 
-    dg::geo::DS<dg::CartesianGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds (
+    dg::geo::DS<dg::CartesianGrid3d, dg::IDMatrix, dg::DVec> ds (
             vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter());
     t.toc();
     std::cout << "# Creation of parallel Derivative took     "<<t.diff()<<"s\n";

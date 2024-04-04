@@ -44,7 +44,7 @@ int main(int argc, char **argv)
             dg::geo::Constant(0), dg::geo::Constant(1), dg::geo::Constant(0),
             dg::geo::Constant(0));
 
-    dg::geo::DS<dg::CartesianMPIGrid3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec>
+    dg::geo::DS<dg::CartesianMPIGrid3d, dg::MIDMatrix, dg::MDVec>
         ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter());
     t.toc();
     if(rank==0)std::cout << "# Creation of parallel Derivative took     "<<t.diff()<<"s\n";

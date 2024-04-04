@@ -49,7 +49,7 @@ struct Implicit
     const container& precond(){return m_ellipticPerp.precond();}
   private:
     const heat::Parameters m_p;
-    dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds;
+    dg::geo::DS<Geometry, IMatrix, container> m_ds;
     dg::Elliptic3d<Geometry, Matrix, container> m_ellipticForward, m_ellipticBackward, m_ellipticPerp;
 
 };
@@ -110,7 +110,7 @@ struct Explicit
               heat::Parameters p,
               dg::geo::TokamakMagneticField mag);
 
-    const dg::geo::DS<Geometry,IMatrix,Matrix,container>& ds(){
+    const dg::geo::DS<Geometry,IMatrix,container>& ds(){
         return m_ds;
     }
     void operator()( double t, const container& y, container& yp);
@@ -129,7 +129,7 @@ struct Explicit
 #endif //DG_MANUFACTURED
 
     //matrices and solvers
-    dg::geo::DS<Geometry,IMatrix,Matrix,container> m_ds;
+    dg::geo::DS<Geometry,IMatrix,container> m_ds;
 
     const heat::Parameters m_p;
     Quantities m_q;

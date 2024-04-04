@@ -331,20 +331,20 @@ void swap_bc_perp( const FieldAligned& fa, const container& fm,
 in arbitrary coordinates
 @snippet ds_t.cu doxygen
  * @note The parallel Laplacian cannot be inverted as long as there are
- * closed fieldlines somewhere in the domain (which is virtually always true). There is therefore no norm parameter in the class.
+ * closed fieldlines somewhere in the domain (which is virtually always true).
 @note The \c div and \c symv member functions are close to but not exactly volume conserving
 (at least if not the linear interpolation is chosen in Fieldaligned)
 * @ingroup fieldaligned
 * @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
 * @tparam IMatrix The type of the interpolation matrix
     - \c dg::IHMatrix, or \c dg::IDMatrix, \c dg::MIHMatrix, or \c dg::MIDMatrix
-* @tparam Matrix The matrix class of the jump matrix
-    - \c dg::HMatrix, or \c dg::DMatrix, \c dg::MHMatrix, or \c dg::MDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
     - \c dg::HVec, or \c dg::DVec, \c dg::MHVec, or \c dg::MDVec
+* @note The \c dg::TensorTraits are defined for this class and thus \c DS
+* is usable as a Matrix class (calling \c symv )
 * @sa The pdf <a href="https://www.overleaf.com/read/jjvstccqzcjv" target="_blank">parallel derivative</a> writeup
 */
-template< class ProductGeometry, class IMatrix, class Matrix, class container >
+template< class ProductGeometry, class IMatrix, class container >
 struct DS
 {
     typedef dg::geo::Fieldaligned<ProductGeometry, IMatrix, container> FA; //!< conveniently abbreviates underlying \c Fieldaligned type
@@ -603,22 +603,27 @@ struct DS
     /**
      * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$
      *
+     * using the \c dg::geo::dssd_centered method.
      * @copydoc hide_ds_parameters2
      * @copydoc hide_ds_attention
+     * @note The \c dg::TensorTraits are defined for this class and thus \c DS
+     * is usable as a Matrix class (calling \c symv )
      */
     void symv( const container& f, container& g){ symv( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
      *
+     * using the \c dg::geo::dssd_centered method.
      * @copydoc hide_ds_parameters4
      * @copydoc hide_ds_attention
+     * @note The \c dg::TensorTraits are defined for this class and thus \c DS
+     * is usable as a Matrix class (calling \c symv )
      */
     void symv( double alpha, const container& f, double beta, container& g);
     /**
      * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
-     * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
+     * Same as \c forward followed by \c backward
      * @copydoc hide_ds_parameters2
      */
     void dss( const container& f, container& g){
@@ -626,8 +631,7 @@ struct DS
     /**
      * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
-     * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
+     * Same as \c forward followed by \c backward
      * @copydoc hide_ds_parameters4
      */
     void dss( double alpha, const container& f, double beta, container& g){
@@ -666,16 +670,6 @@ struct DS
                 bound, boundary_value);
         dssd_centered( m_fa, alpha, m_tempM, f, m_tempP, beta, g);
     }
-    /**
-     * @brief Set the currently used jfactor (\f$ \alpha \f$)
-     * @param new_jfactor The new scale factor for jump terms
-     */
-    void set_jfactor( double new_jfactor) {m_jfactor = new_jfactor;}
-    /**
-     * @brief Get the currently used jfactor (\f$ \alpha \f$)
-     * @return  The current scale factor for jump terms
-     */
-    double get_jfactor() const {return m_jfactor;}
 
     /// The volume form with dG weights
     const container& weights()const {
@@ -692,23 +686,19 @@ struct DS
     private:
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
     container m_tempP, m_tempO, m_tempM;
-    Matrix m_jumpX, m_jumpY;
-    double m_jfactor = 1.;
 };
 
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
-template<class Geometry, class I, class M, class container>
-DS<Geometry, I, M,container>::DS( Fieldaligned<Geometry, I, container> fa): m_fa(fa)
+template<class Geometry, class I, class container>
+DS<Geometry, I, container>::DS( Fieldaligned<Geometry, I, container> fa): m_fa(fa)
 {
-    dg::blas2::transfer( dg::create::jumpX( fa.grid(), fa.bcx()), m_jumpX);
-    dg::blas2::transfer( dg::create::jumpY( fa.grid(), fa.bcy()), m_jumpY);
     m_tempP = fa.sqrtG(), m_tempM = m_tempO = m_tempP;
 }
 
-template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::ds( dg::direction dir, double alpha,
+template<class G, class I, class container>
+inline void DS<G,I,container>::ds( dg::direction dir, double alpha,
     const container& f, double beta, container& dsf) {
     switch( dir){
         case dg::centered:
@@ -719,8 +709,8 @@ inline void DS<G,I,M,container>::ds( dg::direction dir, double alpha,
         return backward( alpha, f, beta, dsf);
     }
 }
-template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::div( dg::direction dir, double alpha,
+template<class G, class I, class container>
+inline void DS<G,I,container>::div( dg::direction dir, double alpha,
     const container& f, double beta, container& dsf) {
     switch( dir){
         case dg::centered:
@@ -733,16 +723,10 @@ inline void DS<G,I,M,container>::div( dg::direction dir, double alpha,
 }
 
 
-template<class G,class I, class M, class container>
-void DS<G,I,M,container>::symv( double alpha, const container& f, double beta, container& dsTdsf)
+template<class G,class I, class container>
+void DS<G,I,container>::symv( double alpha, const container& f, double beta, container& dsTdsf)
 {
     dssd( alpha, f, beta, dsTdsf);
-    //     add jump terms
-    if( m_jfactor !=0 && m_fa.method() == "dg")
-    {
-        dg::blas2::symv( -m_jfactor*alpha, m_jumpX, f, 1., dsTdsf);
-        dg::blas2::symv( -m_jfactor*alpha, m_jumpY, f, 1., dsTdsf);
-    }
 };
 ///@endcond
 
@@ -868,11 +852,7 @@ void ds_centered( const FieldAligned& fa, double alpha, const container& fm,
 /**
  * @brief Centered derivative \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
  *
- * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+ h_z^0} - \frac{f^0}{h_z^- h_z^+} + \frac{f^-}{h_z^-h_z^0}\right) \f]
- * which is the second derivative of a 2nd order polynomial fitted through the plus, minus and centre points
- * the boundary conditions are implemented by
- * mirroring points perpendicular to the boundary, which has some drawbacks as
- * to the numerical stability and toroidal resolution.
+ * The formula used is the one that is obtained if one thinks of \f$ \nabla_\parallel f\f$ on a staggered grid and then deriving the result i.e. \c dg::geo::ds_forward followed by \c dg::geo::ds_backward
  * @param fa this object will be used to get grid distances
  * @copydoc hide_ds_parameters4
  * @copydoc hide_ds_fm
@@ -1033,8 +1013,8 @@ void ds_slope( const FieldAligned& fa, double alpha,
 }//namespace geo
 
 ///@cond
-template< class G, class I, class M, class V>
-struct TensorTraits< geo::DS<G,I,M, V> >
+template< class G, class I, class V>
+struct TensorTraits< geo::DS<G,I, V> >
 {
     using value_type = double;
     using tensor_category = SelfMadeMatrixTag;

@@ -37,6 +37,7 @@ far away from strictly following it really.
  - Add `dg::mat::BesselJ` and `dg::mat::LaguerreL` and `dg::mat::GyroLagK` functors
 ### Changed
  - **std=c++17** Change default C++ standard in Makefiles to C++-17
+ - `dg::geo::DS` class no longer adds jump terms in its symv method. Thus removed one template parameter from `dg::geo::DS` class
  - `SeparatrixOrthogonal` class only integrates with `1e-11` default accuracy (prior `1e-13`)
  - `dg/geometries/geometries.h` now automatically incurs `json` dependency
  - The `tridiag` method of `dg::mat::UniversalLanczos` now returns the tridagonal matrix T

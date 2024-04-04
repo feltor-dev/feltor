@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
     dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>
         dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0],
                 mx[1], -1, method);
-    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix,
+    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix,
         dg::MDVec> ds( dsFA);
     ///##########################################################///
     auto ff = dg::geo::TestFunctionDirNeu(mag);

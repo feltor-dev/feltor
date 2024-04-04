@@ -44,7 +44,7 @@ int main(int argc, char * argv[])
     dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA(
             bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx[0], mx[1],
             -1, method);
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>
         ds( dsFA );
     //![doxygen]
     ///##########################################################///
