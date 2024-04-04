@@ -97,7 +97,8 @@ int main( int argc, char* argv[])
     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma_z, p.amp);
     dg::DVec y0 = dg::evaluate( init0, grid);
     ///////////////////TIME STEPPER
-    dg::DefaultSolver<dg::DVec> solver( diffusion, y0, grid.size(), p.eps_time);
+    heat::ImplicitSolver<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> solver(
+        diffusion, y0, p);
     dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
         "ARK-4-2-3", y0);
     double dt = p.dt, dt_new = dt;

@@ -13,8 +13,8 @@ struct Implicit
     Implicit( const Geometry& g, Parameters p,
         dg::geo::TokamakMagneticField mag):
         m_p(p),
-        m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
-              p.rk4eps, p.mx, p.my),
+        m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(),
+              p.rk4eps, p.mx, p.my, -1, p.interpolation_method),
         m_ellipticForward( g,  dg::forward),
         m_ellipticBackward( g,  dg::backward),
         m_ellipticPerp( g,  dg::centered)
@@ -52,6 +52,48 @@ struct Implicit
     dg::geo::DS<Geometry, IMatrix, Matrix, container> m_ds;
     dg::Elliptic3d<Geometry, Matrix, container> m_ellipticForward, m_ellipticBackward, m_ellipticPerp;
 
+};
+
+template< class Geometry, class IMatrix, class Matrix, class Container>
+struct ImplicitSolver
+{
+    ImplicitSolver( Implicit<Geometry,IMatrix,Matrix,Container>& im,
+        const Container& copyable, Parameters p):
+        m_im(im),
+        m_p(p),
+        m_pcg(copyable, 1000 ),
+        m_lgmres( copyable, 30,3 , 1000)
+    {
+    }
+    void operator()( double alpha, double time, Container& y, const Container& ys)
+    {
+       auto wrapper = [a = alpha, t = time, &i = m_im]( const auto& x, auto& y){
+               i( t, x, y);
+               dg::blas1::axpby( 1., x, -a, y);
+           };
+       dg::blas1::copy( ys, y); // take rhs as initial guess
+       unsigned number=0;
+       dg::Timer t;
+       t.tic();
+       if( m_p.p_diff == "elliptic")
+           number = m_pcg.solve( wrapper, y, ys, m_im.precond(), m_im.weights(), m_p.eps_time);
+       else
+           number = m_lgmres.solve( wrapper, y, ys, m_im.precond(), m_im.weights(), m_p.eps_time);
+       t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif//MPI
+       DG_RANK0 std::cout << "# of pcg iterations time solver: "
+           <<number<<"/"<<1000<<" took "<<t.diff()<<"s\n";
+
+
+    }
+    private:
+    Implicit<Geometry,IMatrix,Matrix,Container>& m_im;
+    const heat::Parameters m_p;
+    dg::PCG<Container> m_pcg;
+    dg::LGMRES<Container> m_lgmres;
 };
 
 struct Quantities{
@@ -106,8 +148,8 @@ Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g,
     m_Z( dg::pullback( dg::cooY3d, g)),
     m_P( dg::pullback( dg::cooZ3d, g)),
 #endif //DG_MANUFACTURED
-    m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(), dg::forward,
-          p.rk4eps, p.mx, p.my),
+    m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(),
+          p.rk4eps, p.mx, p.my, -1, p.interpolation_method),
     m_p(p),
     m_ellipticForward( g,  dg::forward),
     m_ellipticBackward(g,  dg::backward),

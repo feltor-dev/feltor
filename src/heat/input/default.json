@@ -26,5 +26,6 @@
     "mx": 10,
     "my": 10,
     "rk4eps" : 1e-5,
-    "diff"       : "non-adjoint"
+    "interpolation-method" : "dg",
+    "diff"       : "adjoint"
 }

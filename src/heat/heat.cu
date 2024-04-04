@@ -26,8 +26,8 @@ int main( int argc, char* argv[])
     }
     else if( argc == 3)
     {
-        js = dg::file::file2Json(argv[1], dg::file::comments::are_forbidden);
-        gs = dg::file::file2Json(argv[2], dg::file::comments::are_forbidden);
+        js = dg::file::file2Json(argv[1], dg::file::comments::are_discarded);
+        gs = dg::file::file2Json(argv[2], dg::file::comments::are_discarded);
     }
     else
     {
@@ -63,7 +63,8 @@ int main( int argc, char* argv[])
     dg::DVec y0 = dg::evaluate( init0, grid);
     //////////////////////////////////////////////////////////////////
     //Adaptive solver
-    dg::DefaultSolver<dg::DVec> solver( im, y0, grid.size(), p.eps_time);
+    heat::ImplicitSolver<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> solver(
+        im, y0, p);
     dg::Adaptive<dg::ARKStep<dg::DVec>> adaptive(
         "ARK-4-2-3", y0);
     double dt_new = p.dt, dt = dt_new;
