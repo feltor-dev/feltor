@@ -43,7 +43,7 @@ struct Parameters
     std::string sheath_bc;
     std::string fci_bc;
     std::string output;
-    bool symmetric, calibrate;
+    bool symmetric, calibrate, modify_diff, no_diff_penalization;
     bool penalize_wall, penalize_sheath;
     bool partitioned;
     //
@@ -176,7 +176,7 @@ struct Parameters
         }
 
         // Computing flags
-        symmetric = calibrate = false;
+        symmetric = calibrate = modify_diff = no_diff_penalization = false;
         for( unsigned i=0; i<js["flags"].size(); i++)
         {
             std::string flag = js["flags"].get(i,"symmetric").asString();
@@ -189,6 +189,10 @@ struct Parameters
                             "Calibrate not possible with glfw output!\n");
                 calibrate = true;
             }
+            else if( flag == "modify-diff")
+                modify_diff = true;
+            else if( flag == "no-diff-penalization")
+                no_diff_penalization = true;
             else
                 throw std::runtime_error( "Flag "+flag+" not recognized!\n");
         }

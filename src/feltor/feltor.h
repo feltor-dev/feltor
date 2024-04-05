@@ -270,7 +270,7 @@ struct Explicit
                 swap( temp0, temp1);
                 dg::blas2::symv( 1., m_lapperpU, temp1, 0., temp0);
             }
-            if( !m_modify_diff)
+            if( !m_p.modify_diff)
                 dg::blas1::pointwiseDivide( -alpha*m_p.nu_perp_u, temp0, density, beta, result);
             else
                 dg::blas1::axpby( -alpha*m_p.nu_perp_u, temp0, beta, result);
@@ -278,7 +278,7 @@ struct Explicit
         else
             dg::blas1::scal( result, beta);
         double nu = m_p.nu_perp_n;
-        if( m_modify_diff)
+        if( m_p.modify_diff)
             nu += m_p.nu_perp_u;
         if( nu > 0 )
         {
@@ -318,7 +318,6 @@ struct Explicit
         }
     }
 
-    bool modify_diff() const {return m_modify_diff;}
     void compute_parallel_diffusiveN( int i, Container& result)
     {
         dg::blas1::axpby( m_p.nu_parallel_n, lapParN(i), 0., result);
@@ -326,7 +325,7 @@ struct Explicit
     void compute_parallel_diffusiveU( int i, Container& result)
     {
         double nu = m_p.nu_parallel_n;
-        if( m_modify_diff)
+        if( m_p.modify_diff)
             nu += m_p.nu_parallel_u[i];
         if( nu > 0)
         {
@@ -337,7 +336,7 @@ struct Explicit
             dg::blas1::copy( 0, result);
         if( m_p.nu_parallel_u[i] > 0)
         {
-            if( !m_modify_diff)
+            if( !m_p.modify_diff)
                 dg::blas1::pointwiseDivide( m_p.nu_parallel_u[i], lapParU(i), density(i), 1., result);
             else
                 dg::blas1::axpby( m_p.nu_parallel_u[i], lapParU(i), 1., result);
@@ -656,7 +655,7 @@ struct Explicit
     double m_minne = 0., m_minrate  = 0., m_minalpha = 0.;
     double m_nwall = 0., m_uwall = 0.;
     bool m_fixed_profile = true, m_reversed_field = false, m_compute_in_3d = true;
-    bool m_upToDate = false, m_modify_diff = false;
+    bool m_upToDate = false;
     unsigned m_called = 0;
 
 };
@@ -860,15 +859,14 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);
-    // An optional hidden parameter
-    if( m_js["regularization"].isMember("modify-diff") )
-        m_modify_diff = m_js["regularization"]["modify-diff"].asBool();
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif
-    if( m_modify_diff)
+    if( m_p.modify_diff)
         DG_RANK0 std::cout << "# Optional parameter \"modify-diff\" activated\n";
+    if( m_p.no_diff_penalization)
+        DG_RANK0 std::cout << "# Optional parameter \"no-diff-penalization\" activated\n";
 
 }
 
@@ -1889,13 +1887,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
     double beta,
     std::array<Container,2>& yp)
 {
-#if FELTORPERP == 1
-    for( unsigned i=0; i<2; i++)
-        compute_perp_diffusiveN( 1., density[i], m_temp0,
-                m_temp1, beta, yp[i]);
-#else
     dg::blas1::scal( yp, beta);
-#endif
 #if FELTORPARALLEL == 1
     for( unsigned i=0; i<2; i++)
     {
@@ -1906,11 +1898,28 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
         }
     }
 #endif
-    for( unsigned i=0; i<2; i++)
+    if( m_p.no_diff_penalization)
     {
-        multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
-        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
-            -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
+                -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
+        }
+    }
+#if FELTORPERP == 1
+    for( unsigned i=0; i<2; i++)
+        compute_perp_diffusiveN( 1., density[i], m_temp0,
+                m_temp1, 1., yp[i]);
+#endif
+    if( !m_p.no_diff_penalization)
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
+                -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
+        }
     }
 }
 
@@ -1923,17 +1932,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
     double beta,
     std::array<Container,N>& yp)
 {
+    dg::blas1::scal( yp, beta);
     // velocityST[0] := u_e^dagger
     // velocityST[1] := U_i^dagger
-#if FELTORPERP == 1
-    for( unsigned i=0; i<2; i++)
-    {
-        compute_perp_diffusiveU( 1., velocityST[i], densityST[i], m_temp0,
-                m_temp1, m_dFU[i][0], m_dFU[i][1], beta, yp[i]);
-    }
-#else
-    dg::blas1::scal( yp, beta);
-#endif
 #if FELTORPARALLEL == 1
     for( unsigned i=0; i<2; i++)
     {
@@ -1942,13 +1943,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         {
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[i],
                     m_minusU[i], m_zeroU[i], m_plusU[i], 0., m_temp0);
-            if( !m_modify_diff)
+            if( !m_p.modify_diff)
                 dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
             else
                 dg::blas1::axpby( 1., m_temp0, 1., yp[i]);
         }
         double nu = m_p.nu_parallel_n;
-        if( m_modify_diff)
+        if( m_p.modify_diff)
             nu += m_p.nu_parallel_u[i];
         if( nu > 0)
         {
@@ -1973,11 +1974,30 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         }
     }
 #endif
+    if( m_p.no_diff_penalization)
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
+                -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
+        }
+    }
+#if FELTORPERP == 1
     for( unsigned i=0; i<2; i++)
     {
-        multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
-        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
-            -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
+        compute_perp_diffusiveU( 1., velocityST[i], densityST[i], m_temp0,
+                m_temp1, m_dFU[i][0], m_dFU[i][1], 1., yp[i]);
+    }
+#endif
+    if( !m_p.no_diff_penalization)
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
+                -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
+        }
     }
 }
 

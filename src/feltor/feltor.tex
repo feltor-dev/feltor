@@ -1674,7 +1674,6 @@ viscosity and thus should not need additional damping.
     // increase this or the resolution if you see vertical or horizontal
     // oscillations in your simulation box, decrease if simulation
     // looks "out of focus"
-    "modify-diff" : false // [OPTIONAL] (see description below)
 }
 \end{minted}
 Simply set the diffusion to 0 if you do not want any regularization.
@@ -1683,13 +1682,6 @@ Simply set the diffusion to 0 if you do not want any regularization.
     is a clear warning that \mintinline{c}{nu_perp} is too large for the
     chosen resolution.
 \end{tcolorbox}
-If the  "modify-diff" parameter is set to true, the parallel and perpendicular
-momentum diffusion parameters $\nu_{U,\perp}$ and $\nu_\parallel$ are
-multiplied by density $N$. This means they must appear inside the
-divergence, e.g. $\npar^\dagger (\nu_{\parallel} \npar U_\parallel)$.
-The hope is that with this modification the minne parameter can be set
-to lower values without the small densities affecting the CFL condition.
-By default this does not happen.
 
 \subsection{Elliptic solvers}
 We discretize all elliptic operators with a local dG method (LDG).  In order to
@@ -2122,6 +2114,8 @@ We can simplify the full simulation in a few ways:
     "calibrate", // Simulation stops after initialization,
     // no right hand side calls
     // not possible for glfw output
+    "modify-diff", // see text below
+    "no-diff-penalization" //Perp Diffusion is not penalized
 ]
 \end{minted}
 You can combine the flags in any way you want: you can have 1 or more
@@ -2131,6 +2125,17 @@ flags present or leave the field empty.
     which takes a long time) and quickly fine-tune
     magnetic field, wall, sheath, init, source and grid parameters
 \end{tcolorbox}
+If the  "modify-diff" parameter is set to true, the parallel and perpendicular
+momentum diffusion parameters $\nu_{U,\perp}$ and $\nu_\parallel$ are
+multiplied by density $N$. This means they must appear inside the
+divergence, e.g. $\npar^\dagger (\nu_{\parallel} \npar U_\parallel)$.
+The hope is that with this modification the minne parameter can be set
+to lower values without the small densities affecting the CFL condition.
+By default this does not happen.
+
+For the "no-diff-penalization" the idea is to at the same time set
+the "wall": "penalization" parameter to $0$ such that a semblance of
+Neumann boundary conditions result for the wall.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Restarting} \label{sec:restart}
 We have the possibility to initialize time and
