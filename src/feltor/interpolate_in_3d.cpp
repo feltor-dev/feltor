@@ -143,8 +143,10 @@ int main( int argc, char* argv[])
         ZZ[ Nz_out*g2d.size() + i] = yy0[1][i];
         PP[ Nz_out*g2d.size() + i] = phi0;
     }
+    std::cout << "# Integrate Fieldlines in + direction ...\n";
     for( unsigned k=1; k<Nz_out; k++)
     {
+        std::cout << "# Plane "<<k<<" / "<<Nz_out<<"\n";
         for( unsigned i=0; i<g2d.size(); i++)
         {
             double phi1 = phi0 + deltaPhi;
@@ -165,8 +167,10 @@ int main( int argc, char* argv[])
         dg::evaluate( dg::cooX2d, g2d),
         dg::evaluate( dg::cooY2d, g2d),
         dg::evaluate( dg::zero, g2d)};
+    std::cout << "# Integrate Fieldlines in - direction ...\n";
     for( unsigned k=0; k<Nz_out; k++)
     {
+        std::cout << "# Plane "<<k<<" / "<<Nz_out<<"\n";
         for( unsigned i=0; i<g2d.size(); i++)
         {
             double phi1 = phi0 - deltaPhi;
@@ -215,8 +219,7 @@ int main( int argc, char* argv[])
         }
         else
         {
-            feltor::Variables * ptr = nullptr; // Variables are not actually used
-            record.function ( transferH_out, *ptr, g3d_out_equidistant);
+            record.function ( transferH_out, mag, g3d_out_equidistant);
             dg::assign( transferH_out, transferH_out_float);
             write_periodic_stat.def_and_put( record.name, dg::file::long_name(
                 record.long_name), append( transferH_out_float,
@@ -240,7 +243,7 @@ int main( int argc, char* argv[])
             [&]( dg::HVec& result) { result = ZZc; }},
     };
     dg::file::WriteRecordsList<dg::RealCylindricalGrid3d<double>> ( ncid_out,
-        g3d_out_fieldaligned, {"zf", "yf", "xf"}, list).write( list);
+        g3d_out_fieldaligned, {"zf", "yf", "xf"}).write( list);
     }
 
     // define 4d dimension
