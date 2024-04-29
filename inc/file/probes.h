@@ -65,7 +65,7 @@ struct Helper<Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value >>
     }
     static typename Topology::host_vector probes_vec( const dg::HVec& coord, const Topology& grid)
     {
-        return typename Topology::host_vector(coord.size());
+        return typename Topology::host_vector(coord);
     }
     static void def_group( int ncid, std::string format, int& grpid)
     {
@@ -102,7 +102,7 @@ struct Helper<Topology, std::enable_if_t<dg::is_mpi_grid<Topology>::value >>
     }
     static typename Topology::host_vector probes_vec( const dg::HVec& coord, const Topology& grid)
     {
-        typename Topology::host_vector::container_type vec(coord.size());
+        typename Topology::host_vector::container_type vec(coord);
         return typename Topology::host_vector(vec, grid.communicator());
     }
     static void def_group( int ncid, std::string format, int& grpid)
