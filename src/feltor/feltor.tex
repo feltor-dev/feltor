@@ -2775,7 +2775,7 @@ psi              & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( default size: $
 eta              & Coord. Var. & 1 (eta) & $\eta$-coordinate ( default size: $3\cdot 640$) \\
 xc               & Dataset & 2 (eta,psi) & Cartesian x-coordinate of the FSA grid \\
 yc               & Dataset & 2 (eta,psi) & Cartesian y-coordinate of the FSA grid\\
-vol2d            & Dataset & 2 (eta,psi) & Volume form in 2d including dG weights (can be used to integrate 2d quantities on the FSA grid; multiply by $2\pi$xc to get 3d volume)  \\
+vol              & Dataset & 2 (eta,psi) & Volume form in 2d including dG weights (can be used to integrate 2d quantities on the FSA grid; multiply by $2\pi$xc to get 3d volume)  \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
 dvdpsip          & Dataset & 1 (psi) & $\d v/\d\psi_p$ \\
 psi\_vol         & Dataset & 1 (psi) & The volume enclosed by the flux surfaces $v(\psi_p) = \int_{\psi_p} \dV $ \\

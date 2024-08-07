@@ -180,7 +180,7 @@ std::vector<std::tuple<std::string, dg::HVec, std::string> >
     map2d.emplace_back( "yc", coordsX[1],
         "y-coordinate in Cartesian coordinate system of FSA-grid");
     map2d.emplace_back( "vol", dg::create::volume( gridX2d),
-        "Volume form of FSA-grid");
+        "2d Volume form (including dG weights) of FSA-grid. Multiply by 2*Pi*xc to get 3d volume form");
     return map2d;
 }
 
