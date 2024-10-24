@@ -2,6 +2,8 @@
 ##Packages needed on linux for compilation of doxygen doc
 ##sudo apt install
 #doxygen >= 1.9.1
+## Note there is a problem in doxygen 1.9.3 with Mathjax_3 that results in very slow loading
+## So let's go to newest doxygen  ...
 #libjs-mathjax (for nice mathematical formulas)
 #graphviz (for nice graphical nodes)
 
