@@ -632,6 +632,102 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
+/*! @brief \f$ f(g(x_{0i_0},x_{1i_1},...), y_I)\f$ (Kronecker evaluation)
+ *
+ * This routine elementwise evaluates \f[ f(g(x_{0i_0}, x_{1i_1}, ..., x_{(n-1)i_{n-1}}), y_{((i_{n-1} N_{n-2} +...)N_1+i_1)N_0+i_0}) \f]
+ * for all @b combinations of input values. The first index \f$i_0\f$ is the fastest varying in the output.
+ * \f$ N_i\f$ is the size of the vector \f$ x_i\f$. If \f$ x_i\f$ is a scalar then the size \f$ N_i = 1\f$.
+ * If \f$ x_i\f$ is a recursive vector, then the size \f$ N_i\f$ is the sum of sizes over all recursive elements.
+ * The size of the output \f$ y\f$ must match the product of sizes of input vectors i.e.
+ * \f[ N_y = \prod_{i=0}^{n-1} N_i \f]
+ * The order of evaluations is undefined.
+ * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
+ *
+ *
+@code{.cpp}
+double function( double x, double y) {
+    return x+y;
+}
+dg::HVec xs{1,2,3,4}, ys{ 10,20,30,40}, result(16, 0);
+dg::blas1::kronecker( result, dg::equals(), function, xs, ys);
+// result contains in order: 11,12,13,14,21,22,23,...,43,44
+@endcode
+ * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param y contains result
+ * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals, see @ref binary_operators for a collection of predefined functors to use here
+ * @param g The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x0 first input
+ * @param xs more input
+ * @note all aliases allowed
+ * @copydoc hide_naninf
+ * @copydoc hide_ContainerType
+ *
+ */
+//template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
+//inline void kronecker( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs)
+//{
+//    static_assert( all_true<
+//            dg::is_vector<ContainerType>::value,
+//            dg::is_vector<ContainerTypes>::value...>::value,
+//        "All container types must have a vector data layout (AnyVector)!");
+//    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+//    using tensor_category  = get_tensor_category<vector_type>;
+//    static_assert( all_true<
+//            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+//            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+//            >::value,
+//        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+//    dg::blas1::detail::doKronecker(tensor_category(), y, f, g, x0, xs...);
+//}
+//template<class F, class C, class Array, std::size_t ...I, class ...Cs>
+//void call_F( F f, C& y, unsigned u, const Array& a, std::index_sequence<I...>, const Cs& ... cs)
+//{
+//    y[u] = f( cs[ a[I]]...);
+//}
+//template<class F, class C, class ...Cs>
+//void kronecker( C& y, F f, const Cs& ...cs)
+//{
+//    constexpr size_t N = sizeof ...(Cs);
+//    std::array<size_t, N> sizes{ cs.size()...};
+//    auto current = sizes;
+//    unsigned total = 1;
+//    for( unsigned u=0; u<N; u++)
+//        total *= sizes[u];
+//    for( unsigned u=0; u<total; u++)
+//    {
+//        current[0] = u%sizes[0];
+//        size_t remain = u/sizes[0];
+//        for( unsigned k=1; k<N; k++)
+//        {
+//            current[k] = remain%sizes[k];
+//            remain = remain/sizes[k];
+//        }
+//        call_F( f, y, u, current, std::make_index_sequence<N>(), cs ...);
+//    }
+//    for( auto s : sizes)
+//        std::cout << s<<"\n";
+//
+//}
+//
+//int main()
+//{
+//
+//    std::vector<double> xs{1,2,3};
+//    std::vector<double> ys{10,20,30,40};
+//    std::vector<double> zs{100};
+//    std::vector<double> ws{1000};
+//    std::vector<double> y(xs.size()*ys.size()*zs.size()*ws.size());
+//    kronecker( y, [](double x, double y, double z, double u){ return x+y+z+u;}, xs, ys, zs, ws);
+//    for( unsigned u=0; u<y.size(); u++)
+//        std::cout << y[u]<<"\n";
+//
+//
+//
+//    return 0;
+//}
+
 ///@}
 }//namespace blas1
 
