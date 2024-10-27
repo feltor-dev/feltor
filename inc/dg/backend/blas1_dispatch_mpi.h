@@ -111,6 +111,12 @@ inline T doReduce( MPIVectorTag, const ContainerType& x, T zero, BinaryOp op,
         result = op( result, reduction[u]);
     return result;
 }
+template< class BinarySubroutine, class Functor, class ContainerType, class ...ContainerTypes>
+inline void doKronecker( MPIVectorTag, ContainerType& y, BinarySubroutine f, Functor g, ContainerTypes&&... xs)
+{
+    dg::blas1::kronecker( do_get_data( y, get_tensor_category<ContainerType>()), f, g,
+        do_get_data(std::forward<ContainerTypes>(xs), get_tensor_category<ContainerTypes>())...);
+}
 
 } //namespace detail
 } //namespace blas1

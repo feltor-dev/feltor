@@ -635,27 +635,50 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 /*! @brief \f$ f(g(x_{0i_0},x_{1i_1},...), y_I)\f$ (Kronecker evaluation)
  *
  * This routine elementwise evaluates \f[ f(g(x_{0i_0}, x_{1i_1}, ..., x_{(n-1)i_{n-1}}), y_{((i_{n-1} N_{n-2} +...)N_1+i_1)N_0+i_0}) \f]
- * for all @b combinations of input values. The first index \f$i_0\f$ is the fastest varying in the output.
- * \f$ N_i\f$ is the size of the vector \f$ x_i\f$. If \f$ x_i\f$ is a scalar then the size \f$ N_i = 1\f$.
- * If \f$ x_i\f$ is a recursive vector, then the size \f$ N_i\f$ is the sum of sizes over all recursive elements.
+ * for all @b combinations of input values.
+ * \f$ N_i\f$ is the size of the vector \f$ x_i\f$.
+ * The first index \f$i_0\f$ is the fastest varying in the output, then \f$ i_1\f$, etc.
+ * If \f$ x_i\f$ is a scalar then the size \f$ N_i = 1\f$.
+ * @attention None of the \f$ x_i\f$ or \f$ y\f$ can have the \c dg::RecursiveVectorTag
+ *
  * The size of the output \f$ y\f$ must match the product of sizes of input vectors i.e.
  * \f[ N_y = \prod_{i=0}^{n-1} N_i \f]
  * The order of evaluations is undefined.
  * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
  *
- *
+ * @note This function is trivially parallel and the MPI version simply calls the appropriate shared memory version
 @code{.cpp}
 double function( double x, double y) {
     return x+y;
 }
-dg::HVec xs{1,2,3,4}, ys{ 10,20,30,40}, result(16, 0);
-dg::blas1::kronecker( result, dg::equals(), function, xs, ys);
-// result contains in order: 11,12,13,14,21,22,23,...,43,44
+dg::HVec xs{1,2,3,4}, ys{ 10,20,30,40}, y(16, 0);
+dg::blas1::kronecker( y, dg::equals(), function, xs, ys);
+// y contains in order: 11,12,13,14,21,22,23,...,43,44
+
+// Note that the following code is equivalent
+dg::HVec XS(16), YS(16), y(16);
+for( unsigned i=0; i<4; i++)
+for( unsigned k=0; k<4; k++)
+{
+    XS[i*4+k] = xs[k];
+    YS[i*4+k] = ys[i];
+}
+dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
+// however dg::blas1::kronecker has a performance advantage since
+// it never explicitly forms XS or YS
+
+// Finally, we could also write
+dg::blas1::kronecker( XS, dg::equals(), []( double x, double y){ return x;}, xs, ys);
+dg::blas1::kronecker( YS, dg::equals(), []( double x, double y){ return y;}, xs, ys);
+dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
 @endcode
+ * @note For the function \f$ f(x_0, x_1, ..., x_{n-1}) = x_0 x_1 ... x_{n-1} \f$ <tt> dg::blas1::kronecker(y, dg::equals(), x_0, x_1, ...) </tt>computes the actual Kronecker product of the arguments **in reversed order** \f[ y = x_{n-1} \otimes x_{n-2} \otimes ... \otimes x_1 \otimes x_0\f]
+ * With this behaviour we can in e.g. Cartesian coordinates naturally define functions \f$ f(x,y,z)\f$ and evaluate this function on product space coordinates and have \f$ x \f$ as the fastest varying coordinate in memory.
+ *
  * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
  * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
- * @param y contains result
+ * @param y contains result (size of y must match the product of sizes of \f$ x_i\f$)
  * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals, see @ref binary_operators for a collection of predefined functors to use here
  * @param g The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
  * @param x0 first input
@@ -665,68 +688,22 @@ dg::blas1::kronecker( result, dg::equals(), function, xs, ys);
  * @copydoc hide_ContainerType
  *
  */
-//template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
-//inline void kronecker( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs)
-//{
-//    static_assert( all_true<
-//            dg::is_vector<ContainerType>::value,
-//            dg::is_vector<ContainerTypes>::value...>::value,
-//        "All container types must have a vector data layout (AnyVector)!");
-//    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
-//    using tensor_category  = get_tensor_category<vector_type>;
-//    static_assert( all_true<
-//            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-//            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-//            >::value,
-//        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-//    dg::blas1::detail::doKronecker(tensor_category(), y, f, g, x0, xs...);
-//}
-//template<class F, class C, class Array, std::size_t ...I, class ...Cs>
-//void call_F( F f, C& y, unsigned u, const Array& a, std::index_sequence<I...>, const Cs& ... cs)
-//{
-//    y[u] = f( cs[ a[I]]...);
-//}
-//template<class F, class C, class ...Cs>
-//void kronecker( C& y, F f, const Cs& ...cs)
-//{
-//    constexpr size_t N = sizeof ...(Cs);
-//    std::array<size_t, N> sizes{ cs.size()...};
-//    auto current = sizes;
-//    unsigned total = 1;
-//    for( unsigned u=0; u<N; u++)
-//        total *= sizes[u];
-//    for( unsigned u=0; u<total; u++)
-//    {
-//        current[0] = u%sizes[0];
-//        size_t remain = u/sizes[0];
-//        for( unsigned k=1; k<N; k++)
-//        {
-//            current[k] = remain%sizes[k];
-//            remain = remain/sizes[k];
-//        }
-//        call_F( f, y, u, current, std::make_index_sequence<N>(), cs ...);
-//    }
-//    for( auto s : sizes)
-//        std::cout << s<<"\n";
-//
-//}
-//
-//int main()
-//{
-//
-//    std::vector<double> xs{1,2,3};
-//    std::vector<double> ys{10,20,30,40};
-//    std::vector<double> zs{100};
-//    std::vector<double> ws{1000};
-//    std::vector<double> y(xs.size()*ys.size()*zs.size()*ws.size());
-//    kronecker( y, [](double x, double y, double z, double u){ return x+y+z+u;}, xs, ys, zs, ws);
-//    for( unsigned u=0; u<y.size(); u++)
-//        std::cout << y[u]<<"\n";
-//
-//
-//
-//    return 0;
-//}
+template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
+inline void kronecker( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs)
+{
+    static_assert( all_true<
+            dg::is_vector<ContainerType>::value,
+            dg::is_vector<ContainerTypes>::value...>::value,
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    dg::blas1::detail::doKronecker(tensor_category(), y, f, g, x0, xs...);
+}
 
 ///@}
 }//namespace blas1

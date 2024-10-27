@@ -48,6 +48,9 @@ namespace blas1
 {
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
+
+template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
+inline void kronecker( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs);
 namespace detail
 {
 template< class ContainerType1, class ContainerType2>
@@ -103,6 +106,42 @@ inline T doReduce( SharedVectorTag, const ContainerType& x, T init, BinaryOp op,
 {
     return doReduce_dispatch( get_execution_policy<ContainerType>(), x.size(),
             thrust::raw_pointer_cast( x.data()), init, op, unary_op);
+}
+
+template<class T>
+size_t do_get_size( const T& x, dg::SharedVectorTag){ return x.size();}
+template<class T>
+size_t do_get_size( const T& x, dg::ScalarTag){ return 1;}
+
+template<class T>
+size_t get_size( const T& x)
+{
+    return do_get_size( x, dg::get_tensor_category<T>());
+}
+
+template< class ContainerType, class BinarySubroutine, class Functor, class ...ContainerTypes>
+inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine binary, Functor f, ContainerTypes&&... xs)
+{
+    constexpr size_t N = sizeof ...(ContainerTypes);
+    std::array<size_t, N> sizes{ get_size(xs)...};
+    unsigned size = 1;
+    for( unsigned u=0; u<N; u++)
+        size *= sizes[u];
+    using vector_type = dg::find_if_t<dg::is_not_scalar_has_not_any_policy, dg::get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
+    using execution_policy = dg::get_execution_policy<vector_type>;
+    static_assert( dg::all_true<
+            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
+            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
+            >::value,
+        "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
+    doKronecker_dispatch(
+            dg::get_execution_policy<vector_type>(),
+            dg::do_get_pointer_or_reference(y,dg::get_tensor_category<ContainerType>()) ,
+            size,
+            binary, f,
+            sizes,
+            dg::do_get_pointer_or_reference(std::forward<ContainerTypes>(xs),dg::get_tensor_category<ContainerTypes>()) ...
+            );
 }
 
 } //namespace detail

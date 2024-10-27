@@ -57,6 +57,27 @@ inline T doReduce_dispatch( SerialTag, int size, Pointer x, T init, BinaryOp
         init = op( init, unary_op(x[i]));
     return init;
 }
+template<class B, class F, class Pointer, std::size_t ...I, class ...PointerOrValues>
+void call_host_F( B binary, F f, Pointer y, unsigned u, size_t* a, std::index_sequence<I...>, PointerOrValues ... xs)
+{
+    binary( f( get_element( xs, a[I])...), y[u]);
+}
+template<class B, class F, size_t N, class Pointer, class ...PointerOrValues>
+void doKronecker_dispatch( dg::SerialTag, Pointer y, size_t size, B binary, F f, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
+{
+    std::array<size_t, N> current;
+    for( unsigned u=0; u<size; u++)
+    {
+        current[0] = u%sizes[0];
+        size_t remain = u/sizes[0];
+        for( unsigned k=1; k<N; k++)
+        {
+            current[k] = remain%sizes[k];
+            remain = remain/sizes[k];
+        }
+        call_host_F( binary, f, y, u, &current[0], std::make_index_sequence<N>(), xs ...);
+    }
+}
 
 
 }//namespace detail

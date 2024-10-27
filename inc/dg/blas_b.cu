@@ -65,6 +65,10 @@ int main()
     std::cout << "Type n (3), Nx (512) , Ny (512) and Nz (10) \n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::RealGrid3d<value_type> grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
+    Vector absx = dg::create::abscissas( grid.gx());
+    Vector absy = dg::create::abscissas( grid.gy());
+    Vector absz = dg::create::abscissas( grid.gz());
+    Vector XX( grid.size());
     dg::RealGrid3d<value_type> grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d = dg::construct<Vector>( dg::create::weights(grid));
 
@@ -119,13 +123,12 @@ int main()
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
-    //Test new evaluate
-    //std::array<value_type, 3> array_p{ 1,2,3};
-    //t.tic();
-    //for( int i=0; i<multi; i++)
-    //    dg::blas1::subroutine( Expression(), u, v, x, array_p);
-    //t.toc();
-    //std::cout<<"Subroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::kronecker( XX, dg::equals(), []DG_DEVICE(double x, double y,
+                    double z){ return sin(x)*sin(y)*z;}, absx, absy, absz);
+    t.toc();
+    std::cout<<"Kronecker (x X y X z)            "<<t.diff()/multi<<"s\t" <<2*gbytes/x.size()*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::subroutine( test_routine(2.,4.), x, y, z, u, v, w, h);

@@ -59,6 +59,11 @@ inline T doReduce( AnyScalarTag, ContainerType x, T init, BinaryOp op, UnaryOp
     init = op( init, unary_op(x));
     return init;
 }
+template< class BinarySubroutine, class Functor, class ContainerType, class ...ContainerTypes>
+inline void doKronecker( AnyScalarTag, ContainerType& y, BinarySubroutine f, Functor g, ContainerTypes&&... xs)
+{
+    f( g(xs...),y);
+}
 
 
 } //namespace detail
