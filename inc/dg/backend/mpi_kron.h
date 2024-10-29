@@ -39,7 +39,7 @@ void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
 /*! @brief Call and register a call to \c MPI_Cart_create with the dg library
  *
  * If MPI_Cart_create is successful this function is equivalent to
- * @code
+ * @code{.cpp}
     MPI_Cart_create( comm_old, ndims, dims, periods, reorder, comm_cart);
     dg::register_mpi_cart_create( comm_old, ndims, dims, periods, reorder, *comm_cart);
     return MPI_SUCCESS;
@@ -77,7 +77,7 @@ void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm new
  *
  * If \c MPI_Cart_sub is successful and an equivalent sub communicator does not eixst already,
  * this function is equivalent to
- * @code
+ * @code{.cpp}
     MPI_Cart_sub( comm, remain_dims, newcomm);
     dg::register_mpi_cart_sub( comm, remain_dims, *newcomm);
     return MPI_SUCCESS;

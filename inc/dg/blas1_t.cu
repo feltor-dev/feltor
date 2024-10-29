@@ -96,6 +96,9 @@ int main()
                 double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
     thrust::copy( yd.begin(), yd.end(), y.begin());
     std::cout << "Kronecker test (X ox Y) " << y[10]-1142 <<"\n";
+    auto ydd = dg::kronecker( []DG_DEVICE( double x, double y, double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+    thrust::copy( ydd.begin(), ydd.end(), y.begin());
+    std::cout << "Kronecker test (X ox Y) " << y[10]-1142 <<"\n";
     }
 
     //v1 = 2, v2 = 3

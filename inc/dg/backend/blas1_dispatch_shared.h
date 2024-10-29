@@ -120,7 +120,7 @@ size_t get_size( const T& x)
 }
 
 template< class ContainerType, class BinarySubroutine, class Functor, class ...ContainerTypes>
-inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine binary, Functor f, ContainerTypes&&... xs)
+inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine binary, Functor f, const ContainerTypes&... xs)
 {
     constexpr size_t N = sizeof ...(ContainerTypes);
     std::array<size_t, N> sizes{ get_size(xs)...};
@@ -140,12 +140,40 @@ inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine
             size,
             binary, f,
             sizes,
-            dg::do_get_pointer_or_reference(std::forward<ContainerTypes>(xs),dg::get_tensor_category<ContainerTypes>()) ...
+            dg::do_get_pointer_or_reference(xs,dg::get_tensor_category<ContainerTypes>()) ...
             );
 }
 
 } //namespace detail
 } //namespace blas1
+
+namespace detail
+{
+struct _equals
+{
+    template< class T1, class T2>
+#ifdef __CUDACC__
+__host__ __device__
+#endif
+    void operator()( T1 x, T2& y) const
+    {
+        y = x;
+    }
+};
+template<class ContainerType, class Functor, class ...ContainerTypes>
+ContainerType doKronecker( SharedVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+{
+    constexpr size_t N = sizeof ...(ContainerTypes)+1;
+    std::array<size_t, N> sizes{ dg::blas1::detail::get_size(x0), dg::blas1::detail::get_size(xs)...};
+    unsigned size = 1;
+    for( unsigned u=0; u<N; u++)
+        size *= sizes[u];
+    ContainerType y( size);
+    dg::blas1::kronecker( y, _equals(), f, x0, xs ...);
+    return y;
+}
+
+} //namespace detail
 } //namespace dg
 ///@endcond
 

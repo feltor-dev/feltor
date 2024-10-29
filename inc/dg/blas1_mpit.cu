@@ -17,11 +17,19 @@ int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
     MPI_Comm comm;
-    int rank;
+    int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
     if(rank==0)std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/topology/evaluation_mpit program\n";
     //mpi_init2d( dg::PER, dg::PER, comm);
     comm = MPI_COMM_WORLD;
+    int dims[2] = {1, size};
+    int periods[2] = {false, false};
+    MPI_Comm comm_cart, cartX, cartY;
+    dg::mpi_cart_create( comm, 2, dims, periods, false, &comm_cart);
+    int remainsX[2] = {1,0}, remainsY[2] = {0,1};
+    dg::mpi_cart_sub( comm_cart, remainsX, &cartX);
+    dg::mpi_cart_sub( comm_cart, remainsY, &cartY);
     {
     thrust::device_vector<double> v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
     MVec v1(v1p, comm), v2(v2p, comm), v3(v3p, comm), v4(v4p, comm), v5(v4p, comm);
@@ -55,11 +63,18 @@ int main( int argc, char* argv[])
     double zs{100};
     double ws{1000};
     std::vector<double> y(xs.size()*ys.size());
-    MVec xsd(xs, comm), ysd(ys, comm), yd(y, comm);
+    MVec xsd(xs, cartX), ysd(ys, cartY), yd(y, comm);
     dg::blas1::kronecker( yd, dg::equals(), []DG_DEVICE(double x, double y,
                 double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
     thrust::copy( yd.data().begin(), yd.data().end(), y.begin());
+    for( int i=0; i<size; i++)
+        if(rank==i)std::cout << "Kronecker test (X ox Y) " << y[1]-(1112+10*i) <<"\n";
+
+    auto ydd = dg::kronecker( []DG_DEVICE( double x, double y, double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+    thrust::copy( ydd.data().begin(), ydd.data().end(), y.begin());
     if(rank==0)std::cout << "Kronecker test (X ox Y) " << y[1]-1112 <<"\n";
+
+
     }
     thrust::device_vector<double> v1p( 5, 2.), v2p( 5, 3.), v3p(5,5.), v4p(5,4.);
     MVec v1(v1p, comm), v2(v2p, comm), v3(v3p, comm), v4(v4p, comm);

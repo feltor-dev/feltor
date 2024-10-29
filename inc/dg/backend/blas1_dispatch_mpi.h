@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include "mpi_kron.h"
 #include "mpi_vector.h"
 #include "tensor_traits.h"
 #include "predicate.h"
@@ -112,13 +113,47 @@ inline T doReduce( MPIVectorTag, const ContainerType& x, T zero, BinaryOp op,
     return result;
 }
 template< class BinarySubroutine, class Functor, class ContainerType, class ...ContainerTypes>
-inline void doKronecker( MPIVectorTag, ContainerType& y, BinarySubroutine f, Functor g, ContainerTypes&&... xs)
+inline void doKronecker( MPIVectorTag, ContainerType& y, BinarySubroutine f, Functor g, const ContainerTypes&... xs)
 {
     dg::blas1::kronecker( do_get_data( y, get_tensor_category<ContainerType>()), f, g,
-        do_get_data(std::forward<ContainerTypes>(xs), get_tensor_category<ContainerTypes>())...);
+        do_get_data(xs, get_tensor_category<ContainerTypes>())...);
 }
 
 } //namespace detail
 } //namespace blas1
+template<class ContainerType, class Functor, class ...ContainerTypes>
+ContainerType kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs);
+namespace detail
+{
+
+template<class T>
+inline MPI_Comm do_get_comm( const T& v, MPIVectorTag)
+{
+    return v.communicator();
+}
+template<class T>
+inline MPI_Comm do_get_comm( const T& v, AnyScalarTag){
+    return MPI_COMM_NULL;
+}
+template<class ContainerType, class Functor, class ...ContainerTypes>
+ContainerType doKronecker( MPIVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+{
+    constexpr size_t N = sizeof ...(ContainerTypes)+1;
+    std::vector<MPI_Comm> comms{ do_get_comm(x0, get_tensor_category<ContainerType>()),
+            do_get_comm(xs, get_tensor_category<ContainerTypes>())...};
+    std::vector<MPI_Comm> non_zero_comms;
+
+    for( unsigned u=0; u<N; u++)
+        if ( comms[u] != MPI_COMM_NULL)
+            non_zero_comms.push_back( comms[u]);
+
+    typename ContainerType::container_type ydata;
+    ydata = dg::kronecker( f, do_get_data(x0, get_tensor_category<ContainerType>()), do_get_data( xs, get_tensor_category<ContainerTypes>())...);
+
+
+    return {ydata, dg::mpi_cart_kron( non_zero_comms)};
+}
+
+} //namespace detail
 } //namespace dg
 ///@endcond

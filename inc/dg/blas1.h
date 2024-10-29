@@ -687,18 +687,21 @@ dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  *
+ * @sa dg::kronecker
  */
-template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
-inline void kronecker( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs)
+template< class ContainerType0, class BinarySubroutine, class Functor, class ContainerType1, class ...ContainerTypes>
+inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const ContainerType1& x0, const ContainerTypes& ...xs)
 {
     static_assert( all_true<
-            dg::is_vector<ContainerType>::value,
+            dg::is_vector<ContainerType0>::value,
+            dg::is_vector<ContainerType1>::value,
             dg::is_vector<ContainerTypes>::value...>::value,
         "All container types must have a vector data layout (AnyVector)!");
-    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerTypes...>;
     using tensor_category  = get_tensor_category<vector_type>;
     static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerType0, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value,
             dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
             >::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
@@ -769,6 +772,50 @@ template<class ContainerType, class from_ContainerType, class ...Params>
 inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
 {
     return dg::detail::doConstruct<ContainerType, from_ContainerType, Params...>( from, get_tensor_category<ContainerType>(), get_tensor_category<from_ContainerType>(), std::forward<Params>(ps)...);
+}
+
+/**
+ * @brief \f$ y_I = f(x_{0i_0}, x_{1i_1}, ...) \f$ Memory allocating version of \c dg::blas1::kronecker
+ *
+ * In a shared memory space this function is implemented roughly as in the following pseudo-code
+ * @code{.cpp}
+ * size = product( x0.size(), xs.size(), ...)
+ * ContainerType y(size);
+ * dg::blas1::kronecker( y, dg::equals(), f, x0, xs...);
+ * @endcode
+ * The MPI distributed version of this function is implemented as
+ * @code{.cpp}
+ * MPI_Comm comm_kron = dg::mpi_cart_kron( x0.communicator(), xs.communicator()...);
+ * return {dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
+ * @endcode
+ * @attention In particular this means that in MPI all the communicators in the input argument vectors
+ * need to be Cartesian communicators that were created from a common Cartesian root communicator
+ * and both root and all sub communicators need to be registered in the dg
+ * library through calls to \c dg::register_mpi_cart_create and \c dg::register_mpi_cart_sub
+ * or \c dg::mpi_cart_create and \c dg::mpi_cart_sub. The rationale for this behaviour is that
+ * (i) the MPI standard has no easy way of finding a common ancestor to Cartesin sub communicators
+ * and (ii) we want to avoid creating a new communicator every time this function is called.
+ *
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention \c Functor must be callable on the device in use. In particular,
+ * with CUDA it must be a functor tpye (@b not a function) and its signature
+ * must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param f The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x0 first input
+ * @param xs more input
+ * @return newly allocated result (size of container matches the product of sizes of \f$ x_i\f$)
+ * @note all aliases allowed
+ * @copydoc hide_naninf
+ * @copydoc hide_ContainerType
+ *
+ * @sa dg::blas1::kronecker dg::mpi_cart_kron
+ * @ingroup backend
+ */
+template<class ContainerType, class Functor, class ...ContainerTypes>
+ContainerType kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+{
+    using tensor_category  = get_tensor_category<ContainerType>;
+    return dg::detail::doKronecker( tensor_category(), f, x0, xs...);
 }
 
 
