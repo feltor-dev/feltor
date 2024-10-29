@@ -124,11 +124,11 @@ int main()
     t.toc();
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
-    for( int i=0; i<multi; i++)
+    for( int i=0; i<multi*(int)x.size(); i++)
         dg::blas1::kronecker( XX, dg::equals(), []DG_DEVICE(double x, double y,
-                    double z){ return sin(x)*sin(y)*z;}, absx, absy, absz);
+                    double z){ return x*y*z;}, absx, absy, absz);
     t.toc();
-    std::cout<<"Kronecker (x X y X z)            "<<t.diff()/multi<<"s\t" <<2*gbytes/x.size()*multi/t.diff()<<"GB/s\n";
+    std::cout<<"Kronecker (x X y X z)            "<<t.diff()/multi<<"s\t" <<2*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::subroutine( test_routine(2.,4.), x, y, z, u, v, w, h);
