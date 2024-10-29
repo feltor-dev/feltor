@@ -16,16 +16,18 @@ struct MPICartInfo
 static std::map<MPI_Comm, MPICartInfo> mpi_cart_info_map;
 }
 ///@endcond
-/*! @brief register a call to MPI_Cart_create with the dg library
+/*! @brief register a call to \c MPI_Cart_create with the dg library
  *
- * The \c comm_cart parameter is the MPI_Comm that will be registered
+ * The \c comm_cart parameter is the \c MPI_Comm that will be registered
  * @note The function does not check if \c comm_cart is already registered
  * (it will simply overwrite an existing entry)
- * @param comm_old parameter used in MPI_Cart_create
- * @param ndims parameter used in MPI_Cart_create
- * @param dims parameter used in MPI_Cart_create
- * @param periods parameter used in MPI_Cart_create
- * @param comm_cart parameter used in MPI_Cart_create
+ * @param comm_old parameter used in \c MPI_Cart_create
+ * @param ndims parameter used in \c MPI_Cart_create
+ * @param dims parameter used in \c MPI_Cart_create
+ * @param periods parameter used in \c MPI_Cart_create
+ * @param reorder parameter used in \c MPI_Cart_create
+ * @param comm_cart parameter used in \c MPI_Cart_create
+ * @ingroup mpi_structures
  */
 void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
                     const int periods[], int reorder, MPI_Comm comm_cart)
@@ -34,7 +36,7 @@ void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
     detail::MPICartInfo info{ comm_cart, remains};
     detail::mpi_cart_info_map[comm_cart] = info;
 }
-/*! @brief Call and register a call to MPI_Cart_create with the dg library
+/*! @brief Call and register a call to \c MPI_Cart_create with the dg library
  *
  * If MPI_Cart_create is successful this function is equivalent to
  * @code
@@ -42,6 +44,7 @@ void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
     dg::register_mpi_cart_create( comm_old, ndims, dims, periods, reorder, *comm_cart);
     return MPI_SUCCESS;
  * @endcode
+ * @ingroup mpi_structures
  */
 int mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
                     const int periods[], int reorder, MPI_Comm * comm_cart)
@@ -53,13 +56,14 @@ int mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
     return err;
 }
 
-/*! @brief register a call to MPI_Cart_sub with the dg library
+/*! @brief register a call to \c MPI_Cart_sub with the dg library
  *
- * The \c newcomm parameter is the MPI_Comm that will be registered
+ * The \c newcomm parameter is the \c MPI_Comm that will be registered
  * @note \c comm needs to be already registered
- * @param comm parameter used in MPI_Cart_sub
- * @param remain_dims parameter used in MPI_Cart_sub
- * @param newcomm parameter used in MPI_Cart_sub
+ * @param comm parameter used in \c MPI_Cart_sub
+ * @param remain_dims parameter used in \c MPI_Cart_sub
+ * @param newcomm parameter used in \c MPI_Cart_sub
+ * @ingroup mpi_structures
  */
 void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
 {
@@ -69,9 +73,9 @@ void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm new
     detail::mpi_cart_info_map[newcomm] = info;
 }
 
-/*! @brief Call and register a call to MPI_Cart_sub with the dg library
+/*! @brief Call and register a call to \c MPI_Cart_sub with the dg library
  *
- * If MPI_Cart_sub is successful and an equivalent sub communicator does not eixst already,
+ * If \c MPI_Cart_sub is successful and an equivalent sub communicator does not eixst already,
  * this function is equivalent to
  * @code
     MPI_Cart_sub( comm, remain_dims, newcomm);
@@ -79,11 +83,15 @@ void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm new
     return MPI_SUCCESS;
  * @endcode
  * @note \c comm needs to be already registered
- * @param duplicate Determines what happens in case MPI_Cart_sub was already reigstered with the
- * same input parameters \c comm and \c remain_dims. True: call MPI_Cart_sub and register
+ * @param comm parameter of \c MPI_Cart_sub
+ * @param remain_dims parameter of \c MPI_Cart_sub
+ * @param newcomm parameter of \c MPI_Cart_sub
+ * @param duplicate Determines what happens in case \c MPI_Cart_sub was already reigstered with the
+ * same input parameters \c comm and \c remain_dims. True: call \c MPI_Cart_sub and register
  * the novel communicator even if a duplicat exists. False: first check if a communicator
  * that was subbed from \c comm with \c remain_dims was previously registered. In case one is found
- * set *newcomm = existing_comm. Else, call and register MPI_Cart_sub.
+ * set *newcomm = existing_comm. Else, call and register \c MPI_Cart_sub.
+ * @ingroup mpi_structures
  */
 int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, bool duplicate = true)
 {
@@ -119,6 +127,7 @@ int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, boo
  * for all <tt>u < comms.size()</tt>;
  * @param comms input communicators (their order is irrelevant, the result is the same if reordered)
  * @return Kronecker product of communicators (is automatically registered)
+ * @ingroup mpi_structures
  */
 MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
 {
@@ -153,23 +162,26 @@ MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
     return newcomm;
 }
 
-/*! @brief unregister a communicator
- * For example if a communicator was freed
- * @param comm delete associated registry entry
- */
-void unregister_mpi_comm( MPI_Comm comm)
-{
-    detail::mpi_cart_info_map.erase( comm);
-}
-
-/*! @brief call \c MPI_Comm_free(comm) followed by \c dg::unregister_mpi_comm(comm)
- * @param comm free communicator and delete associated registry entry
- */
-void mpi_comm_free( MPI_Comm * comm)
-{
-    MPI_Comm_free(comm);
-    unregister_mpi_comm( *comm);
-}
+// Need to think about those again
+// /*! @brief unregister a communicator
+// * For example if a communicator was freed
+// * @param comm delete associated registry entry
+// * @ingroup mpi_structures
+// */
+//void unregister_mpi_comm( MPI_Comm comm)
+//{
+//    detail::mpi_cart_info_map.erase( comm);
+//}
+//
+// /*! @brief call \c MPI_Comm_free(comm) followed by \c dg::unregister_mpi_comm(comm)
+// * @param comm free communicator and delete associated registry entry
+// * @ingroup mpi_structures
+// */
+//void mpi_comm_free( MPI_Comm * comm)
+//{
+//    MPI_Comm_free(comm);
+//    unregister_mpi_comm( *comm);
+//}
 
 
 }

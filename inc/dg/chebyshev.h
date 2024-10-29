@@ -37,7 +37,7 @@ namespace dg
 * @note The maximum Eigenvalue of \f$ A\f$ and \f$ P A\f$ can be estimated
 * using the \c EVE class.
 * \sa For more information see the book
-* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
+* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">"Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * @note If the initial vector is zero Chebyshev iteration will produce the
 * Chebyshev polynomial \f$ C_k( A) b\f$ applied to the right hand side
 * and the preconditioned version produces
@@ -323,14 +323,14 @@ struct ModifiedChebyshevPreconditioner
  * @brief Least Squares Polynomial Preconditioner \f$ M^{-1} s( AM^{-1})\f$
  *
  * Implements the least squares polynomial preconditioner as suggested by
- * <a href= "https://doi.org/10.1137/0906059"> Youcef Saad, Practical Use of Polynomial Preconditionings for the Conjugate Gradient Method,SIAM J. Sci. and Stat. Comput., 6(4), 865–881 (1985) </a>
+ * <a href= "https://doi.org/10.1137/0906059"> Yousef Saad, Practical Use of Polynomial Preconditionings for the Conjugate Gradient Method,SIAM J. Sci. and Stat. Comput., 6(4), 865–881 (1985) </a>
  * @note The least squares polynomial might (or might not) perform
  * better than Chebyshev Polynomials and does not need an estimate of the
  * lowest Eigenvalue
  * @copydoc hide_polynomial
  *
  * \sa For more information see the book
- * <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
+ * <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">"Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
  * @tparam Matrix Preferably a reference type
  * @tparam InnerPreconditioner Preferably a reference type
  * @copydoc hide_ContainerType

@@ -24,7 +24,7 @@ namespace create
 * @brief Create and assemble a host Matrix for the centered 1d single derivative
 *
 * The matrix isn't symmetric due to the normalisation T.
-* @ingroup create
+* @ingroup creation
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size (used to compute normalisation)
@@ -126,7 +126,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
 /**
 * @brief Create and assemble a host Matrix for the forward 1d single derivative
 *
-* @ingroup create
+* @ingroup creation
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
@@ -212,7 +212,7 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
 /**
 * @brief Create and assemble a host Matrix for the backward 1d single derivative
 *
-* @ingroup create
+* @ingroup creation
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
@@ -298,7 +298,7 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
 /**
 * @brief Create and assemble a host Matrix for the jump terms in 1d
 *
-* @ingroup create
+* @ingroup creation
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
@@ -389,7 +389,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
 /**
 * @brief Create and assemble a host Matrix for normed derivative in 1d
 *
-* @ingroup create
+* @ingroup creation
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size ( used to compute normalisation)
@@ -416,7 +416,7 @@ EllSparseBlockMat<real_type> dx_normed( int n, int N, real_type h, bc bcx, direc
 /**
 * @brief Create and assemble a host Matrix for the derivative in 1d
 *
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid
 * @param bcx boundary condition
 * @param dir The direction of the first derivative
@@ -433,7 +433,7 @@ EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, bc bcx, directi
 * @brief Create and assemble a host Matrix for the derivative in 1d
 *
 * Take the boundary condition from the grid
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid
 * @param dir The direction of the first derivative
 *
@@ -448,7 +448,7 @@ EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, direction dir =
 /**
 * @brief Create and assemble a host Matrix for the jump in 1d
 *
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid
 * @param bcx boundary condition
 *
@@ -463,7 +463,7 @@ EllSparseBlockMat<real_type> jump( const RealGrid1d<real_type>& g, bc bcx)
 * @brief Create and assemble a host Matrix for the jump in 1d
 *
 * Take the boundary condition from the grid
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid
 *
 * @return Host Matrix

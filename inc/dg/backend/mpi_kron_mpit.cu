@@ -70,7 +70,6 @@ int main( int argc, char* argv[])
         if(rank==0)std::cout << err.what()<<"\n";
     }
     if(rank==0) std::cout<< "ALL TESTS PASSED\n";
-    dg::mpi_comm_free( &same);
     MPI_Finalize();
 
     return 0;
