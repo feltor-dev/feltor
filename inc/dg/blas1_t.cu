@@ -85,6 +85,20 @@ int main()
         std::cerr << "Error: result has NaN!\n";
     else
         std::cout <<ud.i-4620007020034741378<<std::endl;;
+
+    std::vector<double> xs{1,2,3};
+    std::vector<double> ys{10,20,30,40};
+    double zs{100};
+    double ws{1000};
+    std::vector<double> y(xs.size()*ys.size());
+    thrust::device_vector<double> xsd(xs), ysd(ys), yd(y);
+    dg::blas1::kronecker( yd, dg::equals(), []DG_DEVICE(double x, double y,
+                double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+    thrust::copy( yd.begin(), yd.end(), y.begin());
+    std::cout << "Kronecker test (X ox Y) " << y[10]-1142 <<"\n";
+    auto ydd = dg::kronecker( []DG_DEVICE( double x, double y, double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+    thrust::copy( ydd.begin(), ydd.end(), y.begin());
+    std::cout << "Kronecker test (X ox Y) " << y[10]-1142 <<"\n";
     }
 
     //v1 = 2, v2 = 3

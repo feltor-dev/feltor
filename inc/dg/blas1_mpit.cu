@@ -4,20 +4,11 @@
 #include <mpi.h>
 #include <thrust/device_vector.h>
 #include "backend/mpi_init.h"
-#include "topology/mpi_evaluation.h"
 #include "blas1.h"
 #include "functors.h"
 
 
 //test program that calls every blas1 function for every specialization
-double two( double x, double y){return 2;}
-double three( double x, double y){return 3;}
-double four( double x, double y){return 4;}
-double five( double x, double y){return 5;}
-double two2( double x, double y){return 2.0002;}
-double three3( double x, double y){return 3.00003;}
-double four4( double x, double y){return 4.00004;}
-double five5( double x, double y){return 5.0005;}
 
 typedef dg::MPI_Vector<thrust::device_vector<double> > MVec;
 //typedef dg::MPI_Vector<cusp::array1d<double, cusp::device_memory> > MVec;
@@ -26,16 +17,22 @@ int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
     MPI_Comm comm;
-    int rank;
+    int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
     if(rank==0)std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/topology/evaluation_mpit program\n";
-    mpi_init2d( dg::PER, dg::PER, comm);
-    dg::MPIGrid2d g( 0,1,0,1, 3,120,120, comm);
+    //mpi_init2d( dg::PER, dg::PER, comm);
+    comm = MPI_COMM_WORLD;
+    int dims[2] = {1, size};
+    int periods[2] = {false, false};
+    MPI_Comm comm_cart, cartX, cartY;
+    dg::mpi_cart_create( comm, 2, dims, periods, false, &comm_cart);
+    int remainsX[2] = {1,0}, remainsY[2] = {0,1};
+    dg::mpi_cart_sub( comm_cart, remainsX, &cartX);
+    dg::mpi_cart_sub( comm_cart, remainsY, &cartY);
     {
-    MVec v1 = dg::evaluate( two2, g);
-    MVec v2 = dg::evaluate( three3, g);
-    MVec v3 = dg::evaluate( five5, g);
-    MVec v4 = dg::evaluate( four4, g), v5(v4);
+    thrust::device_vector<double> v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
+    MVec v1(v1p, comm), v2(v2p, comm), v3(v3p, comm), v4(v4p, comm), v5(v4p, comm);
     if(rank==0)std::cout << "A TEST IS PASSED IF THE RESULT IS ZERO.\n";
     dg::exblas::udouble ud;
     dg::blas1::scal( v3, 3e-10); ud.d = v3.data()[0];
@@ -60,11 +57,27 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "pDivide (z=ax/y+bz)   "<<ud.i-4820274520177585116<<std::endl;
     dg::blas1::transform( v1, v3, dg::EXP<>()); ud.d = v3.data()[0];
     if(rank==0)std::cout << "transform y=exp(x)    "<<ud.i-4620007020034741378<<std::endl;
+
+    std::vector<double> xs{1,2,3};
+    std::vector<double> ys{10*(double)rank + 10};
+    double zs{100};
+    double ws{1000};
+    std::vector<double> y(xs.size()*ys.size());
+    MVec xsd(xs, cartX), ysd(ys, cartY), yd(y, comm);
+    dg::blas1::kronecker( yd, dg::equals(), []DG_DEVICE(double x, double y,
+                double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+    thrust::copy( yd.data().begin(), yd.data().end(), y.begin());
+    for( int i=0; i<size; i++)
+        if(rank==i)std::cout << "Kronecker test (X ox Y) " << y[1]-(1112+10*i) <<"\n";
+
+    auto ydd = dg::kronecker( []DG_DEVICE( double x, double y, double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+    thrust::copy( ydd.data().begin(), ydd.data().end(), y.begin());
+    if(rank==0)std::cout << "Kronecker test (X ox Y) " << y[1]-1112 <<"\n";
+
+
     }
-    MVec v1 = dg::evaluate( two, g);
-    MVec v2 = dg::evaluate( three, g);
-    MVec v3 = dg::evaluate( five, g);
-    MVec v4 = dg::evaluate( four, g);
+    thrust::device_vector<double> v1p( 5, 2.), v2p( 5, 3.), v3p(5,5.), v4p(5,4.);
+    MVec v1(v1p, comm), v2(v2p, comm), v3(v3p, comm), v4(v4p, comm);
 
     if(rank==0)std::cout << "Human readable test RecursiveVector (passed if ouput equals value in brackets) \n";
     std::vector<MVec > w1( 2, v1), w2(2, v2), w3( w2), w4( 2, v4);

@@ -19,7 +19,7 @@ namespace create
 /**
 * @brief Create and assemble a host Matrix for the derivative in 1d
 *
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid with X-point topology
 * @param bcx boundary condition
 * @param dir The direction of the first derivative
@@ -49,7 +49,7 @@ EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, bc bcx, direct
 * @brief Create and assemble a host Matrix for the derivative in 1d
 *
 * Take the boundary condition from the grid
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid with X-point topology
 * @param dir The direction of the first derivative
 *
@@ -63,7 +63,7 @@ EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, direction dir 
 /**
 * @brief Create and assemble a host Matrix for the jump in 1d
 *
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid with X-point topology
 * @param bcx boundary condition
 *
@@ -91,7 +91,7 @@ EllSparseBlockMat<real_type> jump( const RealGridX1d<real_type>& g, bc bcx)
 * @brief Create and assemble a host Matrix for the jump in 1d
 *
 * Take the boundary condition from the grid
-* @ingroup create
+* @ingroup creation
 * @param g 1D grid with X-point topology
 *
 * @return Host Matrix

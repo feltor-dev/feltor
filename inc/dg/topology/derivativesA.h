@@ -24,7 +24,6 @@ namespace create{
   dx( g, g.bcx(), dir);
 * @endcode
 * Take the boundary condition from the grid
-* @ingroup create
 * @param g Any grid
 * @param dir The direction of the first derivative
 *
@@ -43,7 +42,6 @@ auto dx( const Topology& g, direction dir = centered)
   jumpX( g, g.bcx());
 * @endcode
 * Take the boundary condition from the grid
-* @ingroup create
 *
 * @return Host Matrix
  * @copydoc hide_code_blas2_symv
@@ -61,7 +59,6 @@ auto jumpX( const Topology& g)
   dy( g, g.bcy(), dir);
 * @endcode
 * Take the boundary condition from the grid
-* @ingroup create
 * @param g Any grid
 * @param dir The direction of the first derivative
 *
@@ -81,7 +78,6 @@ auto dy( const Topology& g, direction dir = centered)
 * @endcode
 * Take the boundary condition from the grid
 * @param g Any grid
-* @ingroup create
 *
 * @return Host Matrix
 */
@@ -98,7 +94,6 @@ auto jumpY( const Topology& g)
   dz( g, g.bcz(), dir);
 * @endcode
 * Take the boundary condition from the grid
-* @ingroup create
 * @param g Any grid
 * @param dir The direction of the first derivative
 *
@@ -118,7 +113,6 @@ auto dz( const Topology& g, direction dir = centered)
 * @endcode
 * Take the boundary condition from the grid
 * @param g Any grid
-* @ingroup create
 *
 * @return Host Matrix
 */

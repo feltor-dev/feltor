@@ -74,6 +74,41 @@ inline T doReduce_dispatch( OmpTag, int size, Pointer x, T init, BinaryOp op,
 {
     return thrust::transform_reduce(thrust::omp::par, x, x+size, unary_op, init, op);
 }
+template<class F, class G, size_t N, class Pointer, class ...PointerOrValues>
+void doKronecker_omp( Pointer y, size_t size, F f, G g, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
+{
+#pragma omp for nowait
+    for( unsigned u=0; u<size; u++)
+    {
+        std::array<size_t, N> current;
+        current[0] = u%sizes[0];
+        size_t remain = u/sizes[0];
+        for( unsigned k=1; k<N; k++)
+        {
+            current[k] = remain%sizes[k];
+            remain = remain/sizes[k];
+        }
+        call_host_F( f, g, y, u, &current[0], std::make_index_sequence<N>(), xs ...);
+    }
+}
+template<class F, class G, size_t N, class Pointer, class ...PointerOrValues>
+void doKronecker_dispatch( OmpTag, Pointer y, size_t size, F f, G g, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
+{
+    if(omp_in_parallel())
+    {
+        doKronecker_omp( y, size, f, g, sizes, xs... );
+        return;
+    }
+    if(size>MIN_SIZE)
+    {
+        #pragma omp parallel
+        {
+            doKronecker_omp( y, size, f, g, sizes, xs... );
+        }
+    }
+    else
+        doKronecker_dispatch( SerialTag(), y, size, f, g, sizes, xs...);
+}
 
 }//namespace detail
 }//namespace blas1

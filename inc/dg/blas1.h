@@ -641,6 +641,82 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
+/*! @brief \f$ f(g(x_{0i_0},x_{1i_1},...), y_I)\f$ (Kronecker evaluation)
+ *
+ * This routine elementwise evaluates \f[ f(g(x_{0i_0}, x_{1i_1}, ..., x_{(n-1)i_{n-1}}), y_{((i_{n-1} N_{n-2} +...)N_1+i_1)N_0+i_0}) \f]
+ * for all @b combinations of input values.
+ * \f$ N_i\f$ is the size of the vector \f$ x_i\f$.
+ * The first index \f$i_0\f$ is the fastest varying in the output, then \f$ i_1\f$, etc.
+ * If \f$ x_i\f$ is a scalar then the size \f$ N_i = 1\f$.
+ * @attention None of the \f$ x_i\f$ or \f$ y\f$ can have the \c dg::RecursiveVectorTag
+ *
+ * The size of the output \f$ y\f$ must match the product of sizes of input vectors i.e.
+ * \f[ N_y = \prod_{i=0}^{n-1} N_i \f]
+ * The order of evaluations is undefined.
+ * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
+ *
+ * @note This function is trivially parallel and the MPI version simply calls the appropriate shared memory version
+@code{.cpp}
+double function( double x, double y) {
+    return x+y;
+}
+dg::HVec xs{1,2,3,4}, ys{ 10,20,30,40}, y(16, 0);
+dg::blas1::kronecker( y, dg::equals(), function, xs, ys);
+// y contains in order: 11,12,13,14,21,22,23,...,43,44
+
+// Note that the following code is equivalent
+dg::HVec XS(16), YS(16), y(16);
+for( unsigned i=0; i<4; i++)
+for( unsigned k=0; k<4; k++)
+{
+    XS[i*4+k] = xs[k];
+    YS[i*4+k] = ys[i];
+}
+dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
+// however dg::blas1::kronecker has a performance advantage since
+// it never explicitly forms XS or YS
+
+// Finally, we could also write
+dg::blas1::kronecker( XS, dg::equals(), []( double x, double y){ return x;}, xs, ys);
+dg::blas1::kronecker( YS, dg::equals(), []( double x, double y){ return y;}, xs, ys);
+dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
+@endcode
+ * @note For the function \f$ f(x_0, x_1, ..., x_{n-1}) = x_0 x_1 ... x_{n-1} \f$ <tt> dg::blas1::kronecker(y, dg::equals(), x_0, x_1, ...) </tt>computes the actual Kronecker product of the arguments **in reversed order** \f[ y = x_{n-1} \otimes x_{n-2} \otimes ... \otimes x_1 \otimes x_0\f]
+ * With this behaviour we can in e.g. Cartesian coordinates naturally define functions \f$ f(x,y,z)\f$ and evaluate this function on product space coordinates and have \f$ x \f$ as the fastest varying coordinate in memory.
+ *
+ * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param y contains result (size of y must match the product of sizes of \f$ x_i\f$)
+ * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals, see @ref binary_operators for a collection of predefined functors to use here
+ * @param g The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x0 first input
+ * @param xs more input
+ * @note all aliases allowed
+ * @copydoc hide_naninf
+ * @copydoc hide_ContainerType
+ *
+ * @sa dg::kronecker
+ */
+template< class ContainerType0, class BinarySubroutine, class Functor, class ContainerType1, class ...ContainerTypes>
+inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const ContainerType1& x0, const ContainerTypes& ...xs)
+{
+    static_assert( all_true<
+            dg::is_vector<ContainerType0>::value,
+            dg::is_vector<ContainerType1>::value,
+            dg::is_vector<ContainerTypes>::value...>::value,
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType0, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    dg::blas1::detail::doKronecker(tensor_category(), y, f, g, x0, xs...);
+}
+
 ///@}
 }//namespace blas1
 
@@ -705,6 +781,50 @@ template<class ContainerType, class from_ContainerType, class ...Params>
 inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
 {
     return dg::detail::doConstruct<ContainerType, from_ContainerType, Params...>( from, get_tensor_category<ContainerType>(), get_tensor_category<from_ContainerType>(), std::forward<Params>(ps)...);
+}
+
+/**
+ * @brief \f$ y_I = f(x_{0i_0}, x_{1i_1}, ...) \f$ Memory allocating version of \c dg::blas1::kronecker
+ *
+ * In a shared memory space this function is implemented roughly as in the following pseudo-code
+ * @code{.cpp}
+ * size = product( x0.size(), xs.size(), ...)
+ * ContainerType y(size);
+ * dg::blas1::kronecker( y, dg::equals(), f, x0, xs...);
+ * @endcode
+ * The MPI distributed version of this function is implemented as
+ * @code{.cpp}
+ * MPI_Comm comm_kron = dg::mpi_cart_kron( x0.communicator(), xs.communicator()...);
+ * return {dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
+ * @endcode
+ * @attention In particular this means that in MPI all the communicators in the input argument vectors
+ * need to be Cartesian communicators that were created from a common Cartesian root communicator
+ * and both root and all sub communicators need to be registered in the dg
+ * library through calls to \c dg::register_mpi_cart_create and \c dg::register_mpi_cart_sub
+ * or \c dg::mpi_cart_create and \c dg::mpi_cart_sub. The rationale for this behaviour is that
+ * (i) the MPI standard has no easy way of finding a common ancestor to Cartesin sub communicators
+ * and (ii) we want to avoid creating a new communicator every time this function is called.
+ *
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention \c Functor must be callable on the device in use. In particular,
+ * with CUDA it must be a functor tpye (@b not a function) and its signature
+ * must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param f The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x0 first input
+ * @param xs more input
+ * @return newly allocated result (size of container matches the product of sizes of \f$ x_i\f$)
+ * @note all aliases allowed
+ * @copydoc hide_naninf
+ * @copydoc hide_ContainerType
+ *
+ * @sa dg::blas1::kronecker dg::mpi_cart_kron
+ * @ingroup backend
+ */
+template<class ContainerType, class Functor, class ...ContainerTypes>
+ContainerType kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+{
+    using tensor_category  = get_tensor_category<ContainerType>;
+    return dg::detail::doKronecker( tensor_category(), f, x0, xs...);
 }
 
 

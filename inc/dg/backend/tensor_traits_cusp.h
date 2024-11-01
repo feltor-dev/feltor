@@ -11,6 +11,7 @@
 #include "vector_categories.h"
 #include "matrix_categories.h"
 #include "tensor_traits.h"
+#include "predicate.h"
 
 namespace dg
 {
@@ -18,7 +19,7 @@ namespace dg
 ///@cond
 template<class T>
 struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
-    std::enable_if_t< std::is_arithmetic<T>::value>>
+    std::enable_if_t< dg::is_scalar<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = CuspVectorTag;
@@ -28,7 +29,7 @@ struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CPP
 template<class T>
 struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
-    std::enable_if_t< std::is_arithmetic<T>::value>>
+    std::enable_if_t< dg::is_scalar<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = CuspVectorTag;

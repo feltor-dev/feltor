@@ -89,6 +89,47 @@ inline T doReduce_dispatch( CudaTag, int size, Pointer x, T init, BinaryOp op,
     return thrust::transform_reduce(thrust::cuda::par, x, x+size, unary_op,
             init, op);
 }
+template<class Binary, class F, class Pointer, std::size_t ...I, class ...PointerOrValues>
+__device__
+inline void call_device_F( Binary binary, F f, Pointer y, int i, size_t* a,
+        std::index_sequence<I...>, PointerOrValues ... xs)
+{
+    binary( f( get_device_element( xs, a[I])...), y[i]);
+}
+
+template<class Binary, class F, size_t N, class Pointer, class ...PointerOrValues>
+__global__ void kronecker_kernel( int size, const size_t* sizes, Pointer y,
+        Binary binary, F f, PointerOrValues ...xs)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    size_t current[N];
+    for( int i = thread_id; i<size; i += grid_size)
+    {
+        current[0] = i%sizes[0];
+        int remain = i/sizes[0];
+        for( int k=1; k<N; k++)
+        {
+            current[k] = remain%sizes[k];
+            remain = remain/sizes[k];
+        }
+        call_device_F( binary, f, y, i, current, std::make_index_sequence<N>(), xs...);
+    }
+}
+
+template<class Binary, class F, size_t N, class Pointer, class ...PointerOrValues>
+inline void doKronecker_dispatch( dg::CudaTag, Pointer y, size_t size, Binary
+        binary, F f, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
+{
+    const size_t BLOCK_SIZE = 256;
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    thrust::device_vector<size_t> tmp( sizes.begin(), sizes.end());
+    kronecker_kernel<Binary,F,N,Pointer,PointerOrValues...> <<<NUM_BLOCKS, BLOCK_SIZE>>>(size,
+            thrust::raw_pointer_cast(tmp.data()),
+            y,
+            binary, f,
+            xs...);
+}
 
 
 }//namespace detail

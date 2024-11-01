@@ -27,7 +27,7 @@ namespace dg{
  * @copydoc hide_implicit_butcher_tableaus
  * @tparam real_type type of the coefficients
  * @sa RungeKutta, ERKStep, ARKStep
- * @ingroup time_utils_utils
+ * @ingroup time_utils
  */
 template<class real_type>
 struct ButcherTableau{
@@ -174,7 +174,7 @@ struct ButcherTableau{
  *
  * @tparam real_type type of the coefficients
  * @sa ShuOsher
- * @ingroup time_utils_utils
+ * @ingroup time_utils
  */
 template<class real_type>
 struct ShuOsherTableau
