@@ -92,62 +92,70 @@ inline static T TwoProductFMA(T a, T b, T &d) {
 ////////////////////////////////////////////////////////////////////////////////
 // FPE Accumulate and Round function for leightweight implementation
 ////////////////////////////////////////////////////////////////////////////////
-//T is either double or vcl::Vec8d
 //does not check for NaN
 template<typename T, size_t N> UNROLL_ATTRIBUTE
 void Accumulate(T x, std::array<T,N>& fpe , int* status)
 {
-    if( !horizontal_or(x) )
+    if( x == T(0) )
         return;
     for(unsigned int i = 0; i != N; ++i) {
         T s;
         fpe[i] = KnuthTwoSum(fpe[i], x, s);
         x = s;
-        if(!horizontal_or(x)) //early exit
+        if( x == T(0)) //early exit
 	        return;
     }
 
-    if (horizontal_or(x) && *status != 1) {
+    if (x != T(0) && *status != 1) {
         *status = 2;
     }
 }
 /**
-* @brief Convert a fpe to the nearest double precision number (CPU version)
+* @brief Convert a fpe to the nearest number (CPU version)
 *
 * @ingroup highlevel
 * @param fpe a pointer to N doubles on the CPU (representing the fpe)
 * @return the double precision number nearest to the fpe
 */
-template<size_t N>
-inline double Round( const std::array<double,N>& fpe ) {
+template<class T, size_t N>
+inline T Round( const std::array<T,N>& fpe ) {
+    // Our own implementation
+    // Just accumulate to a FPE of size 2 and return sum;
+    std::array<T, 2> fpe_red;
+    int status_red;
+    for( unsigned u = 0; u<N; u++)
+        Accumulate( fpe[N-1-u], fpe_red, &status_red);
+    return fpe_red[0] + fpe_red[1];
 
-    // Now add3(hi, mid, lo)
-    // Adapted from:
-    // Sylvie Boldo, and Guillaume Melquiond. "Emulation of a FMA and correctly rounded sums: proved algorithms using rounding to odd." IEEE Transactions on Computers, 57, no. 4 (2008): 462-471.
-    union {
-        double d;
-        int64_t l;
-    } thdb;
 
-    double tl;
-    double th = KnuthTwoSum(fpe[1], fpe[2], tl);
+    //// Sylvie Boldo, and Guillaume Melquiond. "Emulation of a FMA and correctly rounded sums: proved algorithms using rounding to odd." IEEE Transactions on Computers, 57, no. 4 (2008): 462-471.
+    //// Listing 1 CorrectRoundedSum3
+    //// xh = fpe[0], xm = fpe[1], xl = fpe[2]
+    //static_assert( N > 2, "FPE size must be greater than 2");
+    //union {
+    //    double d;
+    //    int64_t l;
+    //} thdb;
 
-    if (tl != 0.0) {
-        thdb.d = th;
-        // if the mantissa of th is odd, there is nothing to do
-        if (!(thdb.l & 1)) {
-            // choose the rounding direction
-            // depending of the signs of th and tl
-            if ((tl > 0.0) ^ (th < 0.0))
-                thdb.l++;
-            else
-                thdb.l--;
-            th = thdb.d;
-        }
-    }
+    //double tl;
+    //double th = KnuthTwoSum(fpe[1], fpe[2], tl);
 
-    // final addition rounded to nearest
-    return fpe[0] + th;
+    //if (tl != 0.0) {
+    //    thdb.d = th;
+    //    // if the mantissa of th is odd, there is nothing to do
+    //    if (!(thdb.l & 1)) {
+    //        // choose the rounding direction
+    //        // depending of the signs of th and tl
+    //        if ((tl > 0.0) ^ (th < 0.0))
+    //            thdb.l++;
+    //        else
+    //            thdb.l--;
+    //        th = thdb.d;
+    //    }
+    //}
+
+    //// final addition rounded to nearest
+    //return fpe[0] + th;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

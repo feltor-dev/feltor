@@ -51,10 +51,11 @@ static inline double TwoProductFMA(double a, double b, double *d) {
     return p;
 }
 
+template<class T>
 __device__
-static inline double KnuthTwoSum(double a, double b, double *s) {
-    double r = a + b;
-    double z = r - a;
+static inline T KnuthTwoSum(T a, T b, T *s) {
+    T r = a + b;
+    T z = r - a;
     *s = (a - (r - z)) + (b - z);
     return r;
 }
