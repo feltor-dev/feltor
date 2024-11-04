@@ -5,7 +5,7 @@ MPICC=mpiicc -mt_mpi
 OPT=-O3 -xHost  # overwritten for skl in devices.mk
 #MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-qopenmp
-CFLAGS=-Wall -std=c++14 -restrict -fp-model precise -fimf-arch-consistency=true #-mfma  #flags for CC
+CFLAGS=-Wall -std=c++17 -restrict -fp-model precise -fimf-arch-consistency=true #-mfma  #flags for CC
 
 INCLUDE += -I$(HOME)/include # cusp, thrust
 INCLUDE += -I$(NETCDF_INC) -I$(HDF5_INC) -I$(JSONCPP_INC)

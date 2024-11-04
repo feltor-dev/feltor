@@ -23,12 +23,12 @@ Within the file you can overwrite or add to any of the following variables:
 | :-------: | :--------------------------- | :----------------------------------------------------------- |
 |    CC     | g++                          | C++ compiler                                                 |
 |   MPICC   | mpic++                       | the corresponding mpi wrapper for the c++ compiler           |
-|  CFLAGS   | -std=c++14 -mavx -mfma -Wall | flags for the C++ compiler, avx and fma are recommended if the CPU supports it |
+|  CFLAGS   | -std=c++17 -mavx -mfma -Wall | flags for the C++ compiler, avx and fma are recommended if the CPU supports it |
 | MPICFLAGS |                              | flags specific to the MPI compilation                        |
 |   OPT    | -O2                                      | optimization flags for the **host** code (can be overwritten on the command line, CUDA kernel code is always compiled with -O3) |
 |  OMPFLAG  | -fopenmp                                 | The compiler flag activating the OpenMP support |
 |   NVCC    | nvcc                                     | CUDA compiler                            |
-| NVCCFLAGS | -std=c++14  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (minimum instruction set is sse4.1, avx and fma are recommended)                         |
+| NVCCFLAGS | -std=c++17  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (minimum instruction set is sse4.1, avx and fma are recommended)                         |
 | NVCCARCH  | -arch sm_61                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
 |                                          |                                          |     |
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
@@ -70,6 +70,6 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
  - If MPI is used in connection with the gpu backend, the mpi installation would ideally be **cuda-aware** but does not need to be
  - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
  - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
- - The library headers are compliant with the c++14 standard but we reserve the right to upgrade that in future updates
+ - The library headers are compliant with the c++17 standard but we reserve the right to upgrade that in future updates
  - For a mac, we need X-code to compile. At the same time, we need to include the paths to the json, hdf5 and netcdf libraries. We work without GLFW, as it gives problems.  As it is now, the libraries are installed with homebrew, one of the prefered installers for mac. If other programs are used, it is neccessary to include the paths to the libraries used. We compile with g++, but other compilers might also work (like clang++).
 
