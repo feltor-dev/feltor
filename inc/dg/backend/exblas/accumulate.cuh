@@ -42,6 +42,25 @@ static inline double get_element( T* x, int i){
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Auxiliary functions
+////////////////////////////////////////////////////////////////////////////////
+__device__
+static inline double TwoProductFMA(double a, double b, double *d) {
+    double p = a * b;
+    *d = __fma_rn(a, b, -p);
+    return p;
+}
+
+__device__
+static inline double KnuthTwoSum(double a, double b, double *s) {
+    double r = a + b;
+    double z = r - a;
+    *s = (a - (r - z)) + (b - z);
+    return r;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
 __device__
