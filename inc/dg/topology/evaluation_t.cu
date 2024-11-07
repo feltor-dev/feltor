@@ -50,6 +50,7 @@ int main()
     const dg::fDVec wf2d = dg::construct<dg::fDVec>( dg::create::weights( gf2d));
     const dg::DVec w3d = dg::construct<dg::DVec>( dg::create::weights( g3d));
     dg::exblas::udouble res;
+    dg::exblas::ufloat resf;
 
     double integral = dg::blas1::dot( w1d, func1d); res.d = integral;
     std::cout << "1D integral               "<<std::setw(6)<<integral <<"\t" << res.i - 4616944842743393935  << "\n";
@@ -63,8 +64,9 @@ int main()
     std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
     std::cout << "2d error is               "<<(integral2d-sol2d)<<"\n\n";
 
-    float integralf2d = dg::blas1::dot( wf2d, funcf2d); res.d = integralf2d;
-    std::cout << "2D integral (float)       "<<std::setw(6)<<integralf2d <<"\n";
+    float integralf2d = dg::blas1::dot( wf2d, funcf2d); resf.f = integralf2d;
+    std::cout << "2D integral (float)       "<<std::setw(6)<<integralf2d <<"\t" << resf.i - 913405508<<"\n";
+    std::cout << "(Remark: in floating precision the function to integrate may already be different on different compilers)\n";
     float solf2d = 0;
     std::cout << "Correct integral is       "<<std::setw(6)<<solf2d<<std::endl;
     std::cout << "2d error (float)          "<<(integralf2d-solf2d)<<"\n\n";
@@ -150,8 +152,40 @@ int main()
             0., integral_d);
     res.d = integral_d[0];
     std::cout << "2D integral               "<<std::setw(6)<<res.d <<"\t" << res.i + 4823280491526356992<< "\n";
+    std::cout << "(We do not expect this to be correct because the Matrix-Vector product is not accurate nor binary reproducible)!\n";
     std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
     std::cout << "2d error is               "<<(res.d-sol2d)<<"\n\n";
+
+    std::cout << "COMPLEX SCALAR PRODUCTS\n";
+    thrust::device_vector<thrust::complex<double>> cc3d( func3d.size());
+    dg::blas1::transform( func3d, cc3d, []DG_DEVICE(double x){ return thrust::complex<double>{x,x};});
+    thrust::complex<double> cintegral = dg::blas1::dot( w3d, cc3d);
+    res.d =cintegral.real();
+    std::cout << "3D integral (real)        "<<std::setw(6)<<cintegral.real() <<"\t" << res.i - 4675882723962622631<< "\n";
+    res.d =cintegral.imag();
+    std::cout << "3D integral (imag)        "<<std::setw(6)<<cintegral.imag() <<"\t" << res.i - 4675882723962622631<< "\n";
+    sol2d = 0;
+    std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
+    std::cout << "3d error is               "<<(cintegral.real()-sol2d)<<"\n\n";
+
+    thrust::device_vector<thrust::complex<double>> cc1d( func1d.size());
+    dg::blas1::transform( func1d, cc1d, []DG_DEVICE(double x){ return thrust::complex<double>{x,x};});
+    cintegral = dg::blas1::dot( w1d, cc1d);
+    res.d =cintegral.real();
+    std::cout << "1D integral (real)        "<<std::setw(6)<<cintegral.real() <<"\t" << res.i - 4616944842743393935 << "\n";
+    res.d =cintegral.imag();
+    std::cout << "1D integral (imag)        "<<std::setw(6)<<cintegral.imag() <<"\t" << res.i - 4616944842743393935 << "\n";
+    res.d = integral;
+    sol = (exp(2.) -exp(1));
+    std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
+    std::cout << "Relative 1d error is      "<<(cintegral.real()-sol)/sol<<"\n\n";
+    std::cout << "Vector valued SCALAR PRODUCTS\n";
+    std::vector<thrust::device_vector<thrust::complex<double>>> vx( 4, cc1d);
+    std::vector<thrust::device_vector<double>> vw1d( 4, w1d);
+    cintegral = dg::blas1::dot( vw1d, vx);
+    sol = 4*(exp(2.) -exp(1));
+    std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
+    std::cout << "Relative 1d error is      "<<(cintegral.real()-sol)/sol<<"\n\n";
 
     std::cout << "\nFINISHED! Continue with topology/derivatives_t.cu !\n\n";
     return 0;
