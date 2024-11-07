@@ -184,16 +184,30 @@ __host__ __device__
     }
 };
 template<class ContainerType, class Functor, class ...ContainerTypes>
-ContainerType doKronecker( SharedVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto doKronecker( SharedVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     constexpr size_t N = sizeof ...(ContainerTypes)+1;
     std::array<size_t, N> sizes{ dg::blas1::detail::get_size(x0), dg::blas1::detail::get_size(xs)...};
     unsigned size = 1;
     for( unsigned u=0; u<N; u++)
         size *= sizes[u];
-    ContainerType y( size);
-    dg::blas1::kronecker( y, _equals(), f, x0, xs ...);
-    return y;
+    using vector_type = dg::find_if_t<dg::is_not_scalar_has_not_any_policy,
+        dg::get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
+    using execution_policy = dg::get_execution_policy<vector_type>;
+    using value_type = std::invoke_result_t<Functor,
+        get_value_type<ContainerType>, get_value_type<ContainerTypes>...>;
+    if constexpr (std::is_same_v<execution_policy, SerialTag>)
+    {
+        thrust::host_vector<value_type> y( size);
+        dg::blas1::kronecker( y, _equals(), f, x0, xs ...);
+        return y;
+    }
+    else
+    {
+        thrust::device_vector<value_type> y( size);
+        dg::blas1::kronecker( y, _equals(), f, x0, xs ...);
+        return y;
+    }
 }
 
 } //namespace detail

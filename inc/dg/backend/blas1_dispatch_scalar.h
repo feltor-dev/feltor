@@ -79,7 +79,7 @@ inline void doKronecker( AnyScalarTag, ContainerType& y, BinarySubroutine f, Fun
 namespace detail
 {
 template<class ContainerType, class Functor, class ...ContainerTypes>
-ContainerType doKronecker( AnyScalarTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto doKronecker( AnyScalarTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     return f(x0,xs...);
 }

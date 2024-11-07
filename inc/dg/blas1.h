@@ -78,8 +78,13 @@ int result = dg::blas1::dot([] DG_DEVICE( double x, double y){ return int(x*x*y)
  * This is possible with the help of an adapted version of the \c dg::exblas library and
  * works for single and double precision.
 
- * @param x Left Container
- * @param y Right Container may alias x
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention \c Functor must be callable on the device in use. In particular,
+ * with CUDA it must be a functor tpye (@b not function) and its signatures
+ * must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param f The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x First input
+ * @param xs More input (may alias x)
  * @return Scalar product as defined above
  * @note This routine is always executed synchronously due to the
         implicit memcpy of the result. With mpi the result is broadcasted to all processes.
@@ -125,7 +130,7 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
 * @attention Binary Reproducible results are only guaranteed for **float** or **double** input.
-* All other value types redirect to <tt> dg::blas1::dot( dg::Product(), x, y);
+* All other value types redirect to <tt> dg::blas1::dot( dg::Product(), x, y);</tt>
 
  * @param x Left Container
  * @param y Right Container may alias x
@@ -856,16 +861,23 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
 /**
  * @brief \f$ y_I = f(x_{0i_0}, x_{1i_1}, ...) \f$ Memory allocating version of \c dg::blas1::kronecker
  *
- * In a shared memory space this function is implemented roughly as in the following pseudo-code
+ * In a shared memory space with serial execution this function is implemented roughly as in the following pseudo-code
  * @code{.cpp}
+ * // assume x0, xs are host vectors
  * size = product( x0.size(), xs.size(), ...)
- * ContainerType y(size);
+ * using value_type = decltype( f(x0[0], xs[0]...));
+ * thrust::host_vector<value_type> y(size);
  * dg::blas1::kronecker( y, dg::equals(), f, x0, xs...);
  * @endcode
+ * @note The return type is inferred from the \c execution_policy and the \c
+ * tensor_category of the input vectors.  It is unspecified. It is such that
+ * the resulting vector is exactly compatible in a call to
+ * <tt> dg::kronecker( result, dg::equals(), f, x0, xs...); </tt>
+ *
  * The MPI distributed version of this function is implemented as
  * @code{.cpp}
  * MPI_Comm comm_kron = dg::mpi_cart_kron( x0.communicator(), xs.communicator()...);
- * return {dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
+ * return MPI_Vector{dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
  * @endcode
  * @attention In particular this means that in MPI all the communicators in the input argument vectors
  * need to be Cartesian communicators that were created from a common Cartesian root communicator
@@ -888,6 +900,7 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * @param x0 first input
  * @param xs more input
  * @return newly allocated result (size of container matches the product of sizes of \f$ x_i\f$)
+ *
  * @note all aliases allowed
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
@@ -896,7 +909,7 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * @ingroup backend
  */
 template<class ContainerType, class Functor, class ...ContainerTypes>
-ContainerType kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     using tensor_category  = get_tensor_category<ContainerType>;
     return dg::detail::doKronecker( tensor_category(), f, x0, xs...);

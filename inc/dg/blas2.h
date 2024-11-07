@@ -72,7 +72,7 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
 * @attention Binary Reproducible results are only guaranteed for **float** or **double** input.
-* All other value types redirect to <tt> dg::blas1::dot( dg::Product(), x, m, y);
+* All other value types redirect to <tt> dg::blas1::dot( dg::Product(), x, m, y);</tt>
  *
  * @param x Left input
  * @param m The diagonal Matrix.
