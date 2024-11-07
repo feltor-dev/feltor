@@ -63,6 +63,36 @@ void mpi_assert( const Vector1& x, const Vector2&y)
     do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
 }
 
+template<class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
+void doDot_fpe( MPIVectorTag, std::array<T,N>& fpe, Functor f, const ContainerType& x, const ContainerTypes& ...xs)
+{
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>::value;
+    doDot_fpe( fpe, f,
+        do_get_data(x, get_tensor_category<ContainerType>()),
+        do_get_data(xs, get_tensor_category<ContainerTypes>())...);
+
+    //now do the MPI reduction
+    auto comm = get_idx<vector_idx>(x,xs...).communicator();
+    int size;
+    MPI_Comm_size( comm, &size);
+
+    thrust::host_vector<T> reduction( size*N);
+    MPI_Allgather( &fpe[0], N, getMPIDataType<T>(),
+            thrust::raw_pointer_cast(reduction.data()), N, getMPIDataType<T>(),
+            comm);
+    //reduce received data (serial execution)
+    for( unsigned k=0; k<N; k++)
+        fpe[k] = T(0);
+    int status = 0;
+    for ( unsigned u=0; u<(unsigned)size; u++)
+        for (unsigned k = 0; k < N; ++k)
+            exblas::cpu::Accumulate( reduction[u*N+k], fpe, &status);
+    if( status != 0)
+    for( unsigned u=0; u<N; u++)
+    if( fpe[u] - fpe[u] != T(0))
+        throw dg::Error(dg::Message(_ping_)<<"MPI FPE Dot failed since one of the inputs contains NaN or Inf");
+}
+
 template< class Vector1, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVectorTag)
 {

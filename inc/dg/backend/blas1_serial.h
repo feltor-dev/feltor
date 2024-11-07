@@ -4,6 +4,7 @@
 #include "exceptions.h"
 #include "execution_policy.h"
 #include "exblas/exdot_serial.h"
+#include "exblas/fpedot_serial.h"
 
 namespace dg
 {
@@ -11,6 +12,17 @@ namespace blas1
 {
 namespace detail
 {
+template<class T, size_t N, class Functor, class ...PointerOrValues>
+inline void doDot_fpe_dispatch( SerialTag, unsigned size, std::array<T,N>& fpe,
+    Functor f, PointerOrValues ...xs_ptr)
+{
+    int status = 0;
+    exblas::fpedot_cpu<T,N,Functor,PointerOrValues...>( &status, size, fpe, f, xs_ptr...);
+    if( status != 0)
+    for( unsigned u=0; u<N; u++)
+    if( fpe[u] - fpe[u] != T(0))
+        throw dg::Error(dg::Message(_ping_)<<"CPU FPE Dot failed since one of the inputs contains NaN or Inf");
+}
 template<class PointerOrValue1, class PointerOrValue2>
 inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);

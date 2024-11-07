@@ -6,6 +6,7 @@
 #include "config.h"
 #include "blas1_serial.h"
 #include "exblas/exdot_omp.h"
+#include "exblas/fpedot_omp.h"
 namespace dg
 {
 namespace blas1
@@ -13,6 +14,22 @@ namespace blas1
 namespace detail
 {
 constexpr int MIN_SIZE=100;//don't parallelize if work is too small
+
+template<class T, size_t N, class Functor, class ...PointerOrValues>
+inline void doDot_fpe_dispatch( OmpTag, unsigned size, std::array<T,N>& fpe,
+    Functor f, PointerOrValues ...xs_ptr)
+{
+    int status = 0;
+    if(size<MIN_SIZE)
+        exblas::fpedot_cpu<T,N,Functor,PointerOrValues...>( &status, size, fpe, f, xs_ptr...);
+    else
+        exblas::fpedot_omp<T,N,Functor,PointerOrValues...>( &status, size, fpe, f, xs_ptr...);
+    if( status != 0)
+    for( unsigned u=0; u<N; u++)
+    if( fpe[u] - fpe[u] != T(0))
+        throw dg::Error(dg::Message(_ping_)<<"OMP FPE Dot failed since one of the inputs contains NaN or Inf");
+
+}
 
 template<class PointerOrValue1, class PointerOrValue2>
 inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {

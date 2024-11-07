@@ -127,6 +127,31 @@ namespace blas1
 
 namespace detail
 {
+template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
+inline void doDot_fpe( RecursiveVectorTag, std::array<T,N>& fpe, Functor f,
+    const ContainerType& x, const ContainerTypes& ...xs)
+{
+    //find out which one is the RecursiveVector and determine size
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>::value;
+    auto size = get_idx<vector_idx>(x,xs...).size();
+    //reduce received data (serial execution)
+    for( unsigned k=0; k<N; k++)
+        fpe[k] = T(0);
+    for( unsigned u=0; u<size; u++)
+    {
+        std::array<T,N> tmp;
+        doDot_fpe( tmp, f,
+            do_get_vector_element(x, u, get_tensor_category<ContainerType>()),
+            do_get_vector_element(xs, u, get_tensor_category<ContainerTypes>())...);
+        int status = 0;
+        for (unsigned k = 0; k < N; ++k)
+            exblas::cpu::Accumulate( tmp[k], fpe, &status);
+        if( status != 0)
+        for( unsigned u=0; u<N; u++)
+        if( fpe[u] - fpe[u] != T(0))
+            throw dg::Error(dg::Message(_ping_)<<"Vector FPE Dot failed since one of the inputs contains NaN or Inf");
+    }
+}
 
 
 template< class Vector1, class Vector2>
