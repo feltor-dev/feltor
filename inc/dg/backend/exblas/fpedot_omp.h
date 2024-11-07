@@ -63,7 +63,6 @@ inline void Reduction(unsigned int tid, unsigned int tnum,
 template<class T, size_t N, class Functor, class ...PointerOrValues>
 void fpedot_omp(int * status, unsigned size, std::array<T,N>& fpe, Functor f, PointerOrValues ...xs_ptr)
 {
-
     // OpenMP sum+reduction
     int maxthreads = omp_get_max_threads();
     std::vector<std::array<T, N>> acc(maxthreads);
@@ -72,13 +71,19 @@ void fpedot_omp(int * status, unsigned size, std::array<T,N>& fpe, Functor f, Po
     {
         unsigned int tid = omp_get_thread_num();
         unsigned int tnum = omp_get_num_threads();
-        for(int i = 0; i < N; i++) {
-            T res = f( get_element( xs_ptr, i)...);
-            Accumulate(res, fpe, status_i[tid]);
+        std::array<T,N> & myacc = acc[tid];
+        int l = tid * size / tnum;
+        int r = ((tid+1) * size / tnum)  - 1;
+        for( unsigned u=0; u<N; u++)
+            myacc[u] = T(0);
+        for(int i = l; i <= r; i++)
+        {
+            T res = f( cpu::get_element( xs_ptr, i)...);
+            cpu::Accumulate(res, myacc, &status_i[tid]);
             // std::isfinite does not work for complex
             //if( !std::isfinite(res) ) *status = 1;
         }
-        Reduction<N>( tid, tnum, acc, status);
+        cpu::Reduction<T,N>( tid, tnum, acc, status);
     }//omp parallel
     for( uint i=0; i<N; i++)
         fpe[i] = acc[0][i];

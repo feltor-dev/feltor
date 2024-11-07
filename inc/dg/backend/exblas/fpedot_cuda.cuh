@@ -27,8 +27,15 @@ namespace gpu{
 //the second kernel reduces all FPEs from the first kernel (because we need a global synchronization, which is induced by separate kernel launches)
 
 template<class T, uint N, uint  THREADS_PER_BLOCK>
-__device__ void warpReduce( volatile T * a, unsigned int tid, volatile int * status)
+__device__ void warpReduce( T * a, unsigned int tid, volatile int * status)
 {
+    // assert( THREADS_PER_BLOCK == 2*(max_tid+1))
+    // a has size THREADS_PER_BLOCK
+    // This is a manually unrolled tree sum
+    // 0. Currently THREADS_PER_BLOCK = 512 (first call) = 64 (second call) and tid = 0,1,...,31
+    // 1. In each first iteration the 2nd half of a is summed onto the first half
+    // 2. until there is only two left
+
     if( THREADS_PER_BLOCK >= 64)
     {
         #pragma unroll
@@ -58,7 +65,7 @@ __device__ void warpReduce( volatile T * a, unsigned int tid, volatile int * sta
                 a[i*THREADS_PER_BLOCK+tid] = KnuthTwoSum(a[i*THREADS_PER_BLOCK+tid], x, &s);
                 x = s;
             }
-            if (x != 0.0) {
+            if (x != T(0)) {
                 *status = 2; //indicate overflow
             }
         }
@@ -75,7 +82,7 @@ __device__ void warpReduce( volatile T * a, unsigned int tid, volatile int * sta
                 a[i*THREADS_PER_BLOCK+tid] = KnuthTwoSum(a[i*THREADS_PER_BLOCK+tid], x, &s);
                 x = s;
             }
-            if (x != 0.0) {
+            if (x != T(0)) {
                 *status = 2; //indicate overflow
             }
         }
@@ -92,7 +99,7 @@ __device__ void warpReduce( volatile T * a, unsigned int tid, volatile int * sta
                 a[i*THREADS_PER_BLOCK+tid] = KnuthTwoSum(a[i*THREADS_PER_BLOCK+tid], x, &s);
                 x = s;
             }
-            if (x != 0.0) {
+            if (x != T(0)) {
                 *status = 2; //indicate overflow
             }
         }
@@ -109,7 +116,7 @@ __device__ void warpReduce( volatile T * a, unsigned int tid, volatile int * sta
                 a[i*THREADS_PER_BLOCK+tid] = KnuthTwoSum(a[i*THREADS_PER_BLOCK+tid], x, &s);
                 x = s;
             }
-            if (x != 0.0) {
+            if (x != T(0)) {
                 *status = 2; //indicate overflow
             }
         }
@@ -126,7 +133,7 @@ __device__ void warpReduce( volatile T * a, unsigned int tid, volatile int * sta
                 a[i*THREADS_PER_BLOCK+tid] = KnuthTwoSum(a[i*THREADS_PER_BLOCK+tid], x, &s);
                 x = s;
             }
-            if (x != 0.0) {
+            if (x != T(0)) {
                 *status = 2; //indicate overflow
             }
         }
@@ -141,11 +148,12 @@ __global__ void fpeDOT(
     Functor f,
     PointerOrValues ...d_xs
 ) {
+    // MW: this generates a warning for thrust::complex<double> (maybe for cuda::std::complex it does not?)
     __shared__ T l_fpe[N*THREADS_PER_BLOCK]; //shared variables live for a thread block
     T *a = l_fpe + threadIdx.x;
     //Initialize FPEs
     for (uint i = 0; i < N; i++)
-        a[i * THREADS_PER_BLOCK] = 0;
+        a[i * THREADS_PER_BLOCK] = T(0);
     __syncthreads();
 
     //Read data from global memory and accumulate to sub-FPEs
@@ -162,7 +170,7 @@ __global__ void fpeDOT(
             a[i*THREADS_PER_BLOCK] = KnuthTwoSum(a[i*THREADS_PER_BLOCK], x, &s);
             x = s;
         }
-        if (x != 0.0) {
+        if (x != T(0)) {
             *status = 2; //indicate overflow
         }
     }
@@ -182,7 +190,7 @@ __global__ void fpeDOT(
                     a[i*THREADS_PER_BLOCK] = KnuthTwoSum(a[i*THREADS_PER_BLOCK], x, &s);
                     x = s;
                 }
-                if (x != 0.0) {
+                if (x != T(0)) {
                     *status = 2; //indicate overflow
                 }
             }
@@ -191,7 +199,7 @@ __global__ void fpeDOT(
         __syncthreads();
     }
     //Now merge sub-FPEs within each warp
-    if( threadIdx.x < 32) warpReduce<N, THREADS_PER_BLOCK>( l_fpe, threadIdx.x, status);
+    if( threadIdx.x < 32) warpReduce<T, N, THREADS_PER_BLOCK>( l_fpe, threadIdx.x, status);
     if( threadIdx.x == 0)
     {
         for( uint i=0; i<N; i++)
@@ -213,7 +221,7 @@ void fpeDOTMerge(
     //d_a holds max 64 FPEs
     //There may only be one block with 32 threads
     //Merge sub-FPEs within each warp
-    if( threadIdx.x < 32) warpReduce<N, NUM_FPES>( d_PartialFPEs, threadIdx.x, status);
+    if( threadIdx.x < 32) warpReduce<T, N, NUM_FPES>( d_PartialFPEs, threadIdx.x, status);
     if( threadIdx.x == 0)
     {
         for( uint i=0; i<N; i++)
@@ -236,13 +244,13 @@ template<class T, size_t N, class Functor, class ...PointerOrValues>
 __host__
 void fpedot_gpu(int * status, unsigned size, T* fpe, Functor f, PointerOrValues ...xs_ptr)
 {
-{
     static thrust::device_vector<T> d_PartialFPEsV( gpu::NUM_FPES*N, 0.0);
     T *d_PartialFPEs = thrust::raw_pointer_cast( d_PartialFPEsV.data());
     thrust::device_vector<int> d_statusV(1, 0);
     int *d_status = thrust::raw_pointer_cast( d_statusV.data());
     gpu::fpeDOT<T, N, gpu::THREADS_PER_BLOCK, Functor, PointerOrValues...><<<gpu::NUM_FPES, gpu::THREADS_PER_BLOCK>>>(
             d_status, size, d_PartialFPEs, f, xs_ptr...);
+
     gpu::fpeDOTMerge<T, N, gpu::NUM_FPES><<<1, 32>>>( d_PartialFPEs, fpe, d_status);
     *status = d_statusV[0];
 }

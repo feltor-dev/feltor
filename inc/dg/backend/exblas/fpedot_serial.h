@@ -42,8 +42,8 @@ void fpedot_cpu(int * status, unsigned size, std::array<T,N>& fpe, Functor f, Po
     for( unsigned i=0; i<N; i++)
         fpe[i] = T(0);
     for(unsigned i = 0; i < size; i++) {
-        T res = f( get_element( xs_ptr, i)...);
-        Accumulate(res, fpe, status);
+        T res = f( cpu::get_element( xs_ptr, i)...);
+        cpu::Accumulate(res, fpe, status);
     }
 }
 
