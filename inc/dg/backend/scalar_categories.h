@@ -6,10 +6,20 @@
 namespace dg{
 
 /**
- * @brief Scalar Tag base class, indicates the basic Scalar Tensor concept
+ * @brief Scalar Tag base class
  */
 struct AnyScalarTag : public AnyVectorTag{};
-struct ScalarTag : public AnyScalarTag{};
+
+/// Types where \c std::is_arithmetic is true
+struct ArithmeticTag : public AnyScalarTag{};
+/// Types where \c std::is_floating_point is true
+struct FloatingPointTag : public ArithmeticTag{};
+/// Types where \c std::is_integral is true
+struct IntegralTag : public ArithmeticTag{};
+
+/// complex number type
+struct ComplexTag : public AnyScalarTag{};
+
 
 }//namespace dg
 

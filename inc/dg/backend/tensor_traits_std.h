@@ -64,7 +64,7 @@ template<class T>
 struct TensorTraits<std::complex<T>>
 {
     using value_type        = std::complex<T>;
-    using tensor_category   = ScalarTag;
+    using tensor_category   = ComplexTag;
     using execution_policy  = AnyPolicyTag;
 };
 ///@}
