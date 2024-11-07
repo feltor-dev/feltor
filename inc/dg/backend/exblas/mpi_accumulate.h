@@ -20,36 +20,8 @@ namespace exblas {
 namespace detail{
 //we keep track of communicators that were created in the past
 static std::map<MPI_Comm, std::array<MPI_Comm, 2>> comm_mods;
-static int status;
 }
 ///@endcond
-/*
- * operation to reduce fpes
- */
-template<size_t N>
-void mpi_fpeSum( std::array<double,N> *in, std::array<double,N> *inout, int *len, MPI_Datatype *dptr ) {
-    //inout = in + inout
-    for (int i = 0; i < *len; ++i)
-        for (unsigned k = 0; k < N; ++k)
-            exblas::cpu::Accumulate( in[i][k], inout[i], &detail::status);
-    //exblas::detail::status is a static global variable for each process
-}
-
-
-template< size_t NBFPE>
-static void reduce_fpempi_cpu( std::array<double, NBFPE>& in, std::array<double, NBFPE>& out, MPI_Comm comm)
-{
-    // ReproAllReduce -- Begin
-    // user-defined reduction operations
-    MPI_Op Op;
-    MPI_Op_create( (MPI_User_function *) mpi_fpeSum<NBFPE>, true, &Op );
-    MPI_Datatype dt_fpe;
-    MPI_Type_contiguous(NBFPE, MPI_DOUBLE, &dt_fpe);
-    MPI_Type_commit(&dt_fpe);
-    MPI_Allreduce( &in, &out, 1, dt_fpe, Op, MPI_COMM_WORLD);
-    MPI_Op_free( &Op );
-    // ReproAllReduce -- End
-}
 
 /**
  * @brief This function can be used to partition communicators for the \c exblas::reduce_mpi_cpu function
