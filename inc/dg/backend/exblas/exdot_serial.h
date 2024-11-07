@@ -42,6 +42,19 @@ union udouble{
     int64_t i; //!< a 64 bit integer
 };
 
+/*! @brief Utility union to display all bits of a float (using <a href="https://en.wikipedia.org/wiki/Type_punning">type-punning</a>)
+@code
+float result; // = ...
+ufloat res;
+res.f = result;
+std::cout << "Result as float "<<res.f<<"  as integer "<<res.i<<std::endl;
+@endcode
+*/
+union ufloat{
+    float f; //!< a float
+    int32_t i; //!< a 32 bit integer
+};
+
 ///@cond
 namespace cpu{
 
@@ -78,7 +91,7 @@ void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, int64_t* acc, boo
     for(int i = 0; i < N; i++) {
         //double r1;
         //double x = TwoProductFMA(get_element(a,i),get_element(b,i),r1);
-        double x = get_element(a,i)*get_element(b,i);
+        double x = (double)get_element(a,i)*(double)get_element(b,i);
         if( !std::isfinite(x) ) *error = true;
         cache.Accumulate(x);
         //cache.Accumulate(r1);
@@ -128,8 +141,8 @@ void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c
     }
 #else// _WITHOUT_VCL
     for(int i = 0; i < N; i++) {
-        double x1 = get_element(a,i)*get_element(b,i);
-        double x2 = x1*get_element(c,i);
+        double x1 = (double)get_element(a,i)*(double)get_element(b,i);
+        double x2 = x1*(double)get_element(c,i);
         if( !std::isfinite(x2) ) *error = true;
         cache.Accumulate(x2);
     }

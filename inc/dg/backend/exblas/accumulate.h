@@ -58,12 +58,12 @@ static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
 }
 #endif//_WITHOUT_VCL
 template<class T>
-inline double get_element( T x, int i){
-	return (double)x;
+inline T get_element( T x, int i){
+	return x;
 }
 template<class T>
-inline double get_element( T* x, int i){
-	return (double)(*(x+i));
+inline T get_element( T* x, int i){
+	return *(x+i);
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
@@ -121,12 +121,13 @@ template<class T, size_t N>
 inline T Round( const std::array<T,N>& fpe ) {
     // Our own implementation
     // Just accumulate to a FPE of size 2 and return sum;
-    std::array<T, 2> fpe_red;
+    std::array<T, 2> fpe_red{T(0),T(0)};
     int status_red;
     for( unsigned u = 0; u<N; u++)
-        Accumulate( fpe[N-1-u], fpe_red, &status_red);
+        Accumulate( fpe[u], fpe_red, &status_red);
     return fpe_red[0] + fpe_red[1];
 
+    // The problem with the following is to get it to work for complex
 
     //// Sylvie Boldo, and Guillaume Melquiond. "Emulation of a FMA and correctly rounded sums: proved algorithms using rounding to odd." IEEE Transactions on Computers, 57, no. 4 (2008): 462-471.
     //// Listing 1 CorrectRoundedSum3

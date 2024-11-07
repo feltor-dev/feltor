@@ -32,13 +32,13 @@ namespace gpu
 ///////////////////////////////////////////////////////////////////////////
 template<class T>
 __device__
-static inline double get_element( T x, int i){
-	return (double)x;
+static inline T get_element( T x, int i){
+	return x;
 }
 template<class T>
 __device__
-static inline double get_element( T* x, int i){
-	return (double)(*(x+i));
+static inline T get_element( T* x, int i){
+	return *(x+i);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
