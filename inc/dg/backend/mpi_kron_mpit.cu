@@ -49,7 +49,7 @@ int main( int argc, char* argv[])
     assert( mm.at(same).root == comm);
     assert( mm.at(same).remains == remains);
 
-    MPI_Comm kron = dg::mpi_cart_kron( {comm_sub100, same});
+    MPI_Comm kron = dg::mpi_cart_kron( {comm_sub100, same}); // 100 + 001
     int coords[2];
     MPI_Cart_get( kron, 2, np, periods, coords);
     assert( np[0] == 1);
@@ -60,10 +60,16 @@ int main( int argc, char* argv[])
     MPI_Comm comm010;
     int remain_dims010[3] = {0, 1, 0};
     dg::mpi_cart_sub( comm, remain_dims010, &comm010);
-    MPI_Comm comm111 = dg::mpi_cart_kron( {kron, comm010});
-    assert( comm111 == comm);
     try{
-        MPI_Comm doesNotWork =dg::mpi_cart_kron( {comm111, comm010});
+        MPI_Comm comm111 = dg::mpi_cart_kron( {kron, comm010}); // 101 + 010
+        assert( comm111 == comm);
+    }catch( dg::Error & err)
+    {
+        if(rank==0)std::cout << "Expected error message\n";
+        if(rank==0)std::cout << err.what()<<"\n";
+    }
+    try{
+        MPI_Comm doesNotWork =dg::mpi_cart_kron( {comm010, comm010});
     }catch( dg::Error & err)
     {
         if(rank==0)std::cout << "Expected error message\n";
