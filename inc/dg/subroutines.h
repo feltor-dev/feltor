@@ -71,7 +71,7 @@ DG_DEVICE void operator()( T1 x, T2& y) const
 struct divides
 {
     template< class T1, class T2>
-DG_DEVICE T1 operator()( T1 x1, T2 x2) const
+DG_DEVICE auto operator()( T1 x1, T2 x2) const
     {
         return x1/x2;
     }
@@ -82,24 +82,49 @@ struct Sum
 {
     ///@brief \f[ \sum_i x_i \f]
     template< class T1, class ...Ts>
-DG_DEVICE T1 operator()( T1 x, Ts... rest) const
+DG_DEVICE auto operator()( T1 x, Ts... rest) const
     {
-        T1 tmp = T1{0};
-        sum( tmp, x, rest...);
-        return tmp;
+        // unfortunately the fold expression ( x + ... + rest)
+        // does currently not guarantee the order of execution
+        // so we need to wait for DR 2611 to be implemented in g++ to use it
+        return sum( x, rest ...);
     }
     private:
-    template<class T, class ...Ts>
-DG_DEVICE void sum( T& tmp, T x, Ts... rest) const
+    template< class T1, class ...Ts>
+DG_DEVICE auto sum( T1 x, Ts... rest) const
     {
-        tmp += x;
-        sum( tmp, rest...);
+        return x + sum( rest...);
     }
 
-    template<class T>
-DG_DEVICE void sum( T& tmp, T x) const
+    template<class T1, class T2>
+DG_DEVICE auto sum( T1 x1, T2 x2) const
     {
-        tmp += x;
+        return x1 + x2;
+    }
+};
+
+
+///@brief \f$ y = \prod_i x_i \f$
+struct Product
+{
+    ///@brief \f[ \sum_i x_i \f]
+    template< class T1, class ...Ts>
+DG_DEVICE auto operator()( T1 x, Ts... rest) const
+    {
+        // manual implement ( x * ... * rest) until DR 2611 is resolved
+        return prod(x, rest...);
+    }
+    private:
+    template< class T1, class ...Ts>
+DG_DEVICE auto prod( T1 x, Ts... rest) const
+    {
+        return x * prod( rest...);
+    }
+
+    template<class T1, class T2>
+DG_DEVICE auto prod( T1 x1, T2 x2) const
+    {
+        return x1 * x2;
     }
 };
 
@@ -107,50 +132,44 @@ DG_DEVICE void sum( T& tmp, T x) const
 struct PairSum
 {
     ///@brief \f[ \sum_i a_i x_i \f]
-    template< class T, class ...Ts>
-DG_DEVICE T operator()( T a, T x, Ts... rest) const
+    template< class T1, class T2, class ...Ts>
+DG_DEVICE auto operator()( T1 a, T2 x, Ts... rest) const
     {
-        T tmp = T{0};
-        sum( tmp, a, x, rest...);
-        return tmp;
+        return sum( a, x, rest...);
     }
     private:
-    template<class T, class ...Ts>
-DG_DEVICE void sum( T& tmp, T alpha, T x, Ts... rest) const
+    template<class T1, class T2, class ...Ts>
+DG_DEVICE auto sum( T1 alpha, T2 x, Ts... rest) const
     {
-        tmp = DG_FMA( alpha, x, tmp);
-        sum( tmp, rest...);
+        return DG_FMA( alpha, x, sum(rest...));
     }
 
-    template<class T>
-DG_DEVICE void sum( T& tmp, T alpha, T x) const
+    template< class T1, class T2>
+DG_DEVICE auto sum( T1 alpha, T2 x) const
     {
-        tmp = DG_FMA(alpha, x, tmp);
+        return alpha*x;
     }
 };
 ///@brief \f$ y = \sum_i a_i x_i y_i \f$
 struct TripletSum
 {
     ///@brief \f[ \sum_i \alpha_i x_i y_i \f]
-    template< class T1, class ...Ts>
-DG_DEVICE T1 operator()( T1 a, T1 x1, T1 y1, Ts... rest) const
+    template< class T0, class T1, class T2, class ...Ts>
+DG_DEVICE auto operator()( T0 a, T1 x1, T2 y1, Ts... rest) const
     {
-        T1 tmp = T1{0};
-        sum( tmp, a, x1, y1, rest...);
-        return tmp;
+        return sum( a, x1, y1, rest...);
     }
     private:
-    template<class T, class ...Ts>
-DG_DEVICE void sum( T& tmp, T alpha, T x, T y, Ts... rest) const
+    template<class T0, class T1, class T2, class ...Ts>
+DG_DEVICE auto sum( T0 alpha, T1 x, T2 y, Ts... rest) const
     {
-        tmp = DG_FMA( alpha*x, y, tmp);
-        sum( tmp, rest...);
+        return DG_FMA( alpha*x, y, sum(rest...));
     }
 
-    template<class T>
-DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
+    template<class T0, class T1, class T2>
+DG_DEVICE auto sum( T0 alpha, T1 x, T2 y) const
     {
-        tmp = DG_FMA(alpha*x, y, tmp);
+        return (alpha*x)*y;
     }
 };
 
@@ -159,10 +178,10 @@ DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
 ///@addtogroup variadic_subroutines
 ///@{
 
-///@brief \f$ y = \sum_i a_i x_i + b y,\quad \tilde y = \sum_i \tilde a_i x_i + \tilde b y \f$
+///@brief \f$ y = \sum_i b_i x_i + b_0 y,\quad \tilde y = \sum_i \tilde b_i x_i + \tilde b_0 y \f$
 struct EmbeddedPairSum
 {
-    ///@brief \f[ \sum_i \alpha_i x_i \f]
+    ///@brief \f$ y = \sum_i b_i x_i + b_0 y,\quad \tilde y = \sum_i \tilde b_i x_i + \tilde b_0 y \f$
     template< class T1, class ...Ts>
 DG_DEVICE void operator()( T1& y, T1& yt, T1 b, T1 bt, Ts... rest) const
     {
@@ -191,9 +210,7 @@ DG_DEVICE void sum( T1& y_1, T1& yt_1, T1 b, T1 bt, T1 k) const
 template<class BinarySub, class Functor>
 struct Evaluate
 {
-    Evaluate( BinarySub sub, Functor g):
-        m_f( sub),
-        m_g( g) {}
+    Evaluate( BinarySub sub, Functor g): m_f( sub), m_g( g) {}
 #ifdef __CUDACC__
 // cuda compiler spits out a lot of warnings if
 // e.g. dg::transform is used on host vectors with host function
