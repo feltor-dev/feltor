@@ -36,12 +36,12 @@ int main()
     dg::Grid1d g1d( 1, 2, n, 12);
     dg::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48);
     //dg::Grid2d g2d( {0.0, 6.2831853071795862, 3, 48}, {0.0, 6.2831853071795862, 5, 28});
-    dg::RealGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48);
+    dg::RealGrid<float,2> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48);
     dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
     //dg::Grid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx});
 
     //test evaluation functions
-    const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( exp, g1d));
+    const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( [](double x){ return exp(x);}, g1d));
     const dg::DVec func2d = dg::construct<dg::DVec>( dg::evaluate( function<double>, g2d));
     const dg::fDVec funcf2d = dg::construct<dg::fDVec>( dg::evaluate( function<float>, gf2d));
     const dg::DVec func3d = dg::construct<dg::DVec>( dg::evaluate( function3d, g3d));
@@ -109,13 +109,13 @@ int main()
 
     //TEST OF INTEGRAL
     dg::HVec integral_num = dg::integrate( cos, g1d, dg::forward);
-    dg::HVec integral_ana = dg::evaluate( sin, g1d);
+    dg::HVec integral_ana = dg::evaluate( [](double x){return sin(x);}, g1d);
     dg::blas1::plus( integral_ana, -sin(g1d.x0()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
     std::cout << " Error norm of  1d integral function (forward) "<<norm<<"\n";
     integral_num = dg::integrate( cos, g1d, dg::backward);
-    integral_ana = dg::evaluate( sin, g1d);
+    integral_ana = dg::evaluate( [](double x){return sin(x);}, g1d);
     dg::blas1::plus( integral_ana, -sin(g1d.x1()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
