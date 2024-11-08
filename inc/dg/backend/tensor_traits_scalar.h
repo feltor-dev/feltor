@@ -8,12 +8,20 @@ namespace dg
 ///@addtogroup traits
 ///@{
 
-///@brief Recognize arithmetic types as scalars
+/// Enable double and float as a floating point
 template<class T>
-struct TensorTraits<T, std::enable_if_t< std::is_arithmetic<T>::value>>
+struct TensorTraits<T, std::enable_if_t< std::is_floating_point_v<T>>>
 {
     using value_type        = T;
-    using tensor_category   = ScalarTag;
+    using tensor_category   = FloatingPointTag;
+    using execution_policy  = AnyPolicyTag;
+};
+/// Enable integers and anything promotable to integer (such as bool and char) as integral
+template<class T>
+struct TensorTraits<T, std::enable_if_t< std::is_integral_v<T>>>
+{
+    using value_type        = T;
+    using tensor_category   = IntegralTag;
     using execution_policy  = AnyPolicyTag;
 };
 

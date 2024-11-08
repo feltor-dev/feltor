@@ -63,6 +63,36 @@ void mpi_assert( const Vector1& x, const Vector2&y)
     do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
 }
 
+template<class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
+void doDot_fpe( MPIVectorTag, std::array<T,N>& fpe, Functor f, const ContainerType& x, const ContainerTypes& ...xs)
+{
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>::value;
+    doDot_fpe( fpe, f,
+        do_get_data(x, get_tensor_category<ContainerType>()),
+        do_get_data(xs, get_tensor_category<ContainerTypes>())...);
+
+    //now do the MPI reduction
+    auto comm = get_idx<vector_idx>(x,xs...).communicator();
+    int size;
+    MPI_Comm_size( comm, &size);
+
+    thrust::host_vector<T> reduction( size*N);
+    MPI_Allgather( &fpe[0], N, getMPIDataType<T>(),
+            thrust::raw_pointer_cast(reduction.data()), N, getMPIDataType<T>(),
+            comm);
+    //reduce received data (serial execution)
+    for( unsigned k=0; k<N; k++)
+        fpe[k] = T(0);
+    int status = 0;
+    for ( unsigned u=0; u<(unsigned)size; u++)
+        for (unsigned k = 0; k < N; ++k)
+            exblas::cpu::Accumulate( reduction[u*N+k], fpe, &status);
+    if( status != 0)
+    for( unsigned u=0; u<N; u++)
+    if( fpe[u] - fpe[u] != T(0))
+        throw dg::Error(dg::Message(_ping_)<<"MPI FPE Dot failed since one of the inputs contains NaN or Inf");
+}
+
 template< class Vector1, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVectorTag)
 {
@@ -122,7 +152,7 @@ inline void doKronecker( MPIVectorTag, ContainerType& y, BinarySubroutine f, Fun
 } //namespace detail
 } //namespace blas1
 template<class ContainerType, class Functor, class ...ContainerTypes>
-ContainerType kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs);
+auto kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs);
 namespace detail
 {
 
@@ -136,7 +166,7 @@ inline MPI_Comm do_get_comm( const T& v, AnyScalarTag){
     return MPI_COMM_NULL;
 }
 template<class ContainerType, class Functor, class ...ContainerTypes>
-ContainerType doKronecker( MPIVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto doKronecker( MPIVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     constexpr size_t N = sizeof ...(ContainerTypes)+1;
     std::vector<MPI_Comm> comms{ do_get_comm(x0, get_tensor_category<ContainerType>()),
@@ -147,11 +177,10 @@ ContainerType doKronecker( MPIVectorTag, Functor f, const ContainerType& x0, con
         if ( comms[u] != MPI_COMM_NULL)
             non_zero_comms.push_back( comms[u]);
 
-    typename ContainerType::container_type ydata;
-    ydata = dg::kronecker( f, do_get_data(x0, get_tensor_category<ContainerType>()), do_get_data( xs, get_tensor_category<ContainerTypes>())...);
+    auto ydata = dg::kronecker( f, do_get_data(x0, get_tensor_category<ContainerType>()), do_get_data( xs, get_tensor_category<ContainerTypes>())...);
 
 
-    return {ydata, dg::mpi_cart_kron( non_zero_comms)};
+    return MPI_Vector<decltype(ydata)>{ydata, dg::mpi_cart_kron( non_zero_comms)};
 }
 
 } //namespace detail

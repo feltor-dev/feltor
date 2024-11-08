@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include "exceptions.h"
 
 
@@ -122,9 +123,11 @@ int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, boo
  * entry in \c remain_dims can exist in only exactly one comm.
  * The resulting \c remain_dims of the output is then the union of all \c remain_dims
  * of the inputs.
+ *
  * The returned communicator is then the one that hypothetically generated all input comms
  * through <tt> MPI_Cart_sub( return_comm, remain_dims[u], comms[u]); </tt>
  * for all <tt>u < comms.size()</tt>;
+ * @note The order of communicators matters. The function will not transpose communicators
  * @param comms input communicators (their order is irrelevant, the result is the same if reordered)
  * @return Kronecker product of communicators (is automatically registered)
  * @ingroup mpi_structures
@@ -147,14 +150,20 @@ MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
     auto root_info = detail::mpi_cart_info_map.at(root);
     size_t ndims = root_info.remains.size();
     std::vector<int> remains( ndims, 0) ;
+    unsigned current_free_k=0;
     for( unsigned u=0; u<comms.size(); u++)
     {
         for( unsigned k=0; k<ndims; k++)
+        if( infos[u].remains[k])
         {
-            if( remains[k] && infos[u].remains[k])
+            if( remains[k])
                 throw Error(Message(_ping_)<<
                     "Cannot form kronecker product with given communicators as remaining dims must be orthogonal ");
-            remains[k] += infos[u].remains[k];
+            if( k < current_free_k)
+                throw Error(Message(_ping_)<<
+                    "Cannot form kronecker product with communicators in reverse order compared to original ");
+            remains[k] = infos[u].remains[k];
+            current_free_k = k+1;
         }
     }
     MPI_Comm newcomm;

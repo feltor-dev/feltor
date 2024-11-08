@@ -32,14 +32,34 @@ namespace gpu
 ///////////////////////////////////////////////////////////////////////////
 template<class T>
 __device__
-static inline double get_element( T x, int i){
-	return (double)x;
+static inline T get_element( T x, int i){
+	return x;
 }
 template<class T>
 __device__
-static inline double get_element( T* x, int i){
-	return (double)(*(x+i));
+static inline T get_element( T* x, int i){
+	return *(x+i);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Auxiliary functions
+////////////////////////////////////////////////////////////////////////////////
+__device__
+static inline double TwoProductFMA(double a, double b, double *d) {
+    double p = a * b;
+    *d = __fma_rn(a, b, -p);
+    return p;
+}
+
+template<class T>
+__device__
+static inline T KnuthTwoSum(T a, T b, T *s) {
+    T r = a + b;
+    T z = r - a;
+    *s = (a - (r - z)) + (b - z);
+    return r;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs

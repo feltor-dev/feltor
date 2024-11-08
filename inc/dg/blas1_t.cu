@@ -90,15 +90,18 @@ int main()
     std::vector<double> ys{10,20,30,40};
     double zs{100};
     double ws{1000};
-    std::vector<double> y(xs.size()*ys.size());
-    thrust::device_vector<double> xsd(xs), ysd(ys), yd(y);
+    std::vector<thrust::complex<double>> y(xs.size()*ys.size());
+    thrust::device_vector<double> xsd(xs), ysd(ys);
+    thrust::device_vector<thrust::complex<double>> yd(y.size());
     dg::blas1::kronecker( yd, dg::equals(), []DG_DEVICE(double x, double y,
-                double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+                double z, double u){ return thrust::complex<double>{x+y+z+u,1};}, xsd, ysd, zs, ws);
     thrust::copy( yd.begin(), yd.end(), y.begin());
-    std::cout << "Kronecker test (X ox Y) " << y[10]-1142 <<"\n";
-    auto ydd = dg::kronecker( []DG_DEVICE( double x, double y, double z, double u){ return x+y+z+u;}, xsd, ysd, zs, ws);
+    std::cout << "Kronecker test (X ox Y) " << y[10]-thrust::complex<double>{1142,1} <<"\n";
+
+    auto ydd = dg::kronecker( []DG_DEVICE( double x, double y, double z, double
+        u){ return thrust::complex<double>{x+y+z+u,1};}, xsd, ysd, zs, ws);
     thrust::copy( ydd.begin(), ydd.end(), y.begin());
-    std::cout << "Kronecker test (X ox Y) " << y[10]-1142 <<"\n";
+    std::cout << "Kronecker test (X ox Y) " << y[10]-thrust::complex<double>{1142,1} <<"\n";
     }
 
     //v1 = 2, v2 = 3

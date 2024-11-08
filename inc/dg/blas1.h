@@ -56,6 +56,60 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
  * NaN or Inf from y while \c dg::blas1::copy( 0, y ) does.
  */
 
+/*! @brief \f$ \sum_i f(x_{0i}, x_{1i}, ...)\f$ Extended Precision transform reduce
+ *
+ * This routine computes \f[ \sum_i f(x_{0i}, x_{1i}, ...)\f]
+ * @copydoc hide_iterations
+ *
+For example
+@code{.cpp}
+dg::DVec two( 100,2), three(100,3);
+int result = dg::blas1::dot([] DG_DEVICE( double x, double y){ return int(x*x*y);}, two, three);
+// result = 1200 (100*(2*2*3))
+@endcode
+ * @note The main motivator for this version of \c dot is that it works for complex numbers.
+ * @attention if one of the input vectors contains \c Inf or \c NaN or the
+ * product of the input numbers reaches \c Inf or \c Nan then the behaviour
+ * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
+ * dg::ISNSANE in that case
+ * @note This implementation does **not guarantee binary reproducible** results.
+ * The sum is computed with **extended precision** and the result is rounded
+ * to the nearest double precision number.
+ * This is possible with the help of an adapted version of the \c dg::exblas library and
+ * works for single and double precision.
+
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention \c Functor must be callable on the device in use. In particular,
+ * with CUDA it must be a functor tpye (@b not function) and its signatures
+ * must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param f The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x First input
+ * @param xs More input (may alias x)
+ * @return Scalar product as defined above
+ * @note This routine is always executed synchronously due to the
+        implicit memcpy of the result. With mpi the result is broadcasted to all processes.
+ * @copydoc hide_ContainerType
+ */
+template<class Functor, class ContainerType, class ...ContainerTypes>
+auto dot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
+    std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>
+{
+    using T = std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>;
+
+    if constexpr( std::is_integral_v<T>)
+    {
+        std::array<T, 1> fpe;
+        dg::blas1::detail::doDot_fpe( fpe, f, x, xs ...);
+        return fpe[0];
+    }
+    else
+    {
+        std::array<T, 3> fpe;
+        dg::blas1::detail::doDot_fpe( fpe, f, x, xs ...);
+        return exblas::cpu::Round(fpe);
+    }
+}
+
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
@@ -75,6 +129,8 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * to the nearest double precision number.
  * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
+* @attention Binary Reproducible results are only guaranteed for **float** or **double** input.
+* All other value types redirect to <tt> dg::blas1::dot( dg::Product(), x, y);</tt>
 
  * @param x Left Container
  * @param y Right Container may alias x
@@ -84,11 +140,20 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class ContainerType2>
-inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
+inline auto dot( const ContainerType1& x, const ContainerType2& y)
 {
-    std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( x,y);
-    return exblas::cpu::Round(acc.data());
+    if constexpr (std::is_floating_point_v<get_value_type<ContainerType1>> &&
+                  std::is_floating_point_v<get_value_type<ContainerType2>>)
+    {
+        std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( x,y);
+        return exblas::cpu::Round(acc.data());
+    }
+    else
+    {
+        return dg::blas1::dot( dg::Product(), x, y);
+    }
 }
+
 
 /*! @brief \f$ f(x_0) \otimes f(x_1) \otimes \dots \otimes f(x_{N-1}) \f$ Custom (transform) reduction
  *
@@ -571,6 +636,24 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
 ///@cond
 namespace detail{
 
+template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
+inline void doDot_fpe( std::array<T,N>& fpe, Functor f, const ContainerType& x, const ContainerTypes& ...xs)
+{
+    static_assert( all_true<
+            dg::is_vector<ContainerType>::value,
+            dg::is_vector<ContainerTypes>::value...>::value,
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    return doDot_fpe( tensor_category(), fpe, f, x, xs ...);
+
+}
+
 template< class ContainerType1, class ContainerType2>
 inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const ContainerType2& y)
 {
@@ -656,6 +739,7 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
  * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
  *
  * @note This function is trivially parallel and the MPI version simply calls the appropriate shared memory version
+ * The user is responsible for making sure that the result has the correct communicator
 @code{.cpp}
 double function( double x, double y) {
     return x+y;
@@ -786,23 +870,35 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
 /**
  * @brief \f$ y_I = f(x_{0i_0}, x_{1i_1}, ...) \f$ Memory allocating version of \c dg::blas1::kronecker
  *
- * In a shared memory space this function is implemented roughly as in the following pseudo-code
+ * In a shared memory space with serial execution this function is implemented roughly as in the following pseudo-code
  * @code{.cpp}
+ * // assume x0, xs are host vectors
  * size = product( x0.size(), xs.size(), ...)
- * ContainerType y(size);
+ * using value_type = decltype( f(x0[0], xs[0]...));
+ * thrust::host_vector<value_type> y(size);
  * dg::blas1::kronecker( y, dg::equals(), f, x0, xs...);
  * @endcode
+ * @note The return type is inferred from the \c execution_policy and the \c
+ * tensor_category of the input vectors.  It is unspecified. It is such that
+ * the resulting vector is exactly compatible in a call to
+ * <tt> dg::kronecker( result, dg::equals(), f, x0, xs...); </tt>
+ *
  * The MPI distributed version of this function is implemented as
  * @code{.cpp}
  * MPI_Comm comm_kron = dg::mpi_cart_kron( x0.communicator(), xs.communicator()...);
- * return {dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
+ * return MPI_Vector{dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
  * @endcode
  * @attention In particular this means that in MPI all the communicators in the input argument vectors
  * need to be Cartesian communicators that were created from a common Cartesian root communicator
  * and both root and all sub communicators need to be registered in the dg
  * library through calls to \c dg::register_mpi_cart_create and \c dg::register_mpi_cart_sub
- * or \c dg::mpi_cart_create and \c dg::mpi_cart_sub. The rationale for this behaviour is that
+ * or \c dg::mpi_cart_create and \c dg::mpi_cart_sub. Further, the order of input-communicators
+ * must match the dimensions in the common root communicator (see \c dg::mpi_cart_kron)
+ * i.e. currently **in MPI it is not possible to transpose with this function**
+ *
+ * The rationale for this behaviour is that
  * (i) the MPI standard has no easy way of finding a common ancestor to Cartesin sub communicators
+ * (ii) the MPI standard has no easy way of re-joining previously split Cartesian communicators
  * and (ii) we want to avoid creating a new communicator every time this function is called.
  *
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
@@ -813,6 +909,7 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * @param x0 first input
  * @param xs more input
  * @return newly allocated result (size of container matches the product of sizes of \f$ x_i\f$)
+ *
  * @note all aliases allowed
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
@@ -821,7 +918,7 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * @ingroup backend
  */
 template<class ContainerType, class Functor, class ...ContainerTypes>
-ContainerType kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     using tensor_category  = get_tensor_category<ContainerType>;
     return dg::detail::doKronecker( tensor_category(), f, x0, xs...);

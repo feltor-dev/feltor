@@ -27,6 +27,14 @@ namespace blas1
 {
 namespace detail
 {
+template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
+inline void doDot_fpe( AnyScalarTag, std::array<T,N>& fpe, Functor f,
+    const ContainerType& x, const ContainerTypes& ...xs)
+{
+    fpe[0] = f(x,xs...);
+    for( unsigned u=1; u<N; u++)
+        fpe[u] = T(0);
+}
 
 template< class Vector1, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, AnyScalarTag)
@@ -71,7 +79,7 @@ inline void doKronecker( AnyScalarTag, ContainerType& y, BinarySubroutine f, Fun
 namespace detail
 {
 template<class ContainerType, class Functor, class ...ContainerTypes>
-ContainerType doKronecker( AnyScalarTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto doKronecker( AnyScalarTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     return f(x0,xs...);
 }

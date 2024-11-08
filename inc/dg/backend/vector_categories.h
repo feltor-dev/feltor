@@ -11,9 +11,9 @@ namespace dg{
  * @brief Vector Tag base class, indicates the basic Vector/container concept
  *
  * The vector tag has two functions.
- First, it describes how the data in a Vector type is layed out in memory. We distinguish between a simple, contiguous chunk of data in a shared memory system (dg::SharedVectorTag), a dataset that is
-part of a larger dataset on a distributed memory system (dg::MPIVectorTag), and
-a dataset that consists of a number of subsets (dg::RecursiveVectorTag).
+ First, it describes how the data in a Vector type is layed out in memory. We distinguish between a simple, contiguous chunk of data in a shared memory system (\c dg::SharedVectorTag), a dataset that is
+part of a larger dataset on a distributed memory system (\c dg::MPIVectorTag), and
+a dataset that consists of a number of subsets (\c dg::RecursiveVectorTag).
 Both the MPIVectorTag and the RecursiveVectorTag allow recursion, that is
 for example a RecursiveVector can consist itself of many shared vectors or of many
 RecursiveVector again. The innermost type must always be a shared vector however.
@@ -55,8 +55,8 @@ struct MPIVectorTag     : public AnyVectorTag {};
  * @brief This tag indicates composition/recursion.
  *
  * This Tag indicates that a class is composed of an array of containers, i.e. a container of containers.
- * We assume that the bracket \c operator[] is defined to access the inner elements and the \c size() function returns the number of elements.
- * @note The class must typedef \c value_type (the "inner" type that is returned by the bracket operator) and \c dg::TensorTraits<value_type> must be specialized for this type.
+ * We assume that the bracket <tt> operator[] </tt> is defined to access the inner elements and the \c size() function returns the number of elements.
+ * @note The class must typedef \c value_type (the "inner" type that is returned by the bracket operator) and <tt> dg::TensorTraits<value_type> </tt> must be specialized for this type.
  * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is the inner type and N is the size of the array
  */
 struct RecursiveVectorTag  : public AnyVectorTag {};

@@ -22,6 +22,7 @@ namespace detail{
 static std::map<MPI_Comm, std::array<MPI_Comm, 2>> comm_mods;
 }
 ///@endcond
+
 /**
  * @brief This function can be used to partition communicators for the \c exblas::reduce_mpi_cpu function
  *

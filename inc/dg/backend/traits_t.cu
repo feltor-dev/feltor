@@ -16,7 +16,7 @@ template<>
 struct TensorTraits<MyOwnScalar>
 {
     using value_type = MyOwnScalar;
-    using tensor_category = dg::ScalarTag;
+    using tensor_category = dg::AnyScalarTag;
     using execution_policy = dg::AnyPolicyTag;
 };
 }

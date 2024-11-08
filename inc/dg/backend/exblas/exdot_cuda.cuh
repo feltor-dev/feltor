@@ -25,26 +25,6 @@ namespace exblas{
 ///@cond
 namespace gpu{
 
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Auxiliary functions
-////////////////////////////////////////////////////////////////////////////////
-__device__
-static inline double TwoProductFMA(double a, double b, double *d) {
-    double p = a * b;
-    *d = __fma_rn(a, b, -p);
-    return p;
-}
-
-__device__
-static inline double KnuthTwoSum(double a, double b, double *s) {
-    double r = a + b;
-    double z = r - a;
-    *s = (a - (r - z)) + (b - z);
-    return r;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Main Kernels
 ////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +51,7 @@ __global__ void ExDOT(
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
         //double r = 0.0;
         //double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
-        double x = get_element(d_a,pos)*get_element(d_b,pos);
+        double x = (double)get_element(d_a,pos)*(double)get_element(d_b,pos);
         //we do not accumulate the rest of this multiplication
 
         //Check if the input is sane
@@ -164,8 +144,8 @@ __global__ void ExDOT(
         //double r  = 0.0, r2 = 0.0;
         //double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
         //double x2 = TwoProductFMA(x , d_c[pos], &r2);
-        double x1 = get_element(d_a,pos)*get_element(d_b,pos);
-        double x2 = x1                  *get_element(d_c,pos);
+        double x1 = (double)get_element(d_a,pos)*(double)get_element(d_b,pos);
+        double x2 = x1                          *(double)get_element(d_c,pos);
 
         //Check if the input is sane
         if( !isfinite(x2) ) *error = true;
@@ -309,7 +289,7 @@ void ExDOTComplete(
         Normalize(&d_PartialSuperaccs[gid * BIN_COUNT * MERGE_SIZE], imin, imax);
     }
 }
-//MW: we need a global synchronization here!!
+//MW: global synchronization here through separate Kernels
 //one block of threads with at least 39 threads
 template<uint MERGE_SIZE>
 __global__

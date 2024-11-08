@@ -105,6 +105,19 @@ int main(int argc, char** argv)
         if(rank==0)std::cerr << "Error thrown as expected\n";
         //std::cerr << e.what() << std::endl;
     }
+    if(rank==0)std::cout << "COMPLEX SCALAR PRODUCTS\n";
+    thrust::device_vector<thrust::complex<double>> tmp( func3d.data().size());
+    dg::MPI_Vector<thrust::device_vector<thrust::complex<double>>> cc3d( tmp, func3d.communicator());
+    dg::blas1::transform( func3d, cc3d, []DG_DEVICE(double x){ return thrust::complex<double>{x,x};});
+    thrust::complex<double> cintegral = dg::blas1::dot( w3d, cc3d);
+    res.d =cintegral.real();
+    if(rank==0)std::cout << "3D integral (real)        "<<std::setw(6)<<cintegral.real() <<"\t" << res.i - 4675882723962622631<< "\n";
+    res.d =cintegral.imag();
+    if(rank==0)std::cout << "3D integral (imag)        "<<std::setw(6)<<cintegral.imag() <<"\t" << res.i - 4675882723962622631<< "\n";
+    sol2d = 0;
+    if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
+    if(rank==0)std::cout << "2d error is               "<<(cintegral.real()-sol2d)<<"\n\n";
+
     if(rank==0)std::cout << "\nFINISHED! Continue with topology/derivatives_mpit.cu !\n\n";
 
     MPI_Finalize();

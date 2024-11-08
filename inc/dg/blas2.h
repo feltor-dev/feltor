@@ -71,6 +71,8 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * infinite precision, the order of multiplication is guaranteed.
  * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
+* @attention Binary Reproducible results are only guaranteed for **float** or **double** input.
+* All other value types redirect to <tt> dg::blas1::dot( dg::Product(), x, m, y);</tt>
  *
  * @param x Left input
  * @param m The diagonal Matrix.
@@ -82,10 +84,19 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class MatrixType, class ContainerType2>
-inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
+inline auto dot( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
 {
-    std::vector<int64_t> acc = dg::blas2::detail::doDot_superacc( x,m,y);
-    return exblas::cpu::Round(acc.data());
+    if constexpr (std::is_floating_point_v<get_value_type<ContainerType1>> &&
+                  std::is_floating_point_v<get_value_type<MatrixType>>   &&
+                  std::is_floating_point_v<get_value_type<ContainerType2>>)
+    {
+        std::vector<int64_t> acc = dg::blas2::detail::doDot_superacc( x,m,y);
+        return exblas::cpu::Round(acc.data());
+    }
+    else
+    {
+        return dg::blas1::dot( dg::Product(), x, m, y);
+    }
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product

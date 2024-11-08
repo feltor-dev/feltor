@@ -49,7 +49,7 @@ template<class T>
 struct TensorTraits<thrust::complex<T>>
 {
     using value_type        = thrust::complex<T>;
-    using tensor_category   = ScalarTag;
+    using tensor_category   = ComplexTag;
     using execution_policy  = AnyPolicyTag;
 };
 ///@}

@@ -4,12 +4,33 @@
 #include <thrust/system/cuda/execution_policy.h>
 #include "exceptions.h"
 #include "exblas/exdot_cuda.cuh"
+#include "exblas/fpedot_cuda.cuh"
 namespace dg
 {
 namespace blas1
 {
 namespace detail
 {
+template<class T, size_t N, class Functor, class ...PointerOrValues>
+inline void doDot_fpe_dispatch( CudaTag, unsigned size, std::array<T,N>& fpe,
+    Functor f, PointerOrValues ...xs_ptr)
+{
+    int status = 0;
+    static thrust::device_vector<T> d_fpe(N, T(0));
+    T * d_ptr = thrust::raw_pointer_cast( d_fpe.data());
+    exblas::fpedot_gpu<T,N,Functor,PointerOrValues...>( &status, size, d_ptr, f, xs_ptr...);
+    cudaError_t code = cudaGetLastError( );
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+    for(unsigned u=0; u<N; u++)
+        fpe[u] = d_fpe[u];
+
+    if( status != 0)
+    for( unsigned u=0; u<N; u++)
+    if( fpe[u] - fpe[u] != T(0))
+        throw dg::Error(dg::Message(_ping_)<<"GPU FPE Dot failed since one of the inputs contains NaN or Inf");
+}
+
 
 template<class PointerOrValue1, class PointerOrValue2>
 inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
