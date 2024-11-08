@@ -96,10 +96,10 @@ DG_DEVICE auto sum( T1 x, Ts... rest) const
         return x + sum( rest...);
     }
 
-    template<class T1, class T2>
-DG_DEVICE auto sum( T1 x1, T2 x2) const
+    template<class T1>
+DG_DEVICE auto sum( T1 x1) const
     {
-        return x1 + x2;
+        return x1;
     }
 };
 
@@ -121,10 +121,10 @@ DG_DEVICE auto prod( T1 x, Ts... rest) const
         return x * prod( rest...);
     }
 
-    template<class T1, class T2>
-DG_DEVICE auto prod( T1 x1, T2 x2) const
+    template<class T1>
+DG_DEVICE auto prod( T1 x1) const
     {
-        return x1 * x2;
+        return x1;
     }
 };
 
