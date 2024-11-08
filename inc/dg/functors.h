@@ -22,47 +22,6 @@ namespace dg
 ///@{
 //Everything that is quite basic and simple
 
-///@brief \f$ f(x) = f(x,y) = f(x,y,z) = 0\f$
-struct ZERO
-{
-    DG_DEVICE
-    double operator()(double x)const{return 0.;}
-    DG_DEVICE
-    double operator()(double x, double y)const{return 0.;}
-    DG_DEVICE
-    double operator()(double x, double y, double z)const{return 0.;}
-};
-
-///@brief \f$ f(x) = f(x,y) = f(x,y,z) = 1\f$
-struct ONE
-{
-    DG_DEVICE
-    double operator()(double x)const{return 1.;}
-    DG_DEVICE
-    double operator()(double x, double y)const{return 1.;}
-    DG_DEVICE
-    double operator()(double x, double y, double z)const{return 1.;}
-};
-
-///@brief \f$ f(x) = f(x,y) = f(x,y,z) = c\f$
-struct CONSTANT
-{
-    /**
-     * @brief Construct with a value
-     *
-     * @param cte the constant value c
-     */
-    CONSTANT( double cte): m_value(cte){}
-
-    DG_DEVICE
-    double operator()(double x)const{return m_value;}
-    DG_DEVICE
-    double operator()(double x, double y)const{return m_value;}
-    DG_DEVICE
-    double operator()(double x, double y, double z)const{return m_value;}
-    private:
-    double m_value;
-};
 
 ///@brief \f$ f(x) = x + c\f$
 template <class T = double>
