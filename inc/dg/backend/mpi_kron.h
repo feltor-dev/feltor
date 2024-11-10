@@ -12,6 +12,7 @@ struct MPICartInfo
 {
     MPI_Comm root;
     std::vector<int> remains;
+    // std::vector<int> periods; // no need to track because the root and all the children have the same periods
 };
 //we keep track of communicators that were created in the past
 static std::map<MPI_Comm, MPICartInfo> mpi_cart_info_map;
@@ -30,7 +31,7 @@ static std::map<MPI_Comm, MPICartInfo> mpi_cart_info_map;
  * @param comm_cart parameter used in \c MPI_Cart_create
  * @ingroup mpi_structures
  */
-void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
+static void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
                     const int periods[], int reorder, MPI_Comm comm_cart)
 {
     std::vector<int> remains( ndims, 1);
@@ -47,7 +48,7 @@ void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
  * @endcode
  * @ingroup mpi_structures
  */
-int mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
+static int mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
                     const int periods[], int reorder, MPI_Comm * comm_cart)
 {
     int err = MPI_Cart_create( comm_old, ndims, dims, periods, reorder, comm_cart);
@@ -66,7 +67,7 @@ int mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
  * @param newcomm parameter used in \c MPI_Cart_sub
  * @ingroup mpi_structures
  */
-void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
+static void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
 {
     detail::MPICartInfo info = detail::mpi_cart_info_map.at(comm);
     for( unsigned u=0; u<info.remains.size(); u++)
@@ -89,12 +90,12 @@ void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm new
  * @param newcomm parameter of \c MPI_Cart_sub
  * @param duplicate Determines what happens in case \c MPI_Cart_sub was already reigstered with the
  * same input parameters \c comm and \c remain_dims. True: call \c MPI_Cart_sub and register
- * the novel communicator even if a duplicat exists. False: first check if a communicator
+ * the novel communicator even if a duplicate exists. False: first check if a communicator
  * that was subbed from \c comm with \c remain_dims was previously registered. In case one is found
  * set *newcomm = existing_comm. Else, call and register \c MPI_Cart_sub.
  * @ingroup mpi_structures
  */
-int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, bool duplicate = true)
+static int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, bool duplicate = false)
 {
     detail::MPICartInfo info = detail::mpi_cart_info_map.at(comm);
     for( unsigned u=0; u<info.remains.size(); u++)
@@ -111,7 +112,7 @@ int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, boo
     int err = MPI_Cart_sub( comm, remain_dims, newcomm);
     if( err != MPI_SUCCESS)
         return err;
-    detail::mpi_cart_info_map[*newcomm] = info;
+    register_mpi_cart_sub( comm, remain_dims, *newcomm);
     return err;
 }
 
@@ -132,7 +133,7 @@ int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, boo
  * @return Kronecker product of communicators (is automatically registered)
  * @ingroup mpi_structures
  */
-MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
+static MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
 {
     if ( comms.empty())
         return MPI_COMM_NULL;
@@ -169,6 +170,29 @@ MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
     MPI_Comm newcomm;
     dg::mpi_cart_sub( root_info.root, &remains[0], &newcomm, false);
     return newcomm;
+}
+
+/*! @brief Split a Cartesian communicator along each dimensions
+ *
+ * using repeated calls to \c dg::mpi_cart_sub
+ * @tparam Nd number of dimensions
+ * @param comm input Cartesian communicator must be of dimension Nd
+ */
+template<size_t Nd>
+std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
+{
+    std::array<MPI_Comm, Nd> comms;
+    int remain_dims[Nd];
+    for( unsigned u=0; u<Nd; u++)
+    {
+        for( unsigned k=0; k<Nd; k++)
+            remain_dims[k]=0;
+        remain_dims[u] = 1;
+        mpi_cart_sub( comm, remain_dims, &comms[u], false);
+    }
+
+    return comms;
+
 }
 
 // Need to think about those again

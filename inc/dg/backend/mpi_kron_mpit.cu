@@ -75,6 +75,11 @@ int main( int argc, char* argv[])
         if(rank==0)std::cout << "Expected error message\n";
         if(rank==0)std::cout << err.what()<<"\n";
     }
+    std::array<MPI_Comm,3> axes = dg::mpi_cart_split<3>( comm);
+    assert( axes[0] == comm_sub100);
+    assert( axes[1] == comm010);
+    assert( axes[2] == same);
+
     if(rank==0) std::cout<< "ALL TESTS PASSED\n";
     MPI_Finalize();
 
