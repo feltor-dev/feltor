@@ -51,6 +51,9 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
  * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d ) to generate the list of grid coordinates
  * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa \c dg::pullback if you want to evaluate a function in physical space
+ * @note In the MPI version all processes in the grid communicator need to call
+ * this function. Each process evaluates the function f only on the grid
+ * coordinates that it owns i.e. the local part of the given grid
  */
 template< class Functor, class Topology>
 auto evaluate( Functor f, const Topology& g)

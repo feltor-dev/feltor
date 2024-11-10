@@ -81,11 +81,11 @@ struct Box
             m_shape[u] = abs[u].size();
     }
     const std::array<ContainerType, Nd>& abscissas() const {return m_abs;}
-    const std::array<size_t, Nd>& shape() const {return m_shape;}
+    const std::array<unsigned, Nd>& shape() const {return m_shape;}
 
     private:
     std::array<ContainerType, Nd> m_abs;
-    std::array<size_t, Nd> m_shape;
+    std::array<unsigned, Nd> m_shape;
 };
 
 /**
@@ -104,56 +104,27 @@ struct aRealTopology
     using host_grid = RealGrid<real_type, Nd>;
     constexpr static unsigned ndim() { return Nd;}
 
-    std::array<size_t, Nd> shape() const
+    std::array<unsigned, Nd> shape() const
     {
-        std::array<size_t, Nd> shape;
+        std::array<unsigned, Nd> shape;
         for( unsigned u=0; u<Nd; u++)
             shape[u] = m_n[u]*m_N[u];
         return shape;
     }
-    std::array<real_type,Nd> p0() const{
-        m_x0;
-    }
-    std::array<real_type,Nd> p1() const{
-        m_x1;
-    }
-    std::array<real_type,Nd> ll() const{
-        std::array<size_t, Nd> p;
-        for( unsigned u=0; u<Nd; u++)
-            p[u] = m_x1[u] - m_x0[u];
-        return p;
-    }
-    std::array<real_type,Nd> hh() const{
-        std::array<real_type, Nd> hh;
-        for( unsigned u=0; u<Nd; u++)
-            hh[u] = (m_x1[u] - m_x0[u])/(real_type)m_N[u];
-        return hh;
-    }
-    std::array<size_t, Nd> NN() const
-    {
-        return m_N;
-    }
-    std::array<size_t, Nd> nn() const
-    {
-        return m_n;
-    }
-    std::array<dg::bc, Nd> bb() const
-    {
-        return m_bcx;
-    }
+
     std::array<host_vector,Nd> abscissas() const
     {
         std::array<host_vector,Nd> aas;
         for( unsigned u=0; u<Nd; u++)
         {
             host_vector abs(m_n[u]*m_N[u]);
-            double h = hh()[u];
+            double hu = h(u);
             auto aa = dg::DLT<real_type>::abscissas(m_n[u]);
             for( unsigned i=0; i<m_N[u]; i++)
                 for( unsigned j=0; j<m_n[u]; j++)
                 {
-                    real_type xmiddle = DG_FMA( h, (real_type)(i), m_x0[u]);
-                    real_type h2 = h/2.;
+                    real_type xmiddle = DG_FMA( hu, (real_type)(i), m_x0[u]);
+                    real_type h2 = hu/2.;
                     real_type absj = 1.+aa[j];
                     abs[i*m_n[u]+j] = DG_FMA( h2, absj, xmiddle);
                 }
@@ -168,15 +139,52 @@ struct aRealTopology
         {
             host_vector v( m_n[u]*m_N[u]);
             auto ww = dg::DLT<real_type>::weights(m_n[u]);
-            double h = hh()[u];
+            double hu = h(u);
             for( unsigned i=0; i<m_N[u]; i++)
                 for( unsigned j=0; j<m_n[u]; j++)
-                    v[i*m_n[u] + j] = h/2.*ww[j];
+                    v[i*m_n[u] + j] = hu/2.*ww[j];
              aa[u] = v;
         }
         return aa;
     }
+    std::array<real_type,Nd> pp() const{
+        m_x0;
+    }
+    std::array<real_type,Nd> qq() const{
+        m_x1;
+    }
+    std::array<real_type,Nd> ll() const{
+        std::array<real_type, Nd> p;
+        for( unsigned u=0; u<Nd; u++)
+            p[u] = m_x1[u] - m_x0[u];
+        return p;
+    }
+    std::array<real_type,Nd> hh() const{
+        std::array<real_type, Nd> hh;
+        for( unsigned u=0; u<Nd; u++)
+            hh[u] = (m_x1[u] - m_x0[u])/(real_type)m_N[u];
+        return hh;
+    }
+    std::array<unsigned, Nd> NN() const
+    {
+        return m_N;
+    }
+    std::array<unsigned, Nd> nn() const
+    {
+        return m_n;
+    }
+    std::array<dg::bc, Nd> bb() const
+    {
+        return m_bcs;
+    }
 
+    real_type p( unsigned u=0) const { return m_x0[u];}
+    real_type q( unsigned u=0) const { return m_x1[u];}
+    real_type h( unsigned u=0) const { return hh()[u];}
+    real_type l( unsigned u=0) const { return ll()[u];}
+    unsigned n( unsigned u=0) const { return m_n[u];}
+    unsigned N( unsigned u=0) const { return m_N[u];}
+    dg::bc bc( unsigned u=0) const { return m_bcs[u];}
     /// Equivalent to <tt> std::get<0>( p0()) </tt>
     template<size_t Md = Nd>
     real_type x0() const {return std::get<0>(m_x0);}
@@ -208,9 +216,6 @@ struct aRealTopology
 
     /// Equivalent to <tt> std::get<0>( hh()) </tt>
     template<size_t Md = Nd>
-    real_type h() const {return std::get<0>(hh());}
-    /// Equivalent to <tt> std::get<0>( hh()) </tt>
-    template<size_t Md = Nd>
     real_type hx() const {return std::get<0>(hh());}
     /// Equivalent to <tt> std::get<1>( hh()) </tt>
     template<size_t Md = Nd>
@@ -219,9 +224,6 @@ struct aRealTopology
     template<size_t Md = Nd>
     real_type hz() const {return std::get<2>(hh());}
 
-    /// Equivalent to <tt> std::get<0>( nn()) </tt>
-    template<size_t Md = Nd>
-    unsigned n() const {return std::get<0>(m_n);}
     /// Equivalent to <tt> std::get<0>( nn()) </tt>
     template<size_t Md = Nd>
     unsigned nx() const {return std::get<0>(m_n);}
@@ -244,13 +246,13 @@ struct aRealTopology
 
     /// Equivalent to <tt> std::get<0>( bb()) </tt>
     template<size_t Md = Nd>
-    dg::bc bcx() const {return std::get<0>(m_bcx);}
+    dg::bc bcx() const {return std::get<0>(m_bcs);}
     /// Equivalent to <tt> std::get<1>( bb()) </tt>
     template<size_t Md = Nd>
-    dg::bc bcy() const {return std::get<1>(m_bcx);}
+    dg::bc bcy() const {return std::get<1>(m_bcs);}
     /// Equivalent to <tt> std::get<2>( bb()) </tt>
     template<size_t Md = Nd>
-    dg::bc bcz() const {return std::get<2>(m_bcx);}
+    dg::bc bcz() const {return std::get<2>(m_bcs);}
 
     /**
      * @brief The total number of points
@@ -279,7 +281,7 @@ struct aRealTopology
                 <<"    x1 = "<<m_x1[u]<<"\n"
                 <<"    h  = "<<hh()[u]<<"\n"
                 <<"    l  = "<<ll()[u]<<"\n"
-                <<"    bc = "<<bc2str(m_bcx[u])<<"\n";
+                <<"    bc = "<<bc2str(m_bcs[u])<<"\n";
         }
     }
 
@@ -288,17 +290,17 @@ struct aRealTopology
      */
     void shift( bool& negative, std::array<real_type, Nd>& x)const
     {
-        shift( negative, x, m_bcx);
+        shift( negative, x, m_bcs);
     }
     /**
      * @copydoc hide_shift_doc
-     * @param bcx overrule grid internal boundary condition with this value
+     * @param bcs overrule grid internal boundary condition with this value
      */
-    void shift( bool& negative, std::array<real_type,Nd>& x, std::array<dg::bc,Nd> bcx)const
+    void shift( bool& negative, std::array<real_type,Nd>& x, std::array<dg::bc,Nd> bcs)const
     {
         for( unsigned u=0; u<Nd; u++)
         {
-            if( bcx[u] == dg::PER)
+            if( bcs[u] == dg::PER)
             {
                 real_type N0 = floor((x[u]-m_x0[u])/(m_x1[u]-m_x0[u])); // ... -2[ -1[ 0[ 1[ 2[ ...
                 x[u] = x[u] - N0*(m_x1[u]-m_x0[u]); //shift
@@ -309,12 +311,12 @@ struct aRealTopology
                 if( x[u] < m_x0[u]){
                     x[u] = 2.*m_x0[u] - x[u];
                     //every mirror swaps the sign if Dirichlet
-                    if( bcx[u] == dg::DIR || bcx[u] == dg::DIR_NEU)
+                    if( bcs[u] == dg::DIR || bcs[u] == dg::DIR_NEU)
                         negative = !negative;//swap sign
                 }
                 if( x[u] > m_x1[u]){
                     x[u] = 2.*m_x1[u] - x[u];
-                    if( bcx[u] == dg::DIR || bcx[u] == dg::NEU_DIR) //notice the different boundary NEU_DIR to the above DIR_NEU !
+                    if( bcs[u] == dg::DIR || bcs[u] == dg::NEU_DIR) //notice the different boundary NEU_DIR to the above DIR_NEU !
                         negative = !negative; //swap sign
                 }
             }
@@ -341,7 +343,14 @@ struct aRealTopology
         }
         return true;
     }
-    ///@copydoc aRealTopology2d::multiplyCellNumbers()
+    /**
+    * @brief Multiply the number of cells in the first two dimensions with a given factor
+    *
+    * With this function you can resize the grid ignorantly of its current size
+    * @param fx new global number of cells is fx*Nx()
+    * @param fy new global number of cells is fy*Ny()
+    * The remaining dimensions are left unchanged
+    */
     template<size_t Md = Nd>
     std::enable_if_t< (Md>=2),void> multiplyCellNumbers( real_type fx, real_type fy){
         auto Ns = NN();
@@ -390,28 +399,28 @@ struct aRealTopology
     /**
      * @brief reset the boundaries of the grid
      *
-     * @param x0 new left boundary
-     * @param x1 new right boundary ( > x0)
+     * @param p new left boundary
+     * @param q new right boundary ( > x0)
      */
-    void set( std::array<real_type,Nd> x0, std::array<real_type,Nd> x1)
+    void set( std::array<real_type,Nd> p, std::array<real_type,Nd> q)
     {
-        do_set( x0, x1);
+        do_set( p, q);
     }
     /**
      * @brief reset the boundary conditions of the grid
      *
-     * @param bcx new boundary condition
+     * @param bcs new boundary condition
      */
-    void set( std::array<dg::bc,Nd> bcx)
+    void set( std::array<dg::bc,Nd> bcs)
     {
-        do_set( bcx);
+        do_set( bcs);
     }
 
-    void set( std::array<real_type,Nd> x0, std::array<real_type,Nd> x1, std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N, std::array<dg::bc,Nd> bcx)
+    void set( std::array<real_type,Nd> p, std::array<real_type,Nd> q, std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N, std::array<dg::bc,Nd> bcs)
     {
-        set( x0,x1);
+        set( p,q);
         set( new_n, new_N);
-        set( bcx);
+        set( bcs);
     }
 
     protected:
@@ -429,9 +438,13 @@ struct aRealTopology
      * @param gy a Grid1d in y - direction
      * @param gz a Grid1d in z - direction
      */
-    aRealTopology( std::array<real_type,Nd> x0, std::array<real_type,Nd> x1,
-        std::array<unsigned,Nd> n, std::array<unsigned,Nd> m_N,
-        std::array<dg::bc,Nd> bcx) : m_x0(x0), m_x1(x1), m_n(n), m_N(m_N), m_bcx(bcx){}
+    aRealTopology(
+        std::array<real_type,Nd> p,
+        std::array<real_type,Nd> q,
+        std::array<unsigned,Nd> n,
+        std::array<unsigned,Nd> N,
+        std::array<dg::bc, Nd> bcs) : m_x0(p), m_x1(q), m_n(n), m_N(N), m_bcs(bcs)
+    {}
 
     template< size_t M0, size_t ...Ms>
     aRealTopology( aRealTopology<real_type,M0> g0, aRealTopology<real_type,Ms> ...gs)
@@ -446,19 +459,19 @@ struct aRealTopology
 
         for( unsigned u=0; u<M0; u++)
         {
-            m_n[u] = g0.nn()[u];
-            m_N[u] = g0.NN()[u];
-            m_x0[u] = g0.p0()[u];
-            m_x1[u] = g0.p1()[u];
-            m_bcx[u] = g0.bb()[u];
+            m_n[u] = g0.n(u);
+            m_N[u] = g0.N(u);
+            m_x0[u] = g0.p(u);
+            m_x1[u] = g0.q(u);
+            m_bcs[u] = g0.bc(u);
         }
         for( unsigned u=0; u<M1; u++)
         {
-            m_n[M0+u] = g1.nn()[u];
-            m_N[M0+u] = g1.NN()[u];
-            m_x0[M0+u] = g1.p0()[u];
-            m_x1[M0+u] = g1.p1()[u];
-            m_bcx[M0+u] = g1.bb()[u];
+            m_n[M0+u] = g1.n(u);
+            m_N[M0+u] = g1.N(u);
+            m_x0[M0+u] = g1.p(u);
+            m_x1[M0+u] = g1.q(u);
+            m_bcs[M0+u] = g1.bc(u);
         }
     }
 
@@ -479,16 +492,16 @@ struct aRealTopology
         m_x0 = x0;
         m_x1 = x1;
     }
-    virtual void do_set( std::array<dg::bc, Nd> bcx)
+    virtual void do_set( std::array<dg::bc, Nd> bcs)
     {
-        m_bcx = bcx;
+        m_bcs = bcs;
     }
   private:
     std::array<real_type,Nd> m_x0;
     std::array<real_type,Nd> m_x1;
     std::array<unsigned,Nd> m_n;
     std::array<unsigned,Nd> m_N;
-    std::array<dg::bc,Nd> m_bcx;
+    std::array<dg::bc,Nd> m_bcs;
 };
 
 /**
@@ -516,23 +529,28 @@ struct RealGrid : public aRealTopology<real_type, Nd>
      * @param bcx boundary conditions
      */
     template<size_t Md = Nd>
-    RealGrid( real_type x0, real_type x1, unsigned n, unsigned Nx, bc bcx = PER):
-        aRealTopology<real_type,1>({x0}, {x1}, {n}, {Nx}, {bcx})
+    RealGrid( real_type x0, real_type x1, unsigned n, unsigned Nx, dg::bc bbbb ):
+        aRealTopology<real_type,1>{{x0}, {x1}, {n}, {Nx}, {bbbb}}
     {
     }
     ///@copydoc hide_grid_parameters2d
     ///@copydoc hide_bc_parameters2d
     template<size_t Md = Nd>
-    RealGrid( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+    RealGrid( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx = PER, dg::bc bcy = PER):
         aRealTopology<real_type,2>({x0,y0}, {x1,y1}, {n,n}, {Nx, Ny}, {bcx,bcy})
     {
     }
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     template<size_t Md = Nd>
-    RealGrid( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
+    RealGrid( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx = PER, dg::bc bcy = PER, dg::bc bcz=PER):
         aRealTopology<real_type,3>({x0,y0,z0}, {x1,y1,z1}, {n,n,1}, {Nx, Ny,Nz}, {bcx,bcy, bcz})
         {}
+
+    RealGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
+        std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
+        std::array<dg::bc,Nd> bcs) : aRealTopology<real_type,Nd>( p,q,n,N,bcs)
+    {}
 
 
     template<size_t M0, size_t ...Ms>
@@ -558,8 +576,8 @@ struct RealGrid : public aRealTopology<real_type, Nd>
     virtual void do_set( std::array<real_type,Nd> new_x0, std::array<real_type,Nd> new_x1) override final{
         aRealTopology<real_type,Nd>::do_set(new_x0,new_x1);
     }
-    virtual void do_set( std::array<dg::bc,Nd> new_bcx) override final{
-        aRealTopology<real_type,Nd>::do_set(new_bcx);
+    virtual void do_set( std::array<dg::bc,Nd> new_bcs) override final{
+        aRealTopology<real_type,Nd>::do_set(new_bcs);
     }
 
 };
