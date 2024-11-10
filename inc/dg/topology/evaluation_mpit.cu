@@ -19,7 +19,7 @@ T function(T x, T y)
         return delta*cos(x) - 1./rho/cosh( (y-M_PI/2.)/rho)/cosh( (y-M_PI/2.)/rho);
     return delta*cos(x) + 1./rho/cosh( (3.*M_PI/2.-y)/rho)/cosh( (3.*M_PI/2.-y)/rho);
 }
-double function( double x, double y, double z)
+double function3d( double x, double y, double z)
 {
     return exp(x)*exp(y)*exp(z);
 }
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     mpi_init2d( dg::PER, dg::PER, comm2d);
     dg::MPIGrid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
     //dg::MPIGrid2d g2d( {0.0, 6.2831853071795862, 3, 48}, {0.0, 6.2831853071795862, 5, 28}, comm2d);
-    dg::RealMPIGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
+    dg::RealMPIGrid<float,2> gf2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48, 48, dg::PER, dg::PER, comm2d);
     mpi_init3d( dg::PER, dg::PER, dg::PER, comm3d);
     dg::MPIGrid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
     //dg::MPIGrid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx}, comm3d);
@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     dg::MDVec func1d = dg::construct<dg::MDVec>(dg::evaluate( exp, g1d));
     dg::MDVec func2d = dg::construct<dg::MDVec>(dg::evaluate( function<double>, g2d));
     dg::fMDVec funcf2d = dg::construct<dg::fMDVec>(dg::evaluate( function<float>, gf2d));
-    dg::MDVec func3d = dg::construct<dg::MDVec>(dg::evaluate( function, g3d));
+    dg::MDVec func3d = dg::construct<dg::MDVec>(dg::evaluate( function3d, g3d));
     //test weights
     const dg::MDVec w1d = dg::construct<dg::MDVec>( dg::create::weights(g1d));
     const dg::MDVec w2d = dg::construct<dg::MDVec>(dg::create::weights(g2d));
@@ -116,7 +116,19 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "3D integral (imag)        "<<std::setw(6)<<cintegral.imag() <<"\t" << res.i - 4675882723962622631<< "\n";
     sol2d = 0;
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
-    if(rank==0)std::cout << "2d error is               "<<(cintegral.real()-sol2d)<<"\n\n";
+    if(rank==0)std::cout << "3d error is               "<<(cintegral.real()-sol2d)<<"\n\n";
+    tmp.resize( func1d.data().size());
+    dg::MPI_Vector<thrust::device_vector<thrust::complex<double>>> cc1d( tmp, func1d.communicator());
+    dg::blas1::transform( func1d, cc1d, []DG_DEVICE(double x){ return thrust::complex<double>{x,x};});
+    cintegral = dg::blas1::dot( w1d, cc1d);
+    res.d =cintegral.real();
+    std::cout << "1D integral (real)        "<<std::setw(6)<<cintegral.real() <<"\t" << res.i - 4616944842743393935 << "\n";
+    res.d =cintegral.imag();
+    std::cout << "1D integral (imag)        "<<std::setw(6)<<cintegral.imag() <<"\t" << res.i - 4616944842743393935 << "\n";
+    res.d = integral;
+    sol = (exp(2.) -exp(1));
+    std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
+    std::cout << "Relative 1d error is      "<<(cintegral.real()-sol)/sol<<"\n\n";
 
     if(rank==0)std::cout << "\nFINISHED! Continue with topology/derivatives_mpit.cu !\n\n";
 
