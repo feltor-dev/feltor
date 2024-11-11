@@ -64,8 +64,10 @@ int main()
         cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
         auto proj2d = dg::create::fast_projection( g2o, n_old/n_new, N_old/N_new, N_old/N_new);
         auto fast_inte2d = dg::create::fast_interpolation( g2n, n_old/n_new, N_old/N_new, N_old/N_new);
-        auto forward = dg::create::fast_transform( g2o.dltx().forward(), g2o.dlty().forward(), g2o);
-        auto backward = dg::create::fast_transform( g2o.dltx().backward(), g2o.dlty().backward(), g2o);
+        auto forward = dg::create::fast_transform( dg::DLT<double>::forward( n_old),
+            dg::DLT<double>::forward( n_old), g2o);
+        auto backward = dg::create::fast_transform( dg::DLT<double>::backward( n_old),
+            dg::DLT<double>::backward( n_old), g2o);
         const dg::HVec sinO( dg::evaluate( sine, g2o)),
                                     sinN( dg::evaluate( sine, g2n));
         dg::HVec w2do = dg::create::weights( g2o);

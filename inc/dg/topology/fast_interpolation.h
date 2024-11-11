@@ -13,7 +13,6 @@
 #endif //MPI_VERSION
 
 
-
 /**@file
 * @brief A matrix type for fast interpolations/projections
 */
@@ -172,16 +171,22 @@ dg::HMatrix_t<real_type> fast_interpolation( const RealGrid1d<real_type>& t, uns
     unsigned n=t.n();
     dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
     dg::RealGrid1d<real_type> g_new( -1., 1., n*multiplyn, multiplyNx);
+    // Does not generate explicit zeros ...
     cusp::coo_matrix<int, real_type, cusp::host_memory> interpolX = dg::create::interpolation( g_new, g_old);
-    EllSparseBlockMat<real_type> iX( multiplyn*multiplyNx*t.N(), t.N(), 1, multiplyNx*multiplyn, t.n());
-    for( unsigned  k=0; k<multiplyNx*multiplyn; k++)
-    for( unsigned  i=0; i<n; i++)
-    for( unsigned  j=0; j<n; j++)
-        iX.data[(k*n+i)*n+j] = interpolX.values[(k*n+i)*n+j];
-    for( unsigned i=0; i<multiplyNx*multiplyn*t.N(); i++)
+    unsigned size = multiplyn*multiplyNx;
+    EllSparseBlockMat<real_type> iX( size*t.N(), t.N(), 1, size, t.n());
+    dg::blas1::copy( 0., iX.data);
+    for( unsigned l=0; l<interpolX.num_entries; l++)
     {
-        iX.cols_idx[i] = i/(multiplyNx*multiplyn);
-        iX.data_idx[i] = i%(multiplyNx*multiplyn);
+        int row = interpolX.row_indices[l];
+        int col = interpolX.column_indices[l];
+        real_type val = interpolX.values[l];
+        iX.data[row*interpolX.num_cols + col] = val;
+    }
+    for( unsigned i=0; i<size*t.N(); i++)
+    {
+        iX.cols_idx[i] = i/(size);
+        iX.data_idx[i] = i%(size);
     }
     return iX;
 }
@@ -206,31 +211,33 @@ dg::HMatrix_t<real_type> fast_interpolation( const RealGrid1d<real_type>& t, uns
 template<class real_type>
 dg::HMatrix_t<real_type> fast_projection( const RealGrid1d<real_type>& t, unsigned dividen, unsigned divideNx)
 {
-    if( t.N()%divideNx != 0) throw Error( Message(_ping_)<< "Nx and divideNx don't match: Nx: " << t.N()<< " divideNx "<< (unsigned)divideNx);
-    if( t.n()%dividen != 0) throw Error( Message(_ping_)<< "n and dividen don't match: n: " << t.n()<< " dividen "<< (unsigned)dividen);
+    if( t.N()%divideNx != 0)
+        throw Error( Message(_ping_)<< "Nx and divideNx don't match: Nx: "
+                    << t.N()<< " divideNx "<< (unsigned)divideNx);
+    if( t.n()%dividen != 0)
+        throw Error( Message(_ping_)<< "n and dividen don't match: n: "
+                    << t.n()<< " dividen "<< (unsigned)dividen);
     unsigned n=t.n()/dividen;
     dg::RealGrid1d<real_type> g_old( -1., 1., n*dividen, divideNx);
     dg::RealGrid1d<real_type> g_new( -1., 1., n, 1);
-    dg::HVec w1d = dg::create::weights( g_old);
-    dg::HVec v1d = dg::create::inv_weights( g_new);
-    cusp::coo_matrix<int, real_type, cusp::host_memory> projectX, tmp;
-    //Here, we cannot use create::projection because that would remove explicit zeros!!
-    tmp = dg::create::interpolation( g_old, g_new);
-    cusp::transpose( tmp, projectX);
-    EllSparseBlockMat<real_type> pX( t.N()/divideNx, t.N()*dividen, divideNx*dividen, divideNx*dividen, n);
-    for( unsigned k=0; k<divideNx; k++)
-    for( unsigned l=0; l<dividen; l++)
-    for( unsigned i=0; i<n; i++)
-    for( unsigned j=0; j<n; j++)
+    // Does not generate explicit zeros ...
+    cusp::coo_matrix<int, real_type, cusp::host_memory> projectX = dg::create::projection( g_new, g_old);
+    unsigned size = dividen*divideNx;
+    EllSparseBlockMat<real_type> pX( t.N()/divideNx, t.N()*dividen, size, size, n);
+    dg::blas1::copy( 0., pX.data);
+    for( unsigned ll=0; ll<projectX.num_entries; ll++)
     {
-        pX.data[((k*dividen+l)*n+i)*n+j] = projectX.values[((i*divideNx+k)*dividen + l)*n+j];
-        pX.data[((k*dividen+l)*n+i)*n+j] *= v1d[i]*w1d[l*n+j];
+        int row = projectX.row_indices[ll];
+        int col = projectX.column_indices[ll];
+        real_type val = projectX.values[ll];
+        int k = col/(n*dividen), l = (col/n)%dividen, i = row, j = col%n;
+        pX.data[((k*dividen+l)*n+i)*n+j] = val;
     }
     for( unsigned i=0; i<t.N()/divideNx; i++)
-        for( unsigned d=0; d<divideNx*dividen; d++)
+        for( unsigned d=0; d<size; d++)
         {
-            pX.cols_idx[i*divideNx*dividen+d] = i*divideNx*dividen+d;
-            pX.data_idx[i*divideNx*dividen+d] = d;
+            pX.cols_idx[i*size+d] = i*size+d;
+            pX.data_idx[i*size+d] = d;
         }
     return pX;
 }
@@ -497,8 +504,8 @@ template<class real_type>
 thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real_type>& in, const aRealTopology2d<real_type>& g)
 {
     thrust::host_vector<real_type> out(in.size(), 0);
-    auto forward = create::fast_transform( g.dltx().forward(),
-            g.dlty().forward(), g);
+    auto forward = create::fast_transform( dg::DLT<real_type>::forward(g.nx()),
+        dg::DLT<real_type>::forward( g.ny()), g);
     dg::blas2::symv( forward, in, out);
     return out;
 }
