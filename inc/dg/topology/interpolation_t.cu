@@ -206,7 +206,7 @@ int main()
     {
     dg::Grid3d g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
     g.set( 2,2,2,3);
-    g.set( n, Nx,n, Ny,1,Nz);
+    g.set( {n,n,1}, {Nx, Ny,Nz});
     //g.set( n, 3*Nx,n, 4*Ny,n,4*Nz);
     //g.display();
 

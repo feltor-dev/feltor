@@ -46,19 +46,6 @@
  * @param bcy boundary condition in y
  * @param bcz boundary condition in z
  */
-/*!@class hide_shift_doc
- * @brief Shift any point coordinate to a corresponding grid coordinate according to the boundary condition
- *
- * If the given point is already inside the grid, the function does nothing, else along each dimension the following happens: check the boundary condition.
- *If \c dg::PER, the point will be shifted topologically back onto the domain (modulo operation). Else the
- * point will be mirrored at the closest boundary. If the boundary is a Dirichlet boundary (happens for \c dg::DIR, \c dg::DIR_NEU and \c dg::NEU_DIR; the latter two apply \c dg::DIR to the respective left or right boundary )
- * an additional sign flag is swapped. This process is repeated until the result lies inside the grid. This function forms the basis for extending/periodifying a
- * function discretized on the grid beyond the grid boundaries.
- * @sa interpolate
- * @note For periodic boundaries the right boundary point is considered outside the grid and is shifted to the left boundary point.
- * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
- * @param x point to shift (inout) the result is guaranteed to lie inside the grid
- */
 namespace dg{
 
 ///@cond
@@ -157,10 +144,10 @@ struct aRealTopology
         return aa;
     }
     std::array<real_type,Nd> pp() const{
-        m_x0;
+        return m_x0;
     }
     std::array<real_type,Nd> qq() const{
-        m_x1;
+        return m_x1;
     }
     std::array<real_type,Nd> ll() const{
         std::array<real_type, Nd> p;
@@ -294,43 +281,6 @@ struct aRealTopology
         }
     }
 
-    /**
-     * @copydoc hide_shift_doc
-     */
-    void shift( bool& negative, std::array<real_type, Nd>& x)const
-    {
-        shift( negative, x, m_bcs);
-    }
-    /**
-     * @copydoc hide_shift_doc
-     * @param bcs overrule grid internal boundary condition with this value
-     */
-    void shift( bool& negative, std::array<real_type,Nd>& x, std::array<dg::bc,Nd> bcs)const
-    {
-        for( unsigned u=0; u<Nd; u++)
-        {
-            if( bcs[u] == dg::PER)
-            {
-                real_type N0 = floor((x[u]-m_x0[u])/(m_x1[u]-m_x0[u])); // ... -2[ -1[ 0[ 1[ 2[ ...
-                x[u] = x[u] - N0*(m_x1[u]-m_x0[u]); //shift
-            }
-            //mirror along boundary as often as necessary
-            while( (x[u]<m_x0[u]) || (x[u]>m_x1[u]) )
-            {
-                if( x[u] < m_x0[u]){
-                    x[u] = 2.*m_x0[u] - x[u];
-                    //every mirror swaps the sign if Dirichlet
-                    if( bcs[u] == dg::DIR || bcs[u] == dg::DIR_NEU)
-                        negative = !negative;//swap sign
-                }
-                if( x[u] > m_x1[u]){
-                    x[u] = 2.*m_x1[u] - x[u];
-                    if( bcs[u] == dg::DIR || bcs[u] == dg::NEU_DIR) //notice the different boundary NEU_DIR to the above DIR_NEU !
-                        negative = !negative; //swap sign
-                }
-            }
-        }
-    }
 
     /**
      * @brief Check if the grid contains a point
@@ -367,6 +317,12 @@ struct aRealTopology
         Ns[1] = round(fy*(real_type)NN()[1]);
         if( fx != 1 || fy != 1)
             set( nn(), Ns);
+    }
+    template<size_t Md = Nd>
+    std::enable_if_t<(Md == 2), void> set( unsigned new_n, unsigned new_Nx,
+        unsigned new_Ny)
+    {
+        set({new_n,new_n}, {new_Nx,new_Ny});
     }
     /**
     * @brief Set the number of polynomials and cells
@@ -411,7 +367,7 @@ struct aRealTopology
      * @param p new left boundary
      * @param q new right boundary ( > x0)
      */
-    void set( std::array<real_type,Nd> p, std::array<real_type,Nd> q)
+    void set_pq( std::array<real_type,Nd> p, std::array<real_type,Nd> q)
     {
         do_set( p, q);
     }
@@ -420,16 +376,16 @@ struct aRealTopology
      *
      * @param bcs new boundary condition
      */
-    void set( std::array<dg::bc,Nd> bcs)
+    void set_bcs( std::array<dg::bc,Nd> bcs)
     {
         do_set( bcs);
     }
 
     void set( std::array<real_type,Nd> p, std::array<real_type,Nd> q, std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N, std::array<dg::bc,Nd> bcs)
     {
-        set( p,q);
+        set_pq( p,q);
         set( new_n, new_N);
-        set( bcs);
+        set_bcs( bcs);
     }
 
     RealGrid<real_type,1> grid(unsigned i ) const{
