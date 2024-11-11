@@ -67,12 +67,11 @@ struct Average
     Average( const aTopology2d& g, enum coo2d direction, std::string mode = "exact") : m_mode(mode)
     {
         m_nx = g.Nx()*g.nx(), m_ny = g.Ny()*g.ny();
-        m_w=dg::construct<ContainerType>(dg::create::weights(g, direction));
-        m_temp = m_w;
         m_transpose = false;
         unsigned size1d = 0;
         if( direction == coo2d::x)
         {
+            m_w=dg::construct<ContainerType>(dg::create::weights(g, {1,0}));
             dg::blas1::scal( m_temp, 1./g.lx());
             dg::blas1::scal( m_w, 1./g.lx());
             size1d = m_ny;
@@ -81,6 +80,7 @@ struct Average
         }
         else
         {
+            m_w=dg::construct<ContainerType>(dg::create::weights(g, {0,1}));
             m_transpose = true;
             dg::blas1::scal( m_temp, 1./g.ly());
             dg::blas1::scal( m_w, 1./g.ly());
@@ -88,6 +88,7 @@ struct Average
                 dg::transpose( m_nx, m_ny, m_temp, m_w);
             size1d = m_nx;
         }
+        m_temp = m_w;
         thrust::host_vector<double> t1d( size1d);
         m_temp1d = dg::construct<ContainerType>( t1d);
         if( !("exact"==mode || "simple" == mode))
@@ -98,11 +99,10 @@ struct Average
     ///@copydoc Average()
     Average( const aTopology3d& g, enum coo3d direction, std::string mode = "exact"): m_mode(mode)
     {
-        m_w = dg::construct<ContainerType>(dg::create::weights(g, direction));
-        m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.nx()*g.Nx(), ny = g.ny()*g.Ny(), nz = g.nz()*g.Nz();
         if( direction == coo3d::x) {
+            m_w = dg::construct<ContainerType>(dg::create::weights(g, {1,0,0}));
             dg::blas1::scal( m_temp, 1./g.lx());
             dg::blas1::scal( m_w, 1./g.lx());
             m_nx = nx, m_ny = ny*nz;
@@ -110,6 +110,7 @@ struct Average
                 dg::transpose( m_nx, m_ny, m_temp, m_w);
         }
         else if( direction == coo3d::z) {
+            m_w = dg::construct<ContainerType>(dg::create::weights(g, {0,0,1}));
             m_transpose = true;
             dg::blas1::scal( m_temp, 1./g.lz());
             dg::blas1::scal( m_w, 1./g.lz());
@@ -118,6 +119,7 @@ struct Average
                 dg::transpose( m_nx, m_ny, m_temp, m_w);
         }
         else if( direction == coo3d::xy) {
+            m_w = dg::construct<ContainerType>(dg::create::weights(g, {1,1,0}));
             dg::blas1::scal( m_temp, 1./g.lx()/g.ly());
             dg::blas1::scal( m_w, 1./g.lx()/g.ly());
             m_nx = nx*ny, m_ny = nz;
@@ -125,6 +127,7 @@ struct Average
                 dg::transpose( m_nx, m_ny, m_temp, m_w);
         }
         else if( direction == coo3d::yz) {
+            m_w = dg::construct<ContainerType>(dg::create::weights(g, {0,1,1}));
             m_transpose = true;
             dg::blas1::scal( m_temp, 1./g.ly()/g.lz());
             dg::blas1::scal( m_w, 1./g.ly()/g.lz());
@@ -134,6 +137,7 @@ struct Average
         }
         else
             std::cerr << "Warning: this direction is not implemented\n";
+        m_temp = m_w;
         if(!m_transpose)
             m_temp1d = dg::construct<ContainerType>(
                 thrust::host_vector<double>( m_ny,0.));

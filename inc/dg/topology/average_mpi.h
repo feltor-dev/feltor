@@ -59,15 +59,14 @@ struct Average<MPI_Vector<container> >
     Average( const aMPITopology2d& g, enum coo2d direction, std::string mode = "exact") : m_mode( mode)
     {
         m_nx = g.local().Nx()*g.nx(), m_ny = g.local().Ny()*g.ny();
-        m_w=dg::construct<MPI_Vector<container>>(dg::create::weights(g, direction));
-        m_temp = m_w;
         int remain_dims[] = {false,false}; //true true false
         m_transpose = false;
         unsigned size1d = 0;
         if( direction == dg::coo2d::x)
         {
-            dg::blas1::scal( m_w, 1./g.lx());
-            dg::blas1::scal( m_temp, 1./g.lx());
+            m_w=dg::construct<MPI_Vector<container>>(dg::create::weights(g, {1,0}));
+            dg::blas1::scal( m_w, 1./g.global().lx());
+            dg::blas1::scal( m_temp, 1./g.global().lx());
             size1d = m_ny;
             remain_dims[0] = true;
             if( "simple" == mode)
@@ -75,14 +74,16 @@ struct Average<MPI_Vector<container> >
         }
         else
         {
+            m_w=dg::construct<MPI_Vector<container>>(dg::create::weights(g, {0,1}));
             m_transpose = true;
             remain_dims[1] = true;
-            dg::blas1::scal( m_w, 1./g.ly());
-            dg::blas1::scal( m_temp, 1./g.ly());
+            dg::blas1::scal( m_w, 1./g.global().ly());
+            dg::blas1::scal( m_temp, 1./g.global().ly());
             if( "exact" == mode)
                 dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
             size1d = m_nx;
         }
+        m_temp = m_w;
 
         //Now get the reduction communicator
         MPI_Cart_sub( g.communicator(), remain_dims, &m_comm);
@@ -102,48 +103,51 @@ struct Average<MPI_Vector<container> >
     ///@copydoc Average()
     Average( const aMPITopology3d& g, enum coo3d direction, std::string mode = "exact") : m_mode( mode)
     {
-        m_w = dg::construct<MPI_Vector<container>>(dg::create::weights(g, direction));
-        m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.nx()*g.local().Nx(), ny = g.ny()*g.local().Ny(), nz = g.nz()*g.local().Nz();
         int remain_dims[] = {false,false,false};
         m_transpose = false;
         if( direction == dg::coo3d::x) {
-            dg::blas1::scal( m_w, 1./g.lx());
-            dg::blas1::scal( m_temp, 1./g.lx());
+            m_w = dg::construct<MPI_Vector<container>>(dg::create::weights(g, {1,0,0}));
+            dg::blas1::scal( m_w, 1./g.global().lx());
+            dg::blas1::scal( m_temp, 1./g.global().lx());
             m_nx = nx, m_ny = ny*nz;
             remain_dims[0] = true;
             if( "simple" == mode)
                 dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
         else if( direction == dg::coo3d::z) {
+            m_w = dg::construct<MPI_Vector<container>>(dg::create::weights(g, {0,0,1}));
             m_transpose = true;
             remain_dims[2] = true;
             m_nx = nx*ny, m_ny = nz;
-            dg::blas1::scal( m_w, 1./g.lz());
-            dg::blas1::scal( m_temp, 1./g.lz());
+            dg::blas1::scal( m_w, 1./g.global().lz());
+            dg::blas1::scal( m_temp, 1./g.global().lz());
             if( "exact" == mode)
                 dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
         else if( direction == dg::coo3d::xy) {
-            dg::blas1::scal( m_w, 1./g.lx()/g.ly());
-            dg::blas1::scal( m_temp, 1./g.lx()/g.ly());
+            m_w = dg::construct<MPI_Vector<container>>(dg::create::weights(g, {1,1,0}));
+            dg::blas1::scal( m_w, 1./g.global().lx()/g.global().ly());
+            dg::blas1::scal( m_temp, 1./g.global().lx()/g.global().ly());
             m_nx = nx*ny, m_ny = nz;
             remain_dims[0] = remain_dims[1] = true;
             if( "simple" == mode)
                 dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
         else if( direction == dg::coo3d::yz) {
+            m_w = dg::construct<MPI_Vector<container>>(dg::create::weights(g, {0,1,1}));
             m_transpose = true;
             m_nx = nx, m_ny = ny*nz;
             remain_dims[1] = remain_dims[2] = true;
-            dg::blas1::scal( m_w, 1./g.ly()/g.lz());
-            dg::blas1::scal( m_temp, 1./g.ly()/g.lz());
+            dg::blas1::scal( m_w, 1./g.global().ly()/g.global().lz());
+            dg::blas1::scal( m_temp, 1./g.global().ly()/g.global().lz());
             if( "exact" == mode)
                 dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
         else
             std::cerr << "Warning: this direction is not implemented\n";
+        m_temp = m_w;
         //Now get the reduction communicator
         MPI_Cart_sub( g.communicator(), remain_dims, &m_comm);
         exblas::mpi_reduce_communicator( m_comm, &m_comm_mod, &m_comm_mod_reduce);
