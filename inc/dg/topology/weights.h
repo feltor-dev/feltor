@@ -2,6 +2,8 @@
 
 #include <thrust/host_vector.h>
 #include "grid.h"
+#include "../functors.h"
+#include "../blas1.h"
 #include "../enums.h"
 
 /*! @file
