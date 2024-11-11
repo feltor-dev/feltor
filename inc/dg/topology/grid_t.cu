@@ -12,19 +12,19 @@ int main()
     std::cout << std::boolalpha;
     for( int i =0; i<11; i++)
     {
-        double x0 = x + i*2*M_PI;
-        std::cout << std::setw( 8)<< x0 << " ";
+        std::array<double,1> x0 = {x + i*2*M_PI};
+        std::cout << std::setw( 8)<< x0[0] << " ";
         bool mirrored = false;
         g1d.shift( mirrored, x0);
-        if( false == mirrored && ( x0-2.*M_PI)<1e-15 ) std::cout << "PASSED ";
-        else std::cout << "FAILED "<< mirrored<<" "<<x0<<" ";
+        if( false == mirrored && ( x0[0]-2.*M_PI)<1e-15 ) std::cout << "PASSED ";
+        else std::cout << "FAILED "<< mirrored<<" "<<x0[0]<<" ";
 
         for( int j=0; j<4; j++)
         {
-            x0 = x + i*2*M_PI;
+            x0 = {x + i*2*M_PI};
             mirrored = false;
-            g1d.shift( mirrored, x0, bcx[j]);
-            std::cout << std::setw( 6)<<mirrored<<std::setw(8)<<x0 << " ";
+            g1d.shift( mirrored, x0, {bcx[j]});
+            std::cout << std::setw( 6)<<mirrored<<std::setw(8)<<x0[0] << " ";
         }
         std::cout <<std::endl;
     }
@@ -35,18 +35,15 @@ int main()
     double y=0;
     for( int i=0; i<2; i++)
     {
-        double x0 = 0;
-        double y0 = y + i*2.*M_PI;
-        std::cout << std::setw( 8)<< y0 << " ";
+        std::array<double,2> p = {0,y+i*2.*M_PI};
+        std::cout << std::setw( 8)<< p[1] << " ";
         bool mirrored = false;
-        g2d.shift( mirrored, x0, y0);
-        std::cout << std::setw( 6)<<mirrored<<std::setw(8)<<x0 <<std::setw(8)<<y0 << "\n";
-        x0 = 0;
-        y0 = y + i*2.*M_PI;
-        double z0 = 2.*M_PI; //interesting
+        g2d.shift( mirrored, p);
+        std::cout << std::setw( 6)<<mirrored<<std::setw(8)<<p[0] <<std::setw(8)<<p[1] << "\n";
+        std::array<double,3> q = {0,y+i*2.*M_PI, 2.*M_PI};
         mirrored = false;
-        g3d.shift( mirrored, x0, y0, z0);
-        std::cout << std::setw( 15)<<mirrored<<std::setw(8)<<x0 <<std::setw(8)<<y0 <<std::setw(8)<<z0 << "\n";
+        g3d.shift( mirrored, q);
+        std::cout << std::setw( 15)<<mirrored<<std::setw(8)<<q[0] <<std::setw(8)<<q[1] <<std::setw(8)<<q[2] << "\n";
     }
 
     return 0;
