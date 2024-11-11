@@ -41,7 +41,7 @@ int main()
     //dg::Grid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx});
 
     //test evaluation functions
-    const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( [](double x){ return exp(x);}, g1d));
+    const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( exp, g1d));
     const dg::DVec func2d = dg::construct<dg::DVec>( dg::evaluate( function<double>, g2d));
     const dg::fDVec funcf2d = dg::construct<dg::fDVec>( dg::evaluate( function<float>, gf2d));
     const dg::DVec func3d = dg::construct<dg::DVec>( dg::evaluate( function3d, g3d));
@@ -97,25 +97,25 @@ int main()
 
     std::cout << "TEST result of a sin and exp function to compare compiler specific math libraries:\n";
     dg::DVec x(100, 6.12610567450009658);
-    dg::blas1::transform( x, x, []DG_DEVICE(double x){ return sin(x);} );
+    dg::blas1::transform( x, x, sin );
     res.d = x[0];
     std::cout << "Result of sin:    "<<res.i<<"\n"
               << "          GCC:    -4628567870976535683 (correct)"<<std::endl;
     dg::DVec y(1, 5.9126151457310376);
-    dg::blas1::transform( y, y, []DG_DEVICE(double x){return exp(x);} );
+    dg::blas1::transform( y, y, exp );
     res.d = y[0];
     std::cout << "Result of exp:     "<<res.i<<"\n"
               << "          GCC:     4645210948416067678 (correct)"<<std::endl;
 
     //TEST OF INTEGRAL
     dg::HVec integral_num = dg::integrate( cos, g1d, dg::forward);
-    dg::HVec integral_ana = dg::evaluate( [](double x){return sin(x);}, g1d);
+    dg::HVec integral_ana = dg::evaluate( sin, g1d);
     dg::blas1::plus( integral_ana, -sin(g1d.x0()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);
     std::cout << " Error norm of  1d integral function (forward) "<<norm<<"\n";
     integral_num = dg::integrate( cos, g1d, dg::backward);
-    integral_ana = dg::evaluate( [](double x){return sin(x);}, g1d);
+    integral_ana = dg::evaluate( sin, g1d);
     dg::blas1::plus( integral_ana, -sin(g1d.x1()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     norm = dg::blas2::dot( integral_num, dg::create::weights( g1d), integral_num);

@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
     if(rank==0)std::cout << "TEST if dot throws on Inf or Nan:\n";
     dg::MDVec x = dg::evaluate( dg::CONSTANT( 6.12610567450009658), g2d);
-    dg::blas1::transform( x, x, []DG_DEVICE(double x){ return sin(x);} );
+    dg::blas1::transform( x, x, sin );
     dg::blas1::transform( x,x, dg::LN<double>());
     bool hasnan = dg::blas1::reduce( x, false,
             thrust::logical_or<bool>(), dg::ISNFINITE<double>());

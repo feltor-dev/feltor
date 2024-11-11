@@ -61,13 +61,28 @@ auto evaluate( Functor f, const Topology& g)
     return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
 };
 
-// TODO Document problems with calling evaluate with overloaded functions
 /// Utility function equivalent to <tt> dg::evaluate( dg::CONSTANT( value), g)</tt>
 template<class Topology>
 auto evaluate( enum evaluation_helper value, const Topology& g)
 {
     return do_evaluate( dg::CONSTANT( value), g, std::make_index_sequence<Topology::ndim()>());
 };
+
+template<class Topology, class value_type = typename Topology::value_type, class result_type = typename Topology::value_type, typename = std::enable_if_t<Topology::ndim() == 1 > >
+auto evaluate( result_type (*f)( value_type), const Topology& g)
+{
+    return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
+}
+template<class Topology, class value_type0 = typename Topology::value_type, class value_type1 = typename Topology::value_type, class result_type = typename Topology::value_type, typename = std::enable_if_t<Topology::ndim() == 2 > >
+auto evaluate( result_type (*f)( value_type0, value_type1), const Topology& g)
+{
+    return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
+}
+template<class Topology, class value_type0 = typename Topology::value_type, class value_type1 = typename Topology::value_type, class value_type2 = typename Topology::value_type, class result_type = typename Topology::value_type, typename = std::enable_if_t<Topology::ndim() == 3 > >
+auto evaluate( result_type (*f)( value_type0, value_type1, value_type2), const Topology& g)
+{
+    return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
+}
 
 
 
