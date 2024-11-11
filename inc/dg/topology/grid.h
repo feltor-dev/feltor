@@ -1,5 +1,9 @@
 #pragma once
-
+#include <array>
+#include <cmath>
+#include <thrust/host_vector.h>
+#include "../backend/tensor_traits.h" // for get_value_type
+#include "../backend/config.h" // for DG_FMA
 #include "dlt.h"
 #include "../enums.h"
 
@@ -73,8 +77,11 @@ struct RealGrid;
 template<class ContainerType, size_t Nd>
 struct Box
 {
-    /// == Nd
+    /// value type of abscissas
+    using value_type = dg::get_value_type<ContainerType>;
+    /// Dimensionality == Nd
     constexpr static unsigned ndim() {return Nd;}
+
     Box( std::array<ContainerType, Nd> abs) : m_abs(abs)
     {
         for( unsigned u=0; u<Nd; u++)
@@ -98,10 +105,12 @@ struct Box
 template<class real_type, size_t Nd>
 struct aRealTopology
 {
+    /// value type of abscissas and weights
     using value_type = real_type;
-    /// The host vector type used by host functions like evaluate
+    /// vector type of abscissas and weights
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGrid<real_type, Nd>;
+    /// Dimensionality == Nd
     constexpr static unsigned ndim() { return Nd;}
 
     std::array<unsigned, Nd> shape() const
@@ -423,6 +432,28 @@ struct aRealTopology
         set( bcs);
     }
 
+    RealGrid<real_type,1> grid(unsigned i ) const{
+        if( i < Nd)
+            return RealGrid<real_type,1>{ m_x0[i], m_x1[i], m_n[i], m_N[i], m_bcs[i]};
+        else
+            throw Error( Message(_ping_)<<"i>Nd not allowed! You typed: "<<i<<" while Nd is "<<Nd);
+    }
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gx() const {
+        static_assert( Nd > 0);
+        return RealGrid<real_type,1>{ m_x0[0], m_x1[0], m_n[0], m_N[0], m_bcs[0]};
+    }
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gy() const {
+        static_assert( Nd > 1);
+        return RealGrid<real_type,1>{ m_x0[1], m_x1[1], m_n[1], m_N[1], m_bcs[1]};
+    }
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gz() const {
+        static_assert( Nd > 2);
+        return RealGrid<real_type,1>{ m_x0[2], m_x1[2], m_n[2], m_N[2], m_bcs[2]};
+    }
+
     protected:
     ///disallow deletion through base class pointer
     ~aRealTopology() = default;
@@ -529,8 +560,8 @@ struct RealGrid : public aRealTopology<real_type, Nd>
      * @param bcx boundary conditions
      */
     template<size_t Md = Nd>
-    RealGrid( real_type x0, real_type x1, unsigned n, unsigned Nx, dg::bc bbbb ):
-        aRealTopology<real_type,1>{{x0}, {x1}, {n}, {Nx}, {bbbb}}
+    RealGrid( real_type x0, real_type x1, unsigned n, unsigned Nx, dg::bc bcx = dg::PER ):
+        aRealTopology<real_type,1>{{x0}, {x1}, {n}, {Nx}, {bcx}}
     {
     }
     ///@copydoc hide_grid_parameters2d
@@ -557,13 +588,6 @@ struct RealGrid : public aRealTopology<real_type, Nd>
     RealGrid( RealGrid<real_type,M0> g0, RealGrid<real_type,Ms> ...gs) :
         aRealTopology<real_type,Nd>(g0,gs...)
     {
-    }
-
-    RealGrid<real_type,1> grid(unsigned i ) const{
-        if( i < Nd)
-            return RealGrid<real_type,1>{ this->p0()[i], this->p1()[i], this->nn()[i], this->NN()[i], this->bb()[i]};
-        else
-            throw Error( Message(_ping_)<<"i>N not allowed! You typed: "<<i<<" while N is "<<Nd);
     }
 
     ///@brief allow explicit type conversion from any other topology
@@ -602,6 +626,12 @@ template<class T>
 using aRealTopology2d   = dg::aRealTopology<T,2>;
 template<class T>
 using aRealTopology3d   = dg::aRealTopology<T,3>;
+template<class T>
+using RealGrid1d   = dg::RealGrid<T,1>;
+template<class T>
+using RealGrid2d   = dg::RealGrid<T,2>;
+template<class T>
+using RealGrid3d   = dg::RealGrid<T,3>;
 #ifndef MPI_VERSION
 namespace x {
 using Grid0d        = Grid0d      ;
@@ -611,9 +641,15 @@ using Grid3d        = Grid3d      ;
 using aTopology2d   = aTopology2d ;
 using aTopology3d   = aTopology3d ;
 template<class T>
-using aRealTopology2d   = dg::aRealTopology<T,2>;
+using aRealTopology2d   = aRealTopology<T,2>;
 template<class T>
-using aRealTopology3d   = dg::aRealTopology<T,3>;
+using aRealTopology3d   = aRealTopology<T,3>;
+template<class T>
+using RealGrid1d   = RealGrid<T,1>;
+template<class T>
+using RealGrid2d   = RealGrid<T,2>;
+template<class T>
+using RealGrid3d   = RealGrid<T,3>;
 } //namespace x
 #endif
 ///@}
