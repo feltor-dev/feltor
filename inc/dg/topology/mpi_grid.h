@@ -42,17 +42,18 @@ struct RealMPIGrid;
 template<class real_type, size_t Nd>
 struct aRealMPITopology
 {
+    /// value type of abscissas and weights
     using value_type = real_type;
-    /// The host vector type used by host functions like evaluate
+    /// vector type of abscissas and weights
     using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
     using host_grid = RealMPIGrid<real_type, Nd>;
-    /// @brief number of dimensions : 3
-    constexpr static unsigned ndim() {return Nd;}
+    /// Dimensionality == Nd
+    constexpr static unsigned ndim() { return Nd;}
 
     /// Local shape of grid
     std::array<unsigned, Nd> shape() const
     {
-        m_l.shape();
+        return m_l.shape();
     }
     std::array<host_vector,Nd> weights() const
     {
@@ -92,7 +93,7 @@ struct aRealMPITopology
         return abscissas;
     }
     ///@copydoc aRealMPITopology2d::local()const
-    const RealMPIGrid<real_type,Nd>& local() const {return m_l;}
+    const RealGrid<real_type,Nd>& local() const {return m_l;}
      ///@copydoc aRealMPITopology2d::global()const
     const RealGrid<real_type, Nd>& global() const {return m_g;}
 
@@ -111,6 +112,27 @@ struct aRealMPITopology
     {
         return mpi_cart_kron( {m_comms[0], m_comms[1]});
     }
+    dg::bc bc( unsigned u=0) const { return m_g.bc(u);}
+    /// Equivalent to <tt> global().bcx() </tt>
+    template<size_t Md = Nd>
+    dg::bc bcx() const {return m_g.bcx();}
+    /// Equivalent to <tt> global().bcy() </tt>
+    template<size_t Md = Nd>
+    dg::bc bcy() const {return m_g.bcy();}
+    /// Equivalent to <tt> global().bcz() </tt>
+    template<size_t Md = Nd>
+    dg::bc bcz() const {return m_g.bcz();}
+
+    unsigned n( unsigned u=0) const { return m_g.n(u);}
+    /// Equivalent to <tt> global().nx() </tt>
+    template<size_t Md = Nd>
+    unsigned nx() const {return m_g.nx();}
+    /// Equivalent to <tt> global().ny() </tt>
+    template<size_t Md = Nd>
+    unsigned ny() const {return m_g.ny();}
+    /// Equivalent to <tt> global().nz() </tt>
+    template<size_t Md = Nd>
+    unsigned nz() const {return m_g.nz();}
     /**
      * @brief The total global number of points
      * @return global size
@@ -259,6 +281,7 @@ struct aRealMPITopology
         std::array<dg::bc,Nd> bc, std::array<MPI_Comm, Nd> comms) :
         m_g(p,q,n,N,bc), m_comms(comms)
     {
+        // TODO assert dimensionality of Cartesian communicators
         m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
         update_local();
     }
@@ -470,6 +493,12 @@ template<class T>
 using aRealMPITopology2d   = dg::aRealMPITopology<T,2>;
 template<class T>
 using aRealMPITopology3d   = dg::aRealMPITopology<T,3>;
+template<class T>
+using RealMPIGrid1d   = dg::RealMPIGrid<T,1>;
+template<class T>
+using RealMPIGrid2d   = dg::RealMPIGrid<T,2>;
+template<class T>
+using RealMPIGrid3d   = dg::RealMPIGrid<T,3>;
 namespace x{
 using Grid0d          = MPIGrid0d      ;
 using Grid1d          = MPIGrid1d      ;
@@ -478,9 +507,15 @@ using Grid3d          = MPIGrid3d      ;
 using aTopology2d     = aMPITopology2d ;
 using aTopology3d     = aMPITopology3d ;
 template<class T>
-using aRealTopology2d   = dg::aRealMPITopology<T,2>;
+using aRealTopology2d   = aRealMPITopology<T,2>;
 template<class T>
-using aRealTopology3d   = dg::aRealMPITopology<T,3>;
+using aRealTopology3d   = aRealMPITopology<T,3>;
+template<class T>
+using RealGrid1d   = RealMPIGrid<T,1>;
+template<class T>
+using RealGrid2d   = RealMPIGrid<T,2>;
+template<class T>
+using RealGrid3d   = RealMPIGrid<T,3>;
 }//namespace x
 ///@}
 
