@@ -2,6 +2,8 @@
 
 #include "dg/blas.h"
 #include "dx.h"
+#include "derivatives.h"
+#include "derivativesT.h"
 #include "evaluation.h"
 #include "weights.h"
 

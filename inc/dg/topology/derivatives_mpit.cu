@@ -9,20 +9,20 @@
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
 #include "mpi_weights.h"
-
-double zero( double x, double y) { return 0;}
-double sine( double x, double y) { return sin(x)*sin(y);}
-double cosx( double x, double y) { return cos(x)*sin(y);}
-double cosy( double x, double y) { return cos(y)*sin(x);}
-double zero( double x, double y, double z) { return 0;}
-double sine( double x, double y, double z) { return sin(x)*sin(y)*sin(z);}
-double cosx( double x, double y, double z) { return cos(x)*sin(y)*sin(z);}
-double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
-double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
-
+#include "derivativesT.h"
 
 using Matrix = dg::MDMatrix;
 using Vector = dg::MDVec;
+using value_t = double;
+
+value_t sin2e( value_t x, value_t y) { return sin(x)*sin(y);}
+value_t cos2x( value_t x, value_t y) { return cos(x)*sin(y);}
+value_t cos2y( value_t x, value_t y) { return cos(y)*sin(x);}
+value_t sin3e( value_t x, value_t y, value_t z) { return sin(x)*sin(y)*sin(z);}
+value_t cos3x( value_t x, value_t y, value_t z) { return cos(x)*sin(y)*sin(z);}
+value_t cos3y( value_t x, value_t y, value_t z) { return cos(y)*sin(x)*sin(z);}
+value_t cos3z( value_t x, value_t y, value_t z) { return cos(z)*sin(x)*sin(y);}
+
 
 int main(int argc, char* argv[])
 {
@@ -46,10 +46,10 @@ int main(int argc, char* argv[])
     Matrix jx2 = dg::create::jumpX( g2d, g2d.bcx());
     Matrix jy2 = dg::create::jumpY( g2d, g2d.bcy());
     Matrix m2[] = {dx2, dy2, jx2, jy2};
-    const Vector f2d = dg::evaluate( sine, g2d);
-    const Vector dx2d = dg::evaluate( cosx, g2d);
-    const Vector dy2d = dg::evaluate( cosy, g2d);
-    const Vector null2 = dg::evaluate( zero, g2d);
+    const Vector f2d = dg::evaluate( sin2e, g2d);
+    const Vector dx2d = dg::evaluate( cos2x, g2d);
+    const Vector dy2d = dg::evaluate( cos2y, g2d);
+    const Vector null2 = dg::evaluate( dg::zero, g2d);
     Vector sol2[] = {dx2d, dy2d, null2, null2};
     int64_t binary2[] = {4562611930300281864,4553674328256556132,4567083257206218817,4574111364446550002};
 
@@ -72,11 +72,11 @@ int main(int argc, char* argv[])
     Matrix jy3 = dg::create::jumpY( g3d, g3d.bcy());
     Matrix jz3 = dg::create::jumpZ( g3d, g3d.bcz());
     Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
-    const Vector f3d = dg::evaluate( sine, g3d);
-    const Vector dx3d = dg::evaluate( cosx, g3d);
-    const Vector dy3d = dg::evaluate( cosy, g3d);
-    const Vector dz3d = dg::evaluate( cosz, g3d);
-    const Vector null3 = dg::evaluate( zero, g3d);
+    const Vector f3d = dg::evaluate( sin3e, g3d);
+    const Vector dx3d = dg::evaluate( cos3x, g3d);
+    const Vector dy3d = dg::evaluate( cos3y, g3d);
+    const Vector dz3d = dg::evaluate( cos3z, g3d);
+    const Vector null3 = dg::evaluate( dg::zero, g3d);
     Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
     int64_t binary3[] = {4561946736820639666,4553062895410573431,4594213495911299616,4566393134538626348,4573262464593641240,4594304523193682043};
 

@@ -6,6 +6,7 @@
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
 #include "mpi_weights.h"
+#include "derivativesT.h"
 
 
 double function( double x) { return sin(x);}

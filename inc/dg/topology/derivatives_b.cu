@@ -3,6 +3,7 @@
 #include "dg/backend/timer.h"
 #include "dg/blas.h"
 #include "derivatives.h"
+#include "derivativesT.h"
 #include "evaluation.h"
 
 const double lx = 2*M_PI;

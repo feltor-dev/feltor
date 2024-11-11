@@ -143,7 +143,7 @@ struct TensorTraits<MPI_Vector<container> > {
 * @brief Communicator for asynchronous nearest neighbor communication
 *
 * Imagine a communicator with Cartesian topology and further imagine that the
-* grid topology is also Cartesian (vectors form a box) in two or three dimensions.
+* grid topology is also Cartesian (vectors form a box) in Nd dimensions.
 * In each direction this box has a boundary layer (the halo) of a depth given by
 * the user. Each boundary layer has two neighboring layers, one on the same process
 * and one lying on the neighboring process.
@@ -194,42 +194,37 @@ struct NearestNeighborComm
     /**
     * @brief Construct
     *
+    * @tparam Nd the dimensionality of the vector and the MPI Communicator
     * @param n depth of the halo
-    * @param vector_dimensions {x, y, z} dimension (Local number of points)
-    * @param comm the (cartesian) communicator
-    * @param direction 0 is x, 1 is y, 2 is z
+    * @param shape # of vector elements in each direction
+    * @param comm the (cartesian) communicator (must be of dimension Nd)
+    * @param direction coordinate along which to exchange halo e.g. 0 is x, 1 is y, 2 is z
     */
-    NearestNeighborComm( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction)
-    {
-        static_assert( std::is_same<const_pointer_type, get_value_type<Buffer>>::value, "Must be same pointer types");
-        construct( n, vector_dimensions, comm, direction);
-    }
+    template<size_t Nd>
+    NearestNeighborComm( unsigned n, std::array<unsigned, Nd> shape, MPI_Comm
+            comm, unsigned direction) : NearestNeighborComm( n, {shape.begin(),
+                shape.end()}, comm, direction){}
     /**
     * @brief Construct
     *
     * @param n depth of the halo
-    * @param shape Local number of points per dimension: Can be of size 1, 2 or 3 with index 0 -> x, 1-> y, 2->z
-    * @param comm the (cartesian) communicator
-    * @param direction 0 is x, 1 is y, 2 is z
+    * @param shape Local number of points per dimension
+    * @param comm the (cartesian) communicator, number of dimensions must match shape.size()
+    * @param direction in which to exchange halo
     */
-    NearestNeighborComm( unsigned n, const std::vector<unsigned> shape, MPI_Comm comm, unsigned direction)
+    NearestNeighborComm( unsigned n, const std::vector<unsigned>& shape,
+            MPI_Comm comm, unsigned direction)
     {
         static_assert( std::is_same<const_pointer_type, get_value_type<Buffer>>::value, "Must be same pointer types");
-        std::vector<unsigned> vdims;
-        switch( shape.size())
-        {
-            case 1:
-                vdims = {shape[0],1,1};
-                break;
-            case 2:
-                vdims = {shape[0],shape[1],1};
-                break;
-            case 3:
-                vdims = {shape[0],shape[1],shape[2]};
-                break;
-            default:
-                throw std::runtime_error("Dimension not implemented yet!");
-        }
+        int ndims;
+        MPI_Cartdim_get( comm, &ndims);
+        assert( (unsigned)ndims == shape.size());
+        std::vector<unsigned> vdims(3, 1);
+        vdims[1] = shape[direction];
+        for( unsigned u=0; u<direction; u++)
+            vdims[0] *= shape[u];
+        for( unsigned u=direction+1; u<(unsigned)ndims; u++)
+            vdims[2] *= shape[u];
         construct( n, &vdims[0], comm, direction);
     }
 
@@ -255,7 +250,11 @@ struct NearestNeighborComm
     */
     unsigned n() const{return m_n;}
     /**
-    * @brief  The dimensionality of the input vector
+    * @brief  The shape of the input vector as seen by this class
+    *
+    * All dimensions smaller than coord given in constructor are collapsed
+    * to dims[0], dims[1] is the coord dimension in the constructor
+    * and dims[2] are all dimensions larger than coord
     * @return dimensions ( 3)
     */
     const unsigned* dims() const{return m_dim;}
@@ -380,7 +379,7 @@ struct NearestNeighborComm
     void do_global_gather_init( CudaTag, const_pointer_type, MPI_Request rqst[4])const;
     void construct( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction);
 
-    unsigned m_n, m_dim[3]; //deepness, dimensions
+    unsigned m_n, m_dim[3]; //deepness, [left,middle,right]
     MPI_Comm m_comm;
     unsigned m_direction = 0;
     bool m_silent, m_trivial=false; //silent -> no comm, m_trivial-> comm in last dim
@@ -407,10 +406,8 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
     m_n=n;
     m_dim[0] = dimensions[0], m_dim[1] = dimensions[1], m_dim[2] = dimensions[2];
     m_direction = direction;
-    if( dimensions[2] == 1 && direction == 1) m_trivial = true;
-    else if( direction == 2) m_trivial = true;
+    if( dimensions[2] == 1 ) m_trivial = true;
     else m_trivial = false;
-    assert( direction <3);
     m_comm = comm;
     //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified
     MPI_Cart_shift( m_comm, m_direction, -1, &m_source[0], &m_dest[0]);
@@ -420,47 +417,22 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
         MPI_Cartdim_get( comm, &ndims);
         int dims[ndims], periods[ndims], coords[ndims];
         MPI_Cart_get( comm, ndims, dims, periods, coords);
-        if( dims[direction] == 1) m_silent = true;
+        if( dims[m_direction] == 1) m_silent = true;
     }
     if( !m_silent)
     {
     m_outer_size = dimensions[0]*dimensions[1]*dimensions[2]/buffer_size();
     assert( m_outer_size > 1 && "Parallelization too fine grained!"); //right now we cannot have that
     thrust::host_vector<int> mid_gather( 4*buffer_size());
-    switch( direction)
-    {
-        case( 0):
-        for( unsigned i=0; i<m_dim[2]*m_dim[1]; i++)
-            for( unsigned j=0; j<n; j++)
+    for( unsigned i=0; i<m_dim[2]; i++)
+        for( unsigned j=0; j<n; j++)
+            for( unsigned k=0; k<m_dim[0]; k++)
             {
-                mid_gather[(0*n+j)*m_dim[2]*m_dim[1]+i] = i*m_dim[0]                + j;
-                mid_gather[(1*n+j)*m_dim[2]*m_dim[1]+i] = i*m_dim[0] + n            + j;
-                mid_gather[(2*n+j)*m_dim[2]*m_dim[1]+i] = i*m_dim[0] + m_dim[0]-2*n + j;
-                mid_gather[(3*n+j)*m_dim[2]*m_dim[1]+i] = i*m_dim[0] + m_dim[0]-  n + j;
+                mid_gather[((0*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1]                + j)*m_dim[0] + k;
+                mid_gather[((1*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + n            + j)*m_dim[0] + k;
+                mid_gather[((2*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + m_dim[1]-2*n + j)*m_dim[0] + k;
+                mid_gather[((3*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + m_dim[1]-  n + j)*m_dim[0] + k;
             }
-        break;
-        case( 1):
-        for( unsigned i=0; i<m_dim[2]; i++)
-            for( unsigned j=0; j<n; j++)
-                for( unsigned k=0; k<m_dim[0]; k++)
-                {
-                    mid_gather[((0*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1]                + j)*m_dim[0] + k;
-                    mid_gather[((1*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + n            + j)*m_dim[0] + k;
-                    mid_gather[((2*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + m_dim[1]-2*n + j)*m_dim[0] + k;
-                    mid_gather[((3*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + m_dim[1]-  n + j)*m_dim[0] + k;
-                }
-        break;
-        case( 2):
-        for( unsigned i=0; i<n; i++)
-            for( unsigned j=0; j<m_dim[0]*m_dim[1]; j++)
-            {
-                mid_gather[(0*n+i)*m_dim[0]*m_dim[1]+j] = (i                )*m_dim[0]*m_dim[1] + j;
-                mid_gather[(1*n+i)*m_dim[0]*m_dim[1]+j] = (i + n            )*m_dim[0]*m_dim[1] + j;
-                mid_gather[(2*n+i)*m_dim[0]*m_dim[1]+j] = (i + m_dim[2]-2*n )*m_dim[0]*m_dim[1] + j;
-                mid_gather[(3*n+i)*m_dim[0]*m_dim[1]+j] = (i + m_dim[2]-  n )*m_dim[0]*m_dim[1] + j;
-            }
-        break;
-    }
     m_gather_map_middle = mid_gather; //transfer to device
     m_internal_buffer.data().resize( 6*buffer_size() );
 #ifdef _DG_CUDA_UNAWARE_MPI
@@ -473,17 +445,7 @@ template<class I, class B, class V>
 unsigned NearestNeighborComm<I,B,V>::buffer_size() const
 {
     if( m_silent) return 0;
-    switch( m_direction)
-    {
-        case( 0): //x-direction
-            return m_n*m_dim[1]*m_dim[2];
-        case( 1): //y-direction
-            return m_n*m_dim[0]*m_dim[2];
-        case( 2): //z-direction
-            return m_n*m_dim[0]*m_dim[1]; //no further m_n (hide in m_dim)
-        default:
-            return 0;
-    }
+    return m_n*m_dim[0]*m_dim[2];
 }
 
 template<class I, class B, class V>

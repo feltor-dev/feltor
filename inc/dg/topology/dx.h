@@ -61,9 +61,8 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
     Operator<real_type> b = t*(1./2.*rl);
     Operator<real_type> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
     //transform to XSPACE
-    RealGrid1d<real_type> g( 0,1, n, N);
-    Operator<real_type> backward=g.dlt().backward();
-    Operator<real_type> forward=g.dlt().forward();
+    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
+    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
     a = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     bp = backward*bp*forward;
@@ -153,9 +152,8 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
         a_bound_right = t*(d);
     Operator<real_type> b = t*rl;
     //transform to XSPACE
-    RealGrid1d<real_type> g( 0,1, n, N);
-    Operator<real_type> backward=g.dlt().backward();
-    Operator<real_type> forward=g.dlt().forward();
+    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
+    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
     a = backward*a*forward, a_bound_left = backward*a_bound_left*forward;
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     //assemble the matrix
@@ -237,9 +235,8 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
         a_bound_left = t*d;
     Operator<real_type> bp = -t*lr;
     //transform to XSPACE
-    RealGrid1d<real_type> g( 0,1, n, N);
-    Operator<real_type> backward=g.dlt().backward();
-    Operator<real_type> forward=g.dlt().forward();
+    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
+    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
     a  = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
     bp = backward*bp*forward, a_bound_right = backward*a_bound_right*forward;
 
@@ -321,9 +318,8 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
     //transform to XSPACE
     Operator<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
-    RealGrid1d<real_type> g( 0,1, n, N);
-    Operator<real_type> backward=g.dlt().backward();
-    Operator<real_type> forward=g.dlt().forward();
+    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
+    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
     a = backward*t*a*forward, a_bound_left  = backward*t*a_bound_left*forward;
     b = backward*t*b*forward, a_bound_right = backward*t*a_bound_right*forward;
     bp = backward*t*bp*forward;
@@ -405,50 +401,6 @@ EllSparseBlockMat<real_type> dx_normed( int n, int N, real_type h, bc bcx, direc
     return EllSparseBlockMat<real_type>();
 }
 ///@}
-
-///@addtogroup creation
-///@{
-/**
-* @brief Create and assemble a host Matrix for the derivative in 1d
-*
-* @param g 1D grid
-* @param bcx boundary condition
-* @param dir The direction of the first derivative
-*
-* @return Host Matrix
-*/
-template<class real_type>
-EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, bc bcx, direction dir = centered)
-{
-    return dx_normed( g.n(), g.N(), g.h(), bcx, dir);
-}
-
-
-/**
-* @brief Create and assemble a host Matrix for the jump in 1d
-*
-* @param g 1D grid
-* @param bcx boundary condition
-*
-* @return Host Matrix
-*/
-template<class real_type>
-EllSparseBlockMat<real_type> jumpX( const RealGrid1d<real_type>& g, bc bcx)
-{
-    return jump( g.n(), g.N(), g.h(), bcx);
-}
-
-///@}
-
-///@cond
-/// DEPRECATED
-template<class real_type>
-EllSparseBlockMat<real_type> jump( const RealGrid1d<real_type>& g, bc bcx)
-{
-    return jump( g.n(), g.N(), g.h(), bcx);
-}
-///@endcond
-
 
 } //namespace create
 } //namespace dg

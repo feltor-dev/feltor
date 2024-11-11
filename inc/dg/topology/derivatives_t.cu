@@ -2,8 +2,9 @@
 #include <cmath>
 #include "dg/blas.h"
 #include "dg/functors.h"
-#include "derivatives.h"
 #include "evaluation.h"
+#include "derivatives.h"
+#include "derivativesT.h"
 
 using Matrix = dg::DMatrix;
 using Vector = dg::DVec;
