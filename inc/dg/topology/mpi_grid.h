@@ -270,6 +270,27 @@ struct aRealMPITopology
         else
             return false;
     }
+    RealMPIGrid<real_type,1> grid(unsigned u ) const{
+        if( u < Nd)
+            return RealMPIGrid<real_type,1>{ m_g.p(u), m_g.q(u), m_g.n(u), m_g.N(u), m_g.bc(u), m_comms[u]};
+        else
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+    }
+    template<size_t Md = Nd>
+    RealMPIGrid<real_type,1> gx() const {
+        static_assert( Nd > 0);
+        return grid(0);
+    }
+    template<size_t Md = Nd>
+    RealMPIGrid<real_type,1> gy() const {
+        static_assert( Nd > 1);
+        return grid(1);
+    }
+    template<size_t Md = Nd>
+    RealMPIGrid<real_type,1> gz() const {
+        static_assert( Nd > 2);
+        return grid(2);
+    }
     protected:
     ///disallow deletion through base class pointer
     ~aRealMPITopology() = default;
@@ -285,16 +306,29 @@ struct aRealMPITopology
         m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
         update_local();
     }
+    aRealMPITopology( const std::array< RealMPIGrid<real_type, 1>, Nd>& grids)
+    {
+        std::array<RealGrid<real_type,1>,Nd> globals, locals;
+        for( unsigned u=0; u<Nd; u++)
+        {
+            globals[u] = grids[u].global();
+            locals[u] = grids[u].local();
+            m_comms[u] = grids[u].communicator();
+        }
+        m_g = RealGrid<real_type,Nd>( globals);
+        m_l = RealGrid<real_type,Nd>( locals);
+        m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
+    }
     template< size_t M0, size_t ...Ms>
-    aRealMPITopology( aRealMPITopology<real_type,M0> g0,
-            aRealMPITopology<real_type,Ms> ...gs)
+    aRealMPITopology( const aRealMPITopology<real_type,M0>& g0,
+            const aRealMPITopology<real_type,Ms> & ...gs)
     {
         auto grid = aRealMPITopology<real_type, Nd - M0>( gs ...);
         *this = aRealMPITopology<real_type, Nd>( g0, grid);
     }
     template< size_t M0, size_t M1>
-    aRealMPITopology( aRealMPITopology<real_type,M0> g0,
-            aRealMPITopology<real_type,M1> g1) : m_g( g0.global(),g1.global()),
+    aRealMPITopology( const aRealMPITopology<real_type,M0>& g0,
+            const aRealMPITopology<real_type,M1>& g1) : m_g( g0.global(),g1.global()),
         m_l( g0.local(), g1.local())
     {
         static_assert( (M0 + M1) == Nd);
@@ -309,6 +343,8 @@ struct aRealMPITopology
         m_comm = dg::mpi_cart_kron( m_comms);
 
     }
+    //We do not want that because we cannot distinguish if g is meant to be the local or the global grid...
+    //aRealMPITopology( const RealGrid<real_type,Nd> & g, MPI_Comm comm);
     ///explicit copy constructor (default)
     ///@param src source
     aRealMPITopology(const aRealMPITopology& src) = default;
@@ -466,6 +502,7 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
     RealMPIGrid( RealMPIGrid<real_type,M0> g0, RealMPIGrid<real_type,Ms> ...gs) :
         aRealTopology<real_type,Nd>(g0,gs...)
     { }
+
     ///allow explicit type conversion from any other topology
     ///@param src source
     explicit RealMPIGrid( const aRealMPITopology<real_type,Nd>& src):

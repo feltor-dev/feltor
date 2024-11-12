@@ -389,26 +389,26 @@ struct aRealTopology
         set_bcs( bcs);
     }
 
-    RealGrid<real_type,1> grid(unsigned i ) const{
-        if( i < Nd)
-            return RealGrid<real_type,1>{ m_x0[i], m_x1[i], m_n[i], m_N[i], m_bcs[i]};
+    RealGrid<real_type,1> grid(unsigned u ) const{
+        if( u < Nd)
+            return RealGrid<real_type,1>{ m_x0[u], m_x1[u], m_n[u], m_N[u], m_bcs[u]};
         else
-            throw Error( Message(_ping_)<<"i>Nd not allowed! You typed: "<<i<<" while Nd is "<<Nd);
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
     }
     template<size_t Md = Nd>
     RealGrid<real_type,1> gx() const {
         static_assert( Nd > 0);
-        return RealGrid<real_type,1>{ m_x0[0], m_x1[0], m_n[0], m_N[0], m_bcs[0]};
+        return grid(0);
     }
     template<size_t Md = Nd>
     RealGrid<real_type,1> gy() const {
         static_assert( Nd > 1);
-        return RealGrid<real_type,1>{ m_x0[1], m_x1[1], m_n[1], m_N[1], m_bcs[1]};
+        return grid(1);
     }
     template<size_t Md = Nd>
     RealGrid<real_type,1> gz() const {
         static_assert( Nd > 2);
-        return RealGrid<real_type,1>{ m_x0[2], m_x1[2], m_n[2], m_N[2], m_bcs[2]};
+        return grid(2);
     }
 
     protected:
@@ -433,15 +433,25 @@ struct aRealTopology
         std::array<unsigned,Nd> N,
         std::array<dg::bc, Nd> bcs) : m_x0(p), m_x1(q), m_n(n), m_N(N), m_bcs(bcs)
     {}
-
+    aRealTopology( const std::array< RealGrid<real_type, 1>, Nd>& grids)
+    {
+        for( unsigned u=0; u<Nd; u++)
+        {
+            m_x0[u] = grids[u].p();
+            m_x1[u] = grids[u].q();
+            m_n[u] = grids[u].n();
+            m_N[u] = grids[u].N();
+            m_bcs[u] = grids[u].bc();
+        }
+    }
     template< size_t M0, size_t ...Ms>
-    aRealTopology( aRealTopology<real_type,M0> g0, aRealTopology<real_type,Ms> ...gs)
+    aRealTopology( const aRealTopology<real_type,M0> g0, const aRealTopology<real_type,Ms>& ...gs)
     {
         auto grid = aRealTopology<real_type, Nd - M0>( gs ...);
         *this = aRealTopology<real_type, Nd>( g0, grid);
     }
     template< size_t M0, size_t M1>
-    aRealTopology( aRealTopology<real_type,M0> g0, aRealTopology<real_type,M1> g1)
+    aRealTopology( const aRealTopology<real_type,M0>& g0, const aRealTopology<real_type,M1>& g1)
     {
         static_assert( (M0 + M1) == Nd);
 
@@ -535,6 +545,7 @@ struct RealGrid : public aRealTopology<real_type, Nd>
         aRealTopology<real_type,3>({x0,y0,z0}, {x1,y1,z1}, {n,n,1}, {Nx, Ny,Nz}, {bcx,bcy, bcz})
         {}
 
+    RealGrid( const std::array<RealGrid<real_type,1>,Nd>& grids) : aRealTopology<real_type,Nd>( grids){}
     RealGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
         std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
         std::array<dg::bc,Nd> bcs) : aRealTopology<real_type,Nd>( p,q,n,N,bcs)
