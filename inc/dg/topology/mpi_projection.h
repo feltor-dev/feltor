@@ -221,16 +221,16 @@ dg::MIHMatrix_t<typename MPITopology::value_type> interpolation( const MPITopolo
         g_new.local(), g_old.global(), method);
     return convert(  mat, g_old);
 }
-///@copydoc dg::create::interpolation(const RealGrid1d&,const RealGrid1d&,std::string)
-template<class real_type>
-dg::MIHMatrix_t<real_type> interpolation( const aRealMPITopology3d<real_type>&
-        g_new, const aRealMPITopology2d<real_type>& g_old,std::string method = "dg")
-{
-    // actually this is a prolongation
-    dg::IHMatrix_t<real_type> mat = dg::create::interpolation(
-        g_new.local(), g_old.global(), method);
-    return convert(  mat, g_old);
-}
+// This is now dg::create::prolongation
+/////@copydoc dg::create::interpolation(const RealGrid1d&,const RealGrid1d&,std::string)
+//template<class real_type>
+//dg::MIHMatrix_t<real_type> interpolation( const aRealMPITopology3d<real_type>&
+//        g_new, const aRealMPITopology2d<real_type>& g_old,std::string method = "dg")
+//{
+//    dg::IHMatrix_t<real_type> mat = dg::create::interpolation(
+//        g_new.local(), g_old.global(), method);
+//    return convert(  mat, g_old);
+//}
 
 ///@copydoc dg::create::projection(const RealGrid1d&,const RealGrid1d&,std::string)
 template<class MPITopology, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>

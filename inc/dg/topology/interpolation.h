@@ -12,7 +12,7 @@
 
 /*! @file
 
-  @brief 1D, 2D and 3D interpolation matrix creation functions
+  @brief Interpolation matrix creation functions
   */
 
 namespace dg{
@@ -466,7 +466,7 @@ cusp::csr_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interp
  * @copydoc hide_method
  *
  * @return interpolation matrix
- * @attention does **not** remove explicit zeros in the interpolation matrix
+ * @attention removes explicit zeros in the interpolation matrix
  */
 template<class real_type>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
@@ -559,8 +559,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @copydoc hide_method
  *
  * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
- * @attention The 1d version does **not** remove explicit zeros from the
- * interpolation matrix, but the 2d and 3d versions do
+ * @attention Explicit zeros in the returned matrix are removed
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  * @note When interpolating a 2d grid to a 3d grid the third coordinate is simply ignored, i.e. the 2d vector will be trivially copied Nz times into the 3d vector
  * @note also check the transformation matrix, which is the more general solution

@@ -7,7 +7,7 @@
 #include "dg/blas.h"
 
 #include "mpi_evaluation.h"
-#include "average_mpi.h"
+#include "average.h"
 
 const double lx = 2.*M_PI;
 const double ly = M_PI;
@@ -29,8 +29,9 @@ int main(int argc, char* argv[])
     dg::Timer t;
 
 
-    dg::Average<dg::MDVec > pol(g, dg::coo2d::y, "simple");
-    dg::Average<dg::MDVec > pol_ex(g, dg::coo2d::y, "exact");
+// Makes no sense any more to compare exact and simple
+    dg::Average<dg::MIDMatrix,dg::MDVec > pol(g, dg::coo2d::y);
+    dg::Average<dg::MIDMatrix,dg::MDVec > pol_ex(g, dg::coo2d::y);
     dg::MDVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::MDVec solution = dg::evaluate( pol_average, g);
     t.tic();

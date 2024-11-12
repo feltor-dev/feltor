@@ -4,7 +4,7 @@
 
 #include "dg/backend/mpi_init.h"
 #include "dg/blas.h"
-#include "average_mpi.h"
+#include "average.h"
 #include "mpi_evaluation.h"
 
 const double lx = M_PI/2.;
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     //![doxygen]
     dg::MPIGrid3d g( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, comm);
 
-    dg::Average<dg::MDVec > avg(g, dg::coo3d::z, "exact");
+    dg::Average<dg::MIDMatrix, dg::MDVec > avg(g, dg::coo3d::z);
 
     const dg::MDVec vector = dg::evaluate( function ,g);
     dg::MDVec average_z;
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i<<std::endl;
     if(rank==0)std::cout << "(Converges with 2nd order).\n";
     if(rank==0)std::cout << "Averaging x ... \n";
-    dg::Average< dg::MDVec> tor( g, dg::coo3d::x, "exact");
+    dg::Average<dg::MIDMatrix, dg::MDVec > tor(g, dg::coo3d::x);
     average_z = vector;
     tor( vector, average_z);
     solution = dg::evaluate( x_average, g);

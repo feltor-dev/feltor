@@ -17,10 +17,11 @@ int main()
     std::cin >> n >> Nx >> Ny;
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::Average<dg::HVec> pol(g, dg::coo2d::y, "simple");
-    dg::Average<dg::DVec> pol_device(g, dg::coo2d::y, "simple");
-    dg::Average<dg::HVec> pol_ex(g, dg::coo2d::y, "exact");
-    dg::Average<dg::DVec> pol_device_ex(g, dg::coo2d::y, "exact");
+// Makes no sense any more to compare exact and simple
+    dg::Average<dg::IHMatrix, dg::HVec> pol(g, dg::coo2d::y);
+    dg::Average<dg::IDMatrix, dg::DVec> pol_device(g, dg::coo2d::y);
+    dg::Average<dg::IHMatrix, dg::HVec> pol_ex(g, dg::coo2d::y);
+    dg::Average<dg::IDMatrix, dg::DVec> pol_device_ex(g, dg::coo2d::y);
     dg::Timer t;
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);
