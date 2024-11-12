@@ -11,9 +11,9 @@ namespace create{
 namespace detail
 {
 template<class real_type>
-std::vector<real_type> fem_weights( const DLT<real_type>& dlt)
+std::vector<real_type> fem_weights( unsigned nn)
 {
-    std::vector<real_type> x = dlt.abscissas();
+    std::vector<real_type> x = dg::DLT<real_type>::abscissas(nn);
     std::vector<real_type> w = x;
     unsigned n = x.size();
     if( n== 1)
@@ -28,6 +28,7 @@ std::vector<real_type> fem_weights( const DLT<real_type>& dlt)
     return w;
 }
 }//namespace detail
+// TODO Maybe generalize this into the BOX class?
 ///@endcond
 
 ///@addtogroup fem
@@ -53,7 +54,7 @@ template<class real_type>
 thrust::host_vector<real_type> fem_weights( const RealGrid1d<real_type>& g)
 {
     thrust::host_vector<real_type> v( g.size());
-    std::vector<real_type> w = detail::fem_weights(g.dlt());
+    std::vector<real_type> w = detail::fem_weights<real_type>(g.n());
     for( unsigned i=0; i<g.N(); i++)
         for( unsigned j=0; j<g.n(); j++)
             v[i*g.n() + j] = g.h()/2.*w[j];
@@ -63,7 +64,7 @@ thrust::host_vector<real_type> fem_weights( const RealGrid1d<real_type>& g)
 template<class real_type>
 thrust::host_vector<real_type> fem_inv_weights( const RealGrid1d<real_type>& g)
 {
-    thrust::host_vector<real_type> v = fem_weights( g);
+    thrust::host_vector<real_type> v = fem_weights<real_type>( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
@@ -74,8 +75,8 @@ template<class real_type>
 thrust::host_vector<real_type> fem_weights( const aRealTopology2d<real_type>& g)
 {
     thrust::host_vector<real_type> v( g.size());
-    std::vector<real_type> wx = detail::fem_weights(g.dltx());
-    std::vector<real_type> wy = detail::fem_weights(g.dlty());
+    std::vector<real_type> wx = detail::fem_weights<real_type>(g.nx());
+    std::vector<real_type> wy = detail::fem_weights<real_type>(g.ny());
     for( unsigned i=0; i<g.size(); i++)
         v[i] = g.hx()*g.hy()/4.*
                 wx[i%g.nx()]*
@@ -86,7 +87,7 @@ thrust::host_vector<real_type> fem_weights( const aRealTopology2d<real_type>& g)
 template<class real_type>
 thrust::host_vector<real_type> fem_inv_weights( const aRealTopology2d<real_type>& g)
 {
-    thrust::host_vector<real_type> v = fem_weights( g);
+    thrust::host_vector<real_type> v = fem_weights<real_type>( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
@@ -97,9 +98,9 @@ template<class real_type>
 thrust::host_vector<real_type> fem_weights( const aRealTopology3d<real_type>& g)
 {
     thrust::host_vector<real_type> v( g.size());
-    std::vector<real_type> wx = detail::fem_weights(g.dltx());
-    std::vector<real_type> wy = detail::fem_weights(g.dlty());
-    std::vector<real_type> wz = detail::fem_weights(g.dltz());
+    std::vector<real_type> wx = detail::fem_weights<real_type>(g.nx());
+    std::vector<real_type> wy = detail::fem_weights<real_type>(g.ny());
+    std::vector<real_type> wz = detail::fem_weights<real_type>(g.nz());
     for( unsigned i=0; i<g.size(); i++)
         v[i] = g.hx()*g.hy()*g.hz()/8.*
                wx[i%g.nx()]*
@@ -112,7 +113,7 @@ thrust::host_vector<real_type> fem_weights( const aRealTopology3d<real_type>& g)
 template<class real_type>
 thrust::host_vector<real_type> fem_inv_weights( const aRealTopology3d<real_type>& g)
 {
-    thrust::host_vector<real_type> v = fem_weights( g);
+    thrust::host_vector<real_type> v = fem_weights<real_type>( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;

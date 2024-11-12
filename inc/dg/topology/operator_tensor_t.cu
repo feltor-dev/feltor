@@ -11,10 +11,9 @@ int main()
 {
 
     std::cout << "Test of operator Matrix creation\n";
-    dg::DLT<double> dlt(3);
     dg::Operator<double> Op1 = dg::create::pipj<double>( 3);
 
-    dg::Operator<double> Op2 = dlt.forward( );
+    dg::Operator<double> Op2 = dg::DLT<double>::forward(3);
     std::cout << "1st Operator is:\n" << Op1<<"\n";
     std::cout << "2nd Operator is:\n" << Op2<<"\n";
     std::cout << "Tensor Product is: \n" << dg::tensorproduct( Op1, Op2);

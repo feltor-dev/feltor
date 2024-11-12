@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
         MPI_Comm comm2d;
         dg::mpi_init2d( bc, bc, comm2d);
         dg::MPIGrid2d g2d( 0,1, 0,2, 3, 4, 2, bc, bc, comm2d);
-        auto x = dg::evaluate( [](double x, double y){return 1;}, g2d), y(x);
+        auto x = dg::evaluate( dg::one, g2d), y(x);
         if(rank==0)std::cout << "Test "<<dg::bc2str( bc)<<" boundary:\n";
         auto stencil = dg::create::window_stencil( {3,3}, g2d, bc, bc);
         dg::blas2::symv( stencil, x, y);

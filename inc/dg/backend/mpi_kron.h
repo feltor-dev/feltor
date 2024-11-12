@@ -181,6 +181,8 @@ static MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
 template<size_t Nd>
 std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
 {
+    // Should there be a std::vector version?
+    // TODO assert dimensionality of comm
     std::array<MPI_Comm, Nd> comms;
     int remain_dims[Nd];
     for( unsigned u=0; u<Nd; u++)
@@ -192,8 +194,8 @@ std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
     }
 
     return comms;
-
 }
+
 
 // Need to think about those again
 // /*! @brief unregister a communicator

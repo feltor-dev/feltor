@@ -368,7 +368,7 @@ dg::TriDiagonal<dg::HVec_t<real_type>> fem_mass(
     const RealGrid1d<real_type>& g)
 {
     dg::TriDiagonal<dg::HVec_t<real_type>> A(g.size());
-    std::vector<real_type> xx = g.dlt().abscissas();
+    std::vector<real_type> xx = dg::DLT<real_type>::abscissas(g.n());
     std::vector<real_type> xa( g.n()+2);
     xa[0] = (xx[g.n()-1]-2)*g.h()/2.; // the last one from the previous cell
     for( unsigned i=0; i<g.n(); i++)
@@ -409,7 +409,7 @@ dg::TriDiagonal<dg::HVec_t<real_type>> fem_linear2const(
 {
     //bug! periodic boundary conditions
     dg::TriDiagonal<dg::HVec_t<real_type>> A(g.size());
-    std::vector<real_type> xx = g.dlt().abscissas();
+    std::vector<real_type> xx = dg::DLT<real_type>::abscissas(g.n());
     std::vector<real_type> xa( g.n()+2);
     xa[0] = (xx[g.n()-1]-2)*g.h()/2.; // the last one from the previous cell
     for( unsigned i=0; i<g.n(); i++)

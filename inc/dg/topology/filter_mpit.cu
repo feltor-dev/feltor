@@ -42,8 +42,8 @@ int main(int argc, char* argv[])
     dg::MDVec filtered_vec(vec), projected_vec(dg::evaluate( dg::zero, g2)), inter_vec( vec);
     auto op = dg::ExponentialFilter( 36, 0.5, 8, g3.nx());
     dg::MultiMatrix<dg::MDMatrix, dg::MDVec> filter = dg::create::fast_transform(
-       dg::create::modal_filter( op, g3.dltx()),
-       dg::create::modal_filter( op, g3.dlty()), g3);
+       dg::create::modal_filter( op, g3.nx()),
+       dg::create::modal_filter( op, g3.ny()), g3);
     dg::MIDMatrix project = dg::create::projection( g2,g3);
     dg::MIDMatrix interpo = dg::create::interpolation( g3,g2);
 
@@ -77,8 +77,8 @@ int main(int argc, char* argv[])
     dg::MDVec filtered_vec(vec), projected_vec(dg::evaluate( dg::zero, g2)), inter_vec( vec);
     auto op = dg::ExponentialFilter( 36, 0.5, 8, g3.nx());
     dg::MultiMatrix<dg::MDMatrix, dg::MDVec> filter = dg::create::fast_transform(
-       dg::create::modal_filter( op, g3.dltx()),
-       dg::create::modal_filter( op, g3.dlty()), g3);
+       dg::create::modal_filter( op, g3.nx()),
+       dg::create::modal_filter( op, g3.ny()), g3);
     dg::MIDMatrix project = dg::create::projection( g2,g3);
     dg::MIDMatrix interpo = dg::create::interpolation( g3,g2);
 

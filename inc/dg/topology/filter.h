@@ -36,13 +36,14 @@ namespace create
  * @endcode
  * @ingroup misc
  */
-template<class UnaryOp, class real_type>
-dg::Operator<real_type> modal_filter( UnaryOp op, const DLT<real_type>& dlt )
+template<class UnaryOp>
+dg::Operator<std::invoke_result_t<UnaryOp, unsigned>> modal_filter( UnaryOp op, unsigned n )
 {
-    Operator<real_type> backward=dlt.backward();
-    Operator<real_type> forward=dlt.forward();
-    Operator<real_type> filter( dlt.n(), 0);
-    for( unsigned i=0; i<dlt.n(); i++)
+    using real_type = std::invoke_result_t<UnaryOp, unsigned>;
+    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
+    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
+    Operator<real_type> filter( n, 0);
+    for( unsigned i=0; i<n; i++)
         filter(i,i) = op( i);
     filter = backward*filter*forward;
     return filter;

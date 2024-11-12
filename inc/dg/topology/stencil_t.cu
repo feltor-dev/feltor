@@ -10,7 +10,7 @@ int main()
 {
     std::cout << "Test window stencil\n";
     dg::Grid2d g2d( 0,1, 0,2, 3, 5, 3);
-    auto x = dg::evaluate( [](double x, double y){return 1;}, g2d), y(x);
+    auto x = dg::evaluate( dg::one, g2d), y(x);
     std::vector<dg::bc> bcs = {dg::DIR, dg::NEU, dg::PER};
     for( auto bc : bcs)
     {
