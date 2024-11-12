@@ -11,7 +11,7 @@ namespace dg
 
 ///@brief This is the abstract interface class for a two-dimensional Geometry
 template<class real_type>
-struct aRealGeometry2d : public aRealTopology2d<real_type>
+struct aRealGeometry2d : public aRealTopology<real_type,2>
 {
     /**
     * @brief The Jacobian of the coordinate transformation from physical to computational space
@@ -85,7 +85,7 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
 
 ///@brief This is the abstract interface class for a three-dimensional Geometry
 template<class real_type>
-struct aRealGeometry3d : public aRealTopology3d<real_type>
+struct aRealGeometry3d : public aRealTopology<real_type,3>
 {
     /**
     * @brief The Jacobian of the coordinate transformation from physical to computational space
@@ -219,10 +219,11 @@ struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
 {
     RealCartesianGrid2d() = default;
     ///@copydoc RealGrid2d::RealGrid2d()
-    RealCartesianGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometry2d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy}){}
+    RealCartesianGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometry2d<real_type>({x0,y0},{x1,y1},{n,n},{Nx,Ny},{bcx,bcy}){}
 
     ///@copydoc aRealTopology2d<real_type>::aRealTopology2d(RealGrid1d<real_type>,RealGrid1d<real_type>)
-    RealCartesianGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy): dg::aRealGeometry2d<real_type>(gx,gy){}
+    RealCartesianGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy):
+        dg::aRealGeometry2d<real_type>({gx,gy}){}
     /**
      * @brief Construct from existing topology
      * @param g existing grid class
@@ -232,8 +233,8 @@ struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
         return new RealCartesianGrid2d<real_type>(*this);
     }
     private:
-    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny) override final{
-        aRealTopology2d<real_type>::do_set(nx,Nx,ny,Ny);
+    virtual void do_set(std::array<unsigned,2> new_n, std::array<unsigned,2> new_N) override final{
+        aRealTopology2d<real_type>::do_set(new_n,new_N);
     }
 };
 
@@ -247,10 +248,15 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
     RealCartesianGrid3d() = default;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
-    RealCartesianGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aRealProductGeometry3d<real_type>({x0,x1,n,Nx,bcx}, {y0,y1,n,Ny,bcy},{z0,z1,1,Nz,bcz}){}
+    RealCartesianGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1,
+    unsigned n, unsigned Nx, unsigned Ny, unsigned Nz,
+    bc bcx = PER, bc bcy = PER, bc bcz = PER):
+        dg::aRealProductGeometry3d<real_type>({x0,y0,z0},{x1,y1,z1},{n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz})
+        {}
 
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
-    RealCartesianGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz): dg::aRealProductGeometry3d<real_type>(gx,gy,gz){}
+    RealCartesianGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
+        dg::aRealProductGeometry3d<real_type>({gx,gy,gz}){}
     /**
      * @brief Implicit type conversion from Grid3d
      * @param g existing grid object
@@ -263,8 +269,8 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
     virtual RealCartesianGrid2d<real_type>* do_perp_grid() const override final{
         return new RealCartesianGrid2d<real_type>(this->gx(), this->gy());
     }
-    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny, unsigned nz, unsigned Nz) override final{
-        aRealTopology3d<real_type>::do_set(nx,Nx,ny,Ny,nz,Nz);
+    virtual void do_set(std::array<unsigned,3> new_n, std::array<unsigned,3> new_N) override final{
+        aRealTopology3d<real_type>::do_set(new_n,new_N);
     }
 };
 
@@ -280,9 +286,15 @@ struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R
-    RealCylindricalGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aRealProductGeometry3d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy},{z0,z1,1,Nz,bcz}){}
+    RealCylindricalGrid3d( real_type x0, real_type x1,
+        real_type y0, real_type y1, real_type z0, real_type z1,
+        unsigned n, unsigned Nx, unsigned Ny, unsigned Nz,
+        bc bcx = PER, bc bcy = PER, bc bcz = PER):
+    dg::aRealProductGeometry3d<real_type>({x0,y0,z0},{x1,y1,z1},{n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz})
+    {}
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
-    RealCylindricalGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz): dg::aRealProductGeometry3d<real_type>(gx,gy,gz){}
+    RealCylindricalGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
+        dg::aRealProductGeometry3d<real_type>({gx,gy,gz}){}
     virtual RealCylindricalGrid3d* clone()const override final{
         return new RealCylindricalGrid3d(*this);
     }
@@ -299,8 +311,8 @@ struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
         metric.values().push_back( R);
         return metric;
     }
-    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny,unsigned Ny, unsigned nz,unsigned Nz) override final {
-        aRealTopology3d<real_type>::do_set(nx,Nx,ny,Ny,nz,Nz);
+    virtual void do_set(std::array<unsigned,3> new_n, std::array<unsigned,3> new_N) override final{
+        aRealTopology3d<real_type>::do_set(new_n,new_N);
     }
 };
 

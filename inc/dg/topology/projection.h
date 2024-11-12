@@ -161,7 +161,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation(
         n_lcm [u] = lcm( g_new.n(u), g_old.n(u));
         N_lcm [u] = lcm( g_new.N(u), g_old.N(u));
     }
-    RealGrid<real_type, Nd> g_lcm ( g_new.pp(), g_new.qq(), n_lcm, N_lcm, g_new.bb());
+    RealGrid<real_type, Nd> g_lcm ( g_new.get_p(), g_new.get_q(), n_lcm, N_lcm, g_new.get_bc());
     cusp::coo_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
     cusp::coo_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
     cusp::multiply( P, Q, Y);

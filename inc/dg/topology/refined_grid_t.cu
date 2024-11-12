@@ -2,6 +2,7 @@
 
 #include "../blas.h"
 #include "derivatives.h"
+#include "derivativesT.h"
 #include "interpolation.h"
 #include "projection.h"
 #include "transform.h"
