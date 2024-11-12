@@ -17,17 +17,18 @@ namespace create{
 template< class Topology, size_t N, size_t ...I>
 auto do_weights( const Topology& g, std::array<bool, N> coo, std::index_sequence<I...>)
 {
-    auto abs = g.weights();
+    std::array< decltype(g.weights(0)),N> weights;
+    for( unsigned u=0; u<N; u++)
+        weights[u] = g.weights(u);
     for( unsigned u=0; u<N; u++)
         if( !coo[u])
-            dg::blas1::copy( 1, abs[u]);
-    return dg::kronecker( dg::Product(), abs[I]...);
+            dg::blas1::copy( 1, weights[u]);
+    return dg::kronecker( dg::Product(), weights[I]...);
 }
 template< class Topology, size_t ...I>
 auto do_weights( const Topology& g, std::index_sequence<I...>)
 {
-    auto abs = g.weights();
-    return dg::kronecker( dg::Product(), abs[I]...);
+    return dg::kronecker( dg::Product(), g.weights(I)...);
 }
 
 ///@endcond

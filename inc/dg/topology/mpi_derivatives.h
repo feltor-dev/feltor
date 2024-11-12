@@ -157,7 +157,7 @@ dg::MHMatrix_t<real_type> derivative( unsigned coord,
         howmany[0]*= dims[u];
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix,
             coords[coord], howmany);
-    NNCH<real_type> c( g.n(coord), g.shape(), g.communicator(), coord);
+    NNCH<real_type> c( g.n(coord), g.local().get_shape(), g.communicator(), coord);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return { inner, outer, c};
@@ -188,7 +188,7 @@ dg::MHMatrix_t<real_type> jump( unsigned coord,
         howmany[0]*= dims[u];
     EllSparseBlockMat<real_type> inner = detail::distribute_rows(matrix,
             coords[coord], howmany);
-    NNCH<real_type> c( g.n(coord), g.shape(), g.communicator(), coord);
+    NNCH<real_type> c( g.n(coord), g.local().get_shape(), g.communicator(), coord);
     CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
 
     return { inner, outer, c};

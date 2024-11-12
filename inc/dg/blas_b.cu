@@ -65,9 +65,10 @@ int main()
     std::cout << "Type n (3), Nx (512) , Ny (512) and Nz (10) \n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::RealGrid3d<value_type> grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
-    Vector absx = dg::create::abscissas( grid.gx());
-    Vector absy = dg::create::abscissas( grid.gy());
-    Vector absz = dg::create::abscissas( grid.gz());
+
+    Vector absx = grid.abscissas(0);
+    Vector absy = grid.abscissas(1);
+    Vector absz = grid.abscissas(2);
     Vector XX( grid.size());
     dg::RealGrid3d<value_type> grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d = dg::construct<Vector>( dg::create::weights(grid));

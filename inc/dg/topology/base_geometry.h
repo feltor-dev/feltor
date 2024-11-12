@@ -228,7 +228,8 @@ struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
      * @brief Construct from existing topology
      * @param g existing grid class
      */
-    RealCartesianGrid2d( const dg::RealGrid2d<real_type>& g):dg::aRealGeometry2d<real_type>(g.gx(), g.gy()){}
+    RealCartesianGrid2d( const dg::RealGrid2d<real_type>& g):
+        dg::aRealGeometry2d<real_type>({g.gx(), g.gy()}){}
     virtual RealCartesianGrid2d<real_type>* clone()const override final{
         return new RealCartesianGrid2d<real_type>(*this);
     }
@@ -261,7 +262,8 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
      * @brief Implicit type conversion from Grid3d
      * @param g existing grid object
      */
-    RealCartesianGrid3d( const dg::RealGrid3d<real_type>& g):dg::aRealProductGeometry3d<real_type>(g.gx(), g.gy(), g.gz()){}
+    RealCartesianGrid3d( const dg::RealGrid3d<real_type>& g):
+        dg::aRealProductGeometry3d<real_type>({g.gx(), g.gy(), g.gz()}){}
     virtual RealCartesianGrid3d* clone()const override final{
         return new RealCartesianGrid3d(*this);
     }

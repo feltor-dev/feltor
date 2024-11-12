@@ -94,9 +94,9 @@ struct RealGridX1d
         assert( n != 0 );
         assert( bcx != PER);
     }
-    std::array<host_vector,1> abscissas() const { return grid().abscissas();}
-    std::array<host_vector,1> weights() const { return grid().weights();}
-    std::array<unsigned, 1> shape() const { return grid().shape();}
+    host_vector abscissas(unsigned u=0) const { return grid().abscissas(0);}
+    host_vector weights(unsigned u=0) const { return grid().weights(0);}
+    unsigned shape(unsigned u=0) const { return grid().shape(0);}
     /**
      * @brief left boundary
      *
@@ -260,9 +260,9 @@ struct aRealTopologyX2d
     using host_grid = RealGridX2d<real_type>;
     /// @brief number of dimensions : 2
     constexpr static unsigned ndim() {return 2;}
-    std::array<host_vector,2> abscissas() const { return grid().abscissas();}
-    std::array<host_vector,2> weights() const { return grid().weights();}
-    std::array<unsigned, 2> shape() const { return grid().shape();}
+    host_vector abscissas(unsigned u=0) const { return grid().abscissas(u);}
+    host_vector weights(unsigned u=0) const { return grid().weights(u);}
+    unsigned shape(unsigned u=0) const { return grid().shape(u);}
 
     /**
      * @brief Left boundary in x
@@ -543,9 +543,9 @@ struct aRealTopologyX3d
     using host_grid = RealGridX3d<real_type>;
     /// @brief number of dimensions : 3
     constexpr static unsigned ndim() {return 3;}
-    std::array<host_vector,3> abscissas() const { return grid().abscissas();}
-    std::array<host_vector,3> weights() const { return grid().weights();}
-    std::array<unsigned, 3> shape() const { return grid().shape();}
+    host_vector abscissas(unsigned u=0) const { return grid().abscissas(u);}
+    host_vector weights(unsigned u=0) const { return grid().weights(u);}
+    unsigned shape(unsigned u=0) const { return grid().shape(u);}
     /**
      * @brief left boundary in x
      *

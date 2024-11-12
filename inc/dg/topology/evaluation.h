@@ -17,8 +17,7 @@ namespace dg
 template< class Functor, class Topology, size_t ...I>
 auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
 {
-    auto abs = g.abscissas();
-    return dg::kronecker( f, abs[I]...);
+    return dg::kronecker( f, g.abscissas(I)...);
 }
 
 ///@endcond
@@ -37,8 +36,7 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
  *
  * For example fo a 2d grid the implementation is equivalent to
  * @code{.cpp}
- * auto abs = g.abscissas();
- * return dg::kronecker( f, abs[0], abs[1]);
+ * return dg::kronecker( f, g.abscissas(0), g.abscissas(1));
  * @endcode
  * @copydoc hide_code_evaluate1d
  * @copydoc hide_code_evaluate2d

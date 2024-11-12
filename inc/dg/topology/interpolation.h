@@ -406,7 +406,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
 {
 
     std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
-    const auto& abs = g.abscissas();
+    const auto& abs = g.get_abscissas();
     for( unsigned u=0; u<Nd; u++)
     {
         if( x[u].size() != x[0].size())
@@ -435,7 +435,7 @@ cusp::csr_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interp
 {
     using real_type = dg::get_value_type<host_vector>;
     std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
-    const auto& abs = g.abscissas();
+    const auto& abs = g.get_abscissas();
     for( unsigned u=0; u<Nd; u++)
     {
         if( x[u].size() != x[0].size())
@@ -576,8 +576,8 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
         assert( g_new.p(u) >= g_old.p(u));
         assert( g_new.q(u) <= g_old.q(u));
     }
-    auto x = g_new.abscissas();
-    const auto& abs = g_old.abscissas();
+    auto x = g_new.get_abscissas();
+    const auto& abs = g_old.get_abscissas();
     std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
     for( unsigned u=0; u<Nd; u++)
     {

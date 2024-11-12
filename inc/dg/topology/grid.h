@@ -74,8 +74,12 @@ struct Box
         for( unsigned u=0; u<Nd; u++)
             m_shape[u] = abs[u].size();
     }
-    const std::array<ContainerType, Nd>& abscissas() const {return m_abs;}
-    const std::array<unsigned, Nd>& shape() const {return m_shape;}
+    const ContainerType& abscissas(unsigned u=0) const {return m_abs[u];}
+    unsigned shape(unsigned u=0) const {return m_shape[u];}
+
+    const std::array<ContainerType, Nd>& get_abscissas() const {return m_abs;}
+    const std::array<unsigned, Nd>& get_shape() const {return m_shape;}
+
 
     private:
     std::array<ContainerType, Nd> m_abs;
@@ -92,6 +96,7 @@ struct Box
 template<class real_type, size_t Nd>
 struct aRealTopology
 {
+    /////////////////// TYPE TRAITS ////////////////////////////
     /// value type of abscissas and weights
     using value_type = real_type;
     /// vector type of abscissas and weights
@@ -100,49 +105,64 @@ struct aRealTopology
     /// Dimensionality == Nd
     constexpr static unsigned ndim() { return Nd;}
 
-    std::array<unsigned, Nd> shape() const
+    /////////////////// TOPOLOGY CONCEPT ////////////////////////////
+    unsigned shape(unsigned u=0) const
     {
-        std::array<unsigned, Nd> shape;
-        for( unsigned u=0; u<Nd; u++)
-            shape[u] = m_n[u]*m_N[u];
-        return shape;
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+        return m_n[u]*m_N[u];
     }
 
-    std::array<host_vector,Nd> abscissas() const
+    host_vector abscissas(unsigned u=0) const
     {
-        std::array<host_vector,Nd> aas;
-        for( unsigned u=0; u<Nd; u++)
-        {
-            host_vector abs(m_n[u]*m_N[u]);
-            double hu = h(u);
-            auto aa = dg::DLT<real_type>::abscissas(m_n[u]);
-            for( unsigned i=0; i<m_N[u]; i++)
-                for( unsigned j=0; j<m_n[u]; j++)
-                {
-                    real_type xmiddle = DG_FMA( hu, (real_type)(i), m_x0[u]);
-                    real_type h2 = hu/2.;
-                    real_type absj = 1.+aa[j];
-                    abs[i*m_n[u]+j] = DG_FMA( h2, absj, xmiddle);
-                }
-            aas[u] = abs;
-        }
-        return aas;
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+        host_vector abs(m_n[u]*m_N[u]);
+        double hu = h(u);
+        auto aa = dg::DLT<real_type>::abscissas(m_n[u]);
+        for( unsigned i=0; i<m_N[u]; i++)
+            for( unsigned j=0; j<m_n[u]; j++)
+            {
+                real_type xmiddle = DG_FMA( hu, (real_type)(i), m_x0[u]);
+                real_type h2 = hu/2.;
+                real_type absj = 1.+aa[j];
+                abs[i*m_n[u]+j] = DG_FMA( h2, absj, xmiddle);
+            }
+        return abs;
     }
-    std::array<host_vector,Nd> weights() const
+    host_vector weights(unsigned u=0) const
     {
-        std::array<host_vector,Nd> aa;
-        for( unsigned u=0; u<Nd; u++)
-        {
-            host_vector v( m_n[u]*m_N[u]);
-            auto ww = dg::DLT<real_type>::weights(m_n[u]);
-            double hu = h(u);
-            for( unsigned i=0; i<m_N[u]; i++)
-                for( unsigned j=0; j<m_n[u]; j++)
-                    v[i*m_n[u] + j] = hu/2.*ww[j];
-             aa[u] = v;
-        }
-        return aa;
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+        host_vector v( m_n[u]*m_N[u]);
+        auto ww = dg::DLT<real_type>::weights(m_n[u]);
+        double hu = h(u);
+        for( unsigned i=0; i<m_N[u]; i++)
+            for( unsigned j=0; j<m_n[u]; j++)
+                v[i*m_n[u] + j] = hu/2.*ww[j];
+        return v;
     }
+
+    /////////////////// GETTERS ////////////////////////////
+    std::array<unsigned,Nd> get_shape() const{
+        std::array<unsigned,Nd> ss;
+        for( unsigned u=0; u<Nd; u++)
+            ss[u] = shape(u);
+        return ss;
+    }
+    std::array<host_vector,Nd> get_abscissas() const{
+        std::array<host_vector,Nd> abs;
+        for( unsigned u=0; u<Nd; u++)
+            abs[u] = abscissas(u);
+        return abs;
+    }
+    std::array<host_vector,Nd> get_weights() const{
+        std::array<host_vector,Nd> w;
+        for( unsigned u=0; u<Nd; u++)
+            w[u] = weights(u);
+        return w;
+    }
+
     std::array<real_type,Nd> get_p() const{
         return m_x0;
     }
@@ -174,14 +194,20 @@ struct aRealTopology
         return m_bcs;
     }
 
-    real_type p( unsigned u=0) const { return m_x0[u];}
-    real_type q( unsigned u=0) const { return m_x1[u];}
-    real_type h( unsigned u=0) const { return (m_x1[u] - m_x0[u])/(real_type)m_N[u];}
-    real_type l( unsigned u=0) const { return m_x1[u] - m_x0[u];}
-    unsigned n( unsigned u=0) const { return m_n[u];}
-    unsigned N( unsigned u=0) const { return m_N[u];}
-    dg::bc bc( unsigned u=0) const { return m_bcs[u];}
-
+    real_type p( unsigned u=0) const { return m_x0.at(u);}
+    real_type q( unsigned u=0) const { return m_x1.at(u);}
+    real_type h( unsigned u=0) const { return (m_x1.at(u) - m_x0.at(u))/(real_type)m_N.at(u);}
+    real_type l( unsigned u=0) const { return m_x1.at(u) - m_x0.at(u);}
+    unsigned n( unsigned u=0) const { return m_n.at(u);}
+    unsigned N( unsigned u=0) const { return m_N.at(u);}
+    dg::bc bc( unsigned u=0) const { return m_bcs.at(u);}
+    /// Get the u-th axis as a 1d Grid
+    RealGrid<real_type,1> grid(unsigned u ) const{
+        if( u < Nd)
+            return RealGrid<real_type,1>{ m_x0[u], m_x1[u], m_n[u], m_N[u], m_bcs[u]};
+        else
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+    }
     /// Equivalent to <tt> p(0) </tt>
     template<size_t Md = Nd>
     real_type x0() const {return std::get<0>(m_x0);}
@@ -251,58 +277,24 @@ struct aRealTopology
     template<size_t Md = Nd>
     dg::bc bcz() const {return std::get<2>(m_bcs);}
 
-    /**
-     * @brief The total number of points
-     *
-     * @return \f$ \prod_{i=0}^{N-1} n_i N_i\f$
-     */
-    unsigned size() const {
-        unsigned size=1;
-        for( unsigned u=0; u<Nd; u++)
-            size *= m_n[u]*m_N[u];
-        return size;
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gx() const {
+        static_assert( Nd > 0);
+        return grid(0);
     }
-    /**
-     * @brief Display
-     *
-     * @param os output stream
-     */
-    void display( std::ostream& os = std::cout) const
-    {
-        for( unsigned u=0; u<Nd; u++)
-        {
-            os << "Topology parameters for Grid "<<u<<" are: \n"
-                <<"    n  = "<<m_n[u]<<"\n"
-                <<"    N  = "<<m_N[u]<<"\n"
-                <<"    x0 = "<<m_x0[u]<<"\n"
-                <<"    x1 = "<<m_x1[u]<<"\n"
-                <<"    h  = "<<h(u)<<"\n"
-                <<"    l  = "<<l(u)<<"\n"
-                <<"    bc = "<<bc2str(m_bcs[u])<<"\n";
-        }
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gy() const {
+        static_assert( Nd > 1);
+        return grid(1);
+    }
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gz() const {
+        static_assert( Nd > 2);
+        return grid(2);
     }
 
 
-    /**
-     * @brief Check if the grid contains a point
-     *
-     * @note doesn't check periodicity!!
-     * @param x point to check
-     *
-     * @return true if p0[u]<=x[u]<=p1[u] for all u, false else
-     * @attention returns false if x[u] is NaN or INF
-     */
-    bool contains( const std::array<real_type,Nd>& x)const
-    {
-        for( unsigned u=0; u<Nd; u++)
-        {
-            if( !std::isfinite(x[u]) ) return false;
-            //should we catch the case x1==x && dg::PER?
-            if( x[u] < m_x0[u]) return false;
-            if( x[u] > m_x1[u]) return true;
-        }
-        return true;
-    }
+    ////////////////////SETTERS/////////////////////////////
     /**
     * @brief Multiply the number of cells in the first two dimensions with a given factor
     *
@@ -319,6 +311,12 @@ struct aRealTopology
         if( fx != 1 || fy != 1)
             set( m_n, Ns);
     }
+    template<size_t Md = Nd>
+    std::enable_if_t<(Md == 1), void> set( unsigned new_n, unsigned new_Nx)
+    {
+        set({new_n}, {new_Nx});
+    }
+
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 2), void> set( unsigned new_n, unsigned new_Nx,
         unsigned new_Ny)
@@ -341,6 +339,14 @@ struct aRealTopology
     {
         set({new_n,new_n,1}, {new_Nx,new_Ny,new_Nz});
     }
+    /// Same as <tt> set( {new_n, new_n,...}, new_N);</tt>
+    void set( unsigned new_n, std::array<unsigned,Nd> new_N)
+    {
+        std::array<unsigned , Nd> tmp;
+        for( unsigned u=0; u<Nd; u++)
+            tmp[u] = new_n;
+        set( tmp, new_N);
+    }
     /**
     * @brief Set the number of polynomials and cells
     *
@@ -353,14 +359,6 @@ struct aRealTopology
             return;
         do_set(new_n, new_N);
     }
-    /// Same as <tt> set( {new_n, new_n,...}, new_N);</tt>
-    void set( unsigned new_n, std::array<unsigned,Nd> new_N)
-    {
-        std::array<unsigned , Nd> tmp;
-        for( unsigned u=0; u<Nd; u++)
-            tmp[u] = new_n;
-        set( tmp, new_N);
-    }
 
     /**
      * @brief reset the boundaries of the grid
@@ -370,7 +368,7 @@ struct aRealTopology
      */
     void set_pq( std::array<real_type,Nd> p, std::array<real_type,Nd> q)
     {
-        do_set( p, q);
+        do_set_pq( p, q);
     }
     /**
      * @brief reset the boundary conditions of the grid
@@ -382,33 +380,74 @@ struct aRealTopology
         do_set( bcs);
     }
 
-    void set( std::array<real_type,Nd> p, std::array<real_type,Nd> q, std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N, std::array<dg::bc,Nd> bcs)
+    void set( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
+        std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N,
+        std::array<dg::bc,Nd> bcs)
     {
         set_pq( p,q);
         set( new_n, new_N);
         set_bcs( bcs);
     }
+    ////////////////////UTILITY/////////////////////////////
+    /**
+     * @brief The total number of points
+     *
+     * @return \f$ \prod_{i=0}^{N-1} n_i N_i\f$
+     */
+    unsigned size() const {
+        unsigned size=1;
+        for( unsigned u=0; u<Nd; u++)
+            size *= m_n[u]*m_N[u];
+        return size;
+    }
 
-    RealGrid<real_type,1> grid(unsigned u ) const{
-        if( u < Nd)
-            return RealGrid<real_type,1>{ m_x0[u], m_x1[u], m_n[u], m_N[u], m_bcs[u]};
-        else
-            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+
+    /**
+     * @brief Display
+     *
+     * @param os output stream
+     */
+    void display( std::ostream& os = std::cout) const
+    {
+        for( unsigned u=0; u<Nd; u++)
+        {
+            os << "Topology parameters for Grid "<<u<<" are: \n"
+                <<"    n  = "<<m_n[u]<<"\n"
+                <<"    N  = "<<m_N[u]<<"\n"
+                <<"    x0 = "<<m_x0[u]<<"\n"
+                <<"    x1 = "<<m_x1[u]<<"\n"
+                <<"    h  = "<<h(u)<<"\n"
+                <<"    l  = "<<l(u)<<"\n"
+                <<"    bc = "<<bc2str(m_bcs[u])<<"\n";
+        }
     }
+
     template<size_t Md = Nd>
-    RealGrid<real_type,1> gx() const {
-        static_assert( Nd > 0);
-        return grid(0);
+    std::enable_if_t<(Md == 1), bool> contains( real_type x) const
+    {
+        return contains( std::array<real_type,1>{x});
     }
-    template<size_t Md = Nd>
-    RealGrid<real_type,1> gy() const {
-        static_assert( Nd > 1);
-        return grid(1);
-    }
-    template<size_t Md = Nd>
-    RealGrid<real_type,1> gz() const {
-        static_assert( Nd > 2);
-        return grid(2);
+
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * Used for example in \c integrate_in_domain method of  \c dg::AdaptiveTimeloop
+     * @note doesn't check periodicity!!
+     * @param x point to check
+     *
+     * @return true if p0[u]<=x[u]<=p1[u] for all u, false else
+     * @attention returns false if x[u] is NaN or INF
+     */
+    bool contains( const std::array<real_type,Nd>& x)const
+    {
+        for( unsigned u=0; u<Nd; u++)
+        {
+            if( !std::isfinite(x[u]) ) return false;
+            //should we catch the case x1==x && dg::PER?
+            if( x[u] < m_x0[u]) return false;
+            if( x[u] > m_x1[u]) return true;
+        }
+        return true;
     }
 
     protected:
@@ -485,7 +524,7 @@ struct aRealTopology
         m_n = new_n;
         m_N = new_N;
     }
-    virtual void do_set( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
+    virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
     {
         m_x0 = x0;
         m_x1 = x1;
@@ -565,8 +604,8 @@ struct RealGrid : public aRealTopology<real_type, Nd>
     virtual void do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) override final{
         aRealTopology<real_type,Nd>::do_set(new_n,new_N);
     }
-    virtual void do_set( std::array<real_type,Nd> new_x0, std::array<real_type,Nd> new_x1) override final{
-        aRealTopology<real_type,Nd>::do_set(new_x0,new_x1);
+    virtual void do_set_pq( std::array<real_type,Nd> new_x0, std::array<real_type,Nd> new_x1) override final{
+        aRealTopology<real_type,Nd>::do_set_pq(new_x0,new_x1);
     }
     virtual void do_set( std::array<dg::bc,Nd> new_bcs) override final{
         aRealTopology<real_type,Nd>::do_set(new_bcs);
@@ -581,8 +620,8 @@ using get_host_vector = typename Topology::host_vector;
 //template<class Topology>
 //using get_host_grid = typename Topology::host_grid;
 //
-//template<class Grid>
-//using is_shared_grid = std::is_same< get_host_vector<Grid>, thrust::host_vector<typename Grid::value_type>>;
+template<class Grid>
+using is_shared_grid = std::is_base_of< dg::SharedVectorTag, dg::get_tensor_category< get_host_vector<Grid>>>;
 
 ///@addtogroup gridtypes
 ///@{
@@ -598,6 +637,8 @@ template<class T>
 using aRealTopology2d   = dg::aRealTopology<T,2>;
 template<class T>
 using aRealTopology3d   = dg::aRealTopology<T,3>;
+template<class T>
+using RealGrid0d   = dg::RealGrid<T,0>;
 template<class T>
 using RealGrid1d   = dg::RealGrid<T,1>;
 template<class T>
@@ -618,6 +659,8 @@ template<class T>
 using aRealTopology2d   = aRealTopology<T,2>;
 template<class T>
 using aRealTopology3d   = aRealTopology<T,3>;
+template<class T>
+using RealGrid0d   = RealGrid<T,0>;
 template<class T>
 using RealGrid1d   = RealGrid<T,1>;
 template<class T>
