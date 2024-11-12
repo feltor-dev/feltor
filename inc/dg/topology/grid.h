@@ -143,110 +143,111 @@ struct aRealTopology
         }
         return aa;
     }
-    std::array<real_type,Nd> pp() const{
+    std::array<real_type,Nd> get_p() const{
         return m_x0;
     }
-    std::array<real_type,Nd> qq() const{
+    std::array<real_type,Nd> get_q() const{
         return m_x1;
     }
-    std::array<real_type,Nd> ll() const{
+    std::array<real_type,Nd> get_l() const{
         std::array<real_type, Nd> p;
         for( unsigned u=0; u<Nd; u++)
-            p[u] = m_x1[u] - m_x0[u];
+            p[u] = l(u);
         return p;
     }
-    std::array<real_type,Nd> hh() const{
+    std::array<real_type,Nd> get_h() const{
         std::array<real_type, Nd> hh;
         for( unsigned u=0; u<Nd; u++)
-            hh[u] = (m_x1[u] - m_x0[u])/(real_type)m_N[u];
+            hh[u] = h(u);
         return hh;
     }
-    std::array<unsigned, Nd> NN() const
+    std::array<unsigned, Nd> get_N() const
     {
         return m_N;
     }
-    std::array<unsigned, Nd> nn() const
+    std::array<unsigned, Nd> get_n() const
     {
         return m_n;
     }
-    std::array<dg::bc, Nd> bb() const
+    std::array<dg::bc, Nd> get_bc() const
     {
         return m_bcs;
     }
 
     real_type p( unsigned u=0) const { return m_x0[u];}
     real_type q( unsigned u=0) const { return m_x1[u];}
-    real_type h( unsigned u=0) const { return hh()[u];}
-    real_type l( unsigned u=0) const { return ll()[u];}
+    real_type h( unsigned u=0) const { return (m_x1[u] - m_x0[u])/(real_type)m_N[u];}
+    real_type l( unsigned u=0) const { return m_x1[u] - m_x0[u];}
     unsigned n( unsigned u=0) const { return m_n[u];}
     unsigned N( unsigned u=0) const { return m_N[u];}
     dg::bc bc( unsigned u=0) const { return m_bcs[u];}
-    /// Equivalent to <tt> std::get<0>( p0()) </tt>
+
+    /// Equivalent to <tt> p(0) </tt>
     template<size_t Md = Nd>
     real_type x0() const {return std::get<0>(m_x0);}
-    /// Equivalent to <tt> std::get<0>( p1()) </tt>
+    /// Equivalent to <tt> p(1) </tt>
     template<size_t Md = Nd>
     real_type x1() const {return std::get<0>(m_x1);}
-    /// Equivalent to <tt> std::get<1>( p0()) </tt>
+    /// Equivalent to <tt> p(2) </tt>
     template<size_t Md = Nd>
     real_type y0() const {return std::get<1>(m_x0);}
-    /// Equivalent to <tt> std::get<1>( p1()) </tt>
+    /// Equivalent to <tt> q(0) </tt>
     template<size_t Md = Nd>
     real_type y1() const {return std::get<1>(m_x1);}
-    /// Equivalent to <tt> std::get<2>( p0()) </tt>
+    /// Equivalent to <tt> q(1) </tt>
     template<size_t Md = Nd>
     real_type z0() const {return std::get<2>(m_x0);}
-    /// Equivalent to <tt> std::get<2>( p1()) </tt>
+    /// Equivalent to <tt> q(2) </tt>
     template<size_t Md = Nd>
     real_type z1() const {return std::get<2>(m_x1);}
 
-    /// Equivalent to <tt> std::get<0>( ll()) </tt>
+    /// Equivalent to <tt> l(0) </tt>
     template<size_t Md = Nd>
-    real_type lx() const {return std::get<0>(ll());}
-    /// Equivalent to <tt> std::get<1>( ll()) </tt>
+    real_type lx() const {return std::get<0>(get_l());}
+    /// Equivalent to <tt> l(1) </tt>
     template<size_t Md = Nd>
-    real_type ly() const {return std::get<1>(ll());}
-    /// Equivalent to <tt> std::get<2>( ll()) </tt>
+    real_type ly() const {return std::get<1>(get_l());}
+    /// Equivalent to <tt> l(2) </tt>
     template<size_t Md = Nd>
-    real_type lz() const {return std::get<2>(ll());}
+    real_type lz() const {return std::get<2>(get_l());}
 
-    /// Equivalent to <tt> std::get<0>( hh()) </tt>
+    /// Equivalent to <tt> h(0) </tt>
     template<size_t Md = Nd>
-    real_type hx() const {return std::get<0>(hh());}
-    /// Equivalent to <tt> std::get<1>( hh()) </tt>
+    real_type hx() const {return std::get<0>(get_h());}
+    /// Equivalent to <tt> h(1) </tt>
     template<size_t Md = Nd>
-    real_type hy() const {return std::get<1>(hh());}
-    /// Equivalent to <tt> std::get<2>( hh()) </tt>
+    real_type hy() const {return std::get<1>(get_h());}
+    /// Equivalent to <tt> h(2) </tt>
     template<size_t Md = Nd>
-    real_type hz() const {return std::get<2>(hh());}
+    real_type hz() const {return std::get<2>(get_h());}
 
-    /// Equivalent to <tt> std::get<0>( nn()) </tt>
+    /// Equivalent to <tt> n(0) </tt>
     template<size_t Md = Nd>
     unsigned nx() const {return std::get<0>(m_n);}
-    /// Equivalent to <tt> std::get<1>( nn()) </tt>
+    /// Equivalent to <tt> n(1) </tt>
     template<size_t Md = Nd>
     unsigned ny() const {return std::get<1>(m_n);}
-    /// Equivalent to <tt> std::get<2>( nn()) </tt>
+    /// Equivalent to <tt> n(2) </tt>
     template<size_t Md = Nd>
     unsigned nz() const {return std::get<2>(m_n);}
 
-    /// Equivalent to <tt> std::get<0>( NN()) </tt>
+    /// Equivalent to <tt> N(0) </tt>
     template<size_t Md = Nd>
     unsigned Nx() const {return std::get<0>(m_N);}
-    /// Equivalent to <tt> std::get<1>( NN()) </tt>
+    /// Equivalent to <tt> N(1) </tt>
     template<size_t Md = Nd>
     unsigned Ny() const {return std::get<1>(m_N);}
-    /// Equivalent to <tt> std::get<2>( NN()) </tt>
+    /// Equivalent to <tt> N(2) </tt>
     template<size_t Md = Nd>
     unsigned Nz() const {return std::get<2>(m_N);}
 
-    /// Equivalent to <tt> std::get<0>( bb()) </tt>
+    /// Equivalent to <tt> bc(0) </tt>
     template<size_t Md = Nd>
     dg::bc bcx() const {return std::get<0>(m_bcs);}
-    /// Equivalent to <tt> std::get<1>( bb()) </tt>
+    /// Equivalent to <tt> bc(1) </tt>
     template<size_t Md = Nd>
     dg::bc bcy() const {return std::get<1>(m_bcs);}
-    /// Equivalent to <tt> std::get<2>( bb()) </tt>
+    /// Equivalent to <tt> bc(2) </tt>
     template<size_t Md = Nd>
     dg::bc bcz() const {return std::get<2>(m_bcs);}
 
@@ -275,8 +276,8 @@ struct aRealTopology
                 <<"    N  = "<<m_N[u]<<"\n"
                 <<"    x0 = "<<m_x0[u]<<"\n"
                 <<"    x1 = "<<m_x1[u]<<"\n"
-                <<"    h  = "<<hh()[u]<<"\n"
-                <<"    l  = "<<ll()[u]<<"\n"
+                <<"    h  = "<<h(u)<<"\n"
+                <<"    l  = "<<l(u)<<"\n"
                 <<"    bc = "<<bc2str(m_bcs[u])<<"\n";
         }
     }
@@ -312,11 +313,11 @@ struct aRealTopology
     */
     template<size_t Md = Nd>
     std::enable_if_t< (Md>=2),void> multiplyCellNumbers( real_type fx, real_type fy){
-        auto Ns = NN();
-        Ns[0] = round(fx*(real_type)NN()[0]);
-        Ns[1] = round(fy*(real_type)NN()[1]);
+        auto Ns = m_N;
+        Ns[0] = round(fx*(real_type)m_N[0]);
+        Ns[1] = round(fy*(real_type)m_N[1]);
         if( fx != 1 || fy != 1)
-            set( nn(), Ns);
+            set( m_n, Ns);
     }
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 2), void> set( unsigned new_n, unsigned new_Nx,
@@ -348,7 +349,7 @@ struct aRealTopology
     */
     void set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
     {
-        if( new_n==nn() && new_N == NN())
+        if( new_n==m_n && new_N == m_N)
             return;
         do_set(new_n, new_N);
     }
@@ -561,8 +562,10 @@ struct RealGrid : public aRealTopology<real_type, Nd>
     }
 
 };
-//template<class Topology>
-//using get_host_vector = typename Topology::host_vector;
+
+/// Used to discern grid types in interpolation and projection
+template<class Topology>
+using get_host_vector = typename Topology::host_vector;
 //
 //template<class Topology>
 //using get_host_grid = typename Topology::host_grid;
@@ -576,6 +579,8 @@ using Grid0d        = dg::RealGrid<double,0>;
 using Grid1d        = dg::RealGrid<double,1>;
 using Grid2d        = dg::RealGrid<double,2>;
 using Grid3d        = dg::RealGrid<double,3>;
+template<size_t Nd>
+using Grid          = dg::RealGrid<double,Nd>;
 using aTopology2d   = dg::aRealTopology<double,2>;
 using aTopology3d   = dg::aRealTopology<double,3>;
 template<class T>
@@ -594,6 +599,8 @@ using Grid0d        = Grid0d      ;
 using Grid1d        = Grid1d      ;
 using Grid2d        = Grid2d      ;
 using Grid3d        = Grid3d      ;
+template<size_t Nd>
+using Grid          = Grid<Nd>    ;
 using aTopology2d   = aTopology2d ;
 using aTopology3d   = aTopology3d ;
 template<class T>

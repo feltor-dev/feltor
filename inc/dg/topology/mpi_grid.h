@@ -174,11 +174,11 @@ struct aRealMPITopology
     * The remaining dimensions are left unchanged
     */
     void multiplyCellNumbers( real_type fx, real_type fy){
-        auto Ns = m_g.NN();
+        auto Ns = m_g.get_N();
         Ns[0] = round(fx*(real_type)m_g.N(0));
         Ns[1] = round(fy*(real_type)m_g.N(1));
         if( fx != 1 || fy != 1)
-            set( m_g.nn(), Ns);
+            set( m_g.get_n(), Ns);
     }
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 3), void> set( unsigned new_n, unsigned new_Nx,
@@ -194,7 +194,7 @@ struct aRealMPITopology
     */
     void set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
     {
-        if( new_n==m_g.nn() && new_N == m_g.NN())
+        if( new_n==m_g.get_n() && new_N == m_g.get_N())
             return;
         do_set(new_n, new_N);
     }
@@ -317,18 +317,18 @@ struct aRealMPITopology
     aRealMPITopology& operator=(const aRealMPITopology& src) = default;
     virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
     {
-        check_division( new_N,m_g.bb());
+        check_division( new_N,m_g.get_bc());
         m_g.set(new_n, new_N);
         update_local();
     }
     virtual void do_set( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
     {
-        m_g.set( x0, x1);
+        m_g.set_pq( x0, x1);
         update_local();
     }
     virtual void do_set( std::array<dg::bc, Nd> bcs)
     {
-        m_g.set(bcs);
+        m_g.set_bcs(bcs);
         update_local();
     }
     private:
@@ -363,7 +363,7 @@ struct aRealMPITopology
             N[u] = m_g.N(u)/dims[u];
         }
 
-        m_l.set( p, q, m_g.nn(), N, m_g.bb());
+        m_l.set( p, q, m_g.get_n(), N, m_g.get_bc());
     }
     RealGrid<real_type, Nd> m_g, m_l; //global grid, local grid
     std::array<MPI_Comm, Nd> m_comms; // 1d comms
@@ -388,8 +388,9 @@ int aRealMPITopology<real_type,Nd>::pidOf( std::array<real_type,Nd> x) const
     }
 }
 
-//template<class Grid>
-//using is_mpi_grid = std::is_same< get_host_vector<Grid>, MPI_Vector<thrust::host_vector<typename Grid::value_type>>>;
+/// Used to recognize MPI specialisation of interpolation and projection functions
+template<class Grid>
+using is_mpi_grid = std::is_same< get_host_vector<Grid>, MPI_Vector<thrust::host_vector<typename Grid::value_type>>>;
 
 ///@endcond
 
@@ -487,6 +488,8 @@ using MPIGrid0d         = dg::RealMPIGrid<double,0>;
 using MPIGrid1d         = dg::RealMPIGrid<double,1>;
 using MPIGrid2d         = dg::RealMPIGrid<double,2>;
 using MPIGrid3d         = dg::RealMPIGrid<double,3>;
+template<size_t Nd>
+using MPIGrid           = dg::RealMPIGrid<double,Nd>;
 using aMPITopology2d    = dg::aRealMPITopology<double,2>;
 using aMPITopology3d    = dg::aRealMPITopology<double,3>;
 template<class T>
@@ -504,6 +507,8 @@ using Grid0d          = MPIGrid0d      ;
 using Grid1d          = MPIGrid1d      ;
 using Grid2d          = MPIGrid2d      ;
 using Grid3d          = MPIGrid3d      ;
+template<size_t Nd>
+using Grid            = MPIGrid<Nd>    ;
 using aTopology2d     = aMPITopology2d ;
 using aTopology3d     = aMPITopology3d ;
 template<class T>

@@ -27,7 +27,7 @@ MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vec
 
     int dims[g.ndim()], periods[g.ndim()], coords[g.ndim()];
     MPI_Cart_get( g.communicator(), g.ndim(), dims, periods, coords);
-    std::vector<unsigned> shape = g.shape();
+    auto shape = g.shape();
     // an exercise in flattening and unflattening indices
     for( unsigned idx = 0; idx<l.size(); idx++)
     {
