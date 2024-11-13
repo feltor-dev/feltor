@@ -280,7 +280,9 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation1d(
         int idxX =-1;
         for( unsigned k=0; k<g.nx(); k++)
         {
-            if( fabs( xn - gauss_nodesx[k]) < 1e-14)
+            // Due to rounding errors xn will not perfectly be gauss_nodex[k] ( errors ~ 1e-14 possible)
+            // even if x are the abscissas of the grid
+            if( fabs( xn - gauss_nodesx[k]) < 1e-13)
                 idxX = nn*g.nx() + k; //determine which grid column it is
         }
         if( idxX < 0 ) //there is no corresponding point
