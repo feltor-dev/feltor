@@ -4,6 +4,7 @@
 #ifdef MPI_VERSION
 #include "mpi_prolongation.h"
 #endif
+#include <cusp/print.h>
 
 /*! @file
   @brief Classes for poloidal and toroidal average computations.
@@ -34,44 +35,41 @@ struct Average
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>;
     Average() = default;
-    template<class Topology>
-    Average( const Topology& g, std::array<bool, Topology::ndim()> remains)
+    template<class Topology, size_t Md>
+    Average( const Topology& g, std::array<unsigned, Md> axes)
     {
-        // Here, the challenge is that the dimension of the remaining grid is a runtime parameter
-        // because remains needs to be parsed
-        // The alternative would be std::array<unsigned, Md> map in the interface
-        // but that requires restrictions on map
-        m_prolongation = dg::create::prolongation( g, remains);
-        m_average = dg::create::average( remains, g);
-        unsigned first_idx = 0;
-        for( unsigned u=0; u<Topology::ndim(); u++)
-            if( remains[u] )
-            {
-                first_idx = u;
-                break;
-            }
-        auto tmp = dg::evaluate( dg::one, g.grid(first_idx));
-        for( unsigned u=first_idx+1; u<Topology::ndim(); u++)
-            if( remains[u] )
-                tmp = dg::kronecker( dg::Product(), tmp, dg::evaluate( dg::one, g.grid(u)));  //note tmp comes first
+        // Require restrictions on axes
+        m_prolongation = dg::create::prolongation( g, axes);
+        m_average      = dg::create::projection( axes, g);
+        //cusp::print( m_average);
+
+        auto remains = dg::create::detail::complement( g, axes);
+
+        auto tmp = dg::evaluate( dg::one, g.grid(remains[0]));
+        for( unsigned u=1; u<remains.size(); u++)
+            tmp = dg::kronecker( dg::Product(), tmp,
+                dg::evaluate(dg::one, g.grid(remains[u])));  //note tmp comes first (important for comms in MPI)
         m_tmp = dg::construct<ContainerType>(tmp);
         m_area_inv = 1.;
-        for( unsigned u=0; u<Topology::ndim(); u++)
-            if( !remains[u])
-                m_area_inv /= g.l(u);
+        for( unsigned u=0; u<Md; u++)
+            m_area_inv /= g.l(axes[u]);
     }
     /**
      * @brief Prepare internal workspace
      *
      * @param g the grid from which to take the dimensionality and sizes
-     * @param direction the direction or plane over which to average when calling \c operator() (at the moment cannot be \c coo3d::xz or \c coo3d::y)
+     * @param direction the direction over which to average when calling \c operator()
      */
     template< class Topology, typename = std::enable_if_t<Topology::ndim() == 2>>
-    Average( const Topology& g, enum coo2d direction) : Average( g, coo2remains(direction)) { }
+    Average( const Topology& g, enum coo2d direction) : Average( g, coo2axis(direction)) { }
 
     ///@copydoc Average()
     template< class Topology, typename = std::enable_if_t<Topology::ndim() == 3>>
-    Average( const Topology& g, enum coo3d direction) : Average( g, coo2remains(direction)) { }
+    Average( const Topology& g, enum coo3d direction) : Average( g, coo2axis(direction)) { }
+
+    template< class Topology, typename = std::enable_if_t<Topology::ndim() == 3>>
+    Average( const Topology& g, std::array<enum coo3d,2> directions) :
+        Average( g, {coo2axis(directions[0]), coo2axis(directions[1])}) { }
     /**
      * @brief Compute the average as configured in the constructor
      *
@@ -94,25 +92,19 @@ struct Average
     }
 
   private:
-    std::array<bool, 2> coo2remains( enum coo2d direction)
+    std::array<unsigned, 1> coo2axis( enum coo2d direction)
     {
         if( direction == coo2d::x)
-            return {0,1};
-        return {1,0};
+            return {0};
+        return {1};
     }
-    std::array<bool, 3> coo2remains( enum coo3d direction)
+    std::array<unsigned, 1> coo2axis( enum coo3d direction)
     {
         if( direction == coo3d::x)
-            return {0,1,1};
+            return {0};
         if( direction == coo3d::y)
-            return {1,0,1};
-        if( direction == coo3d::z)
-            return {1,1,0};
-        if( direction == coo3d::xy)
-            return {0,0,1};
-        if( direction == coo3d::yz)
-            return {1,0,0};
-        return {0,1,0};
+            return {1};
+        return {2};
     }
     ContainerType m_tmp;
     IMatrix m_average, m_prolongation;

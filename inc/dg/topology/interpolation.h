@@ -346,7 +346,7 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interp
         // Test if point already exists since then no interpolation is needed
         int idxX = -1;
         for( unsigned u=0; u<abs.size(); u++)
-            if( fabs( X - abs[u]) <1e-14)
+            if( fabs( X - abs[u]) <1e-13)
                 idxX = u;
         if( idxX < 0) //no corresponding point
         {

@@ -14,17 +14,17 @@
 namespace dg{
 namespace create{
 ///@cond
-//template< class Topology, size_t N, size_t ...I>
-//auto do_weights( const Topology& g, std::array<bool, N> coo, std::index_sequence<I...>)
-//{
-//    std::array< decltype(g.weights(0)),N> weights;
-//    for( unsigned u=0; u<N; u++)
-//        weights[u] = g.weights(u);
-//    for( unsigned u=0; u<N; u++)
-//        if( !coo[u])
-//            dg::blas1::copy( 1, weights[u]);
-//    return dg::kronecker( dg::Product(), weights[I]...);
-//}
+template< class Topology, size_t N, size_t ...I>
+auto do_weights( const Topology& g, std::array<bool, N> coo, std::index_sequence<I...>)
+{
+    std::array< decltype(g.weights(0)),N> weights;
+    for( unsigned u=0; u<N; u++)
+        weights[u] = g.weights(u);
+    for( unsigned u=0; u<N; u++)
+        if( !coo[u])
+            dg::blas1::copy( 1, weights[u]);
+    return dg::kronecker( dg::Product(), weights[I]...);
+}
 template< class Topology, size_t ...I>
 auto do_weights( const Topology& g, std::index_sequence<I...>)
 {
@@ -68,12 +68,14 @@ auto weights( const Topology& g)
 // This function is ambiguous: Do you want the weights of the grid that remains or those weights
 // prolongated to the full grid again?
 // It is better to create the reduced grid create the weights and the prolongate
-/////@copydoc hide_weights_coo_doc
-//template<class Topology>
-//auto weights( const Topology& g, std::array<bool,Topology::ndim()> remains)
-//{
-//    return do_weights( g, remains, std::make_index_sequence<Topology::ndim()>());
-//}
+// Maybe one design hint could be that remains stands for prolongation
+// Also the first can be done fairly easily
+///@copydoc hide_weights_coo_doc
+template<class Topology>
+auto weights( const Topology& g, std::array<bool,Topology::ndim()> remains)
+{
+    return do_weights( g, remains, std::make_index_sequence<Topology::ndim()>());
+}
 
 
 ///@copydoc hide_inv_weights_doc

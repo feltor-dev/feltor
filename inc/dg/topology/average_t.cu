@@ -26,12 +26,11 @@ int main()
     std::cout << "Averaging y ... \n";
     pol( vector, average_y, false);
     //![doxygen]
-    const dg::Grid1d gx( 0, lx, n, Nx);
-    const dg::DVec w1d = dg::create::weights( gx);
-    dg::DVec solution = dg::evaluate( pol_average, gx);
+    const dg::DVec w1d = dg::create::weights( g.gx());
+    dg::DVec solution = dg::evaluate( pol_average, g.gx());
     dg::blas1::axpby( 1., solution, -1., average_y);
-    std::cout << "TEST prolongation x\n";
-    dg::IDMatrix prolong = dg::create::prolongation( g, {1,0});
+    std::cout << "TEST prolongation y\n";
+    dg::IDMatrix prolong = dg::create::prolongation( g, std::array{1u});
     dg::DVec sol2d = dg::evaluate( pol_average, g), test(sol2d);
     dg::blas2::symv( prolong, solution, test);
     dg::blas1::axpby( 1., sol2d, -1., test);
@@ -50,8 +49,8 @@ int main()
     res = sqrt( dg::blas2::dot( average_y, w2d, average_y));
     std::cout << "Distance to solution is: "<<res<<"\t(Should be 0)"<<std::endl;
 
-    std::cout << "TEST prolongation y\n";
-    prolong = dg::create::prolongation( g, {0,1});
+    std::cout << "TEST prolongation x\n";
+    prolong = dg::create::prolongation( g, std::array{0u});
     dg::DVec sol1d = dg::evaluate( tor_average, g.gy());
     dg::blas2::symv( prolong, sol1d, test);
     dg::blas1::axpby( 1., solution, -1., test);

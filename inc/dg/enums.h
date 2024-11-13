@@ -166,21 +166,20 @@ enum space{
     xspace //!< Configuration space "nodal values"
 };
 
+// With arbitrary dimensionality enabled maybe we can rethink if
+// enum coo { x = 0, y = 1, ...} is a good idea? And how and where to use it?
 ///@brief 2d coordinates
 enum class coo2d : char
 {
     x = 'x', //!< x direction
     y = 'y', //!< y direction
 };
-///@brief 3d contra- and covariant coordinates
+///@brief 3d coordinates
 enum class coo3d : char
 {
     x = 'x', //!< x direction
     y = 'y', //!< y direction
     z = 'z', //!< z direction
-    xy = 'a', //!< xy plane
-    yz = 'b', //!< yz plane
-    xz = 'c', //!< xz plane
 };
 
 ///@}
