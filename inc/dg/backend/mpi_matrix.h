@@ -197,7 +197,8 @@ struct RowColDistMat
 enum dist_type
 {
     row_dist=0, //!< Row distributed
-    col_dist=1 //!< Column distributed
+    col_dist=1, //!< Column distributed
+    allreduce=2 //!< TODO document special distribution
 };
 
 /**
@@ -228,7 +229,11 @@ struct MPIDistMat
     * @param dist either row or column distributed
     */
     MPIDistMat( const LocalMatrix& m, const Collective& c, enum dist_type dist = row_dist):
-        m_m(m), m_c(c), m_buffer( c.allocate_buffer()), m_dist( dist) { }
+        m_m(m), m_c(c), m_buffer( c.allocate_buffer()), m_dist( dist), m_comm( c.communicator()) { }
+
+// TODO Document allreduce mode
+    MPIDistMat( const LocalMatrix& m, MPI_Comm comm):
+        m_m(m), m_c(Collective()), m_buffer(), m_dist(allreduce), m_comm(comm){}
 
     /**
     * @brief Copy Constructor
@@ -239,7 +244,7 @@ struct MPIDistMat
     */
     template< class OtherMatrix, class OtherCollective>
     MPIDistMat( const MPIDistMat<OtherMatrix, OtherCollective>& src):
-        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c->allocate_buffer()), m_dist(src.get_dist()) { }
+        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c->allocate_buffer()), m_dist(src.get_dist()), m_comm(src.get_comm())  { }
     /**
     * @brief Access to the local matrix
     *
@@ -255,6 +260,7 @@ struct MPIDistMat
 
     enum dist_type get_dist() const {return m_dist;}
     void set_dist(enum dist_type dist){m_dist=dist;}
+    MPI_Comm get_comm() const { return m_comm;}
 
     template<class ContainerType1, class ContainerType2>
     void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
@@ -263,6 +269,7 @@ struct MPIDistMat
         if( !m_c->isCommunicating()) //no communication needed
         {
             dg::blas2::symv( alpha, m_m, x.data(), beta, y.data());
+
             return;
 
         }
@@ -289,9 +296,31 @@ struct MPIDistMat
         if( !m_c->isCommunicating()) //no communication needed
         {
             dg::blas2::symv( m_m, x.data(), y.data());
+            if( m_dist == allreduce)
+            {
+#ifdef _DG_CUDA_UNAWARE_MPI
+                m_store.data() = y.data();
+#endif
+                MPI_Allreduce(
+                    MPI_IN_PLACE,
+#ifdef _DG_CUDA_UNAWARE_MPI
+                    thrust::raw_pointer_cast( m_store.data().data()),
+#else
+                    thrust::raw_pointer_cast( y.data().data()),
+#endif
+                    y.data().size(),
+                    getMPIDataType<dg::get_value_type<ContainerType2>>(),
+                    MPI_SUM,
+                    m_comm);
+#ifdef _DG_CUDA_UNAWARE_MPI
+                y.data() = m_store.data();
+#endif
+            }
             return;
 
         }
+        //TODO These asserts don't necessarily need to be true always
+        //Mabe the matrix comm can help?
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
@@ -337,7 +366,11 @@ struct MPIDistMat
     LocalMatrix m_m;
     ClonePtr<Collective> m_c;
     Buffer< typename Collective::container_type> m_buffer;
+#ifdef _DG_CUDA_UNAWARE_MPI
+    dg::Buffer<thrust::host_vector<get_value_type<container_type> >> m_store;
+#endif
     enum dist_type m_dist;
+    MPI_Comm m_comm;
 };
 ///@}
 

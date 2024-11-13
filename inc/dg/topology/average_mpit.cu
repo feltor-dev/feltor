@@ -23,9 +23,10 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Program to test the average in x and z direction\n";
     MPI_Comm comm;
     mpi_init3d( dg::PER, dg::PER, dg::PER, comm);
-    unsigned n = 3, Nx = 32, Ny = 48, Nz = 48;
+    unsigned n = 3, Nx = 32, Ny = 48, Nz = 64;
     //![doxygen]
     dg::MPIGrid3d g( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, comm);
+    //g.display();
 
     dg::Average<dg::MIDMatrix, dg::MDVec > avg(g, dg::coo3d::z);
 
@@ -34,7 +35,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Averaging z ... \n";
     avg( vector, average_z, false);
     //![doxygen]
-    dg::MPIGrid2d gxy( 0, lx, 0, ly, n, Nx, Ny, average_z.communicator());
+    dg::MPIGrid2d gxy( g.gx(), g.gy());
     const dg::MDVec w2d = dg::create::weights( gxy);
     dg::MDVec solution = dg::evaluate( z_average, gxy);
     dg::blas1::axpby( 1., solution, -1., average_z);

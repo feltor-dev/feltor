@@ -168,7 +168,10 @@ static MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
         }
     }
     MPI_Comm newcomm;
-    dg::mpi_cart_sub( root_info.root, &remains[0], &newcomm, false);
+    int err = dg::mpi_cart_sub( root_info.root, &remains[0], &newcomm, false);
+    if( err != MPI_SUCCESS)
+        throw Error(Message(_ping_)<<
+                "Cannot form kronecker product with given communicators");
     return newcomm;
 }
 
