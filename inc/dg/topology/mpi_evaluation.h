@@ -35,8 +35,8 @@ MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vec
         size_t i[g.ndim()], rest = idx;
         for( unsigned d=0; d<g.ndim(); d++)
         {
-            i[d] = rest%g.shape(d);
-            rest = rest/g.shape(d);
+            i[d] = rest%g.local().shape(d);
+            rest = rest/g.local().shape(d);
         }
         size_t idxx = 0;
         // convert to
@@ -47,7 +47,7 @@ MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vec
             // 2 for loops e.g.
             //for( unsigned pz=0; pz<dims[2]; pz++)
             //for( unsigned s=0; s<shape[2]; s++)
-            idxx = (idxx*dims[dd] + coords[dd])*g.shape(dd)+i[dd];
+            idxx = (idxx*dims[dd] + coords[dd])*g.local().shape(dd)+i[dd];
         }
         temp[idx] = global[idxx];
     }
