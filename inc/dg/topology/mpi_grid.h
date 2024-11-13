@@ -458,13 +458,13 @@ struct aRealMPITopology
         static_assert( (M0 + M1) == Nd);
         for( unsigned u=0; u<M0; u++)
         {
-            m_comms[u] = g0.communiator(u);
+            m_comms[u] = g0.comm(u);
         }
         for( unsigned u=0; u<M1; u++)
         {
-            m_comms[M0+u] = g1.communiator(u);
+            m_comms[M0+u] = g1.comm(u);
         }
-        m_comm = dg::mpi_cart_kron( m_comms);
+        m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
 
     }
     //We do not want that because we cannot distinguish if g is meant to be the local or the global grid...
@@ -624,7 +624,7 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
     { }
     template<size_t M0, size_t ...Ms>
     RealMPIGrid( RealMPIGrid<real_type,M0> g0, RealMPIGrid<real_type,Ms> ...gs) :
-        aRealTopology<real_type,Nd>(g0,gs...)
+        aRealMPITopology<real_type,Nd>(g0,gs...)
     { }
 
     ///allow explicit type conversion from any other topology
