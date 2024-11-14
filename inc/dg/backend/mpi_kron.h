@@ -185,7 +185,10 @@ template<size_t Nd>
 std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
 {
     // Should there be a std::vector version?
-    // TODO assert dimensionality of comm
+    // assert dimensionality of comm
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( (unsigned) ndims == Nd);
     std::array<MPI_Comm, Nd> comms;
     int remain_dims[Nd];
     for( unsigned u=0; u<Nd; u++)

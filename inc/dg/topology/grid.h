@@ -483,34 +483,36 @@ struct aRealTopology
             m_bcs[u] = grids[u].bc();
         }
     }
-    template< size_t M0, size_t ...Ms>
-    aRealTopology( const aRealTopology<real_type,M0> g0, const aRealTopology<real_type,Ms>& ...gs)
-    {
-        auto grid = aRealTopology<real_type, Nd - M0>( gs ...);
-        *this = aRealTopology<real_type, Nd>( g0, grid);
-    }
-    template< size_t M0, size_t M1>
-    aRealTopology( const aRealTopology<real_type,M0>& g0, const aRealTopology<real_type,M1>& g1)
-    {
-        static_assert( (M0 + M1) == Nd);
+    // MW: This constructor causes nvcc-12.4 to segfault when constructing a Geometry
+    // Funnily the mpi version works (but let's kill it for now
+    //template< size_t M0, size_t M1, size_t ...Ms>
+    //aRealTopology( const aRealTopology<real_type,M0>& g0, const aRealTopology<real_type,M1>& g1, const aRealTopology<real_type,Ms>& ...gs)
+    //{
+    //    auto grid = aRealTopology<real_type, Nd - M0>( g1, gs ...);
+    //    *this = aRealTopology<real_type, Nd>( g0, grid);
+    //}
+    //template< size_t M0, size_t M1>
+    //aRealTopology( const aRealTopology<real_type,M0>& g0, const aRealTopology<real_type,M1>& g1)
+    //{
+    //    static_assert( (M0 + M1) == Nd);
 
-        for( unsigned u=0; u<M0; u++)
-        {
-            m_n[u] = g0.n(u);
-            m_N[u] = g0.N(u);
-            m_x0[u] = g0.p(u);
-            m_x1[u] = g0.q(u);
-            m_bcs[u] = g0.bc(u);
-        }
-        for( unsigned u=0; u<M1; u++)
-        {
-            m_n[M0+u] = g1.n(u);
-            m_N[M0+u] = g1.N(u);
-            m_x0[M0+u] = g1.p(u);
-            m_x1[M0+u] = g1.q(u);
-            m_bcs[M0+u] = g1.bc(u);
-        }
-    }
+    //    for( unsigned u=0; u<M0; u++)
+    //    {
+    //        m_n[u] = g0.n(u);
+    //        m_N[u] = g0.N(u);
+    //        m_x0[u] = g0.p(u);
+    //        m_x1[u] = g0.q(u);
+    //        m_bcs[u] = g0.bc(u);
+    //    }
+    //    for( unsigned u=0; u<M1; u++)
+    //    {
+    //        m_n[M0+u] = g1.n(u);
+    //        m_N[M0+u] = g1.N(u);
+    //        m_x0[M0+u] = g1.p(u);
+    //        m_x1[M0+u] = g1.q(u);
+    //        m_bcs[M0+u] = g1.bc(u);
+    //    }
+    //}
 
     ///explicit copy constructor (default)
     ///@param src source
@@ -519,20 +521,9 @@ struct aRealTopology
     ///@param src source
     aRealTopology& operator=(const aRealTopology& src) = default;
 
-    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
-    {
-        m_n = new_n;
-        m_N = new_N;
-    }
-    virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
-    {
-        m_x0 = x0;
-        m_x1 = x1;
-    }
-    virtual void do_set( std::array<dg::bc, Nd> bcs)
-    {
-        m_bcs = bcs;
-    }
+    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) = 0;
+    virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1) = 0;
+    virtual void do_set( std::array<dg::bc, Nd> bcs) = 0;
   private:
     std::array<real_type,Nd> m_x0;
     std::array<real_type,Nd> m_x1;
@@ -540,6 +531,27 @@ struct aRealTopology
     std::array<unsigned,Nd> m_N;
     std::array<dg::bc,Nd> m_bcs;
 };
+///@cond
+// pure virtual implementations must be declared outside class
+template<class real_type,size_t Nd>
+void aRealTopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
+{
+    m_n = new_n;
+    m_N = new_N;
+}
+template<class real_type,size_t Nd>
+void aRealTopology<real_type,Nd>::do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
+{
+    m_x0 = x0;
+    m_x1 = x1;
+}
+template<class real_type,size_t Nd>
+void aRealTopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
+{
+    m_bcs = bcs;
+}
+
+///@endcond
 
 /**
  * @brief The simplest implementation of aRealTopology

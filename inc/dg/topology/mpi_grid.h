@@ -424,8 +424,17 @@ struct aRealMPITopology
         std::array<dg::bc,Nd> bc, std::array<MPI_Comm, Nd> comms) :
         m_g(p,q,n,N,bc), m_comms(comms)
     {
-        // TODO assert dimensionality of Cartesian communicators
+        // assert dimensionality of Cartesian communicators
+        int ndims;
+        for ( unsigned u=0; u<Nd;u++)
+        {
+            MPI_Cartdim_get( m_comms[u], &ndims);
+            assert( (unsigned)ndims == 1);
+        }
         m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
+        MPI_Cartdim_get( m_comm, &ndims);
+        assert( (unsigned)ndims == Nd);
+        check_division( N, bc);
         update_local();
     }
     aRealMPITopology( const std::array< RealMPIGrid<real_type, 1>, Nd>& grids)
@@ -441,30 +450,34 @@ struct aRealMPITopology
         m_l = RealGrid<real_type,Nd>( locals);
         m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
     }
-    template< size_t M0, size_t ...Ms>
-    aRealMPITopology( const aRealMPITopology<real_type,M0>& g0,
-            const aRealMPITopology<real_type,Ms> & ...gs)
-    {
-        auto grid = aRealMPITopology<real_type, Nd - M0>( gs ...);
-        *this = aRealMPITopology<real_type, Nd>( g0, grid);
-    }
-    template< size_t M0, size_t M1>
-    aRealMPITopology( const aRealMPITopology<real_type,M0>& g0,
-            const aRealMPITopology<real_type,M1>& g1) : m_g( g0.global(),g1.global()),
-        m_l( g0.local(), g1.local())
-    {
-        static_assert( (M0 + M1) == Nd);
-        for( unsigned u=0; u<M0; u++)
-        {
-            m_comms[u] = g0.comm(u);
-        }
-        for( unsigned u=0; u<M1; u++)
-        {
-            m_comms[M0+u] = g1.comm(u);
-        }
-        m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
 
-    }
+    // MW: The shared version of this constructor causes nvcc-12.4 to segfault when constructing a Geometry
+    // Funnily the mpi version works (but let's kill it for now
+    //template< size_t M0, size_t ...Ms>
+    //aRealMPITopology( const aRealMPITopology<real_type,M0>& g0,
+    //        const aRealMPITopology<real_type,Ms> & ...gs)
+    //{
+    //    auto grid = aRealMPITopology<real_type, Nd - M0>( gs ...);
+    //    *this = aRealMPITopology<real_type, Nd>( g0, grid);
+    //}
+    //template< size_t M0, size_t M1>
+    //aRealMPITopology( const aRealMPITopology<real_type,M0>& g0,
+    //        const aRealMPITopology<real_type,M1>& g1) : m_g( g0.global(),g1.global()),
+    //    m_l( g0.local(), g1.local())
+    //{
+    //    static_assert( (M0 + M1) == Nd);
+    //    for( unsigned u=0; u<M0; u++)
+    //    {
+    //        m_comms[u] = g0.comm(u);
+    //    }
+    //    for( unsigned u=0; u<M1; u++)
+    //    {
+    //        m_comms[M0+u] = g1.comm(u);
+    //    }
+    //    m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
+
+    //}
+
     //We do not want that because we cannot distinguish if g is meant to be the local or the global grid...
     //aRealMPITopology( const RealGrid<real_type,Nd> & g, MPI_Comm comm);
     ///explicit copy constructor (default)
@@ -473,22 +486,9 @@ struct aRealMPITopology
     ///explicit assignment operator (default)
     ///@param src source
     aRealMPITopology& operator=(const aRealMPITopology& src) = default;
-    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
-    {
-        check_division( new_N,m_g.get_bc());
-        m_g.set(new_n, new_N);
-        update_local();
-    }
-    virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
-    {
-        m_g.set_pq( x0, x1);
-        update_local();
-    }
-    virtual void do_set( std::array<dg::bc, Nd> bcs)
-    {
-        m_g.set_bcs(bcs);
-        update_local();
-    }
+    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) =0;
+    virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1) =0;
+    virtual void do_set( std::array<dg::bc, Nd> bcs) =0;
     private:
     void check_division( std::array<unsigned , Nd> N, std::array<dg::bc, Nd> bc)
     {
@@ -544,6 +544,26 @@ int aRealMPITopology<real_type,Nd>::pidOf( std::array<real_type,Nd> x) const
         else
             return -1;
     }
+}
+// pure virtual implementations must be declared outside class
+template<class real_type,size_t Nd>
+void aRealMPITopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
+{
+    check_division( new_N,m_g.get_bc());
+    m_g.set(new_n, new_N);
+    update_local();
+}
+template<class real_type,size_t Nd>
+void aRealMPITopology<real_type,Nd>::do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
+{
+    m_g.set_pq( x0, x1);
+    update_local();
+}
+template<class real_type,size_t Nd>
+void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
+{
+    m_g.set_bcs(bcs);
+    update_local();
 }
 
 /// Used to recognize MPI specialisation of interpolation and projection functions
