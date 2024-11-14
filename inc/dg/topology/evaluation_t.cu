@@ -29,7 +29,7 @@ double function3d( double x, double y, double z)
 int main()
 {
     std::cout << "This program tests the exblas::dot function. The tests succeed only if the evaluation and grid functions but also the weights and especially the exblas::dot function are correctly implemented and compiled. Furthermore, the compiler implementation of the exp function in the math library must be consistent across platforms to get reproducible results\n";
-    std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
+    std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0 \\pm 1!\n";
     unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
     std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
 
@@ -58,8 +58,11 @@ int main()
     std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
     std::cout << "Relative 1d error is      "<<(integral-sol)/sol<<"\n\n";
 
+    unsigned size = dg::blas1::vdot( []DG_DEVICE(double x){ return 1u;}, func3d);
+    std::cout << "Size of vector test       "<<size<<"\t"<<(int)size - (int)g3d.size()<<"\n\n";
+
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
-    std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i + 4823280491526356992<< "\n";
+    std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i + 4823286950217646080<< "\n";
     double sol2d = 0;
     std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
     std::cout << "2d error is               "<<(integral2d-sol2d)<<"\n\n";
@@ -97,12 +100,12 @@ int main()
 
     std::cout << "TEST result of a sin and exp function to compare compiler specific math libraries:\n";
     dg::DVec x(100, 6.12610567450009658);
-    dg::blas1::transform( x, x, sin );
+    dg::blas1::transform( x, x, [] DG_DEVICE ( double x){ return sin(x);} );
     res.d = x[0];
     std::cout << "Result of sin:    "<<res.i<<"\n"
               << "          GCC:    -4628567870976535683 (correct)"<<std::endl;
     dg::DVec y(1, 5.9126151457310376);
-    dg::blas1::transform( y, y, exp );
+    dg::blas1::transform( y, y,[] DG_DEVICE ( double x){ return exp(x);} );
     res.d = y[0];
     std::cout << "Result of exp:     "<<res.i<<"\n"
               << "          GCC:     4645210948416067678 (correct)"<<std::endl;
@@ -151,7 +154,7 @@ int main()
     dg::blas2::symv( 1., dg::asDenseMatrix( dg::asPointers( matrix)), w_h,
             0., integral_d);
     res.d = integral_d[0];
-    std::cout << "2D integral               "<<std::setw(6)<<res.d <<"\t" << res.i + 4823280491526356992<< "\n";
+    std::cout << "2D integral               "<<std::setw(6)<<res.d <<"\t" << res.i + 4823491540355645440 << "\n";
     std::cout << "(We do not expect this to be correct because the Matrix-Vector product is not accurate nor binary reproducible)!\n";
     std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
     std::cout << "2d error is               "<<(res.d-sol2d)<<"\n\n";

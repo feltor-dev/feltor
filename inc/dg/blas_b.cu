@@ -258,6 +258,23 @@ int main()
     t.toc();
     std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
 
+    thrust::device_vector<thrust::complex<double>> cc3d( x[0].size());
+    dg::blas1::transform( x[0], cc3d, []DG_DEVICE(double x){ return thrust::complex<double>{x,x};});
+    thrust::device_vector<thrust::complex<double>> cc( cc3d);
+    thrust::complex<double> cintegral = dg::blas1::dot( cc3d, cc3d);
+    cintegral += dg::blas1::dot( cc3d,cc3d);//warm up
+    t.tic();
+    for( int i=0; i<multi*(int)x.size(); i++)
+        cintegral += dg::blas1::dot( cc3d,cc);
+    t.toc();
+    std::cout<<"vDOT1(x,y) (complex) took        " <<t.diff()/multi<<"s\t"<<4*gbytes*multi/t.diff()<<"GB/s\n";
+    cintegral += dg::blas2::dot( cc3d,w2d,cc3d);//warm up
+    t.tic();
+    for( int i=0; i<multi*(int)x.size(); i++)
+        cintegral += dg::blas2::dot( cc3d,w2d,cc);
+    t.toc();
+    std::cout<<"vDOT2(x,w,y) (complex) took      " <<t.diff()/multi<<"s\t"<<5*gbytes*multi/t.diff()<<"GB/s\n";
+
     std::cout << "\nSequential recursive calls";
     unsigned size_rec = 1e4;
     std::vector<value_type> test_recursive(size_rec, 0.1);

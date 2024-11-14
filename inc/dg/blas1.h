@@ -91,7 +91,7 @@ int result = dg::blas1::dot([] DG_DEVICE( double x, double y){ return int(x*x*y)
  * @copydoc hide_ContainerType
  */
 template<class Functor, class ContainerType, class ...ContainerTypes>
-auto dot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
+auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
     std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>
 {
     using T = std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>;
@@ -130,7 +130,7 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
 * @attention Binary Reproducible results are only guaranteed for **float** or **double** input.
-* All other value types redirect to <tt> dg::blas1::dot( dg::Product(), x, y);</tt>
+* All other value types redirect to <tt> dg::blas1::vdot( dg::Product(), x, y);</tt>
 
  * @param x Left Container
  * @param y Right Container may alias x
@@ -150,7 +150,7 @@ inline auto dot( const ContainerType1& x, const ContainerType2& y)
     }
     else
     {
-        return dg::blas1::dot( dg::Product(), x, y);
+        return dg::blas1::vdot( dg::Product(), x, y);
     }
 }
 
@@ -765,7 +765,7 @@ dg::blas1::kronecker( XS, dg::equals(), []( double x, double y){ return x;}, xs,
 dg::blas1::kronecker( YS, dg::equals(), []( double x, double y){ return y;}, xs, ys);
 dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
 @endcode
- * @note For the function \f$ f(x_0, x_1, ..., x_{n-1}) = x_0 x_1 ... x_{n-1} \f$ <tt> dg::blas1::kronecker(y, dg::equals(), x_0, x_1, ...) </tt>computes the actual Kronecker product of the arguments **in reversed order** \f[ y = x_{n-1} \otimes x_{n-2} \otimes ... \otimes x_1 \otimes x_0\f]
+ * @note For the function \f$ f(x_0, x_1, ..., x_{n-1}) = x_0 x_1 ... x_{n-1} \f$ <tt> dg::blas1::kronecker(y, dg::equals(), x_0, x_1, ...) </tt>computes the actual Kronecker product of the arguments **in reversed order** \f[ y = x_{n-1} \otimes x_{n-2} \otimes ... \otimes x_1 \otimes x_0\f] (or the outer product)
  * With this behaviour we can in e.g. Cartesian coordinates naturally define functions \f$ f(x,y,z)\f$ and evaluate this function on product space coordinates and have \f$ x \f$ as the fastest varying coordinate in memory.
  *
  * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument

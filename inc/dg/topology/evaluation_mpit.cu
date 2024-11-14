@@ -62,9 +62,11 @@ int main(int argc, char** argv)
     double sol = (exp(2.) -exp(1));
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
     if(rank==0)std::cout << "Relative 1d error is      "<<(integral-sol)/sol<<"\n\n";
+    unsigned size = dg::blas1::vdot( []DG_DEVICE(double x){ return 1u;}, func3d);
+    if(rank==0)std::cout << "Size of vector test       "<<size<<"\t"<<(int)size - (int)g3d.size()<<"\n\n";
 
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
-    if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i + 4823280491526356992<< "\n";
+    if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i + 4823286950217646080<< "\n";
     double sol2d = 0.;
     if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
     if(rank==0)std::cout << "2d error is               "<<(integral2d-sol2d)<<"\n\n";
@@ -93,7 +95,7 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
     if(rank==0)std::cout << "TEST if dot throws on Inf or Nan:\n";
     dg::MDVec x = dg::evaluate( dg::CONSTANT( 6.12610567450009658), g2d);
-    dg::blas1::transform( x, x, sin );
+    dg::blas1::transform( x, x, [] DG_DEVICE ( double x){ return sin(x);} );
     dg::blas1::transform( x,x, dg::LN<double>());
     bool hasnan = dg::blas1::reduce( x, false,
             thrust::logical_or<bool>(), dg::ISNFINITE<double>());
