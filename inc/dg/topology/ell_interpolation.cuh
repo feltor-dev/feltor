@@ -201,7 +201,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
  * @note n must be smaller than 5
  * @attention no range check is performed on the input vectors
  */
-cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const Grid1d& g  )
+cusp::ell_matrix<int,double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const Grid1d& g  )
 {
     assert( g.n()<=4);
     //allocate ell matrix storage
@@ -232,7 +232,7 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
     const int* cellx_ptr = thrust::raw_pointer_cast( &cellx[0]);
     const double* xn_ptr = thrust::raw_pointer_cast( &xn[0]);
     //xn = 2*xn - 2*(cellx+0.5)
-    const thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
+    const thrust::device_vector<double> forward(std::vector<double> ( dg::DLT<double>::forward(g.n())));
     const double* forward_ptr = thrust::raw_pointer_cast( &forward[0]);
     detail::interpolation_kernel1d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), cellx_ptr, xn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
@@ -279,7 +279,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     const int* cellY_ptr = thrust::raw_pointer_cast( &cellY[0]);
     const double* xn_ptr = thrust::raw_pointer_cast( &xn[0]);
     const double* yn_ptr = thrust::raw_pointer_cast( &yn[0]);
-    thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
+    thrust::device_vector<double> forward(std::vector<double> ( dg::DLT<double>::forward(g.n())));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
     detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(),
             cellX_ptr, cellY_ptr,
@@ -335,7 +335,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     const double* xn_ptr = thrust::raw_pointer_cast( &xn[0]);
     const double* yn_ptr = thrust::raw_pointer_cast( &yn[0]);
     const double* zn_ptr = thrust::raw_pointer_cast( &zn[0]);
-    thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
+    thrust::device_vector<double> forward(std::vector<double> ( dg::DLT<double>::forward(g.n())));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
     detail::interpolation_kernel3d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), g.Ny(), g.Nz(),
             cellX_ptr, cellY_ptr, cellZ_ptr,
