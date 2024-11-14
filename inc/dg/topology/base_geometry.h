@@ -61,7 +61,8 @@ struct aRealGeometry2d : public aRealTopology<real_type,2>
     ///allow deletion through base class pointer
     virtual ~aRealGeometry2d() = default;
     protected:
-    using aRealTopology2d<real_type>::aRealTopology2d;
+    /// Inherit all parent constructors
+    using aRealTopology<real_type,2>::aRealTopology;
     ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
     aRealGeometry2d( const aRealGeometry2d& src) = default;
     ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
@@ -140,7 +141,8 @@ struct aRealGeometry3d : public aRealTopology<real_type,3>
     ///allow deletion through base class pointer
     virtual ~aRealGeometry3d() = default;
     protected:
-    using aRealTopology3d<real_type>::aRealTopology3d;
+    /// Inherit all parent constructors
+    using aRealTopology<real_type,3>::aRealTopology;
     ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
     aRealGeometry3d( const aRealGeometry3d& src) = default;
     ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
@@ -229,13 +231,19 @@ struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
      * @param g existing grid class
      */
     RealCartesianGrid2d( const dg::RealGrid2d<real_type>& g):
-        dg::aRealGeometry2d<real_type>({g.gx(), g.gy()}){}
+        dg::aRealGeometry2d<real_type>(std::array{g.gx(), g.gy()}){}
     virtual RealCartesianGrid2d<real_type>* clone()const override final{
         return new RealCartesianGrid2d<real_type>(*this);
     }
     private:
     virtual void do_set(std::array<unsigned,2> new_n, std::array<unsigned,2> new_N) override final{
-        aRealTopology2d<real_type>::do_set(new_n,new_N);
+        aRealTopology<real_type,2>::do_set(new_n,new_N);
+    }
+    virtual void do_set_pq( std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final{
+        aRealTopology<real_type,2>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set( std::array<dg::bc,2> new_bcs) override final{
+        aRealTopology<real_type,2>::do_set(new_bcs);
     }
 };
 
@@ -257,13 +265,13 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
 
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
     RealCartesianGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
-        dg::aRealProductGeometry3d<real_type>({gx,gy,gz}){}
+        dg::aRealProductGeometry3d<real_type>(std::array{gx,gy,gz}){}
     /**
      * @brief Implicit type conversion from Grid3d
      * @param g existing grid object
      */
     RealCartesianGrid3d( const dg::RealGrid3d<real_type>& g):
-        dg::aRealProductGeometry3d<real_type>({g.gx(), g.gy(), g.gz()}){}
+        dg::aRealProductGeometry3d<real_type>(std::array{g.gx(), g.gy(), g.gz()}){}
     virtual RealCartesianGrid3d* clone()const override final{
         return new RealCartesianGrid3d(*this);
     }
@@ -272,7 +280,13 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
         return new RealCartesianGrid2d<real_type>(this->gx(), this->gy());
     }
     virtual void do_set(std::array<unsigned,3> new_n, std::array<unsigned,3> new_N) override final{
-        aRealTopology3d<real_type>::do_set(new_n,new_N);
+        aRealTopology<real_type,3>::do_set(new_n,new_N);
+    }
+    virtual void do_set_pq( std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final{
+        aRealTopology<real_type,3>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set( std::array<dg::bc,3> new_bcs) override final{
+        aRealTopology<real_type,3>::do_set(new_bcs);
     }
 };
 
@@ -296,7 +310,7 @@ struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
     {}
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
     RealCylindricalGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
-        dg::aRealProductGeometry3d<real_type>({gx,gy,gz}){}
+        dg::aRealProductGeometry3d<real_type>(std::array{gx,gy,gz}){}
     virtual RealCylindricalGrid3d* clone()const override final{
         return new RealCylindricalGrid3d(*this);
     }
@@ -315,6 +329,12 @@ struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
     }
     virtual void do_set(std::array<unsigned,3> new_n, std::array<unsigned,3> new_N) override final{
         aRealTopology3d<real_type>::do_set(new_n,new_N);
+    }
+    virtual void do_set_pq( std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final{
+        aRealTopology<real_type,3>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set( std::array<dg::bc,3> new_bcs) override final{
+        aRealTopology<real_type,3>::do_set(new_bcs);
     }
 };
 

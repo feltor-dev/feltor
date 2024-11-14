@@ -163,12 +163,12 @@ struct RealCartesianMPIGrid2d : public aRealMPIGeometry2d<real_type>
     ///@copydoc aRealTopology2d::aRealTopology2d(RealGrid1d,RealGrid1d)
     ///@copydoc hide_comm_parameters2d
     RealCartesianMPIGrid2d( RealMPIGrid1d<real_type> gx, RealMPIGrid1d<real_type> gy):
-        aRealMPIGeometry2d<real_type>({gx,gy})
+        aRealMPIGeometry2d<real_type>(std::array{gx,gy})
         {}
     ///@brief Implicit type conversion from MPIGrid2d
     ///@param g existing grid object
     RealCartesianMPIGrid2d( const dg::RealMPIGrid2d<real_type>& g):
-        aRealMPIGeometry2d<real_type>( {g.gx(), g.gy()})
+        aRealMPIGeometry2d<real_type>( std::array{g.gx(), g.gy()})
         {}
     virtual RealCartesianMPIGrid2d* clone()const override final{return new RealCartesianMPIGrid2d(*this);}
     virtual RealCartesianGrid2d<real_type>* global_geometry()const override final{
@@ -178,6 +178,12 @@ struct RealCartesianMPIGrid2d : public aRealMPIGeometry2d<real_type>
     private:
     virtual void do_set(std::array<unsigned,2> new_n, std::array<unsigned,2> new_N) override final{
         aRealMPITopology2d<real_type>::do_set(new_n,new_N);
+    }
+    virtual void do_set_pq( std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final{
+        aRealMPITopology<real_type,2>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set( std::array<dg::bc,2> new_bcs) override final{
+        aRealMPITopology<real_type,2>::do_set(new_bcs);
     }
 
 };
@@ -210,7 +216,7 @@ struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
     ///@brief Implicit type conversion from RealMPIGrid3d
     ///@param g existing grid object
     RealCartesianMPIGrid3d( const dg::RealMPIGrid3d<real_type>& g):
-        aRealProductMPIGeometry3d<real_type>( {g.gx(), g.gy(), g.gz()}){}
+        aRealProductMPIGeometry3d<real_type>( std::array{g.gx(), g.gy(), g.gz()}){}
     virtual RealCartesianMPIGrid3d* clone()const override final{
         return new RealCartesianMPIGrid3d(*this);
     }
@@ -218,7 +224,7 @@ struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
     ///@copydoc hide_comm_parameters3d
     RealCartesianMPIGrid3d( RealMPIGrid1d<real_type> gx, RealMPIGrid1d<real_type> gy,
         RealMPIGrid1d<real_type> gz):
-        dg::aRealProductMPIGeometry3d<real_type>(gx,gy,gz)
+        dg::aRealProductMPIGeometry3d<real_type>(std::array{gx,gy,gz})
         {}
     virtual RealCartesianGrid3d<real_type>* global_geometry()const override final{
         return new RealCartesianGrid3d<real_type>(
@@ -230,7 +236,13 @@ struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
         return new RealCartesianMPIGrid2d<real_type>( this->gx(), this->gy());
     }
     virtual void do_set(std::array<unsigned,3> new_n, std::array<unsigned,3> new_N)override final{
-        aRealMPITopology3d<real_type>::do_set(new_n,new_N);
+        aRealMPITopology<real_type,3>::do_set(new_n,new_N);
+    }
+    virtual void do_set_pq( std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final{
+        aRealMPITopology<real_type,3>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set( std::array<dg::bc,3> new_bcs) override final{
+        aRealMPITopology<real_type,3>::do_set(new_bcs);
     }
 };
 
@@ -258,7 +270,7 @@ struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
 
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
     ///@copydoc hide_comm_parameters3d
-    RealCylindricalMPIGrid3d( RealMPIGrid1d<real_type> gx, RealMPIGrid1d<real_type> gy, RealMPIGrid1d<real_type> gz): dg::aRealProductMPIGeometry3d<real_type>(gx,gy,gz){}
+    RealCylindricalMPIGrid3d( RealMPIGrid1d<real_type> gx, RealMPIGrid1d<real_type> gy, RealMPIGrid1d<real_type> gz): dg::aRealProductMPIGeometry3d<real_type>(std::array{gx,gy,gz}){}
 
     virtual RealCylindricalMPIGrid3d<real_type>* clone()const override final{
         return new RealCylindricalMPIGrid3d(*this);
@@ -281,7 +293,13 @@ struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
         return metric;
     }
     virtual void do_set(std::array<unsigned,3> new_n, std::array<unsigned,3> new_N) override final{
-        aRealMPITopology3d<real_type>::do_set(new_n,new_N);
+        aRealMPITopology<real_type,3>::do_set(new_n,new_N);
+    }
+    virtual void do_set_pq( std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final{
+        aRealMPITopology<real_type,3>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set( std::array<dg::bc,3> new_bcs) override final{
+        aRealMPITopology<real_type,3>::do_set(new_bcs);
     }
 };
 
