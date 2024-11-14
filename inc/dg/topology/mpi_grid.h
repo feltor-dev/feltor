@@ -9,6 +9,13 @@
   @brief MPI Grid objects
   */
 
+//    /*
+//     * The rationale behind this is that \c shape is used to create / construct
+//     * MPI distributed vectors and for this we need the local shape
+//     * Since a MPI communicator is carried by \c MPI_Vector this allows to write
+//     * device independent code
+//     * @param u axis number
+//     */
 namespace dg
 {
 
@@ -53,18 +60,9 @@ struct aRealMPITopology
 
     /////////////////// TOPOLOGY CONCEPT ////////////////////////////
 
-    /*!@brief shape of the local grid
-     *
-     * @attention Contrary to the other getter members this returns a local quantity.
-     * The rationale behind this is that \c shape is used to create / construct
-     * MPI distributed vectors and for this we need the local shape
-     * Since a MPI communicator is carried by \c MPI_Vector this allows to write
-     * device independent code
-     * @param u axis number
-     */
     unsigned shape(unsigned u=0) const
     {
-        return m_l.shape(u);
+        return m_g.shape(u);
     }
     host_vector weights(unsigned u=0) const
     {
@@ -94,9 +92,9 @@ struct aRealMPITopology
         return host_vector{abs, m_comms[u]};
     }
     /////////////////// GETTERS ////////////////////////////
-    /// Local shape of grid
+    /// Global shape of grid
     std::array<unsigned,Nd> get_shape() const{
-        m_l.get_shape();
+        m_g.get_shape();
     }
     std::array<host_vector,Nd> get_abscissas() const{
         std::array<host_vector,Nd> abs;
