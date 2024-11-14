@@ -28,10 +28,7 @@ int main(int argc, char* argv[])
     dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, comm);
     dg::Timer t;
 
-
-// Makes no sense any more to compare exact and simple
     dg::Average<dg::MIDMatrix,dg::MDVec > pol(g, dg::coo2d::y);
-    dg::Average<dg::MIDMatrix,dg::MDVec > pol_ex(g, dg::coo2d::y);
     dg::MDVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::MDVec solution = dg::evaluate( pol_average, g);
     t.tic();
@@ -39,11 +36,6 @@ int main(int argc, char* argv[])
         pol( vector, average_y);
     t.toc();
     if(rank==0)std::cout << "Assembly of average (simple) vector took:      "<<t.diff()/100.<<"s\n";
-    t.tic();
-    for( unsigned i=0; i<100; i++)
-        pol_ex( vector, average_y);
-    t.toc();
-    if(rank==0)std::cout << "Assembly of average (exact)  vector took:      "<<t.diff()/100.<<"s\n";
 
     dg::blas1::axpby( 1., solution, -1., average_y, vector);
     dg::MDVec w2d = dg::create::weights(g);

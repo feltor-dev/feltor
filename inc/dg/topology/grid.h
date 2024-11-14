@@ -485,6 +485,7 @@ struct aRealTopology
     }
     // MW: This constructor causes nvcc-12.4 to segfault when constructing a Geometry
     // Funnily the mpi version works (but let's kill it for now
+    // Maybe in the future a free function "make_grid" ...
     //template< size_t M0, size_t M1, size_t ...Ms>
     //aRealTopology( const aRealTopology<real_type,M0>& g0, const aRealTopology<real_type,M1>& g1, const aRealTopology<real_type,Ms>& ...gs)
     //{
