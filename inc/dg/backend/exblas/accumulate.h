@@ -71,15 +71,22 @@ inline T get_element( T* x, int i){
 
 // Knuth 2Sum.
 template<typename T>
-inline static T KnuthTwoSum(T a, T b, T & s)
+inline std::enable_if_t<!std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T & s)
 {
     T r = a + b;
     T z = r - a;
     s = (a - (r - z)) + (b - z);
     return r;
 }
+template<typename T> // for unsigned, int, char etc.
+inline std::enable_if_t<std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T & s)
+{
+    s = 0;
+    return a + b;
+}
+
 template<typename T>
-inline static T TwoProductFMA(T a, T b, T &d) {
+inline T TwoProductFMA(T a, T b, T &d) {
     T p = a * b;
 #ifdef _WITHOUT_VCL
     d = a*b-p;

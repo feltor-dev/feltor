@@ -53,11 +53,18 @@ static inline double TwoProductFMA(double a, double b, double *d) {
 
 template<class T>
 __device__
-static inline T KnuthTwoSum(T a, T b, T *s) {
+inline std::enable_if_t<!std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T *s) {
     T r = a + b;
     T z = r - a;
     *s = (a - (r - z)) + (b - z);
     return r;
+}
+template<typename T> // for unsigned, int, char etc.
+__device__
+inline std::enable_if_t<std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T * s)
+{
+    *s = T(0);
+    return a + b;
 }
 
 
