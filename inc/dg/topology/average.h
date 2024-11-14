@@ -10,6 +10,30 @@
   @brief Classes for poloidal and toroidal average computations.
   */
 namespace dg{
+
+/*!@brief Transpose vector
+
+The equivalent of
+    <tt> out[j*ny+i] = in[i*nx+j];</tt>
+ * @copydoc hide_ContainerType
+ * @param nx number of columns in input vector (size of contiguous chunks) /rows in output vector
+ * @param ny number of rows in input vector /columns in output vector
+ * @param in input
+ * @param out output (may not alias in)
+ * @attention Implemented using \c dg::blas2::parallel_for so **no MPI**, **no Recursive**
+ * @ingroup utilities
+*/
+template<class ContainerType>
+void transpose( unsigned nx, unsigned ny, const ContainerType& in, ContainerType& out)
+{
+    assert(&in != &out);
+    using value_type = get_value_type<ContainerType>;
+    dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const value_type* ii, value_type* oo)
+        {
+            unsigned i = k/nx, j =  k%nx;
+            oo[j*ny+i] = ii[i*nx+j];
+        }, nx*ny, in, out);
+}
 /**
  * @brief Topological average computations in a Cartesian topology
  *

@@ -94,6 +94,8 @@ template<class Functor, class ContainerType, class ...ContainerTypes>
 auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
     std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>
 {
+    // The reason it is called vdot and not dot is because of the amgiuity when vdot is called
+    // with two arguments
     using T = std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>;
 
     if constexpr( std::is_integral_v<T>)
