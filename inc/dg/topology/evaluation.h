@@ -59,13 +59,6 @@ auto evaluate( Functor f, const Topology& g)
     return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
 };
 
-/// Utility function equivalent to <tt> dg::evaluate( dg::CONSTANT( value), g)</tt>
-template<class Topology>
-auto evaluate( enum evaluation_helper value, const Topology& g)
-{
-    return do_evaluate( dg::CONSTANT( value), g, std::make_index_sequence<Topology::ndim()>());
-};
-
 template<class Topology, class value_type = typename Topology::value_type, class result_type = typename Topology::value_type, typename = std::enable_if_t<Topology::ndim() == 1 > >
 auto evaluate( result_type (*f)( value_type), const Topology& g)
 {

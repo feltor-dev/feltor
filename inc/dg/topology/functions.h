@@ -17,11 +17,16 @@ namespace dg{
 ///@{
 
 /// This enum can be used in \c dg::evaluate
-enum evaluation_helper
-{
-    zero = 0,
-    one = 1
-};
+
+///@brief \f$ f(x, ...) = 0\f$
+template<class T, class ...Ts>
+DG_DEVICE
+T zero(T x, Ts ...xs){return T(0);}
+
+///@brief \f$ f(x, ...) = 1\f$
+template<class T, class ...Ts>
+DG_DEVICE
+T one(T x, Ts ...xs){return T(1);}
 
 ///@brief \f$ f(x, ...) = 0\f$
 struct ZERO
