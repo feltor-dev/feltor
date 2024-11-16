@@ -137,7 +137,7 @@ struct ZCutter : public aCylindricalFunctor<ZCutter>
 };
 
 /**
- * @brief This function uses the dg::Grid2d::shift member to extend another function beyond the grid boundaries
+ * @brief This function extends another function beyond the grid boundaries
  * @sa dg::geo::periodify
  */
 struct Periodify : public aCylindricalFunctor<Periodify>
@@ -160,11 +160,15 @@ struct Periodify : public aCylindricalFunctor<Periodify>
      * @param bcx boundary condition in x (determines how function is periodified)
      * @param bcy boundary condition in y (determines how function is periodified)
      */
-    Periodify( CylindricalFunctor functor, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy): m_g( R0, R1, Z0, Z1, 3, 10, 10, bcx, bcy), m_f(functor) {}
+    Periodify( CylindricalFunctor functor, double R0, double R1, double Z0,
+            double Z1, dg::bc bcx, dg::bc bcy):
+        m_g( R0, R1, Z0, Z1, 3, 10, 10, bcx, bcy), m_f(functor)
+    {}
     double do_compute( double R, double Z) const
     {
         bool negative = false;
-        m_g.shift( negative, R, Z);
+        dg::create::detail::shift( negative, R, m_g.bcx(), m_g.x0(), m_g.x1());
+        dg::create::detail::shift( negative, Z, m_g.bcy(), m_g.y0(), m_g.y1());
         if( negative) return -m_f(R,Z);
         return m_f( R, Z);
     }

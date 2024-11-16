@@ -186,7 +186,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     for( unsigned i=0; i<size; i++)
     {
         std::array<real_type,3> coords{y[0][i],y[1][i],y[2][i]}, coordsP;
-        in_boxp[i] = grid_field.contains( yp[0][i], yp[1][i]) ? true : false;
+        in_boxp[i] = grid_field.contains( std::array{yp[0][i], yp[1][i]}) ? true : false;
         if( false == in_boxp[i])
         {
             //x,y,s

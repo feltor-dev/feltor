@@ -35,7 +35,10 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
     /// @param comm a two-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters
     RealCurvilinearMPIGrid2d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, MPI_Comm comm):
-        dg::aRealMPIGeometry2d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b}, comm), m_handle(generator)
+        dg::aRealMPIGeometry2d<real_type>( {0.,0.},
+                {generator.width(), generator.height()},
+                {tx.n,ty.n},{tx.N,ty.N}, { tx.b, ty.b},
+                dg::mpi_cart_split<2>(comm)), m_handle(generator)
     {
         //generate global 2d grid and then reduce to local
         RealCurvilinearGrid2d<real_type> g(generator, tx, ty);
@@ -56,11 +59,21 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
     //These are necessary to help compiler find inherited names
     using dg::aRealMPIGeometry2d<real_type>::global;
     private:
-    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny) override final
+    virtual void do_set(std::array<unsigned,2> new_n, std::array<unsigned,2> new_N) override final
     {
-        dg::aRealMPITopology2d<real_type>::do_set(nx, Nx, ny, Ny);
-        RealCurvilinearGrid2d<real_type> g( *m_handle, {nx, Nx}, {ny, Ny});
+        dg::aRealMPITopology2d<real_type>::do_set( new_n, new_N);
+        RealCurvilinearGrid2d<real_type> g( *m_handle,
+                {new_n[0], new_N[0]}, {new_n[1], new_N[1]});
         divide_and_conquer(g);//distribute to processes
+    }
+    virtual void do_set(std::array<dg::bc,2> new_bc) override final
+    {
+        // TODO Do we change MPI periodic topology when we change bcs
+        dg::aRealMPITopology2d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
     void divide_and_conquer(const RealCurvilinearGrid2d<real_type>& g_)
     {
@@ -118,8 +131,11 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters
     RealCurvilinearProductMPIGrid3d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, RealGrid1d<real_type> gz, MPI_Comm comm):
-        dg::aRealProductMPIGeometry3d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b}, gz, comm),
-        m_handle( generator)
+        dg::aRealProductMPIGeometry3d<real_type>(
+                {0.,0., gz.x0()},{ generator.width(),
+                generator.height(),gz.x1()}, {tx.n,ty.n, gz.n()},
+                {tx.N, ty.N, gz.N()},{ tx.b, ty.b, gz.bcx()},
+                dg::mpi_cart_split<3>(comm)), m_handle(generator)
     {
         m_map.resize(3);
         RealCurvilinearMPIGrid2d<real_type> g(generator,tx,ty,this->get_perp_comm());
@@ -142,15 +158,28 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
     using dg::aRealMPIGeometry3d<real_type>::global;
     private:
     virtual perpendicular_grid* do_perp_grid() const override final{ return new perpendicular_grid(*this);}
-    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny, unsigned nz, unsigned Nz) override final
+    virtual void do_set( std::array<unsigned,3> new_n, std::array<unsigned,3> new_N) override final
     {
-        dg::aRealMPITopology3d<real_type>::do_set(nx, Nx, ny, Ny, nz, Nz);
-        if( !( nx == this->nx() && Nx == global().Nx() && ny == this->ny() && Ny == global().Ny() ) )
+        auto old_n = this->get_n(), old_N = this->get_N();
+        dg::aRealMPITopology3d<real_type>::do_set( new_n, new_N);
+        if( !( new_n[0] == old_n[0] && new_N[0] == old_N[0] &&
+               new_n[1] == old_n[1] && new_N[1] == old_N[1] ) )
         {
-            RealCurvilinearMPIGrid2d<real_type> g( *m_handle,{nx,Nx,this->bcx()},{ny,Ny, this->bcy()}, this->get_perp_comm());
+            RealCurvilinearMPIGrid2d<real_type> g( *m_handle,
+                    { new_n[0], new_N[0], this->bcx()},
+                    { new_n[1], new_N[1], this->bcy()},
+                    this->get_perp_comm());
             constructPerp( g);
         }
         constructParallel(this->nz(), this->local().Nz());
+    }
+    virtual void do_set(std::array<dg::bc,3> new_bc) override final
+    {
+        dg::aRealMPITopology3d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
     void constructPerp( RealCurvilinearMPIGrid2d<real_type>& g2d)
     {
@@ -199,7 +228,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
 ///@cond
 template<class real_type>
 RealCurvilinearMPIGrid2d<real_type>::RealCurvilinearMPIGrid2d( const RealCurvilinearProductMPIGrid3d<real_type>& g):
-    dg::aRealMPIGeometry2d<real_type>( g.global().gx(), g.global().gy(), g.get_perp_comm() ),
+    dg::aRealMPIGeometry2d<real_type>( g.gx(), g.gy() ),
     m_handle(g.generator())
 {
     m_map=g.map();
