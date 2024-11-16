@@ -240,7 +240,7 @@ static inline int define_limited_time( int ncid, const char* name, int size, int
  * @note This function does not write anything to the file, only read
  * @param ncid NetCDF file or group ID
  * @param dimID dimension ID (output)
- * @param g The 1d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
+ * @param g The 1d DG grid from which data points for coordinate variable are generated using \c g.abscissas()
  * @param name_dim Name of dimension and coordinate variable (input)
  * @param axis The axis attribute (input), ("X", "Y" or "Z")
  * @tparam T determines the datatype of the dimension variables
@@ -257,7 +257,7 @@ bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::str
         return false;
     size_t length;
     retval = nc_inq_dimlen( ncid, *dimID, &length);
-    thrust::host_vector<T> points = dg::create::abscissas( g);
+    thrust::host_vector<T> points = g.abscissas();
     if( length != points.size())
         throw std::runtime_error( "Length of dimension "+name_dim+" does not match grid!\n");
     // Now check if the dimension variable exists already
@@ -285,7 +285,7 @@ bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::str
  * called a coordinate variable.
  * @param ncid NetCDF file or group ID
  * @param dimID dimension ID (output)
- * @param g The 1d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
+ * @param g The 1d DG grid from which data points for coordinate variable are generated using \c g.abscissas()
  * @param name_dim Name of dimension and coordinate variable (input)
  * @param axis The axis attribute (input), ("X", "Y" or "Z")
  * @tparam T determines the datatype of the dimension variables
@@ -301,7 +301,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
             return NC_NOERR;
     int retval;
     std::string long_name = name_dim+"-coordinate in Computational coordinate system";
-    thrust::host_vector<T> points = dg::create::abscissas( g);
+    thrust::host_vector<T> points = g.abscissas();
     if( (retval = nc_def_dim( ncid, name_dim.data(), points.size(), dimID))){ return retval;}
     int varID;
     if( (retval = nc_def_var( ncid, name_dim.data(), getNCDataType<T>(), 1, dimID, &varID))){return retval;}
@@ -320,7 +320,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
  *
  * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) dimension IDs, Must be of size <tt> g.ndim() </tt>
- * @param g The dG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g) in each dimension
+ * @param g The dG grid from which data points for coordinate variable are generated using \c g.abscissas() in each dimension
  * @param name_dims Names for the dimension and coordinate variables (Must have size <tt> g.ndim() </tt>)  **in numpy python ordering** e.g. in 3d we have <tt> {"z", "y", "x"}</tt>; If \c name_dims.empty() then default names in <tt> {"z", "y", "x"} </tt> will be used
  * @tparam Topology <tt> typename Topology::value_type </tt> determines the datatype of the dimension variables
  * @note For a 0d grid, the function does nothing
@@ -365,7 +365,7 @@ int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
  * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) dimension IDs, Must be of size <tt> g.ndim()+1 </tt>
  * @param tvarID (write - only) time coordinate variable ID (unlimited)
- * @param g The dG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
+ * @param g The dG grid from which data points for coordinate variable are generated using \c g.abscissas()
  * @param name_dims Names for the dimension and coordinate variables (Must have size <tt> g.ndim()+1 </tt>)  **in numpy python ordering** e.g. in 3d we have <tt> {"time", "z", "y", "x"}</tt>; If \c name_dims.empty() then default names in <tt> {"time", "z", "y", "x"} </tt> will be used
  * @tparam Topology <tt> typename Topology::value_type </tt> determines the datatype of the dimension variables
  * @note For 0d grids only the "time" dimension is defined, no spatial dimension
@@ -398,7 +398,7 @@ int define_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, s
  * variable and compare to the given grid abscissas
  * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) dimension IDs, Must be of size <tt> g.ndim() </tt>
- * @param g The dG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g) in each dimension
+ * @param g The dG grid from which data points for coordinate variable are generated using \c g.abscissas() in each dimension
  * @param name_dims Names for the dimension and coordinate variables (Must have size <tt> g.ndim() </tt>)  **in numpy python ordering** e.g. in 3d we have <tt> {"z", "y", "x"}</tt>; If \c name_dims.empty() then default names in <tt> {"z", "y", "x"} </tt> will be used
  * @tparam Topology <tt> typename Topology::value_type </tt> determines the datatype of the dimension variables
  * @note For a 0d grid, the default dimension name is "i", axis "I" and the dimension will be of size 1
@@ -437,7 +437,7 @@ bool check_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
  * @param ncid NetCDF file or group ID
  * @param dimsIDs (write - only) dimension IDs, Must be of size <tt> g.ndim()+1 </tt>
  * @param tvarID (write - only) time coordinate variable ID (unlimited)
- * @param g The dG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
+ * @param g The dG grid from which data points for coordinate variable are generated using \c g.abscissas()
  * @param name_dims Names for the dimension and coordinate variables (Must have size <tt> g.ndim()+1 </tt>)  **in numpy python ordering** e.g. in 3d we have <tt> {"time", "z", "y", "x"}</tt>; If \c name_dims.empty() then default names in <tt> {"time", "z", "y", "x"} </tt> will be used
  * @tparam Topology <tt> typename Topology::value_type </tt> determines the datatype of the dimension variables
  * @return False if any dimension with given name does not exist, if no errors are thrown True
@@ -474,7 +474,7 @@ bool check_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, s
  * @param dimsIDs (write - only) 3D array of dimension IDs (time, Y,X)
  * @param size The size of the time variable
  * @param tvarID (write - only) The ID of the time variable (limited)
- * @param g The 2d DG grid from which data points for coordinate variable are generated using \c dg::create::abscissas(g)
+ * @param g The 2d DG grid from which data points for coordinate variable are generated using \c g.abscissas()
  * @param name_dims Names for the dimension variables (time, Y, X)
  * @tparam T determines the datatype of the dimension variables
  *

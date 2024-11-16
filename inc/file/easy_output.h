@@ -160,11 +160,11 @@ void put_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& gri
     if (local_root_rank == MPI_UNDEFINED)
         return;
     unsigned grid_ndims = grid.ndim();
-    auto cc = shape( grid.local());
-    std::reverse( cc.begin(), cc.end());
-    if( vara)
-        cc.insert( cc.begin(), 1);
+    auto cc = grid.local().get_shape();
     std::vector<size_t> count( cc.begin(), cc.end());
+    std::reverse( count.begin(), count.end());
+    if( vara)
+        count.insert( count.begin(), 1);
     int rank, size;
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &size);
@@ -281,7 +281,7 @@ void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
     const host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
-    auto shape = dg::shape( grid);
+    auto shape = grid.get_shape();
     std::vector<size_t> count( shape.begin(), shape.end());
     std::reverse( count.begin(), count.end());
     count.insert( count.begin(), 1);
