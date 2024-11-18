@@ -20,6 +20,12 @@ struct TestGrid : public dg::aRealGeometry2d<double>
     virtual void do_set(std::array<unsigned,2> new_n, std::array<unsigned,2> new_N) override final{
         aRealTopology<double,2>::do_set(new_n,new_N);
     }
+    virtual void do_set_pq(std::array<double,2> new_x0, std::array<double,2> new_x1) override final{
+        aRealTopology<double,2>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set(std::array<dg::bc,2> new_bc) override final{
+        aRealTopology<double,2>::do_set(new_bc);
+    }
     virtual dg::SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
         dg::SparseTensor<thrust::host_vector<real_type> > metric(*this);
         metric.values().resize(5);

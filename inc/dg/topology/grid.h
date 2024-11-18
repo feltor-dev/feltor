@@ -438,7 +438,8 @@ struct aRealTopology
      * @return true if p0[u]<=x[u]<=p1[u] for all u, false else
      * @attention returns false if x[u] is NaN or INF
      */
-    bool contains( const std::array<real_type,Nd>& x)const
+    template<class Vector>
+    bool contains( const Vector& x)const
     {
         for( unsigned u=0; u<Nd; u++)
         {
@@ -597,18 +598,16 @@ struct RealGrid : public aRealTopology<real_type, Nd>
         aRealTopology<real_type,3>({x0,y0,z0}, {x1,y1,z1}, {n,n,1}, {Nx, Ny,Nz}, {bcx,bcy, bcz})
         {}
 
-    RealGrid( const std::array<RealGrid<real_type,1>,Nd>& grids) : aRealTopology<real_type,Nd>( grids){}
+    RealGrid( const std::array<RealGrid<real_type,1>,Nd>& grids) :
+        aRealTopology<real_type,Nd>( grids){}
+
+    RealGrid( std::initializer_list<RealGrid<real_type,1>> grids) :
+        RealGrid( std::array<RealGrid<real_type,1>,Nd>{grids}){}
+
     RealGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
         std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
         std::array<dg::bc,Nd> bcs) : aRealTopology<real_type,Nd>( p,q,n,N,bcs)
     {}
-
-
-    template<size_t M0, size_t ...Ms>
-    RealGrid( RealGrid<real_type,M0> g0, RealGrid<real_type,Ms> ...gs) :
-        aRealTopology<real_type,Nd>(g0,gs...)
-    {
-    }
 
     ///@brief allow explicit type conversion from any other topology
     ///@param src source

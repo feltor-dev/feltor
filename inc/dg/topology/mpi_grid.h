@@ -640,10 +640,18 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
                 {x0,y0,z0},{x1,y1,z1},{n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz},
                 dg::mpi_cart_split<3>(comm))
     { }
-    template<size_t M0, size_t ...Ms>
-    RealMPIGrid( RealMPIGrid<real_type,M0> g0, RealMPIGrid<real_type,Ms> ...gs) :
-        aRealMPITopology<real_type,Nd>(g0,gs...)
-    { }
+
+    RealMPIGrid( const std::array<RealMPIGrid<real_type,1>,Nd>& grids) :
+        aRealMPITopology<real_type,Nd>( grids){}
+
+    RealMPIGrid( std::initializer_list<RealMPIGrid<real_type,1>> grids) :
+        RealMPIGrid( std::array<RealMPIGrid<real_type,1>,Nd>{grids}){}
+
+    RealMPIGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
+        std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
+        std::array<dg::bc,Nd> bcs, std::array<dg::bc,Nd> comms) :
+        aRealMPITopology<real_type,Nd>( p,q,n,N,bcs,comms)
+    {}
 
     ///allow explicit type conversion from any other topology
     ///@param src source

@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Averaging z ... \n";
     avg( vector, average_z, false);
     //![doxygen]
-    dg::MPIGrid2d gxy( g.gx(), g.gy());
+    dg::MPIGrid2d gxy{ g.gx(), g.gy()};
     const dg::MDVec w2d = dg::create::weights( gxy);
     dg::MDVec solution = dg::evaluate( z_average, gxy);
     dg::blas1::axpby( 1., solution, -1., average_z);

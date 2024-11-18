@@ -454,6 +454,14 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
                                                   refY_->N_new(Ny,this->bcy())});
         construct_weights_and_abscissas(new_n[0], Nx, new_n[1], Ny);
     }
+    virtual void do_set(std::array<dg::bc,2> new_bc) override final
+    {
+        dg::aRealTopology2d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
+    }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
         SparseTensor<thrust::host_vector<real_type> > t(*this);
         t.values().push_back( w_[0]);
@@ -525,6 +533,14 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
                                                   refY_->N_new(Ny,this->bcy()),
                                                   refZ_->N_new(Nz,this->bcz())});
         construct_weights_and_abscissas(new_n[0], Nx, new_n[1], Ny, new_n[2], Nz);
+    }
+    virtual void do_set(std::array<dg::bc,3> new_bc) override final
+    {
+        dg::aRealTopology3d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
         SparseTensor<thrust::host_vector<real_type> > t(*this);

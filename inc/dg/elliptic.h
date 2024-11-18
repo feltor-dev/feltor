@@ -104,7 +104,7 @@ class Elliptic1d
         m_jfactor=jfactor;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
-        dg::blas2::transfer( dg::create::jump( g, bcx),   m_jumpX);
+        dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
 
         dg::assign( dg::create::weights(g),       m_weights);
         dg::assign( dg::evaluate( dg::one, g),    m_precond);

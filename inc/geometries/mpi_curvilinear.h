@@ -228,7 +228,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
 ///@cond
 template<class real_type>
 RealCurvilinearMPIGrid2d<real_type>::RealCurvilinearMPIGrid2d( const RealCurvilinearProductMPIGrid3d<real_type>& g):
-    dg::aRealMPIGeometry2d<real_type>( g.gx(), g.gy() ),
+    dg::aRealMPIGeometry2d<real_type>( std::array{g.gx(), g.gy()} ),
     m_handle(g.generator())
 {
     m_map=g.map();

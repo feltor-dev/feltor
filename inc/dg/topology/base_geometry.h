@@ -225,7 +225,7 @@ struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
 
     ///@copydoc aRealTopology2d<real_type>::aRealTopology2d(RealGrid1d<real_type>,RealGrid1d<real_type>)
     RealCartesianGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy):
-        dg::aRealGeometry2d<real_type>({gx,gy}){}
+        dg::aRealGeometry2d<real_type>(std::array{gx,gy}){}
     /**
      * @brief Construct from existing topology
      * @param g existing grid class

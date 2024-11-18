@@ -118,9 +118,9 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
     ///@copydoc hide_grid_product2d
     RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator,
             Topology1d tx, Topology1d ty) :
-        dg::aRealGeometry2d<real_type>(
-                dg::RealGrid1d<real_type>{0., generator.width(), tx.n, tx.N, tx.b},
-                dg::RealGrid1d<real_type>{0., generator.height(), ty.n, ty.N, ty.b}),
+        dg::aRealGeometry2d<real_type>( {0.,0.},
+                {generator.width(), generator.height()},
+                {tx.n,ty.n},{tx.N,ty.N}, { tx.b, ty.b}),
         m_handle(generator)
     {
         construct( tx.n, tx.N, ty.n, ty.N);
@@ -273,7 +273,7 @@ using CurvilinearProductGrid3d  = CurvilinearProductGrid3d ;
 ///@cond
 template<class real_type>
 RealCurvilinearGrid2d<real_type>::RealCurvilinearGrid2d( RealCurvilinearProductGrid3d<real_type> g):
-    dg::aRealGeometry2d<real_type>( g.gx(), g.gy() ), m_handle(g.generator())
+    dg::aRealGeometry2d<real_type>( std::array{g.gx(), g.gy()} ), m_handle(g.generator())
 {
     g.set( {this->nx(), this->ny(), 1}, {this->Nx(), this->Ny(),1}); //shouldn't trigger 2d grid generator
     m_map=g.map();

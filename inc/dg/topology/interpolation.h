@@ -36,6 +36,7 @@ namespace detail{
 template<class real_type>
 void shift( bool& negative, real_type & x, dg::bc bc, real_type x0, real_type x1)
 {
+    // This is now a free function because not all Topologies may have it
     if( bc == dg::PER)
     {
         real_type N0 = floor((x-x0)/(x1-x0)); // ... -2[ -1[ 0[ 1[ 2[ ...

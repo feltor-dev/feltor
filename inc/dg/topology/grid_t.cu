@@ -31,7 +31,7 @@ int main()
     }
     std::cout << "Test 2d and 3d shift functions\n";
     dg::Grid2d g2d( 1., 1.+2.*M_PI, 1., 1.+2.*M_PI, 3, 10, 10, dg::DIR, dg::DIR);
-    dg::Grid2d g2d_test( g2d.gx(),g2d.gy());
+    dg::Grid2d g2d_test{ g2d.gx(),g2d.gy()};
     dg::Grid3d g3d( 1., 1.+2.*M_PI, 1., 1.+2.*M_PI, 0., 2.*M_PI, 3, 10, 10, 10, dg::DIR, dg::DIR, dg::PER);
     double y=0;
     for( int i=0; i<2; i++)

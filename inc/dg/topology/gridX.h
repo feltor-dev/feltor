@@ -97,6 +97,7 @@ struct RealGridX1d
     host_vector abscissas(unsigned u=0) const { return grid().abscissas(0);}
     host_vector weights(unsigned u=0) const { return grid().weights(0);}
     unsigned shape(unsigned u=0) const { return grid().shape(0);}
+    auto get_shape() const { return grid().get_shape();}
     /**
      * @brief left boundary
      *
@@ -263,6 +264,7 @@ struct aRealTopologyX2d
     host_vector abscissas(unsigned u=0) const { return grid().abscissas(u);}
     host_vector weights(unsigned u=0) const { return grid().weights(u);}
     unsigned shape(unsigned u=0) const { return grid().shape(u);}
+    auto get_shape() const { return grid().get_shape();}
 
     /**
      * @brief Left boundary in x
@@ -546,6 +548,7 @@ struct aRealTopologyX3d
     host_vector abscissas(unsigned u=0) const { return grid().abscissas(u);}
     host_vector weights(unsigned u=0) const { return grid().weights(u);}
     unsigned shape(unsigned u=0) const { return grid().shape(u);}
+    auto get_shape() const { return grid().get_shape();}
     /**
      * @brief left boundary in x
      *
