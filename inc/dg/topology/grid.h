@@ -308,7 +308,7 @@ struct aRealTopology
         auto Ns = m_N;
         Ns[0] = round(fx*(real_type)m_N[0]);
         Ns[1] = round(fy*(real_type)m_N[1]);
-        if( fx != 1 || fy != 1)
+        if( fx != 1 or fy != 1)
             set( m_n, Ns);
     }
     template<size_t Md = Nd>

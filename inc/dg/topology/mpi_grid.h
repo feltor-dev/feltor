@@ -283,7 +283,7 @@ struct aRealMPITopology
         auto Ns = m_g.get_N();
         Ns[0] = round(fx*(real_type)m_g.N(0));
         Ns[1] = round(fy*(real_type)m_g.N(1));
-        if( fx != 1 || fy != 1)
+        if( fx != 1 or fy != 1)
             set( m_g.get_n(), Ns);
     }
     template<size_t Md = Nd>
@@ -373,6 +373,8 @@ struct aRealMPITopology
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
         // TODO shouldn't this test for m_l.size() ? How is this used?
+        // ATTENTION This function cannot depend on who is calling it
+        // so it cannot depend on m_l
         if( localIdx < 0 || localIdx >= (int)m_g.size()) return false;
 
         int dims[Nd], periods[Nd], coords[Nd]; // we need the dims
@@ -385,13 +387,18 @@ struct aRealMPITopology
         int current = localIdx;
         for( unsigned u=0; u<Nd; u++)
         {
-            int lIdx = current %m_l.shape(u); // 1d idx
-            current = current / m_l.shape(u);
+            // get local shape of coords[u] grid
+            int Nu = m_g.N(u)/dims[u];
+            if( coords[u] < int(m_g.N(u)%dims[u])) // distribute the rest
+                Nu++;
+            int shapeu=Nu*m_g.n(u); // convert to shape
+            int lIdx = current %shapeu; // 1d idx
+            current = current / shapeu;
             if( coords[u] < int(m_g.N(u)%dims[u])) // has rest
-                gIdx[u] = coords[u]*m_l.shape(u)+lIdx;
+                gIdx[u] = coords[u]*shapeu+lIdx;
             else
             {
-                gIdx[u] = m_g.shape(u) - (dims[u] - coords[u])*m_l.shape(u) + lIdx;
+                gIdx[u] = m_g.shape(u) - (dims[u] - coords[u])*shapeu + lIdx;
             }
         }
         globalIdx = gIdx[Nd-1];
@@ -409,29 +416,40 @@ struct aRealMPITopology
         if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
             return false;
 
-        int cc[Nd];
         int lIdx[Nd];
         int current = globalIdx;
+        // ATTENTION This function cannot depend on who is calling it
+        // so it cannot depend on m_l or current coords
         for( unsigned u=0; u<Nd; u++)
         {
             int gIdx = current%(m_g.shape(u)); // 1d idx
             current = current / (m_g.shape(u));
-            if( coords[u] < int(m_g.N(u)%dims[u])) // has rest
+            // Number of points in the "+1" grids:
+            int barrier = int(m_g.N(u)%dims[u])*(m_g.N(u)/dims[u]+1)*m_g.n(u);
+            if( gIdx < barrier) // has rest
             {
-                cc[u] = gIdx/m_l.shape(u);
-                lIdx[u] = gIdx % m_l.shape(u);
+                int local_size = (m_g.N(u)/dims[u] + 1)*m_g.n(u);
+                coords[u] = gIdx/local_size;
+                lIdx[u] = gIdx % local_size;
             }
             else // count from the back
             {
-                cc[u] = dims[u] - 1 - (m_g.shape(u) - 1 - gIdx)/m_l.shape(u);
-                lIdx[u] = m_l.shape(u) - 1 - (m_g.shape(u) - 1 - gIdx) % m_l.shape(u);
+                int local_size = (m_g.N(u)/dims[u] )*m_g.n(u);
+                coords[u] = dims[u] - 1 - (m_g.shape(u) - 1 - gIdx)/local_size;
+                lIdx[u] = local_size - 1 - (m_g.shape(u) - 1 - gIdx) % local_size;
             }
         }
         localIdx = lIdx[Nd-1];
         for( int u=Nd-2; u>=0; u--)
-            localIdx = localIdx*m_l.shape(u) + lIdx[u];
+        {
+            // get local shape of coords[u] grid
+            int Nu = m_g.N(u)/dims[u];
+            if( coords[u] < int(m_g.N(u)%dims[u])) // distribute the rest
+                Nu++;
+            localIdx = localIdx*Nu*m_g.n(u) + lIdx[u];
+        }
 
-        if( MPI_Cart_rank( m_comm, cc, &PID) == MPI_SUCCESS )
+        if( MPI_Cart_rank( m_comm, coords, &PID) == MPI_SUCCESS )
             return true;
         else
             return false;
@@ -528,6 +546,8 @@ struct aRealMPITopology
     }
     void update_local()
     {
+        // The idea is that every grids gets the same amount and the
+        // rest is distributed to the lowest rank grids
         int dims[Nd], periods[Nd], coords[Nd];
         MPI_Cart_get( m_comm, Nd, dims, periods, coords);
         std::array<real_type,Nd> p, q;
@@ -578,7 +598,6 @@ struct aRealMPITopology
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
 {
-    check_periods( m_g.get_bc());
     m_g.set(new_n, new_N);
     update_local();
 }
@@ -680,7 +699,7 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
 
     RealMPIGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
         std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
-        std::array<dg::bc,Nd> bcs, std::array<dg::bc,Nd> comms) :
+        std::array<dg::bc,Nd> bcs, std::array<MPI_Comm,Nd> comms) :
         aRealMPITopology<real_type,Nd>( p,q,n,N,bcs,comms)
     {}
 

@@ -13,6 +13,7 @@
 #include "mpi_communicator.h"
 
 namespace dg{
+    // TODO Remove mentions of equidisant input vector from docu!
 
 ///@cond
 
