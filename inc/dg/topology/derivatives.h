@@ -29,7 +29,8 @@ namespace create{
  * @return A host matrix
  */
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> derivative( unsigned coord, const aRealTopology<real_type, Nd>& g, dg::bc bc, direction dir = centered)
+EllSparseBlockMat<real_type> derivative( unsigned coord,
+    const aRealTopology<real_type, Nd>& g, dg::bc bc, direction dir = centered)
 {
     if( coord >= Nd)
         throw Error( Message(_ping_)<<"coord>=Nd not allowed! You typed: "<<coord<<" while Nd is "<<Nd);
@@ -37,9 +38,9 @@ EllSparseBlockMat<real_type> derivative( unsigned coord, const aRealTopology<rea
             g.n(coord), g.N(coord), g.h(coord), bc, dir);
     unsigned right_size = 1, left_size = 1;
     for( unsigned u=0; u<coord; u++)
-        right_size*= g.n(u)*g.N(u);
+        right_size*= g.shape(u);
     for( unsigned u=coord+1; u<Nd; u++)
-        left_size *= g.n(u) * g.N(u);
+        left_size *= g.shape(u);
     dd.set_right_size( right_size);
     dd.set_left_size( left_size);
     return dd;
@@ -62,9 +63,9 @@ EllSparseBlockMat<real_type> jump( unsigned coord, const aRealTopology<real_type
             g.n(coord), g.N(coord), g.h(coord), bc);
     unsigned right_size = 1, left_size = 1;
     for( unsigned u=0; u<coord; u++)
-        right_size*= g.n(u)*g.N(u);
+        right_size*= g.shape(u);
     for( unsigned u=coord+1; u<Nd; u++)
-        left_size*=g.n(u) * g.N(u);
+        left_size*=g.shape(u);
     dd.set_right_size( right_size);
     dd.set_left_size( left_size);
     return dd;

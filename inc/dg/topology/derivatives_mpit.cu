@@ -35,9 +35,9 @@ int main(int argc, char* argv[])
     unsigned n = 3, Nx = 24, Ny = 28, Nz = 100;
     if(rank==0)std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
     MPI_Comm comm2d;
-    mpi_init2d( bcx, bcy, comm2d);
+    dg::mpi_init2d( bcx, bcy, comm2d);
     MPI_Comm comm3d;
-    mpi_init3d( bcx, bcy, bcz, comm3d);
+    dg::mpi_init3d( bcx, bcy, bcz, comm3d);
     dg::MPIGrid2d g2d( 0, M_PI,0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy, comm2d);
     const Vector w2d = dg::create::weights( g2d);
 

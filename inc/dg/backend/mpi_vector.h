@@ -196,7 +196,7 @@ struct NearestNeighborComm
     *
     * @tparam Nd the dimensionality of the vector and the MPI Communicator
     * @param n depth of the halo
-    * @param shape # of vector elements in each direction
+    * @param shape local # of vector elements in each direction
     * @param comm the (cartesian) communicator (must be of dimension Nd)
     * @param direction coordinate along which to exchange halo e.g. 0 is x, 1 is y, 2 is z
     */

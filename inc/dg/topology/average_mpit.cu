@@ -17,12 +17,17 @@ double x_average( double x, double y, double z) {return sin(z)*2./M_PI;}
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    int rank;
+    int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
 
     if(rank==0)std::cout << "Program to test the average in x and z direction\n";
+    int dims[3] = {0,0,0};
+    MPI_Dims_create( size, 3, dims);
     MPI_Comm comm;
-    mpi_init3d( dg::PER, dg::PER, dg::PER, comm);
+    std::stringstream ss;
+    ss<< dims[0]<<" "<<dims[1]<<" "<<dims[2];
+    dg::mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
     unsigned n = 3, Nx = 32, Ny = 48, Nz = 64;
     //![doxygen]
     dg::MPIGrid3d g( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, comm);

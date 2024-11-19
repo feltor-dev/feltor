@@ -17,17 +17,19 @@ int main(int argc, char* argv[])
     MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if(size!=4)
-    {
-        std::cerr << "Please run with 4 processes!\n";
-        MPI_Finalize();
-        return 0;
-    }
-    unsigned n, Nx, Ny;
+    //if(size!=4)
+    //{
+    //    std::cerr << "Please run with 4 processes!\n";
+    //    MPI_Finalize();
+    //    return 0;
+    //}
+    unsigned n = 3, Nx = 8, Ny = 8;
+    int dims[2] = {0,0};
+    MPI_Dims_create( size, 2, dims);
     MPI_Comm comm;
     std::stringstream ss;
-    ss<< "2 2 3 8 8";
-    mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm, ss);
+    ss<< dims[0]<<" "<<dims[1];
+    dg::mpi_init2d( dg::PER, dg::PER, comm, ss);
     MPI_Comm_rank( comm, &rank);
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0) std::cout << "Test NON-COMMUNICATING MPI matrix-creation!\n";
@@ -50,8 +52,15 @@ int main(int argc, char* argv[])
     for( unsigned i=0; i<direct_p.matrix().num_rows+1; i++)
         if( direct_p.matrix().row_offsets[i] - converted_p.matrix().row_offsets[i] > 1e-15) equal_rows = false;
 
-    if( !equal_cols || !equal_rows || !equal_values || direct_p.collective().buffer_size() != 0 || converted_p.collective().buffer_size() != 0 )
+    if( !equal_cols or !equal_rows or !equal_values or
+        direct_p.collective().buffer_size() != 0 or
+        converted_p.collective().buffer_size() != 0 )
+    {
         std::cout << "FAILED from rank "<<rank<<"!\n";
+        std::cout << std::boolalpha<<"cols "<<equal_cols<<" rows "<<equal_rows<<" values "<<equal_values
+                  <<" buffer_size 0  "<<(direct_p.collective().buffer_size() == 0)
+                  <<" buffer_size 1  " <<(converted_p.collective().buffer_size() == 0) <<std::endl;
+    }
     else
         std::cout << "SUCCESS from rank "<<rank<<"!\n";
 

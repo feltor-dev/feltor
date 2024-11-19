@@ -105,14 +105,33 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection(
     const aRealTopology<real_type,Nd>& g_new,
     const aRealTopology<real_type,Nd>& g_old, std::string method = "dg")
 {
+    //int rank;
+    //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    //if(rank==0)std::cout << "G new\n";
+    //if(rank==0)g_new.display();
+    //if(rank==0)std::cout << "G old\n";
+    //if(rank==0)g_old.display();
     for( unsigned u=0; u<Nd; u++)
     {
-        if( g_old.N(u) % g_new.N(u) != 0)
-            std::cerr << "# ATTENTION: you project between incompatible grids!! old N: "
-                      <<g_old.N(u)<<" new N: "<<g_new.N(u)<<"\n";
+        if( fabs(g_new.h(u) / g_old.h(u) -round(g_new.h(u) / g_old.h(u))) > 1e-13)
+            throw dg::Error( dg::Message(_ping_)
+                      << "# ATTENTION: you project between incompatible grids!! old h: "
+                      <<g_old.h(u)<<" new h: "<<g_new.h(u)<<"\n");
+        // Check that boundaries of old grid conincide with cell boundaries of new
+        real_type fp = (g_old.p(u) - g_new.p(u) ) / g_new.h(u); // must be integer
+        if( fabs(fp - round( fp)) > 1e-13)
+            throw dg::Error( dg::Message(_ping_)
+                      << "# ATTENTION: you project between incompatible grids!! old p: "
+                      <<g_old.p(u)<<" new p: "<<g_new.p(u)<<"\n");
+        real_type fq = (g_old.q(u) - g_new.p(u) ) / g_new.h(u); // must be integer
+        if( fabs(fq - round( fq)) > 1e-13)
+            throw dg::Error( dg::Message(_ping_)
+                      << "# ATTENTION: you project between incompatible grids!! old q: "
+                      <<g_old.q(u)<<" new q: "<<g_new.q(u)<<"\n");
         if( g_old.n(u) < g_new.n(u))
-            std::cerr << "# ATTENTION: you project between incompatible grids!! old n: "
-                       <<g_old.n(u)<<" new n: "<<g_new.n(u)<<"\n";
+            throw dg::Error( dg::Message(_ping_)
+                       << "# ATTENTION: you project between incompatible grids!! old n: "
+                       <<g_old.n(u)<<" new n: "<<g_new.n(u)<<"\n");
     }
     //form the adjoint
     cusp::coo_matrix<int, real_type, cusp::host_memory> Wf =

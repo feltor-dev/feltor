@@ -124,13 +124,13 @@ int main(int argc, char** argv)
     dg::blas1::transform( func1d, cc1d, []DG_DEVICE(double x){ return thrust::complex<double>{x,x};});
     cintegral = dg::blas1::dot( w1d, cc1d);
     res.d =cintegral.real();
-    std::cout << "1D integral (real)        "<<std::setw(6)<<cintegral.real() <<"\t" << res.i - 4616944842743393935 << "\n";
+    if(rank==0)std::cout << "1D integral (real)        "<<std::setw(6)<<cintegral.real() <<"\t" << res.i - 4616944842743393935 << "\n";
     res.d =cintegral.imag();
-    std::cout << "1D integral (imag)        "<<std::setw(6)<<cintegral.imag() <<"\t" << res.i - 4616944842743393935 << "\n";
+    if(rank==0)std::cout << "1D integral (imag)        "<<std::setw(6)<<cintegral.imag() <<"\t" << res.i - 4616944842743393935 << "\n";
     res.d = integral;
     sol = (exp(2.) -exp(1));
-    std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
-    std::cout << "Relative 1d error is      "<<(cintegral.real()-sol)/sol<<"\n\n";
+    if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol<<std::endl;
+    if(rank==0)std::cout << "Relative 1d error is      "<<(cintegral.real()-sol)/sol<<"\n\n";
 
     if(rank==0)std::cout << "\nFINISHED! Continue with topology/derivatives_mpit.cu !\n\n";
 

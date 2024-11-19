@@ -601,8 +601,9 @@ struct RealGrid : public aRealTopology<real_type, Nd>
     RealGrid( const std::array<RealGrid<real_type,1>,Nd>& grids) :
         aRealTopology<real_type,Nd>( grids){}
 
-    RealGrid( std::initializer_list<RealGrid<real_type,1>> grids) :
-        RealGrid( std::array<RealGrid<real_type,1>,Nd>{grids}){}
+    template<class ...Grid1ds>
+    RealGrid( const RealGrid<real_type,1>& g0, const Grid1ds& ...gs) :
+        aRealTopology<real_type,Nd>( std::array<RealGrid<real_type,1>,Nd>{g0, gs...}){}
 
     RealGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
         std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,

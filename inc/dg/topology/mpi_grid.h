@@ -66,23 +66,34 @@ struct aRealMPITopology
     }
     host_vector weights(unsigned u=0) const
     {
-        auto local_weights = m_l.weights(u);
-        return host_vector{local_weights, m_comms[u]};
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+        thrust::host_vector<real_type> v( m_l.shape(u));
+        auto ww = dg::DLT<real_type>::weights(m_l.n(u));
+        double hu = m_g.h(u); // We need global h here to be binary exact
+        for( unsigned i=0; i<m_l.N(u); i++)
+            for( unsigned j=0; j<m_l.n(u); j++)
+                v[i*m_l.n(u) + j] = hu/2.*ww[j];
+        return host_vector{v, m_comms[u]};
     }
     host_vector abscissas(unsigned u=0) const
     {
+        // We want to be binary exact
+        // Therefore we can't just call local abscissas
         int dims[Nd], periods[Nd], coords[Nd];
         MPI_Cart_get( m_comm, Nd, dims, periods, coords);
         real_type global_x0 = m_g.p(u);
         real_type global_hx = m_g.h(u);
-        int mpi_coord = coords[u];
         thrust::host_vector<real_type> abs(m_l.shape(u));
+        auto aa = dg::DLT<real_type>::abscissas(m_l.n(u));
         for( unsigned i=0; i<m_l.N(u); i++)
         {
-            auto aa = dg::DLT<real_type>::abscissas(m_l.n(u));
             for( unsigned j=0; j<m_l.n(u); j++)
             {
-                unsigned coord = i+m_l.N(u)*mpi_coord;
+                unsigned coord = m_l.N(u)*coords[u] + i;
+                // We need to add rest
+                if( coords[u] >= ((int)m_g.N(u)%dims[u]))
+                    coord += m_g.N(u)%dims[u];
                 real_type xmiddle = DG_FMA( global_hx, (real_type)(coord), global_x0);
                 real_type h2 = global_hx/2.;
                 real_type absj = 1.+aa[j];
@@ -358,57 +369,69 @@ struct aRealMPITopology
         os << "LOCAL GRID \n";
         m_l.display();
     }
-    /**
-     * @brief Returns the pid of the process that holds the local grid surrounding the given point
-     *
-     * @param x X-coord
-     * @param y Y-coord
-     * @param z Z-coord
-     *
-     * @return pid of a process, or -1 if non of the grids matches
-     */
-    int pidOf( std::array<real_type,Nd> x) const;
     ///@copydoc aRealMPITopology2d::local2globalIdx(int,int,int&)const
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
+        // TODO shouldn't this test for m_l.size() ? How is this used?
         if( localIdx < 0 || localIdx >= (int)m_g.size()) return false;
 
-        int coords[Nd];
+        int dims[Nd], periods[Nd], coords[Nd]; // we need the dims
+        if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
+            return false;
+        // and the coords associated to PID
         if( MPI_Cart_coords( m_comm, PID, Nd, coords) != MPI_SUCCESS)
             return false;
         int gIdx[Nd];
         int current = localIdx;
         for( unsigned u=0; u<Nd; u++)
         {
-            int lIdx = current %(m_l.n(u)*m_l.N(u));
-            current = current / (m_l.n(u)*m_l.N(u));
-            gIdx[u] = coords[u]*m_l.n(u)*m_l.N(u)+lIdx;
+            int lIdx = current %m_l.shape(u); // 1d idx
+            current = current / m_l.shape(u);
+            if( coords[u] < int(m_g.N(u)%dims[u])) // has rest
+                gIdx[u] = coords[u]*m_l.shape(u)+lIdx;
+            else
+            {
+                gIdx[u] = m_g.shape(u) - (dims[u] - coords[u])*m_l.shape(u) + lIdx;
+            }
         }
         globalIdx = gIdx[Nd-1];
         for( int u=Nd-2; u>=0; u--)
-            globalIdx = globalIdx*m_g.n(u)*m_g.N(u) + gIdx[u];
+            globalIdx = globalIdx*m_g.shape(u) + gIdx[u];
         return true;
     }
     ///@copydoc aRealMPITopology2d::global2localIdx(int,int&,int&)const
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
+        // an exercise in flattening and unflattening indices
         if( globalIdx < 0 || globalIdx >= (int)m_g.size()) return false;
 
-        int coords[Nd];
+        int dims[Nd], periods[Nd], coords[Nd];
+        if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
+            return false;
+
+        int cc[Nd];
         int lIdx[Nd];
         int current = globalIdx;
         for( unsigned u=0; u<Nd; u++)
         {
-            int gIdx = current%(m_g.n(u)*m_g.N(u));
-            current = current / (m_g.n(u)*m_g.N(u));
-            coords[u] = gIdx/(m_l.n(u)*m_l.N(u));
-            lIdx[u] = gIdx % (m_l.n(u)*m_l.N(u));
+            int gIdx = current%(m_g.shape(u)); // 1d idx
+            current = current / (m_g.shape(u));
+            if( coords[u] < int(m_g.N(u)%dims[u])) // has rest
+            {
+                cc[u] = gIdx/m_l.shape(u);
+                lIdx[u] = gIdx % m_l.shape(u);
+            }
+            else // count from the back
+            {
+                cc[u] = dims[u] - 1 - (m_g.shape(u) - 1 - gIdx)/m_l.shape(u);
+                lIdx[u] = m_l.shape(u) - 1 - (m_g.shape(u) - 1 - gIdx) % m_l.shape(u);
+            }
         }
         localIdx = lIdx[Nd-1];
         for( int u=Nd-2; u>=0; u--)
-            localIdx = localIdx*m_l.n(u)*m_l.N(u) + lIdx[u];
+            localIdx = localIdx*m_l.shape(u) + lIdx[u];
 
-        if( MPI_Cart_rank( m_comm, coords, &PID) == MPI_SUCCESS )
+        if( MPI_Cart_rank( m_comm, cc, &PID) == MPI_SUCCESS )
             return true;
         else
             return false;
@@ -434,7 +457,6 @@ struct aRealMPITopology
         m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
         MPI_Cartdim_get( m_comm, &ndims);
         assert( (unsigned)ndims == Nd);
-        check_division( N, bc);
         update_local();
     }
     aRealMPITopology( const std::array< RealMPIGrid<real_type, 1>, Nd>& grids)
@@ -490,7 +512,7 @@ struct aRealMPITopology
     virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1) =0;
     virtual void do_set( std::array<dg::bc, Nd> bcs) =0;
     private:
-    void check_division( std::array<unsigned , Nd> N, std::array<dg::bc, Nd> bc)
+    void check_periods( std::array<dg::bc, Nd> bc)
     {
         int rank, dims[Nd], periods[Nd], coords[Nd];
         MPI_Cart_get( m_comm, Nd, dims, periods, coords);
@@ -499,28 +521,32 @@ struct aRealMPITopology
         {
             for( unsigned u=0; u<Nd; u++)
             {
-                if(!(N[u]%dims[u]==0))
-                    std::cerr << "N"<<u<<" "<<N[u]<<" np "<<dims[u]<<std::endl;
-                assert( N[u]%dims[u] == 0);
                 if( bc[u] == dg::PER) assert( periods[u] == true);
                 else assert( periods[u] == false);
             }
         }
     }
-    void update_local(){
+    void update_local()
+    {
         int dims[Nd], periods[Nd], coords[Nd];
         MPI_Cart_get( m_comm, Nd, dims, periods, coords);
         std::array<real_type,Nd> p, q;
         std::array<unsigned, Nd> N;
         for( unsigned u=0;u<Nd; u++)
         {
-            p[u] = m_g.p(u) + m_g.l(u)/(real_type)dims[u]*(real_type)coords[u];
-            q[u] = m_g.p(u) + m_g.l(u)/(real_type)dims[u]*(real_type)(coords[u]+1);
-            if( coords[u] == dims[u]-1)
-                q[u] = m_g.q(u);
             N[u] = m_g.N(u)/dims[u];
+            if( coords[u] < int(m_g.N(u)%dims[u])) // distribute the rest
+            {
+                N[u]++;
+                p[u] = m_g.p(u) + m_g.h(u)*N[u]*(real_type)coords[u];
+                q[u] = m_g.p(u) + m_g.h(u)*N[u]*(real_type)(coords[u]+1);
+            }
+            else// count from the back
+            {
+                p[u] = m_g.q(u) - m_g.h(u)*N[u]*(real_type)(dims[u]-coords[u]);
+                q[u] = m_g.q(u) - m_g.h(u)*N[u]*(real_type)(dims[u]-coords[u]-1);
+            }
         }
-
         m_l.set( p, q, m_g.get_n(), N, m_g.get_bc());
     }
     RealGrid<real_type, Nd> m_g, m_l; //global grid, local grid
@@ -528,28 +554,31 @@ struct aRealMPITopology
     MPI_Comm m_comm; //just an integer...(No, more like an address)
 };
 ///@cond
-template<class real_type, size_t Nd>
-int aRealMPITopology<real_type,Nd>::pidOf( std::array<real_type,Nd> x) const
-{
-    int dims[Nd], periods[Nd], coords[Nd];
-    MPI_Cart_get( m_comm, Nd, dims, periods, coords);
-    for( unsigned u=0; u<Nd; u++)
-    {
-        coords[u] = (unsigned)floor( (x[u]-m_g.p(u))/m_g.l(u)*(real_type)dims[u] );
-        //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
-        coords[u]=(coords[u]==dims[u]) ? coords[u]-1 :coords[u];
-        int rank;
-        if( MPI_Cart_rank( m_comm, coords, &rank) == MPI_SUCCESS )
-            return rank;
-        else
-            return -1;
-    }
-}
+//
+//template<class real_type, size_t Nd>
+//int aRealMPITopology<real_type,Nd>::pidOf( std::array<real_type,Nd> x) const
+//{
+//    int dims[Nd], periods[Nd], coords[Nd];
+//    MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+//    for( unsigned u=0; u<Nd; u++)
+//    {
+//        // I think there is a bug here: should be m_l.l(u) even with equidistant local grids
+//        // So for now let's kill it
+//        coords[u] = (unsigned)floor( (x[u]-m_g.p(u))/m_g.l(u)*(real_type)dims[u] );
+//        //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
+//        coords[u]=(coords[u]==dims[u]) ? coords[u]-1 :coords[u];
+//        int rank;
+//        if( MPI_Cart_rank( m_comm, coords, &rank) == MPI_SUCCESS )
+//            return rank;
+//        else
+//            return -1;
+//    }
+//}
 // pure virtual implementations must be declared outside class
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
 {
-    check_division( new_N,m_g.get_bc());
+    check_periods( m_g.get_bc());
     m_g.set(new_n, new_N);
     update_local();
 }
@@ -562,6 +591,7 @@ void aRealMPITopology<real_type,Nd>::do_set_pq( std::array<real_type, Nd> x0, st
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
 {
+    check_periods( bcs);
     m_g.set_bcs(bcs);
     update_local();
 }
@@ -644,8 +674,9 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
     RealMPIGrid( const std::array<RealMPIGrid<real_type,1>,Nd>& grids) :
         aRealMPITopology<real_type,Nd>( grids){}
 
-    RealMPIGrid( std::initializer_list<RealMPIGrid<real_type,1>> grids) :
-        RealMPIGrid( std::array<RealMPIGrid<real_type,1>,Nd>{grids}){}
+    template<class ...Grid1ds>
+    RealMPIGrid( const RealMPIGrid<real_type,1>& g0, const Grid1ds& ...gs) :
+        aRealMPITopology<real_type,Nd>( std::array<RealMPIGrid<real_type,1>,Nd>{g0, gs...}){}
 
     RealMPIGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
         std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,

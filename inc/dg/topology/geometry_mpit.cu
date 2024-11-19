@@ -3,6 +3,7 @@
 #include <cusp/print.h>
 
 #include <mpi.h>
+#include "dg/backend/mpi_init.h"
 #include "geometry.h"
 #include "../blas2.h"
 
@@ -18,32 +19,17 @@ namespace dg { typedef dg::MPI_Vector<thrust::device_vector<double> > MDVec; }
 int main( int argc, char* argv[] )
 {
     MPI_Init(&argc, &argv);
-    int np[3];
-    int periods[3] = {0,0,0};
-    periods[0] = 1;
-    periods[1] = 1;
-    periods[2] = 1;
-    int rank;
+    int dims[3] = {0,0,0};
+    int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( rank == 0)
-    {
-        std::cout << "Type npx, npy and npz\n";
-        std::cin >> np[0] >> np[1] >> np[2];
-        std::cout<< "You typed "<<np[0] <<" and "<<np[1]<<" and "<<np[2]<<std::endl;
-    }
-    MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
-
-    int size;
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if( rank == 0)
-    {
-        std::cout << "Size is "<<size<<std::endl;
-        assert( size == np[0]*np[1]*np[2]);
-    }
-
+    MPI_Dims_create( size, 3, dims);
     MPI_Comm comm;
-    dg::mpi_cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
-    dg::CylindricalMPIGrid3d grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::PER, dg::PER, dg::PER, comm);
+    std::stringstream ss;
+    ss<< dims[0]<<" "<<dims[1]<<" "<<dims[2];
+    dg::mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
+    dg::CylindricalMPIGrid3d grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,
+        3,32,24,16, dg::PER, dg::PER, dg::PER, comm);
     dg::MDVec vol = dg::tensor::volume(grid.metric());
 
     dg::MDVec b = dg::evaluate( sine, grid);
