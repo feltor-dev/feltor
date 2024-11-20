@@ -98,10 +98,10 @@ int main()
         value2 = sqrt(dg::blas2::dot( sinI, w2do, sinI));
         std::cout << "Forward-Backward Error   "<<value2 << " (Must be zero)\n" << std::endl;
     }
-    std::cout << "Test backproject\n";
+    std::cout << "Test backproject 1d\n";
     unsigned n=3, N = 20;
     dg::Grid1d g1d( 0.0, M_PI+0.0, n, N, dg::DIR);
-    dg::Grid1d g1dequi( 0.1, 7., 1, n*N);
+    dg::Grid1d g1dequi( 0.0, M_PI, 1, n*N, dg::DIR);
     auto w1d = dg::create::weights( g1d);
     auto w1dequi = dg::create::weights( g1dequi);
     auto proj = dg::create::backproject( g1d);
@@ -115,5 +115,23 @@ int main()
     dg::blas1::axpby( 1., v, -1., x);
     double err = dg::blas1::dot( x, x);
     std::cout << "Error is "<<sqrt(err)<<" (Must be zero)\n";
+
+    std::cout << "Test backproject 2d\n";
+    dg::Grid2d g2d(0., M_PI, 0., M_PI, 3, 10, 20);
+    dg::Grid2d g2dequi = g2d;
+    g2dequi.set( 1, g2d.shape(0), g2d.shape(1));
+    auto w2d = dg::create::weights( g2d);
+    auto w2dequi = dg::create::weights( g2dequi);
+    proj = dg::create::backproject( g2d);
+    inv_proj = dg::create::inv_backproject( g2d);
+    v = dg::evaluate( sine, g2d), w=v, x=v;
+    dg::blas2::symv( proj, v, w);
+    integral = dg::blas1::dot( v, w2d);
+    integralequi = dg::blas1::dot( w, w2dequi);
+    std::cout << "Error Integral 2d is "<<(integral-integralequi)<<" (Must be zero)\n";
+    dg::blas2::symv( inv_proj, w, x);
+    dg::blas1::axpby( 1., v, -1., x);
+    err = dg::blas1::dot( x, x);
+    std::cout << "Error 2d is "<<sqrt(err)<<" (Must be zero)\n";
     return 0;
 }

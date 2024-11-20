@@ -214,7 +214,7 @@ dg::IHMatrix_t<real_type> backproject( const aRealTopology<real_type,Nd>& g)
         dg::Operator<real_type> op(n, 0.);
         for( unsigned i=0; i<block.num_entries; i++)
             op( block.row_indices[i], block.column_indices[i]) = block.values[i];
-        matrix[u] = (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), op);
+        matrix[u] = (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(u), op);
 
     }
     for( unsigned u=1; u<Nd; u++)
@@ -245,7 +245,7 @@ dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology<real_type,Nd>& g)
         dg::Operator<real_type> op(n, 0.);
         for( unsigned i=0; i<block.num_entries; i++)
             op( block.row_indices[i], block.column_indices[i]) = block.values[i];
-        matrix[u] = (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), dg::invert(op));
+        matrix[u] = (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(u), dg::invert(op));
 
     }
     for( unsigned u=1; u<Nd; u++)
