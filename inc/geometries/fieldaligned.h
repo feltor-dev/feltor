@@ -787,61 +787,39 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         t.tic();
     }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    if( inter_m == "dg")
-    {
-        dg::IHMatrix fine, projection, multi;
-        if( project_m == "dg")
-            projection = dg::create::projection( *grid_transform, grid_fine);
-        else
-        {
-            multi = dg::create::projection( grid_equidist, grid_fine, project_m);
-            fine = dg::create::inv_backproject( *grid_transform);
-            cusp::multiply( fine, multi, projection);
-        }
-        fine = dg::create::interpolation( yp[0], yp[1],
-            *grid_transform, bcx, bcy, "dg");
-        cusp::multiply( projection, fine, multi);
-        dg::blas2::transfer( multi, m_plus);
-        fine = dg::create::interpolation( Xf, Yf,
-            *grid_transform, bcx, bcy, "dg");
-        cusp::multiply( projection, fine, multi);
-        dg::blas2::transfer( multi, m_zero);
-        fine = dg::create::interpolation( ym[0], ym[1],
-            *grid_transform, bcx, bcy, "dg");
-        cusp::multiply( projection, fine, multi);
-        dg::blas2::transfer( multi, m_minus);
-    }
+    { // free memory after use
+    dg::IHMatrix fine, projection, multi, temp;
+    if( project_m == "dg")
+        projection = dg::create::projection( *grid_transform, grid_fine);
     else
     {
-        dg::IHMatrix fine, projection, multi, temp;
-        if( project_m == "dg")
-            projection = dg::create::projection( *grid_transform, grid_fine);
+        multi = dg::create::projection( grid_equidist, grid_fine, project_m);
+        fine = dg::create::inv_backproject( *grid_transform);
+        cusp::multiply( fine, multi, projection);
+    }
+    std::array<dg::HVec*,3> xcomp{ &yp[0], &Xf, &ym[0]};
+    std::array<dg::HVec*,3> ycomp{ &yp[1], &Yf, &ym[1]};
+    std::array<IMatrix*,3> result{ &m_plus, &m_zero, &m_minus};
+
+    for( unsigned u=0; u<3; u++)
+    {
+        if( inter_m == "dg")
+        {
+            fine = dg::create::interpolation( *xcomp[u], *ycomp[u],
+                *grid_transform, bcx, bcy, "dg");
+            cusp::multiply( projection, fine, multi);
+            dg::blas2::transfer( multi, *result[u]);
+        }
         else
         {
-            multi = dg::create::projection( grid_equidist, grid_fine, project_m);
-            fine = dg::create::inv_backproject( *grid_transform);
-            cusp::multiply( fine, multi, projection);
-        }
-
-        fine = dg::create::backproject( *grid_transform); // from dg to equidist
-
-        multi = dg::create::interpolation( yp[0], yp[1],
-            grid_equidist, bcx, bcy, inter_m);
-        cusp::multiply( multi, fine, temp);
-        cusp::multiply( projection, temp, multi);
-        dg::blas2::transfer( multi, m_plus);
-
-        multi = dg::create::interpolation( Xf, Yf,
+            fine = dg::create::backproject( *grid_transform); // from dg to equidist
+            multi = dg::create::interpolation( *xcomp[u], *ycomp[u],
                 grid_equidist, bcx, bcy, inter_m);
-        cusp::multiply( multi, fine, temp);
-        cusp::multiply( projection, temp, multi);
-        dg::blas2::transfer( multi, m_zero);
-
-        multi = dg::create::interpolation( ym[0], ym[1],
-            grid_equidist, bcx, bcy, inter_m);
-        cusp::multiply( multi, fine, temp);
-        cusp::multiply( projection, temp, multi);
-        dg::blas2::transfer( multi, m_minus);
+            cusp::multiply( multi, fine, temp);
+            cusp::multiply( projection, temp, multi);
+            dg::blas2::transfer( multi, *result[u]);
+        }
+    }
     }
 
     if( benchmark)

@@ -235,9 +235,11 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if( benchmark) t.tic();
     dg::ClonePtr<dg::aMPIGeometry2d> grid_transform( grid.perp_grid()) ;
     // We do not need metric of grid_equidist or or grid_fine
-    dg::RealMPIGrid2d<double> grid_equidist( *grid_transform) ;
-    dg::RealMPIGrid2d<double> grid_fine( *grid_transform);
-    grid_equidist.set( 1, grid.global().gx().size(), grid.global().gy().size());
+    // We only need grid_fine_local and grid_equidist_global: multiplying cell numbers on an MPI grid would redistribute points for non-equipartition
+    // So we make them RealGrid
+    dg::RealGrid2d<double> grid_equidist_global( grid_transform->global()) ;
+    dg::RealGrid2d<double> grid_fine_local( grid_transform->local());
+    grid_equidist_global.set( 1, grid_equidist_global.shape(0), grid_equidist_global.shape(1));
     dg::ClonePtr<dg::aMPIGeometry2d> grid_magnetic = grid_transform;//INTEGRATE HIGH ORDER GRID
     grid_magnetic->set( grid_transform->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
     dg::ClonePtr<dg::aGeometry2d> global_grid_magnetic =
@@ -254,8 +256,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         }
     }
     if( fine_m == "equi")
-        grid_fine = grid_equidist;
-    grid_fine.multiplyCellNumbers((double)mx, (double)my);
+        grid_fine_local.set( 1, grid_fine_local.shape(0), grid_fine_local.shape(1));
+    grid_fine_local.multiplyCellNumbers((double)mx, (double)my);
     if( benchmark)
     {
         t.toc();
@@ -275,12 +277,12 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     detail::integrate_all_fieldlines2d( vec, *global_grid_magnetic,
             grid_transform->local(), ym_trafo, vol2d0.data(), hbm, in_boxm,
             -deltaPhi, eps);
-    dg::HVec Xf = dg::evaluate(  dg::cooX2d, grid_fine.local());
-    dg::HVec Yf = dg::evaluate(  dg::cooY2d, grid_fine.local());
+    dg::HVec Xf = dg::evaluate(  dg::cooX2d, grid_fine_local);
+    dg::HVec Yf = dg::evaluate(  dg::cooY2d, grid_fine_local);
     {
     dg::IHMatrix interpolate = dg::create::interpolation( Xf, Yf,
             grid_transform->local(), dg::NEU, dg::NEU, grid_transform->n() < 3 ? "cubic" : "dg");
-    yp.fill(dg::evaluate( dg::zero, grid_fine.local()));
+    yp.fill(dg::evaluate( dg::zero, grid_fine_local));
     ym = yp;
     for( int i=0; i<2; i++)
     {
@@ -295,18 +297,35 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         t.tic();
     }
     ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    if( inter_m == "dg")
-    {
-        dg::IHMatrix fine, projection, multi, temp;
-        if( project_m ==  "dg")
-            projection = dg::create::projection( grid_transform->global(), grid_fine.local());
-        else
-            projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
+    { // free memory after use
+    dg::IHMatrix fine, projection, multi, temp;
+    if( project_m ==  "dg")
+        projection = dg::create::projection( grid_transform->global(), grid_fine_local);
+    else
+        projection = dg::create::projection( grid_equidist_global, grid_fine_local, project_m);
 
-        fine = dg::create::interpolation( yp[0], yp[1],
-            grid_transform->global(), bcx, bcy, "dg");
-        cusp::multiply( projection, fine, multi);
-        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+    std::array<dg::HVec*,3> xcomp{ &yp[0], &Xf, &ym[0]};
+    std::array<dg::HVec*,3> ycomp{ &yp[1], &Yf, &ym[1]};
+    std::array<MPIDistMat<LocalIMatrix, CommunicatorXY>*,3> result{ &m_plus, &m_zero, &m_minus};
+    for( unsigned u=0; u<3; u++)
+    {
+        if( inter_m == "dg")
+        {
+            fine = dg::create::interpolation( *xcomp[u], *ycomp[u],
+                grid_transform->global(), bcx, bcy, "dg");
+            cusp::multiply( projection, fine, multi);
+            multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        }
+        else
+        {
+            fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
+            multi = dg::create::interpolation( *xcomp[u], *ycomp[u],
+                grid_equidist_global, bcx, bcy, inter_m);
+            cusp::multiply( multi, fine, temp);
+            cusp::multiply( projection, temp, multi);
+            multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
+        }
+
         if( project_m != "dg")
         {
             fine = dg::create::inv_backproject( grid_transform->local());
@@ -314,86 +333,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
             temp.swap(multi);
         }
         dg::MIHMatrix mpi = dg::convert( multi, *grid_transform); //, tempT;
-        dg::blas2::transfer( mpi, m_plus);
-
-        fine = dg::create::interpolation( Xf, Yf,
-            grid_transform->global(), bcx, bcy, "dg");
-        cusp::multiply( projection, fine, multi);
-        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        if( project_m != "dg")
-        {
-            fine = dg::create::inv_backproject( grid_transform->local());
-            cusp::multiply( fine, multi, temp);
-            temp.swap(multi);
-        }
-        mpi = dg::convert( multi, *grid_transform); //, tempT;
-        dg::blas2::transfer( mpi, m_zero);
-
-        fine = dg::create::interpolation( ym[0], ym[1],
-            grid_transform->global(), bcx, bcy, "dg");
-        cusp::multiply( projection, fine, multi);
-        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        if( project_m != "dg")
-        {
-            fine = dg::create::inv_backproject( grid_transform->local());
-            cusp::multiply( fine, multi, temp);
-            temp.swap(multi);
-        }
-        mpi = dg::convert( multi, *grid_transform); //, tempT;
-        dg::blas2::transfer( mpi, m_minus);
+        dg::blas2::transfer( mpi, *result[u]);
     }
-    else
-    {
-        dg::IHMatrix fine, projection, multi, temp;
-        if( project_m ==  "dg")
-            projection = dg::create::projection( grid_transform->global(), grid_fine.local());
-        else
-            projection = dg::create::projection( grid_equidist.global(), grid_fine.local(), project_m);
-
-        fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
-        multi = dg::create::interpolation( yp[0], yp[1],
-            grid_equidist.global(), bcx, bcy, inter_m);
-        cusp::multiply( multi, fine, temp);
-        cusp::multiply( projection, temp, multi);
-        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        if( project_m != "dg")
-        {
-            fine = dg::create::inv_backproject( grid_transform->local());
-            cusp::multiply( fine, multi, temp);
-            temp.swap(multi);
-        }
-        dg::MIHMatrix mpi = dg::convert( multi, *grid_transform);
-        dg::blas2::transfer( mpi, m_plus);
-
-        fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
-        multi = dg::create::interpolation( Xf, Yf,
-                grid_equidist.global(), bcx, bcy, inter_m);
-        cusp::multiply( multi, fine, temp);
-        cusp::multiply( projection, temp, multi);
-        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        if( project_m != "dg")
-        {
-            fine = dg::create::inv_backproject( grid_transform->local());
-            cusp::multiply( fine, multi, temp);
-            temp.swap(multi);
-        }
-        mpi = dg::convert( multi, *grid_transform);
-        dg::blas2::transfer( mpi, m_zero);
-
-        fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
-        multi = dg::create::interpolation( ym[0], ym[1],
-            grid_equidist.global(), bcx, bcy, inter_m);
-        cusp::multiply( multi, fine, temp);
-        cusp::multiply( projection, temp, multi);
-        multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
-        if( project_m != "dg")
-        {
-            fine = dg::create::inv_backproject( grid_transform->local());
-            cusp::multiply( fine, multi, temp);
-            temp.swap(multi);
-        }
-        mpi = dg::convert( multi, *grid_transform);
-        dg::blas2::transfer( mpi, m_minus);
     }
     if( benchmark)
     {
@@ -425,12 +366,12 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
                     ym_trafo[1][i], *global_grid_magnetic);
         }
     }
-    dg::assign3dfrom2d( dg::MHVec(hbphi,  MPI_COMM_WORLD), m_bphi,  grid);
-    dg::assign3dfrom2d( dg::MHVec(hbphiM, MPI_COMM_WORLD), m_bphiM, grid);
-    dg::assign3dfrom2d( dg::MHVec(hbphiP, MPI_COMM_WORLD), m_bphiP, grid);
+    dg::assign3dfrom2d( dg::MHVec(hbphi,  grid_transform->communicator()), m_bphi,  grid);
+    dg::assign3dfrom2d( dg::MHVec(hbphiM, grid_transform->communicator()), m_bphiM, grid);
+    dg::assign3dfrom2d( dg::MHVec(hbphiP, grid_transform->communicator()), m_bphiP, grid);
 
-    dg::assign3dfrom2d( dg::MHVec(yp_trafo[2], MPI_COMM_WORLD), m_Gp, grid);
-    dg::assign3dfrom2d( dg::MHVec(ym_trafo[2], MPI_COMM_WORLD), m_Gm, grid);
+    dg::assign3dfrom2d( dg::MHVec(yp_trafo[2], grid_transform->communicator()), m_Gp, grid);
+    dg::assign3dfrom2d( dg::MHVec(ym_trafo[2], grid_transform->communicator()), m_Gm, grid);
     m_G = vol;
     MPI_Vector<LocalContainer> weights = dg::create::weights( grid);
     dg::blas1::pointwiseDot( m_G, weights, m_G);
@@ -440,8 +381,8 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::assign( dg::evaluate( dg::zero, grid), m_hbm);
     m_temp = dg::split( m_hbm, grid); //3d vector
     m_f = dg::split( (const MPI_Vector<LocalContainer>&)m_hbm, grid);
-    dg::assign3dfrom2d( dg::MHVec(hbp, MPI_COMM_WORLD), m_hbp, grid);
-    dg::assign3dfrom2d( dg::MHVec(hbm, MPI_COMM_WORLD), m_hbm, grid);
+    dg::assign3dfrom2d( dg::MHVec(hbp, grid_transform->communicator()), m_hbp, grid);
+    dg::assign3dfrom2d( dg::MHVec(hbm, grid_transform->communicator()), m_hbm, grid);
     dg::blas1::scal( m_hbm, -1.);
     ///%%%%%%%%%%%%%%%%%%%%create mask vectors %%%%%%%%%%%%%%%%%%%//
     thrust::host_vector<double> bbm( in_boxp.size(),0.), bbo(bbm), bbp(bbm);
@@ -455,9 +396,9 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
             bbm[i] = 1.;
         // else all are 0
     }
-    dg::assign3dfrom2d( dg::MHVec(bbm, MPI_COMM_WORLD), m_bbm, grid);
-    dg::assign3dfrom2d( dg::MHVec(bbo, MPI_COMM_WORLD), m_bbo, grid);
-    dg::assign3dfrom2d( dg::MHVec(bbp, MPI_COMM_WORLD), m_bbp, grid);
+    dg::assign3dfrom2d( dg::MHVec(bbm, grid_transform->communicator()), m_bbm, grid);
+    dg::assign3dfrom2d( dg::MHVec(bbo, grid_transform->communicator()), m_bbo, grid);
+    dg::assign3dfrom2d( dg::MHVec(bbp, grid_transform->communicator()), m_bbp, grid);
 
     m_deltaPhi = deltaPhi; // store for evaluate
 
