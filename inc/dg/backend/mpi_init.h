@@ -91,7 +91,7 @@ static inline void mpi_init1d( dg::bc bcx, MPI_Comm& comm, bool verbose = true  
                   << num_threads<<" threads = "
                   <<size*num_threads<<" total"<<std::endl;
     }
-    dg::mpi_cart_create( MPI_COMM_WORLD, 1, np, periods, true, &comm);
+    dg::mpi_cart_create( MPI_COMM_WORLD, {np[0]}, {periods[0]}, true, &comm);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     int num_devices=0;
     cudaGetDeviceCount(&num_devices);
@@ -190,7 +190,7 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istr
         }
     }
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
-    dg::mpi_cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+    dg::mpi_cart_create( MPI_COMM_WORLD, {np[0], np[1]}, {periods[0], periods[1]}, true, &comm);
 
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     int num_devices=0;
@@ -297,7 +297,7 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& com
         }
     }
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
-    dg::mpi_cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
+    dg::mpi_cart_create( MPI_COMM_WORLD, {np[0],np[1],np[2]}, {periods[0],periods[1],periods[2]}, true, &comm);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     int num_devices=0;
     cudaGetDeviceCount(&num_devices);

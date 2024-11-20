@@ -6,6 +6,7 @@
 
 namespace dg
 {
+    // static inline declared functions generate no warning about "defined but not used"...
 ///@cond
 namespace detail{
 struct MPICartInfo
@@ -31,13 +32,14 @@ static std::map<MPI_Comm, MPICartInfo> mpi_cart_info_map;
  * @param comm_cart parameter used in \c MPI_Cart_create
  * @ingroup mpi_structures
  */
-static void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
+static inline void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
                     const int periods[], int reorder, MPI_Comm comm_cart)
 {
-    std::vector<int> remains( ndims, 1);
+    std::vector<int> remains( ndims, true);
     detail::MPICartInfo info{ comm_cart, remains};
     detail::mpi_cart_info_map[comm_cart] = info;
 }
+//TODO Update docu with more modern interface
 /*! @brief Call and register a call to \c MPI_Cart_create with the dg library
  *
  * If MPI_Cart_create is successful this function is equivalent to
@@ -48,13 +50,16 @@ static void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int di
  * @endcode
  * @ingroup mpi_structures
  */
-static int mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
-                    const int periods[], int reorder, MPI_Comm * comm_cart)
+static inline int mpi_cart_create( MPI_Comm comm_old, std::vector<int> dims,
+                    std::vector<int> periods, bool reorder, MPI_Comm * comm_cart)
 {
-    int err = MPI_Cart_create( comm_old, ndims, dims, periods, reorder, comm_cart);
+    assert( dims.size() == periods.size());
+    int ndims = dims.size();
+    int re = (int)reorder;
+    int err = MPI_Cart_create( comm_old, ndims, &dims[0], &periods[0], re, comm_cart);
     if( err != MPI_SUCCESS)
         return err;
-    register_mpi_cart_create( comm_old, ndims, dims, periods, reorder, *comm_cart);
+    register_mpi_cart_create( comm_old, ndims, &dims[0], &periods[0], re, *comm_cart);
     return err;
 }
 
@@ -67,7 +72,7 @@ static int mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
  * @param newcomm parameter used in \c MPI_Cart_sub
  * @ingroup mpi_structures
  */
-static void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
+static inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
 {
     detail::MPICartInfo info = detail::mpi_cart_info_map.at(comm);
     for( unsigned u=0; u<info.remains.size(); u++)
@@ -75,6 +80,8 @@ static void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
     detail::mpi_cart_info_map[newcomm] = info;
 }
 
+//TODO Update docu with more modern interface
+// size of remains must be comm ndims
 /*! @brief Call and register a call to \c MPI_Cart_sub with the dg library
  *
  * If \c MPI_Cart_sub is successful and an equivalent sub communicator does not eixst already,
@@ -95,11 +102,23 @@ static void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
  * set *newcomm = existing_comm. Else, call and register \c MPI_Cart_sub.
  * @ingroup mpi_structures
  */
-static int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newcomm, bool duplicate = false)
+static inline int mpi_cart_sub( MPI_Comm comm, std::vector<int> remains, MPI_Comm *newcomm, bool duplicate = false)
 {
+    int ndims;
+    MPI_Cartdim_get( comm, &ndims);
+    assert( (unsigned) ndims == remains.size());
+
     detail::MPICartInfo info = detail::mpi_cart_info_map.at(comm);
+    // info.remains may be larger than remains because comm may have a parent
+    // but exactly remains.size() entries are true
+    int counter =0;
     for( unsigned u=0; u<info.remains.size(); u++)
-        info.remains[u]  = remain_dims[u];
+        if( info.remains[u])
+        {
+            info.remains[u]  = remains[counter];
+            counter ++;
+        }
+    assert( counter == (int)remains.size());
     if( ! duplicate)
     {
     for (auto it = detail::mpi_cart_info_map.begin(); it != detail::mpi_cart_info_map.end(); ++it)
@@ -109,10 +128,10 @@ static int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newco
             return MPI_SUCCESS; // already registered
         }
     }
-    int err = MPI_Cart_sub( comm, remain_dims, newcomm);
+    int err = MPI_Cart_sub( comm, &remains[0], newcomm);
     if( err != MPI_SUCCESS)
         return err;
-    register_mpi_cart_sub( comm, remain_dims, *newcomm);
+    register_mpi_cart_sub( comm, &remains[0], *newcomm);
     return err;
 }
 
@@ -133,8 +152,9 @@ static int mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm *newco
  * @return Kronecker product of communicators (is automatically registered)
  * @ingroup mpi_structures
  */
-static MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
+static inline MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
 {
+    // This non-template interface must exist so compiler can deduce call mpi_cart_kron( {comm0, comm1});
     if ( comms.empty())
         return MPI_COMM_NULL;
     std::vector<detail::MPICartInfo> infos(comms.size());
@@ -150,7 +170,7 @@ static MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
                     <<infos[u].root);
     auto root_info = detail::mpi_cart_info_map.at(root);
     size_t ndims = root_info.remains.size();
-    std::vector<int> remains( ndims, 0) ;
+    std::vector<int> remains( ndims, false) ;
     unsigned current_free_k=0;
     for( unsigned u=0; u<comms.size(); u++)
     {
@@ -168,12 +188,16 @@ static MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
         }
     }
     MPI_Comm newcomm;
-    int err = dg::mpi_cart_sub( root_info.root, &remains[0], &newcomm, false);
+    int err = dg::mpi_cart_sub( root_info.root, remains, &newcomm, false);
     if( err != MPI_SUCCESS)
         throw Error(Message(_ping_)<<
                 "Cannot form kronecker product with given communicators");
     return newcomm;
 }
+
+// TODO document
+template<class Vector>
+MPI_Comm mpi_cart_kron( Vector comms){ return mpi_cart_kron( std::vector<MPI_Comm>(comms.begin(), comms.end()));}
 
 /*! @brief Split a Cartesian communicator along each dimensions
  *
@@ -186,22 +210,38 @@ std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
 {
     // Should there be a std::vector version?
     // assert dimensionality of comm
+    // Check that there is a Comm that was already split
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     assert( (unsigned) ndims == Nd);
     std::array<MPI_Comm, Nd> comms;
-    int remain_dims[Nd];
+    std::vector<int> remains(Nd);
     for( unsigned u=0; u<Nd; u++)
     {
         for( unsigned k=0; k<Nd; k++)
-            remain_dims[k]=0;
-        remain_dims[u] = 1;
-        mpi_cart_sub( comm, remain_dims, &comms[u], false);
+            remains[k]=0;
+        remains[u] = 1;
+        mpi_cart_sub( comm, remains, &comms[u], false);
     }
 
     return comms;
 }
 
+
+// TODO document , mainly debugging purpose
+static inline void mpi_cart_registry_display( std::ostream& out = std::cout)
+{
+    out << "MPI Cart registry\n";
+    for ( auto pair : detail::mpi_cart_info_map)
+    {
+        auto& re = pair.second.remains;
+        out << "Comm "<<pair.first<<" Root "<<pair.second.root<<" Remains size "<<re.size();
+        out << " r:";
+        for( uint i=0; i<re.size(); i++)
+            out << " "<<re[i];
+        out << std::endl;
+    }
+}
 
 // Need to think about those again
 // /*! @brief unregister a communicator
