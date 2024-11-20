@@ -39,7 +39,7 @@ int main(int argc, char * argv[])
     const double I_0 = 10; //q factor at r=1 is I_0/R_0
     const double a  = 1; //small radius
     const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField(R_0, I_0);
-    double psi_0 = -20, psi_1 = -4;
+    double psi_0 = 0.8, psi_1 = 0.2;
     dg::Timer t;
     t.tic();
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, R_0, 0., 1);

@@ -16,6 +16,7 @@
   */
 namespace dg
 {
+    //TODO Elliptic can be made complex aware with a 2nd complex ContainerType
 // Note that there are many tests for this file : elliptic2d_b,
 // elliptic2d_mpib, elliptic_b, elliptic_mpib, ellipticX2d_b
 // And don't forget inc/geometries/elliptic3d_t (testing alignment and

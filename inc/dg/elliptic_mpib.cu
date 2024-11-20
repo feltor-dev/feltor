@@ -126,7 +126,6 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<grid.local().Nz(); i++)
     {
         laplace_split[i].set_chi( chi_split[i]);
-        dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
         number[i] = pcg.solve( laplace_split[i], x_split[i], b_split[i], 1., w2d, eps);
     }
     t.toc();

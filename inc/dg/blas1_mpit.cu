@@ -16,20 +16,15 @@ typedef dg::MPI_Vector<thrust::device_vector<double> > MVec;
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    MPI_Comm comm;
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     if(rank==0)std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/topology/evaluation_mpit program\n";
     //mpi_init2d( dg::PER, dg::PER, comm);
-    comm = MPI_COMM_WORLD;
-    int dims[2] = {1, size};
-    int periods[2] = {false, false};
-    MPI_Comm comm_cart, cartX, cartY;
-    dg::mpi_cart_create( comm, 2, dims, periods, false, &comm_cart);
-    int remainsX[2] = {1,0}, remainsY[2] = {0,1};
-    dg::mpi_cart_sub( comm_cart, remainsX, &cartX);
-    dg::mpi_cart_sub( comm_cart, remainsY, &cartY);
+    MPI_Comm comm, commX, commY;
+    dg::mpi_cart_create( MPI_COMM_WORLD, {1,size}, {0,0}, false, &comm);
+    dg::mpi_cart_sub( comm, {1,0}, &commX);
+    dg::mpi_cart_sub( comm, {0,1}, &commY);
     {
     thrust::device_vector<double> v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
     MVec v1(v1p, comm), v2(v2p, comm), v3(v3p, comm), v4(v4p, comm), v5(v4p, comm);
@@ -63,18 +58,18 @@ int main( int argc, char* argv[])
     double zs{100};
     double ws{1000};
     std::vector<thrust::complex<double>> y(xs.size()*ys.size());
-    MVec xsd(xs, cartX), ysd(ys, cartY);
+    MVec xsd(xs, commX), ysd(ys, commY);
     dg::MPI_Vector<thrust::device_vector<thrust::complex<double>>> yd(y, comm);
     dg::blas1::kronecker( yd, dg::equals(), []DG_DEVICE(double x, double y,
                 double z, double u){ return thrust::complex<double>{x+y+z+u,1};}, xsd, ysd, zs, ws);
     thrust::copy( yd.data().begin(), yd.data().end(), y.begin());
     for( int i=0; i<size; i++)
-        if(rank==i)std::cout << "Kronecker test (X ox Y) " << y[1]-thrust::complex<double>{(1112+10*i),1} <<"\n";
+        if(rank==i)std::cout << "Kronecker test (X ox Y) " << y[1]-thrust::complex<double>{1112.+10*i,1.} <<"\n";
 
     auto ydd = dg::kronecker( []DG_DEVICE( double x, double y, double z, double
     u){ return thrust::complex<double>{x+y+z+u,1};}, xsd, ysd, zs, ws);
     thrust::copy( ydd.data().begin(), ydd.data().end(), y.begin());
-    if(rank==0)std::cout << "Kronecker test (X ox Y) " << y[1]-thrust::complex<double>{1112,1} <<"\n";
+    if(rank==0)std::cout << "Kronecker test (X ox Y) " << y[1]-thrust::complex<double>{1112.,1.} <<"\n";
 
 
     }

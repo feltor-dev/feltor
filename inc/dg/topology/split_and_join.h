@@ -14,6 +14,7 @@
 namespace dg
 {
     // TODO The only place this is tested implicitly is in fieldaligned and mpi_fieldaligned ?!
+    // And in elliptic_mpib
 
 ///@addtogroup scatter
 ///@{

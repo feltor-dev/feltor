@@ -472,7 +472,7 @@ struct aRealMPITopology
             MPI_Cartdim_get( m_comms[u], &ndims);
             assert( (unsigned)ndims == 1);
         }
-        m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
+        m_comm = dg::mpi_cart_kron( m_comms);
         MPI_Cartdim_get( m_comm, &ndims);
         assert( (unsigned)ndims == Nd);
         update_local();
