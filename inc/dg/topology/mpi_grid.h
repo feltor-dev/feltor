@@ -86,14 +86,12 @@ struct aRealMPITopology
         real_type global_hx = m_g.h(u);
         thrust::host_vector<real_type> abs(m_l.shape(u));
         auto aa = dg::DLT<real_type>::abscissas(m_l.n(u));
+        auto idx = increment( partition( m_g.N(u), dims[u]));
         for( unsigned i=0; i<m_l.N(u); i++)
         {
             for( unsigned j=0; j<m_l.n(u); j++)
             {
-                unsigned coord = m_l.N(u)*coords[u] + i;
-                // We need to add rest
-                if( coords[u] >= ((int)m_g.N(u)%dims[u]))
-                    coord += m_g.N(u)%dims[u];
+                unsigned coord = idx[coords[u]] + i;
                 real_type xmiddle = DG_FMA( global_hx, (real_type)(coord), global_x0);
                 real_type h2 = global_hx/2.;
                 real_type absj = 1.+aa[j];
@@ -180,6 +178,8 @@ struct aRealMPITopology
         else
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
     }
+    /// An alias for "grid"
+    RealMPIGrid<real_type,1> axis(unsigned u ) const{ return grid(u);} // because we can't decide how to name it ...
     ///@copydoc aRealMPITopology2d::local()const
     const RealGrid<real_type,Nd>& local() const {return m_l;}
      ///@copydoc aRealMPITopology2d::global()const
@@ -387,22 +387,14 @@ struct aRealMPITopology
         int current = localIdx;
         for( unsigned u=0; u<Nd; u++)
         {
-            // get local shape of coords[u] grid
-            int Nu = m_g.N(u)/dims[u];
-            if( coords[u] < int(m_g.N(u)%dims[u])) // distribute the rest
-                Nu++;
-            int shapeu=Nu*m_g.n(u); // convert to shape
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            unsigned shapeu = (idx[coords[u]+1] - idx[coords[u]])*m_g.n(u);
             int lIdx = current %shapeu; // 1d idx
             current = current / shapeu;
-            if( coords[u] < int(m_g.N(u)%dims[u])) // has rest
-                gIdx[u] = coords[u]*shapeu+lIdx;
-            else
-            {
-                gIdx[u] = m_g.shape(u) - (dims[u] - coords[u])*shapeu + lIdx;
-            }
+            gIdx[u] = lIdx + idx[coords[u]]*m_g.n(u);
         }
-        globalIdx = gIdx[Nd-1];
-        for( int u=Nd-2; u>=0; u--)
+        globalIdx = gIdx[int(Nd)-1]; // prevent overflow if Nd == 0
+        for( int u=int(Nd)-2; u>=0; u--)
             globalIdx = globalIdx*m_g.shape(u) + gIdx[u];
         return true;
     }
@@ -416,7 +408,7 @@ struct aRealMPITopology
         if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
             return false;
 
-        int lIdx[Nd];
+        int lIdx[Nd], local_shape[Nd];
         int current = globalIdx;
         // ATTENTION This function cannot depend on who is calling it
         // so it cannot depend on m_l or current coords
@@ -424,30 +416,20 @@ struct aRealMPITopology
         {
             int gIdx = current%(m_g.shape(u)); // 1d idx
             current = current / (m_g.shape(u));
-            // Number of points in the "+1" grids:
-            int barrier = int(m_g.N(u)%dims[u])*(m_g.N(u)/dims[u]+1)*m_g.n(u);
-            if( gIdx < barrier) // has rest
-            {
-                int local_size = (m_g.N(u)/dims[u] + 1)*m_g.n(u);
-                coords[u] = gIdx/local_size;
-                lIdx[u] = gIdx % local_size;
-            }
-            else // count from the back
-            {
-                int local_size = (m_g.N(u)/dims[u] )*m_g.n(u);
-                coords[u] = dims[u] - 1 - (m_g.shape(u) - 1 - gIdx)/local_size;
-                lIdx[u] = local_size - 1 - (m_g.shape(u) - 1 - gIdx) % local_size;
-            }
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            // Find coord
+            for( unsigned c=0; c<idx.size()-1; c++)
+                if( unsigned(gIdx)< idx[c+1]*m_g.n(u))
+                {
+                    coords[u] = c;
+                    lIdx[u] = gIdx - idx[c]*m_g.n(u);
+                    local_shape[u] = (idx[c+1]-idx[c])*m_g.n(u);
+                    break;
+                }
         }
-        localIdx = lIdx[Nd-1];
-        for( int u=Nd-2; u>=0; u--)
-        {
-            // get local shape of coords[u] grid
-            int Nu = m_g.N(u)/dims[u];
-            if( coords[u] < int(m_g.N(u)%dims[u])) // distribute the rest
-                Nu++;
-            localIdx = localIdx*Nu*m_g.n(u) + lIdx[u];
-        }
+        localIdx = lIdx[int(Nd)-1];
+        for( int u=int(Nd)-2; u>=0; u--)
+            localIdx = localIdx*local_shape[u] + lIdx[u];
 
         if( MPI_Cart_rank( m_comm, coords, &PID) == MPI_SUCCESS )
             return true;
@@ -530,7 +512,7 @@ struct aRealMPITopology
     virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1) =0;
     virtual void do_set( std::array<dg::bc, Nd> bcs) =0;
     private:
-    void check_periods( std::array<dg::bc, Nd> bc)
+    void check_periods( std::array<dg::bc, Nd> bc) const
     {
         int rank, dims[Nd], periods[Nd], coords[Nd];
         MPI_Cart_get( m_comm, Nd, dims, periods, coords);
@@ -544,28 +526,59 @@ struct aRealMPITopology
             }
         }
     }
+    std::vector<unsigned> equi_partition( unsigned N, unsigned r) const
+    {
+        // Divide N points as equally as possible among participants r
+        std::vector<unsigned> points(r, N/r );
+        for( unsigned u=0; u<N%r; u++)
+            points[u]++;
+        return points;
+    }
+
+    std::vector<unsigned> partition( unsigned N, unsigned r) const
+    {
+        // when N is divisable by 2 then individual points should also be divisable
+        if( N%2 ) // is there a rest ?
+        {
+            return equi_partition( N,r);
+        }
+        auto points = equi_partition( N/2, r);
+        for( unsigned u=0; u<r; u++)
+            points[u] *= 2;
+        return points;
+    }
+    std::vector<unsigned> increment( const std::vector<unsigned>& partition) const
+    {
+        // replace with std::inclusive_scan ?
+        // return global starting idx and end idex
+        // start = inc[coord], end = inc[coord+1]
+        std::vector<unsigned> inc( partition.size()+1, 0);
+        for( unsigned u=0; u<inc.size(); u++)
+            for( unsigned k=0; k<u; k++)
+                inc[u] += partition[k];
+        return inc;
+    }
+
+
+
     void update_local()
     {
-        // The idea is that every grids gets the same amount and the
+        // The idea is that every grid gets the same amount and the
         // rest is distributed to the lowest rank grids
+        // TODO document:
+        // We also prefer: when m_g.N is divisible by 2 => local Ns are also divisable by 2
+        // Important for fast_projection e.g.
         int dims[Nd], periods[Nd], coords[Nd];
         MPI_Cart_get( m_comm, Nd, dims, periods, coords);
         std::array<real_type,Nd> p, q;
         std::array<unsigned, Nd> N;
         for( unsigned u=0;u<Nd; u++)
         {
-            N[u] = m_g.N(u)/dims[u];
-            if( coords[u] < int(m_g.N(u)%dims[u])) // distribute the rest
-            {
-                N[u]++;
-                p[u] = m_g.p(u) + m_g.h(u)*N[u]*(real_type)coords[u];
-                q[u] = m_g.p(u) + m_g.h(u)*N[u]*(real_type)(coords[u]+1);
-            }
-            else// count from the back
-            {
-                p[u] = m_g.q(u) - m_g.h(u)*N[u]*(real_type)(dims[u]-coords[u]);
-                q[u] = m_g.q(u) - m_g.h(u)*N[u]*(real_type)(dims[u]-coords[u]-1);
-            }
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            N[u] = idx[coords[u]+1]-idx[coords[u]] ;
+
+            p[u] = m_g.p(u) + m_g.h(u)*idx[coords[u]];
+            q[u] = m_g.p(u) + m_g.h(u)*idx[coords[u] +1];
         }
         m_l.set( p, q, m_g.get_n(), N, m_g.get_bc());
     }

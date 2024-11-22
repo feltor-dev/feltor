@@ -73,6 +73,7 @@ CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in,
     return out;
 }
 
+//TODO update docu
 /**
 * @brief Partition a global matrix into equal chunks among mpi processes
 *
@@ -83,51 +84,121 @@ CooSparseBlockMat<real_type> save_outer_values(EllSparseBlockMat<real_type>& in,
 * @return The reduced matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> distribute( const EllSparseBlockMat<real_type>& src, int coord, int howmany)
+EllSparseBlockMat<real_type> distribute( const EllSparseBlockMat<real_type>& src,
+    const aRealMPITopology<real_type,1>& g_rows, const aRealMPITopology<real_type,1>& g_cols, bool& isCommunicating)
 {
-    if( howmany == 1)
+    // src left_size and src right_size are the correct local sizes
+    // src has global rows and global cols
+    // grid is needed for local2globalIdx
+    // communicators need to be the same
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    int dim, period, coord;
+    MPI_Cart_get( g_cols.communicator(), 1, &dim, &period, &coord); // coord of the calling process
+    if( dim == 1)
     {
         return src;
     }
-    assert( src.num_rows == src.num_cols);
-    int chunk_size = src.num_rows/howmany;
-    if( coord < int(src.num_rows%howmany)) // distribute the rest
-        chunk_size++;
-    EllSparseBlockMat<real_type> temp(chunk_size, chunk_size, src.blocks_per_line,
-        src.data.size()/(src.n*src.n), src.n);
+    EllSparseBlockMat<real_type> temp(g_rows.local().N(), g_cols.local().N(), // number of blocks
+        src.blocks_per_line, src.data.size()/(src.n*src.n), src.n);
     temp.set_left_size( src.left_size);
     temp.set_right_size( src.right_size);
+    std::cout << "rows cols "<<g_rows.local().N()<<" "<<g_cols.local().N()<<"\n";
+    std::cout << "temp "<<temp.num_rows<<" "<<temp.num_cols<<"\n";
+    std::cout <<std::endl;
     //first copy data elements (even though not all might be needed it doesn't slow down things either)
     for( unsigned  i=0; i<src.data.size(); i++)
         temp.data[i] = src.data[i];
-    //now grab the right chunk of cols and data indices
+    //now grab the right rows of the cols and data indices
+    if(rank==0) std::cout << "Global\n";
+    for( unsigned i=0; i<(unsigned)temp.num_rows; i++)
+    for( unsigned k=0; k<(unsigned)temp.blocks_per_line; k++)
+    {
+        int gIdx=0;
+        int bpl = temp.blocks_per_line;
+        if(rank==0)std::cout << src.data_idx[i*bpl + k] << " ";
+        if(rank==0)std::cout << src.cols_idx[i*bpl + k] << " ";
+        g_rows.local2globalIdx( i*src.n, coord, gIdx); // convert from idx to block idx !
+        temp.data_idx[i*bpl + k] = src.data_idx[ gIdx/src.n*bpl + k];
+        temp.cols_idx[i*bpl + k] = src.cols_idx[ gIdx/src.n*bpl + k];
+        if(rank==0)std::cout << temp.data_idx[i*bpl + k] << " ";
+        if(rank==0)std::cout << temp.cols_idx[i*bpl + k] << "\n";
+    }
+    if(rank==0)std::cout << std::endl;
+    bool local_communicating = false;
+    isCommunicating = false;
+    //data indices are correct but cols still contain global indices (remapping a bit clumsy)
     for( unsigned i=0; i<temp.cols_idx.size(); i++)
     {
-        // local2global index
-        unsigned gIdx = coord * chunk_size*src.blocks_per_line + i;
-        if( coord >= int(src.num_rows%howmany))
-            gIdx = src.num_rows*src.blocks_per_line - (howmany - coord)*chunk_size*src.blocks_per_line + i;
-        temp.data_idx[i] = src.data_idx[ gIdx];
-        temp.cols_idx[i] = src.cols_idx[ gIdx];
-
-        //data indices are correct but cols are still the global indices (remapping a bit clumsy)
         //first in the zeroth line the col idx might be (global)num_cols - 1 -> map that to -1
         if( coord==0 and i/src.blocks_per_line == 0 and temp.cols_idx[i] == src.num_cols-1)
+        {
             temp.cols_idx[i] = -1;
-        //second in the last line the col idx mighty be 0 -> map to (global)num_cols
-        if( coord==(howmany-1) and (int)i/src.blocks_per_line == temp.num_rows-1 and temp.cols_idx[i] == 0)
-            temp.cols_idx[i] = src.num_cols;
-        //Elements are now in the range -1, 0, 1,..., (global)num_cols
-        //now shift this range to chunk range -1,..,chunk_size
-        if( coord < int(src.num_rows%howmany))
-            temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size );
-        else // subtract the rest as well
-            temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size - int(src.num_rows%howmany) );
+            local_communicating = true;
+        }
+        //second in the last line the col idx might be 0 -> map to (global)num_cols
+        else if( coord==(dim-1) and (int)i/src.blocks_per_line == temp.num_rows-1 and temp.cols_idx[i] == 0)
+        {
+            temp.cols_idx[i] = g_cols.local().N();
+            local_communicating = true;
+        }
+        else
+        {
+            int global_start_idx  = 0;
+            g_cols.local2globalIdx( 0, coord, global_start_idx);
+            global_start_idx/=src.n; //convert to block idx!
+            // shift to range [-1, ..., local_shape]
+            int shifted = temp.cols_idx[i] - global_start_idx;
+            if( shifted < -1 or shifted > (int)g_cols.local().N())
+                std::cerr << "Idx "<<i<<" "<<temp.cols_idx[i]<<" shifted "<<shifted
+                    <<" local shape "<<g_cols.local().N()<<" "<<global_start_idx<<"\n";
+            assert( shifted >= -1 and shifted <= (int)g_cols.local().N());
+            temp.cols_idx[i] = shifted;
+            if( temp.cols_idx[i] == -1)
+                local_communicating = true;
+            if( (unsigned)temp.cols_idx[i] == g_cols.local().N())
+                local_communicating = true;
+        }
     }
+    // Everyone needs to agree on whether we communicate
+    MPI_Allreduce( &local_communicating, &isCommunicating, 1,
+                   MPI_C_BOOL, MPI_LOR, g_cols.communicator());
 
     return temp;
 }
 
+// Also used by fast_interpolation
+//
+template<class real_type, size_t Nd>
+RealGrid<real_type,Nd> local_global_grid( unsigned coord,
+    const aRealMPITopology<real_type, Nd>& g)
+{
+    // global grid in coord, local grids else
+    std::array<RealGrid<real_type,1>,Nd> axes;
+    for( unsigned u=0; u<Nd; u++)
+        axes[u] = g.local().axis(u);
+    axes[coord] = g.global().axis(coord);
+    return RealGrid<real_type,Nd>{axes};
+}
+template<class real_type, size_t Nd>
+dg::MHMatrix_t<real_type> elevate( unsigned coord, const dg::HMatrix_t<real_type>& matrix, const aRealMPITopology<real_type, Nd>& g_rows, const aRealMPITopology<real_type,Nd>& g_cols)
+{
+    // TODO Communicators must be the same
+    bool isCommunicating = true;
+    EllSparseBlockMat<real_type> inner = detail::distribute(matrix,
+            g_rows.axis(coord), g_cols.axis(coord), isCommunicating);
+    if( isCommunicating)
+    {
+        NNCH<real_type> c( g_cols.n(coord), g_cols.local().get_shape(), g_cols.communicator(), coord);
+        CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
+
+        return { inner, outer, c};
+    }
+    else
+    {
+        return { inner, CooSparseBlockMat<real_type>(), NNCH<real_type>(g_cols.communicator())};
+    }
+}
 
 } //namespace detail
 
@@ -151,24 +222,8 @@ template<class real_type, size_t Nd>
 dg::MHMatrix_t<real_type> derivative( unsigned coord,
     const aRealMPITopology<real_type, Nd>& g, dg::bc bc, direction dir = centered)
 {
-    // global grid in coord, local grids else
-    std::array<RealGrid<real_type,1>,Nd> grids;
-    for( unsigned u=0; u<Nd; u++)
-        grids[u] = g.local().grid(u);
-    grids[coord] = g.global().grid(coord);
-
-    EllSparseBlockMat<real_type> matrix = dg::create::derivative( coord,
-            RealGrid<real_type,Nd>{grids}, bc, dir);
-
-    int dims[Nd], periods[Nd], coords[Nd];
-    MPI_Cart_get( g.communicator(), Nd, dims, periods, coords);
-
-    EllSparseBlockMat<real_type> inner = detail::distribute(matrix,
-            coords[coord], dims[coord]);
-    NNCH<real_type> c( g.n(coord), g.local().get_shape(), g.communicator(), coord);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
-
-    return { inner, outer, c};
+    return detail::elevate( coord, dg::create::derivative( coord,
+            detail::local_global_grid(coord, g), bc, dir), g, g);
 }
 
 /**
@@ -184,23 +239,8 @@ template<class real_type, size_t Nd>
 dg::MHMatrix_t<real_type> jump( unsigned coord,
     const aRealMPITopology<real_type, Nd>& g, dg::bc bc)
 {
-    // global grid in coord, local grids else
-    std::array<RealGrid<real_type,1>,Nd> grids;
-    for( unsigned u=0; u<Nd; u++)
-        grids[u] = g.local().grid(u);
-    grids[coord] = g.global().grid(coord);
-    EllSparseBlockMat<real_type> matrix = dg::create::jump( coord,
-            RealGrid<real_type,Nd>{grids}, bc);
-
-    int dims[Nd], periods[Nd], coords[Nd];
-    MPI_Cart_get( g.communicator(), Nd, dims, periods, coords);
-
-    EllSparseBlockMat<real_type> inner = detail::distribute(matrix,
-            coords[coord], dims[coord]);
-    NNCH<real_type> c( g.n(coord), g.local().get_shape(), g.communicator(), coord);
-    CooSparseBlockMat<real_type> outer = detail::save_outer_values(inner,c);
-
-    return { inner, outer, c};
+    return detail::elevate( coord, dg::create::jump( coord,
+            detail::local_global_grid(coord, g), bc), g, g);
 }
 
 ///@}

@@ -26,8 +26,8 @@ int main()
         std::cout << "Coarse Grid "<< n_new << " x "<<N_new <<"\n";
         dg::Grid1d go ( 0, M_PI/2., n_old, N_old);
         dg::Grid1d gn ( 0, M_PI/2., n_new, N_new);
-        dg::DMatrix proj = dg::create::fast_projection( go, n_old/n_new,  N_old/N_new);
-        dg::DMatrix inte = dg::create::fast_interpolation( gn, n_old/n_new, N_old/N_new);
+        dg::DMatrix proj = dg::create::fast_projection1d( go, n_old/n_new,  N_old/N_new);
+        dg::DMatrix inte = dg::create::fast_interpolation1d( gn, n_old/n_new, N_old/N_new);
         dg::DVec v = dg::evaluate( sine, go);
         dg::DVec w1do = dg::create::weights( go);
         dg::DVec w1dn = dg::create::weights( gn);

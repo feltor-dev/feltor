@@ -20,18 +20,19 @@ int main(int argc, char* argv[])
     MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if(size!=4)
-    {
-        std::cerr << "Please run with 4 processes!\n";
-        MPI_Finalize();
-        return 0;
-    }
-    unsigned n, Nx, Ny, Nz;
-    MPI_Comm comm;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    //if(size!=4)
+    //{
+    //    std::cerr << "Please run with 4 processes!\n";
+    //    MPI_Finalize();
+    //    return 0;
+    //}
+    int dims[3] = {0,0,0};
+    MPI_Dims_create( size, 3, dims);
     std::stringstream ss;
-    ss<< "2 2 1 3 8 8 8";
-    mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm, ss);
-    MPI_Comm_rank( comm, &rank);
+    ss<< dims[0]<<" "<<dims[1]<<" "<<dims[2];
+    MPI_Comm comm;
+    mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
 
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     if(rank==0)std::cout << "TEST 2D and 3D\n";
