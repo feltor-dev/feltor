@@ -15,6 +15,23 @@ namespace dg{
  * @brief Contains functions used for matrix creation
  */
 namespace create{
+///@cond
+namespace detail
+{
+template<class real_type, size_t Nd>
+void update_left_right( unsigned coord, EllSparseBlockMat<real_type>& mat, const aRealTopology<real_type,Nd>& g)
+{
+    // Also used by fast_interpolation ...
+    unsigned right_size = 1, left_size = 1;
+    for( unsigned u=0; u<coord; u++)
+        right_size*= g.shape(u);
+    for( unsigned u=coord+1; u<Nd; u++)
+        left_size *= g.shape(u);
+    mat.set_right_size( right_size);
+    mat.set_left_size( left_size);
+}
+}
+///@endcond
 
 ///@addtogroup creation
 ///@{
@@ -36,13 +53,7 @@ EllSparseBlockMat<real_type> derivative( unsigned coord,
         throw Error( Message(_ping_)<<"coord>=Nd not allowed! You typed: "<<coord<<" while Nd is "<<Nd);
     EllSparseBlockMat<real_type> dd = dx_normed(
             g.n(coord), g.N(coord), g.h(coord), bc, dir);
-    unsigned right_size = 1, left_size = 1;
-    for( unsigned u=0; u<coord; u++)
-        right_size*= g.shape(u);
-    for( unsigned u=coord+1; u<Nd; u++)
-        left_size *= g.shape(u);
-    dd.set_right_size( right_size);
-    dd.set_left_size( left_size);
+    detail::update_left_right( coord, dd, g);
     return dd;
 }
 /**
@@ -61,13 +72,7 @@ EllSparseBlockMat<real_type> jump( unsigned coord, const aRealTopology<real_type
         throw Error( Message(_ping_)<<"coord>=Nd not allowed! You typed: "<<coord<<" while Nd is "<<Nd);
     EllSparseBlockMat<real_type> dd = jump(
             g.n(coord), g.N(coord), g.h(coord), bc);
-    unsigned right_size = 1, left_size = 1;
-    for( unsigned u=0; u<coord; u++)
-        right_size*= g.shape(u);
-    for( unsigned u=coord+1; u<Nd; u++)
-        left_size*=g.shape(u);
-    dd.set_right_size( right_size);
-    dd.set_left_size( left_size);
+    detail::update_left_right( coord, dd, g);
     return dd;
 }
 

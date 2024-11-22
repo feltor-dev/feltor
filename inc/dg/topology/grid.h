@@ -208,6 +208,8 @@ struct aRealTopology
         else
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
     }
+    /// An alias for "grid"
+    RealGrid<real_type,1> axis(unsigned u ) const{ return grid(u);}
     /// Equivalent to <tt> p(0) </tt>
     template<size_t Md = Nd>
     real_type x0() const {return std::get<0>(m_x0);}
