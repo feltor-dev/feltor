@@ -340,6 +340,7 @@ struct TensorTraits
  *   recursively called with the Matrix on all elements of the Vectors.
  */
 
+    // TODO update docu about chunk size
  /*!
  * @addtogroup mpi_structures
  * @section mpi_backend The MPI interface
