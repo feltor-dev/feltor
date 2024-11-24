@@ -90,6 +90,7 @@ All of the following statements are true
     The associated index map of \f$ S\f$ is identical to the index map of \f$ G\f$.
 - The transpose of a scatter matrix is a gather matrix \f$ G  = S^\mathrm{T}\f$.
     The associated index map of \f$ G\f$ is identical to the index map of \f$ S\f$.
+- From a given index map we can construct two matrices (\f$ G \f$ and \f$ S\f$)
 - A simple consistency test is given by \f$ (Gv)\cdot (Gv) = S(Gv)\cdot v\f$.
 - A scatter matrix can have zero, one or more "1"s in each row.
 - A gather matrix can have zero, one or more "1"s in each column.
@@ -117,8 +118,13 @@ A matrix is a **permutation** if and only if it is both a scatter and a gather m
 
 
 The following statements are all true
-- The index map of a permutation is bijective
-    i.e. each element of the source vector v maps to exactly one location in the buffer vector w.
+- The index map of a permutation is bijective i.e. invertible i.e. each element
+    of the source vector v maps to exactly one location in the buffer vector w.
+- The scatter matrix \f$ S = G^T \equiv G'\neq G\f$ is a gather matrix (in
+    general unequal \f$ G\f$) with the associate index map \f$ m^{-1}\f$.
+    Since the index map is recovered by applying the gather operation to the vector
+    containing its index as values, we have
+    \f[ m^{-1} = G' \vec i = S \vec i\f]
 - \f$ S' = P_1 S P_2 \f$, i.e. multiplication of a scatter matrix by a permutation is again a scatter matrix
 - \f$ G' = P_1 G P_2 \f$, i.e. multiplication of a gather matrix by a permutation is again a gather matrix
 - A Permutation is **symmetric** if and only if it has identical scatter and gather maps
@@ -126,10 +132,12 @@ The following statements are all true
 
 
 
-This class performs these operations for the case that v and w are distributed across processes.
-Accordingly, the index map \f$ g\f$  is also distributed across processes (in the same way w is).
-The elements of \f$ g\f$ are **global** indices into v that have to be transformed
-to pairs (local index into v, rank in communicator) according to a user provided function. Or the user can directly provide the index map as vector of mentioned pairs.
+This class performs these operations for the case that v and w are distributed
+across processes.  Accordingly, the index map \f$ g\f$  is also distributed
+across processes (in the same way w is).  The elements of \f$ g\f$ are
+**global** indices into v that have to be transformed to pairs (local index
+        into v, rank in communicator) according to a user provided function. Or
+the user can directly provide the index map as vector of mentioned pairs.
 
 Imagine now that we want to perform a globally distributed gather operation.
 Then, the following steps are performed
@@ -164,26 +172,40 @@ Then, the following steps are performed
 
  \f[ M v = R G v  = R G_1 P_{G,MPI} G_2 v = R' P_{G,MPI} G_2 v\f]. If R was a
  coo matrix the simple way to obtain R' is replacing the column indices with
- the map \f$ g_1\f$
+ the map \f$ g_1\f$.
+ @note To give the involved vectors unique names we call v the "vector", \f$ s = G_2 v\f$ is the "store" and, \f$ b = P s\f$ is the "buffer".
 
  For \f[ M v = S C v = S_2 P_{S,MPI} S_1 C v = S_2 P_{S,MPI} C' v\f]. Again, if
  C was a coo matrix the simple way to obtain C' is replacing the row indices
- with the map \f$ g_1\f$
+ with the map \f$ g_1\f$.
 
  Simplifications can be achieved if \f$ G_2 = S_2 = I\f$ is the identity
  or if \f$ P_{G,MPI} = P_{S,MPI} = P_{MPI}\f$ is symmetric, which means that
  in-place communication can be used.
 
+ @note Locally, a gather operation is trivially parallel but a scatter operation
+ is not in general (because of the possible reduction operation).
+ @sa LocalGatherMatrix
+
 
  * @tparam value_type The type of data that is being sent i.e. the value type of the vector \f$ v\f$
  * @ingroup mpi_structures
+ * @code
+ int i = myrank;
+ double values[8] = {i,i,i,i, 9,9,9,9};
+ thrust::host_vector<double> hvalues( values, values+8);
+ int pids[8] =      {0,1,2,3, 0,1,2,3};
+ thrust::host_vector<int> hpids( pids, pids+8);
+ BijectiveComm coll( hpids, MPI_COMM_WORLD);
+ thrust::host_vector<double> hrecv = coll.global_gather( hvalues); //for e.g. process 0 hrecv is now {0,9,1,9,2,9,3,9}
+ thrust::host_vector<double> hrecv2( hvalues.size());
+ coll.global_scatter_reduce( hrecv, hrecv2); //hrecv2 now equals hvalues independent of process rank
+ @endcode
  */
-template< class LocalContainer>
-struct aCommunicator
+template< template<class > class Device, class value_type>
+struct MPIGatherScatter
 {
-    using value_type = get_value_type<LocalContainer>;//!< reveal value type
-
-    using container_type = LocalContainer; //!< reveal local container type
+    using container_type = Device<value_type>; //!< reveal local container type
 
     /**
      * @brief Allocate a buffer object of size

@@ -65,6 +65,7 @@ inline void doSymv_cusp_dispatch( Matrix&& m,
                     cusp::sparse_format,
                     AnyPolicyTag)
 {
+    //TODO maybe we can redirect to a cusparse matrix - vector multiplication?
     cusp::array1d_view< typename Container1::const_iterator> cx( x.cbegin(), x.cend());
     cusp::array1d_view< typename Container2::iterator> cy( y.begin(), y.end());
     cusp::multiply( std::forward<Matrix>(m), cx, cy);

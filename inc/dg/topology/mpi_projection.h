@@ -12,40 +12,6 @@
 
 namespace dg
 {
-///@cond
-namespace detail{
-//given global indices -> make a sorted unique indices vector + a gather map into the unique vector:
-//@param buffer_idx -> (gather map/ new column indices) same size as global_idx ( can alias global_idx, index into unique_global_idx
-//@param unique_global_idx -> (list of unique global indices to be used in a Collective Communication object)
-static void global2bufferIdx(
-    const cusp::array1d<int, cusp::host_memory>& global_idx,
-    cusp::array1d<int, cusp::host_memory>& buffer_idx,
-    thrust::host_vector<int>& locally_unique_global_idx)
-{
-    thrust::host_vector<int> index(global_idx.begin(), global_idx.end()), m_global_idx(index);
-    thrust::sequence( index.begin(), index.end());
-    //1. sort input global indices
-    thrust::stable_sort_by_key( m_global_idx.begin(), m_global_idx.end(), index.begin());//this changes both global_idx and index
-    //2. now reduce on multiple indices
-    thrust::host_vector<int> ones( index.size(), 1);
-    thrust::host_vector<int> unique_global( index.size()), howmany( index.size());
-    typedef typename thrust::host_vector<int>::iterator iterator;
-    thrust::pair<iterator, iterator> new_end;
-    new_end = thrust::reduce_by_key( m_global_idx.begin(), m_global_idx.end(), ones.begin(), unique_global.begin(), howmany.begin());
-    //3. copy unique indices
-    locally_unique_global_idx.assign( unique_global.begin(), new_end.first);
-    //4. manually make gather map into locally_unique_global_idx
-    thrust::host_vector<int> gather_map;
-    for( int i=0; i<(int)locally_unique_global_idx.size(); i++)
-        for( int j=0; j<howmany[i]; j++)
-            gather_map.push_back(i);
-    assert( gather_map.size() == global_idx.size());
-    //5. buffer idx is the new index
-    buffer_idx.resize( global_idx.size());
-    thrust::scatter( gather_map.begin(), gather_map.end(), index.begin(), buffer_idx.begin());
-}
-}//namespace detail
-///@endcond
 
 /**
  * @brief Convert a (row-distributed) matrix with local row and global column indices to a row distributed MPI matrix
