@@ -468,76 +468,6 @@ static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs
     return createWallRegion( createMagneticField(gs), jsmod);
 }
 
-/*! @brief Predicate returning true in closed fieldline region
- */
-struct ClosedFieldlineRegion
-{
-    /// if closed is false then the Functor acts as the OpenFieldLineRegion  = not ClosedFieldlineRegion
-    ClosedFieldlineRegion( const TokamakMagneticField& mag, bool closed = true):
-        m_psip(mag.psip()), m_closed(closed)
-    {
-        double RO = mag.R0(), ZO= 0.;
-        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        double psipO = mag.psip()( RO, ZO);
-        m_psipO_pos = psipO > 0;
-        double RX1 = 0., ZX1 = 0., RX2 = 0., ZX2 = 0.;
-        description desc = mag.params().getDescription();
-        if( desc != description::none and desc != description::centeredX)
-            dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        if ( desc == description::standardX or desc == description::doubleX)
-        {
-            // Find first X-point
-            RX1 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-            ZX1 = -1.1*mag.params().elongation()*mag.params().a();
-            dg::geo::findXpoint( mag.get_psip(), RX1, ZX1);
-            m_above.push_back( mod::Above( {RX1, ZX1}, {RO, ZO}));
-        }
-        if ( desc == description::doubleX)
-        {
-            // Find second X-point
-            RX2 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-            ZX2 = +1.1*mag.params().elongation()*mag.params().a();
-            dg::geo::findXpoint( mag.get_psip(), RX2, ZX2);
-            m_above.push_back( mod::Above( {RX2, ZX2}, {RO, ZO}));
-        }
-    }
-    bool operator()( double R, double Z)
-    {
-        for( unsigned u=0; u<m_above.size(); u++)
-            if( !m_above[u](R,Z))
-                return m_closed ? false : true;
-
-        double psip = m_psip(R,Z);
-        if( m_psipO_pos == (psip > 0) ) // true if O-point >0 and psip >0 or if O-point <0 and psip <0
-            return m_closed ? true : false;
-        return m_closed ? false : true;
-    }
-    private:
-    bool m_psipO_pos;
-    std::vector<dg::geo::mod::Above> m_above;
-    CylindricalFunctor m_psip;
-    bool m_closed;
-};
-
-/*! @brief The default predicate for sheath integration
- *
- * The SOL is everything that is not a wall (wall(R,Z) == 1)
- * and not inside the closed Fieldline region
- */
-struct SOLRegion
-{
-    SOLRegion( const TokamakMagneticField& mag, CylindricalFunctor wall): m_wall(wall),
-        m_closed(mag){}
-    bool operator()( double R, double Z)
-    {
-        return m_wall(R,Z) != 1 and not m_closed(R,Z);
-    }
-    private:
-    CylindricalFunctor m_wall;
-    ClosedFieldlineRegion m_closed;
-};
-
-
 
 /**
  * @brief Create the sheath region where fieldlines intersect the boundary
@@ -633,10 +563,10 @@ static inline void createSheathRegion(
     double alpha    = jsmod.get( "alpha", 0.015625 ).asDouble(); // 1/64
     CylindricalFunctor distM = dg::geo::WallFieldlineDistance( dg::geo::createBHat(
             mag), sheath_walls, (-boundary-1e-3)*2.0*M_PI,
-            1e-6, "phi", SOLRegion(mag,wall));
+            1e-6, "phi", mod::SOLRegion(mag,wall));
     CylindricalFunctor distP = dg::geo::WallFieldlineDistance( dg::geo::createBHat(
             mag), sheath_walls, (+boundary+1e-3)*2.0*M_PI,
-            1e-6, "phi", SOLRegion(mag,wall));
+            1e-6, "phi", mod::SOLRegion(mag,wall));
     dg::PolynomialHeaviside polyM( -boundary*2.*M_PI + alpha*M_PI, alpha*M_PI, +1);
     dg::PolynomialHeaviside polyP(  boundary*2.*M_PI - alpha*M_PI, alpha*M_PI, -1);
     auto sheathM = dg::compose( polyM, distM); //positive (because distance)

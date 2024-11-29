@@ -485,7 +485,7 @@ void create_and_set_sheath(
         // The sheath coordinate does not be super precise (1e-4 should be enough)
         sheath_coordinate = dg::geo::WallFieldlineCoordinate(
                 dg::geo::createBHat( mag), sheath_walls,
-                sheath_max_angle, 1e-4, sheath_coord, dg::geo::SOLRegion( mag, wall));
+                sheath_max_angle, 1e-4, sheath_coord, dg::geo::mod::SOLRegion( mag, wall));
         sheath_rate = js ["boundary"]["sheath"].get( "penalization",
                 0.).asDouble();
     }catch(std::runtime_error& e)
