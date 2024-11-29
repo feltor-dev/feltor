@@ -36,7 +36,9 @@ enum class modifier
 {
     none, //!< no modification
     heaviside, //!< Psip is dampened to a constant outside a critical value
-    sol_pfr //!< Psip is dampened in the SOL and PFR regions but not in the closed field line region
+    sol_pfr, //!< Psip is dampened in the SOL and PFR regions but not in the closed field line region
+    sol_pfr_2X, //!< Psip is dampened in the SOL and PFR regions of each of 2 X-points but not in the closed field line region
+    // TODO There should be the "circular" parameter from feltor and should there be a "heavisideX"?
 };
 /**
  * @brief How flux function looks like. Decider on whether and what flux aligned grid to construct
@@ -65,7 +67,8 @@ static const std::map<std::string, equilibrium> str2equilibrium{
 static const std::map<std::string, modifier> str2modifier{
     {"none", modifier::none},
     {"heaviside", modifier::heaviside},
-    {"sol_pfr", modifier::sol_pfr}
+    {"sol_pfr", modifier::sol_pfr},
+    {"sol_pfr_2X", modifier::sol_pfr_2X}
 };
 static const std::map<std::string, description> str2description{
     {"standardO", description::standardO},
