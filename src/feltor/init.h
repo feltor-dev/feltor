@@ -39,7 +39,6 @@ struct Radius : public dg::geo::aCylindricalFunctor<Radius>
     double m_R0, m_Z0;
 };
 
-
 dg::x::HVec xpoint_damping(
     const dg::x::CylindricalGrid3d& grid,
     const dg::geo::TokamakMagneticField& mag ) // unmodified field
@@ -152,14 +151,33 @@ dg::x::HVec make_profile(
     return profile;
 }
 
+
 dg::x::HVec make_damping(
     const dg::x::CylindricalGrid3d& grid,
     const dg::geo::TokamakMagneticField& mag, //unmodified field
     dg::file::WrappedJsonValue js)
-{
     //js = input["damping"]
-    std::string type = js.get("type","none").asString();
+{
     dg::x::HVec damping = dg::evaluate( dg::one, grid);
+    //Q: I think damping is the same as " 1 - createWallRegion"?
+    //A: No the wall uses outside alpha but alignedPFR creates inside alpha!
+    //This is not a problem in parameter setup
+    //Also there may be a difference whether psip or rho_p is used to evaluate
+    //For now we keep original init for backward compatibility
+    //and add sol_pfr and sol_pfr_2X for future use
+    std::string type = js.get("type","none").asString();
+    try{
+        dg::geo::str2modifier.at( type);
+        auto wall_f = dg::geo::createWallRegion( mag, js);
+        auto wall  = dg::pullback(wall_f, grid);
+        // damping = 1 - wall
+        dg::blas1::axpby( 1., damping, -1., wall, damping);
+        return damping;
+    }
+    catch ( std::out_of_range& err)
+    {
+    }
+    // This part is kept for backwards compatibility but is deprecated
     if( "none" == type)
         ;
     else if( "aligned" == type || "alignedX" == type)
