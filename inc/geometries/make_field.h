@@ -3,7 +3,8 @@
 #include "guenter.h"
 #include "polynomial.h"
 #include "toroidal.h"
-#include "fieldaligned.h"
+#include "sheath.h"
+#include "modified.h"
 #include <dg/file/json_utilities.h>
 
 /*!@file
@@ -124,8 +125,11 @@ static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonVal
 }
 
 
+//TODO The place where these functions are somewhat tested is geometry_diag.cpp Formalise?
+
 ///@cond
 namespace detail{
+
 void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, double& sign0)
 {
     double RO=mag.R0(), ZO=0.;
@@ -136,6 +140,200 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
     psi0 = wall_psi0p + sign0*wall_alpha0p/2.;
     alpha0 = fabs( wall_alpha0p/2.);
     sign0 = sign0*((psipO>0)-(psipO<0));
+}
+
+static inline void createModifiedField(
+        const dg::geo::TokamakMagneticField& mag,
+        dg::file::WrappedJsonValue jsmod,
+        modifier& mod,
+        CylindricalFunctorsLvl2& mod_psip,
+        CylindricalFunctor& wall, CylindricalFunctor& transition)
+{
+    std::string m = jsmod.get( "type", "heaviside" ).asString();
+    mod = modifier::heaviside;
+    description desc = mag.params().getDescription();
+    try{
+        mod = str2modifier.at( m);
+    }catch ( std::out_of_range& err)
+    {
+        std::string message = "ERROR: Key \"" + m
+            + "\" not valid in field:\n\t"
+            + jsmod.access_string() + "\"type\" \n";
+        throw std::out_of_range(message);
+    }
+    double RX1 = 0., ZX1 = 0., RX2 = 0., ZX2 = 0.;
+    double RO=mag.R0(), ZO=0.;
+    if( desc != description::none and desc != description::centeredX)
+        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+    if ( desc == description::standardX or desc == description::doubleX)
+    {
+        // Find first X-point
+        RX1 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+        ZX1 = -1.1*mag.params().elongation()*mag.params().a();
+        dg::geo::findXpoint( mag.get_psip(), RX1, ZX1);
+    }
+    if ( desc == description::doubleX)
+    {
+        // Find second X-point
+        RX2 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+        ZX2 = +1.1*mag.params().elongation()*mag.params().a();
+        dg::geo::findXpoint( mag.get_psip(), RX2, ZX2);
+    }
+    switch (mod) {
+        default: //none
+        {
+            wall = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 1, -1);
+            transition = mod::MagneticTransition( mod::nowhere, mag.psip(),
+                    0,  1, -1);
+            mod_psip = mag.get_psip();
+            break;
+        }
+        case modifier::heaviside:
+        {
+            double psi0 = jsmod.get( "boundary", 1.1 ).asDouble();
+            double alpha = jsmod.get( "alpha", 0.2 ).asDouble();
+            double sign = +1;
+            if( desc == description::standardX || desc == description::standardO ||
+                    desc == description::doubleX)
+                detail::transform_psi( mag, psi0, alpha, sign);
+            else
+                sign = jsmod.get( "sign", -1. ).asDouble();
+
+            mod_psip = mod::createPsip( mod::everywhere, mag.get_psip(), psi0, alpha, sign);
+            wall = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha, -sign);
+            transition = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha, sign);
+            break;
+        }
+        case modifier::sol_pfr:
+        {
+            double psi0     = jsmod["boundary"].get( 0, 1.1 ).asDouble(); //given in rho_p
+            double alpha0   = jsmod["alpha"].get(0, 0.2 ).asDouble();
+            double psi1     = jsmod["boundary"].get(1, 0.97 ).asDouble();
+            double alpha1   = jsmod[ "alpha"].get(1, 0.2 ).asDouble();
+            switch( desc){
+                // TODO Maybe this can be unified with modifier::sol_pfr_2X
+                case description::standardX:
+                {
+                    double sign0 = +1., sign1 = -1.;
+                    detail::transform_psi( mag, psi0, alpha0, sign0);
+                    detail::transform_psi( mag, psi1, alpha1, sign1);
+                    CylindricalFunctorsLvl2 mod0_psip;
+                    mod0_psip = mod::createPsip(
+                            mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
+                    mod_psip = mod::createPsip(
+                            mod::HeavisideZ( ZX1, -1), mod0_psip, psi1, alpha1, sign1);
+
+                    CylindricalFunctor wall0 = mod::DampingRegion(
+                        mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
+                    CylindricalFunctor transition0 = mod::MagneticTransition(
+                        mod::everywhere, mag.psip(), psi0, alpha0, sign0);
+                    CylindricalFunctor wall1 = mod::DampingRegion(
+                        mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor transition1 = mod::MagneticTransition(
+                        mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, sign1);
+                    wall = mod::SetUnion( wall0, wall1);
+                    transition = mod::SetUnion( transition0, transition1);
+                    break;
+                }
+                case description::doubleX:
+                {
+                    double sign0 = +1., sign1 = -1.;
+                    detail::transform_psi( mag, psi0, alpha0, sign0);
+                    detail::transform_psi( mag, psi1, alpha1, sign1);
+                    CylindricalFunctorsLvl2 mod0_psip, mod1_psip;
+                    mod0_psip = mod::createPsip(
+                            mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
+                    mod1_psip = mod::createPsip(
+                            mod::HeavisideZ( ZX1, -1), mod0_psip, psi1, alpha1, sign1);
+                    mod_psip = mod::createPsip(
+                            mod::HeavisideZ( ZX2, +1), mod1_psip, psi1, alpha1, sign1);
+                    CylindricalFunctor wall0 = mod::DampingRegion(
+                        mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
+                    CylindricalFunctor wall1 = mod::DampingRegion(
+                        mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor wall2 = mod::DampingRegion(
+                        mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, -sign1);
+                    CylindricalFunctor transition0 = mod::MagneticTransition(
+                        mod::everywhere, mag.psip(), psi0, alpha0, sign0);
+                    CylindricalFunctor transition1 = mod::MagneticTransition(
+                        mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, sign1);
+                    CylindricalFunctor transition2 = mod::MagneticTransition(
+                        mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, sign1);
+                    transition = mod::SetUnion( mod::SetUnion( transition0, transition1), transition2);
+                    wall = mod::SetUnion( mod::SetUnion( wall0, wall1), wall2);
+                    break;
+                }
+                default:
+                {
+                    double sign0 = jsmod[ "sign"].get( 0, -1. ).asDouble();
+                    double sign1 = jsmod[ "sign"].get( 1, +1. ).asDouble();
+                    CylindricalFunctorsLvl2 mod0_psip;
+                    mod0_psip = mod::createPsip(
+                            mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
+                    mod_psip = mod::createPsip(
+                            mod::everywhere, mod0_psip, psi1, alpha1, sign1);
+                    CylindricalFunctor wall0 = mod::DampingRegion(
+                        mod::everywhere, mag.psip(), psi0, alpha0, sign0);
+                    CylindricalFunctor transition0 = mod::MagneticTransition(
+                        mod::everywhere, mag.psip(), psi0, alpha0, sign0);
+                    CylindricalFunctor wall1 = mod::DampingRegion(
+                        mod::everywhere, mag.psip(), psi1, alpha1, sign1);
+                    CylindricalFunctor transition1 = mod::MagneticTransition(
+                        mod::everywhere, mag.psip(), psi1, alpha1, sign1);
+                    wall = mod::SetUnion( wall0, wall1);
+                    transition = mod::SetUnion( transition0, transition1);
+                    break;
+                }
+            }
+            break;
+        }
+        case modifier::sol_pfr_2X:
+        {
+            if( desc != description::doubleX)
+                throw Error( Message(_ping_) << "Description must be doubleX");
+            unsigned num = 4;
+            std::vector<double> psi(num), alpha(num);
+            for( unsigned u=0; u<num; u++)
+            {
+                psi[u] = jsmod["boundary"].get( u, 1.0) .asDouble();
+                alpha[u] = jsmod["alpha"].get( u, 0.1) .asDouble();
+            }
+            std::vector<double> sign = {+1,-1.,+1.,-1};
+            for( unsigned u=0; u<num; u++)
+                detail::transform_psi( mag, psi[u], alpha[u], sign[u]);
+
+            std::vector<std::function< bool( double,double)>> mods = {
+                mod::RightSideOf( {RX1,ZX1},{RO,ZO},{RX2,ZX2}),
+                mod::Above( {RX1, ZX1}, {RO,ZO}, false), // = Below
+                mod::RightSideOf( {RX2,ZX2},{RO,ZO},{RX1,ZX1}),
+                mod::Above( {RX2, ZX2}, {RO, ZO}, false) };
+
+            CylindricalFunctorsLvl2 mod_psips[num];
+            mod_psips[0] = mod::createPsip( mods[0], mag.get_psip(), psi[0],
+                alpha[0], sign[0]);
+            for( unsigned u=1; u<num; u++)
+                mod_psips[u] = mod::createPsip( mods[u], mod_psips[u-1], psi[u],
+                    alpha[u], sign[u]);
+            mod_psip = mod_psips[num-1];
+
+            CylindricalFunctor walls[num], transitions[num];
+            for( unsigned u=0; u<4; u++)
+            {
+                walls[u] = mod::DampingRegion( mods[u], mag.psip(), psi[u],
+                    alpha[u], -sign[u]);
+                transitions[u] = mod::MagneticTransition( mods[u], mag.psip(),
+                    psi[u], alpha[u], sign[u]);
+            }
+            transition = mod::SetUnion( transitions[0], transitions[1]);
+            wall       = mod::SetUnion( walls[0], walls[1]);
+            for( unsigned u=2; u<4; u++)
+            {
+                transition = mod::SetUnion( transition, transitions[u]);
+                wall       = mod::SetUnion( wall, walls[u]);
+            }
+            break;
+        }
+    }
 }
 }//namespace detail
 ///@endcond
@@ -168,6 +366,9 @@ or with additional modification in the private flux region "sol_pfr"
  * The sharp Heaviside jumps are replaced by the
  * \c dg::PolynomialHeaviside function (an approximation to the Heaviside
  * function with width alpha).
+ *
+ * For 2 X-points we can have 2 "sol_prf" regions, one for the lower X-point
+ * and one for the upper one.
  *
  * The \f$ \psi_p\f$ is computed from the given
  * parameters using \c dg::geo::createMagneticField and is modified using the
@@ -204,6 +405,14 @@ or with additional modification in the private flux region "sol_pfr"
     // First value indicates SOL, second the PFR
     "alpha": [0.10,0.10]
 }
+{
+    // sol_pfr for two X-points
+    // first value is for outboard midplane, second is lower pfr, next is
+    // inboard midplane, last is upper pfr
+    "type": "sol_pfr_2X",
+    "boundary": [1.1,0.998, 1.02,0.97],
+    "alpha": [0.10,0.10, 0.05,0.05]
+}
 @endcode
 
  * @param wall (out) On output contains the region where the wall is applied, the functor returns 1 where the wall is, 0 where there it is not and 0<f<1 in the transition region
@@ -214,127 +423,18 @@ static inline TokamakMagneticField createModifiedField(
         dg::file::WrappedJsonValue gs, dg::file::WrappedJsonValue jsmod,
         CylindricalFunctor& wall, CylindricalFunctor& transition)
 {
-    TokamakMagneticField mag = createMagneticField( gs);
+    dg::geo::CylindricalFunctorsLvl2 mod_psip;
+    TokamakMagneticField mag = createMagneticField(gs);
     const MagneticFieldParameters& inp = mag.params();
+
+    modifier mod;
+    detail::createModifiedField( mag, jsmod, mod, mod_psip, wall, transition);
     description desc = inp.getDescription();
     equilibrium equi = inp.getEquilibrium();
-    std::string m = jsmod.get( "type", "heaviside" ).asString();
-    modifier mod = modifier::heaviside;
-    try{
-        mod = str2modifier.at( m);
-    }catch ( std::out_of_range& err)
-    {
-        std::string message = "ERROR: Key \"" + m
-            + "\" not valid in field:\n\t"
-            + jsmod.access_string() + "\"type\" \n";
-        throw std::out_of_range(message);
-    }
     MagneticFieldParameters mod_params{ inp.a(), inp.elongation(),
         inp.triangularity(), equi, mod, desc};
-    CylindricalFunctorsLvl2 mod_psip;
-    switch (mod) {
-        default: //none
-        {
-            wall = mod::DampingRegion( mod::nowhere, mag.psip(), 0, 1, -1);
-            transition = mod::MagneticTransition( mod::nowhere, mag.psip(),
-                    0,  1, -1);
-            return mag;
-        }
-        case modifier::heaviside:
-        {
-            double psi0 = jsmod.get( "boundary", 1.1 ).asDouble();
-            double alpha = jsmod.get( "alpha", 0.2 ).asDouble();
-            double sign = +1;
-            if( desc == description::standardX || desc == description::standardO ||
-                    desc == description::doubleX)
-                detail::transform_psi( mag, psi0, alpha, sign);
-            else
-                sign = jsmod.get( "sign", -1. ).asDouble();
-
-            mod_psip = mod::createPsip( mod::everywhere, mag.get_psip(), psi0, alpha, sign);
-            wall = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha, -sign);
-            transition = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha, sign);
-            break;
-        }
-        case modifier::sol_pfr:
-        {
-            double psi0     = jsmod["boundary"].get( 0, 1.1 ).asDouble();
-            double alpha0   = jsmod["alpha"].get(0, 0.2 ).asDouble();
-            double psi1     = jsmod["boundary"].get(1, 0.97 ).asDouble();
-            double alpha1   = jsmod[ "alpha"].get(1, 0.2 ).asDouble();
-            switch( desc){
-                case description::standardX:
-                {
-                    double sign0 = +1., sign1 = -1.;
-                    detail::transform_psi( mag, psi0, alpha0, sign0);
-                    detail::transform_psi( mag, psi1, alpha1, sign1);
-                    //we can find the X-point
-                    double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-                    double ZX = -1.1*mag.params().elongation()*mag.params().a();
-                    dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-                    CylindricalFunctorsLvl2 mod0_psip;
-                    mod0_psip = mod::createPsip(
-                            mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
-                    mod_psip = mod::createPsip(
-                            mod::HeavisideZ( ZX, -1), mod0_psip, psi1, alpha1, sign1);
-                    CylindricalFunctor wall0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
-                    CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
-                    CylindricalFunctor wall1 = mod::DampingRegion( mod::HeavisideZ(ZX, -1), mag.psip(), psi1, alpha1, -sign1);
-                    CylindricalFunctor transition1 = mod::MagneticTransition( mod::HeavisideZ(ZX, -1), mag.psip(), psi1, alpha1, sign1);
-                    wall = mod::SetUnion( wall0, wall1);
-                    transition = mod::SetUnion( transition0, transition1);
-                    break;
-                }
-                case description::doubleX:
-                {
-                    double sign0 = +1., sign1 = -1.;
-                    detail::transform_psi( mag, psi0, alpha0, sign0);
-                    detail::transform_psi( mag, psi1, alpha1, sign1);
-                    //we can find the X-point
-                    double RX1 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-                    double ZX1 = -1.1*mag.params().elongation()*mag.params().a();
-                    dg::geo::findXpoint( mag.get_psip(), RX1, ZX1);
-                    double RX2 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-                    double ZX2 = +1.1*mag.params().elongation()*mag.params().a();
-                    dg::geo::findXpoint( mag.get_psip(), RX2, ZX2);
-                    CylindricalFunctorsLvl2 mod0_psip, mod1_psip;
-                    mod0_psip = mod::createPsip(
-                            mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
-                    mod1_psip = mod::createPsip(
-                            mod::HeavisideZ( ZX1, -1), mod0_psip, psi1, alpha1, sign1);
-                    mod_psip = mod::createPsip(
-                            mod::HeavisideZ( ZX2, +1), mod1_psip, psi1, alpha1, sign1);
-                    CylindricalFunctor wall0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, -sign0);
-                    CylindricalFunctor wall1 = mod::DampingRegion( mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, -sign1);
-                    CylindricalFunctor wall2 = mod::DampingRegion( mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, -sign1);
-                    CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
-                    CylindricalFunctor transition1 = mod::MagneticTransition( mod::HeavisideZ(ZX1, -1), mag.psip(), psi1, alpha1, sign1);
-                    CylindricalFunctor transition2 = mod::MagneticTransition( mod::HeavisideZ(ZX2, +1), mag.psip(), psi1, alpha1, sign1);
-                    transition = mod::SetUnion( mod::SetUnion( transition0, transition1), transition2);
-                    wall = mod::SetUnion( mod::SetUnion( wall0, wall1), wall2);
-                    break;
-                }
-                default:
-                {
-                    double sign0 = jsmod[ "sign"].get( 0, -1. ).asDouble();
-                    double sign1 = jsmod[ "sign"].get( 1, +1. ).asDouble();
-                    CylindricalFunctorsLvl2 mod0_psip;
-                    mod0_psip = mod::createPsip(
-                            mod::everywhere, mag.get_psip(), psi0, alpha0, sign0);
-                    mod_psip = mod::createPsip(
-                            mod::everywhere, mod0_psip, psi1, alpha1, sign1);
-                    CylindricalFunctor wall0 = mod::DampingRegion( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
-                    CylindricalFunctor transition0 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi0, alpha0, sign0);
-                    CylindricalFunctor wall1 = mod::DampingRegion( mod::everywhere, mag.psip(), psi1, alpha1, sign1);
-                    CylindricalFunctor transition1 = mod::MagneticTransition( mod::everywhere, mag.psip(), psi1, alpha1, sign1);
-                    wall = mod::SetUnion( wall0, wall1);
-                    transition = mod::SetUnion( transition0, transition1);
-                    break;
-                }
-            }
-        }
-    }
-    switch( equi){
+    switch( equi)
+    {
         case equilibrium::solovev:
         {
             solovev::Parameters gp( gs);
@@ -350,13 +450,24 @@ static inline TokamakMagneticField createModifiedField(
 }
 
 
-/// A convenience function call for \c dg::geo::createModifiedField that ignores the transition parameter and returns the wall
-static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs, dg::file::WrappedJsonValue jsmod)
+/// A convenience function call for \c dg::geo::createModifiedField that
+/// ignores the transition parameter and returns the wall functor
+static inline CylindricalFunctor createWallRegion( dg::geo::TokamakMagneticField mag,
+    dg::file::WrappedJsonValue jsmod)
 {
     CylindricalFunctor wall, transition;
-    TokamakMagneticField mag = createModifiedField( gs, jsmod, wall, transition);
+    CylindricalFunctorsLvl2 mod_psip;
+    modifier mod;
+    detail::createModifiedField( mag, jsmod, mod, mod_psip, wall, transition);
     return wall;
 }
+/// DEPRECATED Same as <tt> createWallRegion( createMagneticField(gs), jsmod);</tt>
+static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs,
+    dg::file::WrappedJsonValue jsmod)
+{
+    return createWallRegion( createMagneticField(gs), jsmod);
+}
+
 
 /**
  * @brief Create the sheath region where fieldlines intersect the boundary
