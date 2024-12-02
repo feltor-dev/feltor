@@ -18,6 +18,22 @@ int main( int argc, char * argv[])
     if(rank==0)std::cout <<"N " <<N << std::endl;
     if(rank==0)std::cout <<"# processes =  " <<size <<std::endl;
 
+    std::vector<std::array<int,2>> gIdx {
+    {0, 1}, {6, 2}, {6,7}, {2,0,}, {1,0}, {1,2}, {1,1}, {6,7}, {0,1}, {0,4}, {2,0}};
+    thrust::host_vector<std::array<int,2>> unique;
+    thrust::host_vector<int> bufferIdx;
+    dg::detail::global2bufferIdx( gIdx, bufferIdx, unique);
+
+    auto send = dg:detail::lugi2sendTo( unique, 7);
+
+    if(rank==0)std::cout<< "Found unique values \n";
+    for( unsigned u=0; u<unique.size(); u++)
+        if(rank==0)std::cout << unique[u][0]<<" "<<unique[u][1]<<"\n";
+    if(rank==0)std::cout << std::endl;
+    if(rank==0)std::cout<< "Found unique pids \n";
+    for( unsigned u=0; u<send.size(); u++)
+        if(rank==0)std::cout << "pid "<<u<<" "<<send[u]<<"\n";
+
     if(rank==0)std::cout << "Test BijectiveComm: scatter followed by gather leaves the input vector intact"<<std::endl;
     thrust::host_vector<double> v( N, 3*rank);
     thrust::host_vector<double> m( N);
