@@ -1,5 +1,6 @@
 #pragma once
 
+#include <any>
 #include <memory>
 #include <typeindex>
 
@@ -207,6 +208,7 @@ struct AnyVector
     AnyVector( ) : m_type( typeid( void)){}
 
     // If not allocated or wrong type; change size and type
+    // May need to be called using any_vec.template set<value_type>(size)
     template<class value_type>
     void set(unsigned size) const
     {
@@ -224,6 +226,7 @@ struct AnyVector
         }
     }
     // Get write access to underlying buffer
+    // May need to be called using any_vec.template get<value_type>()
     template<class value_type>
     Vector<value_type>& get( ) const
     {

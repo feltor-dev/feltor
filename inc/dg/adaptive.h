@@ -526,7 +526,7 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
     AdaptiveTimeloop( std::function<void (value_type, const ContainerType&,
                 value_type&, ContainerType&, value_type&)> step)  :
         m_step(step){
-            m_dt_current = dg::Buffer<value_type>( 0.);
+            m_dt_current = dg::detail::Buffer<value_type>( 0.);
     }
     /*!
      * @brief Bind the step function of a \c dg::Adaptive object
@@ -565,7 +565,7 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
             std::get<0>(cap).step( std::get<1>(cap), t0, y0, t, y, dt, control, norm,
                     rtol, atol, reject_limit);
         };
-        m_dt_current = dg::Buffer<value_type>( 0.);
+        m_dt_current = dg::detail::Buffer<value_type>( 0.);
     }
 
     ///@copydoc hide_construct
@@ -587,7 +587,7 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
      * two steps (even if it's several orders of magnitude off in the beginning).
      */
     void set_dt( value_type dt){
-        m_dt_current = dg::Buffer<value_type>(dt);
+        m_dt_current = dg::detail::Buffer<value_type>(dt);
     }
 
     /**
@@ -633,7 +633,7 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
     std::function<void( value_type, const ContainerType&, value_type&,
             ContainerType&, value_type&)> m_step;
     virtual value_type do_dt( ) const { return m_dt_current.data();}
-    dg::Buffer<value_type> m_dt_current ;
+    dg::detail::Buffer<value_type> m_dt_current ;
 };
 
 ///@cond

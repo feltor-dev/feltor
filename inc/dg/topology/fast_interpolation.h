@@ -78,13 +78,13 @@ struct MultiMatrix
             dg::blas2::symv( inter_[i], temp_[i-1].data(), temp_[i].data());
         dg::blas2::symv( alpha, inter_[dims-1], temp_[dims-2].data(), beta, y);
     }
-    std::vector<Buffer<ContainerType> >& get_temp(){ return temp_;}
-    const std::vector<Buffer<ContainerType> >& get_temp()const{ return temp_;}
+    std::vector<dg::detail::Buffer<ContainerType> >& get_temp(){ return temp_;}
+    const std::vector<dg::detail::Buffer<ContainerType> >& get_temp()const{ return temp_;}
     std::vector<MatrixType>& get_matrices(){ return inter_;}
     const std::vector<MatrixType>& get_matrices()const{ return inter_;}
     private:
     std::vector<MatrixType > inter_;
-    std::vector<Buffer<ContainerType> > temp_;
+    std::vector<dg::detail::Buffer<ContainerType> > temp_;
 };
 
 ///@cond
@@ -107,7 +107,7 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const d
     matrix.get_matrices()[0] = right;
     matrix.get_matrices()[1] = left;
     thrust::host_vector<real_type> vec( right.total_num_rows());
-    matrix.get_temp()[0] = Buffer<dg::HVec_t<real_type>>(vec);
+    matrix.get_temp()[0] = dg::detail::Buffer<dg::HVec_t<real_type>>(vec);
     return matrix;
 }
 template<class real_type>
@@ -124,7 +124,7 @@ MultiMatrix< dg::MHMatrix_t<real_type>, dg::MHVec_t<real_type> > multiply( const
     matrix.get_matrices()[0] = right;
     matrix.get_matrices()[1] = left;
     thrust::host_vector<real_type> vec( right.inner_matrix().total_num_rows());
-    matrix.get_temp()[0] = Buffer<dg::MHVec_t<real_type>>({vec, left.collective().communicator()});
+    matrix.get_temp()[0] = dg::detail::Buffer<dg::MHVec_t<real_type>>({vec, left.collective().communicator()});
 
     //std::cout << "MATRIX "<< matrix.get_matrices()[0].inner_matrix().total_num_rows()<<" "<<matrix.get_matrices()[0].inner_matrix().total_num_cols()<<"\t"
     //           << matrix.get_matrices()[1].inner_matrix().total_num_rows()<<" "<<matrix.get_matrices()[1].inner_matrix().total_num_cols()<<"\n";

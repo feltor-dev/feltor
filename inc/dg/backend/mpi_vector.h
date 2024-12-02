@@ -385,10 +385,10 @@ struct NearestNeighborComm
     bool m_silent, m_trivial=false; //silent -> no comm, m_trivial-> comm in last dim
     unsigned m_outer_size = 1; //size of vector in units of buffer_size
     Index m_gather_map_middle;
-    dg::Buffer<Vector> m_internal_buffer;
+    dg::detail::Buffer<Vector> m_internal_buffer;
 #ifdef _DG_CUDA_UNAWARE_MPI
     //a copy of the data on the host (we need to send data manually through the host)
-    dg::Buffer<thrust::host_vector<get_value_type<Vector>>> m_internal_host_buffer;
+    dg::detail::Buffer<thrust::host_vector<get_value_type<Vector>>> m_internal_host_buffer;
 #endif
 
     void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;

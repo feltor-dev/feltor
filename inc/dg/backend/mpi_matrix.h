@@ -189,7 +189,7 @@ struct RowColDistMat
     LocalMatrixInner m_i;
     LocalMatrixOuter m_o;
     Collective m_c;
-    Buffer< typename Collective::buffer_type>  m_buffer;
+    dg::detail::Buffer< typename Collective::buffer_type>  m_buffer;
 };
 
 
@@ -365,9 +365,9 @@ struct MPIDistMat
     private:
     LocalMatrix m_m;
     ClonePtr<Collective> m_c;
-    Buffer< typename Collective::container_type> m_buffer;
+    dg::detail::Buffer< typename Collective::container_type> m_buffer;
 #ifdef _DG_CUDA_UNAWARE_MPI
-    dg::Buffer<thrust::host_vector<get_value_type<container_type> >> m_store;
+    dg::detail::Buffer<thrust::host_vector<get_value_type<container_type> >> m_store;
 #endif
     enum dist_type m_dist;
     MPI_Comm m_comm;
