@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <typeindex>
 
 namespace dg
 {
@@ -137,7 +138,13 @@ struct ClonePtr
     std::unique_ptr<Cloneable> m_ptr;
 };
 
+///@cond
+namespace detail
+{
+
 //Memory buffer class: data can be written even if the object is const
+//should not be public (because of the const behaviour, which is a dirty trick...)
+
 /**
 * @brief a manager class that invokes the copy constructor on the managed ptr when copied (deep copy)
 *
@@ -185,9 +192,52 @@ struct Buffer
     * @attention never try to delete the returned reference
     */
     T& data( )const { return *ptr;}
+    /// An alias for data
+    T& get( )const { return *ptr;}
 
     private:
     T* ptr;
 };
+
+/// "A vector whose value type can be changed at runtime"
+//should not be public (because of the const behaviour, which is a dirty trick...)
+template<template<typename> typename Vector>
+struct AnyVector
+{
+    AnyVector( ) : m_type( typeid( void)){}
+
+    // If not allocated or wrong type; change size and type
+    template<class value_type>
+    void set(unsigned size) const
+    {
+        auto type_idx = std::type_index( typeid( value_type));
+        if( type_idx != m_type.data())
+        {
+            m_vec.data() = Vector<value_type>(size);
+            m_type.data() = type_idx;
+        }
+        else
+        {
+            auto data = std::any_cast<Vector<value_type>>(
+                &m_vec.data());
+            data->resize( size);
+        }
+    }
+    // Get write access to underlying buffer
+    template<class value_type>
+    Vector<value_type>& get( ) const
+    {
+        // throws if not previously set
+        return std::any_cast<Vector<value_type>&>(
+            m_vec.data());
+    }
+    private:
+    //std::unordered_map< std::type_index, Buffer<std::any>>  m_vec;
+    Buffer<std::any> m_vec;
+    Buffer<std::type_index> m_type;
+};
+
+}//namespace detail
+///@endcond
 
 }//namespace dg
