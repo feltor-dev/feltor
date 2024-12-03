@@ -71,9 +71,13 @@ __global__ void fpeDOT(
     Functor f,
     PointerOrValues ...d_xs
 ) {
-    // MW: this generates a warning for thrust::complex<double> (maybe for cuda::std::complex it does not?)
-    // MW: for now we ignore it...
-    __shared__ T l_fpe[N*THREADS_PER_BLOCK]; //shared variables live for a thread block
+    // Dynamic shared memory
+    // https://developer.nvidia.com/blog/using-shared-memory-cuda-cc/
+    // and
+    // https://stackoverflow.com/questions/27570552/templated-cuda-kernel-with-dynamic-shared-memory
+    //extern __shared__ T l_fpe[]; //shared variables live for a thread block
+    extern __shared__ unsigned char memory[];
+    T *l_fpe = reinterpret_cast<T *>(memory);
     T *a = l_fpe + threadIdx.x;
     //Initialize FPEs
     for (uint i = 0; i < N; i++)
@@ -171,7 +175,8 @@ void fpedot_gpu(int * status, unsigned size, T* fpe, Functor f, PointerOrValues 
     T *d_PartialFPEs = thrust::raw_pointer_cast( d_PartialFPEsV.data());
     thrust::device_vector<int> d_statusV(1, 0);
     int *d_status = thrust::raw_pointer_cast( d_statusV.data());
-    gpu::fpeDOT<T, N, gpu::THREADS_PER_BLOCK, Functor, PointerOrValues...><<<gpu::NUM_FPES, gpu::THREADS_PER_BLOCK>>>(
+    gpu::fpeDOT<T, N, gpu::THREADS_PER_BLOCK, Functor, PointerOrValues...>
+        <<<gpu::NUM_FPES, gpu::THREADS_PER_BLOCK, N*gpu::THREADS_PER_BLOCK*sizeof(T)>>>(
             d_status, size, d_PartialFPEs, f, xs_ptr...);
     gpu::fpeDOTMerge<T, N, gpu::NUM_FPES><<<1, 32>>>( d_PartialFPEs, fpe);
     *status = d_statusV[0];
