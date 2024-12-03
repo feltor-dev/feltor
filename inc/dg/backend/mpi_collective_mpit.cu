@@ -19,7 +19,7 @@ int main( int argc, char * argv[])
         return 0;
     }
 
-    unsigned N = 900;
+    unsigned N = 12;
     if(rank==0)std::cout <<"N " <<N << std::endl;
     if(rank==0)std::cout <<"# processes =  " <<size <<std::endl;
 
@@ -41,13 +41,13 @@ int main( int argc, char * argv[])
 
     if(rank==0)std::cout << "Test bijective communication scatter followed by\
  gather leaves the input vector intact"<<std::endl;
-    thrust::host_vector<double> v( N, 3*rank);
+    thrust::host_vector<double> v(N );
     thrust::host_vector<std::array<int,2>> gIdx( N);
     for( unsigned i=0; i<gIdx.size(); i++)
     {
         gIdx[i][0] = i%size;
         gIdx[i][1] = (rank*N + i)/size;
-        v[i] = v[i] + (double)(i + 17%(rank+1));
+        v[i] = double(rank*N + i);
     }
     const auto w = v;
     dg::MPIGather<thrust::host_vector > mpi_gather(gIdx, MPI_COMM_WORLD);
@@ -57,13 +57,18 @@ int main( int argc, char * argv[])
     mpi_gather.scatter( v);
     bool equal = true;
     for( unsigned i=0; i<gIdx.size(); i++)
-        if( v[i] != w[i]) { equal = false; }
     {
-        if( equal)
-            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
-        else
-            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
+        std::cout << rank<<" "<<v[i]<<"\n";
+        if( v[i] != w[i])
+        {
+            equal = false;
+        }
     }
+
+    if( equal)
+        std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
+    else
+        std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
 //    {
 //    if(rank==0)std::cout << "Test bijective branch of SurjectiveComm:"<<std::endl;

@@ -134,10 +134,13 @@ struct MPIPermutation
         return m_communicating;
     }
 
+    // we allow the input to be destroyed and allow for symmetric inplace communication
+    // in such a case no memory for the output needs to be allocated
+    // the required memory will be moved in from the input
 
     // synchronous gather
     template<class ContainerType0, class ContainerType1>
-    void global_gather( const ContainerType0& store, ContainerType1& buffer) const
+    void global_gather( ContainerType0& store, ContainerType1& buffer) const
     {
         MPI_Request rqst = global_gather_init( store, buffer);
         MPI_Wait( &rqst, MPI_STATUS_IGNORE );
@@ -145,7 +148,7 @@ struct MPIPermutation
 
     // synchronous scatter
     template<class ContainerType0, class ContainerType1>
-    void global_scatter( const ContainerType0& buffer, ContainerType1& store) const
+    void global_scatter( ContainerType0& buffer, ContainerType1& store) const
     {
         MPI_Request rqst = global_scatter_init( buffer, store);
         MPI_Wait( &rqst, MPI_STATUS_IGNORE );
@@ -155,14 +158,14 @@ struct MPIPermutation
     // user is responsible to catch CUDA-unawareness!
     template<class ContainerType0, class ContainerType1>
     MPI_Request global_scatter_init(
-            const ContainerType0& buffer, ContainerType1& store) const
+            ContainerType0& buffer, ContainerType1& store) const
     {
         return global_comm_init( buffer, store, true);
     }
     // asynchronous gather
     template<class ContainerType0, class ContainerType1>
     MPI_Request global_gather_init(
-            const ContainerType0& store, ContainerType1& buffer)const
+            ContainerType0& store, ContainerType1& buffer)const
     {
         return global_comm_init( store, buffer, false);
     }
@@ -178,7 +181,7 @@ struct MPIPermutation
     bool m_communicating = false;
     template<class ContainerType0, class ContainerType1>
     MPI_Request global_comm_init(
-            const ContainerType0& send, ContainerType1& recv, bool scatter) const
+            ContainerType0& send, ContainerType1& recv, bool scatter) const
     {
         using value_type = dg::get_value_type<ContainerType0>;
         static_assert( std::is_same_v<value_type,
@@ -198,12 +201,22 @@ struct MPIPermutation
                 throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
         }
 #endif
-        const value_type * s_ptr    = thrust::raw_pointer_cast( send.data());
-        const int * sendTo_ptr      = thrust::raw_pointer_cast( m_sendTo.data());
-        const int * accS_ptr        = thrust::raw_pointer_cast( m_accS.data());
-        value_type * r_ptr          = thrust::raw_pointer_cast( recv.data());
-        const int * recvFrom_ptr    = thrust::raw_pointer_cast( m_recvFrom.data());
-        const int * accR_ptr        = thrust::raw_pointer_cast( m_accR.data());
+        void * send_ptr;
+        //if( m_symmetric)
+        //{
+        //    // recv may be empty
+        //    recv.swap( send);
+        //    send_ptr = MPI_IN_PLACE;
+        //}
+        //else
+        {
+            send_ptr             = thrust::raw_pointer_cast( send.data());
+        }
+        const int * sendTo_ptr   = thrust::raw_pointer_cast( m_sendTo.data());
+        const int * accS_ptr     = thrust::raw_pointer_cast( m_accS.data());
+        void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
+        const int * recvFrom_ptr = thrust::raw_pointer_cast( m_recvFrom.data());
+        const int * accR_ptr     = thrust::raw_pointer_cast( m_accR.data());
         unsigned send_size    = m_buffer_size;
         unsigned recv_size    = m_store_size;
         if( !scatter)
@@ -214,41 +227,17 @@ struct MPIPermutation
             std::swap( send_size, recv_size);
         }
         assert( send.size()  == send_size);
-        assert( recv.size()  == recv_size);
-        return global_comm_init_v( s_ptr, sendTo_ptr,   accS_ptr,
-                                   r_ptr, recvFrom_ptr, accR_ptr);
-
-    }
-    template<class value_type>
-    MPI_Request global_comm_init_v(
-        const value_type* send, const int* sendTo,   const int* accS,
-              value_type* recv, const int* recvFrom, const int* accR) const
-    {
+        if( ! m_symmetric)
+            assert( recv.size()  == recv_size);
         MPI_Request rqst;
-        if ( send == recv) // same address
-        {
-            assert( m_symmetric);
-            MPI_Ialltoallv(
-                MPI_IN_PLACE,
-                sendTo, accS,
-                getMPIDataType<value_type>(),
-                recv, recvFrom, accR,
-                getMPIDataType<value_type>(),
-                m_comm, &rqst);
-        }
-        else
-        {
-            MPI_Ialltoallv(
-                send, sendTo, accS,
-                getMPIDataType<value_type>(),
-                recv, recvFrom, accR,
-                getMPIDataType<value_type>(),
-                m_comm, &rqst);
-         }
+        MPI_Ialltoallv(
+            send_ptr, sendTo_ptr, accS_ptr,
+            getMPIDataType<value_type>(),
+            recv_ptr, recvFrom_ptr, accR_ptr,
+            getMPIDataType<value_type>(),
+            m_comm, &rqst);
         return rqst;
     }
-
-
 };
 
 template<class T>
@@ -509,6 +498,7 @@ Then, the following steps are performed
 template< template <class> class Vector>
 struct MPIGather
 {
+
     MPIGather() = default;
     /**
     * @brief Construct from local indices and PIDs index map
@@ -594,17 +584,19 @@ struct MPIGather
         *this = MPIGather( gIdx, p.communicator());
     }
 
+    //https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
+    template< template<class> class OtherVector>
+    friend class MPIGather; // enable copy
+
     template< template<typename > typename OtherVector>
     MPIGather( const MPIGather<OtherVector>& src)
     {
-        *this = MPIGatherMatrix( src.getGlobalIndexMap(),
-                src.communicator());
+        m_g1 = src.m_g1;
+        m_g2 = src.m_g2;
+        m_permute = src.m_permute;
+        // we don't need to copy memory buffers (they are just workspace) or the request
     }
 
-    const thrust::host_vector<std::array<int,2>>& getGlobalIndexMap() const
-    {
-        return m_gIdx;
-    }
 
     MPI_Comm communicator()const
     {
@@ -773,8 +765,6 @@ struct MPIGather
     }
 
     private:
-    // stored to be able to copy construct
-    thrust::host_vector<std::array<int,2>> m_gIdx;
     Vector<int> m_g1, m_g2;
     detail::AnyVector< Vector> m_buffer, m_store;
     dg::detail::MPIPermutation m_permute;
