@@ -451,7 +451,7 @@ struct MPIGather
         m_permute = detail::MPIPermutation( sendTo, comm);
         assert( m_permute.buffer_size() == bufferIdx.size());
 
-        m_g1 = bufferIdx; //
+        m_g1 = LocalGatherMatrix<Vector>(bufferIdx); //
 
         // Finally, construct G2
         thrust::host_vector<int> storeIdx( m_permute.store_size());
@@ -462,7 +462,7 @@ struct MPIGather
             lIdx[i] = locally_unique_global_idx[i][1]; // the local index
         m_permute.global_scatter( lIdx, storeIdx);
         // All the indices we receive here are local to the current rank!
-        m_g2 = storeIdx;
+        m_g2 = LocalGatherMatrix<Vector>(storeIdx); //
     }
 
     /**
@@ -537,8 +537,8 @@ struct MPIGather
     */
     unsigned buffer_size() const { return m_permute.buffer_size();}
 
-    // gather map from buffer to gIdx given in constructor
-    const thrust::host_vector<int>& get_buffer_idx() const
+    // gather matrix from buffer to gIdx given in constructor
+    const LocalGatherMatrix<Vector>& get_buffer_g1() const
     {
         return m_g1;
     }
@@ -584,8 +584,7 @@ struct MPIGather
         m_store.template set<value_type>( m_permute.store_size());
 
         //gather values to store
-        thrust::gather( m_g2.begin(), m_g2.end(), gatherFrom.begin(),
-            m_store.template get<value_type>().begin());
+        m_g2.gather( gatherFrom, m_store.template get<value_type>());
 #ifdef _DG_CUDA_UNAWARE_MPI // we need to send through host
         if constexpr ( std::is_same_v<
                 dg::get_execution_policy<ContainerType>,
@@ -673,12 +672,11 @@ struct MPIGather
             m_store.template get<value_type>() =
                 m_h_store.template get<value_type>();
 #endif// _DG_CUDA_UNAWARE_MPI
-        thrust::scatter( m_store.template get<value_type>().begin(),
-            m_store.template get<value_type>().end(), m_g2.begin(), scatterTo.begin());
+        m_g2.scatter_plus( m_store.template get<value_type>(), scatterTo);
     }
 
     private:
-    Vector<int> m_g1, m_g2;
+    LocalGatherMatrix<Vector> m_g1, m_g2;
     dg::detail::MPIPermutation m_permute;
     // These are mutable and we never expose them to the user
     mutable detail::AnyVector< Vector> m_store;

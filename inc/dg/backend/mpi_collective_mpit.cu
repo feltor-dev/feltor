@@ -40,6 +40,7 @@ int main( int argc, char * argv[])
     mpi_gather.global_gather_init( v, buffer);
     mpi_gather.global_gather_wait( buffer);
     MPI_Barrier( MPI_COMM_WORLD);
+    dg::blas1::copy( 0, v);
     mpi_gather.global_scatter_plus_init(buffer, v);
     mpi_gather.global_scatter_plus_wait( v);
     bool equal = true;
