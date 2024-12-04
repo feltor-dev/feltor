@@ -4,13 +4,8 @@
  *
  * @brief Some utility functions for the dg::evaluate routines
  */
+#include "../backend/config.h" // DG_DEVICE
 
-///@brief Expands to \__host__ \__device__ if compiled with nvcc else is empty
-#define DG_DEVICE
-#ifdef __CUDACC__
-#undef DG_DEVICE
-#define DG_DEVICE __host__ __device__
-#endif
 
 namespace dg{
 ///@addtogroup basics

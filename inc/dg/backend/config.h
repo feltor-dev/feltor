@@ -75,3 +75,10 @@
 
 #endif //THRUST == CUDA
 #endif //MPI_VERSION
+
+///@brief Expands to \__host__ \__device__ if compiled with nvcc else is empty
+#define DG_DEVICE
+#ifdef __CUDACC__
+#undef DG_DEVICE
+#define DG_DEVICE __host__ __device__
+#endif
