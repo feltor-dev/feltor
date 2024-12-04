@@ -316,29 +316,29 @@ struct NearestNeighborComm
         const_pointer_type host_ptr[6];
         if(m_trivial)
         {
-            host_ptr[0] = thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]);
+            host_ptr[0] = thrust::raw_pointer_cast(&m_internal_buffer[0*size]);
             host_ptr[1] = input;
             host_ptr[2] = input+size;
             host_ptr[3] = input+(m_outer_size-2)*size;
             host_ptr[4] = input+(m_outer_size-1)*size;
-            host_ptr[5] = thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]);
+            host_ptr[5] = thrust::raw_pointer_cast(&m_internal_buffer[5*size]);
         }
         else
         {
-            host_ptr[0] = thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]);
-            host_ptr[1] = thrust::raw_pointer_cast(&m_internal_buffer.data()[1*size]);
-            host_ptr[2] = thrust::raw_pointer_cast(&m_internal_buffer.data()[2*size]);
-            host_ptr[3] = thrust::raw_pointer_cast(&m_internal_buffer.data()[3*size]);
-            host_ptr[4] = thrust::raw_pointer_cast(&m_internal_buffer.data()[4*size]);
-            host_ptr[5] = thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]);
+            host_ptr[0] = thrust::raw_pointer_cast(&m_internal_buffer[0*size]);
+            host_ptr[1] = thrust::raw_pointer_cast(&m_internal_buffer[1*size]);
+            host_ptr[2] = thrust::raw_pointer_cast(&m_internal_buffer[2*size]);
+            host_ptr[3] = thrust::raw_pointer_cast(&m_internal_buffer[3*size]);
+            host_ptr[4] = thrust::raw_pointer_cast(&m_internal_buffer[4*size]);
+            host_ptr[5] = thrust::raw_pointer_cast(&m_internal_buffer[5*size]);
         }
         //copy pointers to device
         thrust::copy( host_ptr, host_ptr+6, buffer.begin());
         //fill internal_buffer if !trivial
         do_global_gather_init( get_execution_policy<Vector>(), input, rqst);
         sendrecv( host_ptr[1], host_ptr[4],
-                  thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //host_ptr is const!
-                  thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //host_ptr is const!
+                  thrust::raw_pointer_cast(&m_internal_buffer[0*size]), //host_ptr is const!
+                  thrust::raw_pointer_cast(&m_internal_buffer[5*size]), //host_ptr is const!
                   rqst);
     }
     /**
@@ -359,14 +359,14 @@ struct NearestNeighborComm
         cudaError_t code = cudaGetLastError( );
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //dst
-                    thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]), //src
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer[0*size]), //dst
+                    thrust::raw_pointer_cast(&m_internal_host_buffer[0*size]), //src
                     size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
 
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //dst
-                    thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]), //src
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer[5*size]), //dst
+                    thrust::raw_pointer_cast(&m_internal_host_buffer[5*size]), //src
                     size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
@@ -385,10 +385,10 @@ struct NearestNeighborComm
     bool m_silent, m_trivial=false; //silent -> no comm, m_trivial-> comm in last dim
     unsigned m_outer_size = 1; //size of vector in units of buffer_size
     Index m_gather_map_middle;
-    dg::detail::Buffer<Vector> m_internal_buffer;
+    mutable Vector m_internal_buffer;
 #ifdef _DG_CUDA_UNAWARE_MPI
     //a copy of the data on the host (we need to send data manually through the host)
-    dg::detail::Buffer<thrust::host_vector<get_value_type<Vector>>> m_internal_host_buffer;
+    mutable thrust::host_vector<get_value_type<Vector>> m_internal_host_buffer;
 #endif
 
     void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
@@ -434,9 +434,9 @@ void NearestNeighborComm<I,B,V>::construct( unsigned n, const unsigned dimension
                 mid_gather[((3*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + m_dim[1]-  n + j)*m_dim[0] + k;
             }
     m_gather_map_middle = mid_gather; //transfer to device
-    m_internal_buffer.data().resize( 6*buffer_size() );
+    m_internal_buffer.resize( 6*buffer_size() );
 #ifdef _DG_CUDA_UNAWARE_MPI
-    m_internal_host_buffer.data().resize( 6*buffer_size() );
+    m_internal_host_buffer.resize( 6*buffer_size() );
 #endif
     }
 }
@@ -455,7 +455,7 @@ void NearestNeighborComm<I,B,V>::do_global_gather_init( SerialTag, const_pointer
     {
         unsigned size = buffer_size();
         for( unsigned i=0; i<4*size; i++)
-            m_internal_buffer.data()[i+size] = input[m_gather_map_middle[i]];
+            m_internal_buffer[i+size] = input[m_gather_map_middle[i]];
     }
 }
 #ifdef _OPENMP
@@ -467,7 +467,7 @@ void NearestNeighborComm<I,B,V>::do_global_gather_init( OmpTag, const_pointer_ty
         unsigned size = buffer_size();
         #pragma omp parallel for
         for( unsigned i=0; i<4*size; i++)
-            m_internal_buffer.data()[size+i] = input[m_gather_map_middle[i]];
+            m_internal_buffer[size+i] = input[m_gather_map_middle[i]];
     }
 }
 #endif
@@ -479,7 +479,7 @@ void NearestNeighborComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_t
     if(!m_trivial)
     {
         unsigned size = buffer_size();
-        thrust::gather( thrust::cuda::tag(), m_gather_map_middle.begin(), m_gather_map_middle.end(), input, m_internal_buffer.data().begin()+size);
+        thrust::gather( thrust::cuda::tag(), m_gather_map_middle.begin(), m_gather_map_middle.end(), input, m_internal_buffer.begin()+size);
     }
     cudaError_t code = cudaGetLastError( );
     if( code != cudaSuccess)
@@ -500,18 +500,18 @@ void NearestNeighborComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_poi
         cudaError_t code = cudaGetLastError( );
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer[1*size]),//dst
             sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
+        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer[4*size]),  //dst
             sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
-        sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
-        rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
-        rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]);
+        sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer[1*size]);
+        sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer[4*size]);
+        rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer[0*size]);
+        rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer[5*size]);
     }
 //This is a mistake if called with a host_vector
 #endif
