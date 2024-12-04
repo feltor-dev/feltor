@@ -448,7 +448,7 @@ struct aRealTopology
             if( !std::isfinite(x[u]) ) return false;
             //should we catch the case x1==x && dg::PER?
             if( x[u] < m_x0[u]) return false;
-            if( x[u] > m_x1[u]) return true;
+            if( x[u] > m_x1[u]) return false;
         }
         return true;
     }
