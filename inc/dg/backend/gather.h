@@ -89,6 +89,7 @@ void findUniqueIndices(
 template<template<class >class Vector>
 struct LocalGatherMatrix
 {
+    LocalGatherMatrix() = default;
 
     // index_map gives num_rows of G, so we need num_cols as well
     LocalGatherMatrix( const thrust::host_vector<int>& index_map)
@@ -96,6 +97,7 @@ struct LocalGatherMatrix
     {
         // For the scatter operation we need to catch the case that multiple
         // values scatter to the same place
+        //
         // buffer -> reduction_buf -> scatter_buf -> store
         // In that case our idea is to first sort the indices such that values
         // to reduce are next to each other
@@ -119,7 +121,6 @@ struct LocalGatherMatrix
             m_reduction_buffer_size = index_map.size();
             m_scatter2target = unique_indices;
             m_red_keys = reduction_keys;
-            m_unique_keys = unique_indices;
             m_gather2reduction = sort_map;
         }
     }
@@ -128,7 +129,10 @@ struct LocalGatherMatrix
     friend class LocalGatherMatrix;
     template<template<class> class OtherVector>
     LocalGatherMatrix( const LocalGatherMatrix<OtherVector>& src)
-    : m_idx ( src.m_idx)
+    : m_idx ( src.m_idx), m_scatter2target( src.m_scatter2target), m_red_keys(
+    src.m_red_keys), m_gather2reduction( src.m_gater2reduction), m_reduction(
+    src.m_reduction), m_scatter_buffer_size( src.m_scatter_buffer_size),
+    m_reduction_buffer_size( src.m_reduction_buffer_size)
     {}
 
     const Vector<int>& index_map() const{ return m_idx;}
@@ -141,7 +145,7 @@ struct LocalGatherMatrix
     }
     // v = v + S w
     template<class ContainerType0, class ContainerType1>
-    void scatter_plus( const ContainerType0& buffer, ContainerType1& store)
+    void scatter_plus( const ContainerType0& buffer, ContainerType1& store) const
     {
         using value_type= dg::get_value_type<ContainerType0>;
         if( !m_reduction)
@@ -162,6 +166,7 @@ struct LocalGatherMatrix
 
             // 2. Reduce multiple sorted indices
             m_scatter_buffer.template set<value_type>( m_scatter_buffer_size);
+            m_unique_keys.resize( m_scatter_buffer_size);
             thrust::reduce_by_key( m_red_keys.begin(), m_red_keys.end(),
                 m_reduction_buffer.template get<value_type>().begin(),
                 m_unique_keys.begin(), // keys output
