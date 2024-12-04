@@ -100,21 +100,13 @@ int main()
 
     }
     {
-        std::cout << "\nTest correct behaviour of buffer class with mouse\n";
-        dg::detail::Buffer<Mouse> buffer;
-        buffer.data().speak();
-        dg::detail::Buffer<Mouse> buffer2 = buffer;
-        buffer2.data().speak();
-        std::swap( buffer, buffer2);
-    }
-    {
         std::cout << "\nTest Buffer behaviour with std::any\n";
         dg::detail::AnyVector<verbose_vec> buffer;
         std::cout << "Construct Verbose (Construct)\n";
         buffer.set<double>( 10);
 
         std::cout << "auto reference cast Verbose (no copy!)\n";
-        // REMEBER TO WRITE auto& NOT JUST auto!!
+        // REMEMBER TO WRITE auto& NOT JUST auto!!
         // T& ref = a;
         // auto vv = ref; deduces auto == T NOT T&
         auto& vv = buffer.get<double>();
@@ -126,10 +118,10 @@ int main()
 
         std::cout << "Reset buffer (Construct)\n";
         buffer.set<float>( 10); // Construct float
-        std::cout << "Cast buffer without copy or move\n";
+        std::cout << "Cast buffer (check that no copy or move is displayed)\n";
         auto& w = buffer.get<float>();
         w[7].a = 42.f;
-        std::cout << buffer.get<float>()[7].a<<"\n";
+        std::cout << buffer.get<float>()[7].a<<" (42)\n";
         std::cout << "Test typeid\n";
         try{
             buffer.get<double>();
@@ -142,7 +134,7 @@ int main()
         buffer2.set<double>(4);
         std::cout << "Test swap (no copies or moves) \n";
         std::swap ( buffer, buffer2);
-        std::cout << buffer2.get<float>()[7].a<<"\n";
+        std::cout << buffer2.get<float>()[7].a<<" (42)\n";
 
     }
 

@@ -143,63 +143,6 @@ struct ClonePtr
 namespace detail
 {
 
-//Memory buffer class: data can be written even if the object is const
-//should not be public (because of the const behaviour, which is a dirty trick...)
-
-/**
-* @brief a manager class that invokes the copy constructor on the managed ptr when copied (deep copy)
-*
-* this class is most useful as a memory buffer for classes that need
-* some workspace to fulfill their task but do otherwise not change their state. A buffer object
-can be declared const while the data it holds are still writeable.
-* @tparam T must be default constructible and copyable
-* @ingroup lowlevel
-*/
-template< class T>
-struct Buffer
-{
-    ///new \c T
-    Buffer(){
-        ptr = new T;
-    }
-    ///new \c T(t)
-    Buffer( const T& t){
-        ptr = new T(t);
-    }
-    Buffer( const Buffer& src){ //copy
-        ptr = new T(*src.ptr);
-    }
-    Buffer( Buffer&& t): ptr( t.ptr){ //move (memory steal) construct
-        t.ptr = nullptr;
-    }
-    Buffer& operator=( Buffer src){ //copy and swap idiom, also implements move assign
-        swap( *this, src);
-        return *this;
-    }
-    ///delete managed object
-    ~Buffer(){
-        delete ptr; //if ptr is nullptr delete does nothing
-    }
-    friend void swap( Buffer& first, Buffer& second) //make std::swap work (ADL)
-    {
-        using std::swap;
-        swap( first.ptr, second.ptr);
-    }
-
-
-    /**
-    * @brief Get write access to the data on the heap
-    * @return a reference to the data object
-    * @attention never try to delete the returned reference
-    */
-    T& data( )const { return *ptr;}
-    /// An alias for data
-    T& get( )const { return *ptr;}
-
-    private:
-    T* ptr;
-};
-
 /// "A vector whose value type can be changed at runtime"
 //should not be public (because of the const behaviour, which is a dirty trick...)
 template<template<typename> typename Vector>
@@ -210,34 +153,41 @@ struct AnyVector
     // If not allocated or wrong type; change size and type
     // May need to be called using any_vec.template set<value_type>(size)
     template<class value_type>
-    void set(unsigned size) const
+    void set(unsigned size)
     {
         auto type_idx = std::type_index( typeid( value_type));
-        if( type_idx != m_type.data())
+        if( type_idx != m_type)
         {
-            m_vec.data() = Vector<value_type>(size);
-            m_type.data() = type_idx;
+            m_vec = Vector<value_type>(size);
+            m_type = type_idx;
         }
         else
         {
             auto data = std::any_cast<Vector<value_type>>(
-                &m_vec.data());
+                &m_vec);
             data->resize( size);
         }
     }
-    // Get write access to underlying buffer
+    // Get read access to underlying buffer
     // May need to be called using any_vec.template get<value_type>()
     template<class value_type>
-    Vector<value_type>& get( ) const
+    const Vector<value_type>& get( ) const
+    {
+        // throws if not previously set
+        return std::any_cast<const Vector<value_type>&>(
+            m_vec);
+    }
+    template<class value_type>
+    Vector<value_type>& get( )
     {
         // throws if not previously set
         return std::any_cast<Vector<value_type>&>(
-            m_vec.data());
+            m_vec);
     }
     private:
     //std::unordered_map< std::type_index, Buffer<std::any>>  m_vec;
-    Buffer<std::any> m_vec;
-    Buffer<std::type_index> m_type;
+    std::any m_vec;
+    std::type_index m_type;
 };
 
 }//namespace detail

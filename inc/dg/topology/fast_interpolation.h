@@ -42,49 +42,46 @@ struct MultiMatrix
     * @param dimension # of matrices to store
     * @attention it is the user's reponsibility to allocate memory for the intermediate "temp" vectors
     */
-    MultiMatrix( int dimension): inter_(dimension), temp_(dimension-1 > 0 ? dimension-1 : 0 ){}
+    MultiMatrix( int dimension): m_inter(dimension), m_temp(dimension-1 > 0 ? dimension-1 : 0 ){}
 
+    //https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
+    template< class OtherMatrix, class OtherContainer>
+    friend class MultiMatrix; // enable copy
     template<class OtherMatrix, class OtherContainer, class ... Params>
-    MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ... ps){
-        unsigned dimsM = src.get_matrices().size();
-        unsigned dimsT = src.get_temp().size();
-        inter_.resize( dimsM);
-        temp_.resize(  dimsT);
+    MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ... ps)
+    {
+        unsigned dimsM = src.m_inter.size();
+        unsigned dimsT = src.m_temp.size();
+        m_inter.resize(dimsM);
+        m_temp.resize(dimsT);
         for( unsigned i=0; i<dimsM; i++)
-            inter_[i] = src.get_matrices()[i];
+            m_inter[i] = src.m_inter[i];
         for( unsigned i=0; i<dimsT; i++)
-            dg::assign( src.get_temp()[i].data(), temp_[i].data(), std::forward<Params>(ps)...);
-
+            dg::assign( src.m_temp[i], m_temp[i], std::forward<Params>(ps)...);
     }
-    template<class ...Params>
-    void construct( Params&& ...ps){
-        *this = MultiMatrix( std::forward<Params>(ps)...);
-    }
-
-
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y) const{ symv( 1., x,0,y);}
     template<class ContainerType0, class ContainerType1>
     void symv(real_type alpha, const ContainerType0& x, real_type beta, ContainerType1& y) const
     {
-        int dims = inter_.size();
+        int dims = m_inter.size();
         if( dims == 1)
         {
-            dg::blas2::symv( alpha, inter_[0], x, beta, y);
+            dg::blas2::symv( alpha, m_inter[0], x, beta, y);
             return;
         }
-        dg::blas2::symv( inter_[0], x,temp_[0].data());
+        dg::blas2::symv( m_inter[0], x,m_temp[0]);
         for( int i=1; i<dims-1; i++)
-            dg::blas2::symv( inter_[i], temp_[i-1].data(), temp_[i].data());
-        dg::blas2::symv( alpha, inter_[dims-1], temp_[dims-2].data(), beta, y);
+            dg::blas2::symv( m_inter[i], m_temp[i-1], m_temp[i]);
+        dg::blas2::symv( alpha, m_inter[dims-1], m_temp[dims-2], beta, y);
     }
-    std::vector<dg::detail::Buffer<ContainerType> >& get_temp(){ return temp_;}
-    const std::vector<dg::detail::Buffer<ContainerType> >& get_temp()const{ return temp_;}
-    std::vector<MatrixType>& get_matrices(){ return inter_;}
-    const std::vector<MatrixType>& get_matrices()const{ return inter_;}
+    std::vector<ContainerType >& get_temp(){ return m_temp;}
+    const std::vector<ContainerType >& get_temp()const{ return m_temp;}
+    std::vector<MatrixType>& get_matrices(){ return m_inter;}
+    const std::vector<MatrixType>& get_matrices()const{ return m_inter;}
     private:
-    std::vector<MatrixType > inter_;
-    std::vector<dg::detail::Buffer<ContainerType> > temp_;
+    std::vector<MatrixType > m_inter;
+    mutable std::vector<ContainerType > m_temp; // OMG mutable exits !? write even in const
 };
 
 ///@cond
@@ -107,7 +104,7 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const d
     matrix.get_matrices()[0] = right;
     matrix.get_matrices()[1] = left;
     thrust::host_vector<real_type> vec( right.total_num_rows());
-    matrix.get_temp()[0] = dg::detail::Buffer<dg::HVec_t<real_type>>(vec);
+    matrix.get_temp()[0] = vec;
     return matrix;
 }
 template<class real_type>
@@ -124,7 +121,7 @@ MultiMatrix< dg::MHMatrix_t<real_type>, dg::MHVec_t<real_type> > multiply( const
     matrix.get_matrices()[0] = right;
     matrix.get_matrices()[1] = left;
     thrust::host_vector<real_type> vec( right.inner_matrix().total_num_rows());
-    matrix.get_temp()[0] = dg::detail::Buffer<dg::MHVec_t<real_type>>({vec, left.collective().communicator()});
+    matrix.get_temp()[0] = dg::MHVec_t<real_type>({vec, left.collective().communicator()});
 
     //std::cout << "MATRIX "<< matrix.get_matrices()[0].inner_matrix().total_num_rows()<<" "<<matrix.get_matrices()[0].inner_matrix().total_num_cols()<<"\t"
     //           << matrix.get_matrices()[1].inner_matrix().total_num_rows()<<" "<<matrix.get_matrices()[1].inner_matrix().total_num_cols()<<"\n";
