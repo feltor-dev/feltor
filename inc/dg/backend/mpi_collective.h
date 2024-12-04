@@ -1,18 +1,11 @@
 #pragma once
 #include <cassert>
 #include <exception>
-#include <thrust/sequence.h>
-#include <thrust/sort.h>
-#include <thrust/gather.h>
-#include <thrust/scatter.h>
 
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
-#include "blas1_dispatch_shared.h"
-#include "dg/blas1.h"
+#include "mpi_communicator.h"
 #include "tensor_traits.h"
 #include "memory.h"
-#include "mpi_communicator.h"
+#include "gather.h"
 
 namespace dg{
 
@@ -240,96 +233,6 @@ struct MPIPermutation
     }
 };
 
-template<class T>
-void find_same(
-        const thrust::host_vector<T>& numbers, // numbers must be sorted
-        thrust::host_vector<T>& unique_numbers,
-        thrust::host_vector<int>& howmany_numbers // same size as uniqe_numbers
-        )
-{
-    // Find unique numbers and how often they appear
-    thrust::host_vector<T> unique_ids( numbers.size());
-    thrust::host_vector<int> ones( numbers.size(), 1),
-        howmany(ones);
-    auto new_end = thrust::reduce_by_key( numbers.begin(), numbers.end(),
-            //pids are the keys by which one is reduced
-            ones.begin(), unique_ids.begin(), howmany.begin() );
-    unique_numbers = thrust::host_vector<T>( unique_ids.begin(),
-            new_end.first);
-    howmany_numbers = thrust::host_vector<int>( howmany.begin(), new_end.second);
-}
-
-//given global indices -> make a sorted unique indices vector + a gather map
-//into the unique vector:
-//@param buffer_idx -> (gather map/ new column indices) same size as global_idx
-//( can alias global_idx, index into unique_global_idx
-//@param unique_global_idx -> (list of unique global indices to be used in a
-//Collective Communication object, sorted)
-static inline void global2bufferIdx(
-    // 1st is pid, 2nd is local index
-    const thrust::host_vector<std::array<int,2>>& global_idx,
-    thrust::host_vector<int>& buffer_idx,
-    thrust::host_vector<std::array<int,2>>& locally_unique_global_idx)
-{
-// sort_map is the gather map wrt to the sorted vector!
-// To duplicate the sort:
-// thrust::gather( sort_map.begin(), sort_map.end(), numbers.begin(), sorted.begin());
-// To undo the sort:
-// thrust::scatter( sorted.begin(), sorted.end(), sort_map.begin(), numbers.begin());
-// To get the gather map wrt to unsorted vector (i.e the inverse index map)
-// "Scatter the index"
-// auto gather_map = sort_map;
-// auto seq = sort_map;
-// thrust::sequence( seq.begin(), seq.end());
-// thrust::scatter( seq.begin(), seq.end(), sort_map.begin(), gather_map.begin());
-// Now gather_map indicates where each of the numbers went in the sorted vector
-    // 1. Sort pids with indices so we get associated gather map
-    thrust::host_vector<int> sort_map, howmany;
-    auto ids = global_idx;
-    sort_map.resize( ids.size());
-    thrust::sequence( sort_map.begin(), sort_map.end()); // 0,1,2,3,...
-    thrust::stable_sort_by_key( ids.begin(), ids.end(),
-            sort_map.begin()); // this changes both ids and sort_map
-
-    find_same( ids, locally_unique_global_idx,
-            howmany);
-
-    // manually make gather map from sorted into locally_unique_global_idx
-    thrust::host_vector<int> gather_map;
-    for( unsigned i=0; i<locally_unique_global_idx.size(); i++)
-        for( int j=0; j<howmany[i]; j++)
-            gather_map.push_back(i);
-    assert( gather_map.size() == global_idx.size());
-    // buffer idx is the new index
-    buffer_idx.resize( global_idx.size());
-    thrust::scatter( gather_map.begin(), gather_map.end(), sort_map.begin(),
-            buffer_idx.begin());
-}
-
-
-//create sendTo map for MPIPermutation
-static inline thrust::host_vector<int> lugi2sendTo(
-    const thrust::host_vector<std::array<int,2>>& locally_unique_global_idx,
-    MPI_Comm comm)
-{
-    int comm_size;
-    MPI_Comm_size( comm, &comm_size);
-    // get pids
-    thrust::host_vector<int> pids(locally_unique_global_idx.size());
-    for( int i=0; i<(int)pids.size(); i++)
-    {
-        pids[i] = locally_unique_global_idx[i][0];
-        // Sanity check
-        assert( 0 <= pids[i] && pids[i] < comm_size);
-    }
-    thrust::host_vector<int> locally_unique_pids, howmany;
-    detail::find_same( pids, locally_unique_pids, howmany);
-    thrust::host_vector<int> sendTo( comm_size, 0 );
-    for( unsigned i=0; i<locally_unique_pids.size(); i++)
-        sendTo[locally_unique_pids[i]] = howmany[i];
-    return sendTo;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 } // namespace detail
@@ -524,10 +427,25 @@ struct MPIGather
             // TODO idx 0 is pid, idx 1 is localIndex on that pid
             MPI_Comm comm)
     {
-        thrust::host_vector<int> bufferIdx;
-        thrust::host_vector<std::array<int,2>> locally_unique_gIdx;
-        detail::global2bufferIdx(gIdx, bufferIdx, locally_unique_gIdx);
-        auto sendTo = detail::lugi2sendTo( locally_unique_gIdx, comm);
+        thrust::host_vector<int> bufferIdx, sort_map, reduction_keys;
+        thrust::host_vector<std::array<int,2>> locally_unique_global_idx;
+        detail::findUniqueIndices<thrust::host_vector>( gIdx, sort_map,
+            reduction_keys, bufferIdx, locally_unique_global_idx);
+        int comm_size;
+        MPI_Comm_size( comm, &comm_size);
+        // get pids
+        thrust::host_vector<int> pids(locally_unique_global_idx.size());
+        for( int i=0; i<(int)pids.size(); i++)
+        {
+            pids[i] = locally_unique_global_idx[i][0];
+            // Sanity check
+            assert( 0 <= pids[i] && pids[i] < comm_size);
+        }
+        thrust::host_vector<int> locally_unique_pids, howmany;
+        detail::find_same<thrust::host_vector>( pids, locally_unique_pids, howmany);
+        thrust::host_vector<int> sendTo( comm_size, 0 );
+        for( unsigned i=0; i<locally_unique_pids.size(); i++)
+            sendTo[locally_unique_pids[i]] = howmany[i];
         //Now construct the MPIPermutation object by getting the number of
         //elements to send
         m_permute = detail::MPIPermutation( sendTo, comm);
@@ -541,7 +459,7 @@ struct MPIGather
         // which values they need to provide:
         thrust::host_vector<int> lIdx( m_permute.buffer_size());
         for( unsigned i=0; i<lIdx.size(); i++)
-            lIdx[i] = locally_unique_gIdx[i][1]; // the local index
+            lIdx[i] = locally_unique_global_idx[i][1]; // the local index
         m_permute.global_scatter( lIdx, storeIdx);
         // All the indices we receive here are local to the current rank!
         m_g2 = storeIdx;

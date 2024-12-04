@@ -23,21 +23,6 @@ int main( int argc, char * argv[])
     if(rank==0)std::cout <<"N " <<N << std::endl;
     if(rank==0)std::cout <<"# processes =  " <<size <<std::endl;
 
-    std::vector<std::array<int,2>> ggIdx {
-    {1,0}, {2,6}, {3,6}, {0,2}, {0,1}, {2,1}, {2,3}, {1,1}, {3,6}, {1,0}, {3,0}, {0,2}};
-    thrust::host_vector<std::array<int,2>> unique;
-    thrust::host_vector<int> bufferIdx;
-    dg::detail::global2bufferIdx( ggIdx, bufferIdx, unique);
-
-    auto send = dg::detail::lugi2sendTo( unique, MPI_COMM_WORLD);
-
-    if(rank==0)std::cout<< "Found unique values \n";
-    for( unsigned u=0; u<unique.size(); u++)
-        if(rank==0)std::cout << unique[u][0]<<" "<<unique[u][1]<<"\n";
-    if(rank==0)std::cout << std::endl;
-    if(rank==0)std::cout<< "Found unique pids \n";
-    for( unsigned u=0; u<send.size(); u++)
-        if(rank==0)std::cout << "pid "<<u<<" "<<send[u]<<"\n";
 
     if(rank==0)std::cout << "Test bijective communication scatter followed by\
  gather leaves the input vector intact"<<std::endl;
