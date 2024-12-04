@@ -51,10 +51,12 @@ int main( int argc, char * argv[])
     }
     const auto w = v;
     dg::MPIGather<thrust::host_vector > mpi_gather(gIdx, MPI_COMM_WORLD);
-    mpi_gather.gather( v);
+    thrust::host_vector<double> buffer( mpi_gather.buffer_size());
+    mpi_gather.global_gather_init( v, buffer);
+    mpi_gather.global_gather_wait( buffer);
     MPI_Barrier( MPI_COMM_WORLD);
-    mpi_gather.scatter_init<double>();
-    mpi_gather.scatter( v);
+    mpi_gather.global_scatter_plus_init(buffer, v);
+    mpi_gather.global_scatter_plus_wait( v);
     bool equal = true;
     for( unsigned i=0; i<gIdx.size(); i++)
     {
