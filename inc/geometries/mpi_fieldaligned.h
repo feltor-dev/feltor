@@ -11,14 +11,16 @@ namespace geo{
 namespace detail{
 
 ///basically a copy across processes
-template<class thrust_vector0, class thrust_vector1>
-void sendForward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) //send to next plane
+template<class thrust_vector>
+void mpi_send( thrust_vector& inout, MPI_Comm comm, int shift) //send to next plane
 {
+    // forward:  shift = +1
+    // backward: shift = -1
     int source, dest;
     MPI_Status status;
-    MPI_Cart_shift( comm, 2, +1, &source, &dest);
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
+    MPI_Cart_shift( comm, 2, shift, &source, &dest);
+    if constexpr (std::is_same_v< get_execution_policy<thrust_vector0>,
+        CudaTag> )
     {
         cudaError_t code = cudaGetLastError( );
         if( code != cudaSuccess)
@@ -27,38 +29,9 @@ void sendForward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) 
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
     }
-#endif //THRUST_DEVICE_SYSTEM
     unsigned size = in.size();
-    MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender
-                    dest, 9,  //destination
-                    thrust::raw_pointer_cast(out.data()), size, MPI_DOUBLE, //receiver
-                    source, 9, //source
-                    comm, &status);
-}
-///basically a copy across processes
-template<class thrust_vector0, class thrust_vector1>
-void sendBackward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) //send to next plane
-{
-    int source, dest;
-    MPI_Status status;
-    MPI_Cart_shift( comm, 2, -1, &source, &dest);
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    if( std::is_same< get_execution_policy<thrust_vector0>, CudaTag>::value) //could be serial tag
-    {
-        cudaError_t code = cudaGetLastError( );
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        code = cudaDeviceSynchronize(); //wait until device functions are finished before sending data
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-    }
-#endif //THRUST_DEVICE_SYSTEM
-    unsigned size = in.size();
-    MPI_Sendrecv(   thrust::raw_pointer_cast(in.data()), size, MPI_DOUBLE,  //sender
-                    dest, 3,  //destination
-                    thrust::raw_pointer_cast(out.data()), size, MPI_DOUBLE, //receiver
-                    source, 3, //source
-                    comm, &status);
+    MPI_Sendrecv_replace( thrust::raw_pointer_cast(inout.data()), size,
+            MPI_DOUBLE, dest, 9,  source, 9, comm, &status);
 }
 }//namespace detail
 
@@ -126,7 +99,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         m_bcz = bcz;
     }
 
-    void operator()(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    void operator()(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out) const;
 
     double deltaPhi() const{return m_deltaPhi;}
     const MPI_Vector<LocalContainer>& hbm()const {
@@ -169,9 +142,9 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
             unsigned rounds) const;
     std::string method() const{return m_interpolation_method;}
   private:
-    void ePlus( enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
-    void eMinus(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
-    void zero(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+    void ePlus( enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out) const;
+    void eMinus(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out) const;
+    void zero(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out) const;
     MPIDistMat<LocalIMatrix, CommunicatorXY> m_plus, m_zero, m_minus, m_plusT, m_minusT; //2d interpolation matrices
     MPI_Vector<LocalContainer> m_hbm, m_hbp; //3d size
     MPI_Vector<LocalContainer> m_G, m_Gm, m_Gp; //3d size
@@ -180,19 +153,17 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
 
     MPI_Vector<LocalContainer> m_left, m_right; //2d size
     MPI_Vector<LocalContainer> m_limiter; //2d size
-    MPI_Vector<LocalContainer> m_ghostM, m_ghostP; //2d size
+    mutable MPI_Vector<LocalContainer> m_ghostM, m_ghostP; //2d size
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcx, m_bcy, m_bcz;
-    std::vector<MPI_Vector<dg::View<const LocalContainer>> > m_f;
-    std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
+    mutable std::vector<MPI_Vector<dg::View<const LocalContainer>> > m_f;
+    mutable std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
     dg::ClonePtr<ProductMPIGeometry> m_g;
     double m_deltaPhi;
     std::string m_interpolation_method;
     unsigned m_coords2, m_sizeZ; //number of processes in z
-#ifdef _DG_CUDA_UNAWARE_MPI
-    //we need to manually send data through the host
-    thrust::host_vector<double> m_send_buffer, m_recv_buffer; //2d size
-#endif
+    //we need to manually send data through the host for cuda-unaware-mpi
+    mutable thrust::host_vector<double> m_buffer; //2d size
     bool m_have_adjoint = false;
     void updateAdjoint( )
     {
@@ -407,9 +378,6 @@ Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::assign( dg::pullback(limit, *grid_transform), m_limiter);
     dg::assign( dg::evaluate(dg::zero, *grid_transform), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
-#ifdef _DG_CUDA_UNAWARE_MPI
-    m_recv_buffer = m_send_buffer = m_ghostP.data();
-#endif
 }
 
 
@@ -482,14 +450,18 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
     if( m_sizeZ != 1)
     {
         unsigned i0 = m_Nz-1;
-#ifdef _DG_CUDA_UNAWARE_MPI
-        thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_send_buffer.begin());
-        detail::sendBackward( m_send_buffer, m_recv_buffer, m_g->communicator());
-        thrust::copy( m_recv_buffer.cbegin(), m_recv_buffer.cend(), m_temp[i0].data().begin());
-#else
-        detail::sendBackward( m_temp[i0].data(), m_ghostM.data(), m_g->communicator());
-        dg::blas1::copy( m_ghostM, m_temp[i0]);
-#endif //_DG_CUDA_UNAWARE_MPI
+        if constexpr (std::is_same_v< dg::get_execution_policy<container>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
+        {
+            m_buffer.resize( m_ghostP.size());
+            thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_buffer.begin());
+            detail::mpi_send( m_buffer, m_g->communicator(), -1);
+            thrust::copy( m_buffer.cbegin(), m_buffer.cend(), m_temp[i0].data().begin());
+        }
+        else
+        {
+            detail::mpi_send( m_temp[i0].data(), m_g->communicator(), -1 );
+        }
     }
 
     //3. apply right boundary conditions in last plane
@@ -507,7 +479,8 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
 }
 
 template<class G, class M, class C, class container>
-void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fme )
+void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum
+    whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fme )
 {
     int rank;
     MPI_Comm_rank(m_g->communicator(), &rank);
@@ -530,14 +503,18 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
     if( m_sizeZ != 1)
     {
         unsigned i0 = 0;
-#ifdef _DG_CUDA_UNAWARE_MPI
-        thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_send_buffer.begin());
-        detail::sendForward( m_send_buffer, m_recv_buffer, m_g->communicator());
-        thrust::copy( m_recv_buffer.cbegin(), m_recv_buffer.cend(), m_temp[i0].data().begin());
-#else
-        detail::sendForward( m_temp[i0].data(), m_ghostP.data(), m_g->communicator());
-        dg::blas1::copy( m_ghostP, m_temp[i0]);
-#endif //_DG_CUDA_UNAWARE_MPI
+        if constexpr (std::is_same_v< dg::get_execution_policy<container>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
+        {
+            m_buffer.resize( m_ghostP.size());
+            thrust::copy( m_temp[i0].data().cbegin(), m_temp[i0].data().cend(), m_buffer.begin());
+            detail::mpi_send( m_buffer, m_g->communicator(), +1);
+            thrust::copy( m_buffer.cbegin(), m_buffer.cend(), m_temp[i0].data().begin());
+        }
+        else
+        {
+            detail::mpi_send( m_temp[i0].data(), m_g->communicator(), +1);
+        }
     }
 
     //3. apply left boundary conditions in first plane

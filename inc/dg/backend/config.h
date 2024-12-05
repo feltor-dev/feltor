@@ -57,29 +57,51 @@
 #endif //compilers
 #endif //THRUST_DEVICE_SYSTEM
 
-//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
-#ifdef MPI_VERSION
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 
-// TODO there should be a way to manually define cuda-awareness at compile time
+//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
+//TODO This should be tested somewhere
+namespace dg{
+#ifdef MPI_VERSION
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA // cuda is involved
+//{;
+
+#ifdef DG_CUDA_AWARE_MPI // TODO document in config README
+//{;
+#pragma message( "Assume CUDA-aware MPI support as per user indication!")
+constexpr bool cuda_aware_mpi = true;
+//}
+#else // ! DG_CUDA_AWARE_MPI
+//{;
 #if defined(OPEN_MPI) && OPEN_MPI
+//{;
 #include "mpi-ext.h"
 // Open-MPI header defines MPIX_CUDA_AWARE if compiled with cuda
-#endif
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
 #pragma message( "CUDA-aware MPI support detected! Yay!")
-//Has cuda aware MPI support. Everything fine
-#elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-#warning "No CUDA aware MPI installation! Falling back to regular MPI!"
-#define _DG_CUDA_UNAWARE_MPI
+constexpr bool cuda_aware_mpi = true;
 #else
+#pragma message( "No CUDA aware MPI installation! Falling back to regular MPI!")
+constexpr bool cuda_aware_mpi = false;
+#endif
+//}
+#else // Other than open-mpi there seems no way to determine cuda support
+//{;
 #pragma message( "Cannot determine CUDA-aware MPI support! Falling back to regular MPI!")
-#define _DG_CUDA_UNAWARE_MPI
-#endif //MPIX_CUDA
-
+constexpr bool cuda_aware_mpi = false;
+//}
+#endif // OPEN_MPI
+//}
+#endif // DG_CUDA_AWARE_MPI
+//}
+#else // THRUST != CUDA
+//{;
+constexpr bool cuda_aware_mpi = false;
+//}
 #endif //THRUST == CUDA
 #endif //MPI_VERSION
+} // namespace dg
 
+//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///@brief Expands to \__host__ \__device__ if compiled with nvcc else is empty
 #define DG_DEVICE
 #ifdef __CUDACC__

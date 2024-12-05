@@ -127,25 +127,9 @@ struct MPIPermutation
         return m_communicating;
     }
 
-    // we allow the input to be destroyed and allow for symmetric inplace communication
+    // TODO we allow the input to be destroyed and allow for symmetric inplace communication
     // in such a case no memory for the output needs to be allocated
     // the required memory will be moved in from the input
-
-    // synchronous gather
-    template<class ContainerType0, class ContainerType1>
-    void global_gather( ContainerType0& store, ContainerType1& buffer) const
-    {
-        MPI_Request rqst = global_gather_init( store, buffer);
-        MPI_Wait( &rqst, MPI_STATUS_IGNORE );
-    }
-
-    // synchronous scatter
-    template<class ContainerType0, class ContainerType1>
-    void global_scatter( ContainerType0& buffer, ContainerType1& store) const
-    {
-        MPI_Request rqst = global_scatter_init( buffer, store);
-        MPI_Wait( &rqst, MPI_STATUS_IGNORE );
-    }
 
     // asynchronous scatter
     // user is responsible to catch CUDA-unawareness!
@@ -153,6 +137,12 @@ struct MPIPermutation
     MPI_Request global_scatter_init(
             ContainerType0& buffer, ContainerType1& store) const
     {
+        assert( buffer.size() == m_buffer_size);
+        if( !m_symmetric)
+        {
+            assert( store.size() == m_store_size);
+        }
+        // store can be empty if symmetric
         return global_comm_init( buffer, store, true);
     }
     // asynchronous gather
@@ -160,6 +150,10 @@ struct MPIPermutation
     MPI_Request global_gather_init(
             ContainerType0& store, ContainerType1& buffer)const
     {
+        assert( store.size() == m_store_size);
+        if( !m_symmetric)
+            assert( buffer.size() == m_buffer_size);
+        // buffer can be empty if symmetric
         return global_comm_init( store, buffer, false);
     }
     private:
@@ -179,10 +173,8 @@ struct MPIPermutation
         using value_type = dg::get_value_type<ContainerType0>;
         static_assert( std::is_same_v<value_type,
                 get_value_type<ContainerType1>>);
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
         if constexpr ( std::is_same_v<
-                dg::get_execution_policy<ContainerType1>,
-                dg::CudaTag>)
+            dg::get_execution_policy<ContainerType1>, dg::CudaTag>)
         {
             // We have to wait that all kernels are finished and values are
             // ready to be sent
@@ -193,15 +185,14 @@ struct MPIPermutation
             if( code != cudaSuccess)
                 throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
         }
-#endif
         void * send_ptr;
-        //if( m_symmetric)
-        //{
-        //    // recv may be empty
-        //    recv.swap( send);
-        //    send_ptr = MPI_IN_PLACE;
-        //}
-        //else
+        if( m_symmetric)
+        {
+            // recv may be empty
+            recv.swap( send);
+            send_ptr = MPI_IN_PLACE;
+        }
+        else
         {
             send_ptr             = thrust::raw_pointer_cast( send.data());
         }
@@ -210,18 +201,13 @@ struct MPIPermutation
         void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
         const int * recvFrom_ptr = thrust::raw_pointer_cast( m_recvFrom.data());
         const int * accR_ptr     = thrust::raw_pointer_cast( m_accR.data());
-        unsigned send_size    = m_buffer_size;
-        unsigned recv_size    = m_store_size;
+
         if( !scatter)
         {
             // invert the scatter and gather operations
             std::swap( sendTo_ptr, recvFrom_ptr);
             std::swap( accS_ptr, accR_ptr);
-            std::swap( send_size, recv_size);
         }
-        assert( send.size()  == send_size);
-        if( ! m_symmetric)
-            assert( recv.size()  == recv_size);
         MPI_Request rqst;
         MPI_Ialltoallv(
             send_ptr, sendTo_ptr, accS_ptr,
@@ -429,7 +415,7 @@ struct MPIGather
     {
         thrust::host_vector<int> bufferIdx, sort_map, reduction_keys;
         thrust::host_vector<std::array<int,2>> locally_unique_global_idx;
-        detail::findUniqueIndices<thrust::host_vector>( gIdx, sort_map,
+        detail::find_unique<thrust::host_vector>( gIdx, sort_map,
             reduction_keys, bufferIdx, locally_unique_global_idx);
         int comm_size;
         MPI_Comm_size( comm, &comm_size);
@@ -449,9 +435,12 @@ struct MPIGather
         //Now construct the MPIPermutation object by getting the number of
         //elements to send
         m_permute = detail::MPIPermutation( sendTo, comm);
-        assert( m_permute.buffer_size() == bufferIdx.size());
+        assert( m_permute.buffer_size() == locally_unique_global_idx.size());
 
         m_g1 = LocalGatherMatrix<Vector>(bufferIdx); //
+        //for( unsigned u=0; u<bufferIdx.size(); u++)
+        //    std::cout << "G1 "<<bufferIdx[u]<<"\n";
+        //std::cout <<std::endl;
 
         // Finally, construct G2
         thrust::host_vector<int> storeIdx( m_permute.store_size());
@@ -460,9 +449,13 @@ struct MPIGather
         thrust::host_vector<int> lIdx( m_permute.buffer_size());
         for( unsigned i=0; i<lIdx.size(); i++)
             lIdx[i] = locally_unique_global_idx[i][1]; // the local index
-        m_permute.global_scatter( lIdx, storeIdx);
+        MPI_Request rqst = m_permute.global_scatter_init( lIdx, storeIdx);
+        MPI_Wait( &rqst, MPI_STATUS_IGNORE );
         // All the indices we receive here are local to the current rank!
         m_g2 = LocalGatherMatrix<Vector>(storeIdx); //
+        //for( unsigned u=0; u<storeIdx.size(); u++)
+        //    std::cout << "G2 "<<storeIdx[u]<<"\n";
+        //std::cout <<std::endl; MPI_Barrier( MPI_COMM_WORLD);
     }
 
     /**
@@ -581,29 +574,31 @@ struct MPIGather
         // TODO docu It is save to use and change vector immediately after this function
         using value_type = get_value_type<ContainerType0>;
 
-        m_store.template set<value_type>( m_permute.store_size());
+        if ( m_permute.isSymmetric())
+            m_store.swap( buffer);
+        else
+            m_store.template set<value_type>( m_permute.store_size());
+        auto& store = m_store.template get<value_type>();
 
         //gather values to store
-        m_g2.gather( gatherFrom, m_store.template get<value_type>());
-#ifdef _DG_CUDA_UNAWARE_MPI // we need to send through host
-        if constexpr ( std::is_same_v<
-                dg::get_execution_policy<ContainerType>,
-                dg::CudaTag>)
+        m_g2.gather( gatherFrom, store);
+        //for( unsigned u=0; u<gatherFrom.size(); u++)
+        //    std::cout << "gatherFrom "<<u<<" "<<gatherFrom[u]<<"\n";
+        //for( unsigned u=0; u<store.size(); u++)
+        //    std::cout << "Store "<<u<<" "<<store[u]<<"\n";
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
         {
-            m_h_buffer.set<value_type>( m_permute.buffer_size());
-            m_h_store.set<value_type>( m_permute.store_size());
+            m_h_buffer.template set<value_type>( m_permute.buffer_size());
+            m_h_store.template set<value_type>( m_permute.store_size());
             // cudaMemcpy
-            m_h_store.template get<value_type>() =
-                m_store.template get<value_type>();
-        }
-        m_rqst = m_permute.global_gather_init(
+            m_h_store.template get<value_type>() = store;
+            m_rqst = m_permute.global_gather_init(
                 m_h_store.template get<value_type>(),
                 m_h_buffer.template get<value_type>());
-#else
-        m_rqst = m_permute.global_gather_init(
-                m_store.template get<value_type>(),
-                buffer);
-#endif// _DG_CUDA_UNAWARE_MPI
+        }
+        else
+            m_rqst = m_permute.global_gather_init(store, buffer);
     }
     template<class ContainerType>
     void global_gather_wait( ContainerType& buffer) const
@@ -611,46 +606,36 @@ struct MPIGather
         using value_type = dg::get_value_type<ContainerType>;
         // can be called on MPI_REQUEST_NULL
         MPI_Wait( &m_rqst, MPI_STATUS_IGNORE );
-#ifdef _DG_CUDA_UNAWARE_MPI // we need to copy from host
-        if constexpr ( std::is_same_v<
-                dg::get_execution_policy<Vector<value_type>>,
-                dg::CudaTag>)
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
             buffer = m_h_buffer.template get<value_type>();
-#endif// _DG_CUDA_UNAWARE_MPI
     }
 
-    // defined only if gIdx map is injective (one-to-one)
-    // TODO infer this information in constructor
     template<class ContainerType0, class ContainerType1>
     void global_scatter_plus_init( ContainerType0& buffer, ContainerType1& scatterTo )const
     {
         using value_type = dg::get_value_type<ContainerType0>;
         m_store.template set<value_type>( m_permute.store_size());
+        auto& store = m_store.template get<value_type>();
         // throw if buffer has wrong type
-#ifdef _DG_CUDA_UNAWARE_MPI // we need to send through host
-        if constexpr ( std::is_same_v<
-                dg::get_execution_policy<ContainerType0>,
-                dg::CudaTag>)
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
         {
+            // we need to send through host
             m_h_buffer.template set<value_type>( m_permute.buffer_size());
             m_h_store.template set<value_type>( m_permute.store_size());
             // cudaMemcpy
             m_h_buffer.template get<value_type>() = buffer;
-        }
-        m_rqst = m_permute.global_scatter_init(
+            m_rqst = m_permute.global_scatter_init(
                 m_h_buffer.template get<value_type>(),
                 m_h_store.template get<value_type>());
-#else
-        m_rqst = m_permute.global_gather_init(
-                buffer, m_store.template get<value_type>());
-#endif// _DG_CUDA_UNAWARE_MPI
+        }
+        else
+            m_rqst = m_permute.global_scatter_init( buffer, store);
     }
     /**
-     * @brief \f$ v = G^\mathrm{T} b\f$. Globally (across processes) scatter data inside buffer
+     * @brief \f$ v = v + G^\mathrm{T} b\f$. Globally (across processes) scatter data inside buffer
      *
-     * @attention no reduction on double indices is performed so this operation is
-     * currently only defined if the gather map is injective
-     * This is the transpose operation of <tt> global_gather() </tt>
      * @param v target vector v; on output contains values from other
      * processes sent back to the origin (must have <tt> local_size() </tt>
      * elements)
@@ -664,15 +649,12 @@ struct MPIGather
         using value_type = get_value_type<ContainerType>;
         // can be called on MPI_REQUEST_NULL
         MPI_Wait( &m_rqst, MPI_STATUS_IGNORE );
+        auto& store = m_store.template get<value_type>();
         //scatter store to v
-#ifdef _DG_CUDA_UNAWARE_MPI // we need to send through host
-        if constexpr ( std::is_same_v<
-                dg::get_execution_policy<ContainerType>,
-                dg::CudaTag>)
-            m_store.template get<value_type>() =
-                m_h_store.template get<value_type>();
-#endif// _DG_CUDA_UNAWARE_MPI
-        m_g2.scatter_plus( m_store.template get<value_type>(), scatterTo);
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
+            store = m_h_store.template get<value_type>();
+        m_g2.scatter_plus( store, scatterTo);
     }
 
     private:
@@ -681,9 +663,7 @@ struct MPIGather
     // These are mutable and we never expose them to the user
     mutable detail::AnyVector< Vector> m_store;
     mutable MPI_Request m_rqst;
-#ifdef _DG_CUDA_UNAWARE_MPI // nothing serious is cuda unaware ...
     mutable detail::AnyVector<thrust::host_vector>  m_h_buffer, m_h_store;
-#endif// _DG_CUDA_UNAWARE_MPI
 };
 
 }//namespace dg

@@ -117,9 +117,15 @@ struct LocalGatherMatrix
     template<template<class> class OtherVector>
     LocalGatherMatrix( const LocalGatherMatrix<OtherVector>& src)
     : m_idx ( src.m_idx) { }
+    // TODO check if m_idx is identity
 
     /// Index map from constructor
     const Vector<int>& index_map() const{ return m_idx;}
+    template<class ContainerType0, class ContainerType1>
+    void gather(const ContainerType0& store, ContainerType1& buffer) const
+    {
+        gather( 1, store, 0, buffer);
+    }
 
     /// \f$ w = \alpha G v + \beta w \f$
     template<class ContainerType0, class ContainerType1>
