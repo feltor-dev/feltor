@@ -952,8 +952,14 @@ right hand sides as defined in Eqs.~\eqref{eq:EgyrofluidN} and \eqref{eq:Egyrofl
         // Double flux aligned wall above and below a threshold value
         "type" : "sol_pfr",
         "boundary" : [1.2, 0.8],
-        "alpha" : [0.25,0.25],
+        "alpha" : [0.05,0.05],
         // first one is for main region, second one for PFR
+
+        // sol and pfr for 2 X-points
+        "type" : "sol_pfr_2X",
+        "boundary" : [1.2, 0.9, 1.1, 0.9],
+        "alpha" : [0.05,0.02, 0.05, 0.01],
+        // 1. outboard region, 2. 1st X PFR, 3. inboard, 4. 2nd X PFR
 
         "penalization" : 1.0, //penalization coefficient $\omega_w$ in density
         // and velocity damping Eq.\eqref{eq:wall_penalization}
@@ -1418,6 +1424,15 @@ We can have no damping
     //$n_{bg}$ drops from initial condition Eq.\eqref{eq:initial_ne}
 }
 \end{minted}
+\begin{tcolorbox}[title=Recent Update]
+You can now choose any type from Section~\ref{sec:wall} here.
+The damping is then defined as $D(R,Z) = 1- \chi_w(R,Z)$.
+Then the only difference between e.g. type "sol\_pfr" and "aligned" below is
+(with same alpha and boundary values) that the
+transition between damping and no-damping happens outside, respectively
+inside the given boundary parameter.
+\end{tcolorbox}
+
 Or we can have an aligned damping profile
 \begin{align}
     \label{eq:aligned_damping}

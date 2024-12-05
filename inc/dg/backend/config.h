@@ -61,7 +61,11 @@
 #ifdef MPI_VERSION
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 
+// TODO there should be a way to manually define cuda-awareness at compile time
+#if defined(OPEN_MPI) && OPEN_MPI
 #include "mpi-ext.h"
+// Open-MPI header defines MPIX_CUDA_AWARE if compiled with cuda
+#endif
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
 #pragma message( "CUDA-aware MPI support detected! Yay!")
 //Has cuda aware MPI support. Everything fine

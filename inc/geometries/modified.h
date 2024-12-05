@@ -224,11 +224,13 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
     std::function<bool(double,double)> m_pred;
 };
 //some possible predicates
-static bool nowhere( double R, double Z){return false;}
-static bool everywhere( double R, double Z){return !nowhere(R,Z);}
-struct HeavisideZ{
+static inline constexpr bool nowhere( double R, double Z){return false;}
+static inline constexpr bool everywhere( double R, double Z){return true;}
+// positive above certain Z value ( deprecated in favor of Above)
+struct HeavisideZ
+{
     HeavisideZ( double Z_X, int side): m_ZX( Z_X), m_side(side) {}
-    bool operator()(double R, double Z){
+    bool operator()(double R, double Z)const{
         if( Z < m_ZX && m_side <= 0) return true;
         if( Z >= m_ZX && m_side > 0) return true;
         return false;
@@ -237,6 +239,177 @@ struct HeavisideZ{
     double m_ZX;
     int m_side;
 };
+
+/// This one checks if a point lies on the right of a line stretching to
+/// infinity given by either two or three points
+struct RightSideOf
+{
+    RightSideOf( std::array<double,2> p1, std::array<double,2> p2)
+    : RightSideOf( std::vector{p1,p2})
+    {
+    }
+    RightSideOf( std::array<double,2> p1, std::array<double,2> p2,
+        std::array<double,2> p3) : RightSideOf( std::vector{p1,p2,p3})
+    {
+    }
+    RightSideOf( std::vector<std::array<double,2>> ps): m_ps(ps)
+    {
+        if( ps.size() != 2 and ps.size() != 3)
+            throw Error( Message(_ping_) << "Give either 2 or 3 Points");
+        for( unsigned u=0; u<ps.size(); u++)
+        for( unsigned k=0; k<ps.size(); k++)
+            if( u!=k and ps[u][0] == ps[k][0] and ps[u][1] == ps[k][1])
+                throw Error( Message(_ping_) << "Points " <<k <<" and "<<u<<" must be different!");
+    }
+    bool operator() ( double R, double Z) const
+    {
+        // I'm sure it is possible to generalize this to more than three points
+        // but it hurts my head right now
+        std::array<double,2> x = {R,Z};
+        std::vector<bool> right_of( m_ps.size()-1);
+        // For each consecutive pair of points check if x lies on the right
+        for( unsigned u=0; u<m_ps.size()-1; u++)
+        {
+            right_of[u] = right_handed( m_ps[u], x, m_ps[u+1]);
+        }
+        if( m_ps.size() == 2)
+            return right_of[0];
+        // else we have 3 points
+        if ( right_handed( m_ps[0], m_ps[2], m_ps[1]))
+        {
+            if( right_of[0] and right_of[1]) // it is right of both lines
+                return true;
+            else
+                return false;
+        }
+        else // left handed points
+        {
+            if( not right_of[0] and not right_of[1]) // it is left of both lines
+                return false;
+            else
+                return true;
+        }
+    }
+    private:
+    // is true if p0,p1,p2 forms a right handed triangle i.e. go counter-clockwise
+    // which is equivalent to saying that p1 is right of [p0,p2]
+    bool right_handed( const std::array<double,2>& p0,
+                       const std::array<double,2>& p1,
+                       const std::array<double,2>& p2) const
+    {
+        //std::cout<< "p0 "<<p0[0]<<" "<<p0[1]<<" p1 "<<p1[0]<<" "<<p1[1]<<" p2 "<<p2[0]<<" "<<p2[1]<<"\n";
+        // if v1 x v2 points up the system is right handed
+        std::array<double,2> v1 = { p1[0]- p0[0], p1[1] - p0[1]};
+        std::array<double,2> v2 = { p2[0]- p0[0], p2[1] - p0[1]};
+        // Now check if z-component of cross product points up or down
+        double v3z = v1[0]*v2[1] - v1[1]*v2[0];
+        //std::cout<< "v3z "<<v3z<<"\n";
+        return (v3z >= 0);
+    }
+    std::vector<std::array<double,2>> m_ps;
+};
+
+// Check if a point lies above or below a plane given by origin p0 and its normal vector (p1-p0)
+struct Above
+{
+    // normal vector is defined by n = p1 - p0
+    // if above is false the predicate returns false for points above the plane
+    Above( std::array<double,2> p0, std::array<double,2> p1, bool above = true)
+    : m_p0( p0), m_vec{ p1[0]-p0[0], p1[1]-p0[1]},  m_above(above){}
+    bool operator() (double R, double Z) const
+    {
+        R -= m_p0[0];
+        Z -= m_p0[1];
+        double res = m_vec[0]* R + m_vec[1]*Z;
+        return m_above == (res > 0); // true if both above and res > 0 or below and res <= 0
+    }
+    private:
+    std::array<double,2> m_p0, m_vec;
+    bool m_above;
+};
+/*! @brief Predicate returning true in closed fieldline region
+ */
+struct ClosedFieldlineRegion
+{
+    /// if closed is false then the Functor acts as the OpenFieldLineRegion  = not ClosedFieldlineRegion
+    /// If no O-point exists no closed fieldline region exists
+    ClosedFieldlineRegion( const TokamakMagneticField& mag, bool closed = true):
+        m_psip(mag.psip()), m_closed(closed)
+    {
+        double RO = mag.R0(), ZO= 0.;
+        description desc = mag.params().getDescription();
+        if( desc != description::none and desc != description::centeredX)
+        {
+            dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+            m_opoint = true;
+        }
+        else
+        {
+            m_opoint = false;
+            double psipO = mag.psip()( RO, ZO);
+            m_psipO_pos = psipO > 0;
+            double RX1 = 0., ZX1 = 0., RX2 = 0., ZX2 = 0.;
+            description desc = mag.params().getDescription();
+            if( desc != description::none and desc != description::centeredX)
+                dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+            if ( desc == description::standardX or desc == description::doubleX)
+            {
+                // Find first X-point
+                RX1 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+                ZX1 = -1.1*mag.params().elongation()*mag.params().a();
+                dg::geo::findXpoint( mag.get_psip(), RX1, ZX1);
+                m_above.push_back( mod::Above( {RX1, ZX1}, {RO, ZO}));
+            }
+            if ( desc == description::doubleX)
+            {
+                // Find second X-point
+                RX2 = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+                ZX2 = +1.1*mag.params().elongation()*mag.params().a();
+                dg::geo::findXpoint( mag.get_psip(), RX2, ZX2);
+                m_above.push_back( mod::Above( {RX2, ZX2}, {RO, ZO}));
+            }
+        }
+    }
+    bool operator()( double R, double Z) const
+    {
+        if( !m_opoint)
+            return m_closed ? false : true;
+        for( unsigned u=0; u<m_above.size(); u++)
+            if( !m_above[u](R,Z))
+                return m_closed ? false : true;
+
+        double psip = m_psip(R,Z);
+        if( m_psipO_pos == (psip > 0) ) // true if O-point >0 and psip >0 or if O-point <0 and psip <0
+            return m_closed ? true : false;
+        return m_closed ? false : true;
+    }
+    private:
+    bool m_opoint;
+    bool m_psipO_pos;
+    std::vector<dg::geo::mod::Above> m_above;
+    CylindricalFunctor m_psip;
+    bool m_closed;
+};
+
+/*! @brief The default predicate for sheath integration
+ *
+ * The SOL is everything that is not a wall (wall(R,Z) == 1)
+ * and not inside the closed Fieldline region
+ */
+struct SOLRegion
+{
+    SOLRegion( const TokamakMagneticField& mag, CylindricalFunctor wall): m_wall(wall),
+        m_closed(mag){}
+    bool operator()( double R, double Z)
+    {
+        return m_wall(R,Z) != 1 and not m_closed(R,Z);
+    }
+    private:
+    CylindricalFunctor m_wall;
+    ClosedFieldlineRegion m_closed;
+};
+
+
 ///@endcond
 
 ///@addtogroup profiles

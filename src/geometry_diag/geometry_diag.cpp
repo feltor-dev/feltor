@@ -123,6 +123,7 @@ int main( int argc, char* argv[])
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
         {"Psip", "Flux function", mag.psip()},
+        {"modPsip", "Modified Flux function", mod_mag.psip()},
         {"PsipR", "Flux function derivative in R", mag.psipR()},
         {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
         {"PsipRR", "Flux function derivative in RR", mag.psipRR()},
@@ -178,6 +179,8 @@ int main( int argc, char* argv[])
         {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( 1.03), dg::geo::RhoP(mag) )},
         {"MagneticTransition", "The region where the magnetic field is modified", transition},
         {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, deltaPsi, 1./(sqrt(2.*M_PI)*deltaPsi)), mag.psip())},
+        {"ClosedFieldlineRegion", "Region of closed fieldlines", dg::compose( [](bool x){ return double(x);}, dg::geo::mod::ClosedFieldlineRegion( mag) )},
+        {"SOL", "The scrape off layer region", dg::compose( [](bool x){ return double(x);}, dg::geo::mod::SOLRegion( mag, wall) )},
         ////
         { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) },
         {"Wall", "Penalization region that acts as the wall", wall },
@@ -190,19 +193,19 @@ int main( int argc, char* argv[])
         /////////////////////////////////////
         {"WallFieldlineAnglePDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, maxPhi, 1e-6, "phi") },
+                    sheath_walls, maxPhi, 1e-6, "phi", dg::geo::mod::SOLRegion( mag, wall)) },
         {"WallFieldlineAngleMDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, -maxPhi, 1e-6, "phi") },
+                    sheath_walls, -maxPhi, 1e-6, "phi", dg::geo::mod::SOLRegion( mag, wall)) },
         {"WallFieldlineSPDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, maxPhi, 1e-6, "s") },
+                    sheath_walls, maxPhi, 1e-6, "s", dg::geo::mod::SOLRegion( mag, wall)) },
         {"WallFieldlineSMDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, -maxPhi, 1e-6, "s") },
+                    sheath_walls, -maxPhi, 1e-6, "s", dg::geo::mod::SOLRegion( mag, wall)) },
         {"Sheath", "Sheath region", sheath},
         {"SheathDirection", "Direction of magnetic field relative to sheath", dg::geo::WallDirection(mag, sheath_walls) },
-        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, maxPhi, 1e-6, "s")}
+        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, maxPhi, 1e-4, "s")}
     };
 
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
