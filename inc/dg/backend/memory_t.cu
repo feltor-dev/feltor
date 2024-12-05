@@ -1,6 +1,7 @@
 #include <iostream>
 #include <any>
 #include <vector>
+#include <cassert>
 
 #include "memory.h"
 
@@ -100,12 +101,12 @@ int main()
 
     }
     {
-        std::cout << "\nTest Buffer behaviour with std::any\n";
+        std::cout << "\nTest AnyVector behaviour \n";
         dg::detail::AnyVector<verbose_vec> buffer;
-        std::cout << "Construct Verbose (Construct)\n";
+        std::cout << "### Construct Verbose (Construct)\n";
         buffer.set<double>( 10);
 
-        std::cout << "auto reference cast Verbose (no copy!)\n";
+        std::cout << "### auto reference cast Verbose (no copy!)\n";
         // REMEMBER TO WRITE auto& NOT JUST auto!!
         // T& ref = a;
         // auto vv = ref; deduces auto == T NOT T&
@@ -113,28 +114,40 @@ int main()
         // auto == std::vector<Verbose<double>>
         vv[7].a = 1.7;
         std::cout << buffer.get<double>()[7].a<<" (1.7)\n";
-        std::cout << "Resize with same size shouldn't do anything\n";
+        std::cout << "### Resize with same size shouldn't do anything\n";
         buffer.set<double>( 10);
 
-        std::cout << "Reset buffer (Construct)\n";
+        std::cout << "### Reset buffer (Construct)\n";
         buffer.set<float>( 10); // Construct float
-        std::cout << "Cast buffer (check that no copy or move is displayed)\n";
+        std::cout << "### Cast buffer (check that no copy or move is displayed)\n";
         auto& w = buffer.get<float>();
         w[7].a = 42.f;
         std::cout << buffer.get<float>()[7].a<<" (42)\n";
-        std::cout << "Test typeid\n";
+        std::cout << "### Test typeid\n";
         try{
             buffer.get<double>();
         }catch ( std::bad_any_cast& e)
         {
-            std::cerr<< "Expected error: "<<e.what()<<"\n";
+            std::cerr<< "### Expected error: "<<e.what()<<"\n";
         }
-        std::cout << "Construct 2nd buffer\n";
+        std::cout << "### Construct 2nd buffer\n";
         dg::detail::AnyVector<verbose_vec> buffer2;
         buffer2.set<double>(4);
-        std::cout << "Test swap (no copies or moves) \n";
+        std::cout << "### Test swap (no copies or moves) \n";
         std::swap ( buffer, buffer2);
         std::cout << buffer2.get<float>()[7].a<<" (42)\n";
+        std::cout << "### Construct verbose vector \n";
+        verbose_vec<float> to_swap( 4);
+        std::cout << "### Swap in verbose vector of same type (no copy or move) \n";
+        buffer2.swap( to_swap);
+        assert( to_swap.size() == 10);
+        std::cout << "### Construct verbose vector \n";
+        verbose_vec<double> to_swap_d( 3, 7.);
+        std::cout << "### Swap in verbose vector of another type (no copy or move) \n";
+        buffer2.swap( to_swap_d);
+        assert( to_swap_d.size() == 0);
+        std::cout << buffer2.get<double>()[2].a<<" (7)\n";
+
 
     }
 

@@ -158,14 +158,29 @@ struct AnyVector
         auto type_idx = std::type_index( typeid( value_type));
         if( type_idx != m_type)
         {
-            m_vec = Vector<value_type>(size);
+            m_vec.emplace<Vector<value_type>>(size);
             m_type = type_idx;
         }
         else
         {
-            auto data = std::any_cast<Vector<value_type>>(
+            auto ptr = std::any_cast<Vector<value_type>>(
                 &m_vec);
-            data->resize( size);
+            ptr->resize( size);
+        }
+    }
+    template<class value_type>
+    void swap ( Vector<value_type>& src)
+    {
+        auto type_idx = std::type_index( typeid( value_type));
+        if( type_idx != m_type)
+        {
+            m_vec.emplace< Vector<value_type>>(std::move(src));
+            m_type = type_idx;
+        }
+        else
+        {
+            auto& vec = std::any_cast<Vector<value_type>&>( m_vec);
+            src.swap(vec);
         }
     }
     // Get read access to underlying buffer
