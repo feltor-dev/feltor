@@ -39,9 +39,9 @@ void symv( get_value_type<ContainerType1> alpha,
 * order to reuse existing optimized matrix formats for the computation. It can
 * be expected that this works particularly well for cases in which the
 * communication to computation ratio is low. This class assumes that the matrix
-* and vector elements are distributed rowwise among mpi processes. The matrix
-* elements are then further separated into columns that are inside the domain
-* and the ones that are outside, i.e.
+* and vector elements are distributed either rowwise or column-wise among mpi processes.
+* The matrix elements are then further separated into rows that do not require communication
+* and the ones that do, i.e.
 * \f[
  M=M_i+M_o
  \f]
@@ -52,20 +52,22 @@ void symv( get_value_type<ContainerType1> alpha,
  symv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points.
  symv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
-* @tparam Collective must be a \c NearestNeighborComm The Communication class
-* needs to gather values across processes. The \c global_gather_init(),
-* \c global_gather_wait(), \c allocate_buffer() and \c isCommunicating() member
-* functions are called.  Gather points from other processes that are necessary
-* for the outer computations. If \c !isCommunicating() the
-* global_gather() function won't be called and only the inner matrix is applied.
+* @tparam Vector The storage class for internal buffers must match the execution policy
+* of the containers in the symv functions
 @note This class overlaps communication with computation of the inner matrix
 */
-template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
-struct RowColDistMat
+template<template<class > class Vector, class LocalMatrixInner, class LocalMatrixOuter = LocalMatrixInner>
+struct MPIDistMat
 {
-    using value_type = get_value_type<LocalMatrixInner>;
+    ///Type of distribution of MPI distributed matrices
+    enum dist_type
+    {
+        row_dist=0, //!< Row distributed
+        col_dist=1, //!< Column distributed
+        allreduce=2 //!< special distribution for partial reduction (Average)
+    };
     ///@brief no memory allocation
-    RowColDistMat(){}
+    MPIDistMat(){}
 
     /**
     * @brief Constructor
@@ -73,25 +75,49 @@ struct RowColDistMat
     * @param inside The local matrix for the inner elements
     * @param outside A local matrix for the elements from other processes
     * @param c The communication object
+    * needs to gather values across processes. The \c global_gather_init(),
+    * \c global_gather_wait(), \c buffer_size() and \c isCommunicating() member
+    * functions are called for row distributed matrices.
+    * The \c global_scatter_plus_init() and \c global_scatter_plus_wait() are called
+    * for column distributed matrices.
+    * If \c !isCommunicating() the gather/scatters functions won't be called and
+    * only the inner matrix is applied.
     */
-    RowColDistMat( const LocalMatrixInner& inside, const LocalMatrixOuter& outside, const Collective& c):
-        m_i(inside), m_o(outside), m_c(c), m_buffer( c.allocate_buffer()) { }
+    MPIDistMat( const LocalMatrixInner& inside,
+                const LocalMatrixOuter& outside,
+                const MPIGather<Vector>& mpi_gather,
+                enum dist_type dist = row_dist
+                )
+    : m_i(inside), m_o(outside), m_c(mpi_gather),
+      m_dist( dist), m_comm(mpi_gather.communicator()) { }
+
+    /**
+     * @brief Allreduce dist type
+     *
+     * In this mode the mpi matrix locally aplies the inner matrix and
+     * calls \c MPI_Allreduce on the result
+     * (outer matrix remains empty)
+     */
+    MPIDistMat( const LocalMatrixInner& m, MPI_Comm comm)
+    : m_i(m), m_dist(allreduce), m_comm(comm){}
 
     /**
     * @brief Copy constructor
 
     * The idea is that a device matrix can be constructed by copying a host matrix.
     *
-    * @tparam OtherMatrixInner LocalMatrixInner must be copy-constructible from OtherMatrixInner
-    * @tparam OtherMatrixOuter LocalMatrixOuter must be copy-constructible from OtherMatrixOuter
-
-    * @tparam OtherCollective Collective must be copy-constructible from OtherCollective
-
+    * @tparam OtherVector Vector must be copy-constructible from OtherVector
+    * @tparam OtherMatrixInner LocalMatrixInner must be copy-constructible from
+    * OtherMatrixInner
+    * @tparam OtherMatrixOuter LocalMatrixOuter must be copy-constructible from
+    * OtherMatrixOuter
     * @param src another Matrix
     */
-    template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
-    RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):
-        m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_c(src.collective()), m_buffer( m_c.allocate_buffer()) { }
+    template<template<class> class OtherVector, class OtherMatrixInner, class OtherMatrixOuter>
+    MPIDistMat( const MPIDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src)
+    : m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_c(src.collective())
+    m_dist( src.dist()), m_comm(src.communicator())
+    { }
     ///@brief Read access to the inner matrix
     const LocalMatrixInner& inner_matrix() const{return m_i;}
     ///@brief Write access to the inner matrix
@@ -101,10 +127,20 @@ struct RowColDistMat
     ///@brief Write access to the outer matrix
     LocalMatrixOuter& outer_matrix(){return m_o;}
     ///@brief Read access to the communication object
-    const Collective& collective() const{return m_c;}
+    const MPIGather<Vector>& collective() const{return m_c;}
+
+    ///@brief Read access to the MPI Communicator
+    MPI_Comm communicator() const{ return m_comm;}
+
+    ///@brief Read access to distribution
+    enum dist_type dist() const {return m_dist;}
+    ///@brief Write access to distribution
+    enum dist_type& dist() {return m_dist;}
 
     /**
     * @brief Matrix Vector product
+    *
+    * @attention This version of symv only works for \c row_dist matrices
     *
     * First the inner elements are computed with a call to doSymv then
     * the global_gather function of the communication object is called.
@@ -118,6 +154,7 @@ struct RowColDistMat
     template<class ContainerType1, class ContainerType2>
     void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
     {
+        // ContainerType is MPI_Vector here...
         //the blas2 functions should make enough static assertions on tpyes
         if( !m_c.isCommunicating()) //no communication needed
         {
@@ -128,21 +165,24 @@ struct RowColDistMat
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.communicator(), &result);
-        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 
-        //1.1 initiate communication
-        MPI_Request rqst[4];
-        const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-              value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
-        //1.2 compute inner points
-        dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
-        //2. wait for communication to finish
-        m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
-        //3. compute and add outer points
-        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
-        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), alpha, b_ptr, 1., y_ptr);
+        auto& buffer = m_buffer.typename get<dg::get_value_type<ContainerType1>>( m_c.buffer_size());
+        if( m_dist == row_dist)
+        {
+            // 1 initiate communication
+            m_c.global_gather_init( x.data(), buffer);
+            // 2 compute inner points
+            dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
+            // 3 wait for communication to finish
+            m_c.global_gather_wait( buffer);
+            // 4 compute and add outer points
+            dg::blas2::symv( alpha, m_o, buffer, 1, y.data());
+            // TODO do we need to do sth special to avoid accessing all y!? In Sparseblockmat?
+        }
+        else
+            throw Error( Message(_ping_)<<"symv(a,x,b,y) can only be used with a row distributed mpi matrix!");
+        // We theoretically could allow this for col_dist if the scatter_plus function in LocalGatherMatrix
+        // accepted an inconsistency in "v = a S w + b v"
     }
 
     /**
@@ -162,200 +202,97 @@ struct RowColDistMat
         if( !m_c.isCommunicating()) //no communication needed
         {
             dg::blas2::symv( m_i, x.data(), y.data());
-            return;
-
-        }
-        int result;
-        MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.communicator(), &result);
-        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-
-        //1.1 initiate communication
-        MPI_Request rqst[4];
-        const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-              value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-        m_c.global_gather_init( x_ptr, m_buffer.data(), rqst);
-        //1.2 compute inner points
-        dg::blas2::symv( m_i, x.data(), y.data());
-        //2. wait for communication to finish
-        m_c.global_gather_wait( x_ptr, m_buffer.data(), rqst);
-        //3. compute and add outer points
-        const value_type** b_ptr = thrust::raw_pointer_cast(m_buffer.data().data());
-        m_o.symv( SharedVectorTag(), get_execution_policy<ContainerType1>(), 1., b_ptr, 1., y_ptr);
-    }
-
-    private:
-    LocalMatrixInner m_i;
-    LocalMatrixOuter m_o;
-    Collective m_c;
-    dg::detail::Buffer< typename Collective::buffer_type>  m_buffer;
-};
-
-
-///Type of distribution of MPI distributed matrices
-enum dist_type
-{
-    row_dist=0, //!< Row distributed
-    col_dist=1, //!< Column distributed
-    allreduce=2 //!< TODO document special distribution
-};
-
-/**
-* @brief Distributed memory matrix class
-*
-* The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation.
-* It can be expected that this works particularly well for cases in which the communication to computation ratio is low.
-* In this class the matrix elements can be distributed rowwise or columnwise among mpi processes.
-* @tparam LocalMatrix The class of the matrix for local computations.
- symv needs to be callable on the container class of the MPI_Vector
-* @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes.
-Gather all points (including the ones that the process already has) necessary for the local matrix-vector
-product into one vector, such that the local matrix can be applied.
-If \c !isCommunicating() the global_gather and global_scatter_reduce functions won't be called and
-only the local matrix is applied.
-*/
-template<class LocalMatrix, class Collective >
-struct MPIDistMat
-{
-    using value_type = get_value_type<LocalMatrix>;
-    ///@brief no memory allocation
-    MPIDistMat( ) { }
-    /**
-    * @brief Constructor
-    *
-    * @param m The local matrix
-    * @param c The communication object
-    * @param dist either row or column distributed
-    */
-    MPIDistMat( const LocalMatrix& m, const Collective& c, enum dist_type dist = row_dist):
-        m_m(m), m_c(c), m_buffer( c.allocate_buffer()), m_dist( dist), m_comm( c.communicator()) { }
-
-// TODO Document allreduce mode
-    MPIDistMat( const LocalMatrix& m, MPI_Comm comm):
-        m_m(m), m_c(Collective()), m_buffer(), m_dist(allreduce), m_comm(comm){}
-
-    /**
-    * @brief Copy Constructor
-    *
-    * @tparam OtherMatrix LocalMatrix must be copy-constructible from OtherMatrix
-    * @tparam OtherCollective Collective must be copy-constructible from OtherCollective
-    * @param src The other matrix
-    */
-    template< class OtherMatrix, class OtherCollective>
-    MPIDistMat( const MPIDistMat<OtherMatrix, OtherCollective>& src):
-        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c->allocate_buffer()), m_dist(src.get_dist()), m_comm(src.get_comm())  { }
-    /**
-    * @brief Access to the local matrix
-    *
-    * @return Reference to the local matrix
-    */
-    const LocalMatrix& matrix() const{return m_m;}
-    /**
-    * @brief Access to the communication object
-    *
-    * @return Reference to the collective object
-    */
-    const Collective& collective() const{return *m_c;}
-
-    enum dist_type get_dist() const {return m_dist;}
-    void set_dist(enum dist_type dist){m_dist=dist;}
-    MPI_Comm get_comm() const { return m_comm;}
-
-    template<class ContainerType1, class ContainerType2>
-    void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
-    {
-        //the blas2 functions should make enough static assertions on tpyes
-        if( !m_c->isCommunicating()) //no communication needed
-        {
-            dg::blas2::symv( alpha, m_m, x.data(), beta, y.data());
-
-            return;
-
-        }
-        int result;
-        MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
-        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        if( m_dist == row_dist){
-            const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-            m_c->global_gather( x_ptr, m_buffer.data());
-            dg::blas2::symv( alpha, m_m, m_buffer.data(), beta, y.data());
-        }
-        if( m_dist == col_dist){
-            dg::blas2::symv( alpha, m_m, x.data(), beta, m_buffer.data());
-            value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-            m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
-        }
-    }
-    template<class ContainerType1, class ContainerType2>
-    void symv( const ContainerType1& x, ContainerType2& y) const
-    {
-        //the blas2 functions should make enough static assertions on tpyes
-        if( !m_c->isCommunicating()) //no communication needed
-        {
-            dg::blas2::symv( m_m, x.data(), y.data());
             if( m_dist == allreduce)
             {
-#ifdef _DG_CUDA_UNAWARE_MPI
-                m_store.data() = y.data();
-#endif
-                MPI_Allreduce(
-                    MPI_IN_PLACE,
-#ifdef _DG_CUDA_UNAWARE_MPI
-                    thrust::raw_pointer_cast( m_store.data().data()),
-#else
-                    thrust::raw_pointer_cast( y.data().data()),
-#endif
-                    y.data().size(),
-                    getMPIDataType<dg::get_value_type<ContainerType2>>(),
-                    MPI_SUM,
-                    m_comm);
-#ifdef _DG_CUDA_UNAWARE_MPI
-                y.data() = m_store.data();
-#endif
+                if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType1>,
+                    dg::CudaTag> and !dg::cuda_aware_mpi)
+                {
+                    using value_type = dg::get_value_type<ContainerType1>;
+                    m_h_buffer.template set<value_type>( y.size());
+                    m_h_buffer.template get<value_type>() = y.data();
+                    MPI_Allreduce(
+                        MPI_IN_PLACE,
+                        thrust::raw_pointer_cast( m_h_buffer.template get<value_type>().data()),
+                        y.data().size(),
+                        getMPIDataType<dg::get_value_type<ContainerType2>>(),
+                        MPI_SUM,
+                        m_comm);
+                    y.data() = m_h_buffer.template get<value_type>();
+                }
+                else
+                {
+                    MPI_Allreduce(
+                        MPI_IN_PLACE,
+                        thrust::raw_pointer_cast( y.data().data()),
+                        y.data().size(),
+                        getMPIDataType<dg::get_value_type<ContainerType2>>(),
+                        MPI_SUM,
+                        m_comm);
+                }
             }
             return;
 
         }
-        //TODO These asserts don't necessarily need to be true always
-        //Mabe the matrix comm can help?
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
-        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        if( m_dist == row_dist){
-            const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-            m_c->global_gather( x_ptr, m_buffer.data());
-            dg::blas2::symv( m_m, m_buffer.data(), y.data());
+
+        auto& buffer = m_buffer.typename get<dg::get_value_type<ContainerType1>>( m_c.buffer_size());
+
+        if( m_dist == row_dist)
+        {
+            // 1 initiate communication
+            m_c.global_gather_init( x.data(), buffer);
+            // 2 compute inner points
+            dg::blas2::symv( m_i, x.data(), y.data());
+            // 3 wait for communication to finish
+            m_c.global_gather_wait( buffer);
+            // 4 compute and add outer points
+            dg::blas2::symv( m_o, buffer, y.data());
+            // TODO do we need to do sth special to avoid accessing all y!? In Sparseblockmat?
         }
-        if( m_dist == col_dist){
-            dg::blas2::symv( m_m, x.data(), m_buffer.data());
-            value_type * y_ptr = thrust::raw_pointer_cast(y.data().data());
-            m_c->global_scatter_reduce( m_buffer.data(), y_ptr);
+        else if( m_dist == col_dist)
+        {
+            // 1. compute outer points
+            dg::blas2::symv( m_o, x.data(), buffer);
+            // 2 initiate communication
+            m_c.global_scatter_plus_init( buffer, y.data());
+            // 3 compute inner points
+            dg::blas2::symv( m_i, x.data(), y.data());
+            // 4 wait for communication to finish
+            m_c.global_scatter_plus_wait( y.data());
         }
     }
+
+    /// Stencil computations
     template<class Functor, class ContainerType1, class ContainerType2>
     void stencil( const Functor f, const ContainerType1& x, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
         if( !m_c->isCommunicating()) //no communication needed
         {
-            dg::blas2::stencil( f, m_m, x.data(), y.data());
+            dg::blas2::stencil( f, m_i, x.data(), y.data());
             return;
 
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c->communicator(), &result);
-        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        if( m_dist == row_dist){
+        auto& buffer = m_buffer.typename get<dg::get_value_type<ContainerType1>>( m_c.buffer_size());
+        if( m_dist == row_dist)
+        {
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
             m_c->global_gather( x_ptr, m_buffer.data());
             dg::blas2::stencil( f, m_m, m_buffer.data(), y.data());
+
+            // 1 initiate communication
+            m_c.global_gather_init( x, buffer);
+            // 2 compute inner points
+            dg::blas2::stencil( f, m_i, x.data(), y.data());
+            // 3 wait for communication to finish
+            m_c.global_gather_wait( buffer);
+            // 4 compute and add outer points
+            dg::blas2::stencil( f, m_o, buffer, y.data());
         }
         if( m_dist == col_dist){
             throw Error( Message(_ping_)<<"stencil cannot be used with a column distributed mpi matrix!");
@@ -363,32 +300,26 @@ struct MPIDistMat
     }
 
     private:
-    LocalMatrix m_m;
-    ClonePtr<Collective> m_c;
-    dg::detail::Buffer< typename Collective::container_type> m_buffer;
-#ifdef _DG_CUDA_UNAWARE_MPI
-    dg::detail::Buffer<thrust::host_vector<get_value_type<container_type> >> m_store;
-#endif
-    enum dist_type m_dist;
-    MPI_Comm m_comm;
+    LocalMatrixInner m_i;
+    LocalMatrixOuter m_o;
+    mutable MPIGather<Vector> m_gather;
+    mutable dg::detail::AnyVector<Vector>  m_buffer;
+#ifdef _DG_CUDA_UNAWARE_MPI // nothing serious is cuda unaware ...
+    mutable detail::AnyVector<thrust::host_vector>  m_h_buffer;
+#endif// _DG_CUDA_UNAWARE_MPI
 };
+
 ///@}
 
 ///@addtogroup traits
 ///@{
-template<class LI, class LO, class C>
-struct TensorTraits<RowColDistMat<LI,LO, C> >
+template<template<class>class V, class LI, class LO>
+struct TensorTraits<MPIDistMat<V, LI,LO> >
 {
     using value_type = get_value_type<LI>;//!< value type
     using tensor_category = MPIMatrixTag;
 };
 
-template<class L, class C>
-struct TensorTraits<MPIDistMat<L, C> >
-{
-    using value_type = get_value_type<L>;//!< value type
-    using tensor_category = MPIMatrixTag;
-};
 ///@}
 
 } //namespace dg
