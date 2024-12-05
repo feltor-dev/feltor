@@ -14,7 +14,7 @@ int main()
     {1,0}, {2,6}, {3,6}, {0,2}, {0,1}, {2,1}, {2,3}, {1,1}, {3,6}, {1,0}, {3,0}, {0,2}};
     thrust::host_vector<std::array<int,2>> unique;
     thrust::host_vector<int> bufferIdx, sort_map, reduction_keys;
-    dg::detail::findUniqueIndices<thrust::host_vector>(
+    dg::detail::find_unique<thrust::host_vector>(
         gIdx, sort_map, reduction_keys, bufferIdx, unique);
 
     std::cout<< "Found unique values \n";
