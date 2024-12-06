@@ -60,41 +60,32 @@ namespace dg{
 ///@{
 //using MPI_Vector<thrust::device_vector<double> >  MDVec; //!< MPI Device Vector s.a. dg::DVec
 template<class T>
-using MHVec_t     = dg::MPI_Vector<dg::HVec_t<T> >; //!< MPI Host Vector s.a. dg::HVec_t
+using MHVec_t   = dg::MPI_Vector<dg::HVec_t<T> >; //!< MPI Host Vector s.a. dg::HVec_t
 using MHVec     = dg::MPI_Vector<dg::HVec >; //!< MPI Host Vector s.a. dg::HVec
 using fMHVec    = dg::MPI_Vector<dg::fHVec >; //!< MPI Host Vector s.a. dg::fHVec
 using MDVec     = dg::MPI_Vector<dg::DVec >; //!< MPI Device Vector s.a. dg::DVec
 using fMDVec    = dg::MPI_Vector<dg::fDVec >; //!< MPI Device Vector s.a. dg::fDVec
 
-template<class T>
-using NNCH = dg::NearestNeighborComm<dg::iHVec, thrust::host_vector<const T*>, thrust::host_vector<T> >; //!< host Communicator for the use in an mpi matrix for derivatives
-template<class T>
-using NNCD = dg::NearestNeighborComm<dg::iDVec, thrust::device_vector<const T*>, thrust::device_vector<T> >; //!< host Communicator for the use in an mpi matrix for derivatives
-using dNNCH = dg::NNCH<double>; //!< host Communicator for the use in an mpi matrix for derivatives
-using fNNCH = dg::NNCH<float>; //!< host Communicator for the use in an mpi matrix for derivatives
-using dNNCD = dg::NNCD<double>; //!< device Communicator for the use in an mpi matrix for derivatives
-using fNNCD = dg::NNCD<float>; //!< device Communicator for the use in an mpi matrix for derivatives
-
 template< class T>
-using CooMat_t    = dg::CooSparseBlockMat<T>;
+using CooMat_t  = dg::CooSparseBlockMat<T>;
 using CooMat    = dg::CooSparseBlockMat<double>;
 using fCooMat   = dg::CooSparseBlockMat<float>;
 using DCooMat   = dg::CooSparseBlockMatDevice<double>;
 using fDCooMat  = dg::CooSparseBlockMatDevice<float>;
 
 template<class T>
-using MHMatrix_t  = dg::RowColDistMat<dg::HMatrix_t<T>, dg::CooMat_t<T>, dg::NNCH<T>>; //!< MPI Host Matrix for derivatives
-using MHMatrix  = dg::RowColDistMat<dg::HMatrix, dg::CooMat, dg::dNNCH>; //!< MPI Host Matrix for derivatives
-using fMHMatrix = dg::RowColDistMat<dg::fHMatrix, dg::fCooMat, dg::fNNCH>; //!< MPI Host Matrix for derivatives
-using MDMatrix  = dg::RowColDistMat<dg::DMatrix, dg::DCooMat, dg::dNNCD>; //!< MPI Device Matrix for derivatives
-using fMDMatrix = dg::RowColDistMat<dg::fDMatrix, dg::fDCooMat, dg::fNNCD>; //!< MPI Device Matrix for derivatives
+using MHMatrix_t  = dg::MPIDistMat<thrust::host_vector, dg::HMatrix_t<T>, dg::CooMat_t<T>>; //!< MPI Host Matrix for derivatives
+using MHMatrix    = dg::MPIDistMat<thrust::host_vector, dg::HMatrix, dg::CooMat>; //!< MPI Host Matrix for derivatives
+using fMHMatrix   = dg::MPIDistMat<thrust::host_vector, dg::fHMatrix, dg::fCooMat>; //!< MPI Host Matrix for derivatives
+using MDMatrix    = dg::MPIDistMat<thrust::device_vector, dg::DMatrix, dg::DCooMat>; //!< MPI Device Matrix for derivatives
+using fMDMatrix   = dg::MPIDistMat<thrust::device_vector, dg::fDMatrix, dg::fDCooMat>; //!< MPI Device Matrix for derivatives
 
 // Can't GeneralComm be replaced by aCommunicator<LocalContainer>? No, because conversion to DVec won't work any more
 // Of course this somewhat defeats the whole purpose of having a virtual base class
 template<class real_type>
-using MIHMatrix_t = MPIDistMat< IHMatrix_t<real_type>, GeneralComm< dg::iHVec, thrust::host_vector<real_type>> >;
+using MIHMatrix_t = MPIDistMat< thrust::host_vector, IHMatrix_t<real_type> >;
 template<class real_type>
-using MIDMatrix_t = MPIDistMat< IDMatrix_t<real_type>, GeneralComm< dg::iDVec, thrust::device_vector<real_type>> >;
+using MIDMatrix_t = MPIDistMat< thrust::device_vector, IDMatrix_t<real_type> >;
 using MIHMatrix = MIHMatrix_t<double>;
 using MIDMatrix = MIDMatrix_t<double>;
 
