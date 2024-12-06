@@ -176,6 +176,7 @@ struct MPIPermutation
         if constexpr ( std::is_same_v<
             dg::get_execution_policy<ContainerType1>, dg::CudaTag>)
         {
+#ifdef __CUDACC__ // g++ does not know cudaDeviceSynchronize
             // We have to wait that all kernels are finished and values are
             // ready to be sent
             cudaError_t code = cudaGetLastError( );
@@ -184,6 +185,9 @@ struct MPIPermutation
             code = cudaDeviceSynchronize();
             if( code != cudaSuccess)
                 throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+#else
+            assert( false && "Something is wrong! This should never execute!");
+#endif
         }
         void * send_ptr;
         if( m_symmetric)
@@ -409,13 +413,14 @@ struct MPIGather
     * operations
     */
     MPIGather( const thrust::host_vector<std::array<int,2>>& gIdx,
+            thrust::host_vector<int>& bufferIdx, // in a way it constructs 2 things
             // TODO gIdx can be unsorted and contain duplicate entries
             // TODO idx 0 is pid, idx 1 is localIndex on that pid
             MPI_Comm comm)
     {
-        thrust::host_vector<int> bufferIdx, sort_map, reduction_keys;
+        thrust::host_vector<int> sort_map, reduction_keys;
         thrust::host_vector<std::array<int,2>> locally_unique_global_idx;
-        detail::find_unique<thrust::host_vector>( gIdx, sort_map,
+        detail::find_unique( gIdx, sort_map,
             reduction_keys, bufferIdx, locally_unique_global_idx);
         int comm_size;
         MPI_Comm_size( comm, &comm_size);
@@ -428,7 +433,7 @@ struct MPIGather
             assert( 0 <= pids[i] && pids[i] < comm_size);
         }
         thrust::host_vector<int> locally_unique_pids, howmany;
-        detail::find_same<thrust::host_vector>( pids, locally_unique_pids, howmany);
+        detail::find_same( pids, locally_unique_pids, howmany);
         thrust::host_vector<int> sendTo( comm_size, 0 );
         for( unsigned i=0; i<locally_unique_pids.size(); i++)
             sendTo[locally_unique_pids[i]] = howmany[i];
@@ -437,7 +442,6 @@ struct MPIGather
         m_permute = detail::MPIPermutation( sendTo, comm);
         assert( m_permute.buffer_size() == locally_unique_global_idx.size());
 
-        m_g1 = LocalGatherMatrix<Vector>(bufferIdx); //
         //for( unsigned u=0; u<bufferIdx.size(); u++)
         //    std::cout << "G1 "<<bufferIdx[u]<<"\n";
         //std::cout <<std::endl;
@@ -481,6 +485,7 @@ struct MPIGather
      */
     template<class ConversionPolicy>
     MPIGather( const thrust::host_vector<int>& globalIndexMap,
+            thrust::host_vector<int>& bufferIdx, // may alias globalIndexMap
             const ConversionPolicy& p)
     {
         // TODO update docu on local_size() ( if we don't scatter we don't need it)
@@ -492,7 +497,7 @@ struct MPIGather
                 success = false;
 
         assert( success);
-        *this = MPIGather( gIdx, p.communicator());
+        *this = MPIGather( gIdx, bufferIdx, p.communicator());
     }
 
     //https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
@@ -502,7 +507,6 @@ struct MPIGather
     template< template<typename > typename OtherVector>
     MPIGather( const MPIGather<OtherVector>& src)
     {
-        m_g1 = src.m_g1;
         m_g2 = src.m_g2;
         m_permute = src.m_permute;
         // we don't need to copy memory buffers (they are just workspace) or the request
@@ -530,11 +534,6 @@ struct MPIGather
     */
     unsigned buffer_size() const { return m_permute.buffer_size();}
 
-    // gather matrix from buffer to gIdx given in constructor
-    const LocalGatherMatrix<Vector>& get_buffer_g1() const
-    {
-        return m_g1;
-    }
     /**
      * @brief True if the gather/scatter operation involves actual MPI communication
      *
@@ -658,7 +657,7 @@ struct MPIGather
     }
 
     private:
-    LocalGatherMatrix<Vector> m_g1, m_g2;
+    LocalGatherMatrix<Vector> m_g2;
     dg::detail::MPIPermutation m_permute;
     // These are mutable and we never expose them to the user
     mutable detail::AnyVector< Vector> m_store;

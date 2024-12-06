@@ -13,23 +13,23 @@
 namespace dg{
 ///@cond
 namespace detail{
-template<template<class> class Vector, class T>
+template<class T>
 void find_same(
-        const Vector<T>& numbers, // numbers must be sorted
-        Vector<T>& unique_numbers,
-        Vector<int>& howmany_numbers // same size as uniqe_numbers
+        const thrust::host_vector<T>& numbers, // numbers must be sorted
+        thrust::host_vector<T>& unique_numbers,
+        thrust::host_vector<int>& howmany_numbers // same size as uniqe_numbers
         )
 {
     // Find unique numbers and how often they appear
-    Vector<T> unique_ids( numbers.size());
-    Vector<int> ones( numbers.size(), 1),
+    thrust::host_vector<T> unique_ids( numbers.size());
+    thrust::host_vector<int> ones( numbers.size(), 1),
         howmany(ones);
     auto new_end = thrust::reduce_by_key( numbers.begin(), numbers.end(),
             //numbers are the keys by which one is reduced
             ones.begin(), unique_ids.begin(), howmany.begin(), std::equal_to() );
-    unique_numbers = Vector<T>( unique_ids.begin(),
+    unique_numbers = thrust::host_vector<T>( unique_ids.begin(),
             new_end.first);
-    howmany_numbers = Vector<int>( howmany.begin(), new_end.second);
+    howmany_numbers = thrust::host_vector<int>( howmany.begin(), new_end.second);
 }
 
 //given indices -> make a sorted unique indices vector + a gather map
@@ -37,13 +37,13 @@ void find_same(
 //@param buffer_idx -> (gather map/ new column indices) same size as indices
 //( can alias indices, index into unique_indices
 //@param unique_indices -> (list of unique indices)
-template<template<class> class Vector, class T>
+template<class T>
 void find_unique(
-    const Vector<T>& indices,   // Unsorted
-    Vector<int>& sort_map,      // Gather indices into sorted indices
-    Vector<int>& reduction_keys,// Gather unique indices into sorted indices
-    Vector<int>& buffer_idx,    // Gather unique indices into indices
-    Vector<T>& unique_indices)  // Sorted
+    const thrust::host_vector<T>& indices,   // Unsorted
+    thrust::host_vector<int>& sort_map,      // Gather indices into sorted indices
+    thrust::host_vector<int>& reduction_keys,// Gather unique indices into sorted indices
+    thrust::host_vector<int>& buffer_idx,    // Gather unique indices into indices
+    thrust::host_vector<T>& unique_indices)  // Sorted
 {
     // sort_map is the gather map wrt to the sorted vector!
     // To duplicate the sort:
@@ -58,14 +58,14 @@ void find_unique(
     // thrust::scatter( seq.begin(), seq.end(), sort_map.begin(), gather_map.begin());
     // Now gather_map indicates where each of the numbers went in the sorted vector
     // 1. Sort pids with indices so we get associated gather map
-    Vector<int> howmany;
+    thrust::host_vector<int> howmany;
     auto ids = indices;
     sort_map.resize( ids.size());
     thrust::sequence( sort_map.begin(), sort_map.end()); // 0,1,2,3,...
     thrust::stable_sort_by_key( ids.begin(), ids.end(),
             sort_map.begin(), std::less()); // this changes both ids and sort_map
 
-    find_same<Vector,T>( ids, unique_indices,
+    find_same<T>( ids, unique_indices,
             howmany);
 
     // manually make gather map from sorted into unique_indices on host
@@ -196,9 +196,9 @@ struct LocalGatherMatrix
         // a scatter buffer.
         // Finally we can scatter the values from there after setting explicit 0s
 
-        Vector<int> sort_map, reduction_keys, buffer_idx, unique_indices;
-        detail::find_unique<Vector>(
-            m_idx, sort_map, reduction_keys, buffer_idx, unique_indices);
+        thrust::host_vector<int> sort_map, reduction_keys, buffer_idx, unique_indices;
+        detail::find_unique( thrust::host_vector<int>(m_idx), sort_map,
+            reduction_keys, buffer_idx, unique_indices);
         if( unique_indices.size() != m_idx.size())
         {
             m_reduction = true;
