@@ -28,7 +28,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         int J[blocks_per_line];
 #endif
         for( int d=0; d<blocks_per_line; d++)
-            J[d] = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+        {
+            int C = cols_idx[i*blocks_per_line+d];
+            J[d] = ( C  == -1 ? -1 : (s*num_cols+C)*n);
+        }
         for( int k=0; k<n; k++)
         {
 #ifdef _MSC_VER
@@ -46,6 +49,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 for( int d=0; d<blocks_per_line; d++)
                 {
                     value_type temp = 0;
+                    if( J[d] == -1)
+                        continue;
                     for( int q=0; q<n; q++) //multiplication-loop
                         temp = DG_FMA(data[ B[d]+q],
                                 x[(J[d]+q)*right_size+j],
@@ -96,9 +101,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         {
             for( int d=0; d<blocks_per_line; d++)
             {
-                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                int J = (s*num_cols+C)*n;
                 for(int q=0; q<n; q++)
-                    xprivate[d*n+q] = x[J+q];
+                    xprivate[d*n+q] = (C == -1 ? 0 : x[J+q]);
             }
             for( int k=0; k<n; k++)
             {
@@ -130,9 +136,12 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 for( int d=0; d<blocks_per_line; d++)
                 {
                     value_type temp = 0;
+                    int C = cols_idx[i*blocks_per_line+d];
+                    if( C == -1)
+                        continue;
                     for( int q=0; q<n; q++)
                     {
-                        int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n+q;
+                        int J = (s*num_cols+C)*n+q;
                         temp = DG_FMA( dprivate[B+d*n+q], x[J], temp);
                     }
                     y[I] = DG_FMA(alpha, temp, y[I]);
@@ -143,9 +152,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         {
             for( int d=0; d<blocks_per_line; d++)
             {
-                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                int J = (s*num_cols+C)*n;
                 for(int q=0; q<n; q++)
-                    xprivate[d*n+q] = x[J+q];
+                    xprivate[d*n+q] = (C == -1 ? 0 : x[J+q]);
             }
             for( int k=0; k<n; k++)
             {
@@ -174,9 +184,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     {
         for( int d=0; d<blocks_per_line; d++)
         {
-            int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+            int C = cols_idx[i*blocks_per_line+d];
+            int J = (s*num_cols+C)*n;
             for(int q=0; q<n; q++)
-                xprivate[d*n+q] = x[J+q];
+                xprivate[d*n+q] = (C == -1 ? 0 : x[J+q]);
         }
         for( int k=0; k<n; k++)
         {
@@ -211,7 +222,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
 
             for( int d=0; d<blocks_per_line; d++)
             {
-                J[d] = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                J[d] = ( C == -1 ? -1 :(s*num_cols+C)*n );
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 for(int q=0; q<n; q++)
                     dprivate[d*n+q] = data[B+q];
@@ -226,8 +238,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 for( int d=0; d<blocks_per_line; d++)
                 {
-                    value_type temp = 0;
                     int Jd = J[d];
+                    if ( Jd == -1)
+                        continue;
+                    value_type temp = 0;
                     for( int q=0; q<n; q++) //multiplication-loop
                         temp = DG_FMA( dprivate[ d*n+q],
                                     x[(Jd+q)*right_size+j],
@@ -248,7 +262,8 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
 
             for( int d=0; d<blocks_per_line; d++)
             {
-                J[d] = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                J[d] = ( C == -1 ? -1 :(s*num_cols+C)*n );
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 for(int q=0; q<n; q++)
                     dprivate[d*n+q] = data[B+q];
@@ -261,8 +276,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
                 for( int d=0; d<blocks_per_line; d++)
                 {
-                    value_type temp = 0;
                     int Jd = J[d];
+                    if( Jd == -1)
+                        continue;
+                    value_type temp = 0;
                     for( int q=0; q<n; q++) //multiplication-loop
                         temp = DG_FMA( dprivate[ d*n+q],
                                     x[(Jd+q)*right_size+j],
@@ -356,14 +373,15 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
 			value_type temp = 0;
 			for (int q = 0; q < m.n; q++) //multiplication-loop
 				temp = DG_FMA(m.data[(m.data_idx[i] * m.n + k)*m.n + q],
-                    x[m.cols_idx[i]][(q*m.left_size +s )*m.right_size+j],
+                    x[((s*m.num_cols + m.cols_idx[i])*m.n+q)*m.right_size+j],
+                    //x[m.cols_idx[i]][(q*m.left_size +s )*m.right_size+j],
 					temp);
 			y[I] = DG_FMA(alpha, temp, y[I]);
 		}
 	}
 }
 template<class value_type, int n>
-void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
+void coo_multiply_kernel( value_type alpha, const value_type* x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
 {
     bool trivial = true;
     int CC = m.cols_idx[0], DD = m.data_idx[0];
@@ -386,7 +404,8 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
                 value_type temp = 0;
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[DDD + q],
-                        x[CCC][q*m.left_size*m.right_size +sj],
+                        x[((s*m.num_cols + CCC)*n+q)*m.right_size+sj],
+                        //x[CCC][q*m.left_size*m.right_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
             }
@@ -408,7 +427,8 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
                 value_type temp = 0;
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[(m.data_idx[i] * n + k)*n + q],
-                        x[m.cols_idx[i]][q*m.left_size*m.right_size +sj],
+                        x[((s*m.num_cols + m.cols_idx[i])*n+q)*m.right_size+j],
+                        //x[m.cols_idx[i]][q*m.left_size*m.right_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
             }
@@ -417,7 +437,7 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
     }
 }
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x, value_type beta, value_type* RESTRICT y) const
 {
     if( n == 1)
         coo_multiply_kernel<value_type, 1>( alpha, x, beta, y, *this);

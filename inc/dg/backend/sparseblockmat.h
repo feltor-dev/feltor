@@ -9,6 +9,8 @@
 #include "tensor_traits.h"
 #include "tensor_traits.h"
 
+//TODO To make it complex ready we possibly need to change value types in blas1 and blas2 functions
+
 namespace dg
 {
 
@@ -44,6 +46,8 @@ one-dimensional matrix.
 template<class value_type>
 struct EllSparseBlockMat
 {
+    /// Value used to pad the rows of the cols_idx array
+    static constexpr int invalid_index = -1;
     ///@brief default constructor does nothing
     EllSparseBlockMat() = default;
     /**
@@ -144,8 +148,8 @@ struct EllSparseBlockMat
 * @brief Coo Sparse Block Matrix format
 *
 * @ingroup sparsematrix
-* The basis of this format is the well-known coordinate sparse matrix format.
-* The clue is that instead of a values array we use an index array with
+* The basis for this format is the well-known coordinate sparse matrix format.
+* Instead of a values array we use an index array with
 indices into a data array that contains the actual blocks. This safes storage if the number
 of nonrecurrent blocks is small.
 \f[
@@ -170,9 +174,6 @@ where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix.
 @note This matrix type is used for the computation of boundary points in
 an mpi - distributed \c EllSparseBlockMat
-@attention We assume that the input vector in \c symv has the layout
-that is given by the Buffer vectors in \c dg::NearestNeighborComm
-@sa \c dg::NearestNeighborComm
 */
 template<class value_type>
 struct CooSparseBlockMat
@@ -232,7 +233,7 @@ struct CooSparseBlockMat
     * @param y output may not alias input
     * @attention beta == 1 (anything else is ignored)
     */
-    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* x, value_type beta, value_type* RESTRICT y) const;
     /**
     * @brief Display internal data to a stream
     *
@@ -269,9 +270,13 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type 
         for( int d=0; d<blocks_per_line; d++)
         {
             value_type temp = 0;
+            int J = cols_idx[i*blocks_per_line+d];
+            if ( J == invalid_index)
+                continue;
+
             for( int q=0; q<n; q++) //multiplication-loop
                 temp = DG_FMA( data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q],
-                            x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j],
+                            x[((s*num_cols + J)*n+q)*right_size+j],
                             temp);
             y[I] = DG_FMA( alpha,temp, y[I]);
         }
@@ -293,8 +298,11 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> EllSparseBlockMat<value_typ
         for( int q=0; q<n; q++) //multiplication-loop
         {
             row_indices.push_back(I);
+            int J = cols_idx[i*blocks_per_line+d];
+            if ( J == invalid_index)
+                continue;
             column_indices.push_back(
-                ((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j);
+                ((s*num_cols + J)*n+q)*right_size+j);
             values.push_back(data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]);
         }
     }
@@ -307,7 +315,7 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> EllSparseBlockMat<value_typ
 }
 
 template<class value_type>
-void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type* x, value_type beta, value_type* RESTRICT y) const
 {
     if( num_entries==0)
         return;
@@ -325,8 +333,8 @@ void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type
         value_type temp = 0;
         for( int q=0; q<n; q++) //multiplication-loop
             temp = DG_FMA( data[ (data_idx[i]*n + k)*n+q],
-                    //x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
-                    x[cols_idx[i]][(q*left_size +s )*right_size+j],
+                    x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
+                    //x[cols_idx[i]][(q*left_size +s )*right_size+j],
                     temp);
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
         y[I] = DG_FMA( alpha,temp, y[I]);

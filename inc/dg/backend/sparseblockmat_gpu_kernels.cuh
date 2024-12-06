@@ -35,7 +35,10 @@ template<class value_type>
         {
             value_type temp=0;
             int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-            int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+            int C = cols_idx[i*blocks_per_line+d];
+            if( C == -1)
+                continue;
+            int J = (s*num_cols+C)*n;
             for( int q=0; q<n; q++) //multiplication-loop
                 temp =fma( data[ B+q], x[(J+q)*right_size+j], temp);
             y[idx]=fma( alpha, temp, y[idx]);
@@ -73,7 +76,10 @@ template<class value_type, size_t n, size_t blocks_per_line>
             for( int d=0; d<blocks_per_line; d++)
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                if( C == -1)
+                    continue;
+                int J = (s*num_cols+C)*n;
                 for( int q=0; q<n; q++) //multiplication-loop
                     temp[d] = fma( data[ B+q], x[(J+q)], temp[d]);
             }
@@ -90,7 +96,10 @@ template<class value_type, size_t n, size_t blocks_per_line>
             for( int d=0; d<blocks_per_line; d++)
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                if( C == -1)
+                    continue;
+                int J = (s*num_cols+C)*n;
                 for( int q=0; q<n; q++) //multiplication-loop
                     temp[d] = fma( data[ B+q], x[(J+q)*right_size+j], temp[d]);
             }
@@ -114,7 +123,10 @@ template<class value_type, size_t n, size_t blocks_per_line>
             for( int d=0; d<blocks_per_line; d++)
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                if( C == -1)
+                    continue;
+                int J = (s*num_cols+C)*n;
                 for( int q=0; q<n; q++) //multiplication-loop
                     temp[d] = fma( data[ B+q], x[(J+q)], temp[d]);
             }
@@ -131,7 +143,10 @@ template<class value_type, size_t n, size_t blocks_per_line>
             for( int d=0; d<blocks_per_line; d++)
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+                int C = cols_idx[i*blocks_per_line+d];
+                if( C == -1)
+                    continue;
+                int J = (s*num_cols+C)*n;
                 for( int q=0; q<n; q++) //multiplication-loop
                     temp[d] = fma( data[ B+q], x[(J+q)*right_size+j], temp[d]);
             }
@@ -255,7 +270,9 @@ template<class value_type>
             int J = cols_idx[entry];
             for( int q=0; q<n; q++) //multiplication-loop
                 temp = fma( data[ (B*n + k)*n+q],
-                    x[J][(q*left +s )*right+j], temp);
+                    x[((s*num_cols + J)*n+q)*right+j],
+                    //x[J][(q*left +s )*right+j],
+                    temp);
             y[I] = fma( alpha, temp, y[I]);
         }
     }
@@ -267,7 +284,7 @@ template<class value_type, int n>
          const int* __restrict__  data_idx,
          const int num_rows, const int num_cols, const int num_entries,
          const int left, const int right,
-         value_type alpha, const value_type**  x, value_type beta,
+         value_type alpha, const value_type*  x, value_type beta,
          value_type * __restrict__ y
          )
 {
@@ -288,14 +305,16 @@ template<class value_type, int n>
             int J = cols_idx[entry];
             for( int q=0; q<n; q++) //multiplication-loop
                 temp = fma( data[ (B*n + k)*n+q],
-                    x[J][(q*left +s )*right+j], temp);
+                    x[((s*num_cols + J)*n+q)*right+j],
+                    //x[J][(q*left +s )*right+j],
+                    temp);
             y[I] = fma( alpha, temp, y[I]);
         }
     }
 }
 
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type** x_ptr, value_type beta, value_type* y_ptr) const
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
 {
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256;
