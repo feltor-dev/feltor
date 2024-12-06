@@ -49,6 +49,7 @@ void gather_test( const thrust::host_vector<std::array<int,2>>& gIdx,
 }
 
 // If you get cuIpcCloseMemHandle failed errors when executing with cuda
+// The cause the IN_PLACE option in mpi functions
 // then https://github.com/horovod/horovod/issues/82
 // --mca btl_smcuda_use_cuda_ipc 0
 int main( int argc, char * argv[])
@@ -63,7 +64,7 @@ int main( int argc, char * argv[])
     // TODO Add random shuffle test
 
     {
-    if(rank==0)std::cout << "Test: Simple shift\n";
+    if(rank==0)std::cout << "Test: Simple shift (non-symmetric, bijective)\n";
     unsigned N=8, shift = 3, global_N = N*size;
     thrust::host_vector<double> v(N), ana(N);
     thrust::host_vector<std::array<int,2>> gIdx( N);
@@ -78,7 +79,7 @@ int main( int argc, char * argv[])
     MPI_Barrier(MPI_COMM_WORLD);
     }
     {
-    if(rank==0)std::cout << "Test simple transpose"<<std::endl;
+    if(rank==0)std::cout << "Test simple transpose ( symmetric, bijective)"<<std::endl;
 
     unsigned global_rows = 2*size, global_cols = size;
     unsigned local_rows = global_rows, local_cols = 1;// matrix size  every rank holds a column
@@ -101,7 +102,7 @@ int main( int argc, char * argv[])
     MPI_Barrier(MPI_COMM_WORLD);
     }
     {
-    if(rank==0)std::cout << " Repartition test with quadratic sizes\n";
+    if(rank==0)std::cout << " Repartition test with quadratic sizes ( bijective, inhomogeneous)\n";
     unsigned N=rank;
     unsigned NT = size-1-rank;
     thrust::host_vector<double> v(N), ana(NT);

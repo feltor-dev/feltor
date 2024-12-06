@@ -70,6 +70,14 @@ struct MPIDistMat
     MPIDistMat(){}
 
     /**
+     * @brief Only local computations
+     *
+     * No communications, only the given local inner matrix will be applied
+     */
+    MPIDistMat( const LocalMatrixInner& m)
+    : m_i(m), m_dist(row_dist), m_comm(MPI_COMM_NULL){}
+
+    /**
     * @brief Constructor
     *
     * @param inside The local matrix for the inner elements
@@ -183,6 +191,7 @@ struct MPIDistMat
             throw Error( Message(_ping_)<<"symv(a,x,b,y) can only be used with a row distributed mpi matrix!");
         // We theoretically could allow this for col_dist if the scatter_plus function in LocalGatherMatrix
         // accepted an inconsistency in "v = a S w + b v"
+        // Maybe as we do for CooSparseMatrix and always require b == 1 in symv
     }
 
     /**
@@ -319,7 +328,6 @@ struct TensorTraits<MPIDistMat<V, LI,LO> >
     using value_type = get_value_type<LI>;//!< value type
     using tensor_category = MPIMatrixTag;
 };
-
 ///@}
 
 } //namespace dg
