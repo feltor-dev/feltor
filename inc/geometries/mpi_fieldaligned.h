@@ -22,12 +22,16 @@ void mpi_send( thrust_vector& inout, MPI_Comm comm, int shift) //send to next pl
     if constexpr (std::is_same_v< get_execution_policy<thrust_vector0>,
         CudaTag> )
     {
+#ifdef __CUDACC__ // g++ does not know cudaDeviceSynchronize
         cudaError_t code = cudaGetLastError( );
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
         code = cudaDeviceSynchronize(); //wait until device functions are finished before sending data
         if( code != cudaSuccess)
             throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+#else
+        assert( false && "Something is wrong! This should never execute!");
+#endif
     }
     unsigned size = in.size();
     MPI_Sendrecv_replace( thrust::raw_pointer_cast(inout.data()), size,
