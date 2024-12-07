@@ -34,6 +34,7 @@ namespace create
 template<class real_type>
 EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
 {
+    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
 
     Operator<real_type> l = create::lilj<real_type>(n);
     Operator<real_type> r = create::rirj<real_type>(n);
@@ -69,7 +70,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
     //assemble the matrix
     if( bcx != PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 3, 6, n);
+        EllSparseBlockMat<real_type> A(N, N, 3, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -78,14 +79,13 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
             A.data[(2*n+i)*n+j] = b(i,j);
             A.data[(3*n+i)*n+j] = a_bound_left(i,j);
             A.data[(4*n+i)*n+j] = a_bound_right(i,j);
-            A.data[(5*n+i)*n+j] = 0; //to invalidate periodic entries
         }
         A.data_idx[0*3+0] = 3; //a_bound_left
         A.cols_idx[0*3+0] = 0;
         A.data_idx[0*3+1] = 2; //b
         A.cols_idx[0*3+1] = 1;
-        A.data_idx[0*3+2] = 5; //0
-        A.cols_idx[0*3+2] = 1; //prevent unnecessary data fetch
+        A.data_idx[0*3+2] = invalid_idx; //0
+        A.cols_idx[0*3+2] = invalid_idx; //prevent unnecessary data fetch
         for( int i=1; i<N-1; i++)
             for( int d=0; d<3; d++)
             {
@@ -96,8 +96,8 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
         A.cols_idx[(N-1)*3+0] = N-2;
         A.data_idx[(N-1)*3+1] = 4; //a_bound_right
         A.cols_idx[(N-1)*3+1] = N-1;
-        A.data_idx[(N-1)*3+2] = 5; //0
-        A.cols_idx[(N-1)*3+2] = N-1; //prevent unnecessary data fetch
+        A.data_idx[(N-1)*3+2] = invalid_idx; //0
+        A.cols_idx[(N-1)*3+2] = invalid_idx; //prevent unnecessary data fetch
         return A;
 
     }
@@ -134,6 +134,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
 template<class real_type>
 EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
 {
+    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
 
     Operator<real_type> l = create::lilj<real_type>(n);
     Operator<real_type> r = create::rirj<real_type>(n);
@@ -159,7 +160,7 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
     //assemble the matrix
     if( bcx != PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 2, 5, n);
+        EllSparseBlockMat<real_type> A(N, N, 2, 4, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -167,7 +168,6 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
             A.data[(1*n+i)*n+j] = b(i,j);
             A.data[(2*n+i)*n+j] = a_bound_left(i,j);
             A.data[(3*n+i)*n+j] = a_bound_right(i,j);
-            A.data[(4*n+i)*n+j] = 0; //to invalidate periodic entries
         }
         A.data_idx[0*2+0] = 2; //a_bound_left
         A.cols_idx[0*2+0] = 0;
@@ -181,8 +181,8 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
             }
         A.data_idx[(N-1)*2+0] = 3; //a_bound_right
         A.cols_idx[(N-1)*2+0] = N-1;
-        A.data_idx[(N-1)*2+1] = 4; //0
-        A.cols_idx[(N-1)*2+1] = N-1; //prevent unnecessary data fetch
+        A.data_idx[(N-1)*2+1] = invalid_idx; //0
+        A.cols_idx[(N-1)*2+1] = invalid_idx; //prevent unnecessary data fetch
         return A;
 
     }
@@ -218,6 +218,7 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
 template<class real_type>
 EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
 {
+    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
     Operator<real_type> l = create::lilj<real_type>(n);
     Operator<real_type> r = create::rirj<real_type>(n);
     Operator<real_type> lr = create::lirj<real_type>(n);
@@ -243,7 +244,7 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 2, 5, n);
+        EllSparseBlockMat<real_type> A(N, N, 2, 4, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -251,12 +252,11 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
             A.data[(1*n+i)*n+j] = a(i,j);
             A.data[(2*n+i)*n+j] = a_bound_left(i,j);
             A.data[(3*n+i)*n+j] = a_bound_right(i,j);
-            A.data[(4*n+i)*n+j] = 0; //to invalidate periodic entries
         }
         A.data_idx[0*2+0] = 2; //a_bound_left
         A.cols_idx[0*2+0] = 0;
-        A.data_idx[0*2+1] = 4; //0
-        A.cols_idx[0*2+1] = 0; //prevent data fetch
+        A.data_idx[0*2+1] = invalid_idx; //0
+        A.cols_idx[0*2+1] = invalid_idx; //prevent data fetch
         for( int i=1; i<N-1; i++) //a
             for( int d=0; d<2; d++)
             {
@@ -302,6 +302,7 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
 template<class real_type>
 EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
 {
+    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
     Operator<real_type> l = create::lilj<real_type>(n);
     Operator<real_type> r = create::rirj<real_type>(n);
     Operator<real_type> lr = create::lirj<real_type>(n);
@@ -326,7 +327,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 3, 6, n);
+        EllSparseBlockMat<real_type> A(N, N, 3, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -335,14 +336,13 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
             A.data[(2*n+i)*n+j] = b(i,j);
             A.data[(3*n+i)*n+j] = a_bound_left(i,j);
             A.data[(4*n+i)*n+j] = a_bound_right(i,j);
-            A.data[(5*n+i)*n+j] = 0; //to invalidate periodic entries
         }
         A.data_idx[0*3+0] = 3; //a_bound_left
         A.cols_idx[0*3+0] = 0;
         A.data_idx[0*3+1] = 2; //b
         A.cols_idx[0*3+1] = 1;
-        A.data_idx[0*3+2] = 5; //0
-        A.cols_idx[0*3+2] = 1; //prevent unnecessary data fetch
+        A.data_idx[0*3+2] = invalid_idx; //0
+        A.cols_idx[0*3+2] = invalid_idx; //prevent unnecessary data fetch
         for( int i=1; i<N-1; i++) //a
             for( int d=0; d<3; d++)
             {
@@ -353,8 +353,8 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
         A.cols_idx[(N-1)*3+0] = N-2;
         A.data_idx[(N-1)*3+1] = 4; //a_bound_right
         A.cols_idx[(N-1)*3+1] = N-1;
-        A.data_idx[(N-1)*3+2] = 5; //0
-        A.cols_idx[(N-1)*3+2] = N-1; //prevent unnecessary data fetch
+        A.data_idx[(N-1)*3+2] = invalid_idx; //0
+        A.cols_idx[(N-1)*3+2] = invalid_idx; //prevent unnecessary data fetch
         return A;
 
     }
