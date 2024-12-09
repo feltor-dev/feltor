@@ -11,27 +11,60 @@
 int main()
 {
     thrust::host_vector<std::array<int,2>> gIdx = std::vector<std::array<int,2>>{
-    {1,0}, {2,6}, {3,6}, {0,2}, {0,1}, {2,1}, {2,3}, {1,1}, {3,6}, {1,0}, {3,0}, {0,2}};
-    thrust::host_vector<std::array<int,2>> unique;
-    thrust::host_vector<int> bufferIdx, sort_map, reduction_keys;
-    dg::detail::find_unique<thrust::host_vector>(
-        gIdx, sort_map, reduction_keys, bufferIdx, unique);
+    {1,0}, {2,6}, {5,6}, {0,2}, {0,1}, {2,1}, {2,3}, {1,1}, {5,6}, {1,0}, {5,0}, {0,2}};
+    std::cout<< "Values \n";
+    for( unsigned u=0; u<gIdx.size(); u++)
+        std::cout <<"{"<<gIdx[u][0]<<","<<gIdx[u][1]<<"} ";
+    std::cout<<"\n"<<std::endl;
+    for( unsigned test=0; test<2; test++)
+    {
+        thrust::host_vector<std::array<int,2>> unique;
+        thrust::host_vector<int> gather_map1, gather_map2, howmany;
+        if( test == 0)
+        {
+            std::cout << "Order preserving TEST\n";
+            dg::detail::find_unique_order_preserving(
+                gIdx, gather_map1, gather_map2, unique, howmany);
+        }
+        else
+        {
+            std::cout << "Stable sort TEST\n";
+            dg::detail::find_unique_stable_sort(
+                gIdx, gather_map1, gather_map2, unique, howmany);
+        }
+        auto sortedgIdx = gIdx;
+        thrust::scatter( gIdx.begin(), gIdx.end(),
+                     gather_map1.begin(), sortedgIdx.begin());
+        std::cout<< "Sorted indices \n";
+        for( unsigned u=0; u<sortedgIdx.size(); u++)
+            std::cout <<"{"<<sortedgIdx[u][0]<<","<<sortedgIdx[u][1]<<"} ";
+        std::cout<<std::endl;
+        std::cout<< "Unique values \n";
+        for( unsigned u=0; u<unique.size(); u++)
+            std::cout <<"{"<<unique[u][0]<<","<<unique[u][1]<<"} ";
+        std::cout<<std::endl;
+        std::cout<< "Howmany Unique values \n";
+        for( unsigned u=0; u<unique.size(); u++)
+            std::cout <<howmany[u]<<" ";
+        std::cout<<std::endl;
+        auto num = gIdx; // consistency test
+        thrust::gather( gather_map2.begin(), gather_map2.end(),
+                    unique.begin(), num.begin());
+        std::cout<< "Sorted Unique values \n";
+        for( unsigned u=0; u<sortedgIdx.size(); u++)
+            std::cout <<"{"<<num[u][0]<<","<<num[u][1]<<"} ";
+        std::cout<<std::endl;
 
-    std::cout<< "Found unique values \n";
-    for( unsigned u=0; u<unique.size(); u++)
-        std::cout << unique[u][0]<<" "<<unique[u][1]<<"\n";
-    std::cout << std::endl;
-    thrust::host_vector<int> pids(unique.size());
-    for( int i=0; i<(int)pids.size(); i++)
-        pids[i] = unique[i][0];
-    thrust::host_vector<int> locally_unique_pids, howmany;
-    dg::detail::find_same<thrust::host_vector>( pids, locally_unique_pids, howmany);
-    thrust::host_vector<int> sendTo( 7, 0 );
-    for( unsigned i=0; i<locally_unique_pids.size(); i++)
-        sendTo[locally_unique_pids[i]] = howmany[i];
-    std::cout<< "Found unique pids \n";
-    for( unsigned u=0; u<sendTo.size(); u++)
-        std::cout << "pid "<<u<<" "<<sendTo[u]<<"\n";
+        num = gIdx; // consistency test
+        auto sort_map = gather_map1;
+        thrust::gather( gather_map1.begin(), gather_map1.end(),
+                    gather_map2.begin(), sort_map.begin());
+        thrust::gather( sort_map.begin(), sort_map.end(),
+                    unique.begin(), num.begin());
+        for( unsigned u=0; u<gIdx.size(); u++)
+            assert( num[u] == gIdx[u]);
+        std::cout << "Gather PASSED\n\n";
+    }
 
 
 
@@ -65,7 +98,11 @@ int main()
     std::vector<int> feltor_result( values);
     gather.scatter_plus( buffer, feltor_result);
     for( unsigned i=0; i<values.size(); i++)
+    {
+        std::cout << i<<" "<<values[i] + cusp_result[i] <<" "<< feltor_result[i]<<"\n";
+
         assert( values[i] + cusp_result[i] == feltor_result[i]);
+    }
     std::cout << "Scatter reduce PASSED\n";
 
     return 0;

@@ -2,7 +2,7 @@
 #include <cassert>
 #include <exception>
 
-#include "mpi_communicator.h"
+#include "mpi_datatype.h"
 #include "tensor_traits.h"
 #include "memory.h"
 #include "gather.h"
@@ -13,7 +13,7 @@ namespace dg{
 namespace detail
 {
     //TODO who handles isCommunicating?
-    //TODO Handle other improvements like isSymmetric!
+    //TODO Handle other improvements
 
 //v -> store -> buffer -> w
 // G_1 P G_2 v
@@ -138,10 +138,8 @@ struct MPIPermutation
             ContainerType0& buffer, ContainerType1& store) const
     {
         assert( buffer.size() == m_buffer_size);
-        if( !m_symmetric)
-        {
-            assert( store.size() == m_store_size);
-        }
+        //if( !m_symmetric)
+        assert( store.size() == m_store_size);
         // store can be empty if symmetric
         return global_comm_init( buffer, store, true);
     }
@@ -151,8 +149,8 @@ struct MPIPermutation
             ContainerType0& store, ContainerType1& buffer)const
     {
         assert( store.size() == m_store_size);
-        if( !m_symmetric)
-            assert( buffer.size() == m_buffer_size);
+        //if( !m_symmetric)
+        assert( buffer.size() == m_buffer_size);
         // buffer can be empty if symmetric
         return global_comm_init( store, buffer, false);
     }
@@ -189,17 +187,7 @@ struct MPIPermutation
             assert( false && "Something is wrong! This should never execute!");
 #endif
         }
-        void * send_ptr;
-        if( m_symmetric)
-        {
-            // recv may be empty
-            recv.swap( send);
-            send_ptr = MPI_IN_PLACE;
-        }
-        else
-        {
-            send_ptr             = thrust::raw_pointer_cast( send.data());
-        }
+        void * send_ptr          = thrust::raw_pointer_cast( send.data());
         const int * sendTo_ptr   = thrust::raw_pointer_cast( m_sendTo.data());
         const int * accS_ptr     = thrust::raw_pointer_cast( m_accS.data());
         void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
@@ -418,48 +406,50 @@ struct MPIGather
             // TODO idx 0 is pid, idx 1 is localIndex on that pid
             MPI_Comm comm)
     {
-        thrust::host_vector<int> sort_map, reduction_keys;
-        thrust::host_vector<std::array<int,2>> locally_unique_global_idx;
-        detail::find_unique( gIdx, sort_map,
-            reduction_keys, bufferIdx, locally_unique_global_idx);
+        thrust::host_vector<int> gather_map1, gather_map2, howmany;
+        thrust::host_vector<std::array<int,2>> locally_unique_gIdx;
+        detail::find_unique_order_preserving( gIdx, gather_map1,
+            gather_map2, locally_unique_gIdx, howmany);
         int comm_size;
         MPI_Comm_size( comm, &comm_size);
         // get pids
-        thrust::host_vector<int> pids(locally_unique_global_idx.size());
+        thrust::host_vector<int> pids(locally_unique_gIdx.size()),
+            lIdx(pids);
         for( int i=0; i<(int)pids.size(); i++)
         {
-            pids[i] = locally_unique_global_idx[i][0];
+            pids[i] = locally_unique_gIdx[i][0];
+            lIdx[i] = locally_unique_gIdx[i][1]; // the local index
             // Sanity check
             assert( 0 <= pids[i] && pids[i] < comm_size);
         }
-        thrust::host_vector<int> locally_unique_pids, howmany;
-        detail::find_same( pids, locally_unique_pids, howmany);
+        thrust::host_vector<int> gather_map3, red_keys,
+            locally_unique_pids;
+        detail::find_unique_stable_sort( pids, gather_map3, red_keys,
+            locally_unique_pids, howmany);
+        // duplicate the sort on lIdx
+        auto sorted_lIdx = lIdx;
+        thrust::scatter( lIdx.begin(), lIdx.end(),
+                 gather_map3.begin(), sorted_lIdx.begin());
+        // buffer index
+        bufferIdx.resize( gather_map1.size());
+        for( unsigned u=0; u<bufferIdx.size(); u++)
+            bufferIdx[u] = gather_map3[gather_map2[gather_map1[u]]];
+        //Now construct the MPIPermutation object by getting the number of
+        //elements to send
         thrust::host_vector<int> sendTo( comm_size, 0 );
         for( unsigned i=0; i<locally_unique_pids.size(); i++)
             sendTo[locally_unique_pids[i]] = howmany[i];
-        //Now construct the MPIPermutation object by getting the number of
-        //elements to send
         m_permute = detail::MPIPermutation( sendTo, comm);
-        assert( m_permute.buffer_size() == locally_unique_global_idx.size());
-
-        //for( unsigned u=0; u<bufferIdx.size(); u++)
-        //    std::cout << "G1 "<<bufferIdx[u]<<"\n";
-        //std::cout <<std::endl;
+        assert( m_permute.buffer_size() == locally_unique_gIdx.size());
 
         // Finally, construct G2
         thrust::host_vector<int> storeIdx( m_permute.store_size());
         // Scatter local indices to the other processes so they may know
         // which values they need to provide:
-        thrust::host_vector<int> lIdx( m_permute.buffer_size());
-        for( unsigned i=0; i<lIdx.size(); i++)
-            lIdx[i] = locally_unique_global_idx[i][1]; // the local index
-        MPI_Request rqst = m_permute.global_scatter_init( lIdx, storeIdx);
+        MPI_Request rqst = m_permute.global_scatter_init( sorted_lIdx, storeIdx);
         MPI_Wait( &rqst, MPI_STATUS_IGNORE );
         // All the indices we receive here are local to the current rank!
-        m_g2 = LocalGatherMatrix<Vector>(storeIdx); //
-        //for( unsigned u=0; u<storeIdx.size(); u++)
-        //    std::cout << "G2 "<<storeIdx[u]<<"\n";
-        //std::cout <<std::endl; MPI_Barrier( MPI_COMM_WORLD);
+        m_g2 = LocalGatherMatrix<Vector>(storeIdx);
     }
 
     /**
@@ -573,10 +563,10 @@ struct MPIGather
         // TODO docu It is save to use and change vector immediately after this function
         using value_type = get_value_type<ContainerType0>;
 
-        if ( m_permute.isSymmetric())
-            m_store.swap( buffer);
-        else
-            m_store.template set<value_type>( m_permute.store_size());
+        //if ( m_permute.isSymmetric())
+        //    m_store.swap( buffer);
+        //else
+        m_store.template set<value_type>( m_permute.store_size());
         auto& store = m_store.template get<value_type>();
 
         //gather values to store

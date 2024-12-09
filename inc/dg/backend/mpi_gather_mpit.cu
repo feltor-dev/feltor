@@ -2,15 +2,18 @@
 
 #include <mpi.h>
 #include "../blas1.h"
-#include "mpi_collective.h"
+#include "mpi_gather.h"
 #include "mpi_vector.h"
 
 template<class T>
 bool is_equal( const T& v, const T& w)
 {
     bool equal = true;
+    //int rank;
+    //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     for( unsigned i=0; i<v.size(); i++)
     {
+        //std::cout << rank<<" "<<v[i] << " "<<w[i]<<"\n";
         if( v[i] != w[i])
         {
             equal = false;
@@ -60,7 +63,6 @@ int main( int argc, char * argv[])
     MPI_Comm_size( MPI_COMM_WORLD, &size);
 
     if(rank==0)std::cout <<"# processes =  " <<size <<std::endl;
-    // TODO Repartition test with quadratic sizes 0, 1, 2, 4, ... To  ..., 4, 2, 1, 0
     // TODO Add random shuffle test
 
     {

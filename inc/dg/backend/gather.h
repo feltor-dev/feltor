@@ -13,72 +13,113 @@
 namespace dg{
 ///@cond
 namespace detail{
+
+/*!
+* gather_map is the gather map wrt to the unsorted elements!
+* To duplicate the sort:
+@code{.cpp}
+thrust::scatter( unsorted_elements.begin(), unsorted_elements.end(),
+                 gather_map.begin(), sorted_elements.begin());
+@endcode
+*
+* To undo the sort:
+@code{.cpp}
+thrust::gather( gather_map.begin(), gather_map.end(),
+                sorted_elements.begin(), unsorted_elements.begin());
+@endcode
+*
+* To get the gather map wrt to sorted elements (i.e the inverse index map)
+* "Scatter the index"
+@code{.cpp}
+auto sort_map = gather_map;
+auto seq = gather_map;
+thrust::sequence( seq.begin(), seq.end());
+thrust::scatter( seq.begin(), seq.end(), gather_map.begin(), sort_map.begin());
+@endcode
+* Now sort_map indicates where each of the sorted elements went in the unsorted vector
+*/
 template<class T>
-void find_same(
-        const thrust::host_vector<T>& numbers, // numbers must be sorted
-        thrust::host_vector<T>& unique_numbers,
-        thrust::host_vector<int>& howmany_numbers // same size as uniqe_numbers
-        )
+void find_unique_stable_sort(
+        const thrust::host_vector<T>& unsorted_elements,
+        thrust::host_vector<int>& gather_map,     // gather unsorted elements from sorted elements (order of equal is preserved), bijective
+        thrust::host_vector<int>& reduction_keys, // gather sorted elements from unique_elements
+        thrust::host_vector<T>& unique_elements,
+        thrust::host_vector<int>& howmany_elements)
 {
-    // Find unique numbers and how often they appear
-    thrust::host_vector<T> unique_ids( numbers.size());
-    thrust::host_vector<int> ones( numbers.size(), 1),
-        howmany(ones);
-    auto new_end = thrust::reduce_by_key( numbers.begin(), numbers.end(),
-            //numbers are the keys by which one is reduced
+    // 1. Sort pids with elements so we get associated gather map
+    auto ids = unsorted_elements;
+    gather_map.resize( ids.size());
+    thrust::sequence( gather_map.begin(), gather_map.end()); // 0,1,2,3,...
+    thrust::stable_sort_by_key( ids.begin(), ids.end(),
+            gather_map.begin(), std::less()); // this changes both ids and gather_map
+    // Find unique elements and how often they appear
+    thrust::host_vector<T> unique_ids( ids.size());
+    thrust::host_vector<int> ones( ids.size(), 1), howmany(ones);
+    auto new_end = thrust::reduce_by_key( ids.begin(), ids.end(),
             ones.begin(), unique_ids.begin(), howmany.begin(), std::equal_to() );
-    unique_numbers = thrust::host_vector<T>( unique_ids.begin(),
+    unique_elements = thrust::host_vector<T>( unique_ids.begin(),
             new_end.first);
-    howmany_numbers = thrust::host_vector<int>( howmany.begin(), new_end.second);
+    howmany_elements = thrust::host_vector<int>( howmany.begin(), new_end.second);
+    reduction_keys.clear();
+    for( unsigned i=0; i<howmany_elements.size(); i++)
+        reduction_keys.insert( reduction_keys.end(), howmany_elements[i], i);
+
+    //invert the gather_map (because above is wrt to sorted vector)
+    auto sort_map = gather_map;
+    auto seq = gather_map;
+    thrust::sequence( seq.begin(), seq.end());
+    thrust::scatter( seq.begin(), seq.end(), gather_map.begin(), sort_map.begin());
+    gather_map = sort_map;
 }
 
-//given indices -> make a sorted unique indices vector + a gather map
-//into the unique vector:
-//@param buffer_idx -> (gather map/ new column indices) same size as indices
-//( can alias indices, index into unique_indices
-//@param unique_indices -> (list of unique indices)
+/*!
+ * Make a gather map from unique_elements to sorted elements via
+@code{.cpp}
+// To make a gather map from unique elements to unsorted element
+thrust::gather( gather_map.begin(), gather_map.end(),
+                reduction_keys.begin(), sort_map.begin());
+@endcode
+ */
 template<class T>
-void find_unique(
-    const thrust::host_vector<T>& indices,   // Unsorted
-    thrust::host_vector<int>& sort_map,      // Gather indices into sorted indices
-    thrust::host_vector<int>& reduction_keys,// Gather unique indices into sorted indices
-    thrust::host_vector<int>& buffer_idx,    // Gather unique indices into indices
-    thrust::host_vector<T>& unique_indices)  // Sorted
+void find_unique_order_preserving(
+    const thrust::host_vector<T>& unsorted_elements,
+    thrust::host_vector<int>& gather_map,     // Gather unsorted elements from reordered elements ( size == elements.size()), bijective
+    thrust::host_vector<int>& reduction_keys, // gather sorted elements from unique_elements
+    thrust::host_vector<T>& unique_elements,
+    thrust::host_vector<int>& howmany_elements)
 {
-    // sort_map is the gather map wrt to the sorted vector!
-    // To duplicate the sort:
-    // thrust::gather( sort_map.begin(), sort_map.end(), numbers.begin(), sorted.begin());
-    // To undo the sort:
-    // thrust::scatter( sorted.begin(), sorted.end(), sort_map.begin(), numbers.begin());
-    // To get the gather map wrt to unsorted vector (i.e the inverse index map)
-    // "Scatter the index"
-    // auto gather_map = sort_map;
-    // auto seq = sort_map;
-    // thrust::sequence( seq.begin(), seq.end());
-    // thrust::scatter( seq.begin(), seq.end(), sort_map.begin(), gather_map.begin());
-    // Now gather_map indicates where each of the numbers went in the sorted vector
-    // 1. Sort pids with indices so we get associated gather map
-    thrust::host_vector<int> howmany;
-    auto ids = indices;
-    sort_map.resize( ids.size());
-    thrust::sequence( sort_map.begin(), sort_map.end()); // 0,1,2,3,...
-    thrust::stable_sort_by_key( ids.begin(), ids.end(),
-            sort_map.begin(), std::less()); // this changes both ids and sort_map
-
-    find_same<T>( ids, unique_indices,
-            howmany);
-
-    // manually make gather map from sorted into unique_indices on host
-    thrust::host_vector<int> h_howmany(howmany), h_reduction_keys;
-    for( unsigned i=0; i<unique_indices.size(); i++)
-        for( int j=0; j<h_howmany[i]; j++)
-            h_reduction_keys.push_back(i);
-    assert( h_reduction_keys.size() == indices.size());
-    reduction_keys = h_reduction_keys;
-    // buffer idx is the new index
-    buffer_idx.resize( indices.size());
-    thrust::scatter( reduction_keys.begin(), reduction_keys.end(), sort_map.begin(),
-            buffer_idx.begin());
+    // find unique elements and how many there are preserving order
+    unique_elements.clear();
+    howmany_elements.clear();
+    std::vector<std::vector<int>> sort; // gather sorted from unsorted elements
+    for( unsigned u=0; u<unsorted_elements.size(); u++)
+    {
+        auto it =std::find( unique_elements.begin(), unique_elements.end(), unsorted_elements[u]);
+        if(  it == unique_elements.end()) // not found
+        {
+            unique_elements.push_back( unsorted_elements[u]);
+            sort.push_back( std::vector<int>(1,u));
+        }
+        else
+        {
+            size_t idx = std::distance( unique_elements.begin(), it);
+            sort[idx].push_back( u);
+        }
+    }
+    // now flatten sort
+    for( unsigned i=0; i<unique_elements.size(); i++)
+    {
+        howmany_elements.push_back( sort[i].size());
+        reduction_keys.insert( reduction_keys.end(), howmany_elements[i], i);
+        for( int k=0; k<howmany_elements[i]; k++)
+            gather_map.push_back(sort[i][k]);
+    }
+    //invert the gather_map (because above is wrt to sorted vector)
+    auto sort_map = gather_map;
+    auto seq = gather_map;
+    thrust::sequence( seq.begin(), seq.end());
+    thrust::scatter( seq.begin(), seq.end(), gather_map.begin(), sort_map.begin());
+    gather_map = sort_map;
 }
 
 
@@ -165,8 +206,8 @@ struct LocalGatherMatrix
             // (We assume this case is more of an edge case)
             // 1. Gather into sorted indices
             m_reduction_buffer.template set<value_type>( m_reduction_buffer_size);
-            thrust::gather( m_gather2reduction.begin(), m_gather2reduction.end(),
-                buffer.begin(), m_reduction_buffer.template get<value_type>().begin());
+            thrust::scatter( buffer.begin(), buffer.end(), m_scatter2reduction.begin(),
+                m_reduction_buffer.template get<value_type>().begin());
 
             // 2. Reduce multiple sorted indices
             m_scatter_buffer.template set<value_type>( m_scatter_buffer_size);
@@ -186,19 +227,21 @@ struct LocalGatherMatrix
     Vector<int> m_idx; // this fully defines the matrix ( so it's the only non-mutable)
     void prepare_scatter( ) const
     {
+        // possible Optimisation: if scatter2target is contiguous one does not need to scatter
         // For the scatter operation we need to catch the case that multiple
         // values scatter to the same place
         //
         // buffer -> reduction_buf -> scatter_buf -> store
-        // In that case our idea is to first sort the indices such that values
+        // In that case our idea is to first gather the indices such that values
         // to reduce are next to each other
         // this allows to use thrust::reduce_by_key from reduction buffer into
         // a scatter buffer.
         // Finally we can scatter the values from there after setting explicit 0s
 
-        thrust::host_vector<int> sort_map, reduction_keys, buffer_idx, unique_indices;
-        detail::find_unique( thrust::host_vector<int>(m_idx), sort_map,
-            reduction_keys, buffer_idx, unique_indices);
+        thrust::host_vector<int> sort_map, reduction_keys, unique_indices, howmany;
+        detail::find_unique_order_preserving( thrust::host_vector<int>(m_idx),
+            sort_map, reduction_keys, unique_indices, howmany);
+        assert( reduction_keys.size() == m_idx.size());
         if( unique_indices.size() != m_idx.size())
         {
             m_reduction = true;
@@ -206,14 +249,14 @@ struct LocalGatherMatrix
             m_reduction_buffer_size = m_idx.size();
             m_scatter2target = unique_indices;
             m_red_keys = reduction_keys;
-            m_gather2reduction = sort_map;
+            m_scatter2reduction = sort_map;
             m_unique_keys.resize( m_scatter_buffer_size);
         }
         m_allocated =true;
     }
     mutable bool m_reduction = false, m_allocated = false;
     mutable unsigned m_scatter_buffer_size, m_reduction_buffer_size;
-    mutable Vector<int> m_scatter2target, m_red_keys, m_gather2reduction; // may be empty
+    mutable Vector<int> m_scatter2target, m_red_keys, m_scatter2reduction; // may be empty
     mutable Vector<int> m_unique_keys;
     mutable detail::AnyVector<Vector> m_scatter_buffer, m_reduction_buffer;
 };

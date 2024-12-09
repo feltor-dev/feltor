@@ -7,7 +7,7 @@
 #include "exblas/mpi_accumulate.h"
 #include "tensor_traits.h"
 #include "blas1_dispatch_shared.h"
-#include "mpi_communicator.h"
+#include "mpi_datatype.h"
 #include "memory.h"
 #include "config.h"
 
