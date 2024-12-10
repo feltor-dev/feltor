@@ -12,204 +12,150 @@ namespace dg{
 ///@cond
 namespace detail
 {
-    //TODO who handles isCommunicating?
-    //TODO Handle other improvements
-
-//v -> store -> buffer -> w
-// G_1 P G_2 v
-// G_2^T P^T G_1^T w
-
-/**
- * @brief engine class for mpi permutating (i.e. bijective)
- *  gather and scatter operations
- *
- * We call the two vectors involved the "buffer" w  and the "store" array v.
- * The buffer array is the one that is associated with the index map
- * that we give in the constructor i.e
- * in the constructor you can specify how many values from each process
- * the buffer array receives or how many values to each process
- * the buffer array sends:
- * \f$ w = G v\f$
- *
- * In this way we gather values from the buffer array into the store array
- * while scatter inverts the operation
- * \f$ v = S w = G^T w = G^{-1} w\f$
- * @note The global size of buffer and store are equal. The local buffer
- * size is the accumulation of the \c connect values in the constructor
- * The store size is infered from the connection matrix.
- *
- * @b Scatter is the following: The first sendTo[0] elements of the buffer array
- * are sent to rank 0, The next sendTo[1] elements are sent to rank 1 and so
- * on; the first recvFrom[0] elements in the store array are the values (in
- * order) sent from rank 0, etc.
- * @b Gather: The first recvFrom[0] elements of the buffer array on the calling
- * rank are received from the "rank slot" in the store array on rank 0. etc.
- *
- * If the collaboration matrix is symmetric scatter and gather are the same
- * operation and "in-place" operation can be used, i.e. buffer and store
- * can be the same array
- */
-struct MPIPermutation
+// map is sorted
+template<class T>
+std::map<int, thrust::host_vector<T>> pack_map(
+    const thrust::host_vector<T>& idx_map, // sorted by pid
+    const thrust::host_vector<int>& howmany_pids // comm_size, how many elements of each pid (can be 0)
+    )
 {
-    MPIPermutation(){
-        m_buffer_size = m_store_size = 0;
-        m_comm = MPI_COMM_NULL;
-    }
-    /**
-     * @brief Give number of elements to connect
-     *
-     * The size of connect must match the number of processes in the communicator
-     * @param connect connect[PID] equals the number of points in the store array
-     * that the calling process has to connect to the buffer array on rank PID
-     * (can be zero, but not negative)
-     * @param comm Communicator
-     *
-     * @note Constructor calls MPI_Allgather with given communicator
-     * The idea here is that the communciation matrix can be analysed and
-     * the most efficient MPI calls can be chosen based on it
-     */
-    MPIPermutation( const thrust::host_vector<int>& connect, MPI_Comm comm)
+    std::map<int, thrust::host_vector<T>> map;
+    unsigned start = 0;
+    for( unsigned u=0; u<howmany_pids.size(); u++)
     {
-        // interpret connect as "sendTo"
-        const thrust::host_vector<int> sendTo = connect;
-        thrust::host_vector<int> recvFrom(sendTo),
-            accS(sendTo), accR(sendTo);
-        m_comm=comm;
-        int rank, size;
-        MPI_Comm_rank( m_comm, &rank);
-        MPI_Comm_size( m_comm, &size);
-        assert( sendTo.size() == (unsigned)size);
-        thrust::host_vector<unsigned> global( size*size);
-        // everyone knows what everyone is sending
-        MPI_Allgather( sendTo.data(), size, MPI_UNSIGNED,
-                       global.data(), size, MPI_UNSIGNED,
-                       m_comm);
-        m_symmetric = true;
-
-        for( unsigned i=0; i<(unsigned)size; i++)
+        if( howmany_pids[u] != 0)
         {
-            recvFrom[i] = global[i*size+rank];
-            if( recvFrom[i] != sendTo[i])
-                m_symmetric = false;
-            // check if global has entries off the diagonal
-            for( unsigned k=0; k<(unsigned)size; k++)
-                if( k != i and global[i*size+k] != 0)
-                    m_communicating = true;
+            map[u] = thrust::host_vector<T>( howmany_pids[u]);
+            for( unsigned i=0; i<(unsigned)howmany_pids[u]; i++)
+            {
+                map[u][i] = idx_map[ start + i];
+            }
+            start += howmany_pids[u];
         }
-        // exclusive_scan sums up all the elements up to (but excluding) index,
-        // i.e. [0,sendTo[0], sendTo[0]+sendTo[1], ...]
-        // These give the partition of the send and receive buffers in Alltoallv
-        thrust::exclusive_scan( sendTo.begin(), sendTo.end(), accS.begin());
-        thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
-        m_sendTo=sendTo, m_recvFrom=recvFrom, m_accS=accS, m_accR=accR;
-        m_store_size = thrust::reduce( m_recvFrom.begin(), m_recvFrom.end() );
-        m_buffer_size = thrust::reduce( m_sendTo.begin(), m_sendTo.end() );
     }
+    return map;
+}
 
-    unsigned buffer_size() const{
-        return m_buffer_size;
-    }
-    unsigned store_size() const{
-        return m_store_size;
-    }
+template<class T>
+thrust::host_vector<T> unpack_map(
+    const std::map<int,thrust::host_vector<T>>& idx_map // map is sorted automatically
+    )
+{
+    thrust::host_vector<T> flat;
+    // flatten map
+    for( auto& idx : idx_map)
+        for( unsigned u=0; u<idx.second.size(); u++)
+            flat.push_back( idx.second[u]);
+    return flat;
+}
 
-
-    /**
-    * @brief The internal MPI communicator used
-    *
-    * @return MPI Communicator
-    */
-    MPI_Comm communicator() const{return m_comm;}
-
-    bool isSymmetric() const { return m_symmetric;}
-
-    bool isCommunicating() const{
-        return m_communicating;
-    }
-
-    // TODO we allow the input to be destroyed and allow for symmetric inplace communication
-    // in such a case no memory for the output needs to be allocated
-    // the required memory will be moved in from the input
-
-    // asynchronous scatter
-    // user is responsible to catch CUDA-unawareness!
-    template<class ContainerType0, class ContainerType1>
-    MPI_Request global_scatter_init(
-            ContainerType0& buffer, ContainerType1& store) const
+// I think this is fairly intuitive to understand which is good
+/**
+ * @brief Bootstrap irregular communication between processes
+ *
+ * @param recvIdx (in) <tt> recvIdx[PID] </tt> contains the indices that the calling rank
+ * receives from PID (indices local to PID)
+ * @param comm Communicator
+ * @param isCommunicating false if no process in comm sends or receives any
+ * message to another process, true else
+ * @return sendIdx (out) <tt> sendIdx[PID] </tt> contains the indices that the calling rank sends
+ * to PID (indices local to calling rank)
+ * All the indices here are local to the current rank!
+ *
+ * @note Calls \c MPI_Allgather with given communicator to send the sizes
+ * followed by \c MPI_Alltoall to send the actual data
+ */
+inline static std::map<int,thrust::host_vector<int>> recvIdx2sendIdx(
+    const std::map<int,thrust::host_vector<int>>& recvIdx,
+    MPI_Comm comm,
+    bool& isCommunicating)
+{
+    int rank, comm_size;
+    MPI_Comm_rank( comm, &rank);
+    MPI_Comm_size( comm, &comm_size);
+    thrust::host_vector<int> sendTo( comm_size, 0 ), recvFrom( comm_size, 0);
+    thrust::host_vector<int> global( comm_size*comm_size);
+    for( auto& recv : recvIdx)
+        sendTo[recv.first] = recv.second.size();
+    // everyone knows howmany elements everyone is sending
+    MPI_Allgather( sendTo.data(), comm_size, MPI_INT,
+                   global.data(), comm_size, MPI_INT,
+                   comm);
+    isCommunicating = false;
+    for( unsigned i=0; i<(unsigned)comm_size; i++)
     {
-        assert( buffer.size() == m_buffer_size);
-        //if( !m_symmetric)
-        assert( store.size() == m_store_size);
-        // store can be empty if symmetric
-        return global_comm_init( buffer, store, true);
+        recvFrom[i] = global[i*comm_size+rank];
+        // check if global has entries off the diagonal
+        for( unsigned k=0; k<(unsigned)comm_size; k++)
+            if( k != i and global[i*comm_size+k] != 0)
+                isCommunicating = true;
     }
-    // asynchronous gather
-    template<class ContainerType0, class ContainerType1>
-    MPI_Request global_gather_init(
-            ContainerType0& store, ContainerType1& buffer)const
-    {
-        assert( store.size() == m_store_size);
-        //if( !m_symmetric)
-        assert( buffer.size() == m_buffer_size);
-        // buffer can be empty if symmetric
-        return global_comm_init( store, buffer, false);
-    }
-    private:
-    //surprisingly MPI_Alltoallv wants the integers to be on the host, only
-    //the data is on the device
-    unsigned m_store_size = 0;
-    unsigned m_buffer_size = 0;
-    thrust::host_vector<int> m_sendTo,   m_accS; //accumulated send
-    thrust::host_vector<int> m_recvFrom, m_accR; //accumulated recv
-    MPI_Comm m_comm = MPI_COMM_NULL;
-    bool m_symmetric = false;
-    bool m_communicating = false;
-    template<class ContainerType0, class ContainerType1>
-    MPI_Request global_comm_init(
-            ContainerType0& send, ContainerType1& recv, bool scatter) const
-    {
-        using value_type = dg::get_value_type<ContainerType0>;
-        static_assert( std::is_same_v<value_type,
-                get_value_type<ContainerType1>>);
-        if constexpr ( std::is_same_v<
-            dg::get_execution_policy<ContainerType1>, dg::CudaTag>)
-        {
-#ifdef __CUDACC__ // g++ does not know cudaDeviceSynchronize
-            // We have to wait that all kernels are finished and values are
-            // ready to be sent
-            cudaError_t code = cudaGetLastError( );
-            if( code != cudaSuccess)
-                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-            code = cudaDeviceSynchronize();
-            if( code != cudaSuccess)
-                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-#else
-            assert( false && "Something is wrong! This should never execute!");
-#endif
-        }
-        void * send_ptr          = thrust::raw_pointer_cast( send.data());
-        const int * sendTo_ptr   = thrust::raw_pointer_cast( m_sendTo.data());
-        const int * accS_ptr     = thrust::raw_pointer_cast( m_accS.data());
-        void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
-        const int * recvFrom_ptr = thrust::raw_pointer_cast( m_recvFrom.data());
-        const int * accR_ptr     = thrust::raw_pointer_cast( m_accR.data());
+    // Now we can use Alltoallv to send
+    thrust::host_vector<int> accS( comm_size), accR(comm_size);
+    thrust::exclusive_scan( sendTo.begin(), sendTo.end(), accS.begin());
+    thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
+    thrust::host_vector<int> recv(
+        thrust::reduce( recvFrom.begin(), recvFrom.end()));
+    auto send = unpack_map( recvIdx);
 
-        if( !scatter)
-        {
-            // invert the scatter and gather operations
-            std::swap( sendTo_ptr, recvFrom_ptr);
-            std::swap( accS_ptr, accR_ptr);
-        }
-        MPI_Request rqst;
-        MPI_Ialltoallv(
-            send_ptr, sendTo_ptr, accS_ptr,
-            getMPIDataType<value_type>(),
-            recv_ptr, recvFrom_ptr, accR_ptr,
-            getMPIDataType<value_type>(),
-            m_comm, &rqst);
-        return rqst;
+    void * send_ptr          = thrust::raw_pointer_cast( send.data());
+    const int * sendTo_ptr   = thrust::raw_pointer_cast( sendTo.data());
+    const int * accS_ptr     = thrust::raw_pointer_cast( accS.data());
+    void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
+    const int * recvFrom_ptr = thrust::raw_pointer_cast( recvFrom.data());
+    const int * accR_ptr     = thrust::raw_pointer_cast( accR.data());
+    MPI_Alltoallv( send_ptr, sendTo_ptr,   accS_ptr, MPI_INT,
+                   recv_ptr, recvFrom_ptr, accR_ptr, MPI_INT,
+                   comm);
+    return pack_map( recv, recvFrom );
+}
+
+
+// Convert a unsorted and possible duplicate global index list to unique
+// stable_sorted by pid and duplicates
+// idx 0 is pid, idx 1 is localIndex on that pid
+inline static std::map<int, thrust::host_vector<int>> gIdx2recvIdx(
+    const thrust::host_vector<std::array<int,2>>& gIdx,
+    thrust::host_vector<int>& bufferIdx, // contains gIdx converted to bufferIdx on out
+    MPI_Comm comm)
+{
+    thrust::host_vector<int> gather_map1, gather_map2, howmany;
+    thrust::host_vector<std::array<int,2>> locally_unique_gIdx;
+    detail::find_unique_order_preserving( gIdx, gather_map1,
+        gather_map2, locally_unique_gIdx, howmany);
+    int comm_size;
+    MPI_Comm_size( comm, &comm_size);
+    // get pids
+    thrust::host_vector<int> pids(locally_unique_gIdx.size()),
+        lIdx(pids);
+    for( int i=0; i<(int)pids.size(); i++)
+    {
+        pids[i] = locally_unique_gIdx[i][0];
+        lIdx[i] = locally_unique_gIdx[i][1]; // the local index
+        // Sanity check
+        assert( 0 <= pids[i] && pids[i] < comm_size);
     }
-};
+    thrust::host_vector<int> gather_map3, red_keys,
+        locally_unique_pids;
+    detail::find_unique_stable_sort( pids, gather_map3, red_keys,
+        locally_unique_pids, howmany);
+    // duplicate the sort on lIdx
+    auto sorted_lIdx = lIdx;
+    thrust::scatter( lIdx.begin(), lIdx.end(),
+             gather_map3.begin(), sorted_lIdx.begin());
+    // buffer index
+    bufferIdx.resize( gather_map1.size());
+    for( unsigned u=0; u<bufferIdx.size(); u++)
+        bufferIdx[u] = gather_map3[gather_map2[gather_map1[u]]];
+    //Now construct the MPIPermutation object by getting the number of
+    //elements to send
+    thrust::host_vector<int> sendTo( comm_size, 0 );
+    for( unsigned i=0; i<locally_unique_pids.size(); i++)
+        sendTo[locally_unique_pids[i]] = howmany[i];
+    std::map<int, thrust::host_vector<int>> recv_map = detail::pack_map( sorted_lIdx, sendTo) ;
+    return recv_map;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -400,56 +346,44 @@ struct MPIGather
     * @param comm The MPI communicator participating in the scatter/gather
     * operations
     */
-    MPIGather( const thrust::host_vector<std::array<int,2>>& gIdx,
-            thrust::host_vector<int>& bufferIdx, // in a way it constructs 2 things
-            // TODO gIdx can be unsorted and contain duplicate entries
-            // TODO idx 0 is pid, idx 1 is localIndex on that pid
-            MPI_Comm comm)
+    MPIGather(
+        const thrust::host_vector<std::array<int,2>>& gIdx,
+        thrust::host_vector<int>& bufferIdx, // in a way it constructs 2 things
+        // TODO gIdx can be unsorted and contain duplicate entries
+        // TODO idx 0 is pid, idx 1 is localIndex on that pid
+        MPI_Comm comm)
     {
-        thrust::host_vector<int> gather_map1, gather_map2, howmany;
-        thrust::host_vector<std::array<int,2>> locally_unique_gIdx;
-        detail::find_unique_order_preserving( gIdx, gather_map1,
-            gather_map2, locally_unique_gIdx, howmany);
+        auto recvIdx = detail::gIdx2recvIdx( gIdx, bufferIdx, comm);
+        auto sendIdx = detail::recvIdx2sendIdx ( recvIdx, comm, m_communicating);
+        // The idea is that recvIdx and sendIdx completely define the communication pattern
+        // and we can choose an optimal implementation
+        // Actually the MPI library should do this but general gather indices
+        // don't seem to be supported
+        // So for now let's just use MPI_Alltoallv
+        // Possible optimization includes
+        // - check for duplicate messages to save internal buffer memory
+        // - check for contiguous messages to avoid internal buffer memory
+        // - check if an MPI_Type could fit the index map
         int comm_size;
         MPI_Comm_size( comm, &comm_size);
-        // get pids
-        thrust::host_vector<int> pids(locally_unique_gIdx.size()),
-            lIdx(pids);
-        for( int i=0; i<(int)pids.size(); i++)
-        {
-            pids[i] = locally_unique_gIdx[i][0];
-            lIdx[i] = locally_unique_gIdx[i][1]; // the local index
-            // Sanity check
-            assert( 0 <= pids[i] && pids[i] < comm_size);
-        }
-        thrust::host_vector<int> gather_map3, red_keys,
-            locally_unique_pids;
-        detail::find_unique_stable_sort( pids, gather_map3, red_keys,
-            locally_unique_pids, howmany);
-        // duplicate the sort on lIdx
-        auto sorted_lIdx = lIdx;
-        thrust::scatter( lIdx.begin(), lIdx.end(),
-                 gather_map3.begin(), sorted_lIdx.begin());
-        // buffer index
-        bufferIdx.resize( gather_map1.size());
-        for( unsigned u=0; u<bufferIdx.size(); u++)
-            bufferIdx[u] = gather_map3[gather_map2[gather_map1[u]]];
-        //Now construct the MPIPermutation object by getting the number of
-        //elements to send
-        thrust::host_vector<int> sendTo( comm_size, 0 );
-        for( unsigned i=0; i<locally_unique_pids.size(); i++)
-            sendTo[locally_unique_pids[i]] = howmany[i];
-        m_permute = detail::MPIPermutation( sendTo, comm);
-        assert( m_permute.buffer_size() == locally_unique_gIdx.size());
+        thrust::host_vector<int> recvFrom(comm_size), sendTo(comm_size),
+                                 accR(comm_size), accS(comm_size);
+        for(auto& idx : recvIdx)
+            recvFrom[idx.first] = idx.second.size();
+        for(auto& idx : sendIdx)
+            sendTo[idx.first] = idx.second.size();
+        thrust::exclusive_scan( sendTo.begin(), sendTo.end(), accS.begin());
+        thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
+        m_sendTo=sendTo, m_recvFrom=recvFrom, m_accS=accS, m_accR=accR;
+        m_store_size = thrust::reduce( m_sendTo.begin(), m_sendTo.end() );
+        m_buffer_size = thrust::reduce( m_recvFrom.begin(), m_recvFrom.end() );
+        m_comm = comm;
 
-        // Finally, construct G2
-        thrust::host_vector<int> storeIdx( m_permute.store_size());
-        // Scatter local indices to the other processes so they may know
-        // which values they need to provide:
-        MPI_Request rqst = m_permute.global_scatter_init( sorted_lIdx, storeIdx);
-        MPI_Wait( &rqst, MPI_STATUS_IGNORE );
-        // All the indices we receive here are local to the current rank!
-        m_g2 = LocalGatherMatrix<Vector>(storeIdx);
+        //v -> store -> buffer -> w
+        // G_1 P G_2 v
+        // G_2^T P^T G_1^T w
+
+        m_g2 = LocalGatherMatrix<Vector>(detail::unpack_map( sendIdx));
     }
 
     /**
@@ -498,15 +432,22 @@ struct MPIGather
     MPIGather( const MPIGather<OtherVector>& src)
     {
         m_g2 = src.m_g2;
-        m_permute = src.m_permute;
+        m_store_size = src.m_store_size;
+        m_buffer_size = src.m_buffer_size;
+        m_sendTo = src.m_sendTo,   m_accS = src.m_accS; //accumulated send
+        m_recvFrom = src.m_recvFrom, m_accR = src.m_accR; //accumulated recv
+        m_comm = src.m_comm;
+        m_communicating = src.m_communicating;
         // we don't need to copy memory buffers (they are just workspace) or the request
     }
 
 
-    MPI_Comm communicator()const
-    {
-        return m_permute.communicator();
-    }
+    /**
+    * @brief The internal MPI communicator used
+    *
+    * @return MPI Communicator
+    */
+    MPI_Comm communicator() const{return m_comm;}
     /**
     * @brief The local size of the buffer vector w = local map size
     *
@@ -522,7 +463,7 @@ struct MPIGather
     * operations. The right way to do it is to call <tt> isCommunicating() </tt>
     * @sa local_size() isCommunicating()
     */
-    unsigned buffer_size() const { return m_permute.buffer_size();}
+    unsigned buffer_size() const { return m_buffer_size;}
 
     /**
      * @brief True if the gather/scatter operation involves actual MPI communication
@@ -544,9 +485,8 @@ struct MPIGather
      * or if the communicator is \c MPI_COMM_NULL. True else.
      * @sa buffer_size()
      */
-    bool isCommunicating() const
-    {
-        return m_permute.isCommunicating();
+    bool isCommunicating() const{
+        return m_communicating;
     }
     /**
      * @brief \f$ w = G v\f$. Globally (across processes) gather data into a buffer
@@ -563,31 +503,25 @@ struct MPIGather
         // TODO docu It is save to use and change vector immediately after this function
         using value_type = get_value_type<ContainerType0>;
 
-        //if ( m_permute.isSymmetric())
-        //    m_store.swap( buffer);
-        //else
-        m_store.template set<value_type>( m_permute.store_size());
+        m_store.template set<value_type>( m_store_size);
         auto& store = m_store.template get<value_type>();
 
         //gather values to store
         m_g2.gather( gatherFrom, store);
-        //for( unsigned u=0; u<gatherFrom.size(); u++)
-        //    std::cout << "gatherFrom "<<u<<" "<<gatherFrom[u]<<"\n";
-        //for( unsigned u=0; u<store.size(); u++)
-        //    std::cout << "Store "<<u<<" "<<store[u]<<"\n";
+        assert( buffer.size() == m_buffer_size);
         if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
             dg::CudaTag> and !dg::cuda_aware_mpi)
         {
-            m_h_buffer.template set<value_type>( m_permute.buffer_size());
-            m_h_store.template set<value_type>( m_permute.store_size());
+            m_h_buffer.template set<value_type>( m_buffer_size);
+            m_h_store.template set<value_type>( m_store_size);
             // cudaMemcpy
             m_h_store.template get<value_type>() = store;
-            m_rqst = m_permute.global_gather_init(
+            m_rqst = global_comm_init(
                 m_h_store.template get<value_type>(),
-                m_h_buffer.template get<value_type>());
+                m_h_buffer.template get<value_type>(), true);
         }
         else
-            m_rqst = m_permute.global_gather_init(store, buffer);
+            m_rqst = global_comm_init(store, buffer, true);
     }
     template<class ContainerType>
     void global_gather_wait( ContainerType& buffer) const
@@ -604,23 +538,23 @@ struct MPIGather
     void global_scatter_plus_init( ContainerType0& buffer, ContainerType1& scatterTo )const
     {
         using value_type = dg::get_value_type<ContainerType0>;
-        m_store.template set<value_type>( m_permute.store_size());
+        m_store.template set<value_type>( m_store_size);
         auto& store = m_store.template get<value_type>();
         // throw if buffer has wrong type
         if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
             dg::CudaTag> and !dg::cuda_aware_mpi)
         {
             // we need to send through host
-            m_h_buffer.template set<value_type>( m_permute.buffer_size());
-            m_h_store.template set<value_type>( m_permute.store_size());
+            m_h_buffer.template set<value_type>( m_buffer_size);
+            m_h_store.template set<value_type>( m_store_size);
             // cudaMemcpy
             m_h_buffer.template get<value_type>() = buffer;
-            m_rqst = m_permute.global_scatter_init(
+            m_rqst = global_comm_init(
                 m_h_buffer.template get<value_type>(),
-                m_h_store.template get<value_type>());
+                m_h_store.template get<value_type>(), false);
         }
         else
-            m_rqst = m_permute.global_scatter_init( buffer, store);
+            m_rqst = global_comm_init( buffer, store, false);
     }
     /**
      * @brief \f$ v = v + G^\mathrm{T} b\f$. Globally (across processes) scatter data inside buffer
@@ -648,11 +582,94 @@ struct MPIGather
 
     private:
     LocalGatherMatrix<Vector> m_g2;
-    dg::detail::MPIPermutation m_permute;
     // These are mutable and we never expose them to the user
     mutable detail::AnyVector< Vector> m_store;
     mutable MPI_Request m_rqst;
     mutable detail::AnyVector<thrust::host_vector>  m_h_buffer, m_h_store;
+
+    //surprisingly MPI_Alltoallv wants the integers to be on the host, only
+    //the data is on the device
+    unsigned m_store_size = 0;
+    unsigned m_buffer_size = 0;
+    thrust::host_vector<int> m_sendTo,   m_accS; //accumulated send
+    thrust::host_vector<int> m_recvFrom, m_accR; //accumulated recv
+    MPI_Comm m_comm = MPI_COMM_NULL;
+    bool m_communicating = false;
+    /**
+     * @brief engine for mpi permutating (i.e. bijective)
+     *  gather and scatter operations
+     *
+     * We call the two vectors involved the "buffer" w  and the "store" array v.
+     * The buffer array is the one that is associated with the index map
+     * that we give in the constructor i.e
+     * in the constructor you can specify how many values from each process
+     * the buffer array receives or how many values to each process
+     * the buffer array sends:
+     * \f$ w = G v\f$
+     *
+     * In this way we gather values from the buffer array into the store array
+     * while scatter inverts the operation
+     * \f$ v = S w = G^T w = G^{-1} w\f$
+     * @note The global size of buffer and store are equal. The local buffer
+     * size is the accumulation of the \c connect values in the constructor
+     * The store size is infered from the connection matrix.
+     *
+     * @b Scatter is the following: The first sendTo[0] elements of the buffer array
+     * are sent to rank 0, The next sendTo[1] elements are sent to rank 1 and so
+     * on; the first recvFrom[0] elements in the store array are the values (in
+     * order) sent from rank 0, etc.
+     * @b Gather: The first recvFrom[0] elements of the buffer array on the calling
+     * rank are received from the "rank slot" in the store array on rank 0. etc.
+     *
+     * If the collaboration matrix is symmetric scatter and gather are the same
+     * operation and "in-place" operation can be used, i.e. buffer and store
+     * can be the same array
+     */
+    template<class ContainerType0, class ContainerType1>
+    MPI_Request global_comm_init(
+            ContainerType0& send, ContainerType1& recv, bool gather) const
+    {
+        using value_type = dg::get_value_type<ContainerType0>;
+        static_assert( std::is_same_v<value_type,
+                get_value_type<ContainerType1>>);
+        if constexpr ( std::is_same_v<
+            dg::get_execution_policy<ContainerType1>, dg::CudaTag>)
+        {
+#ifdef __CUDACC__ // g++ does not know cudaDeviceSynchronize
+            // We have to wait that all kernels are finished and values are
+            // ready to be sent
+            cudaError_t code = cudaGetLastError( );
+            if( code != cudaSuccess)
+                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+            code = cudaDeviceSynchronize();
+            if( code != cudaSuccess)
+                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+#else
+            assert( false && "Something is wrong! This should never execute!");
+#endif
+        }
+        void * send_ptr          = thrust::raw_pointer_cast( send.data());
+        const int * sendTo_ptr   = thrust::raw_pointer_cast( m_sendTo.data());
+        const int * accS_ptr     = thrust::raw_pointer_cast( m_accS.data());
+        void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
+        const int * recvFrom_ptr = thrust::raw_pointer_cast( m_recvFrom.data());
+        const int * accR_ptr     = thrust::raw_pointer_cast( m_accR.data());
+
+        if( !gather)
+        {
+            // invert the scatter and gather operations
+            std::swap( sendTo_ptr, recvFrom_ptr);
+            std::swap( accS_ptr, accR_ptr);
+        }
+        MPI_Request rqst;
+        MPI_Ialltoallv(
+            send_ptr, sendTo_ptr, accS_ptr,
+            getMPIDataType<value_type>(),
+            recv_ptr, recvFrom_ptr, accR_ptr,
+            getMPIDataType<value_type>(),
+            m_comm, &rqst);
+        return rqst;
+    }
 };
 
 }//namespace dg
