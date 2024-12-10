@@ -16,7 +16,7 @@ namespace detail
 template<class T>
 std::map<int, thrust::host_vector<T>> pack_map(
     const thrust::host_vector<T>& idx_map, // sorted by pid
-    const thrust::host_vector<int>& howmany_pids // comm_size, how many elements of each pid (can be 0)
+    const thrust::host_vector<int>& howmany_pids // size > comm_size how many elements of each pid (can be 0)
     )
 {
     std::map<int, thrust::host_vector<T>> map;
@@ -110,6 +110,36 @@ inline static std::map<int,thrust::host_vector<int>> recvIdx2sendIdx(
     return pack_map( recv, recvFrom );
 }
 
+// get unique global send index and gather map into it
+inline static thrust::host_vector<std::array<int,2>> sendIdx2gIdx(
+    const std::map<int,thrust::host_vector<int>>& sendIdx,
+    std::map<int,thrust::host_vector<int>>& bufferIdx
+    )
+{
+    auto flat_send = detail::unpack_map( sendIdx);
+    thrust::host_vector<int> pids;
+    thrust::host_vector<int> unique_send, gather_map1, gather_map2, howmany;
+    thrust::host_vector<int> howmany_pids( sendIdx.rbegin()->first);
+    for( auto& idx : sendIdx)
+    {
+        howmany_pids[idx.first] = idx.second.size();
+        pids.insert( pids.end(), howmany_pids[idx.first], idx.first);
+    }
+    detail::find_unique_order_preserving( flat_send, gather_map1,
+        gather_map2, unique_send, howmany);
+    thrust::host_vector<int> flat_bufferIdx( flat_send.size());
+    for( unsigned u=0; u<flat_bufferIdx.size(); u++)
+        flat_bufferIdx[u] = gather_map2[gather_map1[u]];
+    bufferIdx = pack_map( flat_bufferIdx, howmany_pids);
+    // repeat sort on pids
+    thrust::host_vector<std::array<int,2>> gIdx(flat_send.size());
+    for( unsigned u=0; u<gIdx.size(); u++)
+        gIdx[u][1] = flat_send[u];
+    for( unsigned u=0; u<flat_send.size(); u++)
+        gIdx[flat_bufferIdx[u]][0] = pids[u];
+    return gIdx;
+}
+
 
 // Convert a unsorted and possible duplicate global index list to unique
 // stable_sorted by pid and duplicates
@@ -152,7 +182,8 @@ inline static std::map<int, thrust::host_vector<int>> gIdx2recvIdx(
     thrust::host_vector<int> sendTo( comm_size, 0 );
     for( unsigned i=0; i<locally_unique_pids.size(); i++)
         sendTo[locally_unique_pids[i]] = howmany[i];
-    std::map<int, thrust::host_vector<int>> recv_map = detail::pack_map( sorted_lIdx, sendTo) ;
+    std::map<int, thrust::host_vector<int>> recv_map = detail::pack_map(
+        sorted_lIdx, sendTo) ;
     return recv_map;
 }
 
