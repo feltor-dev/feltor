@@ -12,42 +12,6 @@ namespace dg{
 ///@cond
 namespace detail
 {
-// map is sorted
-template<class T>
-std::map<int, thrust::host_vector<T>> pack_map(
-    const thrust::host_vector<T>& idx_map, // sorted by pid
-    const thrust::host_vector<int>& howmany_pids // size > comm_size how many elements of each pid (can be 0)
-    )
-{
-    std::map<int, thrust::host_vector<T>> map;
-    unsigned start = 0;
-    for( unsigned u=0; u<howmany_pids.size(); u++)
-    {
-        if( howmany_pids[u] != 0)
-        {
-            map[u] = thrust::host_vector<T>( howmany_pids[u]);
-            for( unsigned i=0; i<(unsigned)howmany_pids[u]; i++)
-            {
-                map[u][i] = idx_map[ start + i];
-            }
-            start += howmany_pids[u];
-        }
-    }
-    return map;
-}
-
-template<class T>
-thrust::host_vector<T> unpack_map(
-    const std::map<int,thrust::host_vector<T>>& idx_map // map is sorted automatically
-    )
-{
-    thrust::host_vector<T> flat;
-    // flatten map
-    for( auto& idx : idx_map)
-        for( unsigned u=0; u<idx.second.size(); u++)
-            flat.push_back( idx.second[u]);
-    return flat;
-}
 
 // I think this is fairly intuitive to understand which is good
 /**
@@ -96,7 +60,7 @@ inline static std::map<int,thrust::host_vector<int>> recvIdx2sendIdx(
     thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
     thrust::host_vector<int> recv(
         thrust::reduce( recvFrom.begin(), recvFrom.end()));
-    auto send = unpack_map( recvIdx);
+    auto send = flatten_map( recvIdx);
 
     void * send_ptr          = thrust::raw_pointer_cast( send.data());
     const int * sendTo_ptr   = thrust::raw_pointer_cast( sendTo.data());
@@ -107,86 +71,10 @@ inline static std::map<int,thrust::host_vector<int>> recvIdx2sendIdx(
     MPI_Alltoallv( send_ptr, sendTo_ptr,   accS_ptr, MPI_INT,
                    recv_ptr, recvFrom_ptr, accR_ptr, MPI_INT,
                    comm);
-    return pack_map( recv, recvFrom );
+    thrust::host_vector<int> pids(comm_size);
+    thrust::sequence( pids.begin(), pids.end());
+    return make_map( recv, pids, recvFrom );
 }
-
-// get unique global send index and gather map into it
-inline static thrust::host_vector<std::array<int,2>> sendIdx2gIdx(
-    const std::map<int,thrust::host_vector<int>>& sendIdx,
-    std::map<int,thrust::host_vector<int>>& bufferIdx
-    )
-{
-    auto flat_send = detail::unpack_map( sendIdx);
-    thrust::host_vector<int> pids;
-    thrust::host_vector<int> unique_send, gather_map1, gather_map2, howmany;
-    thrust::host_vector<int> howmany_pids( sendIdx.rbegin()->first);
-    for( auto& idx : sendIdx)
-    {
-        howmany_pids[idx.first] = idx.second.size();
-        pids.insert( pids.end(), howmany_pids[idx.first], idx.first);
-    }
-    detail::find_unique_order_preserving( flat_send, gather_map1,
-        gather_map2, unique_send, howmany);
-    thrust::host_vector<int> flat_bufferIdx( flat_send.size());
-    for( unsigned u=0; u<flat_bufferIdx.size(); u++)
-        flat_bufferIdx[u] = gather_map2[gather_map1[u]];
-    bufferIdx = pack_map( flat_bufferIdx, howmany_pids);
-    // repeat sort on pids
-    thrust::host_vector<std::array<int,2>> gIdx(flat_send.size());
-    for( unsigned u=0; u<gIdx.size(); u++)
-        gIdx[u][1] = flat_send[u];
-    for( unsigned u=0; u<flat_send.size(); u++)
-        gIdx[flat_bufferIdx[u]][0] = pids[u];
-    return gIdx;
-}
-
-
-// Convert a unsorted and possible duplicate global index list to unique
-// stable_sorted by pid and duplicates
-// idx 0 is pid, idx 1 is localIndex on that pid
-inline static std::map<int, thrust::host_vector<int>> gIdx2recvIdx(
-    const thrust::host_vector<std::array<int,2>>& gIdx,
-    thrust::host_vector<int>& bufferIdx, // contains gIdx converted to bufferIdx on out
-    MPI_Comm comm)
-{
-    thrust::host_vector<int> gather_map1, gather_map2, howmany;
-    thrust::host_vector<std::array<int,2>> locally_unique_gIdx;
-    detail::find_unique_order_preserving( gIdx, gather_map1,
-        gather_map2, locally_unique_gIdx, howmany);
-    int comm_size;
-    MPI_Comm_size( comm, &comm_size);
-    // get pids
-    thrust::host_vector<int> pids(locally_unique_gIdx.size()),
-        lIdx(pids);
-    for( int i=0; i<(int)pids.size(); i++)
-    {
-        pids[i] = locally_unique_gIdx[i][0];
-        lIdx[i] = locally_unique_gIdx[i][1]; // the local index
-        // Sanity check
-        assert( 0 <= pids[i] && pids[i] < comm_size);
-    }
-    thrust::host_vector<int> gather_map3, red_keys,
-        locally_unique_pids;
-    detail::find_unique_stable_sort( pids, gather_map3, red_keys,
-        locally_unique_pids, howmany);
-    // duplicate the sort on lIdx
-    auto sorted_lIdx = lIdx;
-    thrust::scatter( lIdx.begin(), lIdx.end(),
-             gather_map3.begin(), sorted_lIdx.begin());
-    // buffer index
-    bufferIdx.resize( gather_map1.size());
-    for( unsigned u=0; u<bufferIdx.size(); u++)
-        bufferIdx[u] = gather_map3[gather_map2[gather_map1[u]]];
-    //Now construct the MPIPermutation object by getting the number of
-    //elements to send
-    thrust::host_vector<int> sendTo( comm_size, 0 );
-    for( unsigned i=0; i<locally_unique_pids.size(); i++)
-        sendTo[locally_unique_pids[i]] = howmany[i];
-    std::map<int, thrust::host_vector<int>> recv_map = detail::pack_map(
-        sorted_lIdx, sendTo) ;
-    return recv_map;
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -384,7 +272,9 @@ struct MPIGather
         // TODO idx 0 is pid, idx 1 is localIndex on that pid
         MPI_Comm comm)
     {
-        auto recvIdx = detail::gIdx2recvIdx( gIdx, bufferIdx, comm);
+        thrust::host_vector<int> unique_gIdx, unique_pids, howmany;
+        detail::gIdx2unique_idx( gIdx, bufferIdx, unique_gIdx, unique_pids, howmany);
+        auto recvIdx = detail::make_map ( unique_gIdx, unique_pids, howmany);
         auto sendIdx = detail::recvIdx2sendIdx ( recvIdx, comm, m_communicating);
         // The idea is that recvIdx and sendIdx completely define the communication pattern
         // and we can choose an optimal implementation
@@ -414,7 +304,7 @@ struct MPIGather
         // G_1 P G_2 v
         // G_2^T P^T G_1^T w
 
-        m_g2 = LocalGatherMatrix<Vector>(detail::unpack_map( sendIdx));
+        m_g2 = LocalGatherMatrix<Vector>(detail::flatten_map( sendIdx));
     }
 
     /**

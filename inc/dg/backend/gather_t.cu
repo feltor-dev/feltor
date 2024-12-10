@@ -66,7 +66,21 @@ int main()
         std::cout << "Gather PASSED\n\n";
     }
 
+    std::cout << "Test gIdx2unique_idx\n";
+    thrust::host_vector<int> bufferIdx, sorted_unique_gIdx, unique_pids,
+        howmany_pids;
+    dg::detail::gIdx2unique_idx( gIdx, bufferIdx, sorted_unique_gIdx,
+            unique_pids, howmany_pids);
+    auto recv_map = dg::detail::make_map( sorted_unique_gIdx, unique_pids,
+            howmany_pids);
 
+    for ( auto& idx : recv_map)
+    {
+        std::cout << "Receive ";
+        for( unsigned u=0; u<idx.second.size(); u++)
+            std::cout << "{"<<idx.first<<","<<idx.second[u]<<"} ";
+        std::cout << "\n";
+    }
 
     std::cout << "Test Local Gather Matrix\n";
     std::vector<int> idx = {7,4,5,2,4,9};

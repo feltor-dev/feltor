@@ -13,6 +13,7 @@
 namespace dg{
 ///@cond
 namespace detail{
+// For the index battle:
 
 /*!
 * gather_map is the gather map wrt to the unsorted elements!
@@ -120,6 +121,79 @@ void find_unique_order_preserving(
     thrust::sequence( seq.begin(), seq.end());
     thrust::scatter( seq.begin(), seq.end(), gather_map.begin(), sort_map.begin());
     gather_map = sort_map;
+}
+
+// map is sorted
+template<class T>
+std::map<int, thrust::host_vector<T>> make_map(
+    const thrust::host_vector<T>& idx_map, // sorted by pid
+    const thrust::host_vector<int>& pids, // unique
+    const thrust::host_vector<int>& howmany // size
+    )
+{
+    std::map<int, thrust::host_vector<T>> map;
+    unsigned start = 0;
+    for( unsigned u=0; u<pids.size(); u++)
+    {
+        if( howmany[u] != 0)
+        {
+            map[pids[u]] = thrust::host_vector<T>( howmany[u]);
+            for( unsigned i=0; i<(unsigned)howmany[u]; i++)
+            {
+                map[pids[u]][i] = idx_map[ start + i];
+            }
+            start += howmany[u];
+        }
+    }
+    return map;
+}
+
+template<class T>
+thrust::host_vector<T> flatten_map(
+    const std::map<int,thrust::host_vector<T>>& idx_map // map is sorted automatically
+    )
+{
+    thrust::host_vector<T> flat;
+    // flatten map
+    for( auto& idx : idx_map)
+        for( unsigned u=0; u<idx.second.size(); u++)
+            flat.push_back( idx.second[u]);
+    return flat;
+}
+
+// Convert a unsorted and possible duplicate global index list to unique
+// stable_sorted by pid and duplicates
+// idx 0 is pid, idx 1 is localIndex on that pid
+inline static void gIdx2unique_idx(
+    const thrust::host_vector<std::array<int,2>>& gIdx,
+    thrust::host_vector<int>& bufferIdx, // gIdx size, gather gIdx from sorted_unique_gIdx
+    thrust::host_vector<int>& sorted_unique_gIdx,
+    thrust::host_vector<int>& unique_pids, // sorted
+    thrust::host_vector<int>& howmany_pids)
+{
+    thrust::host_vector<int> gather_map1, gather_map2, howmany;
+    thrust::host_vector<std::array<int,2>> locally_unique_gIdx;
+    detail::find_unique_order_preserving( gIdx, gather_map1,
+        gather_map2, locally_unique_gIdx, howmany);
+    // get pids
+    thrust::host_vector<int> pids(locally_unique_gIdx.size()),
+        lIdx(pids);
+    for( int i=0; i<(int)pids.size(); i++)
+    {
+        pids[i] = locally_unique_gIdx[i][0];
+        lIdx[i] = locally_unique_gIdx[i][1]; // the local index
+    }
+    thrust::host_vector<int> gather_map3, red_keys;
+    detail::find_unique_stable_sort( pids, gather_map3, red_keys,
+        unique_pids, howmany_pids);
+    // duplicate the sort on lIdx
+    sorted_unique_gIdx = lIdx;
+    thrust::scatter( lIdx.begin(), lIdx.end(),
+             gather_map3.begin(), sorted_unique_gIdx.begin());
+    // buffer index
+    bufferIdx.resize( gather_map1.size());
+    for( unsigned u=0; u<bufferIdx.size(); u++)
+        bufferIdx[u] = gather_map3[gather_map2[gather_map1[u]]];
 }
 
 
