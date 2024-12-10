@@ -56,7 +56,7 @@ struct KroneckerComm
         m_n = 0;
         m_dim[0] = m_dim[1] = m_dim[2] = 0;
         m_comm = comm;
-        m_silent = true;
+        m_communicating = true;
     }
     /**
     * @brief Construct
@@ -74,18 +74,64 @@ struct KroneckerComm
     // not all participating pids need to have the same number of hyperblocks or have the same shape
     // even though shape[0] and shape[2] must be equal between any two communicating pids
     // Index map must be injective i.e. vector element cannot be sent to more than one other rank
-    KroneckerComm( unsigned left,
-    const thrust::host_vector<std::array<int,2>>& gIdx,
-    const thrust::host_vector<int>& bufferIdx, unsigned n, unsigned right,
+    KroneckerComm( unsigned left_size, // (local) of SparseBlockMat
+        const thrust::host_vector<std::array<int,2>>& gIdx,
+        const thrust::host_vector<int>& bufferIdx,
+        unsigned n, // block size
+        unsigned num_cols, // (local) number of block columns
+        unsigned right_size, // (local) of SparseBlockMat
         MPI_Comm comm_1d)
+    : m_slice_size(n*left*right), m_comm(comm_1d)
     {
-        auto recvIdx = detail::gIdx2recvIdx( gIdx, bufferIdx, comm_1d);
-        auto sendIdx = detail::recvIdx2sendIdx ( recvIdx, comm_1d, m_communicating);
+        int ndims;
+        MPI_Cartdim_get( comm_1d, &ndims);
+        asssert( ndims == 1);
+        int rank;
+        MPI_Comm_rank( comm_1d, &rank);
+        static_assert( std::is_base_of<SharedVectorTag,
+                get_tensor_category<Vector<double>>>::value,
+               "Only Shared vectors allowed");
+        // Receive side
+        thrust::host_vector<int> unique_gIdx, unique_pids, howmany;
+        detail::gIdx2unique_idx( gIdx, bufferIdx, unique_gIdx, unique_pids,
+                howmany);
+        auto recvIdx = detail::make_map ( unique_gIdx, unique_pids,
+                howmany);
+        // receive only foreign messages
+        for( unsigned u=0; u<unique_pids.size(); u++)
+            if( unique_pids[u] != rank)
+                m_buffer_size += howmany[u];
+        // bootstrap communication pattern
+        auto sendIdx = detail::recvIdx2sendIdx ( recvIdx, comm_1d,
+                m_communicating);
         // now get unique send indices
-        std::map<int, thrust::host_vector<int>> send_bufferIdx;
-        auto gsendIdx = sendIdx2gIdx( sendIdx, send_bufferIdx);
+        auto flat_idx = detail::flatten_map( sendIdx);
+        thrust::host_vector<int> unique_lIdx, gather_map1, gather_map2;
+        detail::find_unique_order_preserving( flat_idx, gather_map1,
+            gather_map2, unique_lIdx, howmany);
+        thrust::host_vector<int> storeIdx( flat_idx.size());
+        for( unsigned u=0; u<storeIdx.size(); u++)
+            storeIdx[u] = gather_map2[gather_map1[u]];
 
+        m_contiguous = (left_size==1);
+        if( not m_contiguous)
+        {
+            // everything becomes a z - derivative ...
+            // we gather all unique indices into send buffer
+            thrust::host_vector<int> g2( unique_lIdx.size()*n*left*right);
+            for( unsigned l=0; l<unique_lIdx.size(); l++)
+            for( unsigned j=0; j<n; j++)
+            for( unsigned i=0; i<left_size; i++)
+            for( unsigned k=0; k<right_size; k++)
+                g2[((l*n+j)*left_size+i)*right_size + k] =
+                     ((i*num_cols + unique_lIdx[l])*n + j)*right_size + k;
+            m_g2 = LocalGatherMatrix<Vector>(g2);
+            m_store_size = unique_lIdx.size();
+            m_storeIdx = unique_lIdx;
+        }
     }
+    template< template<class> class OtherVector>
+    friend class KroneckerComm; // enable copy
 
     /**
     * @brief Construct from other Communicator
@@ -96,34 +142,11 @@ struct KroneckerComm
     * @tparam OtherVector other container type
     * @param src source object
     */
-    template< template<typename > typename OtherVector, class value_type2>
-    KroneckerComm( const KroneckerComm<OtherVector,value_type2>& src){
-        // ...
-        //if( src.buffer_size() == 0)  m_silent=true;
-        //else
-        //    construct( src.n(), src.dims(), src.communicator(), src.direction());
+    template< template<typename > typename OtherVector>
+    KroneckerComm( const KroneckerComm<OtherVector>& src){
+        ...
     }
 
-    /**
-    * @brief slice width
-    * @return  slice width
-    */
-    unsigned n() const{return m_n;}
-    /**
-    * @brief  The shape of the input vector as seen by this class
-    *
-    * All dimensions smaller than coord given in constructor are collapsed
-    * to dims[0], dims[1] is the coord dimension in the constructor
-    * and dims[2] are all dimensions larger than coord
-    * @return dimensions ( 3)
-    */
-    const unsigned* dims() const{return m_dim;}
-    /**
-    * @brief The direction of communication
-    *
-    * @return direction
-    */
-    unsigned direction() const {return m_direction;}
     ///@copydoc aCommunicator::communicator()
     MPI_Comm communicator() const{return m_comm;}
 
@@ -138,30 +161,9 @@ struct KroneckerComm
         if( buffer_size() == 0 ) return Buffer();
         return Buffer(6);
     }
-    /**  @brief The size of the halo
-     * @return the size of the halo (0 if no communication)
-     */
-    unsigned buffer_size() const;
     ///@copydoc aCommunicator::isCommunicating()
     bool isCommunicating() const{
-        if( buffer_size() == 0) return false;
-        return true;
-    }
-    /**
-     * @brief Map a local matrix index to a buffer index
-     * @param i matrix index
-     * @return buffer index (0,1,...,5)
-     */
-    int map_index(int i) const{
-        // This maps the constructors indices to a local buffer
-        if( i==-1) return 0;
-        if( i== 0) return 1;
-        if( i==+1) return 2;
-        if( i==(int)m_outer_size-0) return 5;
-        if( i==(int)m_outer_size-1) return 4;
-        if( i==(int)m_outer_size-2) return 3;
-        throw Error( Message(_ping_)<<"Index not mappable!");
-        return -1;
+        return m_communicating
     }
 
     /**
@@ -170,33 +172,46 @@ struct KroneckerComm
     * @param buffer (write only) pointers to the received data after \c global_gather_wait() was called (must be allocated by \c allocate_buffer())
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
-    void global_gather_init( const_pointer_type input, buffer_type& buffer, MPI_Request rqst[4])const
+    template<class ContainerType>
+    void global_gather_init( const ContainerType& input)const
     {
-        unsigned size = buffer_size();
+        using value_type = dg::get_value_type<ContainerType>;
+        unsigned size = m_slice_size;
         //init pointers on host
-        const_pointer_type host_ptr[6];
-        if(m_trivial)
+        thrust::host_vector<const value_type*> send_ptrs(m_store_size);
+        m_store.template set<value_type>( m_store_size*size);
+        auto& store = m_store.template get<value_type>();
+        if(m_contiguous)
         {
-            host_ptr[0] = thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]);
-            host_ptr[1] = input;
-            host_ptr[2] = input+size;
-            host_ptr[3] = input+(m_outer_size-2)*size;
-            host_ptr[4] = input+(m_outer_size-1)*size;
-            host_ptr[5] = thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]);
+            for( unsigned u=0; u<send_ptrs.size(); u++)
+                send_ptrs[u] = thrust::raw_pointer_cast(input.data())
+                               + m_unique_lIdx[u]*size;
         }
         else
         {
-            host_ptr[0] = thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]);
-            host_ptr[1] = thrust::raw_pointer_cast(&m_internal_buffer.data()[1*size]);
-            host_ptr[2] = thrust::raw_pointer_cast(&m_internal_buffer.data()[2*size]);
-            host_ptr[3] = thrust::raw_pointer_cast(&m_internal_buffer.data()[3*size]);
-            host_ptr[4] = thrust::raw_pointer_cast(&m_internal_buffer.data()[4*size]);
-            host_ptr[5] = thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]);
+            for( unsigned u=0; u<send_ptrs.size(); u++)
+                send_ptrs[u] =
+                    thrust::raw_pointer_cast(&store.data()[u*size]);
         }
         //copy pointers to device
-        thrust::copy( host_ptr, host_ptr+6, buffer.begin());
-        //fill internal_buffer if !trivial
-        do_global_gather_init( get_execution_policy<Vector>(), input, rqst);
+        thrust::device_vector<const value_type*> d_send_ptrs = send_ptrs;
+        //fill internal_buffer if not contiguous
+        if( not m_contiguous)
+            m_g2.gather( input, store);
+        // continue here
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
+        {
+            m_h_buffer.template set<value_type>( m_buffer_size*size);
+            m_h_store.template set<value_type>( m_store_size*size);
+            // cudaMemcpy
+            m_h_store.template get<value_type>() = store;
+            m_rqst = global_comm_init(
+                m_h_store.template get<value_type>(),
+                m_h_buffer.template get<value_type>(), true);
+        }
+        else
+            m_rqst = global_comm_init(store, buffer, true);
         sendrecv( host_ptr[1], host_ptr[4],
                   thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //host_ptr is const!
                   thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //host_ptr is const!
@@ -210,158 +225,37 @@ struct KroneckerComm
     * @param buffer (write only) where received data resides on return (must be allocated by \c allocate_buffer())
     * @param rqst the same four request variables that were used in global_gather_init
     */
-    void global_gather_wait(const_pointer_type input, const buffer_type& buffer, MPI_Request rqst[4])const
+    template<class value_type>
+    Vector<const value_type*> global_gather_wait( ) const
     {
-        MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-#ifdef _DG_CUDA_UNAWARE_MPI
-    if( std::is_same< get_execution_policy<Vector>, CudaTag>::value ) //could be serial tag
-    {
-        unsigned size = buffer_size();
-        cudaError_t code = cudaGetLastError( );
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //dst
-                    thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]), //src
-                    size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //dst
-                    thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]), //src
-                    size*sizeof(get_value_type<Vector>), cudaMemcpyHostToDevice);
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-    }
-#endif
+        // can be called on MPI_REQUEST_NULL
+        MPI_Waitall( m_rqst.size(), &m_rqst[0], MPI_STATUSES_IGNORE );
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
+            buffer = m_h_buffer.template get<value_type>();
     }
     private:
-    void do_global_gather_init( OmpTag, const_pointer_type, MPI_Request rqst[4])const;
-    void do_global_gather_init( SerialTag, const_pointer_type, MPI_Request rqst[4])const;
-    void do_global_gather_init( CudaTag, const_pointer_type, MPI_Request rqst[4])const;
-
-    unsigned m_local_left_size, m_local_right_size;
+    unsigned m_slice_size;
     MPI_Comm m_comm; // typically 1d
-    bool m_silent, m_trivial=false; //silent -> no comm, m_trivial-> comm in last dim
-    unsigned m_outer_size = 1; //size of vector in units of buffer_size
-    Vector<int> m_gather_map_middle;
-    dg::Buffer<Vector<value_type>> m_internal_buffer;
-#ifdef _DG_CUDA_UNAWARE_MPI
-    //a copy of the data on the host (we need to send data manually through the host)
-    dg::Buffer<thrust::host_vector<value_type>> m_internal_host_buffer;
-#endif
+    bool m_communicating, m_contiguous=false; //silent -> no comm, m_contiguous-> comm in last dim
+    LocalGatherMatrix<Vector> m_g2;
+
+    unsigned m_store_size = 0; // in units of m_slice_size
+    unsigned m_buffer_size = 0; // in units of m_slice_size
+    thrust::host_vector<int> m_unique_lIdx; // store size (for contiguous)
+    mutable detail::AnyVector< Vector> m_buffer, m_store;
+    mutable detail::AnyVector<thrust::host_vector>  m_h_buffer, m_h_store;
+    mutable std::vector<MPI_Request> m_rqst;
 
     void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
 };
 
 ///@cond
 
-template<template<class> class V, class value_type>
-void KroneckerComm<V, value_type>::KroneckerComm(
-    std::vector<std::array<int,3>> bbs, std::array<unsigned,3> collapsed_shape, MPI_Comm comm)
-{
-    static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<V<value_type>>>::value,
-               "Only Shared vectors allowed");
-    // First convert bbs to a flat array
-    std::vector<int> starts ( bbs.size()), ends(bbs.size()), pids( bbs.size());
-    for( unsigned u=0;u<bbs.size(); u++)
-        starts[u] = bbs[u][0], ends[u] = bbs[u][1], pids[u] = bbs[u][2];
-    thrust::vector<int> localIndexMap
 
 
-
-
-
-
-    m_silent=false;
-    m_n=n;
-    m_dim[0] = dimensions[0], m_dim[1] = dimensions[1], m_dim[2] = dimensions[2];
-    m_direction = direction;
-    if( dimensions[2] == 1 ) m_trivial = true;
-    else m_trivial = false;
-    m_comm = comm;
-    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified
-    MPI_Cart_shift( m_comm, m_direction, -1, &m_source[0], &m_dest[0]);
-    MPI_Cart_shift( m_comm, m_direction, +1, &m_source[1], &m_dest[1]);
-    {
-        int ndims;
-        MPI_Cartdim_get( comm, &ndims);
-        int dims[ndims], periods[ndims], coords[ndims];
-        MPI_Cart_get( comm, ndims, dims, periods, coords);
-        if( dims[m_direction] == 1) m_silent = true;
-    }
-    if( !m_silent)
-    {
-    m_outer_size = dimensions[0]*dimensions[1]*dimensions[2]/buffer_size();
-    assert( m_outer_size > 1 && "Parallelization too fine grained!"); //right now we cannot have that
-    thrust::host_vector<int> mid_gather( 4*buffer_size());
-    for( unsigned i=0; i<m_dim[2]; i++)
-        for( unsigned j=0; j<n; j++)
-            for( unsigned k=0; k<m_dim[0]; k++)
-            {
-                mid_gather[((0*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1]                + j)*m_dim[0] + k;
-                mid_gather[((1*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + n            + j)*m_dim[0] + k;
-                mid_gather[((2*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + m_dim[1]-2*n + j)*m_dim[0] + k;
-                mid_gather[((3*n+j)*m_dim[2]+i)*m_dim[0] + k] = (i*m_dim[1] + m_dim[1]-  n + j)*m_dim[0] + k;
-            }
-    m_gather_map_middle = mid_gather; //transfer to device
-    m_internal_buffer.data().resize( 6*buffer_size() );
-#ifdef _DG_CUDA_UNAWARE_MPI
-    m_internal_host_buffer.data().resize( 6*buffer_size() );
-#endif
-    }
-}
-
-template<class I, class B, class V>
-unsigned KroneckerComm<I,B,V>::buffer_size() const
-{
-    if( m_silent) return 0;
-    return m_n*m_dim[0]*m_dim[2];
-}
-
-template<class I, class B, class V>
-void KroneckerComm<I,B,V>::do_global_gather_init( SerialTag, const_pointer_type input, MPI_Request rqst[4]) const
-{
-    if( !m_trivial)
-    {
-        unsigned size = buffer_size();
-        for( unsigned i=0; i<4*size; i++)
-            m_internal_buffer.data()[i+size] = input[m_gather_map_middle[i]];
-    }
-}
-#ifdef _OPENMP
-template<class I, class B, class V>
-void KroneckerComm<I,B,V>::do_global_gather_init( OmpTag, const_pointer_type input, MPI_Request rqst[4]) const
-{
-    if(!m_trivial)
-    {
-        unsigned size = buffer_size();
-        #pragma omp parallel for
-        for( unsigned i=0; i<4*size; i++)
-            m_internal_buffer.data()[size+i] = input[m_gather_map_middle[i]];
-    }
-}
-#endif
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template<class I, class B, class V>
-void KroneckerComm<I,B,V>::do_global_gather_init( CudaTag, const_pointer_type input, MPI_Request rqst[4]) const
-{
-    //gather values from input into sendbuffer
-    if(!m_trivial)
-    {
-        unsigned size = buffer_size();
-        thrust::gather( thrust::cuda::tag(), m_gather_map_middle.begin(), m_gather_map_middle.end(), input, m_internal_buffer.data().begin()+size);
-    }
-    cudaError_t code = cudaGetLastError( );
-    if( code != cudaSuccess)
-        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-    code = cudaDeviceSynchronize(); //wait until device functions are finished before sending data
-    if( code != cudaSuccess)
-        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-}
-#endif
-
-template<class I, class B, class V>
-void KroneckerComm<I,B,V>::sendrecv( const_pointer_type sb1_ptr, const_pointer_type sb2_ptr, pointer_type rb1_ptr, pointer_type rb2_ptr, MPI_Request rqst[4]) const
+template<class V>
+void KroneckerComm<V>::sendrecv( const_pointer_type sb1_ptr, const_pointer_type sb2_ptr, pointer_type rb1_ptr, pointer_type rb2_ptr, MPI_Request rqst[4]) const
 {
     unsigned size = buffer_size();
 #ifdef _DG_CUDA_UNAWARE_MPI
