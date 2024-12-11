@@ -13,6 +13,156 @@
 
 namespace dg
 {
+
+namespace detail
+{
+// manage the case that everything is contiguous in memory
+// This is a local class (no MPI calls involved)
+template<class Vector>
+struct MemoryManager
+{
+    MemoryManager(
+        const std::map<int, thrust::host_vector<int>>& recvIdx,
+        const std::map<int, thrust::host_vector<int>>& sendIdx,
+        unsigned chunk_size)
+    : m_chunk_size( chunk_size), m_sendIdx( sendIdx), m_recvIdx( recvIdx)
+    {
+        // Think about contiguous and non-contiguous separately
+        // We need to find out the minimum amount of memory we need to allocate
+        for( auto& idx : recvIdx)
+        {
+            // size of recvIdx w/o self-message
+            if( idx.first != rank)
+                m_buffer_size += idx.second.size();
+        }
+        // if cuda unaware we need to send messages through host
+        for( auto& idx : sendIdx)
+        {
+            // size of sendIdx w/o self-message
+            if( idx.first != rank)
+                m_h_store_size += idx.second.size();
+        }
+    }
+
+    // Also sync cuda if necessary
+    template<class ContainerType>
+    void make_sendrecv_ptrs( const ContainerType& input,
+        std::map<int, thrust::host_vector<const dg::get_value_type<ContainerType>*>>& send_ptrs,
+        std::map<int, thrust::host_vector<dg::get_value_type<ContainerType>*>>& recv_ptrs)
+    {
+        int rank;
+        MPI_Comm_rank( comm, &rank);
+        using value_type = dg::get_value_type<ContainerType>;
+        //init pointers on host
+        for( auto& idx : m_sendIdx)
+        {
+            send_ptrs[idx.first] = thrust::host_vector<const value_type*>>(idx.second.size());
+            for( unsigned u=0; u<idx.second.size(); u++)
+                send_ptrs[idx.first][u] = thrust::raw_pointer_cast(input.data())
+                           + idx.second[u]*m_chunk_size;
+        }
+
+        // cuda - sync device
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+            dg::CudaTag>)
+        {
+#ifdef __CUDACC__ // g++ does not know cuda code
+            cudaError_t code = cudaGetLastError( );
+            if( code != cudaSuccess)
+                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+            if constexpr ( not dg::cuda_aware_mpi)
+            {
+                m_h_store.template set<value_type>( m_h_store_size*m_chunk_size);
+                auto& h_store = m_h_store.template get<value_type>();
+                unsigned start = 0;
+                for( auto& idx : m_sendIdx)
+                {
+                    if( idx.first != rank) // only non-self messages need to go through host
+                    {
+                        for( unsigned u=0; u<idx.second.size(); u++)
+                        {
+                            code = cudaMemcpy( &h_store.data()[start], &send_ptrs[u],
+                                size*sizeof(value_type), cudaMemcpyDeviceToHost);
+                            send_ptrs[idx.first][u] = // re-point pointer
+                                thrust::raw_pointer_cast(&h_store.data()[start]);
+                            start+= chunk_size;
+                        }
+                    }
+                }
+                if( code != cudaSuccess)
+                    throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+            }
+            // We have to wait that all kernels are finished and values are
+            // ready to be sent
+            code = cudaDeviceSynchronize();
+            if( code != cudaSuccess)
+                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+#else
+            assert( false && "Something is wrong! This should never execute!");
+#endif
+        }
+
+        m_buffer.template set<value_type>( m_buffer_size*m_chunk_size); // recv memory
+        auto& buffer = m_bufer.template get<value_type>();
+        unsigned recv_counter = 0;
+        for( auto& idx : m_recvIdx)
+        {
+            recv_ptrs[idx.first] = thrust::host_vector<const value_type*>>(idx.second.size());
+            for( unsigned u=0; u<idx.second.size(); u++)
+            {
+                if( idx.first != rank)
+                {
+                    if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+                        dg::CudaTag> and not dg::cuda_aware_mpi)
+                    {
+                        m_h_buffer.template set<value_type>( m_buffer_size*m_chunk_size);
+                        recv_ptrs[idx.first][u] = thrust::raw_pointer_cast( h_buffer.data())
+                           + recv_counter*m_chunk_size;
+                    }
+                    else
+                        recv_ptrs[idx.first][u] = thrust::raw_pointer_cast( buffer.data())
+                           + recv_counter*m_chunk_size;
+                }
+                else
+                    recv_ptrs[idx.first][u] = send_ptrs[idx.first][u];
+                recv_counter++;
+            }
+        }
+
+
+    }
+    void host2device_ptrs(
+        std::map<int, thrust::host_vector<value_type*>>& recv_ptrs)
+    {
+        // in case of cuda unaware mpi some recv pointers pointers point to host
+        for( auto& idx : recv_ptrs)
+            if( idx.first != rank) // no self-recvs
+                for( unsigned u=0; u<idx.second.size(); u++)
+
+    }
+    void sync_buffer( ) const
+    {
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
+            buffer = m_h_buffer.template get<value_type>();
+        //copy pointers to device
+        thrust::device_vector<const value_type*> d_send_ptrs = send_ptrs;
+    }
+    private:
+    unsigned m_chunk_size; // from constructor
+    std::map<int,thrust::host_vector<int>> m_sendIdx; // from constructor
+    std::map<int,thrust::host_vector<int>> m_recvIdx; // from constructor
+
+    unsigned m_buffer_size = 0;
+    mutable detail::AnyVector< Vector> m_buffer; // used for foreign message recv
+    mutable detail::AnyVector<thrust::host_vector>  m_h_buffer; // same size as buffer
+
+    unsigned m_h_store_size = 0;
+    mutable detail::AnyVector<thrust::host_vector>  m_h_store;
+
+
+};
+} // namespace detail
 /////////////////////////////communicator//////////////////////////
 /**
 * @brief Communicator for asynchronous communication of MPISparseBlockMat
@@ -67,13 +217,12 @@ struct KroneckerComm
     * @param comm the (cartesian) communicator (must be of dimension Nd)
     * @param direction coordinate along which to exchange halo e.g. 0 is x, 1 is y, 2 is z
     */
+        // The goal here is to minimize data movement especially when the data
+        // is contiguous in memory, then the only write is to the local receive buffer
     // TODO comm is the communicator that the pids refer to
     //
-    // hyperblocks contains 1d indices {start,end,pid}
-    // collapsed shape contains {left_vector_size, direction_vector_size, right_vector_size} in the Sparseblockmat sense
     // not all participating pids need to have the same number of hyperblocks or have the same shape
-    // even though shape[0] and shape[2] must be equal between any two communicating pids
-    // Index map must be injective i.e. vector element cannot be sent to more than one other rank
+    // even though left_size, n, num_cols, and right_size must be equal between any two communicating pids
     KroneckerComm( unsigned left_size, // (local) of SparseBlockMat
         const thrust::host_vector<std::array<int,2>>& gIdx,
         const thrust::host_vector<int>& bufferIdx,
@@ -81,7 +230,7 @@ struct KroneckerComm
         unsigned num_cols, // (local) number of block columns
         unsigned right_size, // (local) of SparseBlockMat
         MPI_Comm comm_1d)
-    : m_slice_size(n*left*right), m_comm(comm_1d)
+    : m_comm(comm_1d)
     {
         int ndims;
         MPI_Cartdim_get( comm_1d, &ndims);
@@ -91,44 +240,43 @@ struct KroneckerComm
         static_assert( std::is_base_of<SharedVectorTag,
                 get_tensor_category<Vector<double>>>::value,
                "Only Shared vectors allowed");
-        // Receive side
-        thrust::host_vector<int> unique_gIdx, unique_pids, howmany;
-        detail::gIdx2unique_idx( gIdx, bufferIdx, unique_gIdx, unique_pids,
-                howmany);
-        auto recvIdx = detail::make_map ( unique_gIdx, unique_pids,
-                howmany);
-        // receive only foreign messages
-        for( unsigned u=0; u<unique_pids.size(); u++)
-            if( unique_pids[u] != rank)
-                m_buffer_size += howmany[u];
+        // Receive side (similar to MPI_Gather)
+        auto recvIdx = detail::gIdx2unique_idx ( gIdx, bufferIdx);
         // bootstrap communication pattern
         auto sendIdx = detail::recvIdx2sendIdx ( recvIdx, comm_1d,
                 m_communicating);
-        // now get unique send indices
-        auto flat_idx = detail::flatten_map( sendIdx);
-        thrust::host_vector<int> unique_lIdx, gather_map1, gather_map2;
-        detail::find_unique_order_preserving( flat_idx, gather_map1,
-            gather_map2, unique_lIdx, howmany);
-        thrust::host_vector<int> storeIdx( flat_idx.size());
-        for( unsigned u=0; u<storeIdx.size(); u++)
-            storeIdx[u] = gather_map2[gather_map1[u]];
-
-        m_contiguous = (left_size==1);
+        unsigned rqst_size = 0;
+        for( auto& idx : recvIdx)
+            rqst_size += idx.second.size();
+        for( auto& idx : sendIdx)
+            rqst_size += idx.second.size();
+        m_rqst.resize( rqst_size);
+        // If not contiguous data we need to make it contiguous (gather into store)
         if( not m_contiguous)
         {
+            // get unique send indices (to avoid duplicate message store)
+            detail::Unique<int> uni = detail::find_unique_order_preserving(
+                detail::flatten_map( sendIdx));
+            m_unique_sendIdx = uni.unique;
+            m_unique_storeIdx = detail::make_map(
+                detail::combine_gather( uni.gather1, uni.gather2),
+                detail::get_size_map( sendIdx)); // m_unique_storeIdx is sendIdx into unique messages
+            m_store_size = uni.unique.size();
             // everything becomes a z - derivative ...
-            // we gather all unique indices into send buffer
-            thrust::host_vector<int> g2( unique_lIdx.size()*n*left*right);
-            for( unsigned l=0; l<unique_lIdx.size(); l++)
+            // we gather all unique indices contiguously into send buffer
+            thrust::host_vector<int> g2( uni.unique.size()*n*left*right);
+            for( unsigned l=0; l<uni.unique.size(); l++)
             for( unsigned j=0; j<n; j++)
             for( unsigned i=0; i<left_size; i++)
             for( unsigned k=0; k<right_size; k++)
                 g2[((l*n+j)*left_size+i)*right_size + k] =
-                     ((i*num_cols + unique_lIdx[l])*n + j)*right_size + k;
+                     ((i*num_cols + uni.unique[l])*n + j)*right_size + k;
             m_g2 = LocalGatherMatrix<Vector>(g2);
-            m_store_size = unique_lIdx.size();
-            m_storeIdx = unique_lIdx;
+            m_memory = detail::MemoryManager( recvIdx, m_unique_storeIdx, n*left*right);
         }
+        else
+            m_memory = detail::MemoryManager( recvIdx, sendIdx, n*left*right);
+
     }
     template< template<class> class OtherVector>
     friend class KroneckerComm; // enable copy
@@ -173,49 +321,47 @@ struct KroneckerComm
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
     template<class ContainerType>
-    void global_gather_init( const ContainerType& input)const
+    Vector<dg::get_value_type<ContainerType>*>
+        global_gather_init( const ContainerType& input)const
     {
         using value_type = dg::get_value_type<ContainerType>;
-        unsigned size = m_slice_size;
-        //init pointers on host
-        thrust::host_vector<const value_type*> send_ptrs(m_store_size);
-        m_store.template set<value_type>( m_store_size*size);
-        auto& store = m_store.template get<value_type>();
-        if(m_contiguous)
-        {
-            for( unsigned u=0; u<send_ptrs.size(); u++)
-                send_ptrs[u] = thrust::raw_pointer_cast(input.data())
-                               + m_unique_lIdx[u]*size;
-        }
-        else
-        {
-            for( unsigned u=0; u<send_ptrs.size(); u++)
-                send_ptrs[u] =
-                    thrust::raw_pointer_cast(&store.data()[u*size]);
-        }
-        //copy pointers to device
-        thrust::device_vector<const value_type*> d_send_ptrs = send_ptrs;
-        //fill internal_buffer if not contiguous
+        std::map<int, thrust::host_vector<const value_type*>> send_ptrs;
+        std::map<int, thrust::host_vector<value_type*>> recv_ptrs;
         if( not m_contiguous)
-            m_g2.gather( input, store);
-        // continue here
-        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
-            dg::CudaTag> and !dg::cuda_aware_mpi)
         {
-            m_h_buffer.template set<value_type>( m_buffer_size*size);
-            m_h_store.template set<value_type>( m_store_size*size);
-            // cudaMemcpy
-            m_h_store.template get<value_type>() = store;
-            m_rqst = global_comm_init(
-                m_h_store.template get<value_type>(),
-                m_h_buffer.template get<value_type>(), true);
+            m_store.template set<value_type>( m_store_size*m_chunk_size);
+            auto& store = m_bufer.template get<value_type>();
+            m_g2.gather( input, store);
+            m_memory.make_sendrecv_ptrs( store, send_ptrs, recv_ptrs);
         }
         else
-            m_rqst = global_comm_init(store, buffer, true);
-        sendrecv( host_ptr[1], host_ptr[4],
-                  thrust::raw_pointer_cast(&m_internal_buffer.data()[0*size]), //host_ptr is const!
-                  thrust::raw_pointer_cast(&m_internal_buffer.data()[5*size]), //host_ptr is const!
-                  rqst);
+            m_memory.make_sendrecv_ptrs( input, send_ptrs, recv_ptrs);
+        // now setup send
+        int rqst_counter = 0;
+        for( auto& idx : recv_ptrs)
+        {
+            if( idx.first != rank) // no self-recvs
+                for( unsigned u=0; u<idx.second.size(); u++)
+                {
+                    MPI_Irecv( idx.second[u], m_chunk_size,
+                           getMPIDataType<value_type>(),  //receiver
+                           idx.first, u, comm, &m_rqst[rqst_counter]);  //source
+                    rqst_counter ++;
+                }
+        }
+        for( auto& idx : send_ptrs)
+        {
+            if( idx.first != rank) // no self-sends
+                for( unsigned u=0; u<idx.second.size(); u++)
+                {
+                    MPI_Isend( idx.second[u], m_chunk_size,
+                           getMPIDataType<value_type>(),  //sender
+                           idx.first, u, comm, &m_rqst[rqst_counter]);  //destination
+                    rqst_counter ++;
+                }
+        }
+        Vector<value_type*> flat_ptrs = detail::flatten_map( recv_ptrs);
+        return flat_ptrs;
     }
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
@@ -230,70 +376,17 @@ struct KroneckerComm
     {
         // can be called on MPI_REQUEST_NULL
         MPI_Waitall( m_rqst.size(), &m_rqst[0], MPI_STATUSES_IGNORE );
-        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
-            dg::CudaTag> and !dg::cuda_aware_mpi)
-            buffer = m_h_buffer.template get<value_type>();
     }
     private:
     unsigned m_slice_size;
     MPI_Comm m_comm; // typically 1d
     bool m_communicating, m_contiguous=false; //silent -> no comm, m_contiguous-> comm in last dim
     LocalGatherMatrix<Vector> m_g2;
+    detail::MemoryManager<Vector> m_memory;
 
-    unsigned m_store_size = 0; // in units of m_slice_size
-    unsigned m_buffer_size = 0; // in units of m_slice_size
-    thrust::host_vector<int> m_unique_lIdx; // store size (for contiguous)
-    mutable detail::AnyVector< Vector> m_buffer, m_store;
-    mutable detail::AnyVector<thrust::host_vector>  m_h_buffer, m_h_store;
+    unsigned m_store_size = 0;
+    mutable detail::AnyVector< Vector> m_store; // used for gather operation
     mutable std::vector<MPI_Request> m_rqst;
 
-    void sendrecv(const_pointer_type, const_pointer_type, pointer_type, pointer_type, MPI_Request rqst[4])const;
 };
-
-///@cond
-
-
-
-template<class V>
-void KroneckerComm<V>::sendrecv( const_pointer_type sb1_ptr, const_pointer_type sb2_ptr, pointer_type rb1_ptr, pointer_type rb2_ptr, MPI_Request rqst[4]) const
-{
-    unsigned size = buffer_size();
-#ifdef _DG_CUDA_UNAWARE_MPI
-    if( std::is_same< get_execution_policy<V>, CudaTag>::value ) //could be serial tag
-    {
-        cudaError_t code = cudaGetLastError( );
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]),//dst
-            sb1_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        code = cudaMemcpy( thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]),  //dst
-            sb2_ptr, size*sizeof(get_value_type<V>), cudaMemcpyDeviceToHost); //src
-        if( code != cudaSuccess)
-            throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-        sb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[1*size]);
-        sb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[4*size]);
-        rb1_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[0*size]);
-        rb2_ptr = thrust::raw_pointer_cast(&m_internal_host_buffer.data()[5*size]);
-    }
-//This is a mistake if called with a host_vector
-#endif
-    MPI_Isend( sb1_ptr, size,
-               getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[0], 3, m_comm, &rqst[0]); //destination
-    MPI_Irecv( rb2_ptr, size,
-               getMPIDataType<get_value_type<V>>(), //receiver
-               m_source[0], 3, m_comm, &rqst[1]); //source
-
-    MPI_Isend( sb2_ptr, size,
-               getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[1], 9, m_comm, &rqst[2]);  //destination
-    MPI_Irecv( rb1_ptr, size,
-               getMPIDataType<get_value_type<V>>(), //receiver
-               m_source[1], 9, m_comm, &rqst[3]); //source
-}
-
-
-///@endcond
 }
