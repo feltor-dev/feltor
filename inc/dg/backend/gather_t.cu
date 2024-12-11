@@ -18,61 +18,54 @@ int main()
     std::cout<<"\n"<<std::endl;
     for( unsigned test=0; test<2; test++)
     {
-        thrust::host_vector<std::array<int,2>> unique;
-        thrust::host_vector<int> gather_map1, gather_map2, howmany;
+        dg::detail::Unique<std::array<int,2>> uni;
         if( test == 0)
         {
             std::cout << "Order preserving TEST\n";
-            dg::detail::find_unique_order_preserving(
-                gIdx, gather_map1, gather_map2, unique, howmany);
+            uni = dg::detail::find_unique_order_preserving(gIdx);
         }
         else
         {
             std::cout << "Stable sort TEST\n";
-            dg::detail::find_unique_stable_sort(
-                gIdx, gather_map1, gather_map2, unique, howmany);
+            uni = dg::detail::find_unique_stable_sort( gIdx);
         }
         auto sortedgIdx = gIdx;
         thrust::scatter( gIdx.begin(), gIdx.end(),
-                     gather_map1.begin(), sortedgIdx.begin());
+                     uni.gather1.begin(), sortedgIdx.begin());
         std::cout<< "Sorted indices \n";
         for( unsigned u=0; u<sortedgIdx.size(); u++)
             std::cout <<"{"<<sortedgIdx[u][0]<<","<<sortedgIdx[u][1]<<"} ";
         std::cout<<std::endl;
         std::cout<< "Unique values \n";
-        for( unsigned u=0; u<unique.size(); u++)
-            std::cout <<"{"<<unique[u][0]<<","<<unique[u][1]<<"} ";
+        for( unsigned u=0; u<uni.unique.size(); u++)
+            std::cout <<"{"<<uni.unique[u][0]<<","<<uni.unique[u][1]<<"} ";
         std::cout<<std::endl;
         std::cout<< "Howmany Unique values \n";
-        for( unsigned u=0; u<unique.size(); u++)
-            std::cout <<howmany[u]<<" ";
+        for( unsigned u=0; u<uni.unique.size(); u++)
+            std::cout <<uni.howmany[u]<<" ";
         std::cout<<std::endl;
         auto num = gIdx; // consistency test
-        thrust::gather( gather_map2.begin(), gather_map2.end(),
-                    unique.begin(), num.begin());
+        thrust::gather( uni.gather2.begin(), uni.gather2.end(),
+                    uni.unique.begin(), num.begin());
         std::cout<< "Sorted Unique values \n";
         for( unsigned u=0; u<sortedgIdx.size(); u++)
             std::cout <<"{"<<num[u][0]<<","<<num[u][1]<<"} ";
         std::cout<<std::endl;
 
         num = gIdx; // consistency test
-        auto sort_map = gather_map1;
-        thrust::gather( gather_map1.begin(), gather_map1.end(),
-                    gather_map2.begin(), sort_map.begin());
+        auto sort_map = uni.gather1;
+        thrust::gather( uni.gather1.begin(), uni.gather1.end(),
+                    uni.gather2.begin(), sort_map.begin());
         thrust::gather( sort_map.begin(), sort_map.end(),
-                    unique.begin(), num.begin());
+                    uni.unique.begin(), num.begin());
         for( unsigned u=0; u<gIdx.size(); u++)
             assert( num[u] == gIdx[u]);
         std::cout << "Gather PASSED\n\n";
     }
 
     std::cout << "Test gIdx2unique_idx\n";
-    thrust::host_vector<int> bufferIdx, sorted_unique_gIdx, unique_pids,
-        howmany_pids;
-    dg::detail::gIdx2unique_idx( gIdx, bufferIdx, sorted_unique_gIdx,
-            unique_pids, howmany_pids);
-    auto recv_map = dg::detail::make_map( sorted_unique_gIdx, unique_pids,
-            howmany_pids);
+    thrust::host_vector<int> bufferIdx;
+    auto recv_map = dg::detail::gIdx2unique_idx( gIdx, bufferIdx);
 
     for ( auto& idx : recv_map)
     {

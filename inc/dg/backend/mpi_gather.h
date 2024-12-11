@@ -71,9 +71,7 @@ inline static std::map<int,thrust::host_vector<int>> recvIdx2sendIdx(
     MPI_Alltoallv( send_ptr, sendTo_ptr,   accS_ptr, MPI_INT,
                    recv_ptr, recvFrom_ptr, accR_ptr, MPI_INT,
                    comm);
-    thrust::host_vector<int> pids(comm_size);
-    thrust::sequence( pids.begin(), pids.end());
-    return make_map( recv, pids, recvFrom );
+    return make_map( recv, make_size_map( recvFrom) );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -272,9 +270,7 @@ struct MPIGather
         // TODO idx 0 is pid, idx 1 is localIndex on that pid
         MPI_Comm comm)
     {
-        thrust::host_vector<int> unique_gIdx, unique_pids, howmany;
-        detail::gIdx2unique_idx( gIdx, bufferIdx, unique_gIdx, unique_pids, howmany);
-        auto recvIdx = detail::make_map ( unique_gIdx, unique_pids, howmany);
+        auto recvIdx = detail::gIdx2unique_idx ( gIdx, bufferIdx);
         auto sendIdx = detail::recvIdx2sendIdx ( recvIdx, comm, m_communicating);
         // The idea is that recvIdx and sendIdx completely define the communication pattern
         // and we can choose an optimal implementation
