@@ -108,3 +108,4 @@ constexpr bool cuda_aware_mpi = false;
 #undef DG_DEVICE
 #define DG_DEVICE __host__ __device__
 #endif
+#include "fma.h"

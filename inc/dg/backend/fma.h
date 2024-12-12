@@ -3,7 +3,6 @@
 #include <cmath>
 #include <complex>
 #include <thrust/complex.h>
-#include "config.h"
 
 namespace dg
 {
@@ -28,12 +27,12 @@ template<class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
 std::complex<T> dg_fma( std::complex<T> x, std::complex<T> y, std::complex<T> z)
 {
     std::complex<T> out = {
-        fma( x.real(), y.real(), z.real()),
-        fma( x.real(), y.imag(), z.imag())
+        std::fma( x.real(), y.real(), z.real()),
+        std::fma( x.real(), y.imag(), z.imag())
     };
     return {
-        fma( -x.imag(), y.imag(), out.real()),
-        fma( x.imag(), y.real(), out.imag())
+        std::fma( -x.imag(), y.imag(), out.real()),
+        std::fma( x.imag(), y.real(), out.imag())
     };
 }
 template<class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
