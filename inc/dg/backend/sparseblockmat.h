@@ -10,6 +10,7 @@
 #include "tensor_traits.h"
 
 //TODO To make it complex ready we possibly need to change value types in blas1 and blas2 functions
+//TODO Make ready for complex via value_type from dg::blas2::symv
 
 namespace dg
 {
@@ -47,7 +48,7 @@ template<class value_type>
 struct EllSparseBlockMat
 {
     /// Value used to pad the rows of the cols_idx array
-    static constexpr int invalid_index = -1;
+    static constexpr int invalid_index = -1; // use -2 as special secret invalid idx
     ///@brief default constructor does nothing
     EllSparseBlockMat() = default;
     /**
