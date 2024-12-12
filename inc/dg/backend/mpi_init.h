@@ -15,6 +15,7 @@ enums need to be included before this
 
 namespace dg
 {
+    //TODO Write cout about cuda awareness (and maybe even test)
 
 /**
  * @brief Convencience shortcut: Calls MPI_Init or MPI_Init_thread

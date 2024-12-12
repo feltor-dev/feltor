@@ -314,6 +314,12 @@ struct MPIKroneckerGather
 
     unsigned buffer_size() const { return m_mpi_gather.buffer_size();}
 
+    /*!@brief This class can act like a \c MPIContiguousGather
+     *
+     * @return true if \c left_size in constructor equals 1, false else
+     */
+    bool isContiguous() const { return m_contiguous;}
+
     ///@copydoc aCommunicator::isCommunicating()
     bool isCommunicating() const{
         return m_mpi_gather.isCommunicating();

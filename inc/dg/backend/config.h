@@ -70,7 +70,7 @@ namespace dg{
 #pragma message( "Assume CUDA-unaware MPI support as per user indication!")
 constexpr bool cuda_aware_mpi = false;
 //}
-#else // ! DG_CUDA_AWARE_MPI
+#else // ! DG_CUDA_UNAWARE_MPI
 //{;
 #if defined(OPEN_MPI) && OPEN_MPI
 //{;
@@ -91,7 +91,7 @@ constexpr bool cuda_aware_mpi = true;
 //}
 #endif // OPEN_MPI
 //}
-#endif // DG_CUDA_AWARE_MPI
+#endif // DG_CUDA_UNAWARE_MPI
 //}
 #else // THRUST != CUDA
 //{;
