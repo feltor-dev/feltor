@@ -47,7 +47,7 @@ template<class real_type>
 struct EllSparseBlockMat
 {
     /// Value used to pad the rows of the cols_idx array
-    static constexpr int invalid_index = -1; // use -2 as special secret invalid idx
+    static constexpr int invalid_index = -1;
     ///@brief default constructor does nothing
     EllSparseBlockMat() = default;
     /**
@@ -200,8 +200,8 @@ struct CooSparseBlockMat
     * @brief Convenience function to assemble the matrix
     *
     * appends the given matrix entry to the existing matrix
-    * @param row row index
-    * @param col column index
+    * @param row block row
+    * @param col block column
     * @param element new block
     */
     void add_value( int row, int col, const thrust::host_vector<real_type>& element)
@@ -209,10 +209,20 @@ struct CooSparseBlockMat
         assert( (int)element.size() == n*n);
         int index = data.size()/n/n;
         data.insert( data.end(), element.begin(), element.end());
+        add_value( row, col, index);
+    }
+    /**
+    * @brief Convenience function to assemble the matrix
+    *
+    * @param row block row
+    * @param col block column
+    * @param data_idx block index into the data array
+    */
+    void add_value( int row, int col, int data_idx)
+    {
         rows_idx.push_back(row);
         cols_idx.push_back(col);
-        data_idx.push_back( index );
-
+        data_idx.push_back( data_idx );
         num_entries++;
     }
 
@@ -271,7 +281,7 @@ void EllSparseBlockMat<real_type>::symv(SharedVectorTag, SerialTag, value_type a
     {
         int I = ((s*num_rows + i)*n+k)*right_size+j;
         // if y[I] isnan then even beta = 0 does not make it 0
-        y[I] = beta == 0 ? (real_type)0 : y[I]*beta;
+        y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
         for( int d=0; d<blocks_per_line; d++)
         {
             value_type temp = 0;
