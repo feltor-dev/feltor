@@ -20,7 +20,7 @@
 #pragma message( "NOTE: Fast std::fma(a,b,c) not activated! Using a*b+c instead!")
 #define DG_FMA(a,b,c) (a*b+c)
 #else
-#define DG_FMA(a,b,c) (fma(a,b,c))
+#define DG_FMA(a,b,c) (dg::detail::dg_fma(a,b,c))
 #endif
 
 //%%%%%%%%%%%%%check for SIMD support in OpenMP4 if device system is OMP%%%%%%%%%%
