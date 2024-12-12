@@ -7,7 +7,6 @@
 #include "config.h"
 #include "exceptions.h"
 #include "tensor_traits.h"
-#include "tensor_traits.h"
 
 //TODO To make it complex ready we possibly need to change value types in blas1 and blas2 functions
 //TODO Make ready for complex via value_type from dg::blas2::symv
@@ -44,7 +43,7 @@ The matrix M has \c num_rows rows and \c num_cols columns of blocks.
 where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
 one-dimensional matrix.
 */
-template<class value_type>
+template<class real_type>
 struct EllSparseBlockMat
 {
     /// Value used to pad the rows of the cols_idx array
@@ -93,7 +92,7 @@ struct EllSparseBlockMat
      *
      * @return The matrix in coo sparse matrix format
      */
-    cusp::coo_matrix<int, value_type, cusp::host_memory> asCuspMatrix() const;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> asCuspMatrix() const;
 
     /**
     * @brief Apply the matrix to a vector
@@ -103,7 +102,9 @@ struct EllSparseBlockMat
     * @param x input
     * @param beta premultiplies output
     * @param y output may not alias input
+    * @tparam value_type value_type = real_type*value_type must be possible
     */
+    template<class value_type>
     void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const;
 
     ///@brief Set <tt> right_range[0] = 0, right_range[1] = right_size</tt>
@@ -128,7 +129,7 @@ struct EllSparseBlockMat
     */
     void display( std::ostream& os = std::cout, bool show_data = false) const;
 
-    thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
+    thrust::host_vector<real_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
     thrust::host_vector<int> cols_idx; //!< is of size num_rows*num_blocks_per_line and contains the column indices % n into the vector
     thrust::host_vector<int> data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number
     thrust::host_vector<int> right_range; //!< range (can be used to apply the matrix to only part of the right rows
@@ -177,7 +178,7 @@ one-dimensional matrix.
 @note This matrix type is used for the computation of boundary points in
 an mpi - distributed \c EllSparseBlockMat
 */
-template<class value_type>
+template<class real_type>
 struct CooSparseBlockMat
 {
     ///@brief default constructor does nothing
@@ -203,7 +204,7 @@ struct CooSparseBlockMat
     * @param col column index
     * @param element new block
     */
-    void add_value( int row, int col, const thrust::host_vector<value_type>& element)
+    void add_value( int row, int col, const thrust::host_vector<real_type>& element)
     {
         assert( (int)element.size() == n*n);
         int index = data.size()/n/n;
@@ -235,6 +236,7 @@ struct CooSparseBlockMat
     * @param y output may not alias input
     * @attention beta == 1 (anything else is ignored)
     */
+    template<class value_type>
     void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const;
     /**
     * @brief Display internal data to a stream
@@ -244,7 +246,7 @@ struct CooSparseBlockMat
     */
     void display(std::ostream& os = std::cout, bool show_data = false) const;
 
-    thrust::host_vector<value_type> data;//!< The data array is of size \c n*n*num_different_blocks and contains the blocks
+    thrust::host_vector<real_type> data;//!< The data array is of size \c n*n*num_different_blocks and contains the blocks
     thrust::host_vector<int> cols_idx; //!< is of size \c num_entries and contains the column indices
     thrust::host_vector<int> rows_idx; //!< is of size \c num_entries and contains the row indices
     thrust::host_vector<int> data_idx; //!< is of size \c num_entries and contains indices into the data array
@@ -257,8 +259,9 @@ struct CooSparseBlockMat
 };
 ///@cond
 
+template<class real_type>
 template<class value_type>
-void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
+void EllSparseBlockMat<real_type>::symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
 {
     //simplest implementation (all optimization must respect the order of operations)
     for( int s=0; s<left_size; s++)
@@ -268,7 +271,7 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type 
     {
         int I = ((s*num_rows + i)*n+k)*right_size+j;
         // if y[I] isnan then even beta = 0 does not make it 0
-        y[I] = beta == 0 ? (value_type)0 : y[I]*beta;
+        y[I] = beta == 0 ? (real_type)0 : y[I]*beta;
         for( int d=0; d<blocks_per_line; d++)
         {
             value_type temp = 0;
@@ -284,10 +287,10 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type 
         }
     }
 }
-template<class value_type>
-cusp::coo_matrix<int, value_type, cusp::host_memory> EllSparseBlockMat<value_type>::asCuspMatrix() const
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> EllSparseBlockMat<real_type>::asCuspMatrix() const
 {
-    cusp::array1d<value_type, cusp::host_memory> values;
+    cusp::array1d<real_type, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
     cusp::array1d<int, cusp::host_memory> column_indices;
     for( int s=0; s<left_size; s++)
@@ -308,7 +311,7 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> EllSparseBlockMat<value_typ
             values.push_back(data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]);
         }
     }
-    cusp::coo_matrix<int, value_type, cusp::host_memory> A(
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
         total_num_rows(), total_num_cols(), values.size());
     A.row_indices = row_indices;
     A.column_indices = column_indices;
@@ -316,8 +319,9 @@ cusp::coo_matrix<int, value_type, cusp::host_memory> EllSparseBlockMat<value_typ
     return A;
 }
 
+template<class real_type>
 template<class value_type>
-void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMat<real_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
 {
     if( num_entries==0)
         return;
@@ -383,8 +387,8 @@ void EllSparseBlockMat<T>::display( std::ostream& os, bool show_data ) const
     os << std::endl;
 }
 
-template<class value_type>
-void CooSparseBlockMat<value_type>::display( std::ostream& os, bool show_data) const
+template<class real_type>
+void CooSparseBlockMat<real_type>::display( std::ostream& os, bool show_data) const
 {
     os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
     os << "num_rows         "<<num_rows<<"\n";

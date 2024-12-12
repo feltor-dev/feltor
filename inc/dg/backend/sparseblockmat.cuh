@@ -7,10 +7,10 @@
 namespace dg
 {
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP
-template<class value_type>
-using EllSparseBlockMatDevice = EllSparseBlockMat<value_type>;
-template<class value_type>
-using CooSparseBlockMatDevice = CooSparseBlockMat<value_type>;
+template<class real_type>
+using EllSparseBlockMatDevice = EllSparseBlockMat<real_type>;
+template<class real_type>
+using CooSparseBlockMatDevice = CooSparseBlockMat<real_type>;
 #else
 
 /**
@@ -23,7 +23,7 @@ to device vectors and does the same thing as the host version
 
 @copydetails EllSparseBlockMat
 */
-template<class value_type>
+template<class real_type>
 struct EllSparseBlockMatDevice
 {
     /// Value used to pad the rows of the cols_idx array
@@ -36,7 +36,7 @@ struct EllSparseBlockMatDevice
         copies all internal data of the host matrix to the device
         @param src  source on the host
     */
-    EllSparseBlockMatDevice( const EllSparseBlockMat<value_type>& src)
+    EllSparseBlockMatDevice( const EllSparseBlockMat<real_type>& src)
     {
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -66,13 +66,16 @@ struct EllSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not alias input
     */
+    template<class value_type>
     void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #ifdef _OPENMP
+    template<class value_type>
     void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #endif //_OPENMP
+    template<class value_type>
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 
-    thrust::device_vector<value_type> data;
+    thrust::device_vector<real_type> data;
     thrust::device_vector<int> cols_idx, data_idx;
     thrust::device_vector<int> right_range; // behold that right_size != right_range[1]-right_range[0] in general
     int num_rows, num_cols, blocks_per_line;
@@ -90,7 +93,7 @@ be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thin
 
 @copydetails CooSparseBlockMat
 */
-template<class value_type>
+template<class real_type>
 struct CooSparseBlockMatDevice
 {
     CooSparseBlockMatDevice() = default;
@@ -101,7 +104,7 @@ struct CooSparseBlockMatDevice
         copies all internal data of the host matrix to the device
         @param src  source on the host
     */
-    CooSparseBlockMatDevice( const CooSparseBlockMat<value_type>& src)
+    CooSparseBlockMatDevice( const CooSparseBlockMat<real_type>& src)
     {
         data = src.data;
         rows_idx = src.rows_idx, cols_idx = src.cols_idx, data_idx = src.data_idx;
@@ -129,28 +132,33 @@ struct CooSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not equal input
     */
+    template<class value_type>
     void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 #ifdef _OPENMP
+    template<class value_type>
     void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 #endif //_OPENMP
 
+    template<class value_type>
     void launch_multiply_kernel(value_type alpha, const value_type** x, value_type beta, value_type* y) const;
 
-    thrust::device_vector<value_type> data;
+    thrust::device_vector<real_type> data;
     thrust::device_vector<int> cols_idx, rows_idx, data_idx;
     int num_rows, num_cols, num_entries;
     int n, left_size, right_size;
 };
 
 ///@cond
+template<class real_type>
 template<class value_type>
-inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
+inline void EllSparseBlockMatDevice<real_type>::symv(SharedVectorTag, CudaTag,
         value_type alpha, const value_type* x, value_type beta, value_type* y) const
 {
     launch_multiply_kernel( alpha, x, beta, y);
 }
+template<class real_type>
 template<class value_type>
-inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
+inline void CooSparseBlockMatDevice<real_type>::symv(SharedVectorTag, CudaTag,
         value_type alpha, const value_type** x, value_type beta, value_type* y) const
 {
     if( num_entries==0)
@@ -158,8 +166,9 @@ inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
     launch_multiply_kernel( alpha, x, beta, y);
 }
 #ifdef _OPENMP
+template<class real_type>
 template<class value_type>
-inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
+inline void EllSparseBlockMatDevice<real_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
 {
     if( !omp_in_parallel())
     {
@@ -172,8 +181,9 @@ inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, v
     launch_multiply_kernel(alpha, x, beta, y);
 }
 
+template<class real_type>
 template<class value_type>
-inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const
+inline void CooSparseBlockMatDevice<real_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const
 {
     if( num_entries==0)
         return;
@@ -191,8 +201,8 @@ inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, v
 }
 #endif //_OPENMP
 
-template<class value_type>
-void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
+template<class real_type>
+void EllSparseBlockMatDevice<real_type>::display( std::ostream& os) const
 {
     os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
     os << "num_rows         "<<num_rows<<"\n";
@@ -220,8 +230,8 @@ void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     os << std::endl;
 
 }
-template<class value_type>
-void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
+template<class real_type>
+void CooSparseBlockMatDevice<real_type>::display( std::ostream& os) const
 {
     os << "Data array has   "<<data.size()/n/n<<" blocks of size "<<n<<"x"<<n<<"\n";
     os << "num_rows         "<<num_rows<<"\n";

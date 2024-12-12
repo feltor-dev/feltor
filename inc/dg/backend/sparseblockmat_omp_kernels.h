@@ -1,14 +1,15 @@
 #include <omp.h>
 #include "config.h"
+#include "fma.h"
 
 //for the fmas it is important to activate -mfma compiler flag
 
 namespace dg{
 
 // general multiply kernel
-template<class value_type>
+template<class real_type, class value_type>
 void ell_multiply_kernel( value_type alpha, value_type beta,
-         const value_type * RESTRICT data, const int * RESTRICT cols_idx,
+         const real_type * RESTRICT data, const int * RESTRICT cols_idx,
          const int * RESTRICT data_idx,
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n,
@@ -62,9 +63,9 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     }
 }
 //specialized multiply kernel
-template<class value_type, int n, int blocks_per_line>
+template<class real_type, class value_type, int n, int blocks_per_line>
 void ell_multiply_kernel( value_type alpha, value_type beta,
-         const value_type * RESTRICT data, const int * RESTRICT cols_idx,
+         const real_type * RESTRICT data, const int * RESTRICT cols_idx,
          const int * RESTRICT data_idx,
          const int num_rows, const int num_cols,
          const int left_size, const int right_size,
@@ -86,7 +87,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     if(trivial)
     {
     value_type xprivate[blocks_per_line*n];
-    value_type dprivate[blocks_per_line*n*n];
+    real_type dprivate[blocks_per_line*n*n];
     for( int d=0; d<blocks_per_line; d++)
     for( int k=0; k<n; k++)
     for( int q=0; q<n; q++)
@@ -209,7 +210,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     }// right_size==1
     else // right_size != 1
     {
-    value_type dprivate[blocks_per_line*n];
+    real_type dprivate[blocks_per_line*n];
     int J[blocks_per_line];
     if( !( (right_range[1]-right_range[0]) > 100*left_size*num_rows*n )) //typically a derivative in y ( Ny*Nz >~ Nx)
     {
@@ -292,9 +293,9 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     }
 }
 
-template<class value_type, int n>
+template<class real_type, class value_type, int n>
 void call_ell_multiply_kernel( value_type alpha, value_type beta,
-         const value_type * RESTRICT data_ptr, const int * RESTRICT cols_ptr,
+         const real_type * RESTRICT data_ptr, const int * RESTRICT cols_ptr,
          const int * RESTRICT block_ptr,
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int left_size, const int right_size,
@@ -302,64 +303,65 @@ void call_ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT x_ptr, value_type * RESTRICT y_ptr)
 {
     if( blocks_per_line == 1)
-        ell_multiply_kernel<value_type, n, 1>  (alpha, beta, data_ptr,
+        ell_multiply_kernel<real_type, value_type, n, 1>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 2)
-        ell_multiply_kernel<value_type, n, 2>  (alpha, beta, data_ptr,
+        ell_multiply_kernel<real_type, value_type, n, 2>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 3)
-        ell_multiply_kernel<value_type, n, 3>  (alpha, beta, data_ptr,
+        ell_multiply_kernel<real_type, value_type, n, 3>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 4)
-        ell_multiply_kernel<value_type, n, 4>  (alpha, beta, data_ptr,
+        ell_multiply_kernel<real_type, value_type, n, 4>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else
-        ell_multiply_kernel<value_type>  (alpha, beta, data_ptr, cols_ptr,
+        ell_multiply_kernel<real_type, value_type>  (alpha, beta, data_ptr, cols_ptr,
         block_ptr, num_rows, num_cols, blocks_per_line, n, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
 }
 
 
+template<class real_type>
 template<class value_type>
-void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
+void EllSparseBlockMatDevice<real_type>::launch_multiply_kernel( value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
 {
-    const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
+    const real_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 1)
-        call_ell_multiply_kernel<value_type, 1>  (alpha, beta, data_ptr,
+        call_ell_multiply_kernel<real_type, value_type, 1>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
 
     else if( n == 2)
-        call_ell_multiply_kernel<value_type, 2>  (alpha, beta, data_ptr,
+        call_ell_multiply_kernel<real_type, value_type, 2>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 3)
-        call_ell_multiply_kernel<value_type, 3>  (alpha, beta, data_ptr,
+        call_ell_multiply_kernel<real_type, value_type, 3>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 4)
-        call_ell_multiply_kernel<value_type, 4>  (alpha, beta, data_ptr,
+        call_ell_multiply_kernel<real_type, value_type, 4>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 5)
-        call_ell_multiply_kernel<value_type, 5>  (alpha, beta, data_ptr,
+        call_ell_multiply_kernel<real_type, value_type, 5>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else
-        ell_multiply_kernel<value_type> ( alpha, beta, data_ptr, cols_ptr,
+        ell_multiply_kernel<real_type, value_type> ( alpha, beta, data_ptr, cols_ptr,
         block_ptr, num_rows, num_cols, blocks_per_line, n, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
 }
 
-template<class value_type>
-void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
+template<class real_type, class value_type>
+void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<real_type>& m )
 {
     #pragma omp for nowait
 	for (int skj = 0; skj < m.left_size*m.n*m.right_size; skj++)
@@ -380,8 +382,8 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
 		}
 	}
 }
-template<class value_type, int n>
-void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
+template<class real_type, class value_type, int n>
+void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<real_type>& m )
 {
     bool trivial = true;
     int CC = m.cols_idx[0], DD = m.data_idx[0];
@@ -436,19 +438,20 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
         }
     }
 }
+template<class real_type>
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMatDevice<real_type>::launch_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
 {
     if( n == 1)
-        coo_multiply_kernel<value_type, 1>( alpha, x, beta, y, *this);
+        coo_multiply_kernel<real_type, value_type, 1>( alpha, x, beta, y, *this);
     else if( n == 2)
-        coo_multiply_kernel<value_type, 2>( alpha, x, beta, y, *this);
+        coo_multiply_kernel<real_type, value_type, 2>( alpha, x, beta, y, *this);
     else if( n == 3)
-        coo_multiply_kernel<value_type, 3>( alpha, x, beta, y, *this);
+        coo_multiply_kernel<real_type, value_type, 3>( alpha, x, beta, y, *this);
     else if( n == 4)
-        coo_multiply_kernel<value_type, 4>( alpha, x, beta, y, *this);
+        coo_multiply_kernel<real_type, value_type, 4>( alpha, x, beta, y, *this);
     else
-        coo_multiply_kernel<value_type>( alpha, x, beta, y, *this);
+        coo_multiply_kernel<real_type, value_type>( alpha, x, beta, y, *this);
 }
 
 }//namespace dg
