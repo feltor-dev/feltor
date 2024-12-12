@@ -373,15 +373,15 @@ void coo_multiply_kernel( value_type alpha, const value_type** x, value_type bet
 			value_type temp = 0;
 			for (int q = 0; q < m.n; q++) //multiplication-loop
 				temp = DG_FMA(m.data[(m.data_idx[i] * m.n + k)*m.n + q],
-                    x[((s*m.num_cols + m.cols_idx[i])*m.n+q)*m.right_size+j],
-                    //x[m.cols_idx[i]][(q*m.left_size +s )*m.right_size+j],
+                    //x[((s*m.num_cols + m.cols_idx[i])*m.n+q)*m.right_size+j],
+                    x[m.cols_idx[i]][(q*m.left_size +s )*m.right_size+j],
 					temp);
 			y[I] = DG_FMA(alpha, temp, y[I]);
 		}
 	}
 }
 template<class value_type, int n>
-void coo_multiply_kernel( value_type alpha, const value_type* x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
+void coo_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMatDevice<value_type>& m )
 {
     bool trivial = true;
     int CC = m.cols_idx[0], DD = m.data_idx[0];
@@ -404,8 +404,8 @@ void coo_multiply_kernel( value_type alpha, const value_type* x, value_type beta
                 value_type temp = 0;
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[DDD + q],
-                        x[((s*m.num_cols + CCC)*n+q)*m.right_size+sj],
-                        //x[CCC][q*m.left_size*m.right_size +sj],
+                        //x[((s*m.num_cols + CCC)*n+q)*m.right_size+sj],
+                        x[CCC][q*m.left_size*m.right_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
             }
@@ -427,8 +427,8 @@ void coo_multiply_kernel( value_type alpha, const value_type* x, value_type beta
                 value_type temp = 0;
                 for (int q = 0; q < n; q++) //multiplication-loop
                     temp = DG_FMA(m.data[(m.data_idx[i] * n + k)*n + q],
-                        x[((s*m.num_cols + m.cols_idx[i])*n+q)*m.right_size+j],
-                        //x[m.cols_idx[i]][q*m.left_size*m.right_size +sj],
+                        //x[((s*m.num_cols + m.cols_idx[i])*n+q)*m.right_size+j],
+                        x[m.cols_idx[i]][q*m.left_size*m.right_size +sj],
                         temp);
                 y[I] = DG_FMA(alpha, temp, y[I]);
             }
@@ -437,7 +437,7 @@ void coo_multiply_kernel( value_type alpha, const value_type* x, value_type beta
     }
 }
 template<class value_type>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
 {
     if( n == 1)
         coo_multiply_kernel<value_type, 1>( alpha, x, beta, y, *this);
