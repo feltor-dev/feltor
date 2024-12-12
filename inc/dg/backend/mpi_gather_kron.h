@@ -74,7 +74,10 @@ struct MPIContiguousGather
         m_rqst.resize ( m_buffer_size + m_store_size);
     }
     MPI_Comm communicator() const{return m_comm;}
+    /// In terms of chunk size
     unsigned buffer_size() const { return m_buffer_size;}
+    /// Size of message chunks
+    unsigned chunk_size() const { return m_chunk_size;}
     bool isCommunicating() const{
         return m_communicating;
     }
@@ -241,7 +244,7 @@ struct MPIKroneckerGather
         const thrust::host_vector<std::array<int,2>>& gIdx,
         const thrust::host_vector<int>& bufferIdx,
         unsigned n, // block size
-        unsigned num_cols, // (local) number of block columns
+        unsigned num_cols, // (local) number of block columns (of gatherFrom)
         unsigned right_size, // (local) of SparseBlockMat
         MPI_Comm comm_1d)
     : m_comm(comm_1d)
@@ -312,7 +315,10 @@ struct MPIKroneckerGather
     ///@copydoc aCommunicator::communicator()
     MPI_Comm communicator() const{return m_comm;}
 
+    ///@copydoc MPIContiguousGather::buffer_size
     unsigned buffer_size() const { return m_mpi_gather.buffer_size();}
+    ///@copydoc MPIContiguousGather::chunk_size
+    unsigned chunk_size() const { return m_mpi_gather.chunk_size();}
 
     /*!@brief This class can act like a \c MPIContiguousGather
      *
@@ -354,4 +360,4 @@ struct MPIKroneckerGather
 
     mutable detail::AnyVector<Vector>  m_store;
 };
-}
+} // namespace dg
