@@ -65,10 +65,10 @@ namespace dg{
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA // cuda is involved
 //{;
 
-#ifdef DG_CUDA_AWARE_MPI // TODO document in config README
+#ifdef DG_CUDA_UNAWARE_MPI // TODO document in config README
 //{;
-#pragma message( "Assume CUDA-aware MPI support as per user indication!")
-constexpr bool cuda_aware_mpi = true;
+#pragma message( "Assume CUDA-unaware MPI support as per user indication!")
+constexpr bool cuda_aware_mpi = false;
 //}
 #else // ! DG_CUDA_AWARE_MPI
 //{;
@@ -86,8 +86,8 @@ constexpr bool cuda_aware_mpi = false;
 //}
 #else // Other than open-mpi there seems no way to determine cuda support
 //{;
-#pragma message( "Cannot determine CUDA-aware MPI support! Falling back to regular MPI!")
-constexpr bool cuda_aware_mpi = false;
+#pragma message( "We assume CUDA-aware MPI support! Compile with -DDG_CUDA_UNAWARE_MPI if we should not!")
+constexpr bool cuda_aware_mpi = true;
 //}
 #endif // OPEN_MPI
 //}
