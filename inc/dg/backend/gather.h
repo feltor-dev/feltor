@@ -266,6 +266,7 @@ struct LocalGatherMatrix
 
     /// Index map from constructor
     const Vector<int>& index_map() const{ return m_idx;}
+
     template<class ContainerType0, class ContainerType1>
     void gather(const ContainerType0& store, ContainerType1& buffer) const
     {

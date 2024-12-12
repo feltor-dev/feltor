@@ -1,7 +1,9 @@
 #pragma once
 #include <cassert>
-#include <exception>
+#include <thrust/host_vector.h>
 
+#include "exceptions.h"
+#include "config.h"
 #include "mpi_datatype.h"
 #include "tensor_traits.h"
 #include "memory.h"
@@ -13,6 +15,7 @@ namespace dg{
 namespace detail
 {
 
+// TODO test the permutation quality
 // I think this is fairly intuitive to understand which is good
 /**
  * @brief Bootstrap irregular communication between processes
@@ -27,7 +30,13 @@ namespace detail
  * All the indices here are local to the current rank!
  *
  * @note Calls \c MPI_Allgather with given communicator to send the sizes
- * followed by \c MPI_Alltoall to send the actual data
+ * followed by \c MPI_Alltoall to send the actual data. This means all processes in comm
+ * need to call this function
+ *
+ * @note This function is a permutation i.e.
+ * @code{.cpp}
+ * recvIdx == recvIdx2sendIdx( recvIdx2sendIdx(recvIdx, comm, isComm), comm, isComm);
+ * @endcode
  */
 inline static std::map<int,thrust::host_vector<int>> recvIdx2sendIdx(
     const std::map<int,thrust::host_vector<int>>& recvIdx,
@@ -243,7 +252,13 @@ template< template <class> class Vector>
 struct MPIGather
 {
 
-    MPIGather() = default;
+    /*!@brief no communication
+     *
+     * @param comm optional MPI communicator: the purpose is to be able to store
+     MPI communicator even if no communication is involved in order to
+     construct MPI_Vector with it
+     */
+    MPIGather( MPI_Comm comm = MPI_COMM_NULL) : m_comm(comm){ }
     /**
     * @brief Construct from local indices and PIDs index map
     *
@@ -341,21 +356,31 @@ struct MPIGather
         *this = MPIGather( gIdx, bufferIdx, p.communicator());
     }
 
-    //https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
+    /// https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
     template< template<class> class OtherVector>
     friend class MPIGather; // enable copy
 
+    /**
+    * @brief Construct from other execution policy
+    *
+    * This makes it possible to construct an object on the host
+    * and then copy everything on to a device
+    * @tparam OtherVector other container type
+    * @param src source object
+    */
     template< template<typename > typename OtherVector>
     MPIGather( const MPIGather<OtherVector>& src)
-    {
-        m_g2 = src.m_g2;
-        m_store_size = src.m_store_size;
-        m_buffer_size = src.m_buffer_size;
-        m_sendTo = src.m_sendTo,   m_accS = src.m_accS; //accumulated send
-        m_recvFrom = src.m_recvFrom, m_accR = src.m_accR; //accumulated recv
-        m_comm = src.m_comm;
-        m_communicating = src.m_communicating;
+    :   m_g2( src.m_g2),
+        m_store_size( src.m_store_size),
+        m_buffer_size( src.m_buffer_size),
+        m_sendTo( src.m_sendTo),
+        m_accS( src.m_accS),
+        m_recvFrom( src.m_recvFrom),
+        m_accR( src.m_accR),
+        m_comm( src.m_comm),
+        m_communicating( src.m_communicating)
         // we don't need to copy memory buffers (they are just workspace) or the request
+    {
     }
 
 
@@ -406,13 +431,16 @@ struct MPIGather
         return m_communicating;
     }
     /**
-     * @brief \f$ w = G v\f$. Globally (across processes) gather data into a buffer
+     * @brief \f$ w = G v\f$. Globally (across processes) asynchronously gather data into a buffer
      *
-     * The transpose operation is <tt> global_scatter_reduce() </tt>
      * @param values source vector v; data is collected from this vector
      * @note If <tt> !isCommunicating() </tt> then this call will not involve
      * MPI communication but will still gather values according to the given
      * index map
+     * @attention It is @b unsafe to write values to \c gatherFrom
+     * or to read values in \c buffer until \c global_gather_wait
+     * has been called
+     * @sa The transpose operation is <tt> global_scatter_reduce() </tt>
      */
     template<class ContainerType0, class ContainerType1>
     void global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer) const
@@ -440,6 +468,16 @@ struct MPIGather
         else
             m_rqst = global_comm_init(store, buffer, true);
     }
+    /**
+    * @brief Wait for asynchronous communication to finish and gather received data into buffer
+    *
+    * Call \c MPI_Waitall on internal \c MPI_Request variables
+    * and manage host memory in case of cuda-unaware MPI.
+    * After this call returns it is safe to use the buffer and the \c gatherFrom variable
+    * from the corresponding \c global_gather_init call
+    * @param buffer (write only) where received data resides on return; must be
+    * identical to the one given in a previous call to \c global_gather_init()
+    */
     template<class ContainerType>
     void global_gather_wait( ContainerType& buffer) const
     {
@@ -451,6 +489,16 @@ struct MPIGather
             buffer = m_h_buffer.template get<value_type>();
     }
 
+    /**
+     * @brief \f$ v = v + G^\mathrm{T} b\f$. Globally (across processes) scatter data inside buffer
+     *
+     * @param v target vector v; on output contains values from other
+     * processes sent back to the origin (must have <tt> local_size() </tt>
+     * elements)
+     * @note If <tt> !isCommunicating() </tt> then this call will not involve
+     * MPI communication but will still scatter and reduce values according to
+     * the given index map
+     */
     template<class ContainerType0, class ContainerType1>
     void global_scatter_plus_init( ContainerType0& buffer, ContainerType1& scatterTo )const
     {
@@ -473,16 +521,7 @@ struct MPIGather
         else
             m_rqst = global_comm_init( buffer, store, false);
     }
-    /**
-     * @brief \f$ v = v + G^\mathrm{T} b\f$. Globally (across processes) scatter data inside buffer
-     *
-     * @param v target vector v; on output contains values from other
-     * processes sent back to the origin (must have <tt> local_size() </tt>
-     * elements)
-     * @note If <tt> !isCommunicating() </tt> then this call will not involve
-     * MPI communication but will still scatter and reduce values according to
-     * the given index map
-     */
+
     template<class ContainerType>
     void global_scatter_plus_wait( ContainerType& scatterTo )const
     {
