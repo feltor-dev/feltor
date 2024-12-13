@@ -208,9 +208,6 @@ struct MPISparseBlockMat
         }
         else
             throw Error( Message(_ping_)<<"symv(a,x,b,y) can only be used with a row distributed mpi matrix!");
-        // We theoretically could allow this for col_dist if the scatter_plus function in LocalGatherMatrix
-        // accepted an inconsistency in "v = a S w + b v"
-        // Maybe as we do for CooSparseMatrix and always require b == 1 in symv
     }
     private:
     LocalMatrixInner m_i;
@@ -253,7 +250,6 @@ struct MPIDistMat
     enum dist_type
     {
         row_dist=0, //!< Row distributed
-        col_dist=1, //!< Column distributed
         allreduce=2 //!< special distribution for partial reduction (Average)
     };
     ///@brief no memory allocation
@@ -276,9 +272,7 @@ struct MPIDistMat
     * needs to gather values across processes. The \c global_gather_init(),
     * \c global_gather_wait(), \c buffer_size() and \c isCommunicating() member
     * functions are called for row distributed matrices.
-    * The \c global_scatter_plus_init() and \c global_scatter_plus_wait() are called
-    * for column distributed matrices.
-    * If \c !isCommunicating() the gather/scatters functions won't be called and
+    * If \c !isCommunicating() the gather functions won't be called and
     * only the inner matrix is applied.
     */
     MPIDistMat( const LocalMatrixInner& inside,
@@ -401,17 +395,6 @@ struct MPIDistMat
             dg::blas2::symv( m_o, buffer, y.data());
             // TODO do we need to do sth special to avoid accessing all y!? In Sparseblockmat?
         }
-        else if( m_dist == col_dist)
-        {
-            // 1. compute outer points
-            dg::blas2::symv( m_o, x.data(), buffer);
-            // 2 initiate communication
-            m_g.global_scatter_plus_init( buffer, y.data());
-            // 3 compute inner points
-            dg::blas2::symv( m_i, x.data(), y.data());
-            // 4 wait for communication to finish
-            m_g.global_scatter_plus_wait( y.data());
-        }
     }
 
     /// Stencil computations
@@ -443,9 +426,6 @@ struct MPIDistMat
             m_g.global_gather_wait( buffer);
             // 4 compute and add outer points
             dg::blas2::stencil( f, m_o, buffer, y.data());
-        }
-        if( m_dist == col_dist){
-            throw Error( Message(_ping_)<<"stencil cannot be used with a column distributed mpi matrix!");
         }
     }
 
