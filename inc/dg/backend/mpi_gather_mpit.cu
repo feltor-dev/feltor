@@ -29,7 +29,8 @@ void gather_test( const thrust::host_vector<std::array<int,2>>& gIdx,
     )
 {
     thrust::host_vector<int> bufferIdx;
-    dg::MPIGather<Vector > mpi_gather(gIdx, bufferIdx, MPI_COMM_WORLD);
+    auto recv_map = dg::gIdx2unique_idx( gIdx, bufferIdx);
+    dg::MPIGather<Vector > mpi_gather(recv_map, MPI_COMM_WORLD);
     dg::LocalGatherMatrix<Vector> local_gather(bufferIdx);
     Vector<double> buffer( mpi_gather.buffer_size());
     mpi_gather.global_gather_init( v, buffer);
@@ -42,10 +43,12 @@ void gather_test( const thrust::host_vector<std::array<int,2>>& gIdx,
     std::cout <<"GATHER Rank "<<rank<< (equal ? " PASSED" : " FAILED")<<std::endl;
     if( bijective)
     {
+        auto send_map = dg::mpi_permutation( recv_map, MPI_COMM_WORLD);
+        dg::MPIGather<Vector > mpi_gather(send_map, MPI_COMM_WORLD);
         num = v;
         dg::blas1::copy( 0, num);
-        mpi_gather.global_scatter_plus_init( buffer, num);
-        mpi_gather.global_scatter_plus_wait( num);
+        mpi_gather.global_gather_init( buffer, num);
+        mpi_gather.global_gather_wait( num);
         equal  = is_equal( v, num);
         std::cout <<"SCATTER Rank "<<rank<<(equal ? " PASSED" : " FAILED")<<std::endl;
     }
@@ -129,51 +132,6 @@ int main( int argc, char * argv[])
     gather_test<thrust::device_vector, double>( gIdx, v, ana, true);
     MPI_Barrier(MPI_COMM_WORLD);
 
-    }
-    for( unsigned test=0; test<2; test++)
-    {
-    if(rank==0 && test == 0)std::cout << "Test General Comm and Surjective Comm:"<<std::endl;
-    if(rank==0 && test == 1)std::cout << "Test Non communicating:"<<std::endl;
-    if(rank==0)std::cout << "Test Norm Gv*Gv vs G^T(Gv)*v: "<<std::endl;
-    unsigned N = 20;
-    thrust::host_vector<double> vec( N, rank);
-    for( int i=0; i<(int)(N); i++)
-        vec[i]*=i;
-    thrust::host_vector<std::array<int,2>> gIdx( N+rank);
-    for( unsigned i=0; i<N+rank; i++)
-    {
-        gIdx[i][1] = i%N;
-        if(i>=5 && i<10) gIdx[i][1]+=3;
-        gIdx[i][0] = rank;
-        if( i>=N && test == 0) gIdx[i][0] = (rank+1)%size;
-    }
-    thrust::host_vector<int> bufferIdx;
-    dg::MPIGather<thrust::host_vector> sur( gIdx, bufferIdx, MPI_COMM_WORLD);
-    thrust::host_vector<double> receive( sur.buffer_size());
-    sur.global_gather_init( vec, receive);
-    sur.global_gather_wait( receive);
-    /// Test if global_scatter_reduce is in fact the transpose of global_gather
-    dg::MPI_Vector<thrust::host_vector<double>> mpi_receive( receive, MPI_COMM_WORLD);
-    double norm1 = dg::blas1::dot( mpi_receive, mpi_receive);
-    thrust::host_vector<double> vec2(vec.size(), 0);
-    sur.global_scatter_plus_init( receive, vec2);
-    sur.global_scatter_plus_wait( vec2);
-    dg::MPI_Vector<thrust::host_vector<double>> mpi_vec( vec, MPI_COMM_WORLD);
-    dg::MPI_Vector<thrust::host_vector<double>> mpi_vec2( vec2, MPI_COMM_WORLD);
-    double norm2 = dg::blas1::dot( mpi_vec, mpi_vec2);
-    {
-        if( fabs(norm1-norm2)<1e-14)
-            std::cout <<"Rank "<<rank<<" PASSED "<<std::endl;
-        else
-            std::cerr <<"Rank "<<rank<<" FAILED "<<std::endl;
-    }
-    if(fabs(norm1-norm2)>1e-14 && rank==0)std::cout << norm1 << " "<<norm2<< " "<<norm1-norm2<<std::endl;
-    if( test == 1)
-        assert( !sur.isCommunicating());
-        // Just to show that even if not communciating the size is not zero
-        //if(rank==0)std::cout << "Rank "<<rank<<" buffer size "<<sur.buffer_size()<<" \n";
-        //if(rank==0)std::cout << "Rank "<<rank<<" local  size "<<vec.size()<<" \n";
-    MPI_Barrier(MPI_COMM_WORLD);
     }
 
     MPI_Finalize();
