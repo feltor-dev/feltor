@@ -216,13 +216,13 @@ struct CooSparseBlockMat
     *
     * @param row block row
     * @param col block column
-    * @param data_idx block index into the data array
+    * @param data block index into the data array
     */
-    void add_value( int row, int col, int data_idx)
+    void add_value( int row, int col, int data)
     {
         rows_idx.push_back(row);
         cols_idx.push_back(col);
-        data_idx.push_back( data_idx );
+        data_idx.push_back( data );
         num_entries++;
     }
 
