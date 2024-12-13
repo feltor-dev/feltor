@@ -47,9 +47,12 @@ int main()
         auto num = gIdx; // consistency test
         thrust::gather( uni.gather2.begin(), uni.gather2.end(),
                     uni.unique.begin(), num.begin());
-        std::cout<< "Sorted Unique values \n";
+        std::cout<< "Sorted indices \n";
         for( unsigned u=0; u<sortedgIdx.size(); u++)
+        {
             std::cout <<"{"<<num[u][0]<<","<<num[u][1]<<"} ";
+            assert( num[u] == sortedgIdx[u]);
+        }
         std::cout<<std::endl;
 
         num = gIdx; // consistency test
@@ -65,7 +68,7 @@ int main()
 
     std::cout << "Test gIdx2unique_idx\n";
     thrust::host_vector<int> bufferIdx;
-    auto recv_map = dg::detail::gIdx2unique_idx( gIdx, bufferIdx);
+    auto recv_map = dg::gIdx2unique_idx( gIdx, bufferIdx);
 
     for ( auto& idx : recv_map)
     {
@@ -85,32 +88,6 @@ int main()
     for( unsigned i=0; i<idx.size(); i++)
         assert( buffer[i] == idx[i]);
     std::cout << "Gather PASSED\n";
-    // We test scatter by comparing to cusp::coo_matrix vector multiplication
-
-    cusp::coo_matrix<int, int, cusp::host_memory> A(  values.size(), idx.size(), idx.size());
-    for( unsigned i=0; i<idx.size(); i++)
-    {
-        A.row_indices[i] = idx[i];
-        A.column_indices[i] = i;
-        A.values[i] = 1;
-    }
-    A.sort_by_row_and_column();
-    std::vector<int> cusp_result( values.size());
-    cusp::array1d_view<typename std::vector<int>::const_iterator> cx(
-        buffer.cbegin(), buffer.cend());
-    cusp::array1d_view<typename std::vector<int>::iterator> cy( cusp_result.begin(),
-        cusp_result.end());
-    cusp::multiply( A, cx, cy);
-
-    std::vector<int> feltor_result( values);
-    gather.scatter_plus( buffer, feltor_result);
-    for( unsigned i=0; i<values.size(); i++)
-    {
-        std::cout << i<<" "<<values[i] + cusp_result[i] <<" "<< feltor_result[i]<<"\n";
-
-        assert( values[i] + cusp_result[i] == feltor_result[i]);
-    }
-    std::cout << "Scatter reduce PASSED\n";
 
     return 0;
 }

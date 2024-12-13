@@ -136,26 +136,6 @@ Unique<T> find_unique_order_preserving(
 }
 
 template<class T>
-std::map<int, thrust::host_vector<T>> make_map(
-    const thrust::host_vector<T>& idx_map, // sorted by pid
-    const std::map<int,int>& size_map // unique pid to howmany
-    )
-{
-    std::map<int, thrust::host_vector<T>> map;
-    unsigned start = 0;
-    for( auto& size : size_map)
-    {
-        if( size.second != 0)
-        {
-            map[size.first] = thrust::host_vector<T>(
-                idx_map.begin()+start, idx_map.begin() + start + size.second);
-            start += size.second;
-        }
-    }
-    return map;
-}
-
-template<class T>
 std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx_map)
 {
     std::map<int,int> out;
@@ -173,39 +153,82 @@ static inline std::map<int,int> make_size_map( const thrust::host_vector<int>& s
     }
     return out;
 }
-template<class T>
-std::map<int,T> make_map(
-    const thrust::host_vector<int>& keys,
-    const thrust::host_vector<T>& vals)
+template<class Keys, class Values>
+std::map<dg::get_value_type<Keys>,dg::get_value_type<Values>> make_map(
+    const Keys& keys,
+    const Values& vals) // same size
 {
-    std::map<int,T> out;
+    std::map<dg::get_value_type<Keys>,dg::get_value_type<Values>> out;
     for( unsigned u=0; u<keys.size(); u++)
         out[keys[u]] = vals[u];
     return out;
 }
-
-template<class T>
-thrust::host_vector<T> flatten_map(
-    const std::map<int,thrust::host_vector<T>>& idx_map // map is sorted automatically
+template<class ContainerType>
+std::map<int, ContainerType> make_map(
+    const ContainerType& flat_map, // sorted by key
+    const std::map<int,int>& size_map // key and chunk size of idx_map
     )
 {
-    thrust::host_vector<T> flat;
+    std::map<int, ContainerType> map;
+    unsigned start = 0;
+    for( auto& size : size_map)
+    {
+        if( size.second != 0)
+        {
+            map[size.first] = ContainerType(
+                flat_map.begin()+start, flat_map.begin() + start + size.second);
+            start += size.second;
+        }
+    }
+    return map;
+}
+
+// keys get lost
+template<class ContainerType>
+thrust::host_vector<dg::get_value_type<ContainerType>> flatten_map(
+    const std::map<int,ContainerType>& idx_map // map is sorted automatically
+    )
+{
+    thrust::host_vector<dg::get_value_type<ContainerType>> flat;
     // flatten map
     for( auto& idx : idx_map)
-        for( unsigned u=0; u<idx.second.size(); u++)
-            flat.push_back( idx.second[u]);
+        flat.insert(flat.end(), idx.second.begin(), idx.second.end());
     return flat;
 }
 
+static inline std::map<int,int> contiguous_range(
+    const thrust::host_vector<int>& in)
+{
+    std::map<int,int> range;
+    for( unsigned u=0; u<in.size(); u++)
+    {
+        int idx = in[u];
+        if( range.find(idx) != range.end())
+        {
+            range[idx]++;
+        }
+        else
+            range[idx] = 1;
+    }
+    return range;
+}
+
+
+}// namespace detail
+///@endcond
+// TODO Maybe this can be public
 // Convert a unsorted and possible duplicate global index list to unique
 // stable_sorted by pid and duplicates map
 // bufferIdx gives
 // idx 0 is pid, idx 1 is localIndex on that pid
+// TODO gIdx can be unsorted and contain duplicate entries
+// TODO idx 0 is pid, idx 1 is localIndex on that pid
+// TODO Maybe be a static MPIGather function?
 inline static std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
     const thrust::host_vector<std::array<int,2>>& gIdx, // unsorted (cannot be map)
     thrust::host_vector<int>& bufferIdx) // gIdx size, gather gIdx from flatten_map
 {
-    Unique<std::array<int,2>> uni = detail::find_unique_order_preserving( gIdx);
+    detail::Unique<std::array<int,2>> uni = detail::find_unique_order_preserving( gIdx);
     // get pids
     thrust::host_vector<int> pids(uni.unique.size()),
         lIdx(pids);
@@ -214,21 +237,36 @@ inline static std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
         pids[i] = uni.unique[i][0];
         lIdx[i] = uni.unique[i][1]; // the local index
     }
-    Unique<int> uni_pids = detail::find_unique_stable_sort( pids);
-    bufferIdx = combine_gather( uni.gather1,
-                   combine_gather( uni.gather2, uni_pids.gather1));
+    detail::Unique<int> uni_pids = detail::find_unique_stable_sort( pids);
+    bufferIdx = detail::combine_gather( uni.gather1,
+                   detail::combine_gather( uni.gather2, uni_pids.gather1));
     // duplicate the sort on lIdx
     auto sorted_unique_gIdx = lIdx;
     thrust::scatter( lIdx.begin(), lIdx.end(),
              uni_pids.gather1.begin(), sorted_unique_gIdx.begin());
     // return map
-    auto pids_howmany = make_map( uni_pids.unique, uni_pids.howmany);
-    return make_map( sorted_unique_gIdx, pids_howmany);
+    auto pids_howmany = detail::make_map( uni_pids.unique, uni_pids.howmany);
+    return detail::make_map( sorted_unique_gIdx, pids_howmany);
+}
+
+inline static thrust::host_vector<int> make_kron_indices(
+    unsigned left_size, // (local) of SparseBlockMat
+    const thrust::host_vector<int>& idx, // local 1d indices in units of n
+    unsigned n, // block size
+    unsigned num_cols, // (local) number of block columns (of gatherFrom)
+    unsigned right_size) // (local) of SparseBlockMat
+{
+    thrust::host_vector<int> g2( idx.size()*n*left_size*right_size);
+    for( unsigned l=0; l<idx.size(); l++)
+    for( unsigned j=0; j<n; j++)
+    for( unsigned i=0; i<left_size; i++)
+    for( unsigned k=0; k<right_size; k++)
+        g2[((l*n+j)*left_size+i)*right_size + k] =
+             ((i*num_cols + idx[l])*n + j)*right_size + k;
+    return g2;
 }
 
 
-}// namespace detail
-///@endcond
 
 /*! @brief Gather sparse matrix \f$ G_{ij} = \delta_{g(i) j}\f$ and its transpose
  *
@@ -287,81 +325,7 @@ struct LocalGatherMatrix
                 y[i] = alpha*x[idx[i]] + beta*y[i];
             }, size, store, m_idx, buffer);
     }
-    /// \f$ v = v + S w\f$
-    template<class ContainerType0, class ContainerType1>
-    void scatter_plus(const ContainerType0& buffer, ContainerType1& store) const
-    {
-        if( ! m_allocated) // 1st time scatter is called
-            prepare_scatter();
-        // This is essentially an implementation for a coo format
-        // sparse matrix vector multiplication
-        // Note a S w + b v is not possible efficiently in one go
-        using value_type= dg::get_value_type<ContainerType0>;
-        auto scatter_lambda = []DG_DEVICE( unsigned i, const value_type* x,
-            const int* idx, value_type* y) { y[idx[i]] += x[i]; };
-        if( !m_reduction) // this is fast
-        {
-            unsigned size = buffer.size();
-            dg::blas2::detail::doParallelFor( SharedVectorTag(),
-                scatter_lambda, size, buffer, m_idx, store);
-        }
-        else
-        {
-            // this is not efficient (needs to load/store 3x)
-            // (We assume this case is more of an edge case)
-            // 1. Gather into sorted indices
-            m_reduction_buffer.template set<value_type>( m_reduction_buffer_size);
-            thrust::scatter( buffer.begin(), buffer.end(), m_scatter2reduction.begin(),
-                m_reduction_buffer.template get<value_type>().begin());
-
-            // 2. Reduce multiple sorted indices
-            m_scatter_buffer.template set<value_type>( m_scatter_buffer_size);
-            thrust::reduce_by_key( m_red_keys.begin(), m_red_keys.end(),
-                m_reduction_buffer.template get<value_type>().begin(),
-                m_unique_keys.begin(), // keys output
-                m_scatter_buffer.template get<value_type>().begin()); // values out
-
-            // 3. Scatter into target
-            unsigned size = m_scatter_buffer_size;
-            dg::blas2::detail::doParallelFor( SharedVectorTag(),
-                scatter_lambda, size, m_scatter_buffer.template get<value_type>(),
-                m_scatter2target, store);
-        }
-    }
     private:
     Vector<int> m_idx; // this fully defines the matrix ( so it's the only non-mutable)
-    void prepare_scatter( ) const
-    {
-        // possible Optimisation: if scatter2target is contiguous one does not need to scatter
-        // For the scatter operation we need to catch the case that multiple
-        // values scatter to the same place
-        //
-        // buffer -> reduction_buf -> scatter_buf -> store
-        // In that case our idea is to first gather the indices such that values
-        // to reduce are next to each other
-        // this allows to use thrust::reduce_by_key from reduction buffer into
-        // a scatter buffer.
-        // Finally we can scatter the values from there after setting explicit 0s
-
-        detail::Unique<int> uni = detail::find_unique_order_preserving(
-            thrust::host_vector<int>(m_idx));
-        assert( uni.gather2.size() == m_idx.size());
-        if( uni.unique.size() != m_idx.size())
-        {
-            m_reduction = true;
-            m_scatter_buffer_size = uni.unique.size();
-            m_reduction_buffer_size = m_idx.size();
-            m_scatter2target = uni.unique;
-            m_red_keys = uni.gather2;
-            m_scatter2reduction = uni.gather1;
-            m_unique_keys.resize( m_scatter_buffer_size);
-        }
-        m_allocated =true;
-    }
-    mutable bool m_reduction = false, m_allocated = false;
-    mutable unsigned m_scatter_buffer_size, m_reduction_buffer_size;
-    mutable Vector<int> m_scatter2target, m_red_keys, m_scatter2reduction; // may be empty
-    mutable Vector<int> m_unique_keys;
-    mutable detail::AnyVector<Vector> m_scatter_buffer, m_reduction_buffer;
 };
 }// namespace dg
