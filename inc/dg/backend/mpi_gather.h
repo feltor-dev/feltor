@@ -5,176 +5,17 @@
 #include "exceptions.h"
 #include "config.h"
 #include "mpi_datatype.h"
+#include "mpi_permutation.h"
 #include "tensor_traits.h"
 #include "memory.h"
 #include "gather.h"
+#include "index.h"
 
 namespace dg{
-
-    /**
-     * @brief engine for mpi permutating (i.e. bijective)
-     *  gather and scatter operations
-     *
-     * We call the two vectors involved the "buffer" w  and the "store" array v.
-     * The buffer array is the one that is associated with the index map
-     * that we give in the constructor i.e
-     * in the constructor you can specify how many values from each process
-     * the buffer array receives or how many values to each process
-     * the buffer array sends:
-     * \f$ w = G v\f$
-     *
-     * In this way we gather values from the buffer array into the store array
-     * while scatter inverts the operation
-     * \f$ v = S w = G^T w = G^{-1} w\f$
-     * @note The global size of buffer and store are equal. The local buffer
-     * size is the accumulation of the \c connect values in the constructor
-     * The store size is infered from the connection matrix.
-     *
-     * @b Scatter is the following: The first sendTo[0] elements of the buffer array
-     * are sent to rank 0, The next sendTo[1] elements are sent to rank 1 and so
-     * on; the first recvFrom[0] elements in the store array are the values (in
-     * order) sent from rank 0, etc.
-     * @b Gather: The first recvFrom[0] elements of the buffer array on the calling
-     * rank are received from the "rank slot" in the store array on rank 0. etc.
-     *
-     * If the collaboration matrix is symmetric scatter and gather are the same
-     * operation and "in-place" operation can be used, i.e. buffer and store
-     * can be the same array
-     */
-// TODO MAybe make a group mpi_utilities
-// TODO test the permutation quality
-// I think this is fairly intuitive to understand which is good
-/**
- * @brief Bootstrap irregular communication between processes
- *
- * @param elements (in) <tt> elements[PID] </tt> contains the message that the calling rank
- * sends to PID
- * @param comm Communicator
- * @return <tt> received elements[PID] </tt> contains the message that the calling rank
- *  receveived from PID
- *
- * @note Calls \c MPI_Allgather with given communicator to send the sizes
- * followed by \c MPI_Alltoall to send the actual data. This means all processes in comm
- * need to call this function
- * @note This can be used to bootstrap mpi gather operations if elements is an index map
- * "recvIdx" of local indices of elements to receive from PID, because it "tells" every
- * process which elements to send
- * @note Also can be used to invert a bijective mpi gather map
- *
- * @note This function is a permutation i.e.
- * @code{.cpp}
- * recvIdx == mpi_permutation( mpi_permutation(recvIdx, comm), comm);
- * @endcode
- * @tparam ContainerType Shared ContainerType.
- */
-template<class ContainerType>
-std::map<int,ContainerType> mpi_permutation(
-    const std::map<int,ContainerType>& elements,
-    MPI_Comm comm)
-{
-    int rank, comm_size;
-    MPI_Comm_rank( comm, &rank);
-    MPI_Comm_size( comm, &comm_size);
-    thrust::host_vector<int> sendTo( comm_size, 0 ), recvFrom( comm_size, 0);
-    thrust::host_vector<int> global( comm_size*comm_size);
-    for( auto& send : elements)
-        sendTo[send.first] = send.second.size();
-    // everyone knows howmany elements everyone is sending
-    MPI_Allgather( sendTo.data(), comm_size, MPI_INT,
-                   global.data(), comm_size, MPI_INT,
-                   comm);
-    for( int i=0; i<comm_size; i++)
-        recvFrom[i] = global[i*comm_size+rank];
-    // Now we can use Alltoallv to send
-    thrust::host_vector<int> accS( comm_size), accR(comm_size);
-    thrust::exclusive_scan( sendTo.begin(), sendTo.end(), accS.begin());
-    thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
-    thrust::host_vector<int> recv(
-        thrust::reduce( recvFrom.begin(), recvFrom.end()));
-    auto send = detail::flatten_map( elements);
-
-    void * send_ptr          = thrust::raw_pointer_cast( send.data());
-    const int * sendTo_ptr   = thrust::raw_pointer_cast( sendTo.data());
-    const int * accS_ptr     = thrust::raw_pointer_cast( accS.data());
-    void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
-    const int * recvFrom_ptr = thrust::raw_pointer_cast( recvFrom.data());
-    const int * accR_ptr     = thrust::raw_pointer_cast( accR.data());
-    MPI_Datatype type = dg::getMPIDataType<dg::get_value_type<ContainerType>>();
-    MPI_Alltoallv( send_ptr, sendTo_ptr,   accS_ptr, type,
-                   recv_ptr, recvFrom_ptr, accR_ptr, type,
-                   comm);
-    return detail::make_map( recv, detail::make_size_map( recvFrom) );
-}
-/*! @brief Check if communication map involves actual mpi communication
-
- * @param elements (in) elements[PID] is the message the calling rank sends to PID
- * @return false if no process in comm sends or receives any
- * message to another process, true else
- * @tparam M message type (\c M.size() must be callable)
- */
-template<class ContainerType>
-bool is_communicating(
-    const std::map<int,ContainerType>& elements,
-    MPI_Comm comm)
-{
-    int comm_size;
-    MPI_Comm_size( comm, &comm_size);
-    thrust::host_vector<int> sendTo( comm_size, 0 );
-    thrust::host_vector<int> global( comm_size*comm_size);
-    for( auto& send : elements)
-        sendTo[send.first] = send.second.size();
-    // everyone knows howmany elements everyone is sending
-    MPI_Allgather( sendTo.data(), comm_size, MPI_INT,
-                   global.data(), comm_size, MPI_INT,
-                   comm);
-    bool isCommunicating = false;
-    for( int i=0; i<comm_size; i++)
-        for( int k=0; k<comm_size; k++)
-            if( k != i and global[i*comm_size+k] != 0)
-                isCommunicating = true;
-    return isCommunicating;
-}
-
-    /**
-     * @brief Construct from global indices index map
-     *
-     * Uses the \c global2localIdx() member of MPITopology to generate \c
-     * localIndexMap and \c pidIndexMap
-     * @param globalIndexMap Each element <tt> globalIndexMap[i] </tt>
-     * represents a global vector index from (or to) where to take the value
-     * <tt>buffer[i]</tt>. There are <tt> local_buffer_size =
-     * globalIndexMap.size() </tt> elements.
-     * @param p the conversion object
-     * @tparam ConversionPolicy has to have the members:
-     *  - <tt> bool global2localIdx(unsigned,unsigned&,unsigned&) const;</tt>
-     *  where the first parameter is the global index and the other two are the
-     *  output pair (localIdx, rank). return true if successful, false if
-     *  global index is not part of the grid
-     *  - <tt> MPI_Comm %communicator() const;</tt>  returns the communicator
-     *  to use in the gatherscatter
-     *  - <tt> local_size(); </tt> return the local vector size
-     * @sa basictopology the MPI %grids defined in Level 3 can all be used as a
-     * ConversionPolicy
-     */
-template<class ConversionPolicy>
-std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
-    const thrust::host_vector<int>& globalIndexMap,
-    thrust::host_vector<int>& bufferIdx, // may alias globalIndexMap
-    const ConversionPolicy& p)
-{
-    // TODO update docu on local_size() ( if we don't scatter we don't need it)
-    thrust::host_vector<std::array<int,2>> gIdx( globalIndexMap.size());
-    bool success = true;
-    for(unsigned i=0; i<gIdx.size(); i++)
-        if( !p.global2localIdx(globalIndexMap[i],
-                    gIdx[i][1], gIdx[i][0]) )
-            success = false;
-
-    assert( success);
-    return gIdx2unique_idx( gIdx, bufferIdx);
-}
 //TODO Docu of Vector and @ingroup
 //Also this discussion holds for all our "MPIGather" objects
+///@cond
+namespace detail{
 
 /*!@brief A hand implemented \c MPI_Ialltoallv for a contiguous \c MPI_Type_contiguous/\c MPI_Type_vector
  *
@@ -191,21 +32,16 @@ std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
  * - the datatypes (double/complex) to send are only available when sending
  *   (not in the constructor), thus an MPI_Type can only be commited during the
  *   send process which may be expensive
+ * - We assume that the actual communication is with nearest neigbors mostly
  */
-template< template <class> class Vector>
 struct MPIContiguousGather
 {
-    struct MsgChunk{
-        int idx; /// !< starting index of message
-        int size; /// !< size of message
-    };
     ///@copydoc MPIGather<Vector>::MPIGather(comm)
     MPIContiguousGather( MPI_Comm comm = MPI_COMM_NULL) : m_comm(comm){ }
     /*!@brief Construct from indices in units of \c chunk_size
      *
-     * @param recvIdx recvIdx[PID] consists of the local indices on PID
-     * that the calling receives from that PID (indices in units of \c chunk_size)
-     * @param chunk_size Size of contiguous block of data
+     * @param recvMsg recvMsg[PID] consists of the local indices on PID
+     * that the calling receives from that PID
      * @param comm
      */
     MPIContiguousGather(
@@ -213,60 +49,34 @@ struct MPIContiguousGather
         MPI_Comm comm)
     : m_comm(comm), m_recvMsg( recvMsg)
     {
-        // pack messages
-        std::map<int, thrust::host_vector<int>> recvIdx, recvSize;
-        for( auto& idx : recvMsg)
-        for( unsigned u=0; u<idx.second.size(); u++)
-        {
-            recvIdx[idx.first].push_back(idx.second[u].idx);
-            recvSize[idx.first].push_back(idx.second[u].size);
-        }
-        auto sendIdx = mpi_permutation ( recvIdx, comm);
-        auto sendSize = mpi_permutation ( recvSize, comm);
-        m_communicating = is_communicating( recvIdx, comm);
-        // un-pack
-        for( auto& idx : sendIdx)
-        for( unsigned u=0; u<idx.second.size(); u++)
-            m_sendMsg[idx.first].push_back({idx.second[u],
-                                            sendSize[idx.first][u]});
+        m_sendMsg = mpi_permute ( recvMsg, comm);
+        m_communicating = is_communicating( recvMsg, comm);
         // We need to find out the minimum amount of memory we need to allocate
-        for( auto& idx : recvSize)
-            m_buffer_size += thrust::reduce( idx.second.begin(), idx.second.end());
+        for( auto& chunks : recvMsg)
+        for( auto& chunk : chunks.second)
+            m_buffer_size += chunk.size;
         // if cuda unaware we need to send messages through host
-        for( auto& idx : sendSize)
-            m_store_size += thrust::reduce( idx.second.begin(), idx.second.end());
+        for( auto& chunks : m_sendMsg)
+        for( auto& chunk : chunks.second)
+            m_store_size += chunk.size;
         resize_rqst();
     }
 
     /// Concatenate neigboring indices to bulk messasge
     static const std::map<int, thrust::host_vector<MsgChunk>> make_chunks(
-        const std::map<int, thrust::host_vector<int> > &recvIdx, int chunk_size)
+        const std::map<int, thrust::host_vector<int> > &recvIdx, int chunk_size = 1)
     {
         std::map<int, thrust::host_vector<MsgChunk>> recvChunk;
         for( auto& idx: recvIdx)
         {
-            auto range = detail::contiguous_range( idx.second);
-            for( auto& r : range)
+            auto chunks = detail::find_contiguous_chunks( idx.second);
+            for( auto& chunk : chunks)
             {
-                recvChunk[idx.first].push_back( {r.first*chunk_size,
-                    r.second*chunk_size});
+                recvChunk[idx.first].push_back( {chunk.idx*chunk_size,
+                    chunk.size*chunk_size});
             }
         }
         return recvChunk;
-    }
-    template< template<class> class OtherVector>
-    friend class MPIContiguousGather; // enable copy
-
-    template< template<class> class OtherVector>
-    MPIContiguousGather( const MPIContiguousGather<OtherVector>& src)
-    {
-        m_sendMsg = src.m_sendMsg;
-        m_recvMsg = src.m_recvMsg;
-        m_comm = src.m_comm;
-        m_communicating = src.m_communicating;
-        m_buffer_size = src.m_buffer_size;
-        m_store_size = src.m_store_size;
-        resize_rqst();
     }
 
     MPI_Comm communicator() const{return m_comm;}
@@ -283,7 +93,8 @@ struct MPIContiguousGather
         using value_type = dg::get_value_type<ContainerType0>;
         static_assert( std::is_same_v<value_type,
                 get_value_type<ContainerType1>>);
-        // Receives
+        // Receives (we implicitly receive chunks in the order)
+        unsigned start = 0;
         unsigned rqst_counter = 0;
         for( auto& msg : m_recvMsg) // first is PID, second is vector of chunks
         for( unsigned u=0; u<msg.second.size(); u++)
@@ -296,19 +107,20 @@ struct MPIContiguousGather
                 m_h_buffer.template set<value_type>( buffer_size);
                 auto& h_buffer = m_h_buffer.template get<value_type>();
                 recv_ptr = thrust::raw_pointer_cast( h_buffer.data())
-                   + chunk.idx;
+                   + start;
             }
             else
                 recv_ptr = thrust::raw_pointer_cast( buffer.data())
-                   + chunk.idx;
+                   + start;
             MPI_Irecv( recv_ptr, chunk.size,
                    getMPIDataType<value_type>(),  //receiver
                    msg.first, u, m_comm, &m_rqst[rqst_counter]);  //source
             rqst_counter ++;
+            start += chunk.size;
         }
 
         // Send
-        unsigned start = 0;
+        start = 0;
         for( auto& msg : m_sendMsg) // first is PID, second is vector of chunks
         for( unsigned u=0; u<msg.second.size(); u++)
         {
@@ -350,8 +162,6 @@ struct MPIContiguousGather
         }
     }
 
-    // Also sync cuda if necessary
-    ///@copydoc MPIGather<Vector>::global_gather_init
     ///@copydoc MPIGather<Vector>::global_gather_wait
     template<class ContainerType>
     void global_gather_wait( ContainerType& buffer) const
@@ -386,6 +196,8 @@ struct MPIContiguousGather
         m_rqst.resize( rqst_size);
     }
 };
+}//namespace detail
+///@endcond
 
 /**
  * @brief Perform MPI distributed gather and its transpose (scatter) operation across processes
@@ -579,7 +391,7 @@ struct MPIGather
     * operations
     */
     MPIGather(
-        const std::map<int, thrust::host_vector<int>>& recvIdx,
+        const std::map<int, thrust::host_vector<int>>& recvIdx, // should be unique global indices (->gIdx2unique)
         MPI_Comm comm) : MPIGather( recvIdx, 1, comm)
     { }
     MPIGather(
@@ -601,41 +413,45 @@ struct MPIGather
         // G_2^T P^T G_1^T w
         // We need some logic to determine if we should pre-gather messages into a store
         unsigned num_messages = 0;
-        auto recvChunks = MPIContiguousGather<Vector>::make_chunks(
+        auto recvChunks = detail::MPIContiguousGather::make_chunks(
             recvIdx, chunk_size);
         for( auto& chunks : recvChunks)
-            num_messages+= chunks.second.size();
-        unsigned size = recvChunks.size();
+            num_messages+= chunks.second.size(); // size of vector of chunks
+        unsigned size = recvChunks.size(); // number of pids involved
         double avg_msg_per_pid = (double)num_messages/(double)size; // > 1
         MPI_Allreduce( MPI_IN_PLACE, &avg_msg_per_pid, 1, MPI_DOUBLE, MPI_MAX, comm);
         m_contiguous = ( avg_msg_per_pid < 10); // 10 is somewhat arbitrary
         if( not m_contiguous) // messages are too fractioned
         {
+            // TODO this is currently not tested in mpi_gather_mpit
+            m_contiguous = false;
             // bootstrap communication pattern
-            auto sendIdx = mpi_permutation ( recvIdx, comm);
-            // In that case only gather unique messages into send store
-            detail::Unique<int> uni = detail::find_unique_order_preserving(
-                detail::flatten_map( sendIdx));
-            sendIdx = detail::make_map(
-                detail::combine_gather( uni.gather1, uni.gather2),
-                detail::get_size_map( sendIdx)); // now sendIdx goes into unique messages
+            auto sendIdx = mpi_permute ( recvIdx, comm);
+            auto lIdx = detail::flatten_map(sendIdx);
+            thrust::host_vector<int> g2;
+            unsigned start = 0;
+            for( auto& idx : sendIdx)
+            {
+                for( unsigned l=0; l<idx.second.size(); l++)
+                {
+                    for( unsigned k=0; k<chunk_size; k++)
+                    {
+                        g2.push_back(idx.second[l] + k);
+                    }
+                    idx.second[l] = start + l; // repoint index to store index in units of chunk_size
+                }
+                start += idx.second.size();
+            }
+            m_g2 = LocalGatherMatrix<Vector>(g2);
             // bootstrap communication pattern back to recvIdx
             // (so that recvIdx has index into same store)
-            auto uni_recvIdx = mpi_permutation( sendIdx, comm);
-            recvChunks = MPIContiguousGather<Vector>::make_chunks(
-                uni_recvIdx, chunk_size);
-            m_mpi_gather = dg::MPIContiguousGather<Vector>( recvChunks, comm);
-            // everything becomes a z - derivative ...
-            // we gather all unique indices contiguously into send buffer
-            // uni.unique == unique local indices into gatherFrom
-            thrust::host_vector<int> g2( uni.unique.size()*chunk_size);
-            for( unsigned l=0; l<uni.unique.size(); l++)
-            for( unsigned k=0; k<chunk_size; k++)
-                g2[l*chunk_size + k] = uni.unique[l] + k;
-            m_g2 = LocalGatherMatrix<Vector>(g2);
+            auto store_recvIdx = mpi_permute( sendIdx, comm);
+            auto store_recvChunks = detail::MPIContiguousGather::make_chunks(
+                store_recvIdx, chunk_size);
+            m_mpi_gather = detail::MPIContiguousGather( store_recvChunks, comm);
         }
         else
-            m_mpi_gather = dg::MPIContiguousGather<Vector>( recvChunks, comm);
+            m_mpi_gather = detail::MPIContiguousGather( recvChunks, comm);
 
     }
 
@@ -758,7 +574,7 @@ struct MPIGather
 
     bool m_contiguous = false;
     LocalGatherMatrix<Vector> m_g2;
-    dg::MPIContiguousGather<Vector> m_mpi_gather;
+    dg::detail::MPIContiguousGather m_mpi_gather;
     // These are mutable and we never expose them to the user
     //unsigned m_store_size;// not needed because g2.index_map.size()
     mutable detail::AnyVector< Vector> m_store;

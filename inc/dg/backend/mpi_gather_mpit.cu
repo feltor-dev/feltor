@@ -9,8 +9,8 @@ template<class T>
 bool is_equal( const T& v, const T& w)
 {
     bool equal = true;
-    //int rank;
-    //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     for( unsigned i=0; i<v.size(); i++)
     {
         //std::cout << rank<<" "<<v[i] << " "<<w[i]<<"\n";
@@ -28,9 +28,19 @@ void gather_test( const thrust::host_vector<std::array<int,2>>& gIdx,
     const Vector<value_type>& ana, bool bijective = false
     )
 {
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
     thrust::host_vector<int> bufferIdx;
     auto recv_map = dg::gIdx2unique_idx( gIdx, bufferIdx);
-    dg::MPIGather<Vector > mpi_gather(recv_map, MPI_COMM_WORLD);
+    dg::MPIGather<Vector> mpi_gather(recv_map, MPI_COMM_WORLD);
+    //auto recvMsg = dg::detail::MPIContiguousGather::make_chunks(recv_map);
+    //std::cout << "Rank "<<rank<<"Receive Chunks\n";
+    //for( auto& msg : recvMsg)
+    //for( auto& chunk : msg.second)
+    //    std::cout << "Rank"<<rank<<" Fom Rank "<<msg.first<<" Chunk "<<chunk.idx<<" "<<chunk.size<<"\n";
+
+    //dg::detail::MPIContiguousGather mpi_gather(recvMsg, MPI_COMM_WORLD);
     dg::LocalGatherMatrix<Vector> local_gather(bufferIdx);
     Vector<double> buffer( mpi_gather.buffer_size());
     mpi_gather.global_gather_init( v, buffer);
@@ -38,20 +48,24 @@ void gather_test( const thrust::host_vector<std::array<int,2>>& gIdx,
     Vector<value_type> num(ana);
     local_gather.gather( buffer, num);
     bool equal  = is_equal( ana, num);
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     std::cout <<"GATHER Rank "<<rank<< (equal ? " PASSED" : " FAILED")<<std::endl;
-    if( bijective)
-    {
-        auto send_map = dg::mpi_permutation( recv_map, MPI_COMM_WORLD);
-        dg::MPIGather<Vector > mpi_gather(send_map, MPI_COMM_WORLD);
-        num = v;
-        dg::blas1::copy( 0, num);
-        mpi_gather.global_gather_init( buffer, num);
-        mpi_gather.global_gather_wait( num);
-        equal  = is_equal( v, num);
-        std::cout <<"SCATTER Rank "<<rank<<(equal ? " PASSED" : " FAILED")<<std::endl;
-    }
+    //if( bijective) // think about this some more...
+    //{
+    //    //auto send_map = dg::mpi_permute( recv_map, MPI_COMM_WORLD);
+    //    //dg::MPIGather<Vector > mpi_gather(send_map, MPI_COMM_WORLD);
+    //    auto sendMsg = dg::mpi_permute( recvMsg, MPI_COMM_WORLD);
+    //    dg::detail::MPIContiguousGather mpi_gather(sendMsg, MPI_COMM_WORLD);
+    //    std::cout << "Rank "<<rank<<"Receive Chunks\n";
+    //    for( auto& msg : sendMsg)
+    //    for( auto& chunk : msg.second)
+    //        std::cout << "Rank"<<rank<<" Fom Rank "<<msg.first<<" Chunk "<<chunk.idx<<" "<<chunk.size<<"\n";
+    //    num = v;
+    //    dg::blas1::copy( 0, num);
+    //    mpi_gather.global_gather_init( buffer, num);
+    //    mpi_gather.global_gather_wait( num);
+    //    equal  = is_equal( v, num);
+    //    std::cout <<"SCATTER Rank "<<rank<<(equal ? " PASSED" : " FAILED")<<std::endl;
+    //}
 }
 
 // If you get cuIpcCloseMemHandle failed errors when executing with cuda
@@ -133,6 +147,7 @@ int main( int argc, char * argv[])
     MPI_Barrier(MPI_COMM_WORLD);
 
     }
+
 
     MPI_Finalize();
 
