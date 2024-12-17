@@ -423,7 +423,6 @@ struct MPIGather
         m_contiguous = ( avg_msg_per_pid < 10); // 10 is somewhat arbitrary
         if( not m_contiguous) // messages are too fractioned
         {
-            // TODO this is currently not tested in mpi_gather_mpit
             m_contiguous = false;
             // bootstrap communication pattern
             auto sendIdx = mpi_permute ( recvIdx, comm);

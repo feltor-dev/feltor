@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <random> // for random shuffle
 #include <mpi.h>
 #include "../blas1.h"
 #include "mpi_gather.h"
@@ -13,9 +14,9 @@ bool is_equal( const T& v, const T& w)
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     for( unsigned i=0; i<v.size(); i++)
     {
-        //std::cout << rank<<" "<<v[i] << " "<<w[i]<<"\n";
         if( v[i] != w[i])
         {
+            std::cout << rank<<" "<<v[i] << " "<<w[i]<<"\n";
             equal = false;
         }
     }
@@ -34,38 +35,52 @@ void gather_test( const thrust::host_vector<std::array<int,2>>& gIdx,
     thrust::host_vector<int> bufferIdx;
     auto recv_map = dg::gIdx2unique_idx( gIdx, bufferIdx);
     dg::MPIGather<Vector> mpi_gather(recv_map, MPI_COMM_WORLD);
-    //auto recvMsg = dg::detail::MPIContiguousGather::make_chunks(recv_map);
-    //std::cout << "Rank "<<rank<<"Receive Chunks\n";
-    //for( auto& msg : recvMsg)
-    //for( auto& chunk : msg.second)
-    //    std::cout << "Rank"<<rank<<" Fom Rank "<<msg.first<<" Chunk "<<chunk.idx<<" "<<chunk.size<<"\n";
-
-    //dg::detail::MPIContiguousGather mpi_gather(recvMsg, MPI_COMM_WORLD);
     dg::LocalGatherMatrix<Vector> local_gather(bufferIdx);
-    Vector<double> buffer( mpi_gather.buffer_size());
+    Vector<value_type> buffer( mpi_gather.buffer_size());
     mpi_gather.global_gather_init( v, buffer);
     mpi_gather.global_gather_wait( buffer);
     Vector<value_type> num(ana);
     local_gather.gather( buffer, num);
     bool equal  = is_equal( ana, num);
     std::cout <<"GATHER Rank "<<rank<< (equal ? " PASSED" : " FAILED")<<std::endl;
-    //if( bijective) // think about this some more...
-    //{
-    //    //auto send_map = dg::mpi_permute( recv_map, MPI_COMM_WORLD);
-    //    //dg::MPIGather<Vector > mpi_gather(send_map, MPI_COMM_WORLD);
-    //    auto sendMsg = dg::mpi_permute( recvMsg, MPI_COMM_WORLD);
-    //    dg::detail::MPIContiguousGather mpi_gather(sendMsg, MPI_COMM_WORLD);
-    //    std::cout << "Rank "<<rank<<"Receive Chunks\n";
-    //    for( auto& msg : sendMsg)
-    //    for( auto& chunk : msg.second)
-    //        std::cout << "Rank"<<rank<<" Fom Rank "<<msg.first<<" Chunk "<<chunk.idx<<" "<<chunk.size<<"\n";
-    //    num = v;
-    //    dg::blas1::copy( 0, num);
-    //    mpi_gather.global_gather_init( buffer, num);
-    //    mpi_gather.global_gather_wait( num);
-    //    equal  = is_equal( v, num);
-    //    std::cout <<"SCATTER Rank "<<rank<<(equal ? " PASSED" : " FAILED")<<std::endl;
-    //}
+    if( bijective) // Scatter the index
+    {
+        auto sIdx = dg::mpi_invert_permutation( gIdx, MPI_COMM_WORLD);
+        auto recv_map = dg::gIdx2unique_idx( sIdx, bufferIdx);
+        dg::LocalGatherMatrix<Vector> local_gather(bufferIdx);
+
+        dg::MPIGather<Vector > mpi_gather(recv_map, MPI_COMM_WORLD);
+        num = v;
+        dg::blas1::copy( 0, num);
+        Vector<value_type> buffer( mpi_gather.buffer_size());
+        mpi_gather.global_gather_init( ana, buffer);
+        mpi_gather.global_gather_wait( buffer);
+        local_gather.gather( buffer, num);
+        equal  = is_equal( v, num);
+        if(!equal)std::cout <<"SCATTER Rank "<<rank<<" FAILED"<<std::endl;
+    }
+}
+template<class value_type>
+void mpi_gather_test( const thrust::host_vector<std::array<int,2>>& gIdx,
+    const thrust::host_vector<value_type>& v,
+    const thrust::host_vector<value_type>& ana, bool bijective = false
+    )
+{
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    // test mpi_gather
+    auto num= ana;
+    dg::mpi_gather( gIdx, v, num, MPI_COMM_WORLD);
+    bool equal  = is_equal( ana, num);
+    if(!equal) std::cout <<"MPI GATHER Rank "<<rank<< " FAILED"<<std::endl;
+    if( bijective)
+    {
+        num = v;
+        dg::blas1::copy( 0, num);
+        dg::mpi_scatter( gIdx, ana, num, MPI_COMM_WORLD);
+        equal  = is_equal( v, num);
+        if(!equal) std::cout <<"MPI SCATTER Rank "<<rank<<" FAILED"<<std::endl;
+    }
 }
 
 // If you get cuIpcCloseMemHandle failed errors when executing with cuda
@@ -95,6 +110,7 @@ int main( int argc, char * argv[])
         ana[i] = double(( rank*N + i + shift) %global_N);
     }
     gather_test<thrust::device_vector, double>( gIdx, v, ana, true);
+    mpi_gather_test( gIdx, v, ana, true);
     MPI_Barrier(MPI_COMM_WORLD);
     }
     {
@@ -118,6 +134,7 @@ int main( int argc, char * argv[])
         matT[i*local_colsT+k] = double(rank*local_rowsT*local_colsT + k*local_rowsT+i);
     }
     gather_test<thrust::device_vector,double>( gIdx, mat, matT, true);
+    mpi_gather_test( gIdx, mat, matT, true);
     MPI_Barrier(MPI_COMM_WORLD);
     }
     {
@@ -144,7 +161,39 @@ int main( int argc, char * argv[])
         ana[i] = double( globalIdx);
     }
     gather_test<thrust::device_vector, double>( gIdx, v, ana, true);
+    mpi_gather_test( gIdx, v, ana, true);
     MPI_Barrier(MPI_COMM_WORLD);
+
+    }
+    {
+    if(rank==0)std::cout << " Random shuffle ( non-bijective, homogeneous)\n";
+    unsigned N = 1000, global_N = size*N;
+    thrust::host_vector<int> v(N), ana( N);
+    thrust::host_vector<std::array<int,2>> gIdx( N);
+    thrust::sequence( v.begin(), v.end());
+    // The idea for a test is that if we gather the index we get the gather map
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> distr( 0, global_N-1);
+    for( int i=0; i<(int)N; i++)
+    {
+        v[i] += rank*N; // we want the global index
+        int idx = distr( gen);
+        int pid = idx / N;
+        int lIdx = idx % N;
+        gIdx[i] = {pid, lIdx};
+        ana[i] = idx;
+    }
+
+    std::cout << "RANK Random"<< rank<<"\n";
+    for( unsigned u=0; u<10; u++)
+        std::cout << gIdx[u][0]<<" "<<gIdx[u][1]<<" ";
+    std::cout << std::endl;
+    gather_test<thrust::device_vector, int>( gIdx, v, ana, false);
+    mpi_gather_test( gIdx, v, ana, false);
+    MPI_Barrier(MPI_COMM_WORLD);
+
 
     }
 
