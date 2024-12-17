@@ -356,22 +356,6 @@ std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx
 }// namespace detail
 ///@endcond
 //
-inline static thrust::host_vector<int> make_kron_indices(
-    unsigned left_size, // (local) of SparseBlockMat
-    const thrust::host_vector<int>& idx, // local 1d indices in units of n
-    unsigned n, // block size
-    unsigned num_cols, // (local) number of block columns (of gatherFrom)
-    unsigned right_size) // (local) of SparseBlockMat
-{
-    thrust::host_vector<int> g2( idx.size()*n*left_size*right_size);
-    for( unsigned l=0; l<idx.size(); l++)
-    for( unsigned j=0; j<n; j++)
-    for( unsigned i=0; i<left_size; i++)
-    for( unsigned k=0; k<right_size; k++)
-        g2[((l*n+j)*left_size+i)*right_size + k] =
-             ((i*num_cols + idx[l])*n + j)*right_size + k;
-    return g2;
-}
 // TODO Maybe this can be public
 // Convert a unsorted and possible duplicate global index list to unique
 // stable_sorted by pid and duplicates map

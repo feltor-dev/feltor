@@ -55,7 +55,7 @@ struct LocalGatherMatrix
     template<class ContainerType0, class ContainerType1>
     void gather(const ContainerType0& store, ContainerType1& buffer) const
     {
-        gather( 1, store, 0, buffer);
+        thrust::gather( m_idx.begin(), m_idx.end(), store.begin(), buffer.begin());
     }
 
     /// \f$ w = \alpha G v + \beta w \f$
@@ -63,7 +63,6 @@ struct LocalGatherMatrix
     void gather(dg::get_value_type<ContainerType0> alpha, const ContainerType0& store,
                 dg::get_value_type<ContainerType1> beta, ContainerType1& buffer) const
     {
-        thrust::gather( m_idx.begin(), m_idx.end(), store.begin(), buffer.begin());
         unsigned size = buffer.size();
         using value_type= dg::get_value_type<ContainerType0>;
         dg::blas2::detail::doParallelFor( SharedVectorTag(),
