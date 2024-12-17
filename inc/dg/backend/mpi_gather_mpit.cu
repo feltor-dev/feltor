@@ -4,7 +4,6 @@
 #include <mpi.h>
 #include "../blas1.h"
 #include "mpi_gather.h"
-#include "mpi_vector.h"
 
 template<class T>
 bool is_equal( const T& v, const T& w)

@@ -51,10 +51,6 @@ struct MPIContiguousGather
     {
         m_sendMsg = mpi_permute ( recvMsg, comm);
         m_communicating = is_communicating( recvMsg, comm);
-        // We need to find out the minimum amount of memory we need to allocate
-        for( auto& chunks : recvMsg)
-        for( auto& chunk : chunks.second)
-            m_buffer_size += chunk.size;
         // if cuda unaware we need to send messages through host
         for( auto& chunks : m_sendMsg)
         for( auto& chunk : chunks.second)
@@ -81,30 +77,50 @@ struct MPIContiguousGather
 
     MPI_Comm communicator() const{return m_comm;}
     /// How many elements in the buffer in total
-    unsigned buffer_size() const { return m_buffer_size;}
+    unsigned buffer_size( bool self_communication = true) const
+    {
+        unsigned buffer_size = 0;
+        int rank;
+        MPI_Comm_rank( m_comm, &rank);
+        // We need to find out the minimum amount of memory we need to allocate
+        for( auto& chunks : m_recvMsg) // first is PID, second is vector of chunks
+        for( auto& chunk : chunks.second)
+        {
+            if( chunks.first == rank and not self_communication)
+                continue;
+            buffer_size += chunk.size;
+        }
+        return buffer_size;
+    }
 
     bool isCommunicating() const{
         return m_communicating;
     }
+    // if not self_communication  then buffer can be smaller
     template<class ContainerType0, class ContainerType1>
-    void global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer) const
+    void global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer,
+        bool self_communication = true) const
     {
         // TODO only works if m_recvMsg is non-overlapping
         using value_type = dg::get_value_type<ContainerType0>;
         static_assert( std::is_same_v<value_type,
                 get_value_type<ContainerType1>>);
+        int rank;
+        MPI_Comm_rank( m_comm, &rank);
         // Receives (we implicitly receive chunks in the order)
         unsigned start = 0;
         unsigned rqst_counter = 0;
         for( auto& msg : m_recvMsg) // first is PID, second is vector of chunks
         for( unsigned u=0; u<msg.second.size(); u++)
         {
+            if( msg.first == rank and not self_communication)
+                continue;
             auto chunk = msg.second[u];
             void * recv_ptr;
             if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
                 dg::CudaTag> and not dg::cuda_aware_mpi)
             {
-                m_h_buffer.template set<value_type>( buffer_size);
+                m_h_buffer.template set<value_type>( buffer_size(self_communication));
                 auto& h_buffer = m_h_buffer.template get<value_type>();
                 recv_ptr = thrust::raw_pointer_cast( h_buffer.data())
                    + start;
@@ -124,6 +140,8 @@ struct MPIContiguousGather
         for( auto& msg : m_sendMsg) // first is PID, second is vector of chunks
         for( unsigned u=0; u<msg.second.size(); u++)
         {
+            if( msg.first == rank and not self_communication)
+                continue;
             auto chunk = msg.second[u];
             const void * send_ptr = thrust::raw_pointer_cast(gatherFrom.data()) + chunk.idx;
             if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
@@ -136,7 +154,7 @@ struct MPIContiguousGather
                     throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
                 if constexpr ( not dg::cuda_aware_mpi)
                 {
-                    m_h_store.template set<value_type>( store_size);
+                    m_h_store.template set<value_type>( m_store_size);
                     auto& h_store = m_h_store.template get<value_type>();
                     code = cudaMemcpy( &h_store[start], send_ptr,
                         chunk.size*sizeof(value_type), cudaMemcpyDeviceToHost);
@@ -178,7 +196,6 @@ struct MPIContiguousGather
     std::map<int,thrust::host_vector<MsgChunk>> m_sendMsg;
     std::map<int,thrust::host_vector<MsgChunk>> m_recvMsg; // from constructor
 
-    unsigned m_buffer_size = 0;
     mutable detail::AnyVector<thrust::host_vector>  m_h_buffer;
 
     unsigned m_store_size = 0;
@@ -193,7 +210,7 @@ struct MPIContiguousGather
             rqst_size += msg.second.size();
         for( auto& msg : m_sendMsg)
             rqst_size += msg.second.size();
-        m_rqst.resize( rqst_size);
+        m_rqst.resize( rqst_size, MPI_REQUEST_NULL);
     }
 };
 }//namespace detail
@@ -399,6 +416,9 @@ struct MPIGather
         unsigned chunk_size, // can be 1 (contiguous indices in recvIdx are concatenated)
         MPI_Comm comm)
     {
+        static_assert( std::is_base_of<SharedVectorTag,
+                get_tensor_category<Vector<double>>>::value,
+                "Only Shared vectors allowed");
         // The idea is that recvIdx and sendIdx completely define the communication pattern
         // and we can choose an optimal implementation
         // Actually the MPI library should do this but general gather indices
@@ -541,7 +561,6 @@ struct MPIGather
     template<class ContainerType0, class ContainerType1>
     void global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer) const
     {
-        // TODO docu It is save to use and change vector immediately after this function
         using value_type = dg::get_value_type<ContainerType0>;
         if( not m_contiguous)
         {
