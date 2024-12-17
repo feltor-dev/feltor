@@ -11,161 +11,6 @@
 
 
 namespace dg{
-///@cond
-namespace detail
-{
-
-
-// for every size != 0 in sizes add map[idx] = size;
-static inline std::map<int,int> make_size_map( const thrust::host_vector<int>& sizes)
-{
-    std::map<int,int> out;
-    for( unsigned u=0; u<sizes.size(); u++)
-    {
-        if ( sizes[u] != 0)
-            out[u] = sizes[u];
-    }
-    return out;
-}
-
-////////////////// Functionality for packaging mpi messages
-// We pack every message into a vector of primitive type
-//
-//forward declare
-template<class T>
-auto flatten ( const T& t);
-
-static inline thrust::host_vector<int> flatten ( const MsgChunk& t)
-{
-    thrust::host_vector<int> flat(2);
-    flat[0] = t.idx, flat[1] = t.size;
-    return flat;
-}
-
-template<class T>
-thrust::host_vector<T> flatten ( const T& t, dg::AnyScalarTag)
-{
-    return thrust::host_vector<T>(1, t);
-}
-template<class ContainerType>
-auto flatten (
-    const ContainerType& t, dg::AnyVectorTag)
-{
-    decltype( flatten(t[0])) flat;
-    for( unsigned u=0; u<t.size(); u++)
-    {
-        auto value = flatten(t[u]);
-        flat.insert(flat.end(), value.begin(), value.end());
-    }
-    return flat;
-}
-
-template<class T>
-auto flatten ( const T& t) // return type is  thrust::host_vector<Type>
-{
-    using tensor_tag = dg::get_tensor_category<T>;
-    return flatten( t, tensor_tag());
-}
-
-// 1. flatten values -> a map of flattened type
-template<class Message>
-auto flatten_values( const std::map<int,Message>& idx_map // map is sorted automatically
-)
-{
-    using vector_type = decltype( flatten( idx_map.at(0) ));
-    std::map<int,vector_type> flat;
-    for( auto& idx : idx_map)
-    {
-        flat[idx.first]  = flatten(idx.second);
-    }
-    return flat;
-}
-
-// 2. flatten the map (keys get lost)
-template<class T>
-thrust::host_vector<T> flatten_map(
-    const std::map<int,thrust::host_vector<T>>& idx_map // map is sorted automatically
-    )
-{
-    thrust::host_vector<T> flat;
-    for( auto& idx : idx_map)
-        flat.insert(flat.end(), idx.second.begin(), idx.second.end());
-    return flat;
-}
-
-////////////////// Functionality for unpacking mpi messages
-// unpack a vector of primitive types into original data type
-
-static inline void make_target(
-    const thrust::host_vector<int>& src, MsgChunk& target)
-{
-    assert( src.size() == 2);
-    target = {src[0], src[1]};
-}
-static inline void make_target(
-    const thrust::host_vector<int>& src, thrust::host_vector<MsgChunk>& target)
-{
-    assert( src.size() % 2 == 0);
-    target.clear();
-    for( unsigned u=0; u<src.size()/2; u++)
-        target.push_back( { src[2*u], src[2*u+1]});
-}
-template<class Target, class Source>
-void make_target( const thrust::host_vector<Source>& src, Target& t, AnyScalarTag)
-{
-    assert( src.size() == 1);
-    t = src[0];
-}
-template<class Target, class Source>
-void make_target( const thrust::host_vector<Source>& src, Target& t, AnyVectorTag)
-{
-    t = src;
-}
-template<class Target, class Source>
-void make_target( const thrust::host_vector<Source>& src, Target& t)
-{
-    using tensor_tag = dg::get_tensor_category<Target>;
-    make_target(src, t, tensor_tag()  );
-}
-
-template<class Target, class T>
-std::map<int, Target> make_map(
-    const thrust::host_vector<T>& flat_map,
-    const std::map<int,int>& size_map // key and chunk size of idx_map
-    )
-{
-    // 1. unflatten vector
-    std::map<int, Target> map;
-    unsigned start = 0;
-    for( auto& size : size_map)
-    {
-        if( size.second != 0)
-        {
-            thrust::host_vector<T> partial(
-                flat_map.begin()+start, flat_map.begin() + start + size.second);
-            start += size.second;
-            make_target( partial, map[size.first]);
-        }
-    }
-    // 2. Convert each message into target type
-    return map;
-}
-
-
-
-
-///////////////////////////////////////////////Get sizes of flat message/////////////
-template<class T>
-std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx_map)
-{
-    std::map<int,int> out;
-    for( auto& idx : idx_map)
-        out[idx.first] = idx.second.size();
-    return out;
-}
-
-} // namespace detail
-///@endcond
 
 
     /**
@@ -199,7 +44,6 @@ std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx
      * can be the same array
      */
 // TODO MAybe make a group mpi_utilities
-// TODO test the permutation quality
 // I think this is fairly intuitive to understand which is good
 /**
  * @brief Bootstrap irregular communication between processes
@@ -249,21 +93,22 @@ std::map<int,MessageType> mpi_permute(
     thrust::host_vector<int> accS( comm_size), accR(comm_size);
     thrust::exclusive_scan( sendTo.begin(), sendTo.end(), accS.begin());
     thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
-    thrust::host_vector<int> recv(
-        thrust::reduce( recvFrom.begin(), recvFrom.end()));
 
     auto send = detail::flatten_map( flat_vals);
+    using value_type = dg::get_value_type<decltype(send)>;
+    thrust::host_vector<value_type> recv(
+        thrust::reduce( recvFrom.begin(), recvFrom.end()));
     void * send_ptr          = thrust::raw_pointer_cast( send.data());
     const int * sendTo_ptr   = thrust::raw_pointer_cast( sendTo.data());
     const int * accS_ptr     = thrust::raw_pointer_cast( accS.data());
     void * recv_ptr          = thrust::raw_pointer_cast( recv.data());
     const int * recvFrom_ptr = thrust::raw_pointer_cast( recvFrom.data());
     const int * accR_ptr     = thrust::raw_pointer_cast( accR.data());
-    MPI_Datatype type = dg::getMPIDataType<dg::get_value_type<decltype(send)>>();
+    MPI_Datatype type = dg::getMPIDataType<value_type>();
     MPI_Alltoallv( send_ptr, sendTo_ptr,   accS_ptr, type,
                    recv_ptr, recvFrom_ptr, accR_ptr, type,
                    comm);
-    return detail::make_map<MessageType>( recv, detail::make_size_map( recvFrom) );
+    return detail::make_map_t<MessageType>( recv, detail::make_size_map( recvFrom) );
 }
 /*! @brief Check if communication map involves actual mpi communication
 
@@ -294,6 +139,68 @@ bool is_communicating(
             if( k != i and global[i*comm_size+k] != 0)
                 isCommunicating = true;
     return isCommunicating;
+}
+
+// un-optimized version (mainly used for testing)
+template<class ContainerType>
+void mpi_gather( const thrust::host_vector<std::array<int,2>>& gather_map,
+    const ContainerType& gatherFrom, ContainerType& result, MPI_Comm comm)
+{
+    thrust::host_vector<int> bufferIdx;
+    auto gather_m = gIdx2unique_idx( gather_map, bufferIdx);
+    auto send_map = mpi_permute(gather_m, comm);
+    auto gather = detail::flatten_map( send_map);
+    auto size_map = detail::get_size_map( send_map);
+    ContainerType res( gather.size());
+    thrust::gather( gather.begin(), gather.end(), gatherFrom.begin(), res.begin());
+    std::map<int,ContainerType> result_map = detail::make_map_t<ContainerType>( res, size_map);
+    std::map<int,ContainerType> recv = mpi_permute( result_map, comm);
+    ContainerType flat = detail::flatten_map( recv);
+    result.resize( bufferIdx.size());
+    thrust::gather( bufferIdx.begin(), bufferIdx.end(), flat.begin(), result.begin());
+}
+// un-optimized version (mainly used for testing), only works for host arrays (only works for injective)
+template<class ContainerType>
+void mpi_scatter( const thrust::host_vector<std::array<int,2>>& scatter_map,
+    const ContainerType& toScatter, ContainerType& result, // result needs to have correct size!
+    MPI_Comm comm, bool resize_result = false // if true we resize the result (needed for invert_permutation)
+    )
+{
+    thrust::host_vector<int> bufferIdx;
+    auto scatter_m = gIdx2unique_idx( scatter_map, bufferIdx);
+    auto recv_map = mpi_permute(scatter_m, comm);
+    auto scatter = detail::flatten_map( recv_map);
+
+    auto size_map = detail::get_size_map( scatter_m);
+
+    ContainerType to_send( toScatter);
+    thrust::scatter( toScatter.begin(), toScatter.end(), bufferIdx.begin(), to_send.begin());
+
+    auto send = detail::make_map_t<ContainerType>( to_send, size_map);
+    auto result_map = mpi_permute( send, comm);
+    auto res = detail::flatten_map( result_map);
+    if( resize_result)
+        result.resize( res.size());
+    thrust::scatter( res.begin(), res.end(), scatter.begin(), result.begin());
+}
+
+// TODO document ( only works on host)
+template<class Integer>
+thrust::host_vector<std::array<Integer,2>>
+    mpi_invert_permutation( const thrust::host_vector<std::array<Integer,2>>& p, MPI_Comm comm)
+{
+    thrust::host_vector<Integer> seq( p.size());
+    thrust::host_vector<std::array<Integer,2>> seq_arr( p.size());
+    thrust::sequence( seq.begin(), seq.end());
+    Integer rank;
+    MPI_Comm_rank( comm, &rank);
+    // package sequence
+    for( unsigned u=0; u<seq.size(); u++)
+        seq_arr[u] = {rank, seq[u]};
+    thrust::host_vector<std::array<Integer,2>> sort_map;
+    mpi_scatter( p, seq_arr, sort_map, comm, true);
+    return sort_map;
+
 }
 
 

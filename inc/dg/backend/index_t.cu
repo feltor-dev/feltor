@@ -86,9 +86,20 @@ int main()
         auto chunks = dg::detail::find_contiguous_chunks( range);
         for( auto& chunk : chunks)
             std::cout << chunk.idx<<" "<<chunk.size<<"\n";
-        assert( chunks[0].idx = 4); assert( chunks[0].size = 3);
-        assert( chunks[1].idx = 1); assert( chunks[1].size = 1);
-        assert( chunks[2].idx = 3); assert( chunks[1].size = 3);
+        assert( chunks[0].idx == 4); assert( chunks[0].size == 3);
+        assert( chunks[1].idx == 1); assert( chunks[1].size == 1);
+        assert( chunks[2].idx == 3); assert( chunks[2].size == 3);
+        std::cout << "PASSED\n";
+
+    }
+    {
+        std::cout << "Test some map functionality\n";
+        std::map< int, thrust::host_vector<int> > send = {{0, std::vector{1,2,3,4}},{3, std::vector{5,6}}};
+        thrust::host_vector<int> ana  = std::vector{1,2,3,4,5,6};
+        auto flat = dg::detail::flatten_values( send);
+        assert( flat == send);
+        auto flatten = dg::detail::flatten_map( flat);
+        assert( flatten == ana);
         std::cout << "PASSED\n";
 
     }

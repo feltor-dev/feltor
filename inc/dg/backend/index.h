@@ -159,6 +159,11 @@ struct MsgChunk
     int idx; /// !< starting index of message
     int size; /// !< size of message
 };
+inline bool operator==( const dg::detail::MsgChunk& a, const dg::detail::MsgChunk& b)
+{
+    return a.idx == b.idx and a.size == b.size;
+}
+
 static inline thrust::host_vector<MsgChunk>
 find_contiguous_chunks(
     const thrust::host_vector<int>& in) // These are unsorted
@@ -176,6 +181,175 @@ find_contiguous_chunks(
     }
     return range;
 }
+
+// for every size != 0 in sizes add map[idx] = size;
+static inline std::map<int,int> make_size_map( const thrust::host_vector<int>& sizes)
+{
+    std::map<int,int> out;
+    for( unsigned u=0; u<sizes.size(); u++)
+    {
+        if ( sizes[u] != 0)
+            out[u] = sizes[u];
+    }
+    return out;
+}
+
+////////////////// Functionality for packaging mpi messages
+// We pack every message into a vector of primitive type
+//
+//forward declare
+template<class T>
+auto flatten ( const T& t);
+
+static inline thrust::host_vector<int> flatten ( const MsgChunk& t)
+{
+    thrust::host_vector<int> flat(2);
+    flat[0] = t.idx, flat[1] = t.size;
+    return flat;
+}
+
+template<class T>
+thrust::host_vector<T> flatten ( const T& t, dg::AnyScalarTag)
+{
+    return thrust::host_vector<T>(1, t);
+}
+template<class ContainerType>
+auto flatten (
+    const ContainerType& t, dg::AnyVectorTag)
+{
+    decltype( flatten(t[0])) flat;
+    for( unsigned u=0; u<t.size(); u++)
+    {
+        auto value = flatten(t[u]);
+        flat.insert(flat.end(), value.begin(), value.end());
+    }
+    return flat;
+}
+
+template<class T>
+auto flatten ( const T& t) // return type is  thrust::host_vector<Type>
+{
+    using tensor_tag = dg::get_tensor_category<T>;
+    return flatten( t, tensor_tag());
+}
+
+// 1. flatten values -> a map of flattened type
+template<class Message>
+auto flatten_values( const std::map<int,Message>& idx_map // map is sorted automatically
+)
+{
+    using vector_type = decltype( flatten( idx_map.at(0) ));
+    std::map<int,vector_type> flat;
+    for( auto& idx : idx_map)
+    {
+        flat[idx.first]  = flatten(idx.second);
+    }
+    return flat;
+}
+
+// 2. flatten the map (keys get lost)
+template<class T>
+thrust::host_vector<T> flatten_map(
+    const std::map<int,thrust::host_vector<T>>& idx_map // map is sorted automatically
+    )
+{
+    thrust::host_vector<T> flat;
+    for( auto& idx : idx_map)
+        flat.insert(flat.end(), idx.second.begin(), idx.second.end());
+    return flat;
+}
+
+////////////////// Functionality for unpacking mpi messages
+// unpack a vector of primitive types into original data type
+
+static inline void make_target(
+    const thrust::host_vector<int>& src, MsgChunk& target)
+{
+    assert( src.size() == 2);
+    target = {src[0], src[1]};
+}
+static inline void make_target(
+    const thrust::host_vector<int>& src, thrust::host_vector<MsgChunk>& target)
+{
+    assert( src.size() % 2 == 0);
+    target.clear();
+    for( unsigned u=0; u<src.size()/2; u++)
+        target.push_back( { src[2*u], src[2*u+1]});
+}
+template<class T, size_t N>
+void make_target(
+    const thrust::host_vector<T>& src, std::array<T,N>& target)
+{
+    assert( src.size() == N);
+    thrust::copy( src.begin(), src.end(), target.begin());
+}
+template<class T, size_t N>
+void make_target(
+    const thrust::host_vector<T>& src, thrust::host_vector<std::array<T,N>>& target)
+{
+    assert( src.size() % N == 0);
+    target.clear();
+    for( unsigned u=0; u<src.size()/N; u++)
+    {
+        std::array<T,N> t;
+        thrust::copy( src.begin() + N*u, src.begin() + N*(u+1), t.begin());
+        target.push_back( t);
+    }
+}
+template<class Target, class Source>
+void make_target( const thrust::host_vector<Source>& src, Target& t, AnyScalarTag)
+{
+    assert( src.size() == 1);
+    t = src[0];
+}
+template<class Target, class Source>
+void make_target( const thrust::host_vector<Source>& src, Target& t, AnyVectorTag)
+{
+    t = src;
+}
+template<class Target, class Source>
+void make_target( const thrust::host_vector<Source>& src, Target& t)
+{
+    using tensor_tag = dg::get_tensor_category<Target>;
+    make_target(src, t, tensor_tag()  );
+}
+
+template<class Target, class T>
+std::map<int, Target> make_map_t(
+    const thrust::host_vector<T>& flat_map,
+    const std::map<int,int>& size_map // key and chunk size of idx_map
+    )
+{
+    // 1. unflatten vector
+    std::map<int, Target> map;
+    unsigned start = 0;
+    for( auto& size : size_map)
+    {
+        if( size.second != 0)
+        {
+            thrust::host_vector<T> partial(
+                flat_map.begin()+start, flat_map.begin() + start + size.second);
+            start += size.second;
+            make_target( partial, map[size.first]);
+        }
+    }
+    // 2. Convert each message into target type
+    return map;
+}
+
+
+
+
+///////////////////////////////////////////////Get sizes of flat message/////////////
+template<class T>
+std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx_map)
+{
+    std::map<int,int> out;
+    for( auto& idx : idx_map)
+        out[idx.first] = idx.second.size();
+    return out;
+}
+
 
 
 
@@ -229,16 +403,7 @@ inline static std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
     // return map
     std::map<int, thrust::host_vector<int>> out;
     std::map<int,int> pids_howmany = detail::make_map( uni_pids.unique, uni_pids.howmany);
-    unsigned start = 0;
-    for( auto& pids : pids_howmany)
-        if( pids.second != 0)
-        {
-            thrust::host_vector<int> partial(
-                sorted_unique_gIdx.begin()+start, sorted_unique_gIdx.begin() + start + pids.second);
-            out[pids.first] = partial;
-            start += pids.second;
-        }
-    return out;
+    return detail::make_map_t<thrust::host_vector<int>>( sorted_unique_gIdx, pids_howmany);
 }
 
 
