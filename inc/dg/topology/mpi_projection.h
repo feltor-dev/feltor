@@ -40,9 +40,18 @@ namespace dg
 template<class ConversionPolicy, class real_type>
 dg::MIHMatrix_t<real_type> convert( const dg::IHMatrix_t<real_type>& global, const ConversionPolicy& policy)
 {
-    dg::iHVec unique_global_idx;
+    //int rank;
+    //MPI_Comm_rank( policy.communicator(), &rank);
+    //// Our idea here is
+    //// 1. convert global.column_indices to local indices
+    //thrust::host_vector<std::array<int,2>> lIdx = gIdx2array( global.column_indices);
+    //// 2. get all the rows that have foreign indices and split into inner and outer matrix
+    //for( unsigned u=0; u<lIdx.size(); u++)
+    //    // ...
+
+
     cusp::array1d<int, cusp::host_memory> buffer_idx;
-    dg::detail::global2bufferIdx( global.column_indices, buffer_idx, unique_global_idx);
+    auto recv_map = dg::gIdx2unique_idx( global.column_indices, buffer_idx, unique_global_idx);
     dg::GeneralComm<dg::iHVec, thrust::host_vector<real_type>> comm( unique_global_idx, policy);
     if( !comm.isCommunicating() )
     {
@@ -90,47 +99,42 @@ dg::MIHMatrix_t<real_type> convert( const dg::IHMatrix_t<real_type>& global, con
  * other two are the output pair (localIdx, rank).
    return true if successful, false if global index is not part of the grid
  *  - <tt> MPI_Comm %communicator() const; </tt>  returns the communicator to use in the gather/scatter
- * @param global the column indices and num_cols need to be global, the row indices and num_rows local
+ *  - <tt> local_size(); </tt> return the local vector size
+ * @param global the row indices and num_rows need to be global
  * @param policy the conversion object
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed it simply has row-indices
- * converted from global to local indices.
+ * converted from global to local indices. \c num_cols is the one from \c global
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
  * @ingroup mpi_structures
  */
 template<class ConversionPolicy, class real_type>
-dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_type>& global, const ConversionPolicy& policy)
+dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_type>& global, const ConversionPolicy& row_policy)
 {
-    // 0. Convert rows to coo rows
-    cusp::array1d<int, cusp::host_memory> rows( global.column_indices.size()), local_rows(rows);
-    for( unsigned i=0; i<global.num_rows; i++)
-        for( int k = global.row_offsets[i]; k < global.row_offsets[i+1]; k++)
-            rows[k] = i;
+    // 0. Convert to coo matrix
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A = global;
     // 1. For all rows determine pid to which it belongs
-    thrust::host_vector<int> pids(rows.size());
-    bool success = true;
-    for(unsigned i=0; i<rows.size(); i++)
-        if( !policy.global2localIdx(rows[i], local_rows[i], pids[i]) ) success = false;
-    assert( success);
-    // 2. Construct BijectiveComm with it
-    dg::BijectiveComm<dg::iHVec, thrust::host_vector<real_type>> comm( pids, policy.communicator());
-    // 3. Gather all rows/cols/vals triplets local to matrix
-    auto rowsV = dg::construct<thrust::host_vector<real_type> >( local_rows);
-    auto colsV = dg::construct<thrust::host_vector<real_type> >( global.column_indices);
-    auto row_buffer = comm.global_gather( &rowsV[0]);
-    auto col_buffer = comm.global_gather( &colsV[0]);
-    auto val_buffer = comm.global_gather( &global.values[0]);
-    int local_num_rows = dg::blas1::reduce( row_buffer, (real_type)0, thrust::maximum<real_type>())+1;
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A( local_num_rows, global.num_cols, row_buffer.size());
-    A.row_indices = dg::construct<cusp::array1d<int, cusp::host_memory>>( row_buffer);
-    A.column_indices = dg::construct<cusp::array1d<int, cusp::host_memory>>( col_buffer);
-    A.values = val_buffer;
-    A.sort_by_row_and_column();
-    return dg::IHMatrix_t<real_type>(A);
+    auto gIdx = dg::gIdx2array( A.row_indices, row_policy);
+    // 2. Now scatter those rows to where they belong
+    cusp::array1d<int, cusp::host_memory> row_buffer, col_buffer, val_buffer;
+    dg::mpi_scatter( gIdx, A.row_indices,    row_buffer);
+    dg::mpi_scatter( gIdx, A.column_indices, col_buffer);
+    dg::mpi_scatter( gIdx, A.values,         val_buffer);
+    for(unsigned i=0; i<row_buffer.size(); i++)
+        assert( row_policy.global2localIdx(row_buffer[i], row_buffer[i], int() );
+
+    cusp::coo_matrix<int, real_type, cusp::host_memory> B(
+        row_policy.local_size(), global.num_cols, row_buffer.size());
+    B.row_indices    = row_buffer;
+    B.column_indices = col_buffer;
+    B.values         = val_buffer;
+    B.sort_by_row_and_column();
+    return dg::IHMatrix_t<real_type>(B);
     // 4. Reduce on identical rows/cols
     // .... Maybe later
 }
 
+//TODO streamline this docu
 /**
  * @brief Convert a matrix with local column indices to a matrix with global column indices
  *
@@ -161,14 +165,12 @@ dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_typ
 template<class ConversionPolicy, class real_type>
 void convertLocal2GlobalCols( dg::IHMatrix_t<real_type>& local, const ConversionPolicy& policy)
 {
-    // 1. For all rows determine pid to which it belongs
+    // 1. For all columns determine pid to which it belongs
     int rank=0;
     MPI_Comm_rank( policy.communicator(), &rank);
 
-    bool success = true;
     for(unsigned i=0; i<local.column_indices.size(); i++)
-        if( !policy.local2globalIdx(local.column_indices[i], rank, local.column_indices[i]) ) success = false;
-    assert( success);
+        assert( policy.local2globalIdx(local.column_indices[i], rank, local.column_indices[i]) );
     local.num_cols = policy.size();
 }
 
