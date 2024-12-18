@@ -364,20 +364,20 @@ std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx
 // TODO gIdx can be unsorted and contain duplicate entries
 // TODO idx 0 is pid, idx 1 is localIndex on that pid
 // TODO Maybe be a static MPIGather function?
-inline static std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
-    const thrust::host_vector<std::array<int,2>>& gIdx, // unsorted (cannot be map)
-    thrust::host_vector<int>& bufferIdx) // gIdx size, gather gIdx from flatten_map
+template<class ArrayVec = thrust::host_vector<std::array<int,2>>, class IntVec = thrust::host_vector<int>>
+std::map<int, IntVec> gIdx2unique_idx(
+    const ArrayVec& gIdx, // unsorted (cannot be map)
+    IntVec& bufferIdx) // gIdx size, gather gIdx from flatten_map
 {
-    detail::Unique<std::array<int,2>> uni = detail::find_unique_order_preserving( gIdx);
+    auto uni = detail::find_unique_order_preserving( gIdx);
     // get pids
-    thrust::host_vector<int> pids(uni.unique.size()),
-        lIdx(pids);
+    IntVec pids(uni.unique.size()), lIdx(pids);
     for( int i=0; i<(int)pids.size(); i++)
     {
         pids[i] = uni.unique[i][0];
         lIdx[i] = uni.unique[i][1]; // the local index
     }
-    detail::Unique<int> uni_pids = detail::find_unique_stable_sort( pids);
+    auto uni_pids = detail::find_unique_stable_sort( pids);
     bufferIdx = detail::combine_gather( uni.gather1,
                    detail::combine_gather( uni.gather2, uni_pids.gather1));
     // duplicate the sort on lIdx
@@ -385,11 +385,19 @@ inline static std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
     thrust::scatter( lIdx.begin(), lIdx.end(),
              uni_pids.gather1.begin(), sorted_unique_gIdx.begin());
     // return map
-    std::map<int, thrust::host_vector<int>> out;
     std::map<int,int> pids_howmany = detail::make_map( uni_pids.unique, uni_pids.howmany);
-    return detail::make_map_t<thrust::host_vector<int>>( sorted_unique_gIdx, pids_howmany);
+    return detail::make_map_t<IntVec>( sorted_unique_gIdx, pids_howmany);
 }
 
+template<class ConversionPolicy, class IntVec = thrust::host_vector<int>>
+thrust::host_vector<std::array<int,2>> gIdx2array( const IntVec& gIdx, const ConversionPolicy& p)
+{
+    thrust::host_vector<std::array<int,2>> arrayIdx( gIdx.size());
+    for(unsigned i=0; i<gIdx.size(); i++)
+        assert(p.global2localIdx(gIdx[i],
+                    arrayIdx[i][1], arrayIdx[i][0]) );
+    return arrayIdx;
+}
 
 /**
  * @brief Construct from global indices index map
@@ -412,21 +420,13 @@ inline static std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a
  * ConversionPolicy
  */
-template<class ConversionPolicy>
-std::map<int, thrust::host_vector<int>> gIdx2unique_idx(
-    const thrust::host_vector<int>& globalIndexMap,
-    thrust::host_vector<int>& bufferIdx, // may alias globalIndexMap
+template<class ConversionPolicy, class IntVec = thrust::host_vector<int>>
+std::map<int, IntVec> gIdx2unique_idx(
+    const IntVec& globalIndexMap,
+    IntVec& bufferIdx, // may alias globalIndexMap
     const ConversionPolicy& p)
 {
     // TODO update docu on local_size() ( if we don't scatter we don't need it)
-    thrust::host_vector<std::array<int,2>> gIdx( globalIndexMap.size());
-    bool success = true;
-    for(unsigned i=0; i<gIdx.size(); i++)
-        if( !p.global2localIdx(globalIndexMap[i],
-                    gIdx[i][1], gIdx[i][0]) )
-            success = false;
-
-    assert( success);
-    return gIdx2unique_idx( gIdx, bufferIdx);
+    return gIdx2unique_idx( gIdx2array(globalIndexMap), bufferIdx);
 }
 } // namespace dg
