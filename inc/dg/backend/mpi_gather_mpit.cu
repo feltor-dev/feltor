@@ -1,5 +1,9 @@
 #include <iostream>
 
+// Define this Macro to test cuda-unaware mpi behaviour
+
+//#define DG_CUDA_UNAWARE_MPI
+
 #include <random> // for random shuffle
 #include <mpi.h>
 #include "../blas1.h"
@@ -196,6 +200,18 @@ int main( int argc, char * argv[])
 
     }
 
+
+    {
+    if(rank==0)std::cout << " Test MPIAllreduce\n";
+    unsigned N = 100;
+    thrust::host_vector<int> v(N, 1);
+    dg::detail::MPIAllreduce red( MPI_COMM_WORLD);
+    red.reduce(v);
+    assert( v[99] == size);
+    std::cout << "RANK "<<rank<<" PASSED\n";
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    }
 
     MPI_Finalize();
 

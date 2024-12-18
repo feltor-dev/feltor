@@ -17,6 +17,54 @@ namespace dg{
 ///@cond
 namespace detail{
 
+struct MPIAllreduce
+{
+    MPIAllreduce( MPI_Comm comm = MPI_COMM_NULL) : m_comm(comm){}
+    MPI_Comm communicator() const{ return m_comm;}
+    template<class ContainerType> // a Shared Vector
+    void reduce( ContainerType& y) const
+    {
+        using value_type = dg::get_value_type<ContainerType>;
+        void * send_ptr = thrust::raw_pointer_cast(y.data());
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+            dg::CudaTag>)
+        {
+#ifdef __CUDACC__ // g++ does not know cuda code
+            // cuda - sync device
+            cudaError_t code = cudaGetLastError( );
+            if( code != cudaSuccess)
+                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+            if constexpr ( not dg::cuda_aware_mpi)
+            {
+                m_h_buffer.template set<value_type>( y.size());
+                auto& h_buffer = m_h_buffer.template get<value_type>();
+                code = cudaMemcpy( &h_buffer[0], send_ptr,
+                    y.size()*sizeof(value_type), cudaMemcpyDeviceToHost);
+                send_ptr = // re-point pointer
+                    thrust::raw_pointer_cast(&h_buffer[0]);
+                if( code != cudaSuccess)
+                    throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+            }
+            // We have to wait that all kernels are finished and values are
+            // ready to be sent
+            code = cudaDeviceSynchronize();
+            if( code != cudaSuccess)
+                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+#else
+            assert( false && "Something is wrong! This should never execute!");
+#endif
+        }
+        MPI_Allreduce( MPI_IN_PLACE, send_ptr, y.size(),
+            getMPIDataType<value_type>(), MPI_SUM, m_comm);
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
+            dg::CudaTag> and !dg::cuda_aware_mpi)
+            y = m_h_buffer.template get<value_type>();
+    }
+    private:
+    MPI_Comm m_comm;
+    mutable detail::AnyVector<thrust::host_vector>  m_h_buffer;
+};
+
 /*!@brief A hand implemented \c MPI_Ialltoallv for a contiguous \c MPI_Type_contiguous/\c MPI_Type_vector
  *
  * What we are doing here is implementing an \c MPI_Ialltoallv for
@@ -37,7 +85,8 @@ namespace detail{
 struct MPIContiguousGather
 {
     ///@copydoc MPIGather<Vector>::MPIGather(comm)
-    MPIContiguousGather( MPI_Comm comm = MPI_COMM_NULL) : m_comm(comm){ }
+    MPIContiguousGather( MPI_Comm comm = MPI_COMM_NULL)
+    : m_comm(comm), m_communicating(false){ }
     /*!@brief Construct from indices in units of \c chunk_size
      *
      * @param recvMsg recvMsg[PID] consists of the local indices on PID
@@ -107,6 +156,14 @@ struct MPIContiguousGather
                 get_value_type<ContainerType1>>);
         int rank;
         MPI_Comm_rank( m_comm, &rank);
+        // BugFix: buffer value_type must be set even if no messages are sent
+        // so that global_gather_wait works
+        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType1>,
+            dg::CudaTag> and not dg::cuda_aware_mpi)
+        {
+            m_h_store.template set<value_type>( m_store_size);
+            m_h_buffer.template set<value_type>( buffer_size(self_communication));
+        }
         // Receives (we implicitly receive chunks in the order)
         unsigned start = 0;
         unsigned rqst_counter = 0;
@@ -117,10 +174,9 @@ struct MPIContiguousGather
                 continue;
             auto chunk = msg.second[u];
             void * recv_ptr;
-            if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
+            if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType1>,
                 dg::CudaTag> and not dg::cuda_aware_mpi)
             {
-                m_h_buffer.template set<value_type>( buffer_size(self_communication));
                 auto& h_buffer = m_h_buffer.template get<value_type>();
                 recv_ptr = thrust::raw_pointer_cast( h_buffer.data())
                    + start;
@@ -154,7 +210,6 @@ struct MPIContiguousGather
                     throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
                 if constexpr ( not dg::cuda_aware_mpi)
                 {
-                    m_h_store.template set<value_type>( m_store_size);
                     auto& h_store = m_h_store.template get<value_type>();
                     code = cudaMemcpy( &h_store[start], send_ptr,
                         chunk.size*sizeof(value_type), cudaMemcpyDeviceToHost);

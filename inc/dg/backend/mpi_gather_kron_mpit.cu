@@ -1,5 +1,9 @@
 #include <iostream>
 
+// Define this Macro to test cuda-unaware mpi behaviour
+
+//#define DG_CUDA_UNAWARE_MPI
+
 #include <mpi.h>
 #include "../blas1.h"
 #include "mpi_gather_kron.h"

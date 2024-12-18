@@ -104,6 +104,7 @@ struct MPIContiguousKroneckerGather
 
 /////////////////////////////communicator//////////////////////////
 //TODO update this docu
+//TODO should this be in detail? Seeing that onyl MPISparseBlockMat is supposed to use it
 /**
 * @brief Communicator for asynchronous communication of MPISparseBlockMat
 *
