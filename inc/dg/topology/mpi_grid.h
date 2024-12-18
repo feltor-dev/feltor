@@ -408,7 +408,7 @@ struct aRealMPITopology
         if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
             return false;
 
-        int lIdx[Nd], local_shape[Nd];
+        int lIdx[Nd] = {0}, local_shape[Nd] = {0};
         int current = globalIdx;
         // ATTENTION This function cannot depend on who is calling it
         // so it cannot depend on m_l or current coords
