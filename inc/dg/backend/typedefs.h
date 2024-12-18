@@ -53,7 +53,6 @@ using IDMatrix = IDMatrix_t<double>;
 #ifdef MPI_VERSION
 #include "mpi_vector.h"
 #include "mpi_matrix.h"
-#include "mpi_collective.h"
 
 namespace dg{
 ///@addtogroup typedefs
@@ -66,6 +65,7 @@ using fMHVec    = dg::MPI_Vector<dg::fHVec >; //!< MPI Host Vector s.a. dg::fHVe
 using MDVec     = dg::MPI_Vector<dg::DVec >; //!< MPI Device Vector s.a. dg::DVec
 using fMDVec    = dg::MPI_Vector<dg::fDVec >; //!< MPI Device Vector s.a. dg::fDVec
 
+// TODO These may be private
 template< class T>
 using CooMat_t  = dg::CooSparseBlockMat<T>;
 using CooMat    = dg::CooSparseBlockMat<double>;
@@ -74,11 +74,11 @@ using DCooMat   = dg::CooSparseBlockMatDevice<double>;
 using fDCooMat  = dg::CooSparseBlockMatDevice<float>;
 
 template<class T>
-using MHMatrix_t  = dg::MPIDistMat<thrust::host_vector, dg::HMatrix_t<T>, dg::CooMat_t<T>>; //!< MPI Host Matrix for derivatives
-using MHMatrix    = dg::MPIDistMat<thrust::host_vector, dg::HMatrix, dg::CooMat>; //!< MPI Host Matrix for derivatives
-using fMHMatrix   = dg::MPIDistMat<thrust::host_vector, dg::fHMatrix, dg::fCooMat>; //!< MPI Host Matrix for derivatives
-using MDMatrix    = dg::MPIDistMat<thrust::device_vector, dg::DMatrix, dg::DCooMat>; //!< MPI Device Matrix for derivatives
-using fMDMatrix   = dg::MPIDistMat<thrust::device_vector, dg::fDMatrix, dg::fDCooMat>; //!< MPI Device Matrix for derivatives
+using MHMatrix_t  = dg::MPISparseBlockMat<thrust::host_vector, dg::HMatrix_t<T>, dg::CooMat_t<T>>; //!< MPI Host Matrix for derivatives
+using MHMatrix    = dg::MPISparseBlockMat<thrust::host_vector, dg::HMatrix, dg::CooMat>; //!< MPI Host Matrix for derivatives
+using fMHMatrix   = dg::MPISparseBlockMat<thrust::host_vector, dg::fHMatrix, dg::fCooMat>; //!< MPI Host Matrix for derivatives
+using MDMatrix    = dg::MPISparseBlockMat<thrust::device_vector, dg::DMatrix, dg::DCooMat>; //!< MPI Device Matrix for derivatives
+using fMDMatrix   = dg::MPISparseBlockMat<thrust::device_vector, dg::fDMatrix, dg::fDCooMat>; //!< MPI Device Matrix for derivatives
 
 // Can't GeneralComm be replaced by aCommunicator<LocalContainer>? No, because conversion to DVec won't work any more
 // Of course this somewhat defeats the whole purpose of having a virtual base class

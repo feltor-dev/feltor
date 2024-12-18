@@ -261,7 +261,7 @@ struct CooSparseBlockMat
     thrust::host_vector<int> rows_idx; //!< is of size \c num_entries and contains the row indices
     thrust::host_vector<int> data_idx; //!< is of size \c num_entries and contains indices into the data array
     int num_rows; //!< number of rows
-    int num_cols; //!< number of columns
+    int num_cols; //!< number of columns (never actually used with pointer approach
     int num_entries; //!< number of entries in the matrix
     int n;  //!< each block has size n*n
     int left_size; //!< size of the left Kronecker delta
@@ -339,6 +339,8 @@ void CooSparseBlockMat<real_type>::symv( SharedVectorTag, SerialTag, value_type 
         std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!! Beta = "<<beta<<"\n";
     assert( beta == 1 && "Beta != 1 yields wrong results in CooSparseBlockMat!!");
     // In fact, Beta is ignored in the following code
+    // beta == 1 avoids the need to access all values in y, just the cols we want
+    // This makes symv a sparse vector = sparse matrix x sparse vector operation
 
     //simplest implementation (sums block by block)
     for( int s=0; s<left_size; s++)

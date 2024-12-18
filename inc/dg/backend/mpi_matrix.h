@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mpi_vector.h"
+#include "mpi_gather_kron.h"
 #include "memory.h"
 #include "timer.h"
 
@@ -29,76 +29,6 @@ void symv( get_value_type<ContainerType1> alpha,
                   ContainerType2& y);
 }//namespace blas2
 
-//TODO should this be public?
-// grid is needed for local2globalIdx and global2localIdx
-// communicators need to be the same
-void mpi_split( // not actually communicating
-    const EllSparseBlockMat<real_type>& src,
-    // src left_size and src right_size are the correct local sizes
-    // src has global rows and global cols
-    const ConversionPolicy& g_rows,
-    const ConversionPolicy& g_cols
-    EllSparseBlockMat<real_type>& inner, // local rows, local cols, correct data
-    CooSparseBlockMat<real_type>& outer  // local rows, global cols, correct data
-)
-{
-    // Indices in src are BLOCK INDICES!
-    int result;
-    MPI_Comm_compare( g_rows.communicator(), g_cols.communicator(), &result);
-    assert( result == MPI_CONGRUENT or result == MPI_IDENT);
-    int rank;
-    MPI_Comm_rank( g_cols.communicator(), &rank);
-    int dim, period, coord;
-    MPI_Cart_get( g_cols.communicator(), 1, &dim, &period, &coord); // coord of the calling process
-    if( dim == 1)
-    {
-        m_i = src;
-        return;
-    }
-    int bpl = src.blocks_per_line;
-    EllSparseBlockMat<real_type> inner(g_rows.local().N(), g_cols.local().N(), // number of blocks
-        bpl, src.data.size()/(src.n*src.n), src.n);
-    inner.set_left_size( src.left_size);
-    inner.set_right_size( src.right_size);
-    CooSparseBlockMat<real_type> outer(inner.num_rows, inner.num_cols, // number of blocks
-        src.n, src.left_size, src.right_size);
-    //first copy data elements (even though not all might be needed it doesn't slow down things either)
-    inner.data = src.cata;
-    outer.data = src.data;
-    std::vector<bool> local_row( inner.num_rows, true);
-    //now grab the right rows of the cols and data indices
-    for( unsigned i=0; i<(unsigned)inner.num_rows; i++)
-    for( unsigned k=0; k<(unsigned)bpl; k++)
-    {
-        int gIdx=0;
-        assert( g_rows.local2globalIdx( i*src.n, outerrd, gIdx)); // convert from idx to block idx !
-        inner.data_idx[i*bpl + k] = src.data_idx[ gIdx/src.n*bpl + k];
-        inner.cols_idx[i*bpl + k] = src.cols_idx[ gIdx/src.n*bpl + k];
-        // find out if row is communicating
-        int gIdx = inner.cols_idx[i*bpl + k], lIdx, pid;
-        assert( g_cols.global2localIdx( gIdx*src.n, lIdx, pid)); // convert from idx to block idx !
-        if ( pid != rank)
-            local_row = false;
-    }
-    // Now split into local matrix and communication matrix
-    // we need to grab the entire row to ensure reproducibility (which is guaranteed by order of computations)
-    thrust::host_vector<std::array<int,2>> gColIdx;
-    for( unsigned i=0; i<(unsigned)inner.num_rows; i++)
-    for( unsigned k=0; k<(unsigned)bpl; k++)
-    {
-        int gIdx = inner.cols_idx[i*bpl + k], lIdx, pid;
-        assert( g_cols.global2localIdx( gIdx*src.n, lIdx, pid));
-        if ( !local_row[i])
-        {
-            outer.add_value( i, gIdx, inner.data_idx[i*bpl + k]);
-            gColIdx.push_back( lIdx/src.n, pid);
-            inner.cols_idx[i*bpl + k] = EllSparseBlockMat<real_type>::invalid_idx;
-        }
-        else
-            inner.cols_idx[i*bpl + k] = lIdx/src.n; // convert from idx to block idx !
-    }
-    // now, inner is ready, and outer is a Coo matrix with global columns
-}
 ///@addtogroup mpi_structures
 ///@{
 
@@ -110,46 +40,16 @@ struct MPISparseBlockMat
                 const LocalMatrixOuter& outside,
                 const MPIKroneckerGather<Vector>& mpi_gather // only gather foreign messages
                 )
-    : m_i(inside), m_o(outside), m_gather(mpi_gather)
+    : m_i(inside), m_o(outside), m_g(mpi_gather)
     {
     }
+    template< template<class> class V, class LI, class LO>
+    friend class MPISparseBlockMat; // enable copy
 
-    template<class real_type, class ConversionPolicy>
-    MPISparseBlockMat(const EllSparseBlockMat<real_type>& src,
-        const ConversionPolicy& g_rows, const ConversionPolicy& g_cols)
-    {
-        EllSparseBlockMat<real_type> inner;
-        CooSparseBlockMat<real_type> outer;
-        mpi_split( src, g_rows, g_cols, inner, outer);
-        // gColIdx are all the blocks we need
-        thrust::host_vector<int> outer_col_idx;
-        MPIKroneckerGather<Vector> kron( outer.left_size, gColIdx, outer_col_idx,
-            outer.n, outer.num_cols, outer.right_size);
-        outer.cols_idx = outer_col_idx;
-        m_o = outer;
-        // If we are contiguous we can do an additional trick which is to save
-        // memory movement for self-communications
-        m_self = std::vector<bool>( gColIdx.size(), false);
-        if( outer.left_size == 1)
-        {
-            thrust::host_vector<int> gColIdx_self;
-            thrust::host_vector<std::array<int,2>> gColIdx_foreign;
-            for( unsigned u=0; u<gColIdx.size(); u++)
-            {
-                m_self.push_back( gColIdx[u][0] == rank);
-                if( *self.back())
-                    gColIdx_self.push_back( gColIdx[u][1]);
-                else
-                    gColIdx_foreign.push_back( gColIdx[u]);
-            }
-            thrust::host_vector<int> outer_col_idx;
-            MPIKroneckerGather<Vector> kron_foreign( outer.left_size, gColIdx_foreign,
-                outer_col_idx, outer.n, outer.num_cols, outer.right_size);
-            m_g = kron_foreign;
-        }
-        else
-            m_g = kron;
-    }
+    template< template<class> class V, class LI, class LO>
+    MPISparseBlockMat( const MPISparseBlockMat<V,LI,LO>& src)
+    : m_i(src.m_i), m_o(src.m_o), m_g(src.m_g)
+    {}
 
     /**
     * @brief Matrix Vector product
@@ -166,7 +66,8 @@ struct MPISparseBlockMat
     * @param y output
     */
     template<class ContainerType1, class ContainerType2>
-    void symv( value_type alpha, const ContainerType1& x, value_type beta, ContainerType2& y) const
+    void symv( dg::get_value_type<ContainerType1> alpha, const ContainerType1&
+        x, dg::get_value_type<ContainerType1> beta, ContainerType2& y) const
     {
         // ContainerType is MPI_Vector here...
         //the blas2 functions should make enough static assertions on tpyes
@@ -181,42 +82,138 @@ struct MPISparseBlockMat
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         using value_type = dg::get_value_type<ContainerType1>;
 
-        auto& buffer = m_buffer.typename get<value_type>( m_g.buffer_size()*m_g.chunk_size());
-        auto& buffer_ptrs = m_buffer_ptrs.typename get<const value_type*>(
-            m_self.size());
-        auto& h_buffer_ptrs = m_h_buffer_ptrs.typename get<const value_type*>(
-            m_self.size());
-        if( m_dist == row_dist)
-        {
-            // 1 initiate communication
-            m_g.global_gather_init( x.data(), buffer);
-            // 2 compute inner points
-            dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
-            // 3 wait for communication to finish
-            m_g.global_gather_wait( buffer);
-            // 4.0 construct pointers into buffer and possibly x
-            for( unsigned u=0; u<m_self.size(); u++)
-            {
-                if( m_self[u])
-                {
-                    h_buffer_ptrs[u] = 
-                }
-            }
-            // 4 compute and add outer points
-            dg::blas2::symv( alpha, m_o, buffer, 1, y.data());
-            // TODO do we need to do sth special to avoid accessing all y!? In Sparseblockmat?
-        }
-        else
-            throw Error( Message(_ping_)<<"symv(a,x,b,y) can only be used with a row distributed mpi matrix!");
+        m_buffer_ptrs.template set<const value_type*>( m_o.num_cols);
+        auto& buffer_ptrs = m_buffer_ptrs.template get<const value_type*>();
+        // 1 initiate communication
+        m_g.global_gather_init( x.data());
+        // 2 compute inner points
+        dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
+        // 3 wait for communication to finish
+        m_g.global_gather_wait( x.data(), buffer_ptrs);
+        // 4 compute and add outer points
+        const value_type** b_ptrs = thrust::raw_pointer_cast( buffer_ptrs.data());
+              value_type*  y_ptr  = thrust::raw_pointer_cast( y.data().data());
+        m_o.symv( SharedVectorTag(), dg::get_execution_policy<ContainerType1>(),
+            alpha, b_ptrs, 1., y_ptr);
+    }
+    template<class ContainerType1, class ContainerType2>
+    void symv(const ContainerType1& x, ContainerType2& y) const
+    {
+        symv( 1, x, 0, y);
     }
     private:
     LocalMatrixInner m_i;
     LocalMatrixOuter m_o;
     MPIKroneckerGather<Vector> m_g;
-    mutable detail::AnyVector<Vector>  m_buffer, m_buffer_ptrs;
-    mutable detail::AnyVector<thrust::host_vector>  m_h_buffer_ptrs;
-    std::vector<bool> m_self;
+    mutable detail::AnyVector<Vector>  m_buffer_ptrs;
 };
+
+
+//TODO should this be public? prob. not
+// grid is needed for local2globalIdx and global2localIdx
+// communicators need to be the same
+template<class real_type, class ConversionPolicyRows, class ConversionPolicyCols>
+MPISparseBlockMat<thrust::host_vector, EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>>
+    make_mpi_sparseblockmat( // not actually communicating
+    const EllSparseBlockMat<real_type>& src,
+    // src left_size and src right_size are the correct local sizes
+    // src has global rows and global cols
+    const ConversionPolicyRows& g_rows, // must be 1d
+    const ConversionPolicyCols& g_cols
+)
+{
+    // Indices in src are BLOCK INDICES!
+    // Our approach here is:
+    // 1. some preliminary MPI tests
+    // 2. grab the correct rows of src and mark rows that are communicating
+    // we need to grab the entire row to ensure reproducibility (which is guaranteed by order of computations)
+    // 3. Convert inner rows to local and move outer rows to vectors (invalidating them in inner)
+    // 4. Use global columns vector to construct MPI Kronecker Gather
+    // 5. Use buffer index to construct local CooSparseBlockMat
+    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
+    int result;
+    MPI_Comm_compare( g_rows.communicator(), g_cols.communicator(), &result);
+    assert( result == MPI_CONGRUENT or result == MPI_IDENT);
+    int rank;
+    MPI_Comm_rank( g_cols.communicator(), &rank);
+    int ndim;
+    MPI_Cartdim_get( g_cols.communicator(), &ndim);
+    assert( ndim == 1);
+    int dim, period, coord;
+    MPI_Cart_get( g_cols.communicator(), 1, &dim, &period, &coord); // coord of the calling process
+    if( dim == 1)
+    {
+        return { src, {}, {}};
+    }
+    int bpl = src.blocks_per_line;
+    EllSparseBlockMat<real_type> inner(g_rows.local().N(), g_cols.local().N(), // number of blocks
+        bpl, src.data.size()/(src.n*src.n), src.n);
+    inner.set_left_size( src.left_size);
+    inner.set_right_size( src.right_size);
+    //first copy data elements (even though not all might be needed it doesn't slow down things either)
+    inner.data = src.data;
+    std::vector<bool> local_row( inner.num_rows, true);
+    //2. now grab the right rows of the cols and data indices (and mark communicating rows)
+    for( int i=0; i<inner.num_rows; i++)
+    for( int k=0; k<bpl; k++)
+    {
+        int gIdx=0;
+        assert( g_rows.local2globalIdx( i*src.n, rank, gIdx)); // convert from idx to block idx !
+        inner.data_idx[i*bpl + k] = src.data_idx[ gIdx/src.n*bpl + k];
+        inner.cols_idx[i*bpl + k] = src.cols_idx[ gIdx/src.n*bpl + k];
+        if( inner.cols_idx[i*bpl+k] == invalid_idx)
+            continue;
+        // find out if row is communicating
+        int lIdx = 0, pid = 0;
+        gIdx = inner.cols_idx[i*bpl + k]*src.n; // convert from block idx to idx !
+        assert( g_cols.global2localIdx( gIdx, lIdx, pid));
+        if ( pid != rank)
+            local_row[i] = false;
+    }
+    thrust::host_vector<std::array<int,2>> gColIdx;
+    thrust::host_vector<int> rowIdx;
+    thrust::host_vector<int> dataIdx;
+    for( int i=0; i<inner.num_rows; i++)
+    {
+    for( int k=0; k<bpl; k++)
+    {
+        int gIdx = inner.cols_idx[i*bpl + k];
+        int lIdx = 0, pid = 0;
+        if( gIdx != invalid_idx)
+        {
+            assert( g_cols.global2localIdx( gIdx*src.n, lIdx, pid));
+            lIdx = lIdx/src.n; // convert from idx to block idx !
+        }
+        else
+            lIdx = invalid_idx;
+        if ( !local_row[i] )
+        {
+            assert( lIdx != invalid_idx);
+            rowIdx.push_back( i);
+            dataIdx.push_back( inner.data_idx[i*bpl+k]);
+            gColIdx.push_back( {pid, lIdx});
+            inner.cols_idx[i*bpl + k] = invalid_idx;
+        }
+        else
+        {
+            inner.cols_idx[i*bpl + k] = lIdx;
+        }
+    }
+    }
+    // Now make MPI Gather object
+    thrust::host_vector<int> lColIdx;
+    auto gather_map = dg::gIdx2unique_idx( gColIdx, lColIdx);
+
+    MPIKroneckerGather<thrust::host_vector> mpi_gather( inner.left_size, gather_map, inner.n,
+        inner.num_cols, inner.right_size, g_cols.communicator());
+    CooSparseBlockMat<real_type> outer(inner.num_rows, mpi_gather.buffer_size(),
+        src.n, src.left_size, src.right_size);
+    outer.data     = src.data; outer.cols_idx = lColIdx;
+    outer.rows_idx = rowIdx;   outer.data_idx = dataIdx;
+    outer.num_entries = rowIdx.size();
+
+    return {inner, outer, mpi_gather};
+}
 
 
 /**
@@ -261,7 +258,7 @@ struct MPIDistMat
      * No communications, only the given local inner matrix will be applied
      */
     MPIDistMat( const LocalMatrixInner& m)
-    : m_i(m), m_dist(row_dist), m_comm(MPI_COMM_NULL){}
+    : m_i(m), m_dist(row_dist){}
 
     /**
     * @brief Constructor
@@ -278,10 +275,11 @@ struct MPIDistMat
     MPIDistMat( const LocalMatrixInner& inside,
                 const LocalMatrixOuter& outside,
                 const MPIGather<Vector>& mpi_gather,
+                Vector<int>& scatter, // TODO scatter comp -> y from symv(outside, recv, comp);
                 enum dist_type dist = row_dist
                 )
     : m_i(inside), m_o(outside), m_g(mpi_gather),
-      m_dist( dist), m_comm(mpi_gather.communicator()) { }
+      m_dist( dist), m_reduce(mpi_gather.communicator()) { }
 
     /**
      * @brief Allreduce dist type
@@ -291,7 +289,7 @@ struct MPIDistMat
      * (outer matrix remains empty)
      */
     MPIDistMat( const LocalMatrixInner& m, MPI_Comm comm)
-    : m_i(m), m_dist(allreduce), m_comm(comm){}
+    : m_i(m), m_dist(allreduce), m_reduce(comm){}
 
     /**
     * @brief Copy constructor
@@ -306,23 +304,19 @@ struct MPIDistMat
     * @param src another Matrix
     */
     template<template<class> class OtherVector, class OtherMatrixInner, class OtherMatrixOuter>
-    MPIDistMat( const MPIDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src)
-    : m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_g(src.collective())
-    m_dist( src.dist()), m_comm(src.communicator())
+    MPIDistMat( const MPIDistMat<OtherVector, OtherMatrixInner, OtherMatrixOuter>& src)
+    : m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_g(src.mpi_gather()),
+    m_dist( src.dist()), m_reduce(src.communicator())
     { }
     ///@brief Read access to the inner matrix
     const LocalMatrixInner& inner_matrix() const{return m_i;}
-    ///@brief Write access to the inner matrix
-    LocalMatrixInner& inner_matrix(){return m_i;}
     ///@brief Read access to the outer matrix
     const LocalMatrixOuter& outer_matrix() const{return m_o;}
-    ///@brief Write access to the outer matrix
-    LocalMatrixOuter& outer_matrix(){return m_o;}
     ///@brief Read access to the communication object
     const MPIGather<Vector>& mpi_gather() const{return m_g;}
 
     ///@brief Read access to the MPI Communicator
-    MPI_Comm communicator() const{ return m_comm;}
+    MPI_Comm communicator() const{ return m_reduce.communicator();}
 
     ///@brief Read access to distribution
     enum dist_type dist() const {return m_dist;}
@@ -348,53 +342,39 @@ struct MPIDistMat
             dg::blas2::symv( m_i, x.data(), y.data());
             if( m_dist == allreduce)
             {
-                if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType1>,
-                    dg::CudaTag> and !dg::cuda_aware_mpi)
-                {
-                    using value_type = dg::get_value_type<ContainerType1>;
-                    m_h_buffer.template set<value_type>( y.size());
-                    m_h_buffer.template get<value_type>() = y.data();
-                    MPI_Allreduce(
-                        MPI_IN_PLACE,
-                        thrust::raw_pointer_cast( m_h_buffer.template get<value_type>().data()),
-                        y.data().size(),
-                        getMPIDataType<dg::get_value_type<ContainerType2>>(),
-                        MPI_SUM,
-                        m_comm);
-                    y.data() = m_h_buffer.template get<value_type>();
-                }
-                else
-                {
-                    MPI_Allreduce(
-                        MPI_IN_PLACE,
-                        thrust::raw_pointer_cast( y.data().data()),
-                        y.data().size(),
-                        getMPIDataType<dg::get_value_type<ContainerType2>>(),
-                        MPI_SUM,
-                        m_comm);
-                }
+                m_reduce.reduce( y.data());
             }
             return;
 
         }
+        assert( m_dist != row_dist);
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 
-        auto& buffer = m_buffer.typename get<dg::get_value_type<ContainerType1>>( m_g.buffer_size());
+        using value_type = dg::get_value_type<ContainerType1>;
+        m_recv_buffer.template set<value_type>( m_g.buffer_size());
+        m_comp_buffer.template set<value_type>( m_o.num_rows);
+        auto& recv_buffer = m_recv_buffer.template get<value_type>();
+        auto& comp_buffer = m_comp_buffer.template get<value_type>();
 
-        if( m_dist == row_dist)
-        {
-            // 1 initiate communication
-            m_g.global_gather_init( x.data(), buffer);
-            // 2 compute inner points
-            dg::blas2::symv( m_i, x.data(), y.data());
-            // 3 wait for communication to finish
-            m_g.global_gather_wait( buffer);
-            // 4 compute and add outer points
-            dg::blas2::symv( m_o, buffer, y.data());
-            // TODO do we need to do sth special to avoid accessing all y!? In Sparseblockmat?
-        }
+        // 1 initiate communication
+        m_g.global_gather_init( x.data(), recv_buffer);
+        // 2 compute inner points
+        dg::blas2::symv( m_i, x.data(), y.data());
+        // 3 wait for communication to finish
+        m_g.global_gather_wait( recv_buffer);
+        // 4 compute and add outer points
+        dg::blas2::stencil( m_o, recv_buffer, comp_buffer);
+        unsigned size = comp_buffer.size();
+        dg::blas2::detail::doParallelFor( SharedVectorTag(),
+            [size]DG_DEVICE( unsigned i, const value_type* x,
+                const int* idx, value_type* y) {
+                y[idx[i]] += x[i];
+            }, size, y.data(), m_scatter, comp_buffer);
+        // What we really need here is a sparse vector format
+        // so we can fuse the symv with the scatter
+        // OR y += Ax
     }
 
     /// Stencil computations
@@ -405,36 +385,49 @@ struct MPIDistMat
         if( !m_g->isCommunicating()) //no communication needed
         {
             dg::blas2::stencil( f, m_i, x.data(), y.data());
+            if( m_dist == allreduce)
+            {
+                m_reduce.reduce( y.data());
+            }
             return;
-
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        auto& buffer = m_buffer.typename get<dg::get_value_type<ContainerType1>>( m_g.buffer_size());
-        if( m_dist == row_dist)
-        {
-            const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
-            m_g->global_gather( x_ptr, m_buffer.data());
-            dg::blas2::stencil( f, m_m, m_buffer.data(), y.data());
 
-            // 1 initiate communication
-            m_g.global_gather_init( x, buffer);
-            // 2 compute inner points
-            dg::blas2::stencil( f, m_i, x.data(), y.data());
-            // 3 wait for communication to finish
-            m_g.global_gather_wait( buffer);
-            // 4 compute and add outer points
-            dg::blas2::stencil( f, m_o, buffer, y.data());
-        }
+        using value_type = dg::get_value_type<ContainerType1>;
+        m_recv_buffer.template set<value_type>( m_g.buffer_size());
+        m_comp_buffer.template set<value_type>( m_o.num_rows);
+        auto& recv_buffer = m_recv_buffer.template get<value_type>();
+        auto& comp_buffer = m_comp_buffer.template get<value_type>();
+
+        // 1 initiate communication
+        m_g.global_gather_init( x.data(), recv_buffer);
+        // 2 compute inner points
+        dg::blas2::stencil( f, m_i, x.data(), y.data());
+        // 3 wait for communication to finish
+        m_g.global_gather_wait( recv_buffer);
+        // 4 compute and add outer points
+        dg::blas2::stencil( f, m_o, recv_buffer, comp_buffer);
+        unsigned size = comp_buffer.size();
+        dg::blas2::detail::doParallelFor( SharedVectorTag(),
+            [size]DG_DEVICE( unsigned i, const value_type* x,
+                const int* idx, value_type* y) {
+                y[idx[i]] += x[i];
+            }, size, y.data(), m_scatter, comp_buffer);
+        // What we really need here is a sparse vector format
+        // so we can fuse the symv with the scatter
+        // OR y += Ax
     }
 
     private:
     LocalMatrixInner m_i;
     LocalMatrixOuter m_o;
     MPIGather<Vector> m_g;
-    mutable detail::AnyVector<Vector>  m_buffer;
-    mutable detail::AnyVector<thrust::host_vector>  m_h_buffer;
+    detail::MPIAllreduce m_reduce;
+    enum dist_type m_dist;
+    mutable detail::AnyVector<Vector>  m_recv_buffer, m_comp_buffer ;
+    Vector<int> m_scatter;
 };
 
 ///@}
