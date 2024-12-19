@@ -248,12 +248,12 @@ auto flatten_values( const std::map<int,Message>& idx_map // map is sorted autom
 }
 
 // 2. flatten the map (keys get lost)
-template<class T>
-thrust::host_vector<T> flatten_map(
-    const std::map<int,thrust::host_vector<T>>& idx_map // map is sorted automatically
+template<class vector>
+vector flatten_map(
+    const std::map<int,vector>& idx_map // map is sorted automatically
     )
 {
-    thrust::host_vector<T> flat;
+    vector flat;
     for( auto& idx : idx_map)
         flat.insert(flat.end(), idx.second.begin(), idx.second.end());
     return flat;
@@ -390,7 +390,7 @@ std::map<int, IntVec> gIdx2unique_idx(
 }
 
 template<class ConversionPolicy, class IntVec = thrust::host_vector<int>>
-thrust::host_vector<std::array<int,2>> gIdx2array( const IntVec& gIdx, const ConversionPolicy& p)
+thrust::host_vector<std::array<int,2>> gIdx2gIdx( const IntVec& gIdx, const ConversionPolicy& p)
 {
     thrust::host_vector<std::array<int,2>> arrayIdx( gIdx.size());
     for(unsigned i=0; i<gIdx.size(); i++)
@@ -427,6 +427,6 @@ std::map<int, IntVec> gIdx2unique_idx(
     const ConversionPolicy& p)
 {
     // TODO update docu on local_size() ( if we don't scatter we don't need it)
-    return gIdx2unique_idx( gIdx2array(globalIndexMap), bufferIdx);
+    return gIdx2unique_idx( gIdx2gIdx(globalIndexMap), bufferIdx);
 }
 } // namespace dg

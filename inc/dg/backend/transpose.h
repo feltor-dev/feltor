@@ -19,17 +19,6 @@ Matrix doTranspose( const Matrix& src, CuspMatrixTag)
     cusp::transpose( src, out);
     return out;
 }
-#ifdef MPI_VERSION
-template <class LocalMatrix, class Collective>
-MPIDistMat<LocalMatrix, Collective> doTranspose( const MPIDistMat<LocalMatrix, Collective>& src, MPIMatrixTag)
-{
-    LocalMatrix tr = doTranspose( src.matrix(), get_tensor_category<LocalMatrix>());
-    MPIDistMat<LocalMatrix, Collective> out( tr, src.collective());
-    if( src.get_dist() == dg::row_dist) out.set_dist( dg::col_dist);
-    if( src.get_dist() == dg::col_dist) out.set_dist( dg::row_dist);
-    return out;
-}
-#endif// MPI_VERSION
 }//namespace detail
 ///@endcond
 
@@ -38,7 +27,6 @@ MPIDistMat<LocalMatrix, Collective> doTranspose( const MPIDistMat<LocalMatrix, C
  *
  * @tparam Matrix one of
  *  - any cusp matrix
- *  - any MPIDistMatrix with a cusp matrix as template parameter
  * @param src the marix to transpose
  *
  * @return the matrix that acts as the transpose of src

@@ -80,8 +80,6 @@ using fMHMatrix   = dg::MPISparseBlockMat<thrust::host_vector, dg::fHMatrix, dg:
 using MDMatrix    = dg::MPISparseBlockMat<thrust::device_vector, dg::DMatrix, dg::DCooMat>; //!< MPI Device Matrix for derivatives
 using fMDMatrix   = dg::MPISparseBlockMat<thrust::device_vector, dg::fDMatrix, dg::fDCooMat>; //!< MPI Device Matrix for derivatives
 
-// Can't GeneralComm be replaced by aCommunicator<LocalContainer>? No, because conversion to DVec won't work any more
-// Of course this somewhat defeats the whole purpose of having a virtual base class
 template<class real_type>
 using MIHMatrix_t = MPIDistMat< thrust::host_vector, IHMatrix_t<real_type> >;
 template<class real_type>

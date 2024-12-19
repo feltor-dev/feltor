@@ -167,6 +167,7 @@ void mpi_scatter( const thrust::host_vector<std::array<int,2>>& scatter_map,
     )
 {
     thrust::host_vector<int> bufferIdx;
+    // must be injective
     auto scatter_m = gIdx2unique_idx( scatter_map, bufferIdx);
     auto recv_map = mpi_permute(scatter_m, comm);
     auto scatter = detail::flatten_map( recv_map);
