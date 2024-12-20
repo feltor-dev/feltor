@@ -91,10 +91,11 @@ struct Unique
     thrust::host_vector<int> howmany;  // howmany of each unique element is there?
 };
 
-template<class T>
-Unique<T> find_unique_stable_sort(
-    const thrust::host_vector<T>& unsorted_elements)
+template<class host_vector >
+Unique<typename host_vector::value_type> find_unique_stable_sort(
+    const host_vector& unsorted_elements)
 {
+    using T = typename host_vector::value_type;
     Unique<T> uni;
     // 1. Sort pids with elements so we get associated gather map
     auto ids = unsorted_elements;
@@ -118,10 +119,11 @@ Unique<T> find_unique_stable_sort(
     return uni;
 }
 
-template<class T>
-Unique<T> find_unique_order_preserving(
-    const thrust::host_vector<T>& unsorted_elements)
+template<class host_vector >
+Unique<typename host_vector::value_type> find_unique_order_preserving(
+    const host_vector& unsorted_elements)
 {
+    using T = typename host_vector::value_type;
     Unique<T> uni;
     // find unique elements and how many there are preserving order
     std::vector<std::vector<int>> sort; // gather sorted from unsorted elements
