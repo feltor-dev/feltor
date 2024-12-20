@@ -11,7 +11,7 @@
 #include "projection.h"
 #ifdef MPI_VERSION
 #include "mpi_grid.h"
-#include "mpi_derivatives.h" // for elevate
+#include "mpi_derivatives.h" // for make_mpi_sparseblockmat
 #endif //MPI_VERSION
 
 
@@ -43,6 +43,12 @@ struct MultiMatrix
     * @attention it is the user's reponsibility to allocate memory for the intermediate "temp" vectors
     */
     MultiMatrix( int dimension): m_inter(dimension), m_temp(dimension-1 > 0 ? dimension-1 : 0 ){}
+    template<class ...Params>
+    void construct( Params&& ...ps)
+    {
+        //construct and swap
+        *this = MultiMatrix( std::forward<Params>( ps)...);
+    }
 
     //https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
     template< class OtherMatrix, class OtherContainer>
@@ -95,8 +101,8 @@ struct TensorTraits<MultiMatrix<M, V> >
 namespace detail
 {
 //pay attention that left and right must have correct sizes
-template<class real_type>
-MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const dg::HMatrix_t<real_type>& left, const dg::HMatrix_t<real_type>& right)
+template<class real_type, class Topology>
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const dg::HMatrix_t<real_type>& left, const dg::HMatrix_t<real_type>& right, const Topology& t)
 {
     MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > matrix(2);
     if( right.total_num_rows() != left.total_num_cols())
@@ -107,33 +113,35 @@ MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const d
     matrix.get_temp()[0] = vec;
     return matrix;
 }
-template<class real_type>
-void set_right_size( dg::HMatrix_t<real_type>& left, const dg::HMatrix_t<real_type>& right)
+template<class real_type, size_t Nd>
+RealGrid<real_type, Nd> set_right_grid( const aRealTopology<real_type, Nd>& t, unsigned new_n , unsigned new_N)
 {
-    left.set_right_size(right.num_rows*right.n*right.right_size);
+    // We need to explicitly convert to grid
+    RealGrid<real_type,Nd> tnew (t);
+    tnew.set_axis( 0, new_n, new_N);
+    return tnew;
 }
 #ifdef MPI_VERSION
-// MHMatrix must have non-null communicator
-template<class real_type>
-MultiMatrix< dg::MHMatrix_t<real_type>, dg::MHVec_t<real_type> > multiply( const dg::MHMatrix_t<real_type>& left, const dg::MHMatrix_t<real_type>& right)
+template<class real_type, class MPITopology>
+MultiMatrix< dg::MHMatrix_t<real_type>, dg::MHVec_t<real_type> > multiply( const dg::MHMatrix_t<real_type>& left, const dg::MHMatrix_t<real_type>& right, const MPITopology& t)
 {
     MultiMatrix< dg::MHMatrix_t<real_type>, dg::MHVec_t<real_type> > matrix(2);
+    if( right.inner_matrix().total_num_rows() != left.inner_matrix().total_num_cols())
+        throw Error( Message(_ping_)<< "left and right cannot be multiplied due to wrong sizes" << left.inner_matrix().total_num_cols() << " vs "<<right.inner_matrix().total_num_rows());
     matrix.get_matrices()[0] = right;
     matrix.get_matrices()[1] = left;
     thrust::host_vector<real_type> vec( right.inner_matrix().total_num_rows());
-    matrix.get_temp()[0] = dg::MHVec_t<real_type>({vec, left.collective().communicator()});
+    matrix.get_temp()[0] = dg::MHVec_t<real_type>({vec, t.communicator()});
 
-    //std::cout << "MATRIX "<< matrix.get_matrices()[0].inner_matrix().total_num_rows()<<" "<<matrix.get_matrices()[0].inner_matrix().total_num_cols()<<"\t"
-    //           << matrix.get_matrices()[1].inner_matrix().total_num_rows()<<" "<<matrix.get_matrices()[1].inner_matrix().total_num_cols()<<"\n";
     return matrix;
 }
-template<class real_type>
-void set_right_size( dg::MHMatrix_t<real_type>& left, const dg::MHMatrix_t<real_type>& right)
+template<class real_type, size_t Nd>
+RealMPIGrid<real_type, Nd> set_right_grid( const aRealMPITopology<real_type, Nd>& t, unsigned new_n , unsigned new_N)
 {
-    const HMatrix_t<real_type>& in = right.inner_matrix();
-    unsigned right_size = in.num_rows*in.n*in.right_size;
-    left.inner_matrix().set_right_size(right_size);
-    left.outer_matrix().right_size = right_size;
+    // We need to explicitly convert to grid
+    RealMPIGrid<real_type,Nd> tnew (t);
+    tnew.set_axis( 0, new_n, new_N);
+    return tnew;
 }
 #endif
 } //namespace detail
@@ -327,15 +335,11 @@ template<class real_type, size_t Nd>
 dg::MHMatrix_t<real_type> fast_interpolation( unsigned coord,
     const aRealMPITopology<real_type, Nd>& t, unsigned multiplyn, unsigned multiplyNx)
 {
-    std::array<unsigned, Nd> n = t.get_n();
-    std::array<unsigned, Nd> N = t.get_N();
-    n[coord] *= multiplyn;
-    N[coord] *= multiplyNx;
-    RealMPIGrid<real_type, Nd>  t_cols( t);
-    t_cols.set( n, N);
-    // elevate is defined in mpi_derivatives.h
-    return detail::elevate( coord, dg::create::fast_interpolation( coord,
-        detail::local_global_grid(coord, t), multiplyn, multiplyNx), t, t_cols );
+    RealMPIGrid<real_type,1> t_rows = t.axis(coord);
+    t_rows.set( t.n(coord)*multiplyn, t.N(coord)*multiplyNx);
+    return make_mpi_sparseblockmat( dg::create::fast_interpolation( coord,
+        detail::local_global_grid(coord, t), multiplyn, multiplyNx),
+            t_rows, t.axis(coord));
 }
 ///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned)
 ///@copydoc hide_coo3d_param
@@ -343,14 +347,11 @@ template<class real_type, size_t Nd>
 dg::MHMatrix_t<real_type> fast_projection( unsigned coord,
     const aRealMPITopology<real_type, Nd>& t, unsigned dividen, unsigned divideNx)
 {
-    std::array<unsigned, Nd> n = t.get_n();
-    std::array<unsigned, Nd> N = t.get_N();
-    n[coord] /= dividen;
-    N[coord] /= divideNx;
-    RealMPIGrid<real_type, Nd>  t_rows( t);
-    t_rows.set( n, N);
-    return detail::elevate( coord, dg::create::fast_projection( coord,
-        detail::local_global_grid(coord, t), dividen, divideNx), t_rows, t);
+    RealMPIGrid<real_type,1> t_rows = t.axis(coord);
+    t_rows.set( t.n(coord)/dividen, t.N(coord)/divideNx);
+    return make_mpi_sparseblockmat( dg::create::fast_projection( coord,
+        detail::local_global_grid(coord, t), dividen, divideNx),
+            t_rows, t.axis(coord));
 }
 ///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
 ///@copydoc hide_coo3d_param
@@ -358,8 +359,8 @@ template<class real_type, size_t Nd>
 MHMatrix_t<real_type> fast_transform( unsigned coord, dg::Operator<real_type> opx,
     const aRealMPITopology<real_type, Nd>& t)
 {
-    return detail::elevate( coord, dg::create::fast_transform( coord, opx,
-        detail::local_global_grid(coord, t)), t, t);
+    return make_mpi_sparseblockmat( dg::create::fast_transform( coord, opx,
+        detail::local_global_grid(coord, t)), t.axis(coord), t.axis(coord));
 }
 
 #endif //MPI_VERSION
@@ -373,9 +374,9 @@ template<class Topology>
 auto fast_interpolation( const Topology& t, unsigned multiplyn, unsigned multiplyNx, unsigned multiplyNy)
 {
     auto interX = dg::create::fast_interpolation( 0, t, multiplyn,multiplyNx);
-    auto interY = dg::create::fast_interpolation( 1, t, multiplyn,multiplyNy);
-    dg::detail::set_right_size( interY, interX);
-    return dg::detail::multiply( interY, interX);
+    auto tX = dg::detail::set_right_grid( t, t.n()*multiplyn, t.Nx()*multiplyNx);
+    auto interY = dg::create::fast_interpolation( 1, tX, multiplyn,multiplyNy);
+    return dg::detail::multiply( interY, interX, t);
 }
 
 ///@copydoc fast_projection(const RealGrid1d<real_type>&,unsigned,unsigned)
@@ -384,9 +385,9 @@ template<class Topology>
 auto fast_projection( const Topology& t, unsigned dividen, unsigned divideNx, unsigned divideNy)
 {
     auto interX = dg::create::fast_projection( 0, t, dividen, divideNx);
-    auto interY = dg::create::fast_projection( 1, t, dividen, divideNy);
-    dg::detail::set_right_size( interY, interX);
-    return dg::detail::multiply( interY, interX);
+    auto tX = dg::detail::set_right_grid( t, t.n()/dividen, t.Nx()/divideNx);
+    auto interY = dg::create::fast_projection( 1, tX, dividen, divideNy);
+    return dg::detail::multiply( interY, interX, t);
 }
 ///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
 ///@param opy the block B for the y transform
@@ -395,7 +396,7 @@ auto fast_transform( dg::Operator<typename Topology::value_type> opx, dg::Operat
 {
     auto interX = dg::create::fast_transform( 0, opx, t);
     auto interY = dg::create::fast_transform( 1, opy, t);
-    return dg::detail::multiply( interY, interX);
+    return dg::detail::multiply( interY, interX, t);
 }
 ///@}
 
