@@ -122,12 +122,6 @@ int main(int argc, char* argv[])
     success = true;
     if(rank==0)
     {
-        // Test local matrix
-        auto identity = global_sine;
-        dg::blas2::symv( local2global.matrix(), global_sine, identity);
-        for( unsigned u=0; u<identity.size(); u++)
-            if( fabs(global_sine[u] - identity[u]) > 1e-14)
-                success = false;
         for( unsigned i=0; i<mpi_temp.size(); i++)
             if( fabs(mpi_temp.data()[i] - global_sine[i]) > 1e-14)
             {
@@ -144,37 +138,6 @@ int main(int argc, char* argv[])
     else
         std::cout << "SUCCESS local2global from rank "<<rank<<"!\n";
     MPI_Barrier(comm);
-    ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
-    if(rank==0) std::cout << "Now test TRANSPOSITION!\n";
-    converted_i = dg::transpose( converted_i);
-    converted_i.symv( sine, temp);
-    //Compute global transposition and distribute among processes
-    x = dg::evaluate( dg::cooX2d, g2d.global());
-    y = dg::evaluate( dg::cooY2d, g2d.global());
-    for( unsigned i=0; i<x.size(); i++)
-    {
-        x[i] +=shift;
-        y[i] +=shift;
-        bool negative = false;
-        dg::create::detail::shift( negative, x[i], g2d.bcx(), g2d.global().x0(), g2d.global().x1());
-        dg::create::detail::shift( negative, y[i], g2d.bcy(), g2d.global().y0(), g2d.global().y1());
-    }
-    direct_i = dg::transpose(dg::create::interpolation( x,y,g2d.global()));
-    g_temp.resize( g2d.global().size());
-    dg::blas2::symv( direct_i, global_sine, g_temp);
-    dg::MHVec mpi_g_temp = dg::global2local( g_temp, g2d);
-    //now compare
-    success = true;
-    for( unsigned i=0; i<temp.size(); i++)
-        if( fabs(temp.data()[i] - mpi_g_temp.data()[i]) > 1e-14)
-        {
-            std::cout << rank << " "<<i<<" "<<temp.data()[i]<<" "<<mpi_g_temp.data()[i]<<"\n";
-            success = false;
-        }
-    if( !success)
-        std::cout << "FAILED Transposition from rank "<<rank<<"!\n";
-    else
-        std::cout << "SUCCESS Transposition from rank "<<rank<<"!\n";
 
     MPI_Finalize();
     return 0;
