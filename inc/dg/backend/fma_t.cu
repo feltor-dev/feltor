@@ -1,6 +1,6 @@
 #include <iostream>
 #include <complex>
-#include "fma.h"
+#include "config.h"
 
 int main()
 {
