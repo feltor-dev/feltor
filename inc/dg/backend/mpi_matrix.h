@@ -1,8 +1,11 @@
 #pragma once
 
 #include "mpi_gather_kron.h"
+#include "sparseblockmat.h"
 #include "memory.h"
 #include "timer.h"
+
+
 
 /*!@file
 
@@ -50,6 +53,17 @@ struct MPISparseBlockMat
     MPISparseBlockMat( const MPISparseBlockMat<V,LI,LO>& src)
     : m_i(src.m_i), m_o(src.m_o), m_g(src.m_g)
     {}
+
+    ///@brief Read access to the inner matrix
+    const LocalMatrixInner& inner_matrix() const{return m_i;}
+    ///@brief Read access to the outer matrix
+    const LocalMatrixOuter& outer_matrix() const{return m_o;}
+    ///@brief Write access to the inner matrix
+    LocalMatrixInner& inner_matrix() {return m_i;}
+    ///@brief Write access to the outer matrix
+    LocalMatrixOuter& outer_matrix() {return m_o;}
+
+    MPI_Comm communicator() const { return m_g.communicator();}
 
     /**
     * @brief Matrix Vector product
@@ -123,6 +137,7 @@ MPISparseBlockMat<thrust::host_vector, EllSparseBlockMat<real_type>, CooSparseBl
 )
 {
     // Indices in src are BLOCK INDICES!
+    // g_rows and g_cols can have different n!!
     // Our approach here is:
     // 1. some preliminary MPI tests
     // 2. grab the correct rows of src and mark rows that are communicating
@@ -145,8 +160,9 @@ MPISparseBlockMat<thrust::host_vector, EllSparseBlockMat<real_type>, CooSparseBl
     {
         return { src, {}, {}};
     }
+    unsigned n = src.n, rn = g_rows.n()/n, cn = g_cols.n()/n;
     int bpl = src.blocks_per_line;
-    EllSparseBlockMat<real_type> inner(g_rows.local().N(), g_cols.local().N(), // number of blocks
+    EllSparseBlockMat<real_type> inner(g_rows.local().N()*rn, g_cols.local().N()*cn, // number of blocks
         bpl, src.data.size()/(src.n*src.n), src.n);
     inner.set_left_size( src.left_size);
     inner.set_right_size( src.right_size);
@@ -158,7 +174,7 @@ MPISparseBlockMat<thrust::host_vector, EllSparseBlockMat<real_type>, CooSparseBl
     for( int k=0; k<bpl; k++)
     {
         int gIdx=0;
-        assert( g_rows.local2globalIdx( i*src.n, rank, gIdx)); // convert from idx to block idx !
+        assert( g_rows.local2globalIdx( i*src.n, rank, gIdx)); // convert from block idx to idx !
         inner.data_idx[i*bpl + k] = src.data_idx[ gIdx/src.n*bpl + k];
         inner.cols_idx[i*bpl + k] = src.cols_idx[ gIdx/src.n*bpl + k];
         if( inner.cols_idx[i*bpl+k] == invalid_idx)
@@ -215,6 +231,32 @@ MPISparseBlockMat<thrust::host_vector, EllSparseBlockMat<real_type>, CooSparseBl
     return {inner, outer, mpi_gather};
 }
 
+///Type of distribution of MPI distributed matrices
+enum dist_type
+{
+    row_dist=0, //!< Row distributed
+    allreduce=2 //!< special distribution for partial reduction (Average)
+};
+// ///@cond
+// namespace detail
+// {
+// // A combined Symv with a scatter of rows
+// // Not good for cuda if number of columns is high so can be removed
+// struct CSRSymvScatterFilter
+// {
+//     template<class real_type>
+//     DG_DEVICE
+//     void operator()( unsigned i, const int* scatter, const int* row_offsets,
+//             const int* column_indices, const real_type* values,
+//             const real_type* x, real_type* y)
+//     {
+//         for( int k=row_offsets[i]; k<row_offsets[i+1]; k++)
+//             y[scatter[i]] += x[column_indices[k]]*values[k];
+//     }
+// };
+// }// namespace detail
+// /// @endcond
+
 
 /**
 * @brief Distributed memory matrix class, asynchronous communication
@@ -243,12 +285,6 @@ MPISparseBlockMat<thrust::host_vector, EllSparseBlockMat<real_type>, CooSparseBl
 template<template<class > class Vector, class LocalMatrixInner, class LocalMatrixOuter = LocalMatrixInner>
 struct MPIDistMat
 {
-    ///Type of distribution of MPI distributed matrices
-    enum dist_type
-    {
-        row_dist=0, //!< Row distributed
-        allreduce=2 //!< special distribution for partial reduction (Average)
-    };
     ///@brief no memory allocation
     MPIDistMat() = default;
 
@@ -278,7 +314,7 @@ struct MPIDistMat
                 Vector<int>& scatter, // TODO scatter comp -> y from symv(outside, recv, comp);
                 enum dist_type dist = row_dist
                 )
-    : m_i(inside), m_o(outside), m_g(mpi_gather),
+    : m_i(inside), m_o(outside), m_g(mpi_gather), m_scatter(scatter),
       m_dist( dist), m_reduce(mpi_gather.communicator()) { }
 
     /**
@@ -306,7 +342,7 @@ struct MPIDistMat
     template<template<class> class OtherVector, class OtherMatrixInner, class OtherMatrixOuter>
     MPIDistMat( const MPIDistMat<OtherVector, OtherMatrixInner, OtherMatrixOuter>& src)
     : m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_g(src.mpi_gather()),
-    m_dist( src.dist()), m_reduce(src.communicator())
+    m_scatter( src.scatter()), m_dist( src.dist()), m_reduce(src.communicator())
     { }
     ///@brief Read access to the inner matrix
     const LocalMatrixInner& inner_matrix() const{return m_i;}
@@ -320,8 +356,7 @@ struct MPIDistMat
 
     ///@brief Read access to distribution
     enum dist_type dist() const {return m_dist;}
-    ///@brief Write access to distribution
-    enum dist_type& dist() {return m_dist;}
+    const Vector<int>& scatter() const {return m_scatter;}
 
     /**
     * @brief Matrix Vector product
@@ -347,7 +382,7 @@ struct MPIDistMat
             return;
 
         }
-        assert( m_dist != row_dist);
+        assert( m_dist == row_dist);
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
@@ -365,16 +400,21 @@ struct MPIDistMat
         // 3 wait for communication to finish
         m_g.global_gather_wait( recv_buffer);
         // 4 compute and add outer points
-        dg::blas2::stencil( m_o, recv_buffer, comp_buffer);
+        dg::blas2::symv( m_o, recv_buffer, comp_buffer);
         unsigned size = comp_buffer.size();
         dg::blas2::detail::doParallelFor( SharedVectorTag(),
             [size]DG_DEVICE( unsigned i, const value_type* x,
                 const int* idx, value_type* y) {
                 y[idx[i]] += x[i];
-            }, size, y.data(), m_scatter, comp_buffer);
-        // What we really need here is a sparse vector format
-        // so we can fuse the symv with the scatter
-        // OR y += Ax
+            }, size, comp_buffer, m_scatter, y.data());
+        // What we need is a fused symv + scatter:
+        //dg::blas2::parallel_for( detail::CSRSymvScatterFilter(),
+        //        m_o.num_rows, m_scatter, m_o.row_offsets,
+        //        m_o.column_indices, m_o.values, recv_buffer, y.data());
+        // // TODO Benchmark GPU speed for this CSR implementation
+        // // it is very likely quite bad for ds_mpit because 50 entries per row
+        //static_assert( std::is_same_v<typename std::decay_t<LocalMatrixOuter>::format
+        //        , cusp::csr_format>);
     }
 
     /// Stencil computations
@@ -382,7 +422,7 @@ struct MPIDistMat
     void stencil( const Functor f, const ContainerType1& x, ContainerType2& y) const
     {
         //the blas2 functions should make enough static assertions on tpyes
-        if( !m_g->isCommunicating()) //no communication needed
+        if( !m_g.isCommunicating()) //no communication needed
         {
             dg::blas2::stencil( f, m_i, x.data(), y.data());
             if( m_dist == allreduce)
@@ -391,6 +431,7 @@ struct MPIDistMat
             }
             return;
         }
+        assert( m_dist == row_dist);
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
@@ -414,7 +455,7 @@ struct MPIDistMat
             [size]DG_DEVICE( unsigned i, const value_type* x,
                 const int* idx, value_type* y) {
                 y[idx[i]] += x[i];
-            }, size, y.data(), m_scatter, comp_buffer);
+            }, size, comp_buffer, m_scatter, y.data());
         // What we really need here is a sparse vector format
         // so we can fuse the symv with the scatter
         // OR y += Ax
@@ -424,10 +465,10 @@ struct MPIDistMat
     LocalMatrixInner m_i;
     LocalMatrixOuter m_o;
     MPIGather<Vector> m_g;
-    detail::MPIAllreduce m_reduce;
-    enum dist_type m_dist;
-    mutable detail::AnyVector<Vector>  m_recv_buffer, m_comp_buffer ;
     Vector<int> m_scatter;
+    enum dist_type m_dist;
+    detail::MPIAllreduce m_reduce;
+    mutable detail::AnyVector<Vector>  m_recv_buffer, m_comp_buffer ;
 };
 
 ///@}
