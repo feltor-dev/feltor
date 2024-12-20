@@ -27,8 +27,9 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
-typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice<double>, dg::CooSparseBlockMatDevice<double>, dg::NNCD<double>> Matrix;
-typedef dg::MPI_Vector<dg::DVec > Vector;
+using Matrix = dg::MDMatrix;
+using Vector = dg::MDVec;
+using value_t = double;
 
 int main(int argc, char* argv[])
 {
