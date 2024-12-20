@@ -174,6 +174,7 @@ struct MPIContiguousGather
                 continue;
             auto chunk = msg.second[u];
             void * recv_ptr;
+            assert( buffer.size() >= unsigned(start + chunk.size - 1));
             if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType1>,
                 dg::CudaTag> and not dg::cuda_aware_mpi)
             {
@@ -200,6 +201,7 @@ struct MPIContiguousGather
                 continue;
             auto chunk = msg.second[u];
             const void * send_ptr = thrust::raw_pointer_cast(gatherFrom.data()) + chunk.idx;
+            assert( gatherFrom.size() >= unsigned(chunk.idx + chunk.size - 1));
             if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
                 dg::CudaTag>)
             {
