@@ -18,8 +18,7 @@ dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
     using real_type = typename MPITopology::value_type;
     dg::IHMatrix_t<real_type> mat = dg::create::prolongation(
         g_new.local(), axes); // local rows, local cols
-    dg::GeneralComm< dg::iHVec, thrust::host_vector<real_type>> comm; // no communication
-    return dg::MIHMatrix_t<real_type>( mat, comm, dg::row_dist);
+    return dg::MIHMatrix_t<real_type>( mat);
 }
 
 template<class MPITopology, size_t Md, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>

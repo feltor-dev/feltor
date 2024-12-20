@@ -44,6 +44,7 @@ int main(int argc, char* argv[])
     const dg::MDVec w2d = dg::create::weights( gxy);
     dg::MDVec solution = dg::evaluate( z_average, gxy);
     dg::blas1::axpby( 1., solution, -1., average_z);
+    // TODO update those values
     int64_t binary[] = {4406193765905047925,4395311848786989976};
     dg::exblas::udouble res;
     res.d = sqrt( dg::blas2::dot( average_z, w2d, average_z));

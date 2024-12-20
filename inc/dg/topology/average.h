@@ -59,6 +59,7 @@ struct Average
     using container_type = ContainerType;
     using value_type = dg::get_value_type<ContainerType>;
     Average() = default;
+    // TODO update docu
     template<class Topology, size_t Md>
     Average( const Topology& g, std::array<unsigned, Md> axes)
     {
