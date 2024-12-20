@@ -118,7 +118,7 @@ struct aRealTopology
         if( u >= Nd)
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
         host_vector abs(m_n[u]*m_N[u]);
-        double hu = h(u);
+        real_type hu = h(u);
         auto aa = dg::DLT<real_type>::abscissas(m_n[u]);
         for( unsigned i=0; i<m_N[u]; i++)
             for( unsigned j=0; j<m_n[u]; j++)
@@ -136,7 +136,7 @@ struct aRealTopology
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
         host_vector v( m_n[u]*m_N[u]);
         auto ww = dg::DLT<real_type>::weights(m_n[u]);
-        double hu = h(u);
+        real_type hu = h(u);
         for( unsigned i=0; i<m_N[u]; i++)
             for( unsigned j=0; j<m_n[u]; j++)
                 v[i*m_n[u] + j] = hu/2.*ww[j];
@@ -349,6 +349,15 @@ struct aRealTopology
             tmp[u] = new_n;
         set( tmp, new_N);
     }
+    // TODO Documentation everywhere
+    void set_axis( unsigned coord, unsigned new_n , unsigned new_N)
+    {
+        std::array<unsigned,Nd> n = m_n, N = m_N;
+        n[coord] = new_n;
+        N[coord] = new_N;
+        set( n, N);
+    }
+
     /**
     * @brief Set the number of polynomials and cells
     *

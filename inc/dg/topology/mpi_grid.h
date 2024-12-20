@@ -70,7 +70,7 @@ struct aRealMPITopology
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
         thrust::host_vector<real_type> v( m_l.shape(u));
         auto ww = dg::DLT<real_type>::weights(m_l.n(u));
-        double hu = m_g.h(u); // We need global h here to be binary exact
+        real_type hu = m_g.h(u); // We need global h here to be binary exact
         for( unsigned i=0; i<m_l.N(u); i++)
             for( unsigned j=0; j<m_l.n(u); j++)
                 v[i*m_l.n(u) + j] = hu/2.*ww[j];
@@ -289,20 +289,20 @@ struct aRealMPITopology
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 1), void> set( unsigned new_n, unsigned new_Nx)
     {
-        set({new_n}, {new_Nx});
+        set(std::array{new_n}, std::array{new_Nx});
     }
 
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 2), void> set( unsigned new_n, unsigned new_Nx,
         unsigned new_Ny)
     {
-        set({new_n,new_n}, {new_Nx,new_Ny});
+        set(std::array{new_n,new_n}, std::array{new_Nx,new_Ny});
     }
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 3), void> set( unsigned new_n, unsigned new_Nx,
         unsigned new_Ny, unsigned new_Nz)
     {
-        set({new_n,new_n,1}, {new_Nx,new_Ny,new_Nz});
+        set(std::array{new_n,new_n,1u}, std::array{new_Nx,new_Ny,new_Nz});
     }
     /// Same as <tt> set( {new_n, new_n,...}, new_N);</tt>
     void set( unsigned new_n, std::array<unsigned,Nd> new_N)
@@ -311,6 +311,14 @@ struct aRealMPITopology
         for( unsigned u=0; u<Nd; u++)
             tmp[u] = new_n;
         set( tmp, new_N);
+    }
+    // TODO Documentation everywhere
+    void set_axis( unsigned coord, unsigned new_n , unsigned new_N)
+    {
+        auto n = m_g.get_n(), N = m_g.get_N();
+        n[coord] = new_n;
+        N[coord] = new_N;
+        set( n, N);
     }
     /**
     * @brief Set the number of polynomials and cells
@@ -457,7 +465,20 @@ struct aRealMPITopology
         m_comm = dg::mpi_cart_kron( m_comms);
         MPI_Cartdim_get( m_comm, &ndims);
         assert( (unsigned)ndims == Nd);
-        update_local();
+        // The idea is that every grid gets the same amount and the
+        // rest is distributed to the lowest rank grids
+        // TODO document:
+        int dims[Nd], periods[Nd], coords[Nd];
+        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        for( unsigned u=0;u<Nd; u++)
+        {
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            N[u] = idx[coords[u]+1]-idx[coords[u]] ;
+
+            p[u] = m_g.p(u) + m_g.h(u)*idx[coords[u]];
+            q[u] = m_g.p(u) + m_g.h(u)*idx[coords[u] +1];
+        }
+        m_l = { p, q, m_g.get_n(), N, m_g.get_bc()};
     }
     aRealMPITopology( const std::array< RealMPIGrid<real_type, 1>, Nd>& grids)
     {
@@ -526,7 +547,7 @@ struct aRealMPITopology
             }
         }
     }
-    std::vector<unsigned> equi_partition( unsigned N, unsigned r) const
+    std::vector<unsigned> partition( unsigned N, unsigned r) const
     {
         // Divide N points as equally as possible among participants r
         std::vector<unsigned> points(r, N/r );
@@ -535,18 +556,6 @@ struct aRealMPITopology
         return points;
     }
 
-    std::vector<unsigned> partition( unsigned N, unsigned r) const
-    {
-        // when N is divisable by 2 then individual points should also be divisable
-        if( N%2 ) // is there a rest ?
-        {
-            return equi_partition( N,r);
-        }
-        auto points = equi_partition( N/2, r);
-        for( unsigned u=0; u<r; u++)
-            points[u] *= 2;
-        return points;
-    }
     std::vector<unsigned> increment( const std::vector<unsigned>& partition) const
     {
         // replace with std::inclusive_scan ?
@@ -559,73 +568,48 @@ struct aRealMPITopology
         return inc;
     }
 
-
-
-    void update_local()
-    {
-        // The idea is that every grid gets the same amount and the
-        // rest is distributed to the lowest rank grids
-        // TODO document:
-        // We also prefer: when m_g.N is divisible by 2 => local Ns are also divisable by 2
-        // Important for fast_projection e.g.
-        int dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
-        std::array<real_type,Nd> p, q;
-        std::array<unsigned, Nd> N;
-        for( unsigned u=0;u<Nd; u++)
-        {
-            auto idx = increment(partition( m_g.N(u), dims[u]));
-            N[u] = idx[coords[u]+1]-idx[coords[u]] ;
-
-            p[u] = m_g.p(u) + m_g.h(u)*idx[coords[u]];
-            q[u] = m_g.p(u) + m_g.h(u)*idx[coords[u] +1];
-        }
-        m_l.set( p, q, m_g.get_n(), N, m_g.get_bc());
-    }
     RealGrid<real_type, Nd> m_g, m_l; //global grid, local grid
     std::array<MPI_Comm, Nd> m_comms; // 1d comms
     MPI_Comm m_comm; //just an integer...(No, more like an address)
 };
 ///@cond
-//
-//template<class real_type, size_t Nd>
-//int aRealMPITopology<real_type,Nd>::pidOf( std::array<real_type,Nd> x) const
-//{
-//    int dims[Nd], periods[Nd], coords[Nd];
-//    MPI_Cart_get( m_comm, Nd, dims, periods, coords);
-//    for( unsigned u=0; u<Nd; u++)
-//    {
-//        // I think there is a bug here: should be m_l.l(u) even with equidistant local grids
-//        // So for now let's kill it
-//        coords[u] = (unsigned)floor( (x[u]-m_g.p(u))/m_g.l(u)*(real_type)dims[u] );
-//        //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
-//        coords[u]=(coords[u]==dims[u]) ? coords[u]-1 :coords[u];
-//        int rank;
-//        if( MPI_Cart_rank( m_comm, coords, &rank) == MPI_SUCCESS )
-//            return rank;
-//        else
-//            return -1;
-//    }
-//}
+
 // pure virtual implementations must be declared outside class
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
 {
     m_g.set(new_n, new_N);
-    update_local();
+    int dims[Nd], periods[Nd], coords[Nd];
+    MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+    std::array<unsigned, Nd> N;
+    for( unsigned u=0;u<Nd; u++)
+    {
+        auto idx = increment(partition( m_g.N(u), dims[u]));
+        N[u] = idx[coords[u]+1]-idx[coords[u]] ;
+    }
+    m_l.set( new_n, N);
 }
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
 {
     m_g.set_pq( x0, x1);
-    update_local();
+    int dims[Nd], periods[Nd], coords[Nd];
+    MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+    std::array<real_type,Nd> p, q;
+    for( unsigned u=0;u<Nd; u++)
+    {
+        auto idx = increment(partition( m_g.N(u), dims[u]));
+        p[u] = m_g.p(u) + m_g.h(u)*idx[coords[u]];
+        q[u] = m_g.p(u) + m_g.h(u)*idx[coords[u] +1];
+    }
+    m_l.set_pq( p, q);
 }
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
 {
     check_periods( bcs);
-    m_g.set_bcs(bcs);
-    update_local();
+    m_g.set_bcs( bcs);
+    m_l.set_bcs( bcs);
 }
 
 /// Used to recognize MPI specialisation of interpolation and projection functions

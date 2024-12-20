@@ -11,6 +11,7 @@ namespace dg
 {
 namespace create
 {
+    // TODO documentation needed
 template<class MPITopology, size_t Md, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
 dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
     const MPITopology& g_new, std::array<unsigned,Md> axes)
