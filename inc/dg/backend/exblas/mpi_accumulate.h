@@ -33,7 +33,7 @@ static std::map<MPI_Comm, std::array<MPI_Comm, 2>> comm_mods;
  * @note the creation of new communicators involves communication between all participation processes (comm in this case).
  * @attention In order to avoid excessive creation of new MPI communicators (there is a limit to how many a program can create), the function keeps record of which communicators it has been called with. If you repeatedly call this function with the same \c comm only the first call will actually create new communicators.
  */
-static void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
+static inline void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
     assert( comm != MPI_COMM_NULL);
     if( detail::comm_mods.count(comm) == 1 )
     {
@@ -77,7 +77,7 @@ processes.  As usual the resulting superaccumulator is unnormalized.
 @param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL
 @sa \c exblas::mpi_reduce_communicator to generate the required communicators
 */
-static void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
+static inline void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {
     for( unsigned i=0; i<num_superacc; i++)
     {
