@@ -53,6 +53,12 @@ int main()
     assert( std::get<std::string>(atts.at("title")) == hello);
     int fortytwo = 42;
     assert( std::get<int>(atts.at("ttt")) == fortytwo);
+	file.close();
+    file.open( "test.nc", dg::file::nc_write);
+    file.rm_att( ".", "same");
+    file.rename_att( ".", "ttt", "truth");
+    int truth = file.get_att<int>(".", "truth");
+    assert( truth == fortytwo);
     std::cout << "PASSED\n";
 
 	//struct NcVariable

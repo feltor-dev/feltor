@@ -327,7 +327,6 @@ struct SerialNcFile
     }
     //std::vector<std::tuple<std::string, nc_type, std::any>> get_atts( std::string id = ".") const;
 
-
     /// Remove an attribute
     void rm_att( std::string id, std::string att)
     {
