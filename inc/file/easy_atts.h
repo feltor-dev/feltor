@@ -12,6 +12,28 @@ namespace dg
 {
 namespace file
 {
+/**
+ * @class hide_atts_NetCDF_example
+ * @code
+    std::map<std::string, dg::file::nc_att_t> atts;
+    atts["text"] = "Hello World!";
+    atts["number"] = 3e-4;
+    atts["int"] = -1;
+    atts["uint"] = 10;
+    atts["bool"] = true;
+    atts["realarray"] = dg::file::vec2json({-1.1, 42.3});
+    dg::file::NC_Error_Handle err;
+    int ncid;
+    err = nc_create( "atts.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    dg::file::set_atts( ncid, NC_GLOBAL, atts);
+    err = nc_close(ncid);
+    // read attributes back to json
+    err = nc_open( "atts.nc", 0, &ncid);
+    auto read = dg::file::get_atts<dg::file::nc_att_t>( ncid, NC_GLOBAL);
+    // read and atts are the same now
+    err = nc_close(ncid);
+ * @endcode
+ */
 
 /// Utility type to simplify dealing with heterogeneous attribute types
 /// We can write utility to convert json -> WrappedJsonValue -> nc_att_t
@@ -129,7 +151,21 @@ void set_att( int ncid, int varid, const std::pair<S, nc_att_t>& att)
 }
 
 
-// Iterable can be e.g. std::vector<std::pair...>, std::map , etc.
+/*! @brief Write a collection of attributes to a NetCDF variable or file
+ *
+ * Example code
+ * @copydoc hide_atts_NetCDF_example
+ * @note boolean values are mapped to byte NetCDF attributes (0b for true, 1b for false)
+ * @param atts An iterable containing all the attributes for the variable
+ * or file. \c atts can be empty in which case no attribute is written.
+ * @param ncid NetCDF file or group ID
+ * @param varid Variable ID, or NC_GLOBAL for a global attribute
+ * @ingroup Attributes
+ * @attention in an MPI program and serial NetCDF only the master process should call
+ * this function
+ * @copydoc hide_master_comment
+ * @tparam Iterable Can be e.g. <tt> std::vector<std::pair...>, std::map </tt> , etc.
+ */
 template<class Iterable> // *it must be usable in set_att
 void set_atts( int ncid, int varid, const Iterable& atts)
 {
@@ -274,7 +310,21 @@ inline static void get_att_h( int ncid, int varid, std::string att_name, dg::fil
     att = get_att_t( ncid, varid, att_name);
 }
 }
-// Get all attributes of a given type
+/*! @brief Read NetCDF attributes of a certain type
+ *
+ * Example code
+ * @copydoc hide_atts_NetCDF_example
+ * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
+ * @return A Dictionary containing all the attributes of a certain type
+ * for the variable or file. Can be empty if no attribute is present.
+ * @param ncid NetCDF file or group ID
+ * @param varid Variable ID, or NC_GLOBAL for a global attribute
+ * @ingroup Attributes
+ * @copydoc hide_parallel_read
+ * @tparam T can be a primitive type like \c int or \c double or a vector
+ * thereor \c std::vector<int> or a \c dg::file::nc_att_t in which case
+ * attributes of heterogeneous types are captured
+ */
 template<class T> // T can be nc_att_t
 std::map<std::string, T> get_atts( int ncid, int varid)
 {
