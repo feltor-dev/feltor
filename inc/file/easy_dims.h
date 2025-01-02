@@ -138,7 +138,7 @@ bool check_real_time( int ncid, const char* name, int* dimID, int* tvarID)
     int ndims;
     int dimids[10];
     err = nc_inq_var( ncid, *tvarID, NULL, &xtype, &ndims, dimids, NULL);
-    if( xtype != getNCDataType<T>() || ndims != 1 || dimids[0] != *dimID)
+    if( xtype != detail::getNCDataType<T>() || ndims != 1 || dimids[0] != *dimID)
         throw std::runtime_error( "Unlimited variable "+std::string(name)+" has wrong type or wrong dimensions!\n");
     return true;
 }
@@ -169,7 +169,7 @@ inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID
             return NC_NOERR;
     int retval;
     if( (retval = nc_def_dim( ncid, name, NC_UNLIMITED, dimID)) ){ return retval;}
-    if( (retval = nc_def_var( ncid, name, getNCDataType<T>(), 1, dimID, tvarID))){return retval;}
+    if( (retval = nc_def_var( ncid, name, detail::getNCDataType<T>(), 1, dimID, tvarID))){return retval;}
     std::string t = "time since start"; //needed for paraview to recognize timeaxis
     // Update: Actually paraview also recognizes time from the "T" "axis" without "unit"
     std::string axis = "T";
@@ -258,7 +258,7 @@ bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::str
     int ndims;
     int dimids[10];
     err = nc_inq_var( ncid, varID, NULL, &xtype, &ndims, dimids, NULL);
-    if( xtype != getNCDataType<T>() || ndims != 1 || dimids[0] != *dimID)
+    if( xtype != detail::getNCDataType<T>() || ndims != 1 || dimids[0] != *dimID)
         throw std::runtime_error( "Dimension variable "+name_dim+" has wrong type or wrong dimensions!\n");
     thrust::host_vector<T> data( points);
     err = nc_get_var( ncid, varID, data.data());
@@ -295,7 +295,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
     thrust::host_vector<T> points = g.abscissas();
     if( (retval = nc_def_dim( ncid, name_dim.data(), points.size(), dimID))){ return retval;}
     int varID;
-    if( (retval = nc_def_var( ncid, name_dim.data(), getNCDataType<T>(), 1, dimID, &varID))){return retval;}
+    if( (retval = nc_def_var( ncid, name_dim.data(), detail::getNCDataType<T>(), 1, dimID, &varID))){return retval;}
     if( (retval = nc_put_var( ncid, varID, points.data())) ){ return retval;}
     if( (retval = nc_put_att_text( ncid, varID, "axis", axis.size(), axis.data())) ){return retval;}
     retval = nc_put_att_text( ncid, varID, "long_name", long_name.size(), long_name.data());

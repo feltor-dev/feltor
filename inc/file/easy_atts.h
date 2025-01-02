@@ -22,6 +22,8 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
       std::vector<double>, std::vector<bool>>;
 
 ///@cond
+namespace detail
+{
 template<class value_type>
 static inline nc_type getNCDataType(){ assert( false && "Type not supported!\n" ); return NC_DOUBLE; }
 template<>
@@ -36,14 +38,22 @@ template<>
 inline nc_type getNCDataType<bool>(){ return NC_BYTE;}
 template<>
 inline nc_type getNCDataType<std::string>(){ return NC_STRING;}
+template<>
+inline nc_type getNCDataType<const char*>(){ return NC_STRING;}
+
+
+} // namespace detail
 ///@endcond
 
 // Variant for user defined data types (compound types)
-template<class T>
-void set_att( int ncid, int varid,
-    std::tuple<std::string, nc_type, std::vector<T>> att)
+// S allows both std::string and const char* to be used
+template<class S, class T>
+void set_att( int ncid, int varid, const std::tuple<S, nc_type,
+        std::vector<T>>& att)
 {
-    auto name = std::get<0>(att).c_str();
+    // This will convert const char* to std::string
+    std::string name_string = std::get<0>(att);
+    auto name = name_string.c_str();
     nc_type xtype = std::get<1>(att);
     const std::vector<T>& data = std::get<2>(att);
     unsigned size = data.size();
@@ -65,11 +75,13 @@ void set_att( int ncid, int varid,
     {
         err = nc_put_att_double( ncid, varid, name, xtype, size, &data[0]);
     }
-    else if constexpr( std::is_same_v<T, std::string>)
+    else if constexpr( std::is_same_v<T, std::string> or
+                       std::is_same_v<T, const char*>)
     {
         if( size != 1)
             throw std::runtime_error( "Cannot write a string array attribute to NetCDF");
-        err = nc_put_att_text( ncid, varid, name, data[0].size(), data[0].c_str());
+        std::string tmp = data[0];
+        err = nc_put_att_text( ncid, varid, name, tmp.size(), tmp.c_str());
     }
     else if constexpr( std::is_same_v<T, bool>)
     {
@@ -85,31 +97,32 @@ void set_att( int ncid, int varid,
     }
 }
 
-template<class T> // T cannot be nc_att_t
-void set_att( int ncid, int varid,
-    std::tuple<std::string, nc_type, T> att)
+template<class S, class T> // T cannot be nc_att_t
+void set_att( int ncid, int varid, std::tuple<S, nc_type, T> att)
 {
     set_att( ncid, varid, std::make_tuple( std::get<0>(att), std::get<1>(att),
                 std::vector<T>( 1, std::get<2>(att)) ));
 }
 
-template<class T>
-void set_att( int ncid, int varid, std::pair<std::string, T> att)
+// Variants for normal types
+template<class S, class T>
+void set_att( int ncid, int varid, const std::pair<S, T>& att)
 {
-    set_att( ncid, varid, std::make_tuple( att.first, getNCDataType<T>(),
-                std::vector<T>(1,att.second)));
+    set_att( ncid, varid, std::make_tuple( att.first,
+                detail::getNCDataType<T>(), std::vector<T>(1,att.second)));
 }
 
-template<class T>
-void set_att( int ncid, int varid, std::pair<std::string, std::vector<T>> att)
+template<class S, class T>
+void set_att( int ncid, int varid, const std::pair<S, std::vector<T>>& att)
 {
-    set_att( ncid, varid, std::make_tuple( att.first, getNCDataType<T>(),
-                att.second));
+    set_att( ncid, varid, std::make_tuple( att.first,
+                detail::getNCDataType<T>(), att.second));
 }
 // Amazing
-static inline void set_att( int ncid, int varid, std::pair<std::string, nc_att_t> att)
+template<class S>
+void set_att( int ncid, int varid, const std::pair<S, nc_att_t>& att)
 {
-    std::string name = att.first;
+    S name = att.first;
     const nc_att_t& v = att.second;
     std::visit( [ncid, varid, name]( auto&& arg) { set_att( ncid, varid,
                 std::make_pair( name, arg)); }, v);
@@ -242,6 +255,7 @@ inline static dg::file::nc_att_t get_att_t( int ncid, int varid,
     else
         throw std::runtime_error( "Cannot convert attribute type to nc_att_t");
 }
+
 namespace detail
 {
 // utility overloads to be able to implement get_atts

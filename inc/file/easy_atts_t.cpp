@@ -81,9 +81,16 @@ int main(int argc, char* argv[])
         assert( read[at.first] == att[at.first]);
     }
     assert( att == read);
-    std::cout << "PASSED!\n";
 
     err = nc_close(ncid);
+    err = nc_open( "atts.nc", NC_WRITE, &ncid);
+    // TEST const char text
+    dg::file::set_att( ncid, NC_GLOBAL, std::pair{ "Text" , "test"});
+    std::string test = std::get<std::string>(dg::file::get_att_t( ncid,
+                NC_GLOBAL, "Text"));
+    assert( test == "test");
+    err = nc_close(ncid);
+    std::cout << "\nPASSED!\n";
 
 
     return 0;
