@@ -13,6 +13,7 @@
 #endif //MPI_VERSION
 
 #include "nc_error.h"
+#include "easy_atts.h"
 
 /*!@file
  *
@@ -33,16 +34,6 @@ namespace file
 {
 
 ///@cond
-template<class value_type>
-static inline nc_type getNCDataType(){ assert( false && "Type not supported!\n" ); return NC_DOUBLE; }
-template<>
-inline nc_type getNCDataType<double>(){ return NC_DOUBLE;}
-template<>
-inline nc_type getNCDataType<float>(){ return NC_FLOAT;}
-template<>
-inline nc_type getNCDataType<int>(){ return NC_INT;}
-template<>
-inline nc_type getNCDataType<unsigned>(){ return NC_UINT;}
 
 namespace detail
 {

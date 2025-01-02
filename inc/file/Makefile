@@ -20,7 +20,7 @@ jsoncpp_netcdf_t jsonhpp_netcdf_t\
 all: $(TARGETS)
 
 %_t: %_t.cpp %.h
-	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS)
+	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) $(VERSION_FLAGS)
 
 %_mpit: %_t.cpp %.h
 	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) -DWITH_MPI

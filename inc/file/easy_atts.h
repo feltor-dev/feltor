@@ -1,0 +1,284 @@
+#pragma once
+
+#include <variant>
+#include <vector>
+#include <map>
+#include <cassert>
+#include <any>
+#include <netcdf.h>
+#include "nc_error.h"
+
+namespace dg
+{
+namespace file
+{
+
+/// Utility type to simplify dealing with heterogeneous attribute types
+/// We can write utility to convert json -> WrappedJsonValue -> nc_att_t
+/// and back
+/// @note Unfortunately, user defined types exist so not every attribute can be an nc_att_t
+using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
+      std::vector<int>, std::vector<unsigned>, std::vector<float>,
+      std::vector<double>, std::vector<bool>>;
+
+///@cond
+template<class value_type>
+static inline nc_type getNCDataType(){ assert( false && "Type not supported!\n" ); return NC_DOUBLE; }
+template<>
+inline nc_type getNCDataType<double>(){ return NC_DOUBLE;}
+template<>
+inline nc_type getNCDataType<float>(){ return NC_FLOAT;}
+template<>
+inline nc_type getNCDataType<int>(){ return NC_INT;}
+template<>
+inline nc_type getNCDataType<unsigned>(){ return NC_UINT;}
+template<>
+inline nc_type getNCDataType<bool>(){ return NC_BYTE;}
+template<>
+inline nc_type getNCDataType<std::string>(){ return NC_STRING;}
+///@endcond
+
+// Variant for user defined data types (compound types)
+template<class T>
+void set_att( int ncid, int varid,
+    std::tuple<std::string, nc_type, std::vector<T>> att)
+{
+    auto name = std::get<0>(att).c_str();
+    nc_type xtype = std::get<1>(att);
+    const std::vector<T>& data = std::get<2>(att);
+    unsigned size = data.size();
+    NC_Error_Handle err;
+    // Test xtype ? netcdf allows xtype to be anything ...
+    if constexpr( std::is_same_v<T, int>)
+    {
+        err = nc_put_att_int( ncid, varid, name, xtype, size, &data[0]);
+    }
+    else if constexpr( std::is_same_v<T, unsigned>)
+    {
+        err = nc_put_att_uint( ncid, varid, name, xtype, size, &data[0]);
+    }
+    else if constexpr( std::is_same_v<T, float>)
+    {
+        err = nc_put_att_float( ncid, varid, name, xtype, size, &data[0]);
+    }
+    else if constexpr( std::is_same_v<T, double>)
+    {
+        err = nc_put_att_double( ncid, varid, name, xtype, size, &data[0]);
+    }
+    else if constexpr( std::is_same_v<T, std::string>)
+    {
+        if( size != 1)
+            throw std::runtime_error( "Cannot write a string array attribute to NetCDF");
+        err = nc_put_att_text( ncid, varid, name, data[0].size(), data[0].c_str());
+    }
+    else if constexpr( std::is_same_v<T, bool>)
+    {
+        // std::vector<bool> is not necessarily contiguous
+        std::vector<signed char> dataB(size);
+        for( unsigned i=0; i<size; i++)
+            dataB[i] = data[i];
+        err = nc_put_att_schar( ncid, varid, name, NC_BYTE, size, &dataB[0]);
+    }
+    else // default
+    {
+        err = nc_put_att( ncid, varid, name, xtype, size, &data[0]);
+    }
+}
+
+template<class T> // T cannot be nc_att_t
+void set_att( int ncid, int varid,
+    std::tuple<std::string, nc_type, T> att)
+{
+    set_att( ncid, varid, std::make_tuple( std::get<0>(att), std::get<1>(att),
+                std::vector<T>( 1, std::get<2>(att)) ));
+}
+
+template<class T>
+void set_att( int ncid, int varid, std::pair<std::string, T> att)
+{
+    set_att( ncid, varid, std::make_tuple( att.first, getNCDataType<T>(),
+                std::vector<T>(1,att.second)));
+}
+
+template<class T>
+void set_att( int ncid, int varid, std::pair<std::string, std::vector<T>> att)
+{
+    set_att( ncid, varid, std::make_tuple( att.first, getNCDataType<T>(),
+                att.second));
+}
+// Amazing
+static inline void set_att( int ncid, int varid, std::pair<std::string, nc_att_t> att)
+{
+    std::string name = att.first;
+    const nc_att_t& v = att.second;
+    std::visit( [ncid, varid, name]( auto&& arg) { set_att( ncid, varid,
+                std::make_pair( name, arg)); }, v);
+}
+
+
+// Iterable can be e.g. std::vector<std::pair...>, std::map , etc.
+template<class Iterable> // *it must be usable in set_att
+void set_atts( int ncid, int varid, const Iterable& atts)
+{
+    for( const auto& it : atts)
+        set_att( ncid, varid, it);
+}
+
+
+template<class T>
+std::vector<T> get_att_v( int ncid, int varid, std::string att)
+{
+    auto name = att.c_str();
+    size_t size;
+    NC_Error_Handle err;
+    err = nc_inq_attlen( ncid, varid, name, &size);
+    nc_type xtype;
+    err = nc_inq_atttype( ncid, varid, name, &xtype);
+    std::vector<T> data(size);
+    if ( xtype == NC_STRING or xtype == NC_CHAR)
+    {
+        std::string str( size, 'x');
+        err = nc_get_att_text( ncid, varid, name, &str[0]);
+        if constexpr ( std::is_convertible_v<std::string,T>)
+            data[0] = str;
+        else
+            throw std::runtime_error("Cannot convert NC_STRING to given type");
+    }
+    else if ( xtype == NC_INT)
+    {
+        std::vector<int> tmp( size);
+        err = nc_get_att_int( ncid, varid, name, &tmp[0]);
+        if constexpr ( std::is_convertible_v<int,T>)
+            std::copy( tmp.begin(), tmp.end(), data.begin());
+        else
+            throw std::runtime_error("Cannot convert NC_INT to given type");
+    }
+    else if ( xtype == NC_UINT)
+    {
+        std::vector<unsigned> tmp( size);
+        err = nc_get_att_uint( ncid, varid, name, &tmp[0]);
+        if constexpr ( std::is_convertible_v<unsigned,T>)
+            std::copy( tmp.begin(), tmp.end(), data.begin());
+        else
+            throw std::runtime_error("Cannot convert NC_UINT to given type");
+    }
+    else if ( xtype == NC_FLOAT)
+    {
+        std::vector<float> tmp( size);
+        err = nc_get_att_float( ncid, varid, name, &tmp[0]);
+        if constexpr ( std::is_convertible_v<float,T>)
+            std::copy( tmp.begin(), tmp.end(), data.begin());
+        else
+            throw std::runtime_error("Cannot convert NC_FLOAT to given type");
+    }
+    else if ( xtype == NC_DOUBLE)
+    {
+        std::vector<double> tmp( size);
+        err = nc_get_att_double( ncid, varid, name, &tmp[0]);
+        if constexpr ( std::is_convertible_v<double,T>)
+            std::copy( tmp.begin(), tmp.end(), data.begin());
+        else
+            throw std::runtime_error("Cannot convert NC_DOUBLE to given type");
+    }
+    else if( xtype == NC_BYTE) // counts as bool
+    {
+        std::vector<signed char> tmp(size);
+        err = nc_get_att_schar( ncid, varid, name, &tmp[0]);
+        if constexpr ( std::is_convertible_v<bool,T>)
+            std::copy( tmp.begin(), tmp.end(), data.begin());
+        else
+            throw std::runtime_error("Cannot convert NC_BYTE to given type");
+    }
+    else // default
+    {
+        // std::vector<bool> is not necessarily contiguous
+        if constexpr (std::is_same_v<T, bool>)
+        {
+            std::vector<signed char> tmp(size);
+            err = nc_get_att( ncid, varid, name, &tmp[0]);
+            std::copy( tmp.begin(), tmp.end(), data.begin());
+        }
+        else
+            err = nc_get_att( ncid, varid, name, &data[0]);
+    }
+    return data;
+}
+
+inline static dg::file::nc_att_t get_att_t( int ncid, int varid,
+        std::string att_name)
+{
+    auto name = att_name.c_str();
+    size_t size;
+    NC_Error_Handle err;
+    err = nc_inq_attlen( ncid, varid, name, &size);
+    nc_type xtype;
+    err = nc_inq_atttype( ncid, varid, name, &xtype);
+    if ( xtype == NC_INT and size == 1)
+        return get_att_v<int>( ncid, varid, att_name)[0];
+    else if ( xtype == NC_INT and size != 1)
+        return get_att_v<int>( ncid, varid, att_name);
+    else if ( xtype == NC_UINT and size == 1)
+        return get_att_v<unsigned>( ncid, varid, att_name)[0];
+    else if ( xtype == NC_UINT and size != 1)
+        return get_att_v<unsigned>( ncid, varid, att_name);
+    else if ( xtype == NC_FLOAT and size == 1)
+        return get_att_v<float>( ncid, varid, att_name)[0];
+    else if ( xtype == NC_FLOAT and size != 1)
+        return get_att_v<float>( ncid, varid, att_name);
+    else if ( xtype == NC_DOUBLE and size == 1)
+        return get_att_v<double>( ncid, varid, att_name)[0];
+    else if ( xtype == NC_DOUBLE and size != 1)
+        return get_att_v<double>( ncid, varid, att_name);
+    else if ( xtype == NC_BYTE and size == 1)
+    {
+        // BugFix: explicitly convert to bool
+        bool value = get_att_v<bool>( ncid, varid, att_name)[0];
+        return value;
+    }
+    else if ( xtype == NC_BYTE and size != 1)
+        return get_att_v<bool>( ncid, varid, att_name);
+    else if ( xtype == NC_STRING || xtype == NC_CHAR)
+        return get_att_v<std::string>( ncid, varid, att_name)[0];
+    else
+        throw std::runtime_error( "Cannot convert attribute type to nc_att_t");
+}
+namespace detail
+{
+// utility overloads to be able to implement get_atts
+template<class T>
+void get_att_h( int ncid, int varid, std::string att_name, T& att)
+{
+    att = get_att_v<T>( ncid, varid, att_name)[0];
+}
+template<class T>
+void get_att_h( int ncid, int varid, std::string att_name, std::vector<T>& att)
+{
+    att = get_att_v<T>( ncid, varid, att_name);
+}
+inline static void get_att_h( int ncid, int varid, std::string att_name, dg::file::nc_att_t& att)
+{
+    att = get_att_t( ncid, varid, att_name);
+}
+}
+// Get all attributes of a given type
+template<class T> // T can be nc_att_t
+std::map<std::string, T> get_atts( int ncid, int varid)
+{
+    NC_Error_Handle err;
+    int number;
+    if( varid == NC_GLOBAL)
+        err = nc_inq_natts( ncid, &number);
+    else
+        err = nc_inq_varnatts( ncid, varid, &number);
+    std::map < std::string, T> map;
+    for( int i=0; i<number; i++)
+    {
+        char att_name[NC_MAX_NAME]; // 256
+        err = nc_inq_attname( ncid, varid, i, att_name);
+        detail::get_att_h( ncid, varid, att_name, map[att_name]);
+    }
+    return map;
+}
+
+}// namespace file
+}// namespace dg

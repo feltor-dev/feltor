@@ -10,6 +10,7 @@
  *
  */
 
+// DEPRECATED
 namespace dg
 {
 namespace file
