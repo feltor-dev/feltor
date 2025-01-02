@@ -49,12 +49,6 @@ jsoncpp_wrapper_t: json_wrapper_t.cpp json_wrapper.h
 jsonhpp_wrapper_t: json_wrapper_t.cpp json_wrapper.h
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) -DDG_USE_JSONHPP
 
-jsoncpp_netcdf_t: json_netcdf_t.cpp json_netcdf.h
-	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(JSONLIB) $(LIBS) $(VERSION_FLAGS)
-
-jsonhpp_netcdf_t: json_netcdf_t.cpp json_netcdf.h
-	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) $(VERSION_FLAGS) -DDG_USE_JSONHPP
-
 .PHONY: doc clean
 
 doc:

@@ -6,7 +6,6 @@
 
 #include "json_utilities.h"
 #include "nc_utilities.h"
-#include "json_netcdf.h"
 #include "writer.h"
 #include "reader.h"
 #include "probes.h"
@@ -23,14 +22,10 @@
  * @defgroup netcdf NetCDF utilities
  * \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5[_serial] -lhdf5[_serial]_hl)
  * @{
+ *      @defgroup Attributes Nc Attributes utilities
  *      @defgroup Dimensions Dimension utilities
  *      @defgroup Input Read variable utilities
  *      @defgroup Output Write variable utilities
- * @}
- * @defgroup json_netcdf Json and NetCDF utilities
- * \#include "dg/file/file.h" (link -lnetcdf -lhdf5[_serial] -lhdf5[_serial]_hl)
- * @{
- *      @defgroup Attributes Json as Nc Attributes utilities
  *      @defgroup Cpp A high level C++ interface
  * @}
  */
