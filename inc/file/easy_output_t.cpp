@@ -38,11 +38,13 @@ int main(int argc, char* argv[])
     DG_RANK0 std::cout << "WRITE A TIME-DEPENDENT SCALAR, SCALAR FIELD AND SUB-FIELDS TO NETCDF4 FILE "
                        << filename<<"\n";
     DG_RANK0 std::cout << "THEN READ IT BACK IN AND TEST EQUALITY\n";
+    DG_RANK0 std::cout << "test.nc and testmpi.nc should be binary equal\n";
     double Tmax=2.*M_PI;
     double NT = 10;
     double h = Tmax/NT;
     double x0 = 0., x1 = 2.*M_PI;
-    dg::x::CartesianGrid3d grid( x0,x1,x0,x1,x0,x1,3,10,10,20, dg::PER, dg::PER, dg::PER
+    dg::x::CartesianGrid3d grid( x0,x1,x0,x1,x0,x1,3,10,10,20, dg::PER,
+            dg::PER, dg::PER
 #ifdef WITH_MPI
     , comm
 #endif
