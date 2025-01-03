@@ -24,9 +24,10 @@ int main(int argc, char* argv[])
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     MPI_Comm comm;
     //create a grid and some data
-    if( size != 4){ std::cerr << "Please run with 4 threads!\n"; return -1;}
+    int dims[3] = {0,0,0};
+    MPI_Dims_create( size, 3, dims);
     std::stringstream ss;
-    ss<< "2 1 2";
+    ss<< dims[0]<<" "<<dims[1]<<" "<<dims[2];
     dg::mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
 #endif
 #ifdef WITH_MPI

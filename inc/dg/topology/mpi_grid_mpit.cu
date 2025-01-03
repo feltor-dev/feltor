@@ -94,16 +94,18 @@ int main(int argc, char* argv[])
             success_l2g = false;
         }
     }
-    if( !success_g2l)
-        std::cout << "FAILED g2l from rank "<<rank<<"!\n";
-    else
-        std::cout << "SUCCESS g2l from rank "<<rank<<"!\n";
+    std::cout << (success_g2l ? "SUCCESS" : "FAILED")
+              << " g2l from rank "<<rank<<"!\n";
+    std::cout << (success_l2g ? "SUCCESS" : "FAILED")
+              << " l2g from rank "<<rank<<"!\n";
 
-    if( !success_l2g)
-        std::cout << "FAILED l2g from rank "<<rank<<"!\n";
-    else
-        std::cout << "SUCCESS l2g from rank "<<rank<<"!\n";
-
+    // Test start and count
+    int gIdx;
+    g2d.local2globalIdx( 0, rank, gIdx);
+    auto start = g2d.start();
+    int sIdx = start[1]*g2d.shape(0) + start[0];
+    std::cout << (sIdx == gIdx ? "SUCCESS" : "FAILED")
+              << " start from rank "<<rank<<"!\n";
 
     MPI_Finalize();
     return 0;

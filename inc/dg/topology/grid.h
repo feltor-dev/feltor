@@ -295,6 +295,12 @@ struct aRealTopology
         return grid(2);
     }
 
+    /// The global start index of the hyperslab that the grid represents
+    /// Used e.g. in NetCDF output together with \c count()
+    /// Equivalent to \c {0}
+    std::array<unsigned, Nd> start() const { return {0};}
+    /// Equivalent to \c get_shape()
+    std::array<unsigned, Nd> count() const { return get_shape();}
 
     ////////////////////SETTERS/////////////////////////////
     /**

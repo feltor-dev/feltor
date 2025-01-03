@@ -100,126 +100,186 @@ namespace file
  *  inquire e.g. the varid
  */
 
+/*!@brief A NetCDF Hyperslab
+ *
+ * https://docs.unidata.ucar.edu/netcdf-c/4.9.2/programming_notes.html#specify_hyperslab
+ */
+struct NcHyperslab
+{
+    NcHyperslab(std::vector<size_t> start, std::vector<size_t> count)
+        : m_start(start), m_count(count)
+    {
+        assert( start.size() == count.size());
+    }
+    template<class Topology>
+    NcHyperslab( const Topology& grid, bool reverse = true)
+    {
+        auto ss = grid.start();
+        auto cc = grid.count();
+        m_start = std::vector<size_t>( ss.begin(), ss.end());
+        m_count = std::vector<size_t>( cc.begin(), cc.end());
+        if( reverse)
+        {
+            std::reverse( m_start.begin(), m_start.end());
+            std::reverse( m_count.begin(), m_count.end());
+        }
+    }
+
+    template<class Topology>
+    NcHyperslab( unsigned slice, const Topology& grid, bool reverse = true)
+          : NcHyperslab( grid, reverse)
+    {
+        m_start.insert( m_start.begin(), slice);
+        m_count.insert( m_count.begin(), 1);
+    }
+    const unsigned ndims() const { return m_start.size();}
+
+    const std::vector<size_t>& start() const { return m_start;}
+    const std::vector<size_t>& count() const { return m_count;}
+    const size_t* startp() const { return &m_start[0];}
+    const size_t* countp() const { return &m_count[0];}
+    private:
+    std::vector<size_t> m_start, m_count;
+};
+
 ///@cond
 namespace detail
 {
 
 template<class T>
-inline int put_var_T( int ncid, int varID, const T* data)
+inline int put_var_T( int ncid, int varid, const T* data)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;
 }
 template<>
-inline int put_var_T<float>( int ncid, int varID, const float* data){
-    return nc_put_var_float( ncid, varID, data);
+inline int put_var_T<float>( int ncid, int varid, const float* data){
+    return nc_put_var_float( ncid, varid, data);
 }
 template<>
-inline int put_var_T<double>( int ncid, int varID, const double* data){
-    return nc_put_var_double( ncid, varID, data);
+inline int put_var_T<double>( int ncid, int varid, const double* data){
+    return nc_put_var_double( ncid, varid, data);
 }
 template<>
-inline int put_var_T<int>( int ncid, int varID, const int* data){
-    return nc_put_var_int( ncid, varID, data);
+inline int put_var_T<int>( int ncid, int varid, const int* data){
+    return nc_put_var_int( ncid, varid, data);
 }
 template<>
-inline int put_var_T<unsigned>( int ncid, int varID, const unsigned* data){
-    return nc_put_var_uint( ncid, varID, data);
+inline int put_var_T<unsigned>( int ncid, int varid, const unsigned* data){
+    return nc_put_var_uint( ncid, varid, data);
 }
 template<class T>
-inline int put_vara_T( int ncid, int varID, const size_t* startp, const size_t* countp, const T* data)
+inline int put_vara_T( int ncid, int varid, const size_t* startp, const size_t* countp, const T* data)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;
 }
 template<>
-inline int put_vara_T<float>( int ncid, int varID, const size_t* startp, const size_t* countp, const float* data){
-    return nc_put_vara_float( ncid, varID, startp, countp, data);
+inline int put_vara_T<float>( int ncid, int varid, const size_t* startp, const size_t* countp, const float* data){
+    return nc_put_vara_float( ncid, varid, startp, countp, data);
 }
 template<>
-inline int put_vara_T<double>( int ncid, int varID, const size_t* startp, const size_t* countp, const double* data){
-    return nc_put_vara_double( ncid, varID, startp, countp, data);
+inline int put_vara_T<double>( int ncid, int varid, const size_t* startp, const size_t* countp, const double* data){
+    return nc_put_vara_double( ncid, varid, startp, countp, data);
 }
 template<>
-inline int put_vara_T<int>( int ncid, int varID, const size_t* startp, const size_t* countp, const int* data){
-    return nc_put_vara_int( ncid, varID, startp, countp, data);
+inline int put_vara_T<int>( int ncid, int varid, const size_t* startp, const size_t* countp, const int* data){
+    return nc_put_vara_int( ncid, varid, startp, countp, data);
 }
 template<>
-inline int put_vara_T<unsigned>( int ncid, int varID, const size_t* startp, const size_t* countp, const unsigned* data){
-    return nc_put_vara_uint( ncid, varID, startp, countp, data);
+inline int put_vara_T<unsigned>( int ncid, int varid, const size_t* startp, const size_t* countp, const unsigned* data){
+    return nc_put_vara_uint( ncid, varid, startp, countp, data);
 }
 #ifdef MPI_VERSION
-// we need to identify the global root rank within the groups and mark the entire group
-// all comms must be same size
-
-template<class host_vector, class MPITopology>
-void put_vara_detail(int ncid, int varid, unsigned slice, const MPITopology& grid, const MPI_Vector<host_vector>& data, bool vara, bool parallel = false)
+template<class host_vector>
+void put_vara_detail(int ncid, int varid,
+        const NcHyperslab& slab,
+        const host_vector& data,
+        MPI_Comm comm)
 {
-    MPI_Comm comm = grid.communicator();
+    // we need to identify the global root rank within the groups and mark the
+    // entire group
     int local_root_rank = dg::mpi_comm_global2local_rank(comm);
     if (local_root_rank == MPI_UNDEFINED)
         return;
-    unsigned grid_ndims = grid.ndim();
-    auto cc = grid.local().get_shape();
-    std::vector<size_t> count( cc.begin(), cc.end());
-    std::reverse( count.begin(), count.end());
-    if( vara)
-        count.insert( count.begin(), 1);
+    unsigned ndims = slab.ndims(); // same on all processes
+    file::NC_Error_Handle err;
+    MPI_Status status;
     int rank, size;
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &size);
-    std::vector<size_t> start(vara ? grid_ndims+1 : grid_ndims,0);
-    if( vara)
-        start[0] = slice;
-    file::NC_Error_Handle err;
-    if( parallel)
+
+    // Send start and count vectors to root
+    std::vector<size_t> r_start( rank == local_root_rank ? size * ndims : 0);
+    std::vector<size_t> r_count( rank == local_root_rank ? size * ndims : 0);
+    MPI_Gather( slab.startp(), ndims, dg::getMPIDataType<size_t>(),
+                &r_start[0], ndims, dg::getMPIDataType<size_t>(),
+                local_root_rank, comm);
+    MPI_Gather( slab.countp(), ndims, dg::getMPIDataType<size_t>(),
+                &r_count[0], ndims, dg::getMPIDataType<size_t>(),
+                local_root_rank, comm);
+
+    MPI_Datatype mpitype = dg::getMPIDataType<get_value_type<host_vector>>();
+    if( rank == local_root_rank )
     {
-        int coords[grid_ndims];
-        MPI_Cart_coords( comm, rank, grid_ndims, coords);
-        for( unsigned i=0; i<grid_ndims; i++)
-            start[vara ? i+1 : i] = count[ vara ? i+1 : i]*coords[grid_ndims-1-i];
-        err = detail::put_vara_T( ncid, varid, &start[0], &count[0],
-            data.data().data());
+        std::vector<size_t> sizes( size, 1);
+        for( int r = 0 ; r < size; r++)
+            for( unsigned u=0; u<ndims; u++)
+                sizes[r]*= r_count[r*ndims + u];
+
+        // host_vector could be a View
+        thrust::host_vector<get_value_type<host_vector>> receive(
+                *std::max_element( sizes.begin(), sizes.end()));
+        for( int r=0; r<size; r++)
+        {
+            if(r!=rank)
+            {
+                MPI_Recv( receive.data(), (int)sizes[r], mpitype,
+                      r, r, comm, &status);
+                err = detail::put_vara_T( ncid, varid, &r_start[r*ndims],
+                        &r_count[r*ndims], receive.data()); // write received
+            }
+            else // write own data
+            {
+                err = detail::put_vara_T( ncid, varid, slab.startp(),
+                        slab.countp(), data.data());
+            }
+        }
     }
     else
     {
-        MPI_Status status;
-        size_t local_size = data.data().size();
-        std::vector<int> coords( grid_ndims*size, 0);
-        for( int rrank=0; rrank<size; rrank++)
-            MPI_Cart_coords( comm, rrank, grid_ndims, &coords[grid_ndims*rrank]);
-        if( rank == local_root_rank )
-        {
-            host_vector receive( data.data());
-            for( int rrank=0; rrank<size; rrank++)
-            {
-                for ( unsigned i=0; i<grid_ndims; i++)
-                    start[vara ? i+1 : i] = count[ vara ? i+1 : i]*coords[grid_ndims*rrank + grid_ndims-1-i];
-                if(rrank!=rank)
-                {
-                    MPI_Recv( receive.data(), local_size, dg::getMPIDataType<get_value_type<host_vector>>(),
-                          rrank, rrank, comm, &status);
-                    err = detail::put_vara_T( ncid, varid, &start[0], &count[0],
-                        receive.data()); // write received data
-                }
-                else // write own data
-                {
-                    err = detail::put_vara_T( ncid, varid, &start[0], &count[0], data.data().data());
-                }
-            }
-        }
-        else
-        {
-            MPI_Send( data.data().data(), local_size, dg::getMPIDataType<get_value_type<host_vector>>(),
-                      local_root_rank, rank, comm);
-        }
+        size_t num = 1;
+        for( unsigned u=0; u<ndims; u++)
+            num*= slab.count()[u];
+        MPI_Send( data.data(), num, mpitype,
+                  local_root_rank, rank, comm);
     }
     MPI_Barrier( comm);
     return;
 }
+
+// all comms must be same size
+template<class host_vector, class MPITopology>
+void put_vara_detail(int ncid, int varid, unsigned slice,
+        const MPITopology& grid, const MPI_Vector<host_vector>& data,
+        bool vara, bool parallel = false)
+{
+    NcHyperslab slab( grid, true);
+    if( vara)
+        slab = NcHyperslab( slice, grid, true);
+    if( parallel)
+    {
+        file::NC_Error_Handle err;
+        err = detail::put_vara_T( ncid, varid,
+                slab.startp(), slab.countp(), data.data().data());
+    }
+    else
+        put_vara_detail( ncid, varid, slab, data.data(), grid.communicator());
+}
 #endif // MPI_VERSION
 } // namespace detail
 ///@endcond
+//
 
 /**
 *
@@ -281,13 +341,9 @@ void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
     const host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
-    auto shape = grid.get_shape();
-    std::vector<size_t> count( shape.begin(), shape.end());
-    std::reverse( count.begin(), count.end());
-    count.insert( count.begin(), 1);
-    std::vector<size_t> start( count.size(), 0);
-    start[0] = slice;
-    err = detail::put_vara_T( ncid, varid, &start[0], &count[0], data.data());
+    NcHyperslab slab( slice, grid);
+    err = detail::put_vara_T( ncid, varid, slab.startp(), slab.countp(),
+            data.data());
 }
 // scalar data
 

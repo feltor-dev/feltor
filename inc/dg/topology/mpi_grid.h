@@ -406,6 +406,25 @@ struct aRealMPITopology
             globalIdx = globalIdx*m_g.shape(u) + gIdx[u];
         return true;
     }
+    /// The global start index of the hyperslab that the local grid represents
+    /// Used e.g. in NetCDF output together with \c count()
+    std::array<unsigned, Nd> start() const
+    {
+        int dims[Nd], periods[Nd], coords[Nd];
+        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        std::array<unsigned, Nd> start;
+        for( unsigned u=0;u<Nd; u++)
+        {
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            start[u] = idx[coords[u]]*m_g.n(u);
+        }
+        return start;
+    }
+    /// Equivalent to \c local().get_shape()
+    std::array<unsigned, Nd> count() const
+    {
+        return m_l.get_shape();
+    }
     ///@copydoc aRealMPITopology2d::global2localIdx(int,int&,int&)const
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
@@ -613,6 +632,7 @@ void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
 }
 
 /// Used to recognize MPI specialisation of interpolation and projection functions
+/// Also used in file.h to recognize MPI output
 template<class Grid>
 using is_mpi_grid = std::is_base_of< dg::MPIVectorTag, dg::get_tensor_category< get_host_vector<Grid> > >;
 

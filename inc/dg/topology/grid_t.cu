@@ -66,5 +66,9 @@ int main()
         assert( !g2d.contains( p_out[i]));
     std::cout << "PASSED!\n";
 
+    std::array<unsigned,2> zero={0,0};
+    assert( g2d.start() == zero);
+    std::cout << "PASSED!\n";
+
     return 0;
 }
