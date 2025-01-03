@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <netcdf.h>
+
 namespace dg{
 namespace file{
 /*!@brief A NetCDF Hyperslab
@@ -9,13 +10,21 @@ namespace file{
  */
 struct NcHyperslab
 {
+    NcHyperslab( size_t slice)
+        : m_start( 1, slice), m_count( 1, 1)
+    {}
+
+    NcHyperslab(std::vector<size_t> count)
+        : m_start( count.size(), 0), m_count( count)
+    {}
     NcHyperslab(std::vector<size_t> start, std::vector<size_t> count)
         : m_start(start), m_count(count)
     {
         assert( start.size() == count.size());
     }
+
     template<class Topology>
-    NcHyperslab( const Topology& grid, bool reverse = true)
+    NcHyperslab( const Topology& grid, bool reverse)
     {
         auto ss = grid.start();
         auto cc = grid.count();
@@ -29,7 +38,7 @@ struct NcHyperslab
     }
 
     template<class Topology>
-    NcHyperslab( unsigned slice, const Topology& grid, bool reverse = true)
+    NcHyperslab( unsigned slice, const Topology& grid, bool reverse)
           : NcHyperslab( grid, reverse)
     {
         m_start.insert( m_start.begin(), slice);

@@ -300,7 +300,7 @@ void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
     const host_vector& data, bool parallel = false)
 {
     file::NC_Error_Handle err;
-    NcHyperslab slab( slice, grid);
+    NcHyperslab slab( slice, grid, true);
     err = detail::put_vara_T( ncid, varid, slab.startp(), slab.countp(),
             data.data());
 }
