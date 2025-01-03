@@ -26,11 +26,20 @@ enum NcFileMode
     nc_noclobber //!< NC_NOCLOBBER Create new file for read and write access, fail if already exists
 };
 
+struct NcVariable
+{
+    std::string name;
+    nc_type xtype;
+    std::vector<std::string> dims;
+};
+
 
 
 // This is a singleton that cannot be copied/assigned but only moved/move-assign
 // Only Netcdf-4 files are supported
 // We orient ourselves at std::fstream behaviour for opening / creating files
+// The class hides all integer ids that the netcdf
+// C-library uses ("Ids do not exist in the Netcdf-4 data model")
 
 struct SerialNcFile
 {
@@ -212,13 +221,14 @@ struct SerialNcFile
     }
 
     ////////////// Dimensions ////////////////////////
+    //Remember that dimensions do not have attributes, only variables (or groups)
     void def_dim( std::string name, size_t size = NC_UNLIMITED)
     {
         if( !m_open)
             throw std::runtime_error( "Can't define dimension in a closed file!");
         NC_Error_Handle err;
         int dim_id;
-        err = nc_def_dim( m_grp, name.c_str(), size,&dim_id);
+        err = nc_def_dim( m_grp, name.c_str(), size, &dim_id);
     }
     void rename_dim( std::string old_name, std::string new_name)
     {
@@ -229,7 +239,7 @@ struct SerialNcFile
         err = nc_inq_dimid( m_grp, old_name.c_str(), &dimid);
         err = nc_rename_dim( m_grp, dimid, new_name.c_str());
     }
-    size_t get_dim_size( std::string name) const
+    size_t dim_size( std::string name) const
     {
         if( !m_open)
             throw std::runtime_error( "Can't get dimension in a closed file!");
@@ -241,6 +251,14 @@ struct SerialNcFile
         return len;
 
     }
+
+    std::vector<size_t> dims_shape( const std::vector<std::string>& dims) const
+    {
+        std::vector<size_t> shape( dims.size());
+        for( unsigned u=0; u<dims.size(); u++)
+            shape[u] = dim_size( dims[u]);
+        return shape;
+    }
     std::vector<std::string> get_dims() const
     {
         if( !m_open)
@@ -248,7 +266,8 @@ struct SerialNcFile
         NC_Error_Handle err;
         int ndims;
         err = nc_inq_ndims( m_grp, &ndims);
-        // Dimension ids are 0, 1, 2, ... in the order in which the dimensions were defined
+        // Dimension ids are 0, 1, 2, ... in the order in which the dimensions
+        // were defined
         std::vector<std::string> dims;
         for ( int dimid = 0; dimid < ndims; dimid++)
         {
@@ -258,17 +277,11 @@ struct SerialNcFile
         }
         return dims;
     }
-
-    template<class ContainerTypeType>
-    void defput_dim( std::string name,
-            std::map<std::string, nc_att_t> atts,
-            const ContainerTypeType& abscissas);
     /////////////// Attributes setters
     // Empty var string makes a global (to the group) attribute
     // Overwrites existing!?
     // Strong attribute set
-    template<class S, class T> // S is string or const char*, T can be nc_att_t
-    void set_att( std::string id, const std::pair<S, T>& att)
+    void set_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
     {
         int varid = name2varid( id, "Can't set attribute in a closed file!");
         dg::file::set_att( m_grp, varid, att);
@@ -284,6 +297,12 @@ struct SerialNcFile
     template<class Iterable> // *it must be usable in set_att
     void set_atts( std::string id, const Iterable& atts)
     {
+        int varid = name2varid( id, "Can't set attributes in a closed file!");
+        dg::file::set_atts( m_grp, varid, atts);
+    }
+    void set_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
+    {
+        // Help compiler choose
         int varid = name2varid( id, "Can't set attributes in a closed file!");
         dg::file::set_atts( m_grp, varid, atts);
     }
@@ -348,22 +367,41 @@ struct SerialNcFile
 
     ////////////// Variables ////////////////////////
     // Overwrite existing?
-    void def_var_x( std::string name, nc_type xtype, std::vector<std::string> dim_names);
+    void def_var( const NcVariable& var)
+    {
+        file::NC_Error_Handle err;
+        std::vector<int> dimids( var.dims.size());
+        for( unsigned u=0; u<var.dims.size(); u++)
+            nc_inq_dimid( m_grp, var.dims[u].c_str(), &dimids[u]);
+        int varid;
+        err = nc_def_var( m_grp, var.name.c_str(), var.xtype,
+                var.dims.size(), &dimids[0],
+                &varid);
+    }
     //template<class Attributes>
     //void def_var_x( std::string name, nc_type xtype, std::vector<std::string> dim_names,
     //        const Attributes& atts);
 
     template<class T>
-    void def_var( std::string name, std::vector<std::string> dim_names);
+    void def_var( std::string name, std::vector<std::string> dim_names)
+    {
+        def_var( NcVariable{ name, detail::getNCDataType<T>(), dim_names});
+    }
 
     //template<class T, class Attributes>
     //void def_var( std::string name, std::vector<std::string> dim_names,
     //        const Attributes& atts);
 
     template<class ContainerType>
-    void put_var( std::string name, const ContainerType& data, unsigned slice=0);
-    template<class ContainerType>
-    void stack_var( std::string name, const ContainerType& data);
+    void put_var( std::string name, const NcHyperslab& slab,
+            const ContainerType& data)
+    {
+        int varid = name2varid( name, "Can't write variable in a closed file!");
+        file::NC_Error_Handle err;
+        err = detail::put_vara_T( m_grp, varid, slab.startp(), slab.countp(),
+            data.data());
+    }
+
 
     //template<class Attributes, class ContainerType>
     //void defput_var( std::string name,
@@ -372,10 +410,73 @@ struct SerialNcFile
     //        const ContainerType& data)
 
     template<class ContainerType>
-    void get_var( std::string name, ContainerType& data, unsigned slice=0) const;
+    void get_var( std::string name, const NcHyperslab& slab,
+            ContainerType& data) const
+    {
+        int varid = name2varid( name, "Can't write variable in a closed file!");
+        file::NC_Error_Handle err;
+        err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
+            data.data());
+    }
 
-    std::vector<std::string> get_vars() const;
-    std::vector<unsigned> get_shape( std::string var) const;
+    bool is_defined( std::string name) const
+    {
+        int varid=0;
+        int retval = nc_inq_varid( m_grp, name.data(), &varid);
+        if( retval != NC_NOERR)
+            return false; //variable does not exist
+        return true;
+    }
+
+    std::vector<NcVariable> get_vars() const
+    {
+        int num_vars = 0, num_dims;
+        file::NC_Error_Handle err;
+        err = nc_inq(m_grp, &num_dims, &num_vars, NULL, NULL);
+        // https://docs.unidata.ucar.edu/netcdf-c/current/reading_unknown.html
+        std::vector<NcVariable> vars;
+        for( int i=0; i<num_vars; i++)
+        {
+            char name[NC_MAX_NAME+1]; // 256
+            int xtype;
+            int ndims;
+            err = nc_inq_varndims( m_grp, i, &ndims);
+            int dimIDs[ndims];
+            err = nc_inq_var( m_grp, i, name, &xtype, NULL, dimIDs, NULL);
+            std::vector<std::string> dim_names;
+            for( unsigned u=0; u<(unsigned)ndims; u++)
+            {
+                char dim_name[NC_MAX_NAME+1]; // 256
+                size_t len;
+                err = nc_inq_dim( m_grp, dimIDs[u], dim_name, &len);
+                dim_names.push_back( dim_name);
+            }
+            vars.push_back( {name, xtype, dim_names});
+        }
+        return vars;
+    }
+    template<class ContainerType>
+    void defput_var( std::string name,
+            const std::vector<std::string>& dims,
+            std::map<std::string, nc_att_t> atts,
+            const ContainerType& data)
+    {
+        def_var<dg::get_value_type<ContainerType>>( name, dims);
+        auto count = dims_shape( dims);
+        std::vector<size_t> start( dims.size(), 0);
+        set_atts( name, atts);
+        put_var( name, { start, count}, data);
+
+    }
+
+    template<class ContainerType>
+    void defput_dim( std::string name,
+            std::map<std::string, nc_att_t> atts,
+            const ContainerType& abscissas)
+    {
+        def_dim( name, abscissas.size());
+        defput_var( name, {name}, atts, abscissas);
+    }
 
     private:
     int name2varid( std::string id, std::string error_message) const
@@ -402,8 +503,6 @@ struct SerialNcFile
     // std::map<std::string, ids>
     // For variables
     // std::any for Buffer for device to host transfer, and dg::assign
-
-
 };
 
 

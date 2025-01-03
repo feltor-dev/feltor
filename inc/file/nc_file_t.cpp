@@ -25,10 +25,10 @@ int main()
 	// probably recursive
 	///////////////////////   Attributes
 	// set attributes
-	file.set_att(".", std::pair{"title", "Hello"} );
-	file.set_att(".", std::pair{"same", "thing"} );
-	file.set_att(".", std::pair{"title", "Hello world"});
-    file.set_att(".", std::make_pair("ttt", 42) );
+	file.set_att(".", {"title", "Hello"} );
+	file.set_att(".", {"same", "thing"} );
+	file.set_att(".", {"title", "Hello world"});
+    file.set_att(".", {"ttt", 42} );
 	std::map<std::string, dg::file::nc_att_t> map_atts = {
 		{"anumber", 42},
         {"axis", "X"},
@@ -36,6 +36,7 @@ int main()
 		{"int_vector", std::vector{1,2,3}}
 	};
 	file.set_atts(".", map_atts);
+    file.set_atts(".", {{ "this", "is"}, {"a", 42}, {"map", std::vector{1,2,3}}});
 	file.close();
     file.open( "test.nc", dg::file::nc_nowrite);
 	// get attributes
@@ -54,6 +55,8 @@ int main()
     int fortytwo = 42;
     assert( std::get<int>(atts.at("ttt")) == fortytwo);
 	file.close();
+    std::cout << "PASSED\n";
+
     file.open( "test.nc", dg::file::nc_write);
     file.rm_att( ".", "same");
     file.rename_att( ".", "ttt", "truth");
@@ -61,30 +64,38 @@ int main()
     assert( truth == fortytwo);
     std::cout << "PASSED\n";
 
-	//struct NcVariable
-	//{
-	//	std::string name;
-	//	std::map<std::string, dg::file::att_t> atts;
-	//	lambda creator(...);
-	//};
-	//////////////////// Dimensions
-	//file.def_dim("x", 42);
-	//file.defput_dim("x", atts, abscissas); // Create dim and dimension variable
-	//file.def_dim("time");
+	////////////////// Dimensions
+	file.def_dim("x", 42);
+    std::vector<double> abscissas{ 1.,2.,3.,4.,5.};
+	file.defput_dim("y", {{"axis", "Y"}, {"long_name", "y-coordinate"}},
+            abscissas); // Create dim and dimension variable
+	file.def_dim("time");
 
-	//file.dim_size("x");
-	//file.get_size("x");
-	///////////////////// Variables
+	size_t xsize = file.dim_size("x");
+    assert( xsize == 42);
 
-	//file.get("variable", data);
-	//file.get("name", data2);
+	size_t ysize = file.dim_size("y");
+    assert( ysize == 5);
+    std::cout << "PASSED Dimensions\n";
+	/////////////////// Variables put
 
-	//file.def("name", atts, {"time", "y", "x"});
-	//file.def_and_put("name", { "y" }, atts, data2);
+	file.def_var<double>("variable", {"time", "y","x"});
+    std::vector<double> data( xsize*ysize, 7);
+	file.put_var("variable", std::vector<size_t>{0, ysize, xsize}, data);
+
+	file.set_att("variable", {"long_name", "blabla"});
+    std::vector<int> data2(ysize, 42);
+	file.defput_var("name", { "y" }, {{"long_name", "blub"}}, data2);
 	//file.put("name", data);
-	//file.put("time", 52, 10);
+	//file.put_var("time", {52}, 10);
 	//file.stack("time", 52);
 
+	/////////////////// Variables get
+    file.get_var( "variable", std::vector<size_t>{0, ysize, xsize}, data);
+    unsigned size = xsize*ysize;
+    assert( data.size() == size);
+    assert( data[0] == 7);
+    std::cout << "PASSED Getters\n";
 
 	file.close();
 	return 0;
