@@ -1,12 +1,30 @@
 #include <iostream>
 
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "nc_mpi_file.h"
+#else
 #include "nc_file.h"
+#endif
 
-int main()
+
+int main(int argc, char* argv[])
 {
-	dg::file::SerialNcFile file;
+#ifdef WITH_MPI
+    MPI_Init( &argc, &argv);
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    //create a grid and some data
+#endif
+#ifdef WITH_MPI
+    std::string filename = "testmpi.nc";
+#else
+    std::string filename = "test.nc";
+#endif
+	dg::file::NcFile file;
 	try {
-		file.open("test.nc", dg::file::nc_clobber);
+		file.open(filename, dg::file::nc_clobber);
 	}
 	catch(dg::file::NC_Error & e)	{
 		std::cerr << e.what();
@@ -85,18 +103,21 @@ int main()
 
 	file.set_att("variable", {"long_name", "blabla"});
     std::vector<int> data2(ysize, 42);
-	file.defput_var("name", { "y" }, {{"long_name", "blub"}}, data2);
+	//file.defput_var("name", { "y" }, {{"long_name", "blub"}}, data2);
 	//file.put("name", data);
-	//file.put_var("time", {52}, 10);
-	//file.stack("time", 52);
+	file.def_var<double>("time", {"time"});
+	file.put_var("time", 52, 10);
 
 	/////////////////// Variables get
     file.get_var( "variable", std::vector<size_t>{0, ysize, xsize}, data);
-    unsigned size = xsize*ysize;
-    assert( data.size() == size);
+    unsigned vsize = xsize*ysize;
+    assert( data.size() == vsize);
     assert( data[0] == 7);
     std::cout << "PASSED Getters\n";
 
 	file.close();
+#ifdef WITH_MPI
+    MPI_Finalize();
+#endif
 	return 0;
 }

@@ -149,13 +149,18 @@ struct SerialNcFile
     /// Call nc_sync
     void sync()
     {
+        if( !m_open)
+            throw std::runtime_error( "Can't sync a closed file!");
         NC_Error_Handle err;
         err = nc_sync( m_ncid);
     }
+    int get_ncid() const { return m_ncid;}
 
     /////////////// Groups /////////////////
     void def_grp( std::string name)
     {
+        if( !m_open)
+            throw std::runtime_error( "Can't create group in a closed file!");
         int new_grp_id = 0;
         NC_Error_Handle err;
         err = nc_def_grp( m_grp, name.c_str(), &new_grp_id);
@@ -195,6 +200,8 @@ struct SerialNcFile
         err = nc_inq_grp_ncid( m_ncid, old_name.c_str(), &old_grp);
         err = nc_rename_grp( old_grp, new_name.c_str());
     }
+
+    int get_grpid() const { return m_grp;}
 
     std::vector<std::string> get_grps( ) const
     {
@@ -367,6 +374,11 @@ struct SerialNcFile
 
     ////////////// Variables ////////////////////////
     // Overwrite existing?
+    template<class T>
+    void def_var( std::string name, std::vector<std::string> dim_names)
+    {
+        def_var( NcVariable{ name, detail::getNCDataType<T>(), dim_names});
+    }
     void def_var( const NcVariable& var)
     {
         file::NC_Error_Handle err;
@@ -377,15 +389,6 @@ struct SerialNcFile
         err = nc_def_var( m_grp, var.name.c_str(), var.xtype,
                 var.dims.size(), &dimids[0],
                 &varid);
-    }
-    //template<class Attributes>
-    //void def_var_x( std::string name, nc_type xtype, std::vector<std::string> dim_names,
-    //        const Attributes& atts);
-
-    template<class T>
-    void def_var( std::string name, std::vector<std::string> dim_names)
-    {
-        def_var( NcVariable{ name, detail::getNCDataType<T>(), dim_names});
     }
 
     //template<class T, class Attributes>
@@ -402,12 +405,16 @@ struct SerialNcFile
             data.data());
     }
 
+    template<class T>
+    void put_var( std::string name, unsigned slice, T data)
+    {
+        int varid = name2varid( name, "Can't write variable in a closed file!");
+        file::NC_Error_Handle err;
+        size_t count = 1;
+        size_t start = slice; // convert to size_t
+        err = detail::put_vara_T( m_grp, varid, &start, &count, &data);
+    }
 
-    //template<class Attributes, class ContainerType>
-    //void defput_var( std::string name,
-    //        std::vector<std::string> dim_names,
-    //        const dg::file::JsonType& atts,
-    //        const ContainerType& data)
 
     template<class ContainerType>
     void get_var( std::string name, const NcHyperslab& slab,
@@ -455,19 +462,6 @@ struct SerialNcFile
         }
         return vars;
     }
-    template<class ContainerType>
-    void defput_var( std::string name,
-            const std::vector<std::string>& dims,
-            std::map<std::string, nc_att_t> atts,
-            const ContainerType& data)
-    {
-        def_var<dg::get_value_type<ContainerType>>( name, dims);
-        auto count = dims_shape( dims);
-        std::vector<size_t> start( dims.size(), 0);
-        set_atts( name, atts);
-        put_var( name, { start, count}, data);
-
-    }
 
     template<class ContainerType>
     void defput_dim( std::string name,
@@ -475,7 +469,11 @@ struct SerialNcFile
             const ContainerType& abscissas)
     {
         def_dim( name, abscissas.size());
-        defput_var( name, {name}, atts, abscissas);
+        def_var<dg::get_value_type<ContainerType>>( name, {name});
+        set_atts( name, atts);
+        std::vector<size_t> count( 1, abscissas.size());
+        std::vector<size_t> start( 1, 0);
+        put_var( name, { start, count}, abscissas);
     }
 
     private:
@@ -499,13 +497,13 @@ struct SerialNcFile
     int m_ncid = 0;
     // For group activities
     int m_grp = 0; // the currently active group
-    // For dimensions
-    // std::map<std::string, ids>
     // For variables
     // std::any for Buffer for device to host transfer, and dg::assign
 };
 
-
+#ifndef MPI_VERSION
+using NcFile = SerialNcFile;
+#endif // MPI_VERSION
 
 }// namespace file
 }// namespace dg
