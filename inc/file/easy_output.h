@@ -152,10 +152,12 @@ inline int put_vara_T<unsigned>( int ncid, int varid, const size_t* startp, cons
 #ifdef MPI_VERSION
 template<class host_vector>
 void put_vara_detail(int ncid, int varid,
-        const NcHyperslab& slab,
+        const MPINcHyperslab& slab,
         const host_vector& data,
-        MPI_Comm comm)
+        thrust::host_vector<dg::get_value_type<host_vector>>& receive
+        )
 {
+    MPI_Comm comm = slab.communicator();
     // we need to identify the global root rank within the groups and mark the
     // entire group
     int local_root_rank = dg::mpi_comm_global2local_rank(comm);
@@ -186,8 +188,8 @@ void put_vara_detail(int ncid, int varid,
                 sizes[r]*= r_count[r*ndims + u];
 
         // host_vector could be a View
-        thrust::host_vector<get_value_type<host_vector>> receive(
-                *std::max_element( sizes.begin(), sizes.end()));
+        unsigned max_size = *std::max_element( sizes.begin(), sizes.end());
+        receive.resize( max_size);
         for( int r=0; r<size; r++)
         {
             if(r!=rank)
@@ -223,9 +225,9 @@ void put_vara_detail(int ncid, int varid, unsigned slice,
         const MPITopology& grid, const MPI_Vector<host_vector>& data,
         bool vara, bool parallel = false)
 {
-    NcHyperslab slab( grid, true);
+    MPINcHyperslab slab( grid, true);
     if( vara)
-        slab = NcHyperslab( slice, grid, true);
+        slab = MPINcHyperslab( slice, grid, true);
     if( parallel)
     {
         file::NC_Error_Handle err;
@@ -233,7 +235,10 @@ void put_vara_detail(int ncid, int varid, unsigned slice,
                 slab.startp(), slab.countp(), data.data().data());
     }
     else
-        put_vara_detail( ncid, varid, slab, data.data(), grid.communicator());
+    {
+        thrust::host_vector<dg::get_value_type<host_vector>> receive;
+        put_vara_detail( ncid, varid, slab, data.data(), receive);
+    }
 }
 #endif // MPI_VERSION
 } // namespace detail

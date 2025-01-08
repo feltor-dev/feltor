@@ -168,6 +168,10 @@ struct AnyVector
             ptr->resize( size);
         }
     }
+    // If you think you need this fct. think again, std::vector e.g. will not release
+    // memory on resize unless the size is bigger
+    //template<class value_type>
+    //void set_at_least( unsigned size);
     template<class value_type>
     void swap ( Vector<value_type>& src)
     {

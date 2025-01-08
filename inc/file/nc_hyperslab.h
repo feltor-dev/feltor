@@ -38,7 +38,7 @@ struct NcHyperslab
     }
 
     template<class Topology>
-    NcHyperslab( unsigned slice, const Topology& grid, bool reverse)
+    NcHyperslab( size_t slice, const Topology& grid, bool reverse)
           : NcHyperslab( grid, reverse)
     {
         m_start.insert( m_start.begin(), slice);
@@ -53,6 +53,40 @@ struct NcHyperslab
     private:
     std::vector<size_t> m_start, m_count;
 };
+
+#ifdef MPI_VERSION
+struct MPINcHyperslab
+{
+
+    MPINcHyperslab(std::vector<size_t> local_start,
+        std::vector<size_t> local_count, MPI_Comm comm)
+    : m_slab( local_start, local_count), m_comm(comm)
+    {
+    }
+
+    template<class Topology>
+    MPINcHyperslab( const Topology& grid, bool reverse)
+    : m_slab( grid, reverse), m_comm(grid.communicator())
+    {
+    }
+
+    template<class Topology>
+    MPINcHyperslab( size_t slice, const Topology& grid, bool reverse)
+    : m_slab( slice, grid, reverse), m_comm(grid.communicator())
+    {
+    }
+    const unsigned ndims() const { return m_slab.ndims();}
+
+    const std::vector<size_t>& start() const { return m_slab.start();}
+    const std::vector<size_t>& count() const { return m_slab.count();}
+    MPI_Comm communicator() const { return m_comm;}
+    const size_t* startp() const { return m_slab.startp();}
+    const size_t* countp() const { return m_slab.countp();}
+    private:
+    NcHyperslab m_slab;
+    MPI_Comm m_comm;
+};
+#endif
 
 }//namespace file
 }//namespace dg

@@ -77,10 +77,10 @@ inline int get_vara_T<unsigned>( int ncid, int varID, const size_t* startp, cons
 #ifdef MPI_VERSION
 template<class host_vector>
 void get_vara_detail(int ncid, int varid,
-        const NcHyperslab& slab,
-        host_vector& data,
-        MPI_Comm comm)
+        const MPINcHyperslab& slab,
+        host_vector& data)
 {
+    MPI_Comm comm = slab.communicator();
     // we need to identify the global root rank within the groups and mark the
     // entire group
     int local_root_rank = dg::mpi_comm_global2local_rank(comm);
@@ -148,9 +148,9 @@ void get_vara_detail(int ncid, int varid, unsigned slice,
         const MPITopology& grid, MPI_Vector<host_vector>& data,
         bool vara, bool parallel = false)
 {
-    NcHyperslab slab( grid, true);
+    MPINcHyperslab slab( grid, true);
     if( vara)
-        slab = NcHyperslab( slice, grid, true);
+        slab = MPINcHyperslab( slice, grid, true);
     if( parallel)
     {
         file::NC_Error_Handle err;
@@ -158,7 +158,7 @@ void get_vara_detail(int ncid, int varid, unsigned slice,
                 slab.startp(), slab.countp(), data.data().data());
     }
     else
-        get_vara_detail( ncid, varid, slab, data.data(), grid.communicator());
+        get_vara_detail( ncid, varid, slab, data.data());
 }
 #endif // MPI_VERSION
 } // namespace detail

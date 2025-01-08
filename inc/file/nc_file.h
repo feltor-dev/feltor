@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dg/backend/memory.h"
 #include "nc_error.h"
 #include "easy_dims.h"
 #include "easy_atts.h"
@@ -391,28 +392,34 @@ struct SerialNcFile
                 &varid);
     }
 
-    //template<class T, class Attributes>
-    //void def_var( std::string name, std::vector<std::string> dim_names,
-    //        const Attributes& atts);
-
     template<class ContainerType>
     void put_var( std::string name, const NcHyperslab& slab,
             const ContainerType& data)
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
         file::NC_Error_Handle err;
-        err = detail::put_vara_T( m_grp, varid, slab.startp(), slab.countp(),
-            data.data());
+        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
+            dg::CudaTag>)
+        {
+            using value_type = dg::get_value_type<ContainerType>;
+            m_buffer.template set<value_type>( data.size());
+            const auto& buffer = m_buffer.template get<value_type>( );
+            dg::assign ( data, buffer);
+            err = detail::put_vara_T( m_grp, varid, slab.startp(), slab.countp(),
+                buffer.data());
+        }
+        else
+            err = detail::put_vara_T( m_grp, varid, slab.startp(), slab.countp(),
+                data.data());
     }
 
     template<class T>
-    void put_var( std::string name, unsigned slice, T data)
+    void put_var1( std::string name, const std::vector<size_t>& start, T data)
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
         file::NC_Error_Handle err;
-        size_t count = 1;
-        size_t start = slice; // convert to size_t
-        err = detail::put_vara_T( m_grp, varid, &start, &count, &data);
+        std::vector<size_t> count( start.size(), 1);
+        err = detail::put_vara_T( m_grp, varid, &start[0], &count[0], &data);
     }
 
 
@@ -422,14 +429,25 @@ struct SerialNcFile
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
         file::NC_Error_Handle err;
-        err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
-            data.data());
+        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
+            dg::CudaTag>)
+        {
+            using value_type = dg::get_value_type<ContainerType>;
+            m_buffer.template set<value_type>( data.size());
+            const auto& buffer = m_buffer.template get<value_type>( );
+            err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
+                buffer.data());
+            dg::assign ( buffer, data);
+        }
+        else
+            err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
+                data.data());
     }
 
     bool is_defined( std::string name) const
     {
         int varid=0;
-        int retval = nc_inq_varid( m_grp, name.data(), &varid);
+        int retval = nc_inq_varid( m_grp, name.c_str(), &varid);
         if( retval != NC_NOERR)
             return false; //variable does not exist
         return true;
@@ -461,6 +479,13 @@ struct SerialNcFile
             vars.push_back( {name, xtype, dim_names});
         }
         return vars;
+    }
+    template<class ContainerType>
+    void put_var( std::string name, const ContainerType& data)
+    {
+        std::vector<size_t> count( 1, data.size());
+        std::vector<size_t> start( 1, 0);
+        put_var( name, { start, count}, data);
     }
 
     template<class ContainerType>
@@ -495,10 +520,10 @@ struct SerialNcFile
 
     bool m_open = false;
     int m_ncid = 0;
-    // For group activities
     int m_grp = 0; // the currently active group
-    // For variables
-    // std::any for Buffer for device to host transfer, and dg::assign
+
+    // Buffer for device to host transfer, and dg::assign
+    dg::detail::AnyVector<thrust::host_vector> m_buffer;
 };
 
 #ifndef MPI_VERSION

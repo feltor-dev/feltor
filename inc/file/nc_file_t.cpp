@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 	file.set_atts(".", map_atts);
     file.set_atts(".", {{ "this", "is"}, {"a", 42}, {"map", std::vector{1,2,3}}});
 	file.close();
-    file.open( "test.nc", dg::file::nc_nowrite);
+    file.open( filename, dg::file::nc_nowrite);
 	// get attributes
 	auto title = file.get_att<std::string>(".", "title"); // get index 0 automatically
     assert( title == "Hello world");
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
 	file.close();
     std::cout << "PASSED\n";
 
-    file.open( "test.nc", dg::file::nc_write);
+    file.open( filename, dg::file::nc_write);
     file.rm_att( ".", "same");
     file.rename_att( ".", "ttt", "truth");
     int truth = file.get_att<int>(".", "truth");
@@ -85,8 +85,23 @@ int main(int argc, char* argv[])
 	////////////////// Dimensions
 	file.def_dim("x", 42);
     std::vector<double> abscissas{ 1.,2.,3.,4.,5.};
+#ifdef WITH_MPI
+    if( size >= 2)
+    {
+        if( rank==0)
+            abscissas = {1.,2.,3.};
+        else if ( rank==1)
+            abscissas = {4.,5.};
+        else
+            abscissas.clear();
+    }
+    dg::MPI_Vector<std::vector<double>> mpi_abscissas( abscissas, MPI_COMM_WORLD);
+	file.defput_dim("y", {{"axis", "Y"}, {"long_name", "y-coordinate"}},
+            mpi_abscissas); // Create dim and dimension variable
+#else
 	file.defput_dim("y", {{"axis", "Y"}, {"long_name", "y-coordinate"}},
             abscissas); // Create dim and dimension variable
+#endif
 	file.def_dim("time");
 
 	size_t xsize = file.dim_size("x");
@@ -99,20 +114,28 @@ int main(int argc, char* argv[])
 
 	file.def_var<double>("variable", {"time", "y","x"});
     std::vector<double> data( xsize*ysize, 7);
-	file.put_var("variable", std::vector<size_t>{0, ysize, xsize}, data);
+#ifdef WITH_MPI
+    // TODO Make mpi test
+#else
+	file.put_var("variable", data);
+#endif
 
 	file.set_att("variable", {"long_name", "blabla"});
     std::vector<int> data2(ysize, 42);
 	//file.defput_var("name", { "y" }, {{"long_name", "blub"}}, data2);
 	//file.put("name", data);
 	file.def_var<double>("time", {"time"});
-	file.put_var("time", 52, 10);
+	file.put_var1("time", {52}, 10);
 
 	/////////////////// Variables get
+#ifdef WITH_MPI
+    // TODO Make mpi test
+#else
     file.get_var( "variable", std::vector<size_t>{0, ysize, xsize}, data);
     unsigned vsize = xsize*ysize;
     assert( data.size() == vsize);
     assert( data[0] == 7);
+#endif
     std::cout << "PASSED Getters\n";
 
 	file.close();

@@ -21,7 +21,6 @@ struct MPINcFile
     /// mpi-mode = shared, MPI_Comm = MPI_COMM_WORLD
     MPINcFile(const std::string& path, enum NcFileMode mode = nc_nowrite)
     {
-        m_comm = MPI_COMM_WORLD;
         open( path, mode);
     }
     MPINcFile(const MPINcFile& rhs) = delete;
@@ -35,6 +34,7 @@ struct MPINcFile
 
     void open(const std::string& path, enum NcFileMode mode = nc_nowrite)
     {
+        m_comm = MPI_COMM_WORLD;
         int rank;
         MPI_Comm_rank( m_comm, &rank);
         m_rank0 = (rank == 0);
@@ -193,16 +193,16 @@ struct MPINcFile
     void def_var( std::string name, std::vector<std::string> dim_names)
     {
         if( m_rank0)
-            def_var<T>( name, dim_names);
+            m_file.def_var<T>( name, dim_names);
     }
     void def_var( const NcVariable& var)
     {
         if( m_rank0)
-            def_var( var);
+            m_file.def_var( var);
     }
     template<class ContainerType>
-    void put_var( std::string name, const NcHyperslab& slab,
-            const dg::MPI_Vector<ContainerType>& data)
+    void put_var( std::string name, const MPINcHyperslab& slab,
+            const ContainerType& data)
     {
         int grpid = 0, varid = 0;
         if( m_rank0)
@@ -211,23 +211,93 @@ struct MPINcFile
             file::NC_Error_Handle err;
             err = nc_inq_varid( grpid, name.c_str(), &varid);
         }
-        detail::put_vara_detail( grpid, varid, slab, data.data(), data.communicator());
+        using value_type = dg::get_value_type<ContainerType>;
+        m_receive.template set<value_type>(0);
+        auto& receive = m_receive.template get<value_type>( );
+        const auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
+        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
+            dg::CudaTag>)
+        {
+            m_buffer.template set<value_type>( data.size());
+            const auto& buffer = m_buffer.template get<value_type>( );
+            dg::assign ( data_ref, buffer);
+            detail::put_vara_detail( grpid, varid, slab, buffer, receive);
+        }
+        else
+            detail::put_vara_detail( grpid, varid, slab, data_ref, receive);
+    }
+
+    template<class ContainerType>
+    void put_var( std::string name, const MPI_Vector<ContainerType>& data)
+    {
+        // Only works for 1d variable in MPI
+        int varid = 0, ndims = 0;
+        int retval = nc_inq_varid( m_file.get_grpid(), name.c_str(), &varid);
+        if( retval != NC_NOERR )
+            throw std::runtime_error( "Variable does not exist!");
+        retval = nc_inq_varndims( m_file.get_grpid(), varid, &ndims);
+        assert( ndims == 1);
+
+        int count = data.size();
+        MPI_Comm comm = data.communicator();
+        int rank, size;
+        MPI_Comm_rank( comm, &rank);
+        MPI_Comm_size( comm, &size);
+        std::vector<int> counts ( size);
+        MPI_Allgather( &count, 1, MPI_INT, &counts[0], 1, MPI_INT, comm);
+        std::vector<size_t> start(1, 0);
+        for( int r=0; r<rank; r++)
+            start[0] += counts[r];
+        put_var( name, { start, std::vector<size_t>(1,count), comm}, data);
+    }
+    template<class ContainerType>
+    void defput_dim( std::string name,
+            std::map<std::string, nc_att_t> atts,
+            const MPI_Vector<ContainerType>& abscissas)  // implicitly assume ordered by rank
+    {
+        if( m_rank0)
+        {
+            m_file.def_dim( name, abscissas.size());
+            m_file.def_var<dg::get_value_type<ContainerType>>( name, {name});
+            m_file.set_atts( name, atts);
+        }
+        put_var( name, abscissas);
     }
 
     template<class T>
-    void put_var( std::string name, unsigned slice, T data)
+    void put_var1( std::string name, const std::vector<size_t>& start, T data)
     {
         if(m_rank0)
-            put_var( name, slice, data);
+            m_file.put_var1( name, start, data);
     }
 
 
     template<class ContainerType>
-    void get_var( std::string name, const NcHyperslab& slab,
+    void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
     {
+        // Reading is always possible in parallel
         readsync();
-        m_file.get_var( name, slab, data);
+        file::NC_Error_Handle err;
+        int grpid = 0, varid = 0;
+        grpid = m_file.get_grpid();
+        err = nc_inq_varid( grpid, name.c_str(), &varid);
+
+        using value_type = dg::get_value_type<ContainerType>;
+        auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
+
+        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
+            dg::CudaTag>)
+        {
+            m_buffer.template set<value_type>( data.size());
+            const auto& buffer = m_buffer.template get<value_type>( );
+            err = detail::get_vara_T( grpid, varid,
+                slab.startp(), slab.countp(), buffer.data());
+            dg::assign ( buffer, data_ref);
+        }
+        else
+            err = detail::get_vara_T( grpid, varid,
+                slab.startp(), slab.countp(), data_ref.data());
     }
 
     bool is_defined( std::string name) const
@@ -242,29 +312,6 @@ struct MPINcFile
         return m_file.get_vars();
     }
 
-    template<class ContainerType>
-    void defput_dim( std::string name,
-            std::map<std::string, nc_att_t> atts,
-            const MPI_Vector<ContainerType>& abscissas)  // implicitly assume ordered by rank
-    {
-        if( m_rank0)
-        {
-            m_file.def_dim( name, abscissas.size());
-            m_file.def_var<dg::get_value_type<ContainerType>>( name, {name});
-            m_file.set_atts( name, atts);
-        }
-        int count = abscissas.size();
-        MPI_Comm comm = abscissas.communicator();
-        int rank, size;
-        MPI_Comm_rank( comm, &rank);
-        MPI_Comm_size( comm, &size);
-        std::vector<int> counts ( size);
-        MPI_Allgather( count, 1, MPI_INT, &counts[0], 1, MPI_INT, comm);
-        std::vector<size_t> start(1, 0);
-        for( unsigned r=0; r<rank; r++)
-            start[0] += counts[r];
-        put_var( name, { start, std::vector<size_t>(1,count)}, abscissas);
-    }
 
     private:
     void readsync() const
@@ -279,10 +326,34 @@ struct MPINcFile
             MPI_Barrier( m_comm);
         }
     }
+    template<class ContainerType>
+    const ContainerType& get_ref( const MPI_Vector<ContainerType>& x, dg::MPIVectorTag)
+    {
+        return x.data();
+    }
+    template<class ContainerType>
+    const ContainerType& get_ref( const ContainerType& x, dg::AnyVectorTag)
+    {
+        return x;
+    }
+    template<class ContainerType>
+    ContainerType& get_ref( MPI_Vector<ContainerType>& x, dg::MPIVectorTag)
+    {
+        return x.data();
+    }
+    template<class ContainerType>
+    ContainerType& get_ref( ContainerType& x, dg::AnyVectorTag)
+    {
+        return x;
+    }
+
+
     bool m_rank0;
     bool m_readonly;
     MPI_Comm m_comm;
     SerialNcFile m_file;
+    // Buffer for device to host transfer, and dg::assign
+    dg::detail::AnyVector<thrust::host_vector> m_buffer, m_receive;
 };
 
 using NcFile = MPINcFile;
