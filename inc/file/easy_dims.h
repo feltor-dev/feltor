@@ -20,7 +20,7 @@
  * The define_dimensions functions
  */
 
-
+// TODO DEPRECATED!?
 namespace dg
 {
 /**

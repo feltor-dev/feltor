@@ -85,7 +85,7 @@ struct MPINcFile
     }
 
     ////////////// Dimensions ////////////////////////
-    void def_dim( std::string name, size_t size = NC_UNLIMITED)
+    void def_dim( std::string name, size_t size)
     {
         if( m_rank0)
             m_file.def_dim( name, size);
@@ -231,12 +231,15 @@ struct MPINcFile
     void put_var( std::string name, const MPI_Vector<ContainerType>& data)
     {
         // Only works for 1d variable in MPI
-        int varid = 0, ndims = 0;
-        int retval = nc_inq_varid( m_file.get_grpid(), name.c_str(), &varid);
-        if( retval != NC_NOERR )
-            throw std::runtime_error( "Variable does not exist!");
-        retval = nc_inq_varndims( m_file.get_grpid(), varid, &ndims);
-        assert( ndims == 1);
+        if( m_rank0)
+        {
+            int varid = 0, ndims = 0;
+            int retval = nc_inq_varid( m_file.get_grpid(), name.c_str(), &varid);
+            if( retval != NC_NOERR )
+                throw std::runtime_error( "Variable does not exist!");
+            retval = nc_inq_varndims( m_file.get_grpid(), varid, &ndims);
+            assert( ndims == 1);
+        }
 
         int count = data.size();
         MPI_Comm comm = data.communicator();
@@ -250,17 +253,22 @@ struct MPINcFile
             start[0] += counts[r];
         put_var( name, { start, std::vector<size_t>(1,count), comm}, data);
     }
+
+    template<class T>
+    void defput_dim( std::string name, size_t size,
+            std::map<std::string, nc_att_t> atts)
+    {
+        if( m_rank0)
+            m_file.defput_dim<T>( name, size, atts);
+    }
     template<class ContainerType>
     void defput_dim( std::string name,
             std::map<std::string, nc_att_t> atts,
             const MPI_Vector<ContainerType>& abscissas)  // implicitly assume ordered by rank
     {
         if( m_rank0)
-        {
-            m_file.def_dim( name, abscissas.size());
-            m_file.def_var<dg::get_value_type<ContainerType>>( name, {name});
-            m_file.set_atts( name, atts);
-        }
+            m_file.defput_dim<dg::get_value_type<ContainerType>>( name,
+                abscissas.size(), atts);
         put_var( name, abscissas);
     }
 

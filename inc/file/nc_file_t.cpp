@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
 	file.defput_dim("y", {{"axis", "Y"}, {"long_name", "y-coordinate"}},
             abscissas); // Create dim and dimension variable
 #endif
-	file.def_dim("time");
+	file.def_dim("time", NC_UNLIMITED);
 
 	size_t xsize = file.dim_size("x");
     assert( xsize == 42);

@@ -43,6 +43,7 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
       std::vector<int>, std::vector<unsigned>, std::vector<float>,
       std::vector<double>, std::vector<bool>>;
 
+// TODO update docu
 ///@cond
 namespace detail
 {

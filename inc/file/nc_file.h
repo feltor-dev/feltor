@@ -1,8 +1,8 @@
 #pragma once
 
+#include "dg/blas.h"
 #include "dg/backend/memory.h"
 #include "nc_error.h"
-#include "easy_dims.h"
 #include "easy_atts.h"
 #include "easy_output.h"
 #include "easy_input.h"
@@ -230,7 +230,7 @@ struct SerialNcFile
 
     ////////////// Dimensions ////////////////////////
     //Remember that dimensions do not have attributes, only variables (or groups)
-    void def_dim( std::string name, size_t size = NC_UNLIMITED)
+    void def_dim( std::string name, size_t size)
     {
         if( !m_open)
             throw std::runtime_error( "Can't define dimension in a closed file!");
@@ -486,6 +486,14 @@ struct SerialNcFile
         std::vector<size_t> count( 1, data.size());
         std::vector<size_t> start( 1, 0);
         put_var( name, { start, count}, data);
+    }
+    template<class T>
+    void defput_dim( std::string name, size_t size,
+            std::map<std::string, nc_att_t> atts)
+    {
+        def_dim( name, size);
+        def_var<T>( name, {name});
+        set_atts( name, atts);
     }
 
     template<class ContainerType>
