@@ -48,7 +48,7 @@ namespace dg{
 /**
  * @brief Bootstrap irregular communication between processes
  *
- * @param elements (in) <tt> elements[PID] </tt> contains the message that the calling rank
+ * @param messages (in) <tt> messages[PID] </tt> contains the message that the calling rank
  * sends to PID
  * @param comm Communicator
  * @return <tt> received elements[PID] </tt> contains the message that the calling rank

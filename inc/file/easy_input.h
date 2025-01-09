@@ -78,7 +78,8 @@ inline int get_vara_T<unsigned>( int ncid, int varID, const size_t* startp, cons
 template<class host_vector>
 void get_vara_detail(int ncid, int varid,
         const MPINcHyperslab& slab,
-        host_vector& data)
+        host_vector& data,
+        thrust::host_vector<dg::get_value_type<host_vector>>& to_send)
 {
     MPI_Comm comm = slab.communicator();
     // we need to identify the global root rank within the groups and mark the
@@ -111,8 +112,8 @@ void get_vara_detail(int ncid, int varid,
                 sizes[r]*= r_count[r*ndims + u];
 
         // host_vector could be a View
-        thrust::host_vector<get_value_type<host_vector>> to_send(
-                *std::max_element( sizes.begin(), sizes.end()));
+        unsigned max_size = *std::max_element( sizes.begin(), sizes.end());
+        to_send.resize( max_size);
         for( int r=0; r<size; r++)
         {
             if(r!=rank)
@@ -158,7 +159,10 @@ void get_vara_detail(int ncid, int varid, unsigned slice,
                 slab.startp(), slab.countp(), data.data().data());
     }
     else
-        get_vara_detail( ncid, varid, slab, data.data());
+    {
+        thrust::host_vector<dg::get_value_type<host_vector>> to_send;
+        get_vara_detail( ncid, varid, slab, data.data(), to_send);
+    }
 }
 #endif // MPI_VERSION
 } // namespace detail
