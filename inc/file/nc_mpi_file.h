@@ -14,6 +14,8 @@ namespace dg
 namespace file
 {
 
+    //TODO where is file MPI_Comm in put_var?
+
 struct MPINcFile
 {
     /////////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
@@ -34,31 +36,39 @@ struct MPINcFile
 
     void open(const std::string& path, enum NcFileMode mode = nc_nowrite)
     {
+        // General problem: HDF5 may use file locks to prevent multiple processes
+        // from opening the same file for write at the same time
         m_comm = MPI_COMM_WORLD;
         int rank;
         MPI_Comm_rank( m_comm, &rank);
         m_rank0 = (rank == 0);
         m_readonly = ( mode == nc_nowrite);
         // Classic file access, one process writes, everyone else reads
-        if( m_rank0)
+        if( m_readonly or m_rank0)
+        {
             m_file.open( path, mode);
-        MPI_Barrier( m_comm);
-        if( !m_rank0)
-            m_file.open( path, nc_nowrite);
+        }
     }
     /// Check if a file is open
     bool is_open() const
     {
-        return m_file.is_open();
+        bool boolean;
+        if( m_readonly or m_rank0)
+            boolean = m_file.is_open();
+        return mpi_bcast( boolean);
     }
 
-    void close() { m_file.close(); }
+    void close()
+    {
+        m_file.close();
+        MPI_Barrier( m_comm); // all ranks agree that file is closed
+        // removes lock from file
+    }
 
     void sync()
     {
-        // Also the readers need to sync to update information
-        m_file.sync();
-        MPI_Barrier( m_comm);
+        if( m_readonly or m_rank0)
+            m_file.sync();
     }
 
     /////////////// Groups /////////////////
@@ -66,6 +76,18 @@ struct MPINcFile
     {
         if( m_rank0)
             m_file.def_grp(name);
+    }
+    void def_grp_p( std::filesystem::path path)
+    {
+        if( m_rank0)
+            m_file.def_grp_p(path);
+    }
+    bool grp_exists( std::filesystem::path path) const
+    {
+        bool boolean;
+        if( m_readonly or m_rank0)
+            boolean = m_file.grp_exists(path);
+        return mpi_bcast( boolean);
     }
     void set_grp( std::string name = "")
     {
@@ -78,10 +100,35 @@ struct MPINcFile
             m_file.rename_grp(old_name, new_name);
     }
 
-    std::vector<std::string> get_grps( ) const
+    int get_grpid() const
     {
-        readsync();
-        return m_file.get_grps();
+        int integer;
+        if( m_readonly or m_rank0)
+            integer = m_file.get_grpid();
+        return mpi_bcast( integer);
+    }
+
+    std::filesystem::path get_grp_path( ) const
+    {
+        std::filesystem::path path;
+        if( m_readonly or m_rank0)
+            path = m_file.get_grp_path();
+        return mpi_bcast( path);
+    }
+
+    std::vector<std::filesystem::path> get_grps( ) const
+    {
+        std::vector<std::filesystem::path> grps;
+        if( m_readonly or m_rank0)
+            grps = m_file.get_grps();
+        return mpi_bcast( grps);
+    }
+    std::vector<std::filesystem::path> get_grps_r( ) const
+    {
+        std::vector<std::filesystem::path> grps;
+        if( m_readonly or m_rank0)
+            grps = m_file.get_grps_r();
+        return mpi_bcast( grps);
     }
 
     ////////////// Dimensions ////////////////////////
@@ -97,19 +144,32 @@ struct MPINcFile
     }
     size_t dim_size( std::string name) const
     {
-        readsync();
-        return m_file.dim_size( name);
+        size_t size;
+        if( m_readonly or m_rank0)
+            size = m_file.dim_size( name);
+        return mpi_bcast( size);
     }
 
     std::vector<size_t> dims_shape( const std::vector<std::string>& dims) const
     {
-        readsync();
-        return m_file.dims_shape( dims);
+        std::vector<size_t> size;
+        if( m_readonly or m_rank0)
+            size = m_file.dims_shape( dims);
+        return mpi_bcast( size);
     }
     std::vector<std::string> get_dims() const
     {
-        readsync();
-        return m_file.get_dims();
+        std::vector<std::string> strings;
+        if( m_readonly or m_rank0)
+            strings = m_file.get_dims( );
+        return mpi_bcast( strings) ;
+    }
+    bool dim_exists( std::string name) const
+    {
+        bool boolean;
+        if( m_readonly or m_rank0)
+            boolean = m_file.dim_exists(name);
+        return mpi_bcast( boolean);
     }
     /////////////// Attributes setters
     void set_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
@@ -141,36 +201,46 @@ struct MPINcFile
 
     dg::file::nc_att_t get_att_t( std::string id, std::string att_name) const
     {
-        readsync();
-        return m_file.get_att_t(id, att_name);
+        nc_att_t att;
+        if( m_readonly or m_rank0)
+            att = m_file.get_att_t( id, att_name);
+        return mpi_bcast( att);
     }
 
     template<class T>
     T get_att_i( std::string id, std::string att_name, unsigned idx = 0) const
     {
-        readsync();
-        return m_file.get_att_i<T>(id, att_name, idx);
+        T att;
+        if( m_readonly or m_rank0)
+            att = m_file.get_att_i<T>( id, att_name, idx);
+        return mpi_bcast( att);
     }
 
     // This works for compound types
     template<class T>
     std::vector<T> get_att_v( std::string id, std::string att_name) const
     {
-        readsync();
-        return m_file.get_att_v<T>(id, att_name);
+        std::vector<T> att;
+        if( m_readonly or m_rank0)
+            att = m_file.get_att_v<T>( id, att_name);
+        return mpi_bcast( att);
     }
     template<class T>
     T get_att( std::string id, std::string att_name) const
     {
-        readsync();
-        return m_file.get_att<T>(id, att_name);
+        T att;
+        if( m_readonly or m_rank0)
+            att = m_file.get_att<T>( id, att_name);
+        return mpi_bcast( att);
     }
 
     template<class T>
     std::map<std::string, T> get_atts( std::string id = ".") const
     {
-        readsync();
-        return m_file.get_atts<T>(id);
+        std::map<std::string, T> atts;
+        if( m_readonly or m_rank0)
+            atts = m_file.get_atts<T>( id);
+        return mpi_bcast( atts);
     }
     //std::vector<std::tuple<std::string, nc_type, std::any>> get_atts( std::string id = ".") const;
 
@@ -266,9 +336,11 @@ struct MPINcFile
             std::map<std::string, nc_att_t> atts,
             const MPI_Vector<ContainerType>& abscissas)  // implicitly assume ordered by rank
     {
+        unsigned size = abscissas.size(), global_size = 0;
+        MPI_Reduce( &size, &global_size, 1, MPI_UNSIGNED, MPI_SUM, 0, m_comm);
         if( m_rank0)
             m_file.defput_dim<dg::get_value_type<ContainerType>>( name,
-                abscissas.size(), atts);
+                global_size, atts);
         put_var( name, abscissas);
     }
 
@@ -284,14 +356,13 @@ struct MPINcFile
     void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
     {
-        // Reading is always possible in parallel
-        readsync();
         file::NC_Error_Handle err;
         int grpid = 0, varid = 0;
         grpid = m_file.get_grpid();
         err = nc_inq_varid( grpid, name.c_str(), &varid);
 
         using value_type = dg::get_value_type<ContainerType>;
+        auto& receive = m_receive.template get<value_type>( );
         auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
 
         if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
@@ -299,41 +370,41 @@ struct MPINcFile
         {
             m_buffer.template set<value_type>( data.size());
             const auto& buffer = m_buffer.template get<value_type>( );
-            err = detail::get_vara_T( grpid, varid,
-                slab.startp(), slab.countp(), buffer.data());
+            if( m_readonly)
+                err = detail::get_vara_T( grpid, varid,
+                    slab.startp(), slab.countp(), buffer.data());
+            else
+                detail::get_vara_detail( grpid, varid, slab, buffer, receive);
             dg::assign ( buffer, data_ref);
         }
         else
-            err = detail::get_vara_T( grpid, varid,
-                slab.startp(), slab.countp(), data_ref.data());
+        {
+            if( m_readonly)
+                err = detail::get_vara_T( grpid, varid,
+                    slab.startp(), slab.countp(), data_ref.data());
+            else
+                detail::get_vara_detail( grpid, varid, slab, data_ref, receive);
+        }
     }
 
-    bool is_defined( std::string name) const
+    bool var_exists( std::string name) const
     {
-        readsync();
-        return m_file.is_defined(name);
+        bool boolean;
+        if( m_readonly or m_rank0)
+            boolean = m_file.var_exists(name);
+        return mpi_bcast( boolean);
     }
 
     std::vector<NcVariable> get_vars() const
     {
-        readsync();
-        return m_file.get_vars();
+        std::vector<NcVariable> vars;
+        if( m_readonly or m_rank0)
+            vars = m_file.get_vars();
+        return mpi_bcast( vars);
     }
 
 
     private:
-    void readsync() const
-    {
-        if( !m_readonly) // someone is writing
-        {
-            if( !m_file.is_open())
-                throw std::runtime_error( "Can't sync a closed file!");
-            NC_Error_Handle err;
-            err = nc_sync( m_file.get_ncid());
-
-            MPI_Barrier( m_comm);
-        }
-    }
     template<class ContainerType>
     const ContainerType& get_ref( const MPI_Vector<ContainerType>& x, dg::MPIVectorTag)
     {
@@ -353,6 +424,95 @@ struct MPINcFile
     ContainerType& get_ref( ContainerType& x, dg::AnyVectorTag)
     {
         return x;
+    }
+
+    template<class T>
+    T mpi_bcast( T data) const
+    {
+        if( not m_readonly)
+            MPI_Bcast( &data, 1, dg::getMPIDataType<T>(), 0, m_comm);
+        return data;
+    }
+    std::string mpi_bcast( std::string data) const
+    {
+        if( not m_readonly)
+        {
+            size_t len = data.size();
+            MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+            data.resize( len, 'x');
+            MPI_Bcast( &data[0], len, MPI_CHAR, 0, m_comm);
+        }
+        return data;
+    }
+    std::filesystem::path mpi_bcast( std::filesystem::path data) const
+    {
+        if( not m_readonly)
+        {
+            std::string name = data.generic_string();
+            name = mpi_bcast( name);
+            data = name;
+        }
+        return data;
+    }
+    NcVariable mpi_bcast( NcVariable data)
+    {
+        if( not m_readonly)
+        {
+            std::string name = data.name;
+            data.name = mpi_bcast( name);
+            int xtype = data.xtype;
+            data.xtype = mpi_bcast( xtype);
+            auto dims = data.dims;
+            data.dims = mpi_bcast( dims);
+        }
+        return data;
+    }
+
+    template<class T>
+    std::vector<T> mpi_bcast( std::vector<T> data) const
+    {
+        if( not m_readonly)
+        {
+            size_t len = data.size();
+            MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+            data.resize( len);
+            for( unsigned u=0; u<len; u++)
+                data[u] = mpi_bcast( data[u]);
+        }
+        return data;
+    }
+    template<class K, class T>
+    std::map<K, T> mpi_bcast( std::map<K,T> data) const
+    {
+        if( not m_readonly)
+        {
+            size_t len = data.size();
+            MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+            std::vector<K> keys;
+            std::vector<T> values;
+            if( m_rank0)
+            {
+                for ( const auto& pair : data)
+                {
+                    keys.push_back( pair.first);
+                    values.push_back( pair.second);
+                }
+            }
+            keys = mpi_bcast( keys);
+            values = mpi_bcast( values);
+            if( not m_rank0)
+                for( unsigned u=0; u<len; u++)
+                    data[keys[u]] = values[u];
+        }
+        return data;
+    }
+    nc_att_t mpi_bcast( const nc_att_t& data) const
+    {
+        if( not m_readonly)
+        {
+            data = std::visit( [this]( auto&& arg) { return nc_att_t(mpi_bcast(arg)); }, data);
+        }
+        return data;
     }
 
 
