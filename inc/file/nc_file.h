@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include "dg/blas.h"
 #include "dg/backend/memory.h"
 #include "nc_error.h"
@@ -158,6 +159,7 @@ struct SerialNcFile
     int get_ncid() const { return m_ncid;}
 
     /////////////// Groups /////////////////
+    // create all required intermediary groups in path as well
     void def_grp( std::string name)
     {
         if( !m_open)
@@ -168,64 +170,117 @@ struct SerialNcFile
         // we just forget the id => always need to ask netcdf for id
         // should be no performance hit as (hopefully) cached
     }
+    void def_grp_p( std::filesystem::path path)
+    {
+        if( !m_open)
+            throw std::runtime_error( "Can't create group in a closed file!");
+        if( not path.has_root_path()) // it is a relative path
+        {
+            auto current = get_grp_path();
+            path = (current / path);
+        }
+        int groupid = m_ncid;
+        auto rel_path = path.relative_path();
+        NC_Error_Handle err;
+        for( auto it = rel_path.begin(); it != rel_path.end(); it++)
+        {
+            std::string grp = *it;
+            int new_grpid;
+            int retval = nc_inq_ncid( groupid, grp.c_str(), &new_grpid);
+            if( retval != NC_NOERR)
+                err = nc_def_grp( groupid, grp.c_str(), &groupid);
+            else
+                groupid = new_grpid;
+        }
+    }
+    bool grp_exists( std::filesystem::path path) const
+    {
+        if( !m_open)
+            throw std::runtime_error( "Can't check group in a closed file!");
+        std::string name = path.generic_string();
+        if( not path.has_root_path()) // it is a relative path
+        {
+            auto current = get_grp_path();
+            name = (current / path ).generic_string();
+        }
+        int grpid=0;
+        int retval = nc_inq_grp_full_ncid( m_ncid, name.c_str(), &grpid);
+        return retval == NC_NOERR;
+    }
     // using inq_group_parent we can use ".." to go up in the hierarchy
     // All subsequent calls to Atts, Dims and Vars are made to group
     // Empty string goes back to root group
-    void set_grp( std::string name = "")
+    // What happens if 2 nested groups with same name exist?
+    // A: That is allowed to happen
+    // path can be absolute or relative
+    void set_grp( std::filesystem::path path = "")
     {
-        NC_Error_Handle err;
         if( !m_open)
             throw std::runtime_error( "Can't set group in a closed file!");
+        NC_Error_Handle err;
+        std::string name = path.generic_string();
         if ( name == ".")
             return;
-        if ( name == "")
+        if ( name == "" or name == "/")
         {
             m_grp = m_ncid;
         }
         else if ( name == "..")
         {
+            if( m_grp == m_ncid)
+                return;
             err = nc_inq_grp_parent( m_grp, &m_grp);
         }
         else
         {
-            // TODO What happens if 2 nested groups with same name exist?
-            err = nc_inq_grp_ncid( m_ncid, name.c_str(), &m_grp);
+            if( not path.has_root_path()) // it is a relative path
+            {
+                auto current = get_grp_path();
+                name = (current / path ).generic_string();
+            }
+            err = nc_inq_grp_full_ncid( m_ncid, name.c_str(), &m_grp);
         }
     }
+    // rename a subgroup in the current group
     void rename_grp( std::string old_name, std::string new_name)
     {
         if( !m_open)
             throw std::runtime_error( "Can't rename group in a closed file!");
         NC_Error_Handle err;
         int old_grp;
-        err = nc_inq_grp_ncid( m_ncid, old_name.c_str(), &old_grp);
+        err = nc_inq_grp_ncid( m_grp, old_name.c_str(), &old_grp);
         err = nc_rename_grp( old_grp, new_name.c_str());
     }
 
     int get_grpid() const { return m_grp;}
 
-    std::vector<std::string> get_grps( ) const
+    std::filesystem::path get_grp_path( ) const
+    {
+        if( !m_open)
+            throw std::runtime_error( "Can't get group in a closed file!");
+        return get_grp_path( m_grp);
+    }
+
+    /// Get all subgroups in the current group as absolute paths
+    std::vector<std::filesystem::path> get_grps( ) const
     {
         if( !m_open)
             throw std::runtime_error( "Can't get groups in a closed file!");
-        NC_Error_Handle err;
-        int num_grps;
-        err = nc_inq_grps( m_ncid, &num_grps, NULL);
-        if( num_grps == 0)
-            return {};
-        std::vector<int> group_ids( num_grps);
-        err = nc_inq_grps( m_ncid, &num_grps, &group_ids[0]);
-        std::vector<std::string> groups( num_grps);
+        auto grps = get_grps(m_grp);
+        std::vector<std::filesystem::path> grps_v;
+        for( auto grp : grps)
+            grps_v.push_back( grp.second);
+        return grps_v;
 
-        for( int i=0; i<num_grps; i++)
-        {
-            size_t len;
-            err = nc_inq_grpname_len( group_ids[i], &len);
-            char name [len];
-            err = nc_inq_grpname( m_grp, name);
-            groups[i] = name;
-        }
-        return groups;
+    }
+    /// Get all subgroups recursively in the current group as absolute paths
+    std::vector<std::filesystem::path> get_grps_r( ) const
+    {
+        auto grps = get_grps_r(m_grp);
+        std::vector<std::filesystem::path> grps_v;
+        for( auto grp : grps)
+            grps_v.push_back( grp.second);
+        return grps_v;
     }
 
     ////////////// Dimensions ////////////////////////
@@ -241,7 +296,7 @@ struct SerialNcFile
     void rename_dim( std::string old_name, std::string new_name)
     {
         if( !m_open)
-            throw std::runtime_error( "Can't renam dimension in a closed file!");
+            throw std::runtime_error( "Can't rename dimension in a closed file!");
         int dimid;
         NC_Error_Handle err;
         err = nc_inq_dimid( m_grp, old_name.c_str(), &dimid);
@@ -284,6 +339,12 @@ struct SerialNcFile
             dims[dimid] = dimname;
         }
         return dims;
+    }
+    bool dim_exists( std::string name) const
+    {
+        int dimid=0;
+        int retval = nc_inq_dimid( m_grp, name.c_str(), &dimid);
+        return retval == NC_NOERR;
     }
     /////////////// Attributes setters
     // Empty var string makes a global (to the group) attribute
@@ -444,13 +505,11 @@ struct SerialNcFile
                 data.data());
     }
 
-    bool is_defined( std::string name) const
+    bool var_exists( std::string name) const
     {
         int varid=0;
         int retval = nc_inq_varid( m_grp, name.c_str(), &varid);
-        if( retval != NC_NOERR)
-            return false; //variable does not exist
-        return true;
+        return retval == NC_NOERR;
     }
 
     std::vector<NcVariable> get_vars() const
@@ -525,13 +584,55 @@ struct SerialNcFile
         return varid;
 
     }
+    // Absolute current path
+    std::filesystem::path get_grp_path( int ncid ) const
+    {
+        size_t len;
+        NC_Error_Handle err;
+        err = nc_inq_grpname_full( ncid, &len, NULL);
+        std::string current( len, 'x');
+        err = nc_inq_grpname_full( ncid, &len, &current[0]);
+        return current;
+    }
+    // Absolute paths of subgroups
+    std::map<int, std::filesystem::path> get_grps( int ncid ) const
+    {
+        NC_Error_Handle err;
+        int num_grps;
+        err = nc_inq_grps( ncid, &num_grps, NULL);
+        if( num_grps == 0)
+            return {};
+        std::vector<int> group_ids( num_grps);
+        err = nc_inq_grps( ncid, &num_grps, &group_ids[0]);
+        std::map<int, std::filesystem::path> groups;
+        for( int i=0; i<num_grps; i++)
+        {
+            size_t len;
+            err = nc_inq_grpname_full( group_ids[i], &len, NULL);
+            std::string name( len, 'z');
+            err = nc_inq_grpname_full( group_ids[i], &len, &name[0]);
+            groups[group_ids[i]] = name;
+        }
+        return groups;
+    }
+    std::map<int, std::filesystem::path> get_grps_r( int ncid) const
+    {
+        auto grps = get_grps(ncid);
+        for( auto grp : grps)
+        {
+            auto subgrps = get_grps_r( grp.first);
+            grps.merge( subgrps);
+        }
+        return grps;
+    }
 
     bool m_open = false;
-    int m_ncid = 0;
-    int m_grp = 0; // the currently active group
+    int m_ncid = 0; // ncid can be different by opening the same file twice
+    int m_grp = 0; // the currently active group (All group ids in open files are unique and thus group ids can be different by opening the same file twice), dims can be seen by all child groups
 
     // Buffer for device to host transfer, and dg::assign
     dg::detail::AnyVector<thrust::host_vector> m_buffer;
+    std::map<std::string,std::pair<int,unsigned>> m_varids; //first is ID, second is the slice to write to next == length
 };
 
 #ifndef MPI_VERSION
