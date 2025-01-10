@@ -6,6 +6,7 @@
 #else
 #include "nc_file.h"
 #endif
+#include "dg/backend/timer.h"
 
 
 int main(int argc, char* argv[])
@@ -49,7 +50,7 @@ int main(int argc, char* argv[])
     assert( file.grp_exists( "subgroup"));
     auto all_grps = file.get_grps();
     for( auto grp : all_grps)
-        std::cout << "Found "<<grp<<"\n";
+        DG_RANK0 std::cout << "Found "<<grp<<"\n";
     auto all_grps_r = file.get_grps_r();
     std::vector<std::filesystem::path> ana = {
         "/subgroup",
@@ -62,7 +63,7 @@ int main(int argc, char* argv[])
     {
         assert( all_grps_r[i] == ana[i]);
     }
-    std::cout << "Groups PASSED\n";
+    DG_RANK0 std::cout << "Groups PASSED\n";
     ///////////////////////   Attributes
     // set attributes
 
@@ -96,14 +97,14 @@ int main(int argc, char* argv[])
     int fortytwo = 42;
     assert( std::get<int>(atts.at("ttt")) == fortytwo);
     file.close();
-    std::cout << "PASSED\n";
+    DG_RANK0 std::cout << "PASSED\n";
 
     file.open( filename, dg::file::nc_write);
-    file.rm_att( ".", "same");
+    file.del_att( ".", "same");
     file.rename_att( ".", "ttt", "truth");
     int truth = file.get_att<int>(".", "truth");
     assert( truth == fortytwo);
-    std::cout << "PASSED\n";
+    DG_RANK0 std::cout << "PASSED\n";
 
     ////////////////// Dimensions
     file.def_dim("x", 42);
@@ -132,7 +133,7 @@ int main(int argc, char* argv[])
 
     size_t ysize = file.dim_size("y");
     assert( ysize == 5);
-    std::cout << "PASSED Dimensions\n";
+    DG_RANK0 std::cout << "PASSED Dimensions\n";
     /////////////////// Variables put
 
     file.def_var<double>("variable", {"time", "y","x"});
@@ -150,6 +151,8 @@ int main(int argc, char* argv[])
     file.def_var<double>("time", {"time"});
     file.put_var1("time", {52}, 10);
 
+
+
     /////////////////// Variables get
 #ifdef WITH_MPI
     // TODO Make mpi test
@@ -159,8 +162,34 @@ int main(int argc, char* argv[])
     assert( data.size() == vsize);
     assert( data[0] == 7);
 #endif
-    std::cout << "PASSED Getters\n";
+    DG_RANK0 std::cout << "PASSED Getters\n";
 
+    file.close();
+    // Some benchmarks
+
+    file.open( "benchmark.nc", dg::file::nc_clobber);
+    file.def_dim( "time", NC_UNLIMITED);
+    file.def_dim( "y", 42);
+    file.def_dim( "x", 42);
+    dg::Timer timer;
+    timer.tic();
+    for( unsigned u=0; u<1000; u++)
+        file.def_var<double>( "var"+std::to_string(u), {"time", "y","x"});
+    timer.toc();
+    DG_RANK0 std::cout << "Defining 1000 variables took "<<timer.diff()<<"s\n";
+    timer.tic();
+    for( unsigned u=0; u<1000; u++)
+        file.set_att( "var"+std::to_string(u), {"long_name", std::to_string(u)});
+    timer.toc();
+    DG_RANK0 std::cout << "Set attribute of 1000 variables took "<<timer.diff()<<"s\n";
+    timer.tic();
+    for( int u=1000; u>0; u--)
+    {
+        int varid;
+        DG_RANK0 nc_inq_varid( file.get_grpid(), ("var"+std::to_string(u)).c_str(), &varid);
+    }
+    timer.toc();
+    DG_RANK0 std::cout << "Getting id of 1000 variables took "<<timer.diff()<<"s\n";
     file.close();
 #ifdef WITH_MPI
     MPI_Finalize();
