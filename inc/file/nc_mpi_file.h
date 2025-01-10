@@ -245,10 +245,10 @@ struct MPINcFile
     //std::vector<std::tuple<std::string, nc_type, std::any>> get_atts( std::string id = ".") const;
 
     /// Remove an attribute
-    void rm_att( std::string id, std::string att)
+    void del_att( std::string id, std::string att)
     {
         if( m_rank0)
-            m_file.rm_att( id, att);
+            m_file.del_att( id, att);
     }
     /// Rename an attribute
     void rename_att( std::string id, std::string old_att_name, std::string new_att_name)
@@ -482,7 +482,7 @@ struct MPINcFile
         return data;
     }
     template<class K, class T>
-    std::map<K, T> mpi_bcast( std::map<K,T> data) const
+    std::map<K, T> mpi_bcast( const std::map<K,T>& data) const
     {
         if( not m_readonly)
         {
@@ -501,18 +501,23 @@ struct MPINcFile
             keys = mpi_bcast( keys);
             values = mpi_bcast( values);
             if( not m_rank0)
+            {
+                std::map<K,T> tmp;
                 for( unsigned u=0; u<len; u++)
-                    data[keys[u]] = values[u];
+                    tmp[keys[u]] = values[u];
+                return tmp;
+            }
         }
         return data;
     }
     nc_att_t mpi_bcast( const nc_att_t& data) const
     {
+        nc_att_t tmp;
         if( not m_readonly)
         {
-            data = std::visit( [this]( auto&& arg) { return nc_att_t(mpi_bcast(arg)); }, data);
+            tmp = std::visit( [this]( auto&& arg) { return nc_att_t(mpi_bcast(arg)); }, data);
         }
-        return data;
+        return tmp;
     }
 
 

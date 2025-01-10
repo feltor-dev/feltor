@@ -416,7 +416,8 @@ struct SerialNcFile
     //std::vector<std::tuple<std::string, nc_type, std::any>> get_atts( std::string id = ".") const;
 
     /// Remove an attribute
-    void rm_att( std::string id, std::string att)
+    /// Note that you cannot delete attributes or dimensions or groups
+    void del_att( std::string id, std::string att)
     {
         int varid = name2varid( id, "Can't delete attribute in a closed file!");
         auto name = att.c_str();
@@ -571,6 +572,7 @@ struct SerialNcFile
     private:
     int name2varid( std::string id, std::string error_message) const
     {
+        // This is fast even for lots variables (1000 vars take <ms)
         if( !m_open)
             throw std::runtime_error( error_message );
         NC_Error_Handle err;
