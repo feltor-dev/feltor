@@ -18,50 +18,147 @@ namespace dg
 {
 namespace file
 {
+/**
+ * @class hide_atts_NetCDF_example
+ * @code{.cpp}
+    dg::file::NcFile file( "atts.nc", dg::file::nc_clobber);
 
-/// All Files are opened/ created in Netcdf-4 data format
+    std::map<std::string, dg::file::nc_att_t> atts;
+    atts["text"] = "Hello World!";
+    atts["number"] = 3e-4;
+    atts["int"] = -1;
+    atts["uint"] = 10;
+    atts["bool"] = true;
+    atts["realarray"] = std::vector{-1.1, 42.3};
+    file.put_atts( ".", atts);
+    // OR
+    file.put_att( ".", {"text", "Hello World!"});
+    file.put_att( ".", {"number", 3e-4});
+    file.close();
+
+    // read attributes back
+
+    file.open( "atts.nc", dg::file::nc_nowrite);
+    auto read = file.get_atts( ".");
+    // read and atts are the same now
+
+    bool is_true = std::get<bool>(read["bool"]);
+    double number = std::get<double>(read["number"]);
+    // OR
+    is_true = file.get_att_as<bool>( ".", "bool");
+    number = file.get_att_as<double>( ".", "number");
+    file.close();
+ * @endcode
+ */
+/**
+ * @class hide_grps_NetCDF_example
+ * Groups can be thought of as directories in a NetCDF-4 file and we therefore
+ * use \c std::filesystem::path and use bash equivalent operations to
+ * manipulate them
+ * @code{.cpp}
+    dg::file::NcFile file( "grps.nc", dg::file::nc_clobber);
+    // mkdir subgroup
+    file.def_grp( "subgrp");
+    // cd subgroup
+    file.set_grp( "subgrp");
+    // mkdir -p
+    file.def_grp_p("/subgrp/subgrp2/subgrp3/subgrp4");
+    assert( file.grp_is_defined( "/subgrp/subgrp2/subgrp3"));
+
+    // cd ..
+    file.set_grp(".."); // go to parent group
+    // cd
+    file.set_grp(); // go to root group
+
+    // mv subgrp sub
+    file.rename_grp( subgrp, sub);
+
+    // ls
+    auto subgrps = file.get_grps()
+    // ls -R
+    auto allgrps = file.get_grps_r()
+
+    file.close();
+ * @endcode
+ */
+/**
+ * @class hide_dimension_hiding
+ *
+ * @attention Dimensions are visible in a group and all of its subgroups.  Now,
+ * a file can define multiple dimensions with the same name in subgroups. The
+ * dimension in the highest group will then hide the ones in the lower groups
+ * and e.g a call to \c def_var cannot currently use a dimension that is hidden
+ * in such a way even though the NetCDF-C API would allow to do it using the
+ * dimension ID. In contrast, \c get_var_dims may return dimension names that
+ * are actually hidden. It is therefore highly recommended to use unique names
+ * for all dimensions in the file.
+ * Furthermore, notice that while a dimension is visible in subgroups,
+ * its associated dimension variable is not.
+ *
+ * @class hide_attributes_overwrite
+ * @attention Attributes are silently overwritten. You need to manually
+ * check with \c att_is_defined for existence if this is a concern
+ *
+ * @class hide_container_type
+ * @tparam ContainerType May be anything that \c dg::get_tensor_category
+ * recognises as a \c dg::SharedVectorTag
+ */
+
+/*! @brief NetCDF file format
+ *
+ * All Files are opened/ created in Netcdf-4 data format
+ * @note If you are looking for an "nc_append" you can use
+@code{.cpp}
+auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
+@endcode
+*/
 enum NcFileMode
 {
     nc_nowrite,  //!< NC_NOWRITE Open an existing file for read-only access, fail if it does not exist
     nc_write,    //!< NC_WRITE Open an existing file for read and write access, fail if it does not exist
     nc_clobber, //!< NC_CLOBBER Create a new file for read and write access, overwrite if file exists
-    nc_noclobber //!< NC_NOCLOBBER Create new file for read and write access, fail if already exists
+    nc_noclobber, //!< NC_NOCLOBBER Create new file for read and write access, fail if already exists
 };
 
-struct NcVariable
-{
-    std::string name;
-    nc_type xtype;
-    std::vector<std::string> dims;
-};
-
-
-
-// This is a singleton that cannot be copied/assigned but only moved/move-assign
-// Only Netcdf-4 files are supported
-// We orient ourselves at std::fstream behaviour for opening / creating files
-// The class hides all integer ids that the netcdf
-// C-library uses ("Ids do not exist in the Netcdf-4 data model")
-
+/*! @brief Serial NetCDF-4 file
+ *
+ * The class hides all integer ids that the NetCDF C-library uses
+ * ("Ids do not exist in the Netcdf-4 data model!")
+ *
+ * @note This is a singleton that cannot be copied/assigned but only
+ * moved/move-assign
+ *
+ * @note Only Netcdf-4 files are supported
+ *
+ *
+ * @note Most member functions will throw if they are called on a closed file
+*/
 struct SerialNcFile
 {
     /////////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
     /// Construct a File Handle not associated to any file
     SerialNcFile () = default;
     /*!
-      @brief Open/Create a netCDF file.
-      @param path  Name of the netCDF file to open or create
-      @param mode determine how to open/create the file
-      @sa NcFileMode
-    */
-    SerialNcFile(const std::string& path, enum NcFileMode mode = nc_nowrite)
+     * @brief Open/Create a netCDF file.
+     * @param filename  Name or path including the name of the netCDF file to
+     * open or create. The path may be either absolute or **relative to the
+     * execution path of the program** i.e. relative to \c
+     * std::filesystem::current_path()
+     * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
+     * nc_noclobber)
+     * @sa NcFileMode
+     */
+    SerialNcFile(const std::filesystem::path& filename,
+            enum NcFileMode mode = nc_nowrite)
     {
-        open( path, mode);
+        // TODO Can filename be a std::filesystem::path?
+        open( filename, mode);
     }
     /*! @brief  There can only be exactly one file handle per physical file.
      *
-     * Because the destructor releases all resources, a second handle
-     * could be left in an invalid state
+     * The reason is that the destructor releases all resources and thus a copy
+     * of the file that is subsequently destroyed leaves the original in an
+     * invalid state
      */
     SerialNcFile(const SerialNcFile& rhs) = delete;
     ///@copydoc SerialNcFile(const SerialNcFile&)
@@ -74,9 +171,10 @@ struct SerialNcFile
     SerialNcFile& operator =(SerialNcFile && rhs) = default;
 
     /// @brief Close open nc file and release all resources
+    /// @note A destructor never throws any errors so we / will just print a
+    /// warning to \c std::cerr if something goes wrong
     ~SerialNcFile()
     {
-        // A destructor may not throw any errors
         try
         {
             close();
@@ -90,38 +188,47 @@ struct SerialNcFile
 
     /*! Explicitly open or create a netCDF file
      *
-     * @note If a file is already open this call will throw.
-     * Close it before opening a new file.
-      @param path    File name
-      @param ncFileFlags File flags from netcdf.h
-      @sa nc_open
+     * @param filename  Name or path including the name of the netCDF file to
+     * open or create. The path may be either absolute or **relative to the
+     * execution path of the program** i.e. relative to \c
+     * std::filesystem::current_path()
+     * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
+     * nc_noclobber)
+     * @note Just like \c std::fstream opening fails if a file is already
+     * associated (\c is_open()) \c close() it before opening a new file.
     */
-    void open(const std::string& path, enum NcFileMode mode = nc_nowrite)
+    void open(const std::filesystem::path& filename,
+            enum NcFileMode mode = nc_nowrite)
     {
         // Like a std::fstream opening fails if file already associated
         if( m_open)
             throw std::runtime_error( "Close file before opening a new one!");
 
+        // TODO Test the pathing on Windows
         NC_Error_Handle err;
         switch (mode)
         {
             case nc_nowrite:
-                err = nc_open( path.c_str(), NC_NETCDF4 | NC_NOWRITE, &m_ncid);
+                err = nc_open( filename.string().c_str(), NC_NETCDF4 |
+                        NC_NOWRITE, &m_ncid);
                 break;
             case nc_write:
-                err = nc_open( path.c_str(), NC_NETCDF4 | NC_WRITE, &m_ncid);
+                err = nc_open( filename.string().c_str(), NC_NETCDF4 |
+                        NC_WRITE, &m_ncid);
                 break;
             case nc_noclobber:
-                err = nc_create( path.c_str(), NC_NETCDF4 | NC_NOCLOBBER, &m_ncid);
+                err = nc_create( filename.string().c_str(), NC_NETCDF4 |
+                        NC_NOCLOBBER, &m_ncid);
                 break;
             case nc_clobber:
-                err = nc_create( path.c_str(), NC_NETCDF4 | NC_CLOBBER, &m_ncid);
+                err = nc_create( filename.string().c_str(), NC_NETCDF4 |
+                        NC_CLOBBER, &m_ncid);
                 break;
         }
         m_open = true;
         m_grp = m_ncid;
     }
-    /// Check if a file is open
+    /// Check if a file is associated (i.e. it is open)
     bool is_open() const
     {
         return m_open;
@@ -129,11 +236,11 @@ struct SerialNcFile
 
     /*! @brief Explicitly close a file
      *
-     * Closing a file triggers all buffers to be written and
-     * memory to be released.
+     * Closing a file triggers all buffers to be written and memory to be
+     * released. After closing a new file can be associated to this handle
+     * again.
      *
      * @note This function may throw
-     * After closing a new file can be associated to this handle again
      */
     void close()
     {
@@ -156,10 +263,22 @@ struct SerialNcFile
         NC_Error_Handle err;
         err = nc_sync( m_ncid);
     }
+    /*! @brief Get the \c ncid of the underlying NetCDF C-API
+     *
+     * Just if for whatever reason you want to call a NetCDF C-function
+     * yourself
+     */
     int get_ncid() const { return m_ncid;}
 
     /////////////// Groups /////////////////
-    // create all required intermediary groups in path as well
+    /*! Define a group named \c name in the current group
+     *
+     * @copydoc hide_grps_NetCDF_example
+     * Think of this as the bash command \c mkdir name
+     * @param name of the new group
+     * @note Just like in a filesystem 2 nested groups with same name can exist
+     * but not 2 groups with the same name in the same group.
+     */
     void def_grp( std::string name)
     {
         if( !m_open)
@@ -168,15 +287,25 @@ struct SerialNcFile
         NC_Error_Handle err;
         err = nc_def_grp( m_grp, name.c_str(), &new_grp_id);
         // we just forget the id => always need to ask netcdf for id
-        // should be no performance hit as (hopefully) cached
+        // Is no performance hit as cached
     }
+
+    /*! Define a group named \c path and all required intermediary groups
+     *
+     * @copydoc hide_grps_NetCDF_example
+     * Think of this as the bash command \c mkdir -p path
+     * @param path of the new group. Can be absolute or relative to the current
+     * group
+     * @note Just like in a filesystem 2 nested groups with same name can exist
+     * but not 2 groups with the same name in the same group.
+     */
     void def_grp_p( std::filesystem::path path)
     {
         if( !m_open)
             throw std::runtime_error( "Can't create group in a closed file!");
         if( not path.has_root_path()) // it is a relative path
         {
-            auto current = get_grp_path();
+            auto current = get_current_path();
             path = (current / path);
         }
         int groupid = m_ncid;
@@ -193,26 +322,33 @@ struct SerialNcFile
                 groupid = new_grpid;
         }
     }
-    bool grp_exists( std::filesystem::path path) const
+    /*! @brief Check for existence of the group given by path
+     * @copydoc hide_grps_NetCDF_example
+     * @param path Absolute or relative path to the current group
+     */
+    bool grp_is_defined( std::filesystem::path path) const
     {
         if( !m_open)
             throw std::runtime_error( "Can't check group in a closed file!");
         std::string name = path.generic_string();
         if( not path.has_root_path()) // it is a relative path
         {
-            auto current = get_grp_path();
+            auto current = get_current_path();
             name = (current / path ).generic_string();
         }
         int grpid=0;
         int retval = nc_inq_grp_full_ncid( m_ncid, name.c_str(), &grpid);
         return retval == NC_NOERR;
     }
-    // using inq_group_parent we can use ".." to go up in the hierarchy
-    // All subsequent calls to Atts, Dims and Vars are made to group
-    // Empty string goes back to root group
-    // What happens if 2 nested groups with same name exist?
-    // A: That is allowed to happen
-    // path can be absolute or relative
+    /*! @brief Change group to \c path
+     *
+     * @copydoc hide_grps_NetCDF_example
+     * All subsequent calls to atts, dims and vars are made to that group
+     *
+     * @param path can be absolute or relative to the current group.
+     * Empty string or "/" goes back to root group. "." is the current group
+     * and returns immediately.
+     */
     void set_grp( std::filesystem::path path = "")
     {
         if( !m_open)
@@ -235,13 +371,13 @@ struct SerialNcFile
         {
             if( not path.has_root_path()) // it is a relative path
             {
-                auto current = get_grp_path();
+                auto current = get_current_path();
                 name = (current / path ).generic_string();
             }
             err = nc_inq_grp_full_ncid( m_ncid, name.c_str(), &m_grp);
         }
     }
-    // rename a subgroup in the current group
+    /// rename a subgroup in the current group from \c old_name to \c new_name
     void rename_grp( std::string old_name, std::string new_name)
     {
         if( !m_open)
@@ -252,9 +388,11 @@ struct SerialNcFile
         err = nc_rename_grp( old_grp, new_name.c_str());
     }
 
+    /// Get the NetCDF-C ID of the current group
     int get_grpid() const { return m_grp;}
 
-    std::filesystem::path get_grp_path( ) const
+    /// Get the absolute path of the current group (
+    std::filesystem::path get_current_path( ) const
     {
         if( !m_open)
             throw std::runtime_error( "Can't get group in a closed file!");
@@ -262,6 +400,7 @@ struct SerialNcFile
     }
 
     /// Get all subgroups in the current group as absolute paths
+    /// @copydoc hide_grps_NetCDF_example
     std::vector<std::filesystem::path> get_grps( ) const
     {
         if( !m_open)
@@ -273,7 +412,16 @@ struct SerialNcFile
         return grps_v;
 
     }
-    /// Get all subgroups recursively in the current group as absolute paths
+    /*! @brief Get all subgroups recursively in the current group as absolute paths
+     *
+     * Think of this as \c ls -R
+     * @copydoc hide_grps_NetCDF_example
+     * @note Using the vector of paths it is possible to traverse
+     * the entire filesystem
+     *
+     * @return All groups and subgroups
+     * @attention Does not include the current group
+     */
     std::vector<std::filesystem::path> get_grps_r( ) const
     {
         auto grps = get_grps_r(m_grp);
@@ -284,7 +432,17 @@ struct SerialNcFile
     }
 
     ////////////// Dimensions ////////////////////////
-    //Remember that dimensions do not have attributes, only variables (or groups)
+    /*! @brief Define a dimension named \c name of size \c size
+     *
+     * @copdoc hide_dimension_hiding
+     * @note Remember that dimensions do not have attributes or types,
+     * only variables and groups have attributes and only variables have types
+     * @note One often defines an associated **dimension variable**
+     * with the same name as the dimension.
+     * @param name of the dimension. Cannot be the same name as a dimension
+     * name already existing in the current group
+     * @param size Size of the dimension
+     */
     void def_dim( std::string name, size_t size)
     {
         if( !m_open)
@@ -293,6 +451,7 @@ struct SerialNcFile
         int dim_id;
         err = nc_def_dim( m_grp, name.c_str(), size, &dim_id);
     }
+    /// Rename a dimension from \c old_name to \c new_name
     void rename_dim( std::string old_name, std::string new_name)
     {
         if( !m_open)
@@ -302,7 +461,12 @@ struct SerialNcFile
         err = nc_inq_dimid( m_grp, old_name.c_str(), &dimid);
         err = nc_rename_dim( m_grp, dimid, new_name.c_str());
     }
-    size_t dim_size( std::string name) const
+    /*! @brief Get the size of the dimension named \c name
+     *
+     * @note The size of an unlimited dimension is the maximum of the sizes
+     * of all variables that share this dimension.
+     */
+    size_t get_dim_size( std::string name) const
     {
         if( !m_open)
             throw std::runtime_error( "Can't get dimension in a closed file!");
@@ -315,117 +479,204 @@ struct SerialNcFile
 
     }
 
-    std::vector<size_t> dims_shape( const std::vector<std::string>& dims) const
+    /// Get the size of each dimension in \c dims
+    std::vector<size_t> get_dims_shape( const std::vector<std::string>& dims) const
     {
         std::vector<size_t> shape( dims.size());
         for( unsigned u=0; u<dims.size(); u++)
-            shape[u] = dim_size( dims[u]);
+            shape[u] = get_dim_size( dims[u]);
         return shape;
     }
-    std::vector<std::string> get_dims() const
+    /*! Get all visible dimension names in the current group
+     *
+     * The visible dimensions are all the dimensions in the current group
+     * and all its parent group.
+     * @copydoc hide_dimension_hiding
+     * @param include_parents per default the parent groups will be included in
+     * the search for dimensions, if \c false they are excluded
+     * @return All visible dimension names. Hidden names do not appear.
+     */
+    std::vector<std::string> get_dims( bool include_parents = true) const
     {
         if( !m_open)
             throw std::runtime_error( "Can't get dimension in a closed file!");
         NC_Error_Handle err;
+        // There is a correct way of getting the dimensions in a group
+        // https://github.com/Unidata/netcdf-c/issues/2873
         int ndims;
-        err = nc_inq_ndims( m_grp, &ndims);
-        // Dimension ids are 0, 1, 2, ... in the order in which the dimensions
-        // were defined
+        err = nc_inq_dimids( m_grp, &ndims, NULL, include_parents);
+        int dimids[ndims];
+        err = nc_inq_dimids( m_grp, &ndims, dimids, include_parents);
+        // Globally dimension ids are 0, 1, 2, ... in the order in which the
+        // dimensions were defined
         std::vector<std::string> dims;
-        for ( int dimid = 0; dimid < ndims; dimid++)
+        for ( int i = 0; i < ndims; i++)
         {
             char dimname [ NC_MAX_NAME+1];
-            err = nc_inq_dimname( m_grp, dimid, dimname);
-            dims[dimid] = dimname;
+            err = nc_inq_dimname( m_grp, dimids[i], dimname);
+            if( std::find(dims.begin(), dims.end(), std::string(dimname) ) ==
+                    dims.end())
+                dims.push_back(dimname);
         }
         return dims;
     }
-    bool dim_exists( std::string name) const
+
+    /*! Get all visible unlimited dimension names in the current group
+     *
+     * @copydoc hide_dimension_hiding
+     * This function **does not** include the parent groups
+     * @return All unlimited dimension names in current group.
+     */
+    std::vector<std::string> get_unlim_dims( ) const
+    {
+        if( !m_open)
+            throw std::runtime_error( "Can't inquire dimension in a closed file!");
+        int ndims;
+        NC_Error_Handle err;
+        err = nc_inq_unlimdims( m_grp, &ndims, NULL);
+        int dimids[ndims];
+        // Our tests indicate that this does not return the unlimited dimensions
+        // of the parent group even though the documentation says so...
+        err = nc_inq_unlimdims( m_grp, &ndims, dimids);
+        std::vector<std::string> dims;
+        for( int i=0; i<ndims; i++)
+        {
+            char dimname [ NC_MAX_NAME+1];
+            err = nc_inq_dimname( m_grp, dimids[i], dimname);
+            if( std::find(dims.begin(), dims.end(), std::string(dimname) ) ==
+                    dims.end())
+                dims.push_back(dimname);
+        }
+        return dims;
+    }
+
+    /// Check for existence of the dimension named \c name
+    bool dim_is_defined( std::string name) const
     {
         int dimid=0;
         int retval = nc_inq_dimid( m_grp, name.c_str(), &dimid);
         return retval == NC_NOERR;
     }
     /////////////// Attributes setters
-    // Empty var string makes a global (to the group) attribute
-    // Overwrites existing!?
-    // Strong attribute set
-    void set_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
+    /*! @brief Put an individual attribute
+     * @copydoc hide_atts_NetCDF_example
+     * @param id Variable name or "." for the current group
+     * @copydoc hide_attributes_overwrite
+     */
+    void put_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
     {
         int varid = name2varid( id, "Can't set attribute in a closed file!");
-        dg::file::set_att( m_grp, varid, att);
+        dg::file::detail::put_att( m_grp, varid, att);
     }
 
+    /*! @brief Put an individual attribute of preset type
+     * @tparam S std::string or const char*
+     * @tparam T Cannot be an nc_att_t
+     * @param id Variable name or "." for the current group
+     * @copydoc hide_attributes_overwrite
+     */
     template<class S, class T> // T cannot be nc_att_t
-    void set_att( std::string id, const std::tuple<S,nc_type, T>& att)
+    void put_att( std::string id, const std::tuple<S,nc_type, T>& att)
     {
         int varid = name2varid( id, "Can't set attribute in a closed file!");
-        dg::file::set_att( m_grp, varid, att);
+        dg::file::detail::put_att( m_grp, varid, att);
     }
-    // Iterable can be e.g. std::vector<std::pair...>, std::map , etc.
-    template<class Iterable> // *it must be usable in set_att
-    void set_atts( std::string id, const Iterable& atts)
+    /*! @brief Write a collection of attributes to a NetCDF variable or file
+     *
+     * Example code
+     * @copydoc hide_atts_NetCDF_example
+     * @note boolean values are mapped to byte NetCDF attributes (0b for true,
+     * 1b for false)
+     * @param atts An iterable containing all the attributes for the variable
+     * or file. \c atts can be empty in which case no attribute is written.
+     * @tparam Iterable Can be e.g. <tt> std::vector<std::pair...>, std::map
+     * </tt> , etc.
+     * @copydoc hide_attributes_overwrite
+     */
+    template<class Iterable> // *it must be usable in put_att
+    void put_atts( std::string id, const Iterable& atts)
     {
         int varid = name2varid( id, "Can't set attributes in a closed file!");
-        dg::file::set_atts( m_grp, varid, atts);
+        dg::file::detail::put_atts( m_grp, varid, atts);
     }
-    void set_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
+    /// Short for <tt> put_atts<std::map<std::string, nc_att_t>( id, atts); </tt>
+    void put_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
     {
-        // Help compiler choose
-        int varid = name2varid( id, "Can't set attributes in a closed file!");
-        dg::file::set_atts( m_grp, varid, atts);
+        put_atts<std::map<std::string, nc_att_t>>( id, atts);
     }
 
     /////////////////// Attribute getters
 
-    dg::file::nc_att_t get_att_t( std::string id, std::string att_name) const
+    /*! @brief Get an attribute named \c att_name of the group or variable \c id
+     *
+     * @copydoc hide_atts_NetCDF_example
+     * @tparam T Any type in \c dg::file::nc_att_t or \c nc_att_t
+     * in which case the type specific nc attribute getters are called
+     * or \c std::vector<type> in which case the general \c nc_get_att is called
+     * @param id Variable name or "." for the current group
+     * @param att_name Name of the attribute
+     * @return Attribute cast to type \c T
+     */
+    template<class T>
+    T get_att_as( std::string id, std::string att_name) const
     {
         int varid = name2varid( id, "Can't get attribute in a closed file!");
-        return dg::file::get_att_t( m_grp, varid, att_name);
+        return dg::file::detail::get_att_as<T>( m_grp, varid, att_name);
     }
 
+    /// Short for <tt> get_att_as<std::vector<T>>( id, att_name);
     template<class T>
-    T get_att_i( std::string id, std::string att_name, unsigned idx = 0) const
+    std::vector<T> get_att_vec_as( std::string id, std::string att_name) const
     {
-        auto vec = get_att_v<T>( id, att_name);
-        return vec[idx];
+        return get_att_as<std::vector<T>>( id, att_name);
     }
 
-    // This works for compound types
+    /*! @brief Read all NetCDF attributes of a certain type
+     *
+     * For example
+     * @copydoc hide_atts_NetCDF_example
+     * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
+     * @return A Dictionary containing all the attributes of a certain type
+     * for the variable or file. Can be empty if no attribute is present.
+     * @param id Variable name or "." for current group
+     * @tparam T can be a primitive type like \c int or \c double or a vector
+     * thereof \c std::vector<int> or a \c dg::file::nc_att_t in which case
+     * attributes of heterogeneous types are captured
+     */
     template<class T>
-    std::vector<T> get_att_v( std::string id, std::string att_name) const
-    {
-        int varid = name2varid( id, "Can't get attribute in a closed file!");
-        return dg::file::get_att_v<T>( m_grp, varid, att_name);
-    }
-    template<class T>
-    T get_att( std::string id, std::string att_name) const
-    {
-        nc_att_t att = get_att_t( id, att_name);
-        return std::get<T>( att);
-    }
-
-
-    // Get all attributes of a given type
-    template<class T> // T can be nc_att_t
-    std::map<std::string, T> get_atts( std::string id = ".") const
+    std::map<std::string, T> get_atts_as( std::string id = ".") const
     {
         int varid = name2varid( id, "Can't get attributes in a closed file!");
-        return dg::file::get_atts<T>( m_grp, varid);
+        return dg::file::detail::get_atts_as<T>( m_grp, varid);
     }
-    //std::vector<std::tuple<std::string, nc_type, std::any>> get_atts( std::string id = ".") const;
 
-    /// Remove an attribute
-    /// Note that you cannot delete attributes or dimensions or groups
-    void del_att( std::string id, std::string att)
+    /// Short for <tt> get_atts_as<nc_att_t>( id)
+    std::map<std::string, nc_att_t> get_atts( std::string id = ".") const
+    {
+        return get_atts_as<nc_att_t>( id);
+    }
+
+    /// Remove an attribute named \c att_name
+    /// @note Attributes are the only thing you can delete in a NetCDF file.
+    /// You cannot delete variables or dimensions or groups
+    void del_att( std::string id, std::string att_name)
     {
         int varid = name2varid( id, "Can't delete attribute in a closed file!");
-        auto name = att.c_str();
+        auto name = att_name.c_str();
         NC_Error_Handle err;
         err = nc_del_att( m_grp, varid, name);
     }
+    /// Check for existence of the attribute named \c att_name
+    bool att_is_defined( std::string id, std::string att_name) const
+    {
+        int varid = name2varid( id, "Can't get attributes in a closed file!");
+        int attid;
+        int retval = nc_inq_attid( m_grp, varid, att_name.c_str(), &attid);
+        return retval == NC_NOERR;
+    }
     /// Rename an attribute
-    void rename_att( std::string id, std::string old_att_name, std::string new_att_name)
+    void rename_att( std::string id, std::string old_att_name, std::string
+            new_att_name)
     {
         int varid = name2varid( id, "Can't delete attribute in a closed file!");
         auto old_name = old_att_name.c_str();
@@ -436,25 +687,64 @@ struct SerialNcFile
 
 
     ////////////// Variables ////////////////////////
-    // Overwrite existing?
+    /*! @brief Define a variable with given type and dimension
+     * @param name Name of the variable to define
+     * @param dim_names Name of one of the visible dimensions in the current group
+     * @copydoc hide_dimension_hiding
+     * @tparam T set the type of the variable
+     */
     template<class T>
-    void def_var( std::string name, std::vector<std::string> dim_names)
+    void def_var_as( std::string name, std::vector<std::string> dim_names)
     {
-        def_var( NcVariable{ name, detail::getNCDataType<T>(), dim_names});
-    }
-    void def_var( const NcVariable& var)
-    {
-        file::NC_Error_Handle err;
-        std::vector<int> dimids( var.dims.size());
-        for( unsigned u=0; u<var.dims.size(); u++)
-            nc_inq_dimid( m_grp, var.dims[u].c_str(), &dimids[u]);
-        int varid;
-        err = nc_def_var( m_grp, var.name.c_str(), var.xtype,
-                var.dims.size(), &dimids[0],
-                &varid);
+        def_var( name, detail::getNCDataType<T>(), dim_names);
     }
 
+    /*! @brief Define a variable with given type and dimension
+     * @param name Name of the variable to define
+     * @param xtype NetCDF typeid
+     * @param dim_names Name of one of the visible dimensions in the current group
+     * @copydoc hide_dimension_hiding
+     * @tparam T set the type of the variable
+     * @note This function overload is useful if you want to use a compound type
+     */
+    void def_var( std::string name, nc_type xtype,
+            std::vector<std::string> dim_names)
+    {
+        file::NC_Error_Handle err;
+        std::vector<int> dimids( dim_names.size());
+        for( unsigned u=0; u<dim_names.size(); u++)
+            nc_inq_dimid( m_grp, dim_names[u].c_str(), &dimids[u]);
+        int varid;
+        err = nc_def_var( m_grp, name.c_str(), xtype, dim_names.size(),
+                &dimids[0], &varid);
+    }
+
+    /*! @brief Write data to a variable
+     * The hyperslab is infered from the dimensions of the variable
+     * @param name Name of the variable to write data to. Must be visible in
+     * the current group
+     * @param data to write. Size must be at least that of the product of all
+     * dimensions associated to \c name
+     * @copydoc hide_container_type
+     */
     template<class ContainerType>
+    void put_var( std::string name, const ContainerType& data)
+    {
+        auto dims = get_var_dims(name);
+        std::vector<size_t> count( get_dims_shape( dims));
+        std::vector<size_t> start( dims.size());
+        put_var( name, { start, count}, data);
+    }
+
+    /*! @brief Write data to a variable
+     * @param name Name of the variable to write data to. Must be visible in
+     * the current group
+     * @param slab Define where the data is written
+     * @param data to write. Size must be at least that of the slab
+     * @tparam ContainerType May be anything that \c dg::get_tensor_category
+     * recognises as a \c dg::SharedVectorTag
+     */
+    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void put_var( std::string name, const NcHyperslab& slab,
             const ContainerType& data)
     {
@@ -475,8 +765,16 @@ struct SerialNcFile
                 data.data());
     }
 
-    template<class T>
-    void put_var1( std::string name, const std::vector<size_t>& start, T data)
+    /*! @brief Write a single data point
+     * @param name Name of the variable to write data to. Must be visible in
+     * the current group
+     * @param start The coordinates (one for each dimension) to which to write
+     * data to
+     * @param data to write
+     * @tparam T must be convertible to the datatype of the variable \c name
+     */
+    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    void put_var( std::string name, const std::vector<size_t>& start, T data)
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
         file::NC_Error_Handle err;
@@ -484,8 +782,38 @@ struct SerialNcFile
         err = detail::put_vara_T( m_grp, varid, &start[0], &count[0], &data);
     }
 
+    /*@brief Define a dimension and dimension variable in one go
+    @code{.cpp}
+    def_dim( name, size);
+    def_var_as<T>( name, {name});
+    put_atts( name, atts);
+    @endcode
+     */
+    template<class T>
+    void defput_dim_as( std::string name, size_t size,
+            const std::map<std::string, nc_att_t>& atts)
+    {
+        def_dim( name, size);
+        def_var_as<T>( name, {name});
+        put_atts( name, atts);
+    }
 
+    ///@brief Define a dimension and dimension variable in one go
     template<class ContainerType>
+    void defput_dim( std::string name,
+            const std::map<std::string, nc_att_t>& atts,
+            const ContainerType& abscissas)
+    {
+        def_dim( name, abscissas.size());
+        def_var_as<dg::get_value_type<ContainerType>>( name, {name});
+        put_atts( name, atts);
+        std::vector<size_t> count( 1, abscissas.size());
+        std::vector<size_t> start( 1, 0);
+        put_var( name, { start, count}, abscissas);
+    }
+
+    // TODO continue documentation
+    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void get_var( std::string name, const NcHyperslab& slab,
             ContainerType& data) const
     {
@@ -506,67 +834,78 @@ struct SerialNcFile
                 data.data());
     }
 
-    bool var_exists( std::string name) const
+    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    void get_var( std::string name, const std::vector<size_t>& start, T& data) const
     {
+        int varid = name2varid( name, "Can't get variable in a closed file!");
+        file::NC_Error_Handle err;
+        std::vector<size_t> count( start.size(), 1);
+        err = detail::get_vara_T( m_grp, varid, &start[0], &count[0], &data);
+    }
+
+    /// Check if variable named \c name is defined in the current group
+    bool var_is_defined( std::string name) const
+    {
+        if( !m_open)
+            throw std::runtime_error( "Can't check variable in closed file" );
         int varid=0;
         int retval = nc_inq_varid( m_grp, name.c_str(), &varid);
         return retval == NC_NOERR;
     }
 
-    std::vector<NcVariable> get_vars() const
+    /// Get the NetCDF typeid of the variable named \c name
+    nc_type get_var_type(std::string name) const
     {
-        int num_vars = 0, num_dims;
+        int varid = name2varid( name, "Can't get var info in closed file");
+        int xtype;
         file::NC_Error_Handle err;
-        err = nc_inq(m_grp, &num_dims, &num_vars, NULL, NULL);
-        // https://docs.unidata.ucar.edu/netcdf-c/current/reading_unknown.html
-        std::vector<NcVariable> vars;
-        for( int i=0; i<num_vars; i++)
+        err = nc_inq_vartype( m_grp, varid, &xtype);
+        return xtype;
+    }
+    /*! @brief Get the dimension names associated to variable \c name
+     *
+     * @param name of the variable
+     * @return list of dimension names associated with variable
+     * @copydoc hide_dimension_hiding
+     */
+    std::vector<std::string> get_var_dims(std::string name) const
+    {
+        int varid = name2varid( name, "Can't get var info in closed file");
+        file::NC_Error_Handle err;
+
+        int ndims;
+        err = nc_inq_varndims( m_grp, varid, &ndims);
+        int dimids[ndims];
+        err = nc_inq_vardimid( m_grp, varid, dimids);
+
+        std::vector<std::string> dims(ndims);
+        for( int i=0; i<ndims; i++)
         {
-            char name[NC_MAX_NAME+1]; // 256
-            int xtype;
-            int ndims;
-            err = nc_inq_varndims( m_grp, i, &ndims);
-            int dimIDs[ndims];
-            err = nc_inq_var( m_grp, i, name, &xtype, NULL, dimIDs, NULL);
-            std::vector<std::string> dim_names;
-            for( unsigned u=0; u<(unsigned)ndims; u++)
-            {
-                char dim_name[NC_MAX_NAME+1]; // 256
-                size_t len;
-                err = nc_inq_dim( m_grp, dimIDs[u], dim_name, &len);
-                dim_names.push_back( dim_name);
-            }
-            vars.push_back( {name, xtype, dim_names});
+            char dimname [ NC_MAX_NAME+1];
+            err = nc_inq_dimname( m_grp, dimids[i], dimname);
+            dims[i] = dimname;
         }
-        return vars;
-    }
-    template<class ContainerType>
-    void put_var( std::string name, const ContainerType& data)
-    {
-        std::vector<size_t> count( 1, data.size());
-        std::vector<size_t> start( 1, 0);
-        put_var( name, { start, count}, data);
-    }
-    template<class T>
-    void defput_dim( std::string name, size_t size,
-            std::map<std::string, nc_att_t> atts)
-    {
-        def_dim( name, size);
-        def_var<T>( name, {name});
-        set_atts( name, atts);
+        return dims;
     }
 
-    template<class ContainerType>
-    void defput_dim( std::string name,
-            std::map<std::string, nc_att_t> atts,
-            const ContainerType& abscissas)
+    /// Get a list of variable names in the current group
+    std::vector<std::string> get_vars() const
     {
-        def_dim( name, abscissas.size());
-        def_var<dg::get_value_type<ContainerType>>( name, {name});
-        set_atts( name, atts);
-        std::vector<size_t> count( 1, abscissas.size());
-        std::vector<size_t> start( 1, 0);
-        put_var( name, { start, count}, abscissas);
+        if( !m_open)
+            throw std::runtime_error( "Can't check variables in closed file" );
+        return get_vars_info( m_grp);
+    }
+
+    /// Get a list of variable names in the current group and all subgroups
+    std::map<std::filesystem::path, std::vector<std::string>> get_vars_r()
+        const
+    {
+        std::map<int, std::filesystem::path> all_grps = get_grps_r(m_grp);
+        all_grps[m_grp] = get_current_path();
+        std::map<std::filesystem::path, std::vector<std::string>> vars;
+        for( auto grp : all_grps)
+            vars[grp.second] = get_vars_info( grp.first);
+        return vars;
     }
 
     private:
@@ -627,14 +966,40 @@ struct SerialNcFile
         }
         return grps;
     }
+    std::vector<std::string> get_vars_info(int grpid) const
+    {
+        if( !m_open)
+            throw std::runtime_error( "Can't check variables in closed file" );
+        std::vector<std::string> vars;
+        int num_vars = 0, num_dims;
+        file::NC_Error_Handle err;
+        err = nc_inq(grpid, &num_dims, &num_vars, NULL, NULL);
+        // https://docs.unidata.ucar.edu/netcdf-c/current/reading_unknown.html
+        for( int i=0; i<num_vars; i++)
+        {
+            char name[NC_MAX_NAME+1]; // 256
+            err = nc_inq_varname( grpid, i, name);
+            vars.push_back( name);
+        }
+        return vars;
+    }
 
     bool m_open = false;
     int m_ncid = 0; // ncid can be different by opening the same file twice
-    int m_grp = 0; // the currently active group (All group ids in open files are unique and thus group ids can be different by opening the same file twice), dims can be seen by all child groups
+    int m_grp = 0; // the currently active group (All group ids in open files
+                   // are unique and thus group ids can be different by opening
+                   // the same file twice), dims can be seen by all child
+                   // groups
 
     // Buffer for device to host transfer, and dg::assign
     dg::detail::AnyVector<thrust::host_vector> m_buffer;
-    std::map<std::string,std::pair<int,unsigned>> m_varids; //first is ID, second is the slice to write to next == length
+    // Variable tracker (persists on closing and opening a different file)
+    // The problem with trying to track is
+    // 1) do we track every file that is opened?
+    // 2) we cannot prevent someone from opening closing a file here and simply
+    // opening the same file somewhere else. The info is lost or corrupted then
+    //std::map<std::filesystem::path, std::map<std::filesystem::path, NcVarInfo>>
+    //    m_vars;
 };
 
 #ifndef MPI_VERSION

@@ -12,33 +12,12 @@ namespace dg
 {
 namespace file
 {
-/**
- * @class hide_atts_NetCDF_example
- * @code
-    std::map<std::string, dg::file::nc_att_t> atts;
-    atts["text"] = "Hello World!";
-    atts["number"] = 3e-4;
-    atts["int"] = -1;
-    atts["uint"] = 10;
-    atts["bool"] = true;
-    atts["realarray"] = dg::file::vec2json({-1.1, 42.3});
-    dg::file::NC_Error_Handle err;
-    int ncid;
-    err = nc_create( "atts.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::set_atts( ncid, NC_GLOBAL, atts);
-    err = nc_close(ncid);
-    // read attributes back to json
-    err = nc_open( "atts.nc", 0, &ncid);
-    auto read = dg::file::get_atts<dg::file::nc_att_t>( ncid, NC_GLOBAL);
-    // read and atts are the same now
-    err = nc_close(ncid);
- * @endcode
- */
 
-/// Utility type to simplify dealing with heterogeneous attribute types
-/// We can write utility to convert json -> WrappedJsonValue -> nc_att_t
-/// and back
-/// @note Unfortunately, user defined types exist so not every attribute can be an nc_att_t
+/*! @brief Utility type to simplify dealing with heterogeneous attribute types
+ *
+ *  @note Unfortunately, user defined types exist so not every attribute can be
+ *  an nc_att_t
+*/
 using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
       std::vector<int>, std::vector<unsigned>, std::vector<float>,
       std::vector<double>, std::vector<bool>>;
@@ -65,13 +44,10 @@ template<>
 inline nc_type getNCDataType<const char*>(){ return NC_STRING;}
 
 
-} // namespace detail
-///@endcond
-
 // Variant for user defined data types (compound types)
 // S allows both std::string and const char* to be used
 template<class S, class T>
-void set_att( int ncid, int varid, const std::tuple<S, nc_type,
+void put_att( int ncid, int varid, const std::tuple<S, nc_type,
         std::vector<T>>& att)
 {
     // This will convert const char* to std::string
@@ -121,59 +97,45 @@ void set_att( int ncid, int varid, const std::tuple<S, nc_type,
 }
 
 template<class S, class T> // T cannot be nc_att_t
-void set_att( int ncid, int varid, std::tuple<S, nc_type, T> att)
+void put_att( int ncid, int varid, std::tuple<S, nc_type, T> att)
 {
-    set_att( ncid, varid, std::make_tuple( std::get<0>(att), std::get<1>(att),
+    put_att( ncid, varid, std::make_tuple( std::get<0>(att), std::get<1>(att),
                 std::vector<T>( 1, std::get<2>(att)) ));
 }
 
 // Variants for normal types
 template<class S, class T>
-void set_att( int ncid, int varid, const std::pair<S, T>& att)
+void put_att( int ncid, int varid, const std::pair<S, T>& att)
 {
-    set_att( ncid, varid, std::make_tuple( att.first,
+    put_att( ncid, varid, std::make_tuple( att.first,
                 detail::getNCDataType<T>(), std::vector<T>(1,att.second)));
 }
 
 template<class S, class T>
-void set_att( int ncid, int varid, const std::pair<S, std::vector<T>>& att)
+void put_att( int ncid, int varid, const std::pair<S, std::vector<T>>& att)
 {
-    set_att( ncid, varid, std::make_tuple( att.first,
+    put_att( ncid, varid, std::make_tuple( att.first,
                 detail::getNCDataType<T>(), att.second));
 }
 // Amazing
 template<class S>
-void set_att( int ncid, int varid, const std::pair<S, nc_att_t>& att)
+void put_att( int ncid, int varid, const std::pair<S, nc_att_t>& att)
 {
     S name = att.first;
     const nc_att_t& v = att.second;
-    std::visit( [ncid, varid, name]( auto&& arg) { set_att( ncid, varid,
+    std::visit( [ncid, varid, name]( auto&& arg) { put_att( ncid, varid,
                 std::make_pair( name, arg)); }, v);
 }
 
 
-/*! @brief Write a collection of attributes to a NetCDF variable or file
- *
- * Example code
- * @copydoc hide_atts_NetCDF_example
- * @note boolean values are mapped to byte NetCDF attributes (0b for true, 1b for false)
- * @param atts An iterable containing all the attributes for the variable
- * or file. \c atts can be empty in which case no attribute is written.
- * @param ncid NetCDF file or group ID
- * @param varid Variable ID, or NC_GLOBAL for a global attribute
- * @ingroup Attributes
- * @attention in an MPI program and serial NetCDF only the master process should call
- * this function
- * @copydoc hide_master_comment
- * @tparam Iterable Can be e.g. <tt> std::vector<std::pair...>, std::map </tt> , etc.
- */
-template<class Iterable> // *it must be usable in set_att
-void set_atts( int ncid, int varid, const Iterable& atts)
+template<class Iterable> // *it must be usable in put_att
+void put_atts( int ncid, int varid, const Iterable& atts)
 {
     for( const auto& it : atts)
-        set_att( ncid, varid, it);
+        put_att( ncid, varid, it);
 }
 
+/////////////////////////////GETTERS////////////////////////////
 
 template<class T>
 std::vector<T> get_att_v( int ncid, int varid, std::string att)
@@ -293,9 +255,9 @@ inline static dg::file::nc_att_t get_att_t( int ncid, int varid,
         throw std::runtime_error( "Cannot convert attribute type to nc_att_t");
 }
 
-namespace detail
-{
-// utility overloads to be able to implement get_atts
+//namespace detail
+//{
+// utility overloads to be able to implement get_att and get_atts
 template<class T>
 void get_att_h( int ncid, int varid, std::string att_name, T& att)
 {
@@ -310,24 +272,16 @@ inline static void get_att_h( int ncid, int varid, std::string att_name, dg::fil
 {
     att = get_att_t( ncid, varid, att_name);
 }
-}
-/*! @brief Read NetCDF attributes of a certain type
- *
- * Example code
- * @copydoc hide_atts_NetCDF_example
- * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
- * @return A Dictionary containing all the attributes of a certain type
- * for the variable or file. Can be empty if no attribute is present.
- * @param ncid NetCDF file or group ID
- * @param varid Variable ID, or NC_GLOBAL for a global attribute
- * @ingroup Attributes
- * @copydoc hide_parallel_read
- * @tparam T can be a primitive type like \c int or \c double or a vector
- * thereor \c std::vector<int> or a \c dg::file::nc_att_t in which case
- * attributes of heterogeneous types are captured
- */
+//}
 template<class T> // T can be nc_att_t
-std::map<std::string, T> get_atts( int ncid, int varid)
+T get_att_as( int ncid, int varid, std::string att_name)
+{
+    T att;
+    detail::get_att_h( ncid, varid, att_name, att);
+    return att;
+}
+template<class T> // T can be nc_att_t
+std::map<std::string, T> get_atts_as( int ncid, int varid)
 {
     NC_Error_Handle err;
     int number;
@@ -344,6 +298,7 @@ std::map<std::string, T> get_atts( int ncid, int varid)
     }
     return map;
 }
-
+} // namespace detail
+///@endcond
 }// namespace file
 }// namespace dg

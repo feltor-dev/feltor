@@ -70,6 +70,13 @@ struct MPINcFile
         if( m_readonly or m_rank0)
             m_file.sync();
     }
+    int get_ncid() const
+    {
+        int integer;
+        if( m_readonly or m_rank0)
+            integer = m_file.get_ncid();
+        return mpi_bcast( integer);
+    }
 
     /////////////// Groups /////////////////
     void def_grp( std::string name)
@@ -82,17 +89,17 @@ struct MPINcFile
         if( m_rank0)
             m_file.def_grp_p(path);
     }
-    bool grp_exists( std::filesystem::path path) const
+    bool grp_is_defined( std::filesystem::path path) const
     {
         bool boolean;
         if( m_readonly or m_rank0)
-            boolean = m_file.grp_exists(path);
+            boolean = m_file.grp_is_defined(path);
         return mpi_bcast( boolean);
     }
-    void set_grp( std::string name = "")
+    void set_grp( std::filesystem::path path = "")
     {
         if( m_rank0)
-            m_file.set_grp(name);
+            m_file.set_grp(path);
     }
     void rename_grp( std::string old_name, std::string new_name)
     {
@@ -108,11 +115,11 @@ struct MPINcFile
         return mpi_bcast( integer);
     }
 
-    std::filesystem::path get_grp_path( ) const
+    std::filesystem::path get_current_path( ) const
     {
         std::filesystem::path path;
         if( m_readonly or m_rank0)
-            path = m_file.get_grp_path();
+            path = m_file.get_current_path();
         return mpi_bcast( path);
     }
 
@@ -142,19 +149,19 @@ struct MPINcFile
         if( m_rank0)
             m_file.rename_dim( old_name, new_name);
     }
-    size_t dim_size( std::string name) const
+    size_t get_dim_size( std::string name) const
     {
         size_t size;
         if( m_readonly or m_rank0)
-            size = m_file.dim_size( name);
+            size = m_file.get_dim_size( name);
         return mpi_bcast( size);
     }
 
-    std::vector<size_t> dims_shape( const std::vector<std::string>& dims) const
+    std::vector<size_t> get_dims_shape( const std::vector<std::string>& dims) const
     {
         std::vector<size_t> size;
         if( m_readonly or m_rank0)
-            size = m_file.dims_shape( dims);
+            size = m_file.get_dims_shape( dims);
         return mpi_bcast( size);
     }
     std::vector<std::string> get_dims() const
@@ -164,91 +171,92 @@ struct MPINcFile
             strings = m_file.get_dims( );
         return mpi_bcast( strings) ;
     }
-    bool dim_exists( std::string name) const
+    std::vector<std::string> get_unlim_dims() const
+    {
+        std::vector<std::string> strings;
+        if( m_readonly or m_rank0)
+            strings = m_file.get_unlim_dims( );
+        return mpi_bcast( strings) ;
+    }
+    bool dim_is_defined( std::string name) const
     {
         bool boolean;
         if( m_readonly or m_rank0)
-            boolean = m_file.dim_exists(name);
+            boolean = m_file.dim_is_defined(name);
         return mpi_bcast( boolean);
     }
     /////////////// Attributes setters
-    void set_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
+    void put_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
     {
         if( m_rank0)
-            m_file.set_att( id, att);
+            m_file.put_att( id, att);
     }
 
     template<class S, class T> // T cannot be nc_att_t
-    void set_att( std::string id, const std::tuple<S,nc_type, T>& att)
+    void put_att( std::string id, const std::tuple<S,nc_type, T>& att)
     {
         if( m_rank0)
-            m_file.set_att( id, att);
+            m_file.put_att( id, att);
     }
     // Iterable can be e.g. std::vector<std::pair...>, std::map , etc.
-    template<class Iterable> // *it must be usable in set_att
-    void set_atts( std::string id, const Iterable& atts)
+    template<class Iterable> // *it must be usable in put_att
+    void put_atts( std::string id, const Iterable& atts)
     {
         if( m_rank0)
-            m_file.set_atts( id, atts);
+            m_file.put_atts( id, atts);
     }
-    void set_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
+    void put_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
     {
         if( m_rank0)
-            m_file.set_atts( id, atts);
+            m_file.put_atts( id, atts);
     }
 
     /////////////////// Attribute getters
 
-    dg::file::nc_att_t get_att_t( std::string id, std::string att_name) const
-    {
-        nc_att_t att;
-        if( m_readonly or m_rank0)
-            att = m_file.get_att_t( id, att_name);
-        return mpi_bcast( att);
-    }
-
     template<class T>
-    T get_att_i( std::string id, std::string att_name, unsigned idx = 0) const
+    T get_att_as( std::string id, std::string att_name) const
     {
         T att;
         if( m_readonly or m_rank0)
-            att = m_file.get_att_i<T>( id, att_name, idx);
+            att = m_file.get_att_as<T>( id, att_name);
         return mpi_bcast( att);
     }
-
-    // This works for compound types
     template<class T>
-    std::vector<T> get_att_v( std::string id, std::string att_name) const
+    std::vector<T> get_att_vec_as( std::string id, std::string att_name) const
     {
         std::vector<T> att;
         if( m_readonly or m_rank0)
-            att = m_file.get_att_v<T>( id, att_name);
-        return mpi_bcast( att);
-    }
-    template<class T>
-    T get_att( std::string id, std::string att_name) const
-    {
-        T att;
-        if( m_readonly or m_rank0)
-            att = m_file.get_att<T>( id, att_name);
+            att = m_file.get_att_vec_as<T>( id, att_name);
         return mpi_bcast( att);
     }
 
     template<class T>
-    std::map<std::string, T> get_atts( std::string id = ".") const
+    std::map<std::string, T> get_atts_as( std::string id = ".") const
     {
         std::map<std::string, T> atts;
         if( m_readonly or m_rank0)
-            atts = m_file.get_atts<T>( id);
+            atts = m_file.get_atts_as<T>( id);
         return mpi_bcast( atts);
     }
-    //std::vector<std::tuple<std::string, nc_type, std::any>> get_atts( std::string id = ".") const;
+    /// Short for <tt> get_atts_as<nc_att_t>( id)
+    std::map<std::string, nc_att_t> get_atts( std::string id = ".") const
+    {
+        return get_atts_as<nc_att_t>( id);
+    }
 
     /// Remove an attribute
     void del_att( std::string id, std::string att)
     {
         if( m_rank0)
             m_file.del_att( id, att);
+    }
+    /// Check for existence of the attribute named \c att_name
+    bool att_is_defined( std::string id, std::string att_name) const
+    {
+        bool boolean;
+        if( m_readonly or m_rank0)
+            boolean = m_file.att_is_defined(id, att_name);
+        return mpi_bcast( boolean);
     }
     /// Rename an attribute
     void rename_att( std::string id, std::string old_att_name, std::string new_att_name)
@@ -260,43 +268,22 @@ struct MPINcFile
 
     ////////////// Variables ////////////////////////
     template<class T>
-    void def_var( std::string name, std::vector<std::string> dim_names)
+    void def_var_as( std::string name, std::vector<std::string> dim_names)
     {
         if( m_rank0)
-            m_file.def_var<T>( name, dim_names);
+            m_file.def_var_as<T>( name, dim_names);
     }
-    void def_var( const NcVariable& var)
+    void def_var( std::string name, nc_type xtype,
+            std::vector<std::string> dim_names)
     {
         if( m_rank0)
-            m_file.def_var( var);
+            m_file.def_var( name, xtype, dim_names);
     }
-    template<class ContainerType>
-    void put_var( std::string name, const MPINcHyperslab& slab,
-            const ContainerType& data)
-    {
-        int grpid = 0, varid = 0;
-        if( m_rank0)
-        {
-            grpid = m_file.get_grpid();
-            file::NC_Error_Handle err;
-            err = nc_inq_varid( grpid, name.c_str(), &varid);
-        }
-        using value_type = dg::get_value_type<ContainerType>;
-        m_receive.template set<value_type>(0);
-        auto& receive = m_receive.template get<value_type>( );
-        const auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
-        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
-            dg::CudaTag>)
-        {
-            m_buffer.template set<value_type>( data.size());
-            const auto& buffer = m_buffer.template get<value_type>( );
-            dg::assign ( data_ref, buffer);
-            detail::put_vara_detail( grpid, varid, slab, buffer, receive);
-        }
-        else
-            detail::put_vara_detail( grpid, varid, slab, data_ref, receive);
-    }
-
+    /*! @brief
+     *
+     * @attention Only works for 1d variables in MPI, in which
+     * case the rank of the calling process determines where the data is written to
+     */
     template<class ContainerType>
     void put_var( std::string name, const MPI_Vector<ContainerType>& data)
     {
@@ -324,12 +311,46 @@ struct MPINcFile
         put_var( name, { start, std::vector<size_t>(1,count), comm}, data);
     }
 
+    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
+    void put_var( std::string name, const MPINcHyperslab& slab,
+            const ContainerType& data)
+    {
+        int grpid = 0, varid = 0;
+        if( m_rank0)
+        {
+            grpid = m_file.get_grpid();
+            file::NC_Error_Handle err;
+            err = nc_inq_varid( grpid, name.c_str(), &varid);
+        }
+        using value_type = dg::get_value_type<ContainerType>;
+        m_receive.template set<value_type>(0);
+        auto& receive = m_receive.template get<value_type>( );
+        const auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
+        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
+            dg::CudaTag>)
+        {
+            m_buffer.template set<value_type>( data.size());
+            const auto& buffer = m_buffer.template get<value_type>( );
+            dg::assign ( data_ref, buffer);
+            detail::put_vara_detail( grpid, varid, slab, buffer, receive);
+        }
+        else
+            detail::put_vara_detail( grpid, varid, slab, data_ref, receive);
+    }
+
+    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    void put_var( std::string name, const std::vector<size_t>& start, T data)
+    {
+        if(m_rank0)
+            m_file.put_var( name, start, data);
+    }
+
     template<class T>
-    void defput_dim( std::string name, size_t size,
-            std::map<std::string, nc_att_t> atts)
+    void defput_dim_as( std::string name, size_t size,
+            const std::map<std::string, nc_att_t>& atts)
     {
         if( m_rank0)
-            m_file.defput_dim<T>( name, size, atts);
+            m_file.defput_dim_as<T>( name, size, atts);
     }
     template<class ContainerType>
     void defput_dim( std::string name,
@@ -339,20 +360,13 @@ struct MPINcFile
         unsigned size = abscissas.size(), global_size = 0;
         MPI_Reduce( &size, &global_size, 1, MPI_UNSIGNED, MPI_SUM, 0, m_comm);
         if( m_rank0)
-            m_file.defput_dim<dg::get_value_type<ContainerType>>( name,
+            m_file.defput_dim_as<dg::get_value_type<ContainerType>>( name,
                 global_size, atts);
         put_var( name, abscissas);
     }
 
-    template<class T>
-    void put_var1( std::string name, const std::vector<size_t>& start, T data)
-    {
-        if(m_rank0)
-            m_file.put_var1( name, start, data);
-    }
 
-
-    template<class ContainerType>
+    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
     {
@@ -387,19 +401,52 @@ struct MPINcFile
         }
     }
 
-    bool var_exists( std::string name) const
+    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    void get_var( std::string name, const std::vector<size_t>& start, T& data) const
+    {
+        if( m_readonly or m_rank0)
+            m_file.get_var( name, start, data);
+        data = mpi_bcast( data);
+    }
+
+    bool var_is_defined( std::string name) const
     {
         bool boolean;
         if( m_readonly or m_rank0)
-            boolean = m_file.var_exists(name);
+            boolean = m_file.var_is_defined(name);
         return mpi_bcast( boolean);
     }
 
-    std::vector<NcVariable> get_vars() const
+    nc_type get_var_type(std::string name) const
     {
-        std::vector<NcVariable> vars;
+        nc_type xtype;
+        if( m_readonly or m_rank0)
+            xtype = m_file.get_var_type(name);
+        return mpi_bcast( xtype);
+    }
+
+    std::vector<std::string> get_var_dims(std::string name) const
+    {
+        std::vector<std::string> dims;
+        if( m_readonly or m_rank0)
+            dims = m_file.get_dims();
+        return mpi_bcast( dims);
+    }
+
+    std::vector<std::string> get_vars() const
+    {
+        std::vector<std::string> vars;
         if( m_readonly or m_rank0)
             vars = m_file.get_vars();
+        return mpi_bcast( vars);
+    }
+
+    std::map<std::filesystem::path, std::vector<std::string>> get_vars_r()
+        const
+    {
+        std::map<std::filesystem::path, std::vector<std::string>> vars;
+        if( m_readonly or m_rank0)
+            vars = m_file.get_vars_r();
         return mpi_bcast( vars);
     }
 
@@ -451,19 +498,6 @@ struct MPINcFile
             std::string name = data.generic_string();
             name = mpi_bcast( name);
             data = name;
-        }
-        return data;
-    }
-    NcVariable mpi_bcast( NcVariable data)
-    {
-        if( not m_readonly)
-        {
-            std::string name = data.name;
-            data.name = mpi_bcast( name);
-            int xtype = data.xtype;
-            data.xtype = mpi_bcast( xtype);
-            auto dims = data.dims;
-            data.dims = mpi_bcast( dims);
         }
         return data;
     }

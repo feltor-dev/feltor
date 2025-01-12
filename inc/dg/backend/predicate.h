@@ -49,7 +49,8 @@ template<template <typename> class Predicate, class Default, class T, class... T
 using find_if_v = std::integral_constant<unsigned, detail::find_if_impl<Predicate,0, Default, T, Ts...>::value>;
 
 /////////////////////////////////////////////////////////////////////////////////
-//is scalar
+//is scalar (use is_scalar::value in enable_if)
+//TODO Maybe provide _v overloads?
 template< class T>
 using is_scalar = std::conditional_t< std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
 template< class T>
