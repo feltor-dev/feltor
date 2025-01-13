@@ -111,6 +111,7 @@ namespace file
 @code{.cpp}
 auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
 @endcode
+@ingroup Cpp
 */
 enum NcFileMode
 {
@@ -122,6 +123,10 @@ enum NcFileMode
 
 /*! @brief Serial NetCDF-4 file
  *
+ * Our take on a modern C++ implementation of <a href =
+ * https://docs.unidata.ucar.edu/netcdf-c/4.9.2/netcdf_data_model.html>the
+ * NetCDF-4 data model</a>
+ *
  * The class hides all integer ids that the NetCDF C-library uses
  * ("Ids do not exist in the Netcdf-4 data model!")
  *
@@ -130,12 +135,12 @@ enum NcFileMode
  *
  * @note Only Netcdf-4 files are supported
  *
- *
  * @note Most member functions will throw if they are called on a closed file
+@ingroup Cpp
 */
 struct SerialNcFile
 {
-    /////////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
+    // ///////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
     /// Construct a File Handle not associated to any file
     SerialNcFile () = default;
     /*!
@@ -161,13 +166,13 @@ struct SerialNcFile
      * invalid state
      */
     SerialNcFile(const SerialNcFile& rhs) = delete;
-    ///@copydoc SerialNcFile(const SerialNcFile&)
+    ///@copydoc SerialNcFile::SerialNcFile(const SerialNcFile&)
     SerialNcFile& operator =(const SerialNcFile & rhs) = delete;
 
     /*! @brief Swap resources between two file handles
      */
     SerialNcFile(SerialNcFile&& rhs) = default;
-    ///@copydoc SerialNcFile(SerialNcFile&&)
+    ///@copydoc SerialNcFile::SerialNcFile(SerialNcFile&&)
     SerialNcFile& operator =(SerialNcFile && rhs) = default;
 
     /// @brief Close open nc file and release all resources
@@ -184,7 +189,7 @@ struct SerialNcFile
             std::cerr << e.what() << std::endl;
         }
     }
-    ///////////////////// open/close /////////
+    // /////////////////// open/close /////////
 
     /*! Explicitly open or create a netCDF file
      *
@@ -270,7 +275,7 @@ struct SerialNcFile
      */
     int get_ncid() const { return m_ncid;}
 
-    /////////////// Groups /////////////////
+    // ///////////// Groups /////////////////
     /*! Define a group named \c name in the current group
      *
      * @copydoc hide_grps_NetCDF_example
@@ -431,10 +436,10 @@ struct SerialNcFile
         return grps_v;
     }
 
-    ////////////// Dimensions ////////////////////////
+    // //////////// Dimensions ////////////////////////
     /*! @brief Define a dimension named \c name of size \c size
      *
-     * @copdoc hide_dimension_hiding
+     * @copydoc hide_dimension_hiding
      * @note Remember that dimensions do not have attributes or types,
      * only variables and groups have attributes and only variables have types
      * @note One often defines an associated **dimension variable**
@@ -605,7 +610,7 @@ struct SerialNcFile
         put_atts<std::map<std::string, nc_att_t>>( id, atts);
     }
 
-    /////////////////// Attribute getters
+    // ///////////////// Attribute getters
 
     /*! @brief Get an attribute named \c att_name of the group or variable \c id
      *
@@ -624,7 +629,7 @@ struct SerialNcFile
         return dg::file::detail::get_att_as<T>( m_grp, varid, att_name);
     }
 
-    /// Short for <tt> get_att_as<std::vector<T>>( id, att_name);
+    /// Short for <tt> get_att_as<std::vector<T>>( id, att_name);</tt>
     template<class T>
     std::vector<T> get_att_vec_as( std::string id, std::string att_name) const
     {
@@ -650,7 +655,7 @@ struct SerialNcFile
         return dg::file::detail::get_atts_as<T>( m_grp, varid);
     }
 
-    /// Short for <tt> get_atts_as<nc_att_t>( id)
+    /// Short for <tt> get_atts_as<nc_att_t>( id) </tt>
     std::map<std::string, nc_att_t> get_atts( std::string id = ".") const
     {
         return get_atts_as<nc_att_t>( id);
@@ -685,8 +690,7 @@ struct SerialNcFile
         err = nc_rename_att( m_grp, varid, old_name, new_name);
     }
 
-
-    ////////////// Variables ////////////////////////
+    // //////////// Variables ////////////////////////
     /*! @brief Define a variable with given type and dimension
      * @param name Name of the variable to define
      * @param dim_names Name of one of the visible dimensions in the current group
@@ -812,7 +816,8 @@ struct SerialNcFile
         put_var( name, { start, count}, abscissas);
     }
 
-    // TODO continue documentation
+    /*! @brief Read hyperslab \c slab from variable named \c name into container \c data
+     */
     template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void get_var( std::string name, const NcHyperslab& slab,
             ContainerType& data) const
@@ -834,6 +839,9 @@ struct SerialNcFile
                 data.data());
     }
 
+    /*! @brief Read scalar from position \c start from variable named \c name
+     * into container \c data
+     */
     template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
     void get_var( std::string name, const std::vector<size_t>& start, T& data) const
     {
@@ -897,8 +905,9 @@ struct SerialNcFile
     }
 
     /// Get a list of variable names in the current group and all subgroups
-    std::map<std::filesystem::path, std::vector<std::string>> get_vars_r()
-        const
+    /// @return <tt> std::map<std::filesystem::path, std::vector<std::string>> </tt>
+    /// We use 'auto' as type so that the doxygen page looks neater
+    auto get_vars_r() const
     {
         std::map<int, std::filesystem::path> all_grps = get_grps_abs_r(m_grp);
         all_grps[m_grp] = get_current_path();
@@ -1003,6 +1012,8 @@ struct SerialNcFile
 };
 
 #ifndef MPI_VERSION
+/// Convenience typedef for platform independent code
+/// @ingrpup Cpp
 using NcFile = SerialNcFile;
 #endif // MPI_VERSION
 
