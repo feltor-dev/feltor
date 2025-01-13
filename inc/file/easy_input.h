@@ -89,20 +89,20 @@ void get_vara_detail(int ncid, int varid,
     int local_root_rank = dg::mpi_comm_global2local_rank(comm, 0, global_comm);
     if (local_root_rank == MPI_UNDEFINED)
         return;
-    unsigned ndims = slab.ndims(); // same on all processes
+    unsigned ndim = slab.ndim(); // same on all processes
     file::NC_Error_Handle err;
     int rank, size;
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &size);
 
     // Send start and count vectors to root
-    std::vector<size_t> r_start( rank == local_root_rank ? size * ndims : 0);
-    std::vector<size_t> r_count( rank == local_root_rank ? size * ndims : 0);
-    MPI_Gather( slab.startp(), ndims, dg::getMPIDataType<size_t>(),
-                &r_start[0], ndims, dg::getMPIDataType<size_t>(),
+    std::vector<size_t> r_start( rank == local_root_rank ? size * ndim : 0);
+    std::vector<size_t> r_count( rank == local_root_rank ? size * ndim : 0);
+    MPI_Gather( slab.startp(), ndim, dg::getMPIDataType<size_t>(),
+                &r_start[0], ndim, dg::getMPIDataType<size_t>(),
                 local_root_rank, comm);
-    MPI_Gather( slab.countp(), ndims, dg::getMPIDataType<size_t>(),
-                &r_count[0], ndims, dg::getMPIDataType<size_t>(),
+    MPI_Gather( slab.countp(), ndim, dg::getMPIDataType<size_t>(),
+                &r_count[0], ndim, dg::getMPIDataType<size_t>(),
                 local_root_rank, comm);
 
     MPI_Datatype mpitype = dg::getMPIDataType<get_value_type<host_vector>>();
@@ -110,8 +110,8 @@ void get_vara_detail(int ncid, int varid,
     {
         std::vector<size_t> sizes( size, 1);
         for( int r = 0 ; r < size; r++)
-            for( unsigned u=0; u<ndims; u++)
-                sizes[r]*= r_count[r*ndims + u];
+            for( unsigned u=0; u<ndim; u++)
+                sizes[r]*= r_count[r*ndim + u];
 
         // host_vector could be a View
         unsigned max_size = *std::max_element( sizes.begin(), sizes.end());
@@ -120,8 +120,8 @@ void get_vara_detail(int ncid, int varid,
         {
             if(r!=rank)
             {
-                err = detail::get_vara_T( ncid, varid, &r_start[r*ndims],
-                        &r_count[r*ndims], to_send.data()); // read data
+                err = detail::get_vara_T( ncid, varid, &r_start[r*ndim],
+                        &r_count[r*ndim], to_send.data()); // read data
                 MPI_Send( to_send.data(), (int)sizes[r], mpitype,
                       r, r, comm);
             }
@@ -135,7 +135,7 @@ void get_vara_detail(int ncid, int varid,
     else
     {
         size_t num = 1;
-        for( unsigned u=0; u<ndims; u++)
+        for( unsigned u=0; u<ndim; u++)
             num*= slab.count()[u];
         MPI_Status status;
         MPI_Recv( data.data(), num, mpitype,

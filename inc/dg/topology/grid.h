@@ -113,8 +113,17 @@ struct aRealTopology
         return m_n[u]*m_N[u];
     }
 
+    /*! @brief Get the grid abscissas of the \c u axis
+     *
+     * @param u Axis number
+     * @return Vector containing abscissas
+     * @sa dg::evaluate
+     */
     host_vector abscissas(unsigned u=0) const
     {
+        // On getting n,N,x0,x1 given the abscissas:
+        // Unfortunately, we cannot invert this to binary precision
+        // at least not with our pyfeltor implementation
         if( u >= Nd)
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
         host_vector abs(m_n[u]*m_N[u]);
@@ -130,6 +139,12 @@ struct aRealTopology
             }
         return abs;
     }
+    /*! @brief Get the weights of the \c u axis
+     *
+     * @param u Axis number
+     * @return Vector containing weights
+     * @sa dg::create::weights
+     */
     host_vector weights(unsigned u=0) const
     {
         if( u >= Nd)

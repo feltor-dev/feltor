@@ -44,7 +44,7 @@ struct NcHyperslab
         m_start.insert( m_start.begin(), slice);
         m_count.insert( m_count.begin(), 1);
     }
-    const unsigned ndims() const { return m_start.size();}
+    unsigned ndim() const { return m_start.size();}
 
     const std::vector<size_t>& start() const { return m_start;}
     const std::vector<size_t>& count() const { return m_count;}
@@ -75,7 +75,7 @@ struct MPINcHyperslab
     : m_slab( slice, grid, reverse), m_comm(grid.communicator())
     {
     }
-    const unsigned ndims() const { return m_slab.ndims();}
+    unsigned ndim() const { return m_slab.ndim();}
 
     const std::vector<size_t>& start() const { return m_slab.start();}
     const std::vector<size_t>& count() const { return m_slab.count();}

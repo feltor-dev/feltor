@@ -249,14 +249,14 @@ struct MPINcFile
         if( m_rank0)
             m_file.put_att( id, att);
     }
-    ///@copydoc SerialNcFile::put_atts<Iterable>
+    ///@copydoc SerialNcFile::put_atts(std::string,const Iterable&)
     template<class Iterable>
     void put_atts( std::string id, const Iterable& atts)
     {
         if( m_rank0)
             m_file.put_atts( id, atts);
     }
-    ///@copydoc SerialNcFile::put_atts
+    ///@copydoc SerialNcFile::put_atts(std::string,const std::map<std::string,nc_att_t>&)
     void put_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
     {
         if( m_rank0)
@@ -312,17 +312,20 @@ struct MPINcFile
     // //////////// Variables ////////////////////////
     ///@copydoc SerialNcFile::def_var_as
     template<class T>
-    void def_var_as( std::string name, std::vector<std::string> dim_names)
+    void def_var_as( std::string name,
+        const std::vector<std::string>& dim_names,
+        const std::map<std::string, nc_att_t>& atts = {})
     {
         if( m_rank0)
-            m_file.def_var_as<T>( name, dim_names);
+            m_file.def_var_as<T>( name, dim_names, atts);
     }
     ///@copydoc SerialNcFile::def_var
     void def_var( std::string name, nc_type xtype,
-            std::vector<std::string> dim_names)
+            const std::vector<std::string>& dim_names,
+            const std::map<std::string, nc_att_t>& atts = {})
     {
         if( m_rank0)
-            m_file.def_var( name, xtype, dim_names);
+            m_file.def_var( name, xtype, dim_names, atts);
     }
     /*!
      * @copydoc SerialNcFile::put_var(std::string,const ContainerType&)
@@ -376,7 +379,7 @@ struct MPINcFile
             dg::CudaTag>)
         {
             m_buffer.template set<value_type>( data.size());
-            const auto& buffer = m_buffer.template get<value_type>( );
+            auto& buffer = m_buffer.template get<value_type>( );
             dg::assign ( data_ref, buffer);
             detail::put_vara_detail( grpid, varid, slab, buffer, receive, m_comm);
         }
@@ -400,23 +403,28 @@ struct MPINcFile
         if( m_rank0)
             m_file.defput_dim_as<T>( name, size, atts);
     }
-    ///@copydoc SerialNcFile::defput_dim
+    /*! @copydoc SerialNcFile::defput_dim
+     *
+     * We use \c MPI_Reduce with \c abscissas.comm() to get the size of the
+     * dimension in MPI. The local data and the rank of the calling process
+     * determines where that local data is written in the dimension variable
+     */
     template<class ContainerType>
     void defput_dim( std::string name,
             std::map<std::string, nc_att_t> atts,
             const MPI_Vector<ContainerType>& abscissas)  // implicitly assume ordered by rank
     {
         unsigned size = abscissas.size(), global_size = 0;
-        MPI_Reduce( &size, &global_size, 1, MPI_UNSIGNED, MPI_SUM, 0, m_comm);
+        MPI_Reduce( &size, &global_size, 1, MPI_UNSIGNED, MPI_SUM, 0,
+            abscissas.communicator());
         if( m_rank0)
             m_file.defput_dim_as<dg::get_value_type<ContainerType>>( name,
                 global_size, atts);
         put_var( name, abscissas);
     }
 
-
     ///@copydoc SerialNcFile::get_var(std::string,const NcHyperslab&,ContainerType&,ContainerType&)
-    // The comm in MPINcHyperslab must be at least a subgroup of m_comm
+    /// @note The comm in MPINcHyperslab must be at least a subgroup of \c communicator()
     template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
@@ -434,7 +442,7 @@ struct MPINcFile
             dg::CudaTag>)
         {
             m_buffer.template set<value_type>( data.size());
-            const auto& buffer = m_buffer.template get<value_type>( );
+            auto& buffer = m_buffer.template get<value_type>( );
             if( m_readonly)
                 err = detail::get_vara_T( grpid, varid,
                     slab.startp(), slab.countp(), buffer.data());
@@ -495,22 +503,22 @@ struct MPINcFile
 
     private:
     template<class ContainerType>
-    const ContainerType& get_ref( const MPI_Vector<ContainerType>& x, dg::MPIVectorTag)
+    const ContainerType& get_ref( const MPI_Vector<ContainerType>& x, dg::MPIVectorTag) const
     {
         return x.data();
     }
     template<class ContainerType>
-    const ContainerType& get_ref( const ContainerType& x, dg::AnyVectorTag)
+    const ContainerType& get_ref( const ContainerType& x, dg::AnyVectorTag) const
     {
         return x;
     }
     template<class ContainerType>
-    ContainerType& get_ref( MPI_Vector<ContainerType>& x, dg::MPIVectorTag)
+    ContainerType& get_ref( MPI_Vector<ContainerType>& x, dg::MPIVectorTag) const
     {
         return x.data();
     }
     template<class ContainerType>
-    ContainerType& get_ref( ContainerType& x, dg::AnyVectorTag)
+    ContainerType& get_ref( ContainerType& x, dg::AnyVectorTag) const
     {
         return x;
     }
@@ -602,7 +610,7 @@ struct MPINcFile
     MPI_Comm m_comm;
     SerialNcFile m_file;
     // Buffer for device to host transfer, and dg::assign
-    dg::detail::AnyVector<thrust::host_vector> m_buffer, m_receive;
+    mutable dg::detail::AnyVector<thrust::host_vector> m_buffer, m_receive;
 };
 
 /// Convenience typedef for platform independent code

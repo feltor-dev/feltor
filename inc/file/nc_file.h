@@ -18,8 +18,7 @@ namespace dg
 {
 namespace file
 {
-/**
- * @class hide_atts_NetCDF_example
+/*! @class hide_atts_NetCDF_example
  * @code{.cpp}
     dg::file::NcFile file( "atts.nc", dg::file::nc_clobber);
 
@@ -50,8 +49,7 @@ namespace file
     file.close();
  * @endcode
  */
-/**
- * @class hide_grps_NetCDF_example
+/*! @class hide_grps_NetCDF_example
  * Groups can be thought of as directories in a NetCDF-4 file and we therefore
  * use \c std::filesystem::path and use bash equivalent operations to
  * manipulate them
@@ -81,10 +79,9 @@ namespace file
     file.close();
  * @endcode
  */
-/**
- * @class hide_dimension_hiding
+/*! @class hide_dimension_hiding
  *
- * @attention Dimensions are visible in a group and all of its subgroups.  Now,
+ * @attention Dimensions are **visible** in a group and all of its subgroups.  Now,
  * a file can define multiple dimensions with the same name in subgroups. The
  * dimension in the highest group will then hide the ones in the lower groups
  * and e.g a call to \c def_var cannot currently use a dimension that is hidden
@@ -101,7 +98,33 @@ namespace file
  *
  * @class hide_container_type
  * @tparam ContainerType May be anything that \c dg::get_tensor_category
- * recognises as a \c dg::SharedVectorTag
+ * recognises as a \c dg::SharedVectorTag. In \c defput* members the value type
+ * determines the NetCDF type of the variable to define
+ * @note In both \c put* and \c get* members it is possible for \c data to have
+ * a different value type from the defined value type of the variable that is
+ * being written/read, the NetCDF C-API simply converts it to
+ * the requested type. For example a variable declared as \c NC_DOUBLE can be
+ * read as/written from integer or float and vice versa.
+ */
+/*! @class hide_unlimited_issue
+ *
+ * @note There are a couple of subtle issues related to **unlimited dimensions** in NetCDF.
+ * First of all, all variables that share a dimension in NetCDF have the same size
+ * along that dimension.  Second, it is possible to write data to any index
+ * (the start value of the hyperslab in the unlimited dimension can be
+ * anything) of a variable with an unlimited dimension. For example you can do
+ * @code{.cpp}
+ * file.def_dim( "time", NC_UNLIMITED);
+ * file.def_var_as<double>( "var", {"time"}, {});
+ * file.put_var( "var", {5}, 42); // perfectly legal
+ * @endcode
+ * The size of an unlimited dimension is the maximum of the sizes of all
+ * variables that share this dimension. If you are trying to read a variable at a slice
+ * where data was never written, the NetCDF library just fills it up with Fill Values.
+ * However, trying to read beyond the size of the unlimited dimension will fail.
+ * If a user wants to keep all unlimited variables synchronised, they unfortunately have
+ * to keep track of which variable was written themselves:
+ * See <a href="https://github.com/Unidata/netcdf-c/issues/1898">NetCDF issue</a>
  */
 
 /*! @brief NetCDF file format
@@ -123,9 +146,8 @@ enum NcFileMode
 
 /*! @brief Serial NetCDF-4 file
  *
- * Our take on a modern C++ implementation of <a href =
- * https://docs.unidata.ucar.edu/netcdf-c/4.9.2/netcdf_data_model.html>the
- * NetCDF-4 data model</a>
+ * Our take on a modern C++ implementation of
+<a href="https://docs.unidata.ucar.edu/netcdf-c/4.9.2/netcdf_data_model.html">the NetCDF-4 data model</a>
  *
  * The class hides all integer ids that the NetCDF C-library uses
  * ("Ids do not exist in the Netcdf-4 data model!")
@@ -136,7 +158,11 @@ enum NcFileMode
  * @note Only Netcdf-4 files are supported
  *
  * @note Most member functions will throw if they are called on a closed file
-@ingroup Cpp
+ * @sa Conventions to follow are the
+ <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html">CF-conventions</a>
+ and
+ <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
+ * @ingroup Cpp
 */
 struct SerialNcFile
 {
@@ -396,7 +422,7 @@ struct SerialNcFile
     /// Get the NetCDF-C ID of the current group
     int get_grpid() const { return m_grp;}
 
-    /// Get the absolute path of the current group (
+    /// Get the absolute path of the current group
     std::filesystem::path get_current_path( ) const
     {
         if( !m_open)
@@ -446,7 +472,9 @@ struct SerialNcFile
      * with the same name as the dimension.
      * @param name of the dimension. Cannot be the same name as a dimension
      * name already existing in the current group
-     * @param size Size of the dimension
+     * @param size Size of the dimension to create. Use \c NC_UNLIMITED to
+     * create an unlimited dimension
+     * @copydoc hide_unlimited_issue
      */
     void def_dim( std::string name, size_t size)
     {
@@ -470,6 +498,7 @@ struct SerialNcFile
      *
      * @note The size of an unlimited dimension is the maximum of the sizes
      * of all variables that share this dimension.
+     * @copydoc hide_unlimited_issue
      */
     size_t get_dim_size( std::string name) const
     {
@@ -607,6 +636,8 @@ struct SerialNcFile
     /// Short for <tt> put_atts<std::map<std::string, nc_att_t>( id, atts); </tt>
     void put_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
     {
+        if( atts.empty())
+            return;
         put_atts<std::map<std::string, nc_att_t>>( id, atts);
     }
 
@@ -691,28 +722,34 @@ struct SerialNcFile
     }
 
     // //////////// Variables ////////////////////////
-    /*! @brief Define a variable with given type and dimension
+    /*! @brief Define a variable with given type, dimensions and (optionally)
+     * attributes
      * @param name Name of the variable to define
      * @param dim_names Name of one of the visible dimensions in the current group
      * @copydoc hide_dimension_hiding
      * @tparam T set the type of the variable
+     * @param atts Attributes to put for the variable
      */
     template<class T>
-    void def_var_as( std::string name, std::vector<std::string> dim_names)
+    void def_var_as( std::string name,
+        const std::vector<std::string>& dim_names,
+        const std::map<std::string, nc_att_t>& atts = {})
     {
         def_var( name, detail::getNCDataType<T>(), dim_names);
     }
 
-    /*! @brief Define a variable with given type and dimension
+    /*! @brief Define a variable with given type, dimensions and (optionally)
+     * attributes
      * @param name Name of the variable to define
      * @param xtype NetCDF typeid
      * @param dim_names Name of one of the visible dimensions in the current group
      * @copydoc hide_dimension_hiding
-     * @tparam T set the type of the variable
+     * @param atts Attributes to put for the variable
      * @note This function overload is useful if you want to use a compound type
      */
     void def_var( std::string name, nc_type xtype,
-            std::vector<std::string> dim_names)
+            const std::vector<std::string>& dim_names,
+            const std::map<std::string, nc_att_t>& atts = {})
     {
         file::NC_Error_Handle err;
         std::vector<int> dimids( dim_names.size());
@@ -721,9 +758,11 @@ struct SerialNcFile
         int varid;
         err = nc_def_var( m_grp, name.c_str(), xtype, dim_names.size(),
                 &dimids[0], &varid);
+        put_atts( name, atts);
     }
 
     /*! @brief Write data to a variable
+     *
      * The hyperslab is infered from the dimensions of the variable
      * @param name Name of the variable to write data to. Must be visible in
      * the current group
@@ -745,8 +784,8 @@ struct SerialNcFile
      * the current group
      * @param slab Define where the data is written
      * @param data to write. Size must be at least that of the slab
-     * @tparam ContainerType May be anything that \c dg::get_tensor_category
-     * recognises as a \c dg::SharedVectorTag
+     * @copydoc hide_container_type
+     * @copydoc hide_unlimited_issue
      */
     template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void put_var( std::string name, const NcHyperslab& slab,
@@ -759,14 +798,14 @@ struct SerialNcFile
         {
             using value_type = dg::get_value_type<ContainerType>;
             m_buffer.template set<value_type>( data.size());
-            const auto& buffer = m_buffer.template get<value_type>( );
+            auto& buffer = m_buffer.template get<value_type>( );
             dg::assign ( data, buffer);
             err = detail::put_vara_T( m_grp, varid, slab.startp(), slab.countp(),
                 buffer.data());
         }
         else
             err = detail::put_vara_T( m_grp, varid, slab.startp(), slab.countp(),
-                data.data());
+                thrust::raw_pointer_cast(data.data()));
     }
 
     /*! @brief Write a single data point
@@ -776,6 +815,7 @@ struct SerialNcFile
      * data to
      * @param data to write
      * @tparam T must be convertible to the datatype of the variable \c name
+     * @copydoc hide_unlimited_issue
      */
     template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
     void put_var( std::string name, const std::vector<size_t>& start, T data)
@@ -786,37 +826,70 @@ struct SerialNcFile
         err = detail::put_vara_T( m_grp, varid, &start[0], &count[0], &data);
     }
 
-    /*@brief Define a dimension and dimension variable in one go
-    @code{.cpp}
-    def_dim( name, size);
-    def_var_as<T>( name, {name});
-    put_atts( name, atts);
-    @endcode
+    /*! @brief Define a dimension and dimension variable in one go
+     *
+     * Short for
+     * @code{.cpp}
+     * def_dim( name, size);
+     * def_var_as<T>( name, {name}, atts);
+     * @endcode
+     * @param name Name of the dimension and associated dimension variable
+     * @param size Size of the dimension to create. Use \c NC_UNLIMITED to
+     * create an unlimited dimension
+     * @param atts Suggested attribute is "axis" : "T" which enable paraview to
+     * recognize the dimension as the time axis
+     * @note This function is mainly intended to define an unlimited dimension
+     * as in
+     * @code{.cpp}
+     * file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+     * @endcode
      */
     template<class T>
     void defput_dim_as( std::string name, size_t size,
             const std::map<std::string, nc_att_t>& atts)
     {
         def_dim( name, size);
-        def_var_as<T>( name, {name});
-        put_atts( name, atts);
+        def_var_as<T>( name, {name}, atts);
     }
 
-    ///@brief Define a dimension and dimension variable in one go
+    /*!
+     * @brief Define a dimension and define and write to a dimension variable
+     * in one go
+     *
+     * @param name Name of the dimension and associated dimension variable
+     * @param atts Suggested attributes is for example "axis" : "X" which
+     * enable paraview to recognize the dimension as the x axis and "long_name"
+     * : "X-coordinate in Cartesian coordinates"
+     * @param abscissas values to write to the dimension variable (the
+     * dimension size is inferred from \c abscissas.size() and the type is
+     * inferred from \c ContainerType
+     * @note This function is mainly intended to define a dimension from a grid
+     * as in
+     * @code{.cpp}
+     * file.defput_dim( "x", {{"axis", "X"}, {"long_name", "x-coordinate in
+     * Cartesian grid"}, grid.abscissas(0));
+     * @endcode
+     * @copydoc hide_container_type
+     */
     template<class ContainerType>
     void defput_dim( std::string name,
             const std::map<std::string, nc_att_t>& atts,
             const ContainerType& abscissas)
     {
         def_dim( name, abscissas.size());
-        def_var_as<dg::get_value_type<ContainerType>>( name, {name});
-        put_atts( name, atts);
+        def_var_as<dg::get_value_type<ContainerType>>( name, {name}, atts);
         std::vector<size_t> count( 1, abscissas.size());
         std::vector<size_t> start( 1, 0);
         put_var( name, { start, count}, abscissas);
     }
 
-    /*! @brief Read hyperslab \c slab from variable named \c name into container \c data
+    /*! @brief Read hyperslab \c slab from variable named \c name into
+     * container \c data
+     *
+     * @param name of previously defined variable
+     * @param slab Hyperslab to read
+     * @param data Result on output
+     * @copydoc hide_container_type
      */
     template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void get_var( std::string name, const NcHyperslab& slab,
@@ -829,17 +902,21 @@ struct SerialNcFile
         {
             using value_type = dg::get_value_type<ContainerType>;
             m_buffer.template set<value_type>( data.size());
-            const auto& buffer = m_buffer.template get<value_type>( );
+            auto& buffer = m_buffer.template get<value_type>( );
             err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
                 buffer.data());
             dg::assign ( buffer, data);
         }
         else
             err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
-                data.data());
+                thrust::raw_pointer_cast(data.data()));
     }
 
     /*! @brief Read scalar from position \c start from variable named \c name
+     *
+     * @param name of previously defined variable
+     * @param start coordinate to take scalar from
+     * @param data Result on output
      * into container \c data
      */
     template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
@@ -1001,7 +1078,7 @@ struct SerialNcFile
                    // groups
 
     // Buffer for device to host transfer, and dg::assign
-    dg::detail::AnyVector<thrust::host_vector> m_buffer;
+    mutable dg::detail::AnyVector<thrust::host_vector> m_buffer;
     // Variable tracker (persists on closing and opening a different file)
     // The problem with trying to track is
     // 1) do we track every file that is opened?
