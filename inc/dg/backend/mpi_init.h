@@ -377,7 +377,7 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, 
  * else
  * // do something
  * @endcode
- * @param comm The communicator / process group. Must be sub-group of \c global_comm
+ * @param comm The communicator / process group. Must be sub-group of or same as \c global_comm
  * @param global_rank a rank within \c global_comm
  * @param global_comm the communicator, which \c global_rank refers to
  * @return rank of \c global_comm, \c global_rank in \c comm, \c MPI_UNDEFINED

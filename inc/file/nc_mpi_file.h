@@ -16,6 +16,10 @@ namespace file
 
     //TODO where is file MPI_Comm in put_var?
 
+/*! @brief MPI NetCDF-4 file based on **serial** NetCDF
+ *
+ * by funneling get and put operations through the master rank of the given communicator
+ */
 struct MPINcFile
 {
     /////////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
@@ -91,6 +95,8 @@ struct MPINcFile
     {
         return mpi_invoke( &SerialNcFile::get_ncid, m_file);
     }
+
+    MPI_Comm communicator() const { return m_comm;}
 
     /////////////// Groups /////////////////
     void def_grp( std::string name)
@@ -305,10 +311,10 @@ struct MPINcFile
             m_buffer.template set<value_type>( data.size());
             const auto& buffer = m_buffer.template get<value_type>( );
             dg::assign ( data_ref, buffer);
-            detail::put_vara_detail( grpid, varid, slab, buffer, receive);
+            detail::put_vara_detail( grpid, varid, slab, buffer, receive, m_comm);
         }
         else
-            detail::put_vara_detail( grpid, varid, slab, data_ref, receive);
+            detail::put_vara_detail( grpid, varid, slab, data_ref, receive, m_comm);
     }
 
     template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
@@ -339,6 +345,7 @@ struct MPINcFile
     }
 
 
+// The comm in MPINcHyperslab must be at least a subgroup of m_comm
     template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
     void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
@@ -361,7 +368,7 @@ struct MPINcFile
                 err = detail::get_vara_T( grpid, varid,
                     slab.startp(), slab.countp(), buffer.data());
             else
-                detail::get_vara_detail( grpid, varid, slab, buffer, receive);
+                detail::get_vara_detail( grpid, varid, slab, buffer, receive, m_comm);
             dg::assign ( buffer, data_ref);
         }
         else
@@ -370,7 +377,7 @@ struct MPINcFile
                 err = detail::get_vara_T( grpid, varid,
                     slab.startp(), slab.countp(), data_ref.data());
             else
-                detail::get_vara_detail( grpid, varid, slab, data_ref, receive);
+                detail::get_vara_detail( grpid, varid, slab, data_ref, receive, m_comm);
         }
     }
 

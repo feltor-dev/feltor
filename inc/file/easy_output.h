@@ -154,13 +154,14 @@ template<class host_vector>
 void put_vara_detail(int ncid, int varid,
         const MPINcHyperslab& slab,
         const host_vector& data,
-        thrust::host_vector<dg::get_value_type<host_vector>>& receive
+        thrust::host_vector<dg::get_value_type<host_vector>>& receive,
+        MPI_Comm global_comm = MPI_COMM_WORLD
         )
 {
     MPI_Comm comm = slab.communicator();
     // we need to identify the global root rank within the groups and mark the
     // entire group
-    int local_root_rank = dg::mpi_comm_global2local_rank(comm);
+    int local_root_rank = dg::mpi_comm_global2local_rank(comm, 0, global_comm);
     if (local_root_rank == MPI_UNDEFINED)
         return;
     unsigned ndims = slab.ndims(); // same on all processes
