@@ -19,9 +19,11 @@ namespace file
 struct MPINcFile
 {
     /////////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
-    MPINcFile () = default;
-    /// mpi-mode = shared, MPI_Comm = MPI_COMM_WORLD
-    MPINcFile(const std::string& path, enum NcFileMode mode = nc_nowrite)
+    MPINcFile (MPI_Comm comm = MPI_COMM_WORLD)
+    : m_comm(comm)
+    {}
+    MPINcFile(const std::string& path, enum NcFileMode mode = nc_nowrite, MPI_Comm comm = MPI_COMM_WORLD)
+    : m_comm(comm)
     {
         open( path, mode);
     }
@@ -29,7 +31,26 @@ struct MPINcFile
     MPINcFile& operator =(const MPINcFile & rhs) = delete;
 
     MPINcFile(MPINcFile&& rhs) = default;
-    MPINcFile& operator =(MPINcFile && rhs) = default;
+    MPINcFile& operator =(MPINcFile && rhs)
+    {
+        if( this!= &rhs)
+        {
+            // We need to check that the rhs has the same communicator
+            // else we need to think about different groups (do all ranks in both
+            // groups call this function?)
+            int result;
+            MPI_Comm_compare( this->m_comm, rhs.m_comm, &result);
+            // congruent, similar and ident all should be fine
+            assert( result != MPI_UNEQUAL);
+            this->m_comm  = rhs.m_comm;
+            this->m_rank0 = rhs.m_rank0;
+            this->m_readonly = rhs.m_readonly;
+            this->m_file    = std::move( rhs.m_file);
+            this->m_buffer  = std::move( rhs.m_buffer);
+            this->m_receive = std::move( rhs.m_receive);
+        }
+        return *this;
+    }
 
     ~MPINcFile() = default;
     ///////////////////// open/close /////////
@@ -38,7 +59,6 @@ struct MPINcFile
     {
         // General problem: HDF5 may use file locks to prevent multiple processes
         // from opening the same file for write at the same time
-        m_comm = MPI_COMM_WORLD;
         int rank;
         MPI_Comm_rank( m_comm, &rank);
         m_rank0 = (rank == 0);
