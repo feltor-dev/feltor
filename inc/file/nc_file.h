@@ -405,7 +405,7 @@ struct SerialNcFile
     {
         if( !m_open)
             throw std::runtime_error( "Can't get groups in a closed file!");
-        auto grps = get_grps(m_grp);
+        auto grps = get_grps_abs(m_grp);
         std::vector<std::filesystem::path> grps_v;
         for( auto grp : grps)
             grps_v.push_back( grp.second);
@@ -424,7 +424,7 @@ struct SerialNcFile
      */
     std::vector<std::filesystem::path> get_grps_r( ) const
     {
-        auto grps = get_grps_r(m_grp);
+        auto grps = get_grps_abs_r(m_grp);
         std::vector<std::filesystem::path> grps_v;
         for( auto grp : grps)
             grps_v.push_back( grp.second);
@@ -900,7 +900,7 @@ struct SerialNcFile
     std::map<std::filesystem::path, std::vector<std::string>> get_vars_r()
         const
     {
-        std::map<int, std::filesystem::path> all_grps = get_grps_r(m_grp);
+        std::map<int, std::filesystem::path> all_grps = get_grps_abs_r(m_grp);
         all_grps[m_grp] = get_current_path();
         std::map<std::filesystem::path, std::vector<std::string>> vars;
         for( auto grp : all_grps)
@@ -936,7 +936,7 @@ struct SerialNcFile
         return current;
     }
     // Absolute paths of subgroups
-    std::map<int, std::filesystem::path> get_grps( int ncid ) const
+    std::map<int, std::filesystem::path> get_grps_abs( int ncid ) const
     {
         NC_Error_Handle err;
         int num_grps;
@@ -956,12 +956,12 @@ struct SerialNcFile
         }
         return groups;
     }
-    std::map<int, std::filesystem::path> get_grps_r( int ncid) const
+    std::map<int, std::filesystem::path> get_grps_abs_r( int ncid) const
     {
-        auto grps = get_grps(ncid);
+        auto grps = get_grps_abs(ncid);
         for( auto grp : grps)
         {
-            auto subgrps = get_grps_r( grp.first);
+            auto subgrps = get_grps_abs_r( grp.first);
             grps.merge( subgrps);
         }
         return grps;

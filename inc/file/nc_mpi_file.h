@@ -52,10 +52,7 @@ struct MPINcFile
     /// Check if a file is open
     bool is_open() const
     {
-        bool boolean;
-        if( m_readonly or m_rank0)
-            boolean = m_file.is_open();
-        return mpi_bcast( boolean);
+        return mpi_invoke( &SerialNcFile::is_open, m_file);
     }
 
     void close()
@@ -72,10 +69,7 @@ struct MPINcFile
     }
     int get_ncid() const
     {
-        int integer;
-        if( m_readonly or m_rank0)
-            integer = m_file.get_ncid();
-        return mpi_bcast( integer);
+        return mpi_invoke( &SerialNcFile::get_ncid, m_file);
     }
 
     /////////////// Groups /////////////////
@@ -91,10 +85,7 @@ struct MPINcFile
     }
     bool grp_is_defined( std::filesystem::path path) const
     {
-        bool boolean;
-        if( m_readonly or m_rank0)
-            boolean = m_file.grp_is_defined(path);
-        return mpi_bcast( boolean);
+        return mpi_invoke( &SerialNcFile::grp_is_defined, m_file, path);
     }
     void set_grp( std::filesystem::path path = "")
     {
@@ -109,33 +100,21 @@ struct MPINcFile
 
     int get_grpid() const
     {
-        int integer;
-        if( m_readonly or m_rank0)
-            integer = m_file.get_grpid();
-        return mpi_bcast( integer);
+        return mpi_invoke( &SerialNcFile::get_grpid, m_file);
     }
 
     std::filesystem::path get_current_path( ) const
     {
-        std::filesystem::path path;
-        if( m_readonly or m_rank0)
-            path = m_file.get_current_path();
-        return mpi_bcast( path);
+        return mpi_invoke( &SerialNcFile::get_current_path, m_file);
     }
 
     std::vector<std::filesystem::path> get_grps( ) const
     {
-        std::vector<std::filesystem::path> grps;
-        if( m_readonly or m_rank0)
-            grps = m_file.get_grps();
-        return mpi_bcast( grps);
+        return mpi_invoke( &SerialNcFile::get_grps, m_file);
     }
     std::vector<std::filesystem::path> get_grps_r( ) const
     {
-        std::vector<std::filesystem::path> grps;
-        if( m_readonly or m_rank0)
-            grps = m_file.get_grps_r();
-        return mpi_bcast( grps);
+        return mpi_invoke( &SerialNcFile::get_grps_r, m_file);
     }
 
     ////////////// Dimensions ////////////////////////
@@ -151,39 +130,24 @@ struct MPINcFile
     }
     size_t get_dim_size( std::string name) const
     {
-        size_t size;
-        if( m_readonly or m_rank0)
-            size = m_file.get_dim_size( name);
-        return mpi_bcast( size);
+        return mpi_invoke( &SerialNcFile::get_dim_size, m_file, name);
     }
 
     std::vector<size_t> get_dims_shape( const std::vector<std::string>& dims) const
     {
-        std::vector<size_t> size;
-        if( m_readonly or m_rank0)
-            size = m_file.get_dims_shape( dims);
-        return mpi_bcast( size);
+        return mpi_invoke( &SerialNcFile::get_dims_shape, m_file, dims);
     }
-    std::vector<std::string> get_dims() const
+    std::vector<std::string> get_dims(bool include_parents = true) const
     {
-        std::vector<std::string> strings;
-        if( m_readonly or m_rank0)
-            strings = m_file.get_dims( );
-        return mpi_bcast( strings) ;
+        return mpi_invoke( &SerialNcFile::get_dims, m_file, include_parents);
     }
     std::vector<std::string> get_unlim_dims() const
     {
-        std::vector<std::string> strings;
-        if( m_readonly or m_rank0)
-            strings = m_file.get_unlim_dims( );
-        return mpi_bcast( strings) ;
+        return mpi_invoke( &SerialNcFile::get_unlim_dims, m_file);
     }
     bool dim_is_defined( std::string name) const
     {
-        bool boolean;
-        if( m_readonly or m_rank0)
-            boolean = m_file.dim_is_defined(name);
-        return mpi_bcast( boolean);
+        return mpi_invoke( &SerialNcFile::dim_is_defined, m_file, name);
     }
     /////////////// Attributes setters
     void put_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
@@ -216,27 +180,19 @@ struct MPINcFile
     template<class T>
     T get_att_as( std::string id, std::string att_name) const
     {
-        T att;
-        if( m_readonly or m_rank0)
-            att = m_file.get_att_as<T>( id, att_name);
-        return mpi_bcast( att);
+        return mpi_invoke( &SerialNcFile::get_att_as<T>, m_file, id, att_name);
     }
     template<class T>
     std::vector<T> get_att_vec_as( std::string id, std::string att_name) const
     {
-        std::vector<T> att;
-        if( m_readonly or m_rank0)
-            att = m_file.get_att_vec_as<T>( id, att_name);
-        return mpi_bcast( att);
+        return mpi_invoke( &SerialNcFile::get_att_vec_as<T>, m_file, id,
+            att_name);
     }
 
     template<class T>
     std::map<std::string, T> get_atts_as( std::string id = ".") const
     {
-        std::map<std::string, T> atts;
-        if( m_readonly or m_rank0)
-            atts = m_file.get_atts_as<T>( id);
-        return mpi_bcast( atts);
+        return mpi_invoke( &SerialNcFile::get_atts_as<T>, m_file, id);
     }
     /// Short for <tt> get_atts_as<nc_att_t>( id)
     std::map<std::string, nc_att_t> get_atts( std::string id = ".") const
@@ -253,10 +209,7 @@ struct MPINcFile
     /// Check for existence of the attribute named \c att_name
     bool att_is_defined( std::string id, std::string att_name) const
     {
-        bool boolean;
-        if( m_readonly or m_rank0)
-            boolean = m_file.att_is_defined(id, att_name);
-        return mpi_bcast( boolean);
+        return mpi_invoke( &SerialNcFile::att_is_defined, m_file, id, att_name);
     }
     /// Rename an attribute
     void rename_att( std::string id, std::string old_att_name, std::string new_att_name)
@@ -406,48 +359,34 @@ struct MPINcFile
     {
         if( m_readonly or m_rank0)
             m_file.get_var( name, start, data);
-        data = mpi_bcast( data);
+        if( not m_readonly)
+            mpi_bcast( data);
     }
 
     bool var_is_defined( std::string name) const
     {
-        bool boolean;
-        if( m_readonly or m_rank0)
-            boolean = m_file.var_is_defined(name);
-        return mpi_bcast( boolean);
+        return mpi_invoke( &SerialNcFile::var_is_defined, m_file, name);
     }
 
     nc_type get_var_type(std::string name) const
     {
-        nc_type xtype;
-        if( m_readonly or m_rank0)
-            xtype = m_file.get_var_type(name);
-        return mpi_bcast( xtype);
+        return mpi_invoke( &SerialNcFile::get_var_type, m_file, name);
     }
 
     std::vector<std::string> get_var_dims(std::string name) const
     {
-        std::vector<std::string> dims;
-        if( m_readonly or m_rank0)
-            dims = m_file.get_dims();
-        return mpi_bcast( dims);
+        return mpi_invoke( &SerialNcFile::get_var_dims, m_file, name);
     }
 
     std::vector<std::string> get_vars() const
     {
-        std::vector<std::string> vars;
-        if( m_readonly or m_rank0)
-            vars = m_file.get_vars();
-        return mpi_bcast( vars);
+        return mpi_invoke( &SerialNcFile::get_vars, m_file);
     }
 
     std::map<std::filesystem::path, std::vector<std::string>> get_vars_r()
         const
     {
-        std::map<std::filesystem::path, std::vector<std::string>> vars;
-        if( m_readonly or m_rank0)
-            vars = m_file.get_vars_r();
-        return mpi_bcast( vars);
+        return mpi_invoke( &SerialNcFile::get_vars_r, m_file);
     }
 
 
@@ -474,84 +413,84 @@ struct MPINcFile
     }
 
     template<class T>
-    T mpi_bcast( T data) const
+    void mpi_bcast( T& data) const
     {
-        if( not m_readonly)
-            MPI_Bcast( &data, 1, dg::getMPIDataType<T>(), 0, m_comm);
-        return data;
+        MPI_Bcast( &data, 1, dg::getMPIDataType<T>(), 0, m_comm);
     }
-    std::string mpi_bcast( std::string data) const
+    void mpi_bcast( std::string& data) const
     {
-        if( not m_readonly)
-        {
-            size_t len = data.size();
-            MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
-            data.resize( len, 'x');
-            MPI_Bcast( &data[0], len, MPI_CHAR, 0, m_comm);
-        }
-        return data;
+        size_t len = data.size();
+        MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+        data.resize( len, 'x');
+        MPI_Bcast( &data[0], len, MPI_CHAR, 0, m_comm);
     }
-    std::filesystem::path mpi_bcast( std::filesystem::path data) const
+    void mpi_bcast( std::filesystem::path& data) const
     {
-        if( not m_readonly)
-        {
-            std::string name = data.generic_string();
-            name = mpi_bcast( name);
-            data = name;
-        }
-        return data;
+        std::string name = data.generic_string();
+        mpi_bcast( name);
+        data = name;
     }
 
     template<class T>
-    std::vector<T> mpi_bcast( std::vector<T> data) const
+    void mpi_bcast( std::vector<T>& data) const
     {
-        if( not m_readonly)
-        {
-            size_t len = data.size();
-            MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
-            data.resize( len);
-            for( unsigned u=0; u<len; u++)
-                data[u] = mpi_bcast( data[u]);
-        }
-        return data;
+        size_t len = data.size();
+        MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+        data.resize( len);
+
+        for( unsigned u=0; u<len; u++)
+            if constexpr ( std::is_same_v<T, bool>)
+            {
+                bool b = data[u];
+                mpi_bcast( b);
+                data[u] = b;
+            }
+            else
+                mpi_bcast( data[u]);
     }
     template<class K, class T>
-    std::map<K, T> mpi_bcast( const std::map<K,T>& data) const
+    void mpi_bcast( std::map<K,T>& data) const
     {
-        if( not m_readonly)
+        size_t len = data.size();
+        MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+        std::vector<K> keys;
+        std::vector<T> values;
+        if( m_rank0)
         {
-            size_t len = data.size();
-            MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
-            std::vector<K> keys;
-            std::vector<T> values;
-            if( m_rank0)
+            for ( const auto& pair : data)
             {
-                for ( const auto& pair : data)
-                {
-                    keys.push_back( pair.first);
-                    values.push_back( pair.second);
-                }
-            }
-            keys = mpi_bcast( keys);
-            values = mpi_bcast( values);
-            if( not m_rank0)
-            {
-                std::map<K,T> tmp;
-                for( unsigned u=0; u<len; u++)
-                    tmp[keys[u]] = values[u];
-                return tmp;
+                keys.push_back( pair.first);
+                values.push_back( pair.second);
             }
         }
-        return data;
+        mpi_bcast( keys);
+        mpi_bcast( values);
+        if( not m_rank0)
+        {
+            for( unsigned u=0; u<len; u++)
+                data[keys[u]] = values[u];
+        }
     }
-    nc_att_t mpi_bcast( const nc_att_t& data) const
+    void mpi_bcast( nc_att_t& data) const
     {
-        nc_att_t tmp;
-        if( not m_readonly)
+        std::visit( [this]( auto&& arg) { mpi_bcast(arg); }, data);
+    }
+
+    template<class F, class ... Args>
+    std::invoke_result_t<F, Args...> mpi_invoke( F&& f, Args&& ...args) const
+    {
+        using R = std::invoke_result_t<F, Args...>;
+        if ( m_readonly)
         {
-            tmp = std::visit( [this]( auto&& arg) { return nc_att_t(mpi_bcast(arg)); }, data);
+            return std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
         }
-        return tmp;
+        R r;
+        if( m_rank0)
+        {
+            r = std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+        }
+        mpi_bcast( r);
+        return r;
     }
 
 
