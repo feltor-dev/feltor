@@ -81,7 +81,7 @@ namespace file
  */
 /*! @class hide_dimension_hiding
  *
- * @attention Dimensions are **visible** in a group and all of its subgroups.  Now,
+ * @note Dimensions are **visible** in a group and all of its subgroups.  Now,
  * a file can define multiple dimensions with the same name in subgroups. The
  * dimension in the highest group will then hide the ones in the lower groups
  * and e.g a call to \c def_var cannot currently use a dimension that is hidden
@@ -93,7 +93,7 @@ namespace file
  * its associated dimension variable is not.
  *
  * @class hide_attributes_overwrite
- * @attention Attributes are silently overwritten. You need to manually
+ * @note Attributes are silently overwritten. You need to manually
  * check with \c att_is_defined for existence if this is a concern
  *
  * @class hide_container_type
@@ -725,7 +725,8 @@ struct SerialNcFile
     /*! @brief Define a variable with given type, dimensions and (optionally)
      * attributes
      * @param name Name of the variable to define
-     * @param dim_names Name of one of the visible dimensions in the current group
+     * @param dim_names Names of visible dimensions in the current group
+     * @copydoc hide_dimension_order
      * @copydoc hide_dimension_hiding
      * @tparam T set the type of the variable
      * @param atts Attributes to put for the variable
@@ -742,7 +743,8 @@ struct SerialNcFile
      * attributes
      * @param name Name of the variable to define
      * @param xtype NetCDF typeid
-     * @param dim_names Name of one of the visible dimensions in the current group
+     * @param dim_names Names of visible dimensions in the current group
+     * @copydoc hide_dimension_order
      * @copydoc hide_dimension_hiding
      * @param atts Attributes to put for the variable
      * @note This function overload is useful if you want to use a compound type

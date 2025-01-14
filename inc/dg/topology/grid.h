@@ -310,12 +310,27 @@ struct aRealTopology
         return grid(2);
     }
 
-    /// The global start index of the hyperslab that the grid represents
-    /// Used e.g. in NetCDF output together with \c count()
-    /// Equivalent to \c {0}
+    /*! @brief Start coordinate in C-order for \c dg::file::NcHyperslab
+     *
+     * Used to construct \c dg::file::NcHyperslab together with \c count()
+     * @return \c {0}
+     */
     std::array<unsigned, Nd> start() const { return {0};}
-    /// Equivalent to \c get_shape()
-    std::array<unsigned, Nd> count() const { return get_shape();}
+    /*! @brief Count vector in C-order for \c dg::file::NcHyperslab
+     *
+     * Used to construct \c dg::file::NcHyperslab together with \c start()
+     * @return <tt> reverse( get_shape())</tt>
+     * @note In C-order the fastest dimension is the last one while our \c
+     * dg::evaluate and \c dg::kronecker make the 0 dimension/ 1st argument the
+     * fastest varying, so we return the reverse order of \c get_shape()
+     */
+    std::array<unsigned, Nd> count() const
+    {
+        std::array<unsigned,Nd> ss;
+        for( unsigned u=0; u<Nd; u++)
+            ss[Nd-1-u] = m_n[u]*m_N[u];
+        return ss;
+    }
 
     ////////////////////SETTERS/////////////////////////////
     /**

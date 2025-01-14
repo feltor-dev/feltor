@@ -29,26 +29,39 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
  *
  * %Evaluate is equivalent to the following:
  *
- * -# generate a list of grid coordinates \f$ x_i, ...\f$ representing the given computational space discretization (the grid)
- * -# evaluate the given function or functor at these coordinates and store the result
- *   in the output vector \f$ v_i = f(x_i, ...)\f$ for all \c i
+ * -# from the given Nd dimensional grid generate Nd one-dimensional lists of
+ *  grid coordinates <tt> x_i = g.abscissas( i)</tt> representing the given
+ *  computational space discretization in each dimension
+ * -# evaluate the given function or functor at these coordinates and store the
+ *  result in the output vector <tt> v = dg::kronecker( f, x_0, x_1, ...)</tt>
+ *  The dimension number \c i is thus mapped to the argument number of the
+ *  function \c f. The **0 dimension is the contiguous dimension** in the
+ *  return vector \c v
  * .
  *
  * For example fo a 2d grid the implementation is equivalent to
  * @code{.cpp}
  * return dg::kronecker( f, g.abscissas(0), g.abscissas(1));
  * @endcode
- * @copydoc hide_code_evaluate1d
  * @copydoc hide_code_evaluate2d
- * @copydoc hide_code_evaluate3d
- * @tparam Functor Model of Function <tt> return_type f(real_type, ...) </tt>
- * @param f The function to evaluate, see @ref functions for a host of predefined functors to evaluate
- * @param g The grid that defines the computational space on which to evaluate f
+ * @tparam Topology A fixed sized grid type with member functions <tt> static
+ * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and
+ * <tt> vector_type Topology::abscissas( unsigned dim)</tt> giving the
+ * abscissas in dimension \c dim
+ * @tparam Functor Callable as <tt> return_type f(real_type, ...)</tt>.
+ * \c Functor needs to be callable with \c Topology::ndim arguments.
+ * @param f The function to evaluate, see @ref functions for a host of
+ * predefined functors to evaluate
+ * @param g The grid that defines the computational space on which to evaluate
+ * \c f
  *
- * @return The output vector \c v as a host vector
- * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d ) to generate the list of grid coordinates
+ * @return The output vector \c v as a host vector. Its value type is
+ * determined by the return type of \c Functor
+ * @note Use the elementary function \f$ f(x) = x \f$ (\c dg::cooX1d ) to
+ * generate the list of grid coordinates
  * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa \c dg::pullback if you want to evaluate a function in physical space
+ * @sa \c dg::kronecker
  * @note In the MPI version all processes in the grid communicator need to call
  * this function. Each process evaluates the function f only on the grid
  * coordinates that it owns i.e. the local part of the given grid
@@ -56,9 +69,23 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
 template< class Functor, class Topology>
 auto evaluate( Functor f, const Topology& g)
 {
+    // The evaluate function is the reason why our Topology needs to have fixed
+    // sized dimensions instead of dynamically sized dimensions
+    // even though if we really wanted we could maybe ask ndim = g.ndim()
+    // and then do use switch and manually implement until ndim < 10 say
+    // for now we keep fixed sized grids ...
+    //
+    // If we ever change the order of the fastest dimension we need to rethink
+    // NetCDF hyperslab construction
     return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
 };
 
+///@cond
+//These overloads help the compiler in a situation where a free function has
+//several overloads of different dimensions e.g.
+//double zero( double);
+//double zero( double,double);
+//In such a case dg::evaluate( zero, grid); cannot determine the Functor type...
 template<class Topology, class value_type = typename Topology::value_type, class result_type = typename Topology::value_type, typename = std::enable_if_t<Topology::ndim() == 1 > >
 auto evaluate( result_type (*f)( value_type), const Topology& g)
 {
@@ -74,6 +101,7 @@ auto evaluate( result_type (*f)( value_type0, value_type1, value_type2), const T
 {
     return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
 }
+///@endcond
 
 
 
@@ -133,17 +161,14 @@ thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& 
 }
 
 
-/*!@brief Indefinite integral of a function on a grid
- * \f[ F_h(x) = \int_a^x f_h(x') dx' \f]
+/*!@brief Untility shortcut
  *
- * This function first evaluates f on the given grid and then computes
- *  and returns its indefinite integral
- * @param f The function to evaluate and then integrate
- * @param g The grid
- * @param dir If dg::backward then the integral starts at the right boundary (i.e. goes in the reverse direction)
- * \f[ F_h(x) = \int_b^x f_h(x') dx' = \int_a^x f_h(x') dx' - \int_a^b f_h(x') dx' \f]
- * @return integral of \c f on the grid \c g
- * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+ * for
+ * @code{.cpp}
+ *   thrust::host_vector<real_type> vector = evaluate( f, g);
+ *   return integrate<real_type>(vector, g, dir);
+ *  @endcode
+ *
  */
 template< class UnaryOp,class real_type>
 thrust::host_vector<real_type> integrate( UnaryOp f, const RealGrid<real_type,1>& g, dg::direction dir = dg::forward)

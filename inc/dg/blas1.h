@@ -731,7 +731,7 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
  * This routine elementwise evaluates \f[ f(g(x_{0i_0}, x_{1i_1}, ..., x_{(n-1)i_{n-1}}), y_{((i_{n-1} N_{n-2} +...)N_1+i_1)N_0+i_0}) \f]
  * for all @b combinations of input values.
  * \f$ N_i\f$ is the size of the vector \f$ x_i\f$.
- * The first index \f$i_0\f$ is the fastest varying in the output, then \f$ i_1\f$, etc.
+ * The **first index \f$i_0\f$ is the fastest varying in the output**, then \f$ i_1\f$, etc.
  * If \f$ x_i\f$ is a scalar then the size \f$ N_i = 1\f$.
  * @attention None of the \f$ x_i\f$ or \f$ y\f$ can have the \c dg::RecursiveVectorTag
  *
@@ -768,7 +768,7 @@ dg::blas1::kronecker( YS, dg::equals(), []( double x, double y){ return y;}, xs,
 dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
 @endcode
  * @note For the function \f$ f(x_0, x_1, ..., x_{n-1}) = x_0 x_1 ... x_{n-1} \f$ <tt> dg::blas1::kronecker(y, dg::equals(), x_0, x_1, ...) </tt>computes the actual Kronecker product of the arguments **in reversed order** \f[ y = x_{n-1} \otimes x_{n-2} \otimes ... \otimes x_1 \otimes x_0\f] (or the outer product)
- * With this behaviour we can in e.g. Cartesian coordinates naturally define functions \f$ f(x,y,z)\f$ and evaluate this function on product space coordinates and have \f$ x \f$ as the fastest varying coordinate in memory.
+ * With this behaviour we can in e.g. Cartesian coordinates naturally define functions \f$ f(x,y,z)\f$ and evaluate this function on product space coordinates and have **\f$ x \f$ as the fastest varying coordinate in memory**.
  *
  * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
@@ -890,24 +890,32 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * MPI_Comm comm_kron = dg::mpi_cart_kron( x0.communicator(), xs.communicator()...);
  * return MPI_Vector{dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
  * @endcode
- * @attention In particular this means that in MPI all the communicators in the input argument vectors
- * need to be Cartesian communicators that were created from a common Cartesian root communicator
- * and both root and all sub communicators need to be registered in the dg
- * library through calls to \c dg::register_mpi_cart_create and \c dg::register_mpi_cart_sub
- * or \c dg::mpi_cart_create and \c dg::mpi_cart_sub. Further, the order of input-communicators
- * must match the dimensions in the common root communicator (see \c dg::mpi_cart_kron)
- * i.e. currently **in MPI it is not possible to transpose with this function**
+ * @attention In particular this means that in MPI all the communicators in the
+ * input argument vectors need to be Cartesian communicators that were created
+ * from a common Cartesian root communicator and both root and all sub
+ * communicators need to be registered in the dg library through calls to \c
+ * dg::register_mpi_cart_create and \c dg::register_mpi_cart_sub or \c
+ * dg::mpi_cart_create and \c dg::mpi_cart_sub. Further, the order of
+ * input-communicators must match the dimensions in the common root
+ * communicator (see \c dg::mpi_cart_kron) i.e. currently **in MPI it is not
+ * possible to transpose with this function**
  *
- * The rationale for this behaviour is that
- * (i) the MPI standard has no easy way of finding a common ancestor to Cartesin sub communicators
- * (ii) the MPI standard has no easy way of re-joining previously split Cartesian communicators
- * and (ii) we want to avoid creating a new communicator every time this function is called.
+ * The rationale for this behaviour is that:
+ *
+ * -# the MPI standard has no easy way of finding a common ancestor to
+ * Cartesin sub communicators
+ * -# the MPI standard has no easy way of re-joining previously split
+ * Cartesian communicators
+ * -# we want to avoid creating a new communicator every time this
+ * function is called.
+ * .
  *
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
  * @attention \c Functor must be callable on the device in use. In particular,
  * with CUDA it must be a functor tpye (@b not a function) and its signature
  * must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
- * @param f The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param f The functor to evaluate, see @ref functions and @ref
+ * variadic_evaluates for a collection of predefined functors to use here
  * @param x0 first input
  * @param xs more input
  * @return newly allocated result (size of container matches the product of sizes of \f$ x_i\f$)

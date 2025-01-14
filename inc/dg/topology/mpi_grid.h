@@ -360,7 +360,7 @@ struct aRealMPITopology
     unsigned size() const { return m_g.size();}
     /**
      * @brief The total local number of points
-     * @return equivalent to \c local.size()
+     * @return \c local().size()
      */
     unsigned local_size() const { return m_l.size();}
     // used in conversion policy in interpolation
@@ -377,7 +377,7 @@ struct aRealMPITopology
         os << "LOCAL GRID \n";
         m_l.display();
     }
-    ///@copydoc aRealMPITopology2d::local2globalIdx(int,int,int&)const
+
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
         // TODO shouldn't this test for m_l.size() ? How is this used?
@@ -406,26 +406,7 @@ struct aRealMPITopology
             globalIdx = globalIdx*m_g.shape(u) + gIdx[u];
         return true;
     }
-    /// The global start index of the hyperslab that the local grid represents
-    /// Used e.g. in NetCDF output together with \c count()
-    std::array<unsigned, Nd> start() const
-    {
-        int dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
-        std::array<unsigned, Nd> start;
-        for( unsigned u=0;u<Nd; u++)
-        {
-            auto idx = increment(partition( m_g.N(u), dims[u]));
-            start[u] = idx[coords[u]]*m_g.n(u);
-        }
-        return start;
-    }
-    /// Equivalent to \c local().get_shape()
-    std::array<unsigned, Nd> count() const
-    {
-        return m_l.get_shape();
-    }
-    ///@copydoc aRealMPITopology2d::global2localIdx(int,int&,int&)const
+
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
         // an exercise in flattening and unflattening indices
@@ -463,6 +444,37 @@ struct aRealMPITopology
         else
             return false;
     }
+
+    /*! @brief The global start coordinate in C-order of \c
+     * dg::file::MPINcHyperslab that the local grid represents
+     *
+     * Used to construct \c dg::file::MPINcHyperslab together with \c count()
+     * @return global start coordinates of the local grid in C-order
+     * @note In C-order the fastest dimension is the last one while our \c
+     * dg::evaluate and \c dg::kronecker make the 0 dimension/ 1st argument the
+     * fastest varying.
+     */
+    std::array<unsigned, Nd> start() const
+    {
+        int dims[Nd], periods[Nd], coords[Nd];
+        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        std::array<unsigned, Nd> start;
+        for( unsigned u=0;u<Nd; u++)
+        {
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            start[Nd-1-u] = idx[coords[u]]*m_g.n(u);
+        }
+        return start;
+    }
+    /*! @brief Count vector in C-order for \c dg::file::MPINcHyperslab
+     *
+     * Used to construct \c dg::file::MPINcHyperslab together with \c start()
+     * @return \c local().count()
+     * @note In C-order the fastest dimension is the last one while our \c
+     * dg::evaluate and \c dg::kronecker make the 0 dimension/ 1st argument the
+     * fastest varying, so we return the reverse order of \c local().get_shape()
+     */
+    std::array<unsigned, Nd> count() const { return m_l.count(); }
     protected:
     ///disallow deletion through base class pointer
     ~aRealMPITopology() = default;

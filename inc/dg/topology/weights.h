@@ -36,41 +36,56 @@ auto do_weights( const Topology& g, std::index_sequence<I...>)
 ///@addtogroup highlevel
 ///@{
 
-/*!@class hide_weights_doc
-* @brief Nodal weight coefficients
-* @param g The grid
-* @return Host Vector
-* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
-*/
-/*!@class hide_inv_weights_doc
-* @brief inverse nodal weight coefficients
-* @param g The grid
-* @return Host Vector
-* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
-*/
-/*!@class hide_weights_coo_doc
-* @brief nodal weight coefficients
-* @param g The grid
-* @param coo The coordinate for which to generate the weights (in 2d only \c dg::x and \c dg::y are allowed)
-* @return Host Vector with full grid size
-* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
-*/
 
-///@copydoc hide_weights_doc
-///@copydoc hide_code_evaluate1d
-///@copydoc hide_code_evaluate2d
+/*! @brief Nodal weight coefficients
+ *
+ * %Equivalent to the following:
+ *
+ * -# from the given Nd dimensional grid generate Nd one-dimensional lists of
+ *  integraion weights <tt> w_i = g.weights( i)</tt>
+ * -# take the kronecker product of the 1d weights and store the result in the
+ *  output vector <tt> w = dg::kronecker( dg::Product(), w_0, w_1, ...)</tt>
+ *  The **0 dimension is the contiguous dimension** in the return vector \c w
+ * .
+ * @copydoc hide_code_evaluate2d
+ * @tparam Topology A fixed sized grid type with member functions <tt> static
+ * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and
+ * <tt> vector_type Topology::weights( unsigned dim)</tt> giving the integration
+ * weights in dimension \c dim
+ * @param g The grid
+ * @return The output vector \c w as a host vector. Its value type is the same
+ * as the grid value type
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+ */
 template<class Topology>
 auto weights( const Topology& g)
 {
     return do_weights( g, std::make_index_sequence<Topology::ndim()>());
 }
 
-// This function is ambiguous: Do you want the weights of the grid that remains or those weights
-// prolongated to the full grid again?
-// It is better to create the reduced grid create the weights and the prolongate
-// Maybe one design hint could be that remains stands for prolongation
-// Also the first can be done fairly easily
-///@copydoc hide_weights_coo_doc
+/*! @brief Nodal weight coefficients on a subset of dimensions
+ *
+ * %Equivalent to the following:
+ *
+ * -# from the given Nd dimensional grid generate Nd one-dimensional lists of
+ *  integraion weights <tt> w_i = remains[i] ? g.weights( i) : 1</tt>
+ * -# take the kronecker product of the 1d weights and store the result in the
+ *  output vector <tt> w = dg::kronecker( dg::Product(), w_0, w_1, ...)</tt>
+ *  The **0 dimension is the contiguous dimension** in the return vector \c w
+ * .
+ * @tparam Topology A fixed sized grid type with member functions <tt> static
+ * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and
+ * <tt> vector_type Topology::weights( unsigned dim)</tt> giving the integration
+ * weights in dimension \c dim
+ * @param g The grid
+ * @param remains For each dimension determine whether to use weights or a vector of 1s
+ * @return Host Vector with full grid size
+ * @note If you want the weights of the sub-grid that consists of the remaining dimensions
+ * you need to manually create that sub-grid and use \c dg::create::weights( sub_grid)
+ * The difference is the size of the resulting vector or the result of this function is
+ * to prolongate the sub-grid weights to the full grid again
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+ */
 template<class Topology>
 auto weights( const Topology& g, std::array<bool,Topology::ndim()> remains)
 {
@@ -78,7 +93,15 @@ auto weights( const Topology& g, std::array<bool,Topology::ndim()> remains)
 }
 
 
-///@copydoc hide_inv_weights_doc
+/*! @brief Inverse nodal weight coefficients
+ *
+ * Short for
+ * @code{.cpp}
+ *   auto v = weights( g);
+ *   dg::blas1::transform( v, v, dg::INVERT());
+ *   return v;
+ * @endcode
+*/
 template<class Topology>
 auto inv_weights( const Topology& g)
 {

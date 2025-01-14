@@ -131,10 +131,10 @@ int main(int argc, char* argv[])
         for( auto& record : records)
         {
             record.function ( result, grid, time);
-            file.put_var( record.name, {i, grid, true}, result);
+            file.put_var( record.name, {i, grid}, result);
             file.set_grp( "projected");
             dg::apply( project, result, tmp);
-            file.put_var( record.name, {i, grid_out, true}, tmp);
+            file.put_var( record.name, {i, grid_out}, tmp);
             file.set_grp( "..");
         }
     }
@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
     DG_RANK0 std::cout << "Found "<<num_slices<<" timesteps in file\n";
     // Test that dimension is indeed what we expect
     auto abscissas = grid.abscissas(0), test( abscissas);
-    file.get_var( "x", {grid.axis(0), true}, test);
+    file.get_var( "x", {grid.axis(0)}, test);
     dg::blas1::axpby( 1., abscissas, -1., test);
     assert( dg::blas1::dot( test, test) == 0);
 
@@ -172,9 +172,9 @@ int main(int argc, char* argv[])
         file.get_var("time", {i}, time);
         file.get_var("Energy", {i}, energy);
         DG_RANK0 std::cout << "Time "<<time<<" Energy "<<energy<<"\t";
-        file.get_var( "vectorX", {i, grid, true}, data);
+        file.get_var( "vectorX", {i, 1, grid}, data);
         file.set_grp("projected");
-        file.get_var( "vectorX", {i, grid_out, true}, dataP);
+        file.get_var( "vectorX", {i, grid_out}, dataP);
         file.set_grp("..");
 #ifdef MPI_VERSION
         DG_RANK0 std::cout << "data "<<data.data()[0]<<" dataP "<<dataP.data()[0]<<"\n";

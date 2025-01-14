@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
 #ifdef WITH_MPI
     // TODO Make mpi test
 #else
-    file.get_var( "variable", std::vector<size_t>{0, ysize, xsize}, data);
+    file.get_var( "variable", {{0,0,0}, {0, ysize, xsize}}, data);
     unsigned vsize = xsize*ysize;
     assert( data.size() == vsize);
     assert( data[0] == 7);
