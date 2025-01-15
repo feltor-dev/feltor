@@ -36,18 +36,16 @@ namespace detail{
 template< class ContainerType1, class MatrixType, class ContainerType2>
 inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType1>::value,
-            dg::is_vector<MatrixType>::value,
-            dg::is_vector<ContainerType2>::value>::value,
+    static_assert(
+            dg::is_vector_v<ContainerType1> && dg::is_vector_v<MatrixType> &&
+            dg::is_vector_v<ContainerType2> ,
         "The container types must have a vector data layout (AnyVector)!");
     //check ContainerTypes: must be either scalar or same base category
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerType2>;
     using vector_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType1, vector_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerType2, vector_category>::value
-            >::value,
+    static_assert(
+            dg::is_scalar_or_same_base_category<ContainerType1, vector_category>::value &&
+            dg::is_scalar_or_same_base_category<ContainerType2, vector_category>::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     return doDot_superacc( x, m, y, get_tensor_category<MatrixType>(), vector_category());
 }
@@ -148,16 +146,16 @@ inline void doSymv( get_value_type<ContainerType1> alpha,
                   ContainerType2& y,
                   AnyMatrixTag)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_execution_policy<ContainerType1>,
+                                  get_execution_policy<ContainerType2>>,
                                 "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
+    static_assert( std::is_same_v<get_value_type<ContainerType1>,
+                                  get_value_type<MatrixType>> &&
+                   std::is_same_v<get_value_type<ContainerType2>,
+                                  get_value_type<MatrixType>>,
                                 "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_tensor_category<ContainerType1>,
-                                get_tensor_category<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_tensor_category<ContainerType1>,
+                                  get_tensor_category<ContainerType2>>,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( alpha, std::forward<MatrixType>(M), x, beta, y,
             get_tensor_category<MatrixType>(),
@@ -169,16 +167,16 @@ inline void doSymv( MatrixType&& M,
                   ContainerType2& y,
                   AnyMatrixTag)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_execution_policy<ContainerType1>,
+                                  get_execution_policy<ContainerType2>>,
                                 "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
+    static_assert( std::is_same_v<get_value_type<ContainerType1>,
+                                  get_value_type<MatrixType>> &&
+                   std::is_same_v<get_value_type<ContainerType2>,
+                                  get_value_type<MatrixType>>,
                                 "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_tensor_category<ContainerType1>,
-                                get_tensor_category<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_tensor_category<ContainerType1>,
+                                  get_tensor_category<ContainerType2>>,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( std::forward<MatrixType>(M), x, y,
             get_tensor_category<MatrixType>(),
@@ -192,16 +190,16 @@ inline void doStencil(
                   ContainerType2& y,
                   AnyMatrixTag)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_execution_policy<ContainerType1>,
+                                  get_execution_policy<ContainerType2>>,
                                 "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
+    static_assert( std::is_same_v<get_value_type<ContainerType1>,
+                                  get_value_type<MatrixType>> &&
+                   std::is_same_v<get_value_type<ContainerType2>,
+                                  get_value_type<MatrixType>>,
                                 "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_tensor_category<ContainerType1>,
-                                get_tensor_category<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_tensor_category<ContainerType1>,
+                                  get_tensor_category<ContainerType2>>,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doStencil( f, std::forward<MatrixType>(M), x, y,
             get_tensor_category<MatrixType>(),
@@ -390,18 +388,14 @@ inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTyp
 {
     // Is the assumption that results are automatically ready on return still true?
     // Do we have to introduce barriers around this function?
-    static_assert( all_true<
-            dg::is_vector<ContainerType>::value,
-            dg::is_vector<ContainerTypes>::value...>::value,
+    static_assert( (dg::is_vector_v<ContainerType> &&
+             ... && dg::is_vector_v<ContainerTypes>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
+    static_assert(( dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value &&
+              ... &&dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
     dg::blas2::detail::doParallelFor(tensor_category(), f, N, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 /*! @brief \f$ F(M, x, y)\f$

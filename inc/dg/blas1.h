@@ -641,16 +641,13 @@ namespace detail{
 template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
 inline void doDot_fpe( std::array<T,N>& fpe, Functor f, const ContainerType& x, const ContainerTypes& ...xs)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType>::value,
-            dg::is_vector<ContainerTypes>::value...>::value,
+    static_assert( ( dg::is_vector_v<ContainerType> && ...
+                  && dg::is_vector_v<ContainerTypes>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
+    static_assert( ( dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value &&
+              ... && dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     return doDot_fpe( tensor_category(), fpe, f, x, xs ...);
 
@@ -659,16 +656,12 @@ inline void doDot_fpe( std::array<T,N>& fpe, Functor f, const ContainerType& x, 
 template< class ContainerType1, class ContainerType2>
 inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const ContainerType2& y)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType1>::value,
-            dg::is_vector<ContainerType2>::value>::value,
+    static_assert( ( dg::is_vector_v<ContainerType1> && dg::is_vector_v<ContainerType2>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerType2>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerType2, tensor_category>::value
-            >::value,
+    static_assert( ( dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value
+                  && dg::is_scalar_or_same_base_category<ContainerType2, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     return doDot_superacc( x, y, tensor_category());
 }
@@ -711,18 +704,14 @@ except the scalar product, which is not trivially parallel.
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType>::value,
-            dg::is_vector<ContainerTypes>::value...>::value,
+    static_assert( ( dg::is_vector_v<ContainerType> &&
+               ...&& dg::is_vector_v<ContainerTypes>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
+    static_assert( ( dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value &&
+              ... && dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
@@ -787,18 +776,16 @@ dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
 template< class ContainerType0, class BinarySubroutine, class Functor, class ContainerType1, class ...ContainerTypes>
 inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const ContainerType1& x0, const ContainerTypes& ...xs)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType0>::value,
-            dg::is_vector<ContainerType1>::value,
-            dg::is_vector<ContainerTypes>::value...>::value,
+    static_assert( ( (dg::is_vector_v<ContainerType0> &&
+                      dg::is_vector_v<ContainerType1>) &&
+                      ... && dg::is_vector_v<ContainerTypes>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerTypes...>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType0, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
+    static_assert( (
+            (dg::is_scalar_or_same_base_category<ContainerType0, tensor_category>::value &&
+             dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value) &&
+            ... && dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     dg::blas1::detail::doKronecker(tensor_category(), y, f, g, x0, xs...);
 }

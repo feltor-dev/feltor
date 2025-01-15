@@ -40,8 +40,8 @@ template< class Vector1, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, AnyScalarTag)
 {
     //both Vectors are scalars
-    static_assert( std::is_convertible<get_value_type<Vector1>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_convertible<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector1>, double>, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector2>, double>, "We only support double precision dot products at the moment!");
     const get_value_type<Vector1>* x_ptr = &x;
     const get_value_type<Vector2>* y_ptr = &y;
     //since we only accumulate up to two values (multiplication and rest) reduce the size of the FPE

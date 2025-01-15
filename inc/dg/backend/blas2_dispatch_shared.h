@@ -49,15 +49,13 @@ void doTransfer( const Vector1& in, Vector2& out, AnyVectorTag, AnyVectorTag)
 template< class Vector1, class Matrix, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag, SharedVectorTag)
 {
-    static_assert( std::is_convertible<get_value_type<Vector1>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_convertible<get_value_type<Matrix>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_convertible<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector1>, double>, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Matrix>, double>, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector2>, double>, "We only support double precision dot products at the moment!");
     //find out which one is the SharedVector and determine category and policy
     using execution_policy = get_execution_policy<Matrix>;
-    static_assert( all_true<
-            dg::has_any_or_same_policy<Vector1, execution_policy>::value,
-            dg::has_any_or_same_policy<Vector2, execution_policy>::value
-            >::value,
+    static_assert( dg::has_any_or_same_policy<Vector1, execution_policy>::value &&
+            dg::has_any_or_same_policy<Vector2, execution_policy>::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
 
     return dg::blas1::detail::doDot_dispatch( execution_policy(), m.size(), do_get_pointer_or_reference(x,get_tensor_category<Vector1>()), do_get_pointer_or_reference(m,get_tensor_category<Matrix>()), do_get_pointer_or_reference(y,get_tensor_category<Vector2>()));
@@ -91,10 +89,9 @@ inline void doParallelFor( SharedVectorTag, Stencil f, unsigned N, ContainerType
 
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
     using execution_policy = get_execution_policy<vector_type>;
-    static_assert( all_true<
-            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
-            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
-            >::value,
+    static_assert((
+            dg::has_any_or_same_policy<ContainerType, execution_policy>::value &&
+      ... &&dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value),
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     doParallelFor_dispatch(
             get_execution_policy<vector_type>(),

@@ -66,10 +66,8 @@ inline void doDot_fpe( SharedVectorTag, std::array<T,N>& fpe, Functor f,
 {
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
     using execution_policy = get_execution_policy<vector_type>;
-    static_assert( all_true<
-            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
-            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
-            >::value,
+    static_assert( (dg::has_any_or_same_policy<ContainerType, execution_policy>::value &&
+            ... &&  dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value),
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
     doDot_fpe_dispatch(
@@ -85,16 +83,15 @@ inline void doDot_fpe( SharedVectorTag, std::array<T,N>& fpe, Functor f,
 template< class Vector1, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedVectorTag)
 {
-    static_assert( std::is_convertible<get_value_type<Vector1>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_convertible<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector1>, double>, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector2>, double>, "We only support double precision dot products at the moment!");
     //find out which one is the SharedVector and determine category and policy
     using vector_type = find_if_t<dg::is_not_scalar, Vector1, Vector1, Vector2>;
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
     using execution_policy = get_execution_policy<vector_type>;
-    static_assert( all_true<
-            dg::has_any_or_same_policy<Vector1, execution_policy>::value,
-            dg::has_any_or_same_policy<Vector2, execution_policy>::value
-            >::value,
+    static_assert(
+            dg::has_any_or_same_policy<Vector1, execution_policy>::value &&
+            dg::has_any_or_same_policy<Vector2, execution_policy>::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     //maybe assert size here?
     auto size = get_idx<vector_idx>(x,y).size();
@@ -109,10 +106,8 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
 
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
     using execution_policy = get_execution_policy<vector_type>;
-    static_assert( all_true<
-            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
-            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
-            >::value,
+    static_assert( ( dg::has_any_or_same_policy<ContainerType, execution_policy>::value &&
+            ... &&   dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value),
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
     doSubroutine_dispatch(
@@ -152,10 +147,8 @@ inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine
         size *= sizes[u];
     using vector_type = dg::find_if_t<dg::is_not_scalar_has_not_any_policy, dg::get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
     using execution_policy = dg::get_execution_policy<vector_type>;
-    static_assert( dg::all_true<
-            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
-            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
-            >::value,
+    static_assert(( dg::has_any_or_same_policy<ContainerType, execution_policy>::value &&
+             ... && dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value),
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     doKronecker_dispatch(
             dg::get_execution_policy<vector_type>(),

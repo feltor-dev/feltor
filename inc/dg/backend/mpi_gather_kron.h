@@ -31,8 +31,7 @@ struct MPIContiguousKroneckerGather
         assert( ndims == 1);
         int rank;
         MPI_Comm_rank( comm_1d, &rank);
-        static_assert( std::is_base_of<SharedVectorTag,
-                get_tensor_category<Vector<double>>>::value,
+        static_assert( dg::is_vector_v<Vector<double>, SharedVectorTag>,
                 "Only Shared vectors allowed");
         auto recvChunks = detail::MPIContiguousGather::make_chunks(
             recvIdx, chunk_size);

@@ -26,8 +26,7 @@ struct MPIAllreduce
     {
         using value_type = dg::get_value_type<ContainerType>;
         void * send_ptr = thrust::raw_pointer_cast(y.data());
-        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
-            dg::CudaTag>)
+        if constexpr (dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
 #ifdef __CUDACC__ // g++ does not know cuda code
             // cuda - sync device
@@ -56,8 +55,8 @@ struct MPIAllreduce
         }
         MPI_Allreduce( MPI_IN_PLACE, send_ptr, y.size(),
             getMPIDataType<value_type>(), MPI_SUM, m_comm);
-        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
-            dg::CudaTag> and !dg::cuda_aware_mpi)
+        if constexpr (dg::has_policy_v<ContainerType, dg::CudaTag>
+            and not dg::cuda_aware_mpi)
             y = m_h_buffer.template get<value_type>();
     }
     private:
@@ -158,8 +157,8 @@ struct MPIContiguousGather
         MPI_Comm_rank( m_comm, &rank);
         // BugFix: buffer value_type must be set even if no messages are sent
         // so that global_gather_wait works
-        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType1>,
-            dg::CudaTag> and not dg::cuda_aware_mpi)
+        if constexpr (dg::has_policy_v<ContainerType1, dg::CudaTag>
+            and not dg::cuda_aware_mpi)
         {
             m_h_store.template set<value_type>( m_store_size);
             m_h_buffer.template set<value_type>( buffer_size(self_communication));
@@ -175,8 +174,8 @@ struct MPIContiguousGather
             auto chunk = msg.second[u];
             void * recv_ptr;
             assert( buffer.size() >= unsigned(start + chunk.size - 1));
-            if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType1>,
-                dg::CudaTag> and not dg::cuda_aware_mpi)
+            if constexpr (dg::has_policy_v<ContainerType1, dg::CudaTag>
+                and not dg::cuda_aware_mpi)
             {
                 auto& h_buffer = m_h_buffer.template get<value_type>();
                 recv_ptr = thrust::raw_pointer_cast( h_buffer.data())
@@ -202,8 +201,7 @@ struct MPIContiguousGather
             auto chunk = msg.second[u];
             const void * send_ptr = thrust::raw_pointer_cast(gatherFrom.data()) + chunk.idx;
             assert( gatherFrom.size() >= unsigned(chunk.idx + chunk.size - 1));
-            if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType0>,
-                dg::CudaTag>)
+            if constexpr (dg::has_policy_v<ContainerType0, dg::CudaTag>)
             {
 #ifdef __CUDACC__ // g++ does not know cuda code
                 // cuda - sync device
@@ -243,8 +241,8 @@ struct MPIContiguousGather
     {
         using value_type = dg::get_value_type<ContainerType>;
         MPI_Waitall( m_rqst.size(), &m_rqst[0], MPI_STATUSES_IGNORE );
-        if constexpr (std::is_same_v< dg::get_execution_policy<ContainerType>,
-            dg::CudaTag> and !dg::cuda_aware_mpi)
+        if constexpr (dg::has_policy_v<ContainerType, dg::CudaTag>
+                and not dg::cuda_aware_mpi)
             buffer = m_h_buffer.template get<value_type>();
     }
     private:
@@ -473,8 +471,7 @@ struct MPIGather
         unsigned chunk_size, // can be 1 (contiguous indices in recvIdx are concatenated)
         MPI_Comm comm)
     {
-        static_assert( std::is_base_of<SharedVectorTag,
-                get_tensor_category<Vector<double>>>::value,
+        static_assert( dg::is_vector_v<Vector<double>, SharedVectorTag>,
                 "Only Shared vectors allowed");
         // The idea is that recvIdx and sendIdx completely define the communication pattern
         // and we can choose an optimal implementation
