@@ -50,17 +50,15 @@ int main(int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     MPI_Comm comm;
-    //create a grid and some data
-    if( size != 4){ std::cerr << "Please run with 4 threads!\n"; return -1;}
+    int dims[2] = {0,0};
+    MPI_Dims_create( size, 2, dims);
     std::stringstream ss;
-    ss<< "2 2";
+    ss<< dims[0]<<" "<<dims[1];
     dg::mpi_init2d( dg::PER, dg::PER, comm, ss);
 #endif
     auto js_direct = dg::file::file2Json("probes_direct.json");
     auto params = dg::file::parse_probes( js_direct);
 
-    int ncid=0;
-    dg::file::NC_Error_Handle err;
 #ifdef WITH_MPI
     std::string filename = "probesmpi.nc";
 #else
@@ -68,22 +66,23 @@ int main(int argc, char* argv[])
 #endif
     DG_RANK0 std::cout << "WRITE A TIMEDEPENDENT VECTOR FIELD AND PROBE DATA TO NETCDF4 FILE "
                        << filename<<"\n";
-    DG_RANK0 err = nc_create( filename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
+    dg::file::NcFile file( filename, dg::file::nc_clobber);
     double x0 = 0., x1 = 2.*M_PI;
     dg::x::Grid2d grid( x0,x1,x0,x1,3,100,100, dg::PER, dg::PER
 #ifdef WITH_MPI
     , comm
 #endif
     );
-    int dim_ids[3], tvarID;
-    // This caught an error in define_dimensions
-    DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
-    dg::file::WriteRecordsList<dg::x::Grid2d> records( ncid, grid, {"time","y","x"});
+    file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+    file.defput_dim( "y", {{"axis", "Y"},
+        {"long_name", "y-coordinate in Cartesian system"}}, grid.abscissas(1));
+    file.defput_dim( "x", {{"axis", "X"},
+        {"long_name", "x-coordinate in Cartesian system"}}, grid.abscissas(0));
 
-    dg::file::Probes<dg::x::Grid2d> probes( ncid, grid, params);
-    probes.static_write( records_static_list, grid);
-    // This poses a problem for paraview because root dimensions are not defined in order
-    // dg::file::Writer<dg::x::Grid2d> restart( ncid, grid, {"yr","xr"});
+    dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
+    dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
+    dg::file::Probes probes( file, grid, params);
+    probes.static_write( records_static_list, resultH, grid);
 
     double Tmax=2.*M_PI;
     double NT = 10;
@@ -95,32 +94,39 @@ int main(int argc, char* argv[])
         if( i <= 3)
         {
             DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
-            probes.write( time, records_list, grid, time);
+            probes.write( time, records_list, resultD, grid, time);
         }
         else
         {
             if( i % 2)
             {
                 DG_RANK0 std::cout<<"Buffer timestep "<<i<<"\n";
-                probes.buffer( time, records_list, grid, time);
+                probes.buffer( time, records_list, resultD, grid, time);
             }
             else
             {
                 DG_RANK0 std::cout<<"Buffer & Flush timestep "<<i<<"\n";
-                probes.buffer( time, records_list, grid, time);
+                probes.buffer( time, records_list, resultD, grid, time);
                 probes.flush();
             }
         }
         //write vector field
-        records.write( records_list, grid, time);
+        for( auto& record : records_list)
+        {
+            record.function ( resultD, grid, time);
+            if( i==0)
+            {
+                file.def_var( record.name, NC_DOUBLE, {"time", "y", "x"});
+                file.put_att( record.name, {"long_name", record.long_name});
+            }
+            file.put_var( record.name, {i,grid}, resultD);
+        }
         //write time
-        const size_t Tcount = 1;
-        const size_t Tstart = i;
-        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &Tstart, &Tcount, &time);
+        file.put_var( "time", {i}, time);
     }
 
 
-    DG_RANK0 err = nc_close(ncid);
+    file.close();
 #ifdef WITH_MPI
     MPI_Finalize();
 #endif

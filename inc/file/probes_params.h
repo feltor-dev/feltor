@@ -25,7 +25,8 @@ struct ProbesParams
      * dg::create::interpolation function in the \c dg::file::Probes class.
      * @note In MPI all coordinates from all threads will be interpolated but
      * only the coordinates that the master thread is holding will be written
-     * to file
+     * to file. Also note that \c parse_probes only reads coords on the master
+     * thread the other ranks remain empty
      */
     std::vector< dg::HVec> coords;
     std::vector<std::string> coords_names; //!< Name of coordinates (must have same size as \c coords)

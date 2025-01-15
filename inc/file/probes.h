@@ -4,124 +4,33 @@
 #include "dg/topology/interpolation.h"
 #ifdef MPI_VERSION
 #include "dg/topology/mpi_projection.h"
+#include "nc_mpi_file.h"
 #endif //MPI_VERSION
 
 #include "probes_params.h"
-#include "writer.h"
+#include "nc_file.h"
 
 namespace dg
 {
 namespace file
 {
 
-///@cond
-namespace detail
+/**
+ * @brief A realisation of the %Record concept. Helper to generate NetCDF variables.
+ *
+ * Supposed to be used in connection with a Records writer like \c WriteRecordList
+ * @snippet netcdf_t.cpp doxygen
+   @tparam SignatureType Signature of the callable function
+ */
+template<class SignatureType>
+struct Record
 {
-// helpers to define a C++-17 if constexpr
-template<class Topology, unsigned ndim>
-struct CreateInterpolation{};
-
-
-template<class Topology>
-struct CreateInterpolation<Topology,1>
-{
-    static auto call( const std::vector<dg::HVec>& x, const Topology& g)
-    {
-        return dg::create::interpolation( x[0], g, g.bcx());
-
-    }
+    using Signature = SignatureType; //!< Signature of the \c function
+    std::string name; //!< Name of the variable to create
+    std::string long_name; //!< Attribute "long_name" of the variable
+    std::function<Signature> function; //!< The function to call that generates data for the variable
 };
-template<class Topology>
-struct CreateInterpolation<Topology,2>
-{
-static auto call( const std::vector<dg::HVec>& x, const Topology& g)
-{
-    return dg::create::interpolation( x[0], x[1], g, g.bcx(), g.bcy());
-
-}
-};
-template<class Topology>
-struct CreateInterpolation<Topology,3>
-{
-static auto call( const std::vector<dg::HVec>& x, const Topology& g)
-{
-    return dg::create::interpolation( x[0], x[1], x[2], g, g.bcx(), g.bcy(), g.bcz());
-
-}
-};
-
-template<class Topology, class Enable = void>
-class Helper {};
-
-template<class Topology>
-struct Helper<Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value >>
-{
-    using IHMatrix = dg::IHMatrix_t<typename Topology::value_type>;
-    using Writer0d = dg::file::Writer<dg::RealGrid0d<typename Topology::value_type>>;
-    using Writer1d = dg::file::Writer<dg::RealGrid1d<typename Topology::value_type>>;
-    static dg::RealGrid1d<typename Topology::value_type> create( unsigned num_pins)
-    {
-        return {0,1,1,num_pins};
-    }
-    static typename Topology::host_vector probes_vec( const dg::HVec& coord, const Topology& grid)
-    {
-        return typename Topology::host_vector(coord);
-    }
-    static void def_group( int ncid, std::string format, int& grpid)
-    {
-        dg::file::NC_Error_Handle err;
-        err = nc_def_grp(ncid,"probes",&grpid);
-        err = nc_put_att_text( grpid, NC_GLOBAL,
-            "format", format.size(), format.data());
-    }
-    static void open_group( int ncid, int& grpid)
-    {
-        dg::file::NC_Error_Handle err;
-        err = nc_inq_grp_ncid( ncid, "probes", &grpid);
-    }
-};
-
-#ifdef MPI_VERSION
-template<class Topology>
-struct Helper<Topology, std::enable_if_t<dg::is_mpi_grid<Topology>::value >>
-{
-    using IHMatrix = dg::MIHMatrix_t<typename Topology::value_type>;
-    using Writer0d = dg::file::Writer<dg::RealMPIGrid0d<typename Topology::value_type>>;
-    using Writer1d = dg::file::Writer<dg::RealMPIGrid1d<typename Topology::value_type>>;
-    static dg::RealMPIGrid1d<typename Topology::value_type> create( unsigned num_pins)
-    {
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank); // a private variable
-        MPI_Comm comm1d, comm_cart1d;
-        MPI_Comm_split( MPI_COMM_WORLD, rank, rank, &comm1d);
-        int dims[1] = {1};
-        int periods[1] = {true};
-        MPI_Cart_create( comm1d, 1, dims, periods, false, &comm_cart1d);
-        dg::MPIGrid1d g1d ( 0,1,1, rank == 0 ? num_pins : 1, comm_cart1d);
-        return g1d;
-    }
-    static typename Topology::host_vector probes_vec( const dg::HVec& coord, const Topology& grid)
-    {
-        typename Topology::host_vector::container_type vec(coord);
-        return typename Topology::host_vector(vec, grid.communicator());
-    }
-    static void def_group( int ncid, std::string format, int& grpid)
-    {
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        DG_RANK0 Helper<dg::RealGrid1d<typename Topology::value_type>>::def_group(ncid, format, grpid);
-    }
-    static void open_group( int ncid, int& grpid)
-    {
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        DG_RANK0 Helper<dg::Grid1d>::open_group(ncid, grpid);
-    }
-};
-#endif
-}
-///@endcond
-//
+    // TODO update docu with result vector
 
 /**
  * @brief Facilitate output at selected points
@@ -132,8 +41,8 @@ struct Helper<Topology, std::enable_if_t<dg::is_mpi_grid<Topology>::value >>
  * Instead of writing to file every time one desires probe outputs, an internal
  * buffer stores the probe values when the \c buffer member is called. File
  * writes happen only when calling \c flush
- * @note in an MPI program all processes have to create the class and call its methods.
- * Only the master thread writes to file and needs to open the file
+ * @note in an MPI program all processes in the \c file.communicator() have to
+ * create the class and call its methods.
  * @copydoc hide_tparam_topology
  * @note It is the topology of the simulation grid that is needed here, i.e.
  * the Topology **from which** to interpolate, not the topology of the 1d probe
@@ -143,7 +52,7 @@ struct Helper<Topology, std::enable_if_t<dg::is_mpi_grid<Topology>::value >>
  * are defined. This is because of the dimension numbering in NetCDF-4.
  * @ingroup Cpp
  */
-template<class Topology>
+template<class NcFile, class Topology>
 struct Probes
 {
     Probes() = default;
@@ -157,10 +66,10 @@ struct Probes
      * @param params Typically read in from file with \c dg::file::parse_probes
      */
     Probes(
-        const int& ncid,
+        NcFile& file,
         const Topology& grid,
         const ProbesParams& params // do nothing if probes is false
-        ) : m_ncid(&ncid)
+        ) : m_file(&file)
     {
         m_probes = params.probes;
         if( !params.probes) return;
@@ -168,35 +77,39 @@ struct Probes
         if ( params.coords.size() != grid.ndim())
             throw std::runtime_error( "Need "+std::to_string(grid.ndim())+" values in coords!");
         unsigned num_pins = params.get_coords_sizes();
+        // params.coords is empty on ranks other than master
 
-        m_probe_interpolate = detail::CreateInterpolation<Topology,
-                            Topology::ndim()>::call( params.coords, grid);
+        m_probe_interpolate = dg::create::interpolation( params.coords, grid,
+            grid.get_bc(), "dg");
         // Create helper storage probe variables
-        m_simple_probes = detail::Helper<Topology>::probes_vec( params.coords[0], grid);
+        m_simple_probes = create_probes_vec( params.coords[0], grid);
         m_resultH = dg::evaluate( dg::zero, grid);
 
-        detail::Helper<Topology>::def_group( ncid, params.format, m_probe_grp_id);
-
-        auto g1d = detail::Helper<Topology>::create( num_pins);
-        typename detail::Helper<Topology>::Writer1d
-            writer_coords( m_probe_grp_id, g1d, {"pdim"});
+        file.def_grp( "probes");
+        m_grp = file.get_current_path() / "probes";
+        file.set_grp( m_grp);
+        file.put_att( ".", {"format", params.format});
+        file.def_dim( "pdim", num_pins);
+        file.template defput_dim_as<double>( "ptime", NC_UNLIMITED, {{"axis" , "T"}});
         for( unsigned i=0; i<params.coords.size(); i++)
-            writer_coords.def_and_put( params.coords_names[i], {},
-                detail::Helper<Topology>::probes_vec( params.coords[i], grid));
-        m_writer0d = { m_probe_grp_id, {}, {"ptime"}};
-        m_writer1d = { m_probe_grp_id, g1d, {"ptime", "pdim"}};
+        {
+            file.template def_var_as<double>( params.coords_names[i], {"pdim"}, {});
+            auto probes_vec = create_probes_vec( params.coords[0], grid);
+            file.put_var( params.coords_names[i], {probes_vec}, probes_vec);
+        }
+        file.set_grp("..");
     }
 
     /*! @brief Directly write results of a list of callback functions to file
      *
      * Each item in the list consists of a name, a long name and a callback function that
-     * is called with a host vector as first argument and the given list of Params as additional arguments.
+     * is called with \c result as first argument and the given list of Params as additional arguments.
      * @code
         for ( auto& record : records)
         {
             record.name;
             record.long_name;
-            record.function( resultH, ps...);
+            record.function( result, ps...);
         }
      * @endcode
      * The host vector has the size of the grid given in the constructor of the Probes class.
@@ -209,24 +122,25 @@ struct Probes
      * @note If \c param.probes was \c false in the constructor this function returns immediately
      * @copydoc hide_tparam_listclass
      */
-    template<class ListClass, class ...Params>
-    void static_write( const ListClass& records, Params&& ... ps)
+    template<class ListClass, class Result, class ...Params>
+    void static_write( const ListClass& records, Result& result, Params&& ... ps)
     {
+        static_assert( dg::is_vector_v<Result>, "Result must be a vector type");
         if(!m_probes) return;
+        m_file->set_grp( m_grp);
 
-        typename detail::Helper<Topology>::Writer1d
-            write( m_probe_grp_id, m_writer1d.grid(), {"pdim"});
-        auto result =
-            dg::construct<get_first_argument_type_t<typename ListClass::value_type::Signature>>(
-                m_resultH);
         for ( auto& record : records)
         {
             record.function( result, std::forward<Params>(ps)...);
             dg::assign( result, m_resultH);
             dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
-            write.def_and_put( record.name, dg::file::long_name(
-                record.long_name), m_simple_probes);
+
+            m_file->template def_var_as<dg::get_value_type<Result>>(
+                record.name, {"pdim"});
+            m_file->put_att( record.name, {"long_name", record.long_name});
+            m_file->put_var( record.name, {m_simple_probes}, m_simple_probes);
         }
+        m_file->set_grp("..");
     }
 
     /*! @brief Write (time-dependent) results of a list of callback functions to internal buffer
@@ -242,18 +156,14 @@ struct Probes
      * @note No data is written to file and the netcdf file does not need to be open.
      * @note If \c param.probes was \c false in the constructor this function returns immediately
      */
-    template<class ListClass, class ...Params>
-    void buffer( double time, const ListClass& probe_list, Params&& ... ps)
+    template<class ListClass, class Result, class ...Params>
+    void buffer( double time, const ListClass& probe_list, Result& result, Params&& ... ps)
     {
         if(!m_probes) return;
         m_time_intern.push_back(time);
-        auto result =
-            dg::construct<get_first_argument_type_t<typename ListClass::value_type::Signature>>(
-                m_resultH);
         if( m_simple_probes_intern.empty())
-            init_buffer( probe_list);
-        if( m_probe_start == 0)
-            init_writer( probe_list);
+            init<dg::get_value_type<Result>>( probe_list);
+
         for( auto& record : probe_list)
         {
             record.function( result, std::forward<Params>(ps)...);
@@ -273,20 +183,21 @@ struct Probes
     void flush()
     {
         if(!m_probes) return;
-        detail::Helper<Topology>::open_group( *m_ncid, m_probe_grp_id);
-
         // else we write the internal buffer to file
+        m_file->set_grp( m_grp);
         for( unsigned j=0; j<m_time_intern.size(); j++)
         {
-            m_writer0d.put( "ptime", m_time_intern[j], m_probe_start);
+            m_file->put_var( "ptime", {m_probe_start}, m_time_intern[j]);
             for( auto& field : m_simple_probes_intern)
-                m_writer1d.put( field.first, field.second[j], m_probe_start);
+                m_file->put_var( field.first, {m_probe_start, field.second[j]},
+                    field.second[j]);
             m_probe_start ++;
         }
-        // flush internal buffer
+        // clear internal buffers
         m_time_intern.clear();
         for( auto& field : m_simple_probes_intern)
             field.second.clear();
+        m_file->set_grp( "..");
     }
 
     /*! @brief Same as \c buffer followed by \c flush
@@ -296,34 +207,51 @@ struct Probes
         flush();
      * @endcode
      */
-    template<class ListClass, class ...Params>
-    void write( double time, const ListClass& probe_list, Params&& ... ps)
+    template<class ListClass, class Result, class ...Params>
+    void write( double time, const ListClass& probe_list, Result& result, Params&& ... ps)
     {
-        buffer( time, probe_list, std::forward<Params>(ps)...);
+        buffer( time, probe_list, result, std::forward<Params>(ps)...);
         flush();
     }
 
     private:
-    template<class ListClass>
-    void init_buffer( const ListClass& probe_list)
+    template<class T=Topology, std::enable_if_t<dg::is_vector_v<typename
+    T::host_vector, dg::SharedVectorTag>, bool> = true>
+    auto create_probes_vec( const dg::HVec& coord, const T& grid)
     {
-        for( auto& record : probe_list)
-            m_simple_probes_intern[record.name] = std::vector<typename Topology::host_vector>(); // empty vectors
+        return typename Topology::host_vector(coord);
     }
-    template<class ListClass>
-    void init_writer( const ListClass& probe_list)
+    template<class T=Topology, std::enable_if_t<dg::is_vector_v<typename
+    T::host_vector, dg::MPIVectorTag>, bool> = true>
+    auto create_probes_vec( const dg::HVec& coord, const T& grid)
     {
-        for( auto& record : probe_list)
-            m_writer1d.def( record.name, dg::file::long_name( record.long_name));
+        return typename Topology::host_vector(coord, grid.communicator());
     }
-
-    typename detail::Helper<Topology>::Writer1d m_writer1d;
-    typename detail::Helper<Topology>::Writer0d m_writer0d;
+    template<class value_type, class ListClass>
+    void init( const ListClass& probe_list)
+    {
+        m_file->set_grp( m_grp);
+        for( auto& record : probe_list)
+        {
+            m_simple_probes_intern[record.name] = {}; // empty vectors
+            m_file->template def_var_as<value_type>( record.name, {"ptime", "pdim"});
+            m_file->put_att( record.name, {"long_name", record.long_name});
+        }
+        m_file->set_grp( "..");
+    }
     bool m_probes = false;
-    const int* m_ncid;
+    NcFile* m_file;
+    std::filesystem::path m_grp;
     int m_probe_grp_id;
-    typename detail::Helper<Topology>::IHMatrix m_probe_interpolate;
     typename Topology::host_vector m_simple_probes;
+#ifdef MPI_VERSION
+    std::conditional_t<
+        dg::is_vector_v<typename Topology::host_vector, dg::SharedVectorTag>,
+        dg::IHMatrix_t< typename Topology::value_type>,
+        dg::MIHMatrix_t<typename Topology::value_type> > m_probe_interpolate;
+#else
+    dg::IHMatrix_t< typename Topology::value_type> m_probe_interpolate;
+#endif
     std::map<std::string, std::vector<typename Topology::host_vector>> m_simple_probes_intern;
     std::vector<double> m_time_intern;
     //Container m_resultD;
