@@ -30,13 +30,13 @@ namespace file
  * If \c nc_nowrite the reads are parallel and involve no MPI communication, otherwise
  * all data is communicated to/from rank 0.
  *
- * @note When compiling you do thus need to link only to the normal **serial**
+ * @note When compiling you thus need to link only to the normal **serial**
  * NetCDF-C library, **not parallel** NetCDF
  * @attention All ranks in the communicator \c comm given in the constructor
  * must participate in **all** member function calls. No exceptions!. Even if
  * e.g. the data to write only lies distributed only on a subgroup of ranks.
  * @sa SerialNcFile
-@ingroup Cpp
+ * @ingroup Cpp
  */
 struct MPINcFile
 {
@@ -49,10 +49,12 @@ struct MPINcFile
     MPINcFile (MPI_Comm comm = MPI_COMM_WORLD)
     : m_comm(comm)
     {}
-    /// @copydoc SerialNcFile::SerialNcFile(const std::filesystem::path&,enum NcFileMode)
-    ///@param comm All ranks in comm must participate in all subsequent member
-    ///function calls
-    MPINcFile(const std::filesystem::path& filename, enum NcFileMode mode = nc_nowrite, MPI_Comm comm = MPI_COMM_WORLD)
+    /*! @copydoc SerialNcFile::SerialNcFile(const std::filesystem::path&,enum NcFileMode)
+     * @param comm All ranks in comm must participate in all subsequent member
+     * function calls
+     */
+    MPINcFile(const std::filesystem::path& filename, enum NcFileMode mode =
+        nc_nowrite, MPI_Comm comm = MPI_COMM_WORLD)
     : m_comm(comm)
     {
         open( filename, mode);
@@ -91,9 +93,12 @@ struct MPINcFile
     ~MPINcFile() = default;
     // /////////////////// open/close /////////
 
-    ///@copydoc SerialNcFile::open
-    ///@note if <tt> mode == nc_nowrite</tt> all ranks in comm open the file and
-    /// the read member functions involve no communication
+    /*!@copydoc SerialNcFile::open
+     * @note if <tt> mode == nc_nowrite</tt> all ranks in comm open the file and
+     *  the read member functions involve no communication
+     * @note May invoke \c MPI_Barrier so that all ranks see the existence of a
+     * possibly new file
+     */
     void open(const std::filesystem::path& filename,
             enum NcFileMode mode = nc_nowrite)
     {
@@ -108,6 +113,7 @@ struct MPINcFile
         {
             m_file.open( filename, mode);
         }
+        MPI_Barrier( m_comm); // all ranks agree that file exists
     }
     ///@copydoc SerialNcFile::is_open
     ///  All MPI ranks agree if a file is open
@@ -116,8 +122,10 @@ struct MPINcFile
         return mpi_invoke( &SerialNcFile::is_open, m_file);
     }
 
-    ///@copydoc SerialNcFile::close
-    ///@note invoke \c MPI_Barrier
+    /*!@copydoc SerialNcFile::close
+     * @note May invoke \c MPI_Barrier so that \c file.open with \c nc_nowrite
+     *  can be called directly afterwards (the HDF-5 file-lock needs to be released)
+     */
     void close()
     {
         m_file.close();
@@ -327,40 +335,14 @@ struct MPINcFile
         if( m_rank0)
             m_file.def_var( name, xtype, dim_names, atts);
     }
-    /*!
-     * @copydoc SerialNcFile::put_var(std::string,const ContainerType&)
-     * @attention Only works for 1d variables in MPI, in which
-     * case the rank of the calling process determines where the data is written to
-     */
-    template<class ContainerType>
-    void put_var( std::string name, const MPI_Vector<ContainerType>& data)
-    {
-        // Only works for 1d variable in MPI
-        if( m_rank0)
-        {
-            int varid = 0, ndims = 0;
-            int retval = nc_inq_varid( m_file.get_grpid(), name.c_str(), &varid);
-            if( retval != NC_NOERR )
-                throw std::runtime_error( "Variable does not exist!");
-            retval = nc_inq_varndims( m_file.get_grpid(), varid, &ndims);
-            assert( ndims == 1);
-        }
-
-        int count = data.size();
-        MPI_Comm comm = data.communicator();
-        int rank, size;
-        MPI_Comm_rank( comm, &rank);
-        MPI_Comm_size( comm, &size);
-        std::vector<int> counts ( size);
-        MPI_Allgather( &count, 1, MPI_INT, &counts[0], 1, MPI_INT, comm);
-        std::vector<size_t> start(1, 0);
-        for( int r=0; r<rank; r++)
-            start[0] += counts[r];
-        put_var( name, { start, std::vector<size_t>(1,count), comm}, data);
-    }
 
     ///@copydoc SerialNcFile::put_var(std::string,const NcHyperslab&,const ContainerType&)
-    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
+    /// @note The \c ContainerType in MPI can have either a \c
+    ///dg::SharedVectorTag or \c dg::MPIVectorTag (It is the communicator of
+    ///the slab that counts, the data communicator if present is ignored)
+    template<class ContainerType, typename = std::enable_if_t<
+        dg::is_vector_v<ContainerType, dg::SharedVectorTag> or
+        dg::is_vector_v<ContainerType, dg::MPIVectorTag>>>
     void put_var( std::string name, const MPINcHyperslab& slab,
             const ContainerType& data)
     {
@@ -370,13 +352,15 @@ struct MPINcFile
             grpid = m_file.get_grpid();
             file::NC_Error_Handle err;
             err = nc_inq_varid( grpid, name.c_str(), &varid);
+            int ndims;
+            err = nc_inq_varndims( grpid, varid, &ndims);
+            assert( (unsigned)ndims == slab.ndim());
         }
         using value_type = dg::get_value_type<ContainerType>;
         m_receive.template set<value_type>(0);
         auto& receive = m_receive.template get<value_type>( );
         const auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
-        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
-            dg::CudaTag>)
+        if constexpr ( dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
             m_buffer.template set<value_type>( data.size());
             auto& buffer = m_buffer.template get<value_type>( );
@@ -388,7 +372,8 @@ struct MPINcFile
     }
 
     ///@copydoc SerialNcFile::put_var(std::string,const std::vector<size_t>&,T)
-    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    /// @note In MPI only the rank 0 writes data
+    template<class T, typename = std::enable_if_t<dg::is_scalar_v<T>>>
     void put_var( std::string name, const std::vector<size_t>& start, T data)
     {
         if(m_rank0)
@@ -405,9 +390,8 @@ struct MPINcFile
     }
     /*! @copydoc SerialNcFile::defput_dim
      *
-     * We use \c MPI_Reduce with \c abscissas.comm() to get the size of the
-     * dimension in MPI. The local data and the rank of the calling process
-     * determines where that local data is written in the dimension variable
+     * @note We use \c MPI_Reduce with \c abscissas.size() and \c
+     * abscissas.communicator() to get the size of the dimension in MPI.
      */
     template<class ContainerType>
     void defput_dim( std::string name,
@@ -420,12 +404,15 @@ struct MPINcFile
         if( m_rank0)
             m_file.defput_dim_as<dg::get_value_type<ContainerType>>( name,
                 global_size, atts);
-        put_var( name, abscissas);
+        put_var( name, {abscissas}, abscissas);
     }
 
     ///@copydoc SerialNcFile::get_var(std::string,const NcHyperslab&,ContainerType&,ContainerType&)
-    /// @note The comm in MPINcHyperslab must be at least a subgroup of \c communicator()
-    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
+    /// @note The comm in \c MPINcHyperslab must be at least a subgroup of \c communicator()
+    /// @note The \c ContainerType in MPI can have either a \c dg::SharedVectorTag or \c dg::MPIVectorTag
+    template<class ContainerType, typename = std::enable_if_t<
+        dg::is_vector_v<ContainerType, dg::SharedVectorTag> or
+        dg::is_vector_v<ContainerType, dg::MPIVectorTag>>>
     void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
     {
@@ -438,8 +425,7 @@ struct MPINcFile
         auto& receive = m_receive.template get<value_type>( );
         auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
 
-        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
-            dg::CudaTag>)
+        if constexpr ( dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
             m_buffer.template set<value_type>( data.size());
             auto& buffer = m_buffer.template get<value_type>( );
@@ -461,7 +447,7 @@ struct MPINcFile
     }
 
     ///@copydoc SerialNcFile::get_var(std::string,const std::vector<size_t>&,T&)
-    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    template<class T, typename = std::enable_if_t<dg::is_scalar_v<T>> >
     void get_var( std::string name, const std::vector<size_t>& start, T& data) const
     {
         if( m_readonly or m_rank0)

@@ -25,8 +25,9 @@ namespace file{
  */
 struct NcHyperslab
 {
-    /*! @brief <tt> {slice}, {count}</tt>
+    /*! @brief <tt>{start}, {count}</tt>
      *
+     * One dimensional slab
      * @param start the starting position of a 1d variable
      * @param count the count of a 1d variable
      */
@@ -35,10 +36,11 @@ struct NcHyperslab
     {
     }
 
-    /*! @brief <tt> start, count</tt>
+    /*! @brief <tt>start, count</tt>
      *
+     * \c start.size() dimensional slab
      * @param start specific start vector
-     * @param count specific count vector
+     * @param count specific count vector (must have same size as \c start)
      */
     NcHyperslab(std::vector<size_t> start, std::vector<size_t> count)
         : m_start(start), m_count(count)
@@ -46,13 +48,43 @@ struct NcHyperslab
         assert( start.size() == count.size());
     }
 
-    /*! @brief <tt> grid.start(), grid.count()</tt>
+    /*! <tt>{0}, {file.get_dims_shape( file.get_var_dims(name))}</tt>
+     *
+     * Infer hyperslab from the dimensions of the variable
+     * @param file Reference to the file object \c get_dims_shape and \c
+     * get_var_dims are called
+     * @param name Name of the variable to inquire
+     */
+    template<class File>
+    NcHyperslab( const File& file, std::string name)
+    {
+        auto dims = file.get_var_dims(name);
+        m_count = std::vector<size_t>( get_dims_shape( dims));
+        m_start = std::vector<size_t>( dims.size(), 0);
+    }
+
+    /*! @brief <tt>{0 , data.size()}</tt>
+     *
+     * A one-dimensional slab
+     * @tparam ContainerType ContainerType::size() must be callable
+     * @param data explicitly set one dimensional count
+     * @attention This only works for one-dimensional data
+     */
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, dg::SharedVectorTag>, bool> = true>
+    NcHyperslab( const ContainerType& data)
+    : NcHyperslab( 0, data.size())
+    {
+    }
+    /*! @brief <tt>grid.start(), grid.count()</tt>
      *
      * @tparam Topology Topolgy::start() and *::count() need to return an
      * iterable that can be used to construct <tt> std::vector<size_t></tt>
      * @param grid explicitly set start and count
+     * @param copdoc hide_dimension_order
      */
-    template<class Topology>
+    template<class Topology, std::enable_if_t<
+        !dg::is_vector_v<Topology>, bool> = true>
     NcHyperslab( const Topology& grid)
     {
         auto ss = grid.start();
@@ -61,25 +93,25 @@ struct NcHyperslab
         m_count = std::vector<size_t>( cc.begin(), cc.end());
     }
 
-    /// Same as <tt> NcHyperslab{ start0, 1, grid}</tt>
-    template<class Topology>
-    NcHyperslab( size_t start0, const Topology& grid)
-          : NcHyperslab( start0, 1, grid)
+    /// Same as <tt>NcHyperslab{ start0, 1, param}</tt>
+    template<class T>
+    NcHyperslab( size_t start0, const T& param)
+          : NcHyperslab( start0, 1, param)
     {
     }
-    /*! @brief <tt> {start0, grid.start()}, {count0, grid.count()}</tt>
+
+    /*! @brief <tt>{start0, NcHyperslab( param).start()}, {count0, NcHyperslab(param).count()}</tt>
      *
-     * @tparam Topology Topolgy::start() and *::count() need to return an
-     * iterable that can be used to construct \c std::vector<size_t>
+     * @tparam T <tt>NcHyperslab::NcHyperslab<T>(param)</tt> must be callable
      * @param start0 The start coordinate of the unlimited dimension
-     * is prepended to the grid.start()
+     * is prepended to \c NcHyperslab(param)
      * @param count0 The count coordinate of the unlimited dimension
-     * is prepended to the grid.count()
-     * @param grid explicitly set start() and count()
+     * is prepended to \c NcHyperslab(param)
+     * @param param forwarded to \c NcHyperslab(param)
      */
-    template<class Topology>
-    NcHyperslab( size_t start0, size_t count0, const Topology& grid)
-          : NcHyperslab( grid)
+    template<class T>
+    NcHyperslab( size_t start0, size_t count0, const T& param)
+          : NcHyperslab( param)
     {
         m_start.insert( m_start.begin(), start0);
         m_count.insert( m_count.begin(), count0);
@@ -118,10 +150,24 @@ struct NcHyperslab
 struct MPINcHyperslab
 {
 
-    /*! @brief <tt> start, count</tt>
+    /*! @brief <tt>{local_start}, {local_count}</tt>
      *
+     * One dimensional slab
+     * @param local_start the starting position of a 1d variable
+     * @param local_count the count of a 1d variable
+     * @param comm communicator of ranks that hold relevant data
+     */
+    MPINcHyperslab( size_t local_start, size_t local_count, MPI_Comm comm)
+    : m_slab( local_start, local_count), m_comm(comm)
+    {
+    }
+
+
+    /*! @brief <tt>local_start, local_count, comm</tt>
+     *
+     * \c local_start.size() dimensional slab
      * @param local_start specific local start vector
-     * @param local_count specific local count vector
+     * @param local_count specific local count vector (must have same size as \c local_start)
      * @param comm communicator of ranks that hold relevant data
      */
     MPINcHyperslab(std::vector<size_t> local_start,
@@ -130,43 +176,78 @@ struct MPINcHyperslab
     {
     }
 
-    /*! @brief <tt> grid.start(), grid.count(), grid.communicator()</tt>
+    /*! @brief <tt>{local_start(data) , local_size(data), data.communicator()}</tt>
+     *
+     * Infer the local start and count by the size of the data vector.  The
+     * local size is communicated to all processes in \c data.communicator()
+     * and using the rank one can infer the starting position of the local data
+     * chunk.  This assumes that the data is ordered by rank.
+     * @attention This only works for one-dimensional data
+     *
+     * @tparam ContainerType \c ContainerType::size() and
+     * \c ContainerType::communicator() must be callable
+     * @param data explicitly set one dimensional start and count
+     */
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, dg::MPIVectorTag>, bool> = true>
+    MPINcHyperslab( const ContainerType& data)
+    : m_slab ( 0) // "default" construct
+    {
+        int count = data.size();
+        MPI_Comm comm = data.communicator();
+        int rank, size;
+        MPI_Comm_rank( comm, &rank);
+        MPI_Comm_size( comm, &size);
+        std::vector<int> counts ( size);
+        MPI_Allgather( &count, 1, MPI_INT, &counts[0], 1, MPI_INT, comm);
+        size_t start = 0;
+        for( int r=0; r<rank; r++)
+            start += counts[r];
+
+        *this = MPINcHyperslab{ start, (size_t)count, comm};
+    }
+
+    /*! @brief <tt>grid.start(), grid.count(), grid.communicator()</tt>
      *
      * @tparam MPITopology MPITopolgy::start() and *::count() need to return an
-     * iterable that can be used to construct <tt> std::vector<size_t></tt>
+     * iterable that can be used to construct <tt>std::vector<size_t></tt>
      * MPITopology.communicator() needs to return the communicator of ranks
      * that hold data
      * @param grid explicitly set start and count and comm
+     * @param copdoc hide_dimension_order
      */
-    template<class MPITopology>
+    template<class MPITopology, std::enable_if_t<!dg::is_vector_v<MPITopology>,
+    bool> = true>
     MPINcHyperslab( const MPITopology& grid)
     : m_slab( grid), m_comm(grid.communicator())
     {
     }
 
-    /// Same as <tt> MPINcHyperslab{ start0, 1, grid}</tt>
-    template<class MPITopology>
-    MPINcHyperslab( size_t start0, const MPITopology& grid)
-    : MPINcHyperslab( start0, 1, grid)
+    /// Same as <tt>MPINcHyperslab{ start0, 1, grid}</tt>
+    template<class T>
+    MPINcHyperslab( size_t start0, const T& param)
+    : MPINcHyperslab( start0, 1, param)
     {
     }
-    /*! @brief <tt> {start0, grid.start()}, {count0, grid.count()},
+    /*! @brief <tt>{start0, MPINcHyperslab( param).start()}, {count0, MPINcHyperslab(param).count(), MPINcHyperslab.communicator()}</tt>
      * grid.communicator()</tt>
      *
      * @tparam MPITopology MPITopolgy::start() and *::count() need to return an
-     * iterable that can be used to construct <tt> std::vector<size_t></tt>
+     * iterable that can be used to construct <tt>std::vector<size_t></tt>
      * MPITopology.communicator() needs to return the communicator of ranks
      * that hold data
      * @param start0 The start coordinate of the unlimited dimension
      * is prepended to the grid.start()
      * @param count0 The count coordinate of the unlimited dimension
      * is prepended to the grid.count()
-     * @param grid explicitly set start and count and comm
+     * @param param explicitly set start and count and comm
      */
-    template<class MPITopology>
-    MPINcHyperslab( size_t start0, size_t count0, const MPITopology& grid)
-    : m_slab( start0, count0, grid), m_comm( grid.communicator())
+    template<class T>
+    MPINcHyperslab( size_t start0, size_t count0, const T& param)
+    : MPINcHyperslab( param)
     {
+        m_slab.start().insert( m_slab.start().begin(), start0);
+        m_slab.count().insert( m_slab.count().begin(), count0);
     }
 
     ///@copdoc NcHyperslab::ndim()

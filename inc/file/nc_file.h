@@ -91,6 +91,8 @@ namespace file
  * for all dimensions in the file.
  * Furthermore, notice that while a dimension is visible in subgroups,
  * its associated dimension variable is not.
+ * @attention Paraview seems to have issues if dimensions in a subgrup in a
+ * NetCDF file are defined before any of the dimensions in the root group.
  *
  * @class hide_attributes_overwrite
  * @note Attributes are silently overwritten. You need to manually
@@ -465,7 +467,6 @@ struct SerialNcFile
     // //////////// Dimensions ////////////////////////
     /*! @brief Define a dimension named \c name of size \c size
      *
-     * @copydoc hide_dimension_hiding
      * @note Remember that dimensions do not have attributes or types,
      * only variables and groups have attributes and only variables have types
      * @note One often defines an associated **dimension variable**
@@ -475,6 +476,7 @@ struct SerialNcFile
      * @param size Size of the dimension to create. Use \c NC_UNLIMITED to
      * create an unlimited dimension
      * @copydoc hide_unlimited_issue
+     * @copydoc hide_dimension_hiding
      */
     void def_dim( std::string name, size_t size)
     {
@@ -764,39 +766,25 @@ struct SerialNcFile
     }
 
     /*! @brief Write data to a variable
-     *
-     * The hyperslab is infered from the dimensions of the variable
      * @param name Name of the variable to write data to. Must be visible in
      * the current group
-     * @param data to write. Size must be at least that of the product of all
-     * dimensions associated to \c name
-     * @copydoc hide_container_type
-     */
-    template<class ContainerType>
-    void put_var( std::string name, const ContainerType& data)
-    {
-        auto dims = get_var_dims(name);
-        std::vector<size_t> count( get_dims_shape( dims));
-        std::vector<size_t> start( dims.size());
-        put_var( name, { start, count}, data);
-    }
-
-    /*! @brief Write data to a variable
-     * @param name Name of the variable to write data to. Must be visible in
-     * the current group
-     * @param slab Define where the data is written
+     * @param slab Define where the data is written. The dimension of the slab
+     * \c slab.ndim() must match the number of dimensions of the variable
      * @param data to write. Size must be at least that of the slab
      * @copydoc hide_container_type
      * @copydoc hide_unlimited_issue
      */
-    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, SharedVectorTag>, bool > = true>
     void put_var( std::string name, const NcHyperslab& slab,
             const ContainerType& data)
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
         file::NC_Error_Handle err;
-        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
-            dg::CudaTag>)
+        int ndims;
+        err = nc_inq_varndims( m_grp, varid, &ndims);
+        assert( (unsigned)ndims == slab.ndim());
+        if constexpr ( dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
             using value_type = dg::get_value_type<ContainerType>;
             m_buffer.template set<value_type>( data.size());
@@ -819,7 +807,7 @@ struct SerialNcFile
      * @tparam T must be convertible to the datatype of the variable \c name
      * @copydoc hide_unlimited_issue
      */
-    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
     void put_var( std::string name, const std::vector<size_t>& start, T data)
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
@@ -845,6 +833,8 @@ struct SerialNcFile
      * @code{.cpp}
      * file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
      * @endcode
+     * @copydoc hide_unlimited_issue
+     * @copydoc hide_dimension_hiding
      */
     template<class T>
     void defput_dim_as( std::string name, size_t size,
@@ -880,9 +870,7 @@ struct SerialNcFile
     {
         def_dim( name, abscissas.size());
         def_var_as<dg::get_value_type<ContainerType>>( name, {name}, atts);
-        std::vector<size_t> count( 1, abscissas.size());
-        std::vector<size_t> start( 1, 0);
-        put_var( name, { start, count}, abscissas);
+        put_var( name, {abscissas}, abscissas);
     }
 
     /*! @brief Read hyperslab \c slab from variable named \c name into
@@ -893,14 +881,14 @@ struct SerialNcFile
      * @param data Result on output
      * @copydoc hide_container_type
      */
-    template<class ContainerType, typename = std::enable_if_t<dg::is_not_scalar<ContainerType>::value>>
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, SharedVectorTag>, bool > = true>
     void get_var( std::string name, const NcHyperslab& slab,
             ContainerType& data) const
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
         file::NC_Error_Handle err;
-        if constexpr ( std::is_same_v<dg::get_execution_policy<ContainerType>,
-            dg::CudaTag>)
+        if constexpr ( dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
             using value_type = dg::get_value_type<ContainerType>;
             m_buffer.template set<value_type>( data.size());
@@ -921,7 +909,7 @@ struct SerialNcFile
      * @param data Result on output
      * into container \c data
      */
-    template<class T, typename = std::enable_if_t<dg::is_scalar<T>::value>>
+    template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
     void get_var( std::string name, const std::vector<size_t>& start, T& data) const
     {
         int varid = name2varid( name, "Can't get variable in a closed file!");

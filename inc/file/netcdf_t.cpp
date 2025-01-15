@@ -81,12 +81,12 @@ int main(int argc, char* argv[])
     file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
     // It is possible to write to any index in an unlimited variable
     file.put_var("time", {5}, Tmax);
-    file.defput_dim( "x", {{"axis", "X"},
-        {"long_name", "x-coordinate in Cartesian system"}}, grid.abscissas(0));
-    file.defput_dim( "y", {{"axis", "Y"},
-        {"long_name", "y-coordinate in Cartesian system"}}, grid.abscissas(1));
     file.defput_dim( "z", {{"axis", "Z"},
         {"long_name", "z-coordinate in Cartesian system"}}, grid.abscissas(2));
+    file.defput_dim( "y", {{"axis", "Y"},
+        {"long_name", "y-coordinate in Cartesian system"}}, grid.abscissas(1));
+    file.defput_dim( "x", {{"axis", "X"},
+        {"long_name", "x-coordinate in Cartesian system"}}, grid.abscissas(0));
     file.def_var_as<double>( "Energy", {"time"}, {{"long_name", "Energy"}});
     for( auto& record : records)
         file.def_var_as<double>( record.name, {"time", "z", "y", "x"},
@@ -172,9 +172,9 @@ int main(int argc, char* argv[])
         file.get_var("time", {i}, time);
         file.get_var("Energy", {i}, energy);
         DG_RANK0 std::cout << "Time "<<time<<" Energy "<<energy<<"\t";
-        file.get_var( "vectorX", {i, 1, grid}, data);
+        file.get_var( "vectorX", {i, grid}, data);
         file.set_grp("projected");
-        file.get_var( "vectorX", {i, grid_out}, dataP);
+        file.get_var( "vectorX", {i, 1, grid_out}, dataP);
         file.set_grp("..");
 #ifdef MPI_VERSION
         DG_RANK0 std::cout << "data "<<data.data()[0]<<" dataP "<<dataP.data()[0]<<"\n";
