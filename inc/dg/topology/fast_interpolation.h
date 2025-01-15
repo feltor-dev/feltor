@@ -182,7 +182,8 @@ dg::HMatrix_t<real_type> fast_interpolation1d( const RealGrid1d<real_type>& t, u
     dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
     dg::RealGrid1d<real_type> g_new( -1., 1., n*multiplyn, multiplyNx);
     // Does not generate explicit zeros ...
-    cusp::coo_matrix<int, real_type, cusp::host_memory> interpolX = dg::create::interpolation( g_new, g_old);
+    cusp::coo_matrix<int, real_type, cusp::host_memory> interpolX =
+        dg::create::interpolation( g_new, g_old);
     unsigned size = multiplyn*multiplyNx;
     EllSparseBlockMat<real_type> iX( size*t.N(), t.N(), 1, size, t.n());
     dg::blas1::copy( 0., iX.data);

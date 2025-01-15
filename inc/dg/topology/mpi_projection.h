@@ -230,7 +230,8 @@ namespace create
 //
 ///@{
 ///@copydoc dg::create::interpolation(const RealGrid1d&,const RealGrid1d&,std::string)
-template<class MPITopology, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+template<class MPITopology, typename = std::enable_if_t<dg::is_vector_v<
+    typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> interpolation( const MPITopology&
         g_new, const MPITopology& g_old, std::string method = "dg")
 {
@@ -250,7 +251,8 @@ dg::MIHMatrix_t<typename MPITopology::value_type> interpolation( const MPITopolo
 //}
 
 ///@copydoc dg::create::projection(const RealGrid1d&,const RealGrid1d&,std::string)
-template<class MPITopology, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+template<class MPITopology, typename = std::enable_if_t<dg::is_vector_v<
+    typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> projection( const MPITopology&
         g_new, const MPITopology& g_old, std::string method = "dg")
 {
@@ -259,6 +261,18 @@ dg::MIHMatrix_t<typename MPITopology::value_type> projection( const MPITopology&
     convertLocal2GlobalCols( mat, g_old);
     auto mat_loc = convertGlobal2LocalRows( mat, g_new);
     return make_mpi_matrix(  mat_loc, g_old);
+}
+
+template<class RecursiveHostVector, class real_type, size_t Nd>
+dg::MIHMatrix_t<real_type> interpolation(
+        const RecursiveHostVector& x,
+        const aRealMPITopology<real_type, Nd>& g,
+        std::array<dg::bc, Nd> bcs,
+        std::string method = "dg")
+{
+    dg::IHMatrix_t<real_type> mat = dg::create::interpolation( x, g.global(),
+            bcs, method);
+    return make_mpi_matrix(  mat, g);
 }
 
 /**
@@ -273,9 +287,9 @@ dg::MIHMatrix_t<typename MPITopology::value_type> projection( const MPITopology&
  *
  * @copydetails interpolation(const thrust::host_vector<real_type>&,const RealGrid1d<real_type>&,dg::bc,std::string)
  */
-template<class real_type>
+template<class host_vector, class real_type>
 dg::MIHMatrix_t<real_type> interpolation(
-        const thrust::host_vector<real_type>& x,
+        const host_vector& x,
         const RealMPIGrid1d<real_type>& g,
         dg::bc bcx = dg::NEU,
         std::string method = "dg")
@@ -296,10 +310,10 @@ dg::MIHMatrix_t<real_type> interpolation(
  *
  * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc,std::string)
  */
-template<class real_type>
+template<class host_vector, class real_type>
 dg::MIHMatrix_t<real_type> interpolation(
-        const thrust::host_vector<real_type>& x,
-        const thrust::host_vector<real_type>& y,
+        const host_vector& x,
+        const host_vector& y,
         const aRealMPITopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU,
         std::string method = "dg")
@@ -321,14 +335,14 @@ dg::MIHMatrix_t<real_type> interpolation(
  *
  * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology3d<real_type>&,dg::bc,dg::bc,dg::bc,std::string)
  */
-template<class real_type>
+template<class host_vector, class real_type>
 dg::MIHMatrix_t<real_type> interpolation(
-        const thrust::host_vector<real_type>& x,
-        const thrust::host_vector<real_type>& y,
-        const thrust::host_vector<real_type>& z,
+        const host_vector& x,
+        const host_vector& y,
+        const host_vector& z,
         const aRealMPITopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, dg::bc bcz = dg::PER,
-        std::string method = "linear")
+        std::string method = "dg")
 {
     dg::IHMatrix_t<real_type> mat = dg::create::interpolation( x,y,z,
             g.global(), bcx, bcy, bcz, method);

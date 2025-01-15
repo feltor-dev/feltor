@@ -77,7 +77,8 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> prolongation(
     std::vector<cusp::csr_matrix<int,real_type,cusp::host_memory>> matrix(Nd-Md);
     for( unsigned u=0; u<Nd-Md; u++)
     {
-        matrix[u] = detail::interpolation1d( full_abs[u], g_new.grid(remains[u]), g_new.bc(remains[u]));
+        matrix[u] = detail::interpolation1d( dg::xspace, full_abs[u],
+            g_new.grid(remains[u]), g_new.bc(remains[u]));
     }
     for( unsigned u=1; u<Nd-Md; u++)
         matrix[0] = dg::tensorproduct_cols( matrix[u], matrix[0]);

@@ -4,6 +4,7 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/csr_matrix.h>
 #include "dg/backend/typedefs.h"
+#include "dg/backend/view.h"
 #include "grid.h"
 #include "evaluation.h"
 #include "functions.h"
@@ -251,64 +252,82 @@ std::vector<real_type> choose_1d_abscissas( real_type X,
 }
 
 template<class real_type>
+void interpolation_row( dg::space sp, real_type X,
+    const RealGrid1d<real_type>& g, dg::bc bcx,
+    cusp::array1d<int, cusp::host_memory>& cols,
+    cusp::array1d<real_type, cusp::host_memory>& vals)
+{
+    bool negative = false;
+    detail::shift( negative, X, bcx, g.x0(), g.x1());
+
+    //determine which cell (x) lies in
+    real_type xnn = (X-g.x0())/g.h();
+    unsigned nn = (unsigned)floor(xnn);
+    //determine normalized coordinates
+    real_type xn = 2.*xnn - (real_type)(2*nn+1);
+    //intervall correction
+    if (nn==g.N()) {
+        nn-=1;
+        xn = 1.;
+    }
+    //Test if the point is a Gauss point since then no interpolation is needed
+    int idxX =-1;
+    std::vector<real_type> gauss_nodesx = dg::DLT<real_type>::abscissas(g.n());
+    for( unsigned k=0; k<g.nx(); k++)
+    {
+        // Due to rounding errors xn will not perfectly be gauss_nodex[k] ( errors ~ 1e-14 possible)
+        // even if x are the abscissas of the grid
+        if( fabs( xn - gauss_nodesx[k]) < 1e-13)
+            idxX = nn*g.nx() + k; //determine which grid column it is
+    }
+    if( idxX < 0 or sp == dg::lspace) //there is no corresponding point
+    {
+        //evaluate 1d Legendre polynomials at (xn, yn)...
+        std::vector<real_type> px = detail::legendre( xn, g.n());
+        //...these are the matrix coefficients with which to multiply
+        if( sp == dg::xspace)
+        {
+            std::vector<real_type> pxF(px.size(), 0);
+            std::vector<real_type> forward =
+                dg::DLT<real_type>::forward(g.n());
+            for( unsigned l=0; l<g.n(); l++)
+                for( unsigned k=0; k<g.n(); k++)
+                    pxF[l]+= px[k]*forward[k*g.n() + l];
+            px.swap( pxF);
+        }
+        for ( unsigned l=0; l<g.n(); l++)
+        {
+            cols.push_back( nn*g.n() + l);
+            vals.push_back( negative ? -px[l] : px[l]);
+        }
+    }
+    else //the point already exists
+    {
+        cols.push_back( idxX);
+        vals.push_back( negative ? -1. : 1.);
+    }
+}
+
+
+// dG interpolation
+template<class host_vector, class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation1d(
-        const thrust::host_vector<real_type>& x,
-        const RealGrid1d<real_type>& g,
-        dg::bc bcx )
+    dg::space sp,
+    const host_vector& x, // can be a view...
+    const RealGrid1d<real_type>& g,
+    dg::bc bcx )
 {
     cusp::array1d<real_type, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
     cusp::array1d<int, cusp::host_memory> column_indices;
-    std::vector<real_type> gauss_nodesx = dg::DLT<real_type>::abscissas(g.n());
-    dg::Operator<real_type> forward = dg::DLT<real_type>::forward(g.n());
+    auto ptr = x.begin();
     for( unsigned i=0; i<x.size(); i++)
     {
-        real_type X = x[i];
-        bool negative = false;
-        detail::shift( negative, X, bcx, g.x0(), g.x1());
-
-        //determine which cell (x) lies in
-        real_type xnn = (X-g.x0())/g.h();
-        unsigned nn = (unsigned)floor(xnn);
-        //determine normalized coordinates
-        real_type xn = 2.*xnn - (real_type)(2*nn+1);
-        //intervall correction
-        if (nn==g.N()) {
-            nn-=1;
-            xn = 1.;
-        }
-        //Test if the point is a Gauss point since then no interpolation is needed
-        int idxX =-1;
-        for( unsigned k=0; k<g.nx(); k++)
-        {
-            // Due to rounding errors xn will not perfectly be gauss_nodex[k] ( errors ~ 1e-14 possible)
-            // even if x are the abscissas of the grid
-            if( fabs( xn - gauss_nodesx[k]) < 1e-13)
-                idxX = nn*g.nx() + k; //determine which grid column it is
-        }
-        if( idxX < 0 ) //there is no corresponding point
-        {
-            //evaluate 2d Legendre polynomials at (xn, yn)...
-            std::vector<real_type> px = detail::legendre( xn, g.n());
-            //...these are the matrix coefficients with which to multiply
-            std::vector<real_type> pxF(px.size(),0);
-            for( unsigned l=0; l<g.n(); l++)
-                for( unsigned k=0; k<g.n(); k++)
-                    pxF[l]+= px[k]*forward(k,l);
-            unsigned cols = nn*g.n();
-            for ( unsigned l=0; l<g.n(); l++)
-            {
-                row_indices.push_back(i);
-                column_indices.push_back( cols + l);
-                values.push_back(negative ? -pxF[l] : pxF[l]);
-            }
-        }
-        else //the point already exists
-        {
+        unsigned size = values.size();
+        interpolation_row( sp, *ptr, g, bcx, column_indices, values);
+        for( unsigned u=0; u<values.size()-size; u++)
             row_indices.push_back(i);
-            column_indices.push_back(idxX);
-            values.push_back( negative ? -1. : 1.);
-        }
+        ptr++;
     }
     cusp::coo_matrix<int, real_type, cusp::host_memory> A(
             x.size(), g.size(), values.size());
@@ -318,15 +337,17 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation1d(
     return A;
 }
 
-template<class host_vector >
-cusp::coo_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interpolation1d(
-        const host_vector& x,
-        const host_vector& abs, // must be sorted
-        dg::bc bcx, dg::get_value_type<host_vector> x0, dg::get_value_type<host_vector> x1,
+// nearest, linear or cubic interpolation
+template<class host_vector1, class host_vector2 >
+cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> interpolation1d(
+        const host_vector1& x,
+        const host_vector2& abs, // must be sorted
+        dg::bc bcx, dg::get_value_type<host_vector2> x0, dg::get_value_type<host_vector2> x1,
         std::string method )
 {
-    using real_type = dg::get_value_type<host_vector>;
-    // boundary condidions for dg::Box likely won't work
+    using real_type = dg::get_value_type<host_vector2>;
+    // boundary condidions for dg::Box likely won't work | Box is now removed
+    // from library ...
     cusp::array1d<real_type, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
     cusp::array1d<int, cusp::host_memory> column_indices;
@@ -339,9 +360,11 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interp
         points_per_line = 4;
     else
         throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
+    auto ptr = x.begin();
     for( unsigned i=0; i<x.size(); i++)
     {
-        real_type X = x[i];
+        real_type X = *ptr;
+        ptr++;
         bool negative = false;
         detail::shift( negative, X, bcx, x0, x1);
         // Test if point already exists since then no interpolation is needed
@@ -400,27 +423,26 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interp
  * **communication in mpi**.
  */
 
-template<class real_type, size_t Nd>
+template<class RecursiveHostVector, class real_type, size_t Nd>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
-        const std::array<thrust::host_vector<real_type>,Nd>& x,
+        const RecursiveHostVector& x,
         const aRealTopology<real_type, Nd>& g,
         std::array<dg::bc, Nd> bcs,
         std::string method = "dg")
 {
 
     std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
-    const auto& abs = g.get_abscissas();
     for( unsigned u=0; u<Nd; u++)
     {
         if( x[u].size() != x[0].size())
             throw dg::Error( dg::Message(_ping_)<<"All coordinate lists must have same size "<<x[0].size());
         if( method == "dg")
         {
-            axes[u] = detail::interpolation1d( x[u], g.grid(u), bcs[u]);
+            axes[u] = detail::interpolation1d( dg::xspace, x[u], g.grid(u), bcs[u]);
         }
         else
         {
-            axes[u] = detail::interpolation1d( x[u], abs[u], bcs[u], g.p(u), g.q(u), method);
+            axes[u] = detail::interpolation1d( x[u], g.abscissas(u), bcs[u], g.p(u), g.q(u), method);
         }
     }
     for( unsigned u=1; u<Nd; u++)
@@ -429,29 +451,6 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
     }
     return axes[0];
 }
-
-template<class host_vector, size_t Nd>
-cusp::csr_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interpolation(
-        const std::array<host_vector,Nd>& x,
-        const Box<host_vector, Nd>& g,
-        std::string method = "linear")
-{
-    using real_type = dg::get_value_type<host_vector>;
-    std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
-    const auto& abs = g.get_abscissas();
-    for( unsigned u=0; u<Nd; u++)
-    {
-        if( x[u].size() != x[0].size())
-            throw dg::Error( dg::Message(_ping_)<<"All coordinate lists must have same size "<<x[0].size());
-        axes[u] = detail::interpolation1d( x[u], abs(u), dg::NEU,
-            abs[u][0], abs[u][abs[u].size()-1], method);
-    }
-    for( unsigned u=1; u<Nd; u++)
-        axes[0] = dg::tensorproduct_cols( axes[u], axes[0]);
-    return axes[0];
-}
-///@cond
-///@endcond
 
 /**
  * @brief Create interpolation matrix
@@ -471,15 +470,17 @@ cusp::csr_matrix<int, dg::get_value_type<host_vector>, cusp::host_memory> interp
  * @return interpolation matrix
  * @attention removes explicit zeros in the interpolation matrix
  */
-template<class real_type>
+template<class host_vector, class real_type, typename = std::enable_if_t<dg::is_vector_v<host_vector>>>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
-        const thrust::host_vector<real_type>& x,
+        const host_vector& x,
         const RealGrid1d<real_type>& g,
         dg::bc bcx = dg::NEU,
         std::string method = "dg")
 {
-    // The explicit conversion to std::array prevents the function from calling itself indefinitely
-    return interpolation( std::array<thrust::host_vector<real_type>,1>{x}, g, std::array<dg::bc,1>{bcx}, method);
+    dg::View<const host_vector> vx( x.data(), x.size());
+    return interpolation(
+        std::vector{vx}, g,
+        std::array<dg::bc,1>{bcx}, method);
 }
 
 /**
@@ -503,15 +504,17 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @return interpolation matrix
  * @attention removes explicit zeros in the interpolation matrix
  */
-template<class real_type>
+template<class host_vector, class real_type>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
-        const thrust::host_vector<real_type>& x,
-        const thrust::host_vector<real_type>& y,
+        const host_vector& x,
+        const host_vector& y,
         const aRealTopology2d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU,
         std::string method = "dg")
 {
-    return interpolation( {x,y}, g, {bcx,bcy}, method);
+    dg::View<const host_vector> vx( x.data(), x.size());
+    dg::View<const host_vector> vy( y.data(), y.size());
+    return interpolation( std::vector{vx,vy}, g, {bcx,bcy}, method);
 }
 
 
@@ -539,16 +542,19 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @attention removes explicit zeros from the interpolation matrix
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
-template<class real_type>
+template<class host_vector, class real_type>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
-        const thrust::host_vector<real_type>& x,
-        const thrust::host_vector<real_type>& y,
-        const thrust::host_vector<real_type>& z,
+        const host_vector& x,
+        const host_vector& y,
+        const host_vector& z,
         const aRealTopology3d<real_type>& g,
         dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU, dg::bc bcz = dg::PER,
         std::string method = "dg")
 {
-    return interpolation( {x,y,z}, g, {bcx,bcy,bcz}, method);
+    dg::View<const host_vector> vx( x.data(), x.size());
+    dg::View<const host_vector> vy( y.data(), y.size());
+    dg::View<const host_vector> vz( z.data(), z.size());
+    return interpolation( std::vector{vx,vy,vz}, g, {bcx,bcy,bcz}, method);
 }
 /**
  * @brief Create interpolation between two grids
@@ -578,18 +584,19 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
         assert( g_new.p(u) >= g_old.p(u));
         assert( g_new.q(u) <= g_old.q(u));
     }
-    auto x = g_new.get_abscissas();
-    const auto& abs = g_old.get_abscissas();
     std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
     for( unsigned u=0; u<Nd; u++)
     {
         if( method == "dg")
         {
-            axes[u] = detail::interpolation1d( x[u], g_old.grid(u), g_old.bc(u));
+            axes[u] = detail::interpolation1d( dg::xspace, g_new.abscissas(u),
+                g_old.grid(u), g_old.bc(u));
         }
         else
         {
-            axes[u] = detail::interpolation1d( x[u], abs[u], g_old.bc(u), g_old.p(u), g_old.q(u), method);
+            axes[u] = detail::interpolation1d( g_new.abscissas(u),
+                g_old.abscissas(u), g_old.bc(u), g_old.p(u), g_old.q(u),
+                method);
         }
     }
     for( unsigned u=1; u<Nd; u++)
@@ -620,53 +627,22 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @ingroup interpolation
  * @return interpolated point
  */
-template<class real_type>
+template<class host_vector, class real_type>
 real_type interpolate(
     dg::space sp,
-    const thrust::host_vector<real_type>& v,
+    const host_vector& v,
     real_type x,
     const RealGrid1d<real_type>& g,
     dg::bc bcx = dg::NEU)
 {
     assert( v.size() == g.size());
-    bool negative = false;
-    create::detail::shift( negative, x, bcx, g.x0(), g.x1());
-
-    //determine which cell (x) lies in
-
-    real_type xnn = (x-g.x0())/g.h();
-    unsigned n = (unsigned)floor(xnn);
-    //determine normalized coordinates
-
-    real_type xn =  2.*xnn - (real_type)(2*n+1);
-    //interval correction
-    if (n==g.N()) {
-        n-=1;
-        xn = 1.;
-    }
-    //evaluate 1d Legendre polynomials at (xn)...
-    std::vector<real_type> px = create::detail::legendre( xn, g.n());
-    if( sp == dg::xspace)
-    {
-        dg::Operator<real_type> forward = dg::DLT<real_type>::forward(g.n());
-        std::vector<real_type> pxF(g.n(),0);
-        for( unsigned l=0; l<g.n(); l++)
-            for( unsigned k=0; k<g.n(); k++)
-                pxF[l]+= px[k]*forward(k,l);
-        for( unsigned k=0; k<g.n(); k++)
-            px[k] = pxF[k];
-    }
-    //these are the matrix coefficients with which to multiply
-    unsigned cols = (n)*g.n();
+    cusp::array1d<real_type, cusp::host_memory> vals;
+    cusp::array1d<int, cusp::host_memory> cols;
+    create::detail::interpolation_row( sp, x, g, bcx, cols, vals);
     //multiply x
     real_type value = 0;
-    for( unsigned j=0; j<g.n(); j++)
-    {
-        if(negative)
-            value -= v[cols + j]*px[j];
-        else
-            value += v[cols + j]*px[j];
-    }
+    for( unsigned j=0; j<vals.size(); j++)
+        value += v[cols[j]]*vals[j];
     return value;
 }
 
@@ -689,67 +665,28 @@ real_type interpolate(
  * @ingroup interpolation
  * @return interpolated point
  */
-template<class real_type>
+template<class host_vector, class real_type>
 real_type interpolate(
     dg::space sp,
-    const thrust::host_vector<real_type>& v,
+    const host_vector& v,
     real_type x, real_type y,
-    const aRealTopology2d<real_type>& g,
+    const aRealTopology<real_type, 2>& g,
     dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU )
 {
     assert( v.size() == g.size());
-    bool negative = false;
-    create::detail::shift( negative, x, bcx, g.x0(), g.x1());
-    create::detail::shift( negative, y, bcy, g.y0(), g.y1());
-
-    //determine which cell (x,y) lies in
-
-    real_type xnn = (x-g.x0())/g.hx();
-    real_type ynn = (y-g.y0())/g.hy();
-    unsigned n = (unsigned)floor(xnn);
-    unsigned m = (unsigned)floor(ynn);
-    //determine normalized coordinates
-
-    real_type xn =  2.*xnn - (real_type)(2*n+1);
-    real_type yn =  2.*ynn - (real_type)(2*m+1);
-    //interval correction
-    if (n==g.Nx()) {
-        n-=1;
-        xn = 1.;
-    }
-    if (m==g.Ny()) {
-        m-=1;
-        yn =1.;
-    }
-    //evaluate 2d Legendre polynomials at (xn, yn)...
-    std::vector<real_type> px = create::detail::legendre( xn, g.nx()),
-                           py = create::detail::legendre( yn, g.ny());
-    if( sp == dg::xspace)
-    {
-        dg::Operator<real_type> forwardx = dg::DLT<real_type>::forward(g.nx());
-        dg::Operator<real_type> forwardy = dg::DLT<real_type>::forward(g.ny());
-        std::vector<real_type> pxF(g.nx(),0), pyF(g.ny(), 0);
-        for( unsigned l=0; l<g.nx(); l++)
-            for( unsigned k=0; k<g.nx(); k++)
-                pxF[l]+= px[k]*forwardx(k,l);
-        for( unsigned l=0; l<g.ny(); l++)
-            for( unsigned k=0; k<g.ny(); k++)
-                pyF[l]+= py[k]*forwardy(k,l);
-        px = pxF, py = pyF;
-    }
-    //these are the matrix coefficients with which to multiply
-    unsigned cols = (m)*g.Nx()*g.ny()*g.nx() + (n)*g.nx();
+    cusp::array1d<real_type, cusp::host_memory> valsx;
+    cusp::array1d<int, cusp::host_memory> colsx;
+    create::detail::interpolation_row( sp, x, g.gx(), bcx, colsx, valsx);
+    cusp::array1d<real_type, cusp::host_memory> valsy;
+    cusp::array1d<int, cusp::host_memory> colsy;
+    create::detail::interpolation_row( sp, y, g.gy(), bcy, colsy, valsy);
     //multiply x
     real_type value = 0;
-    for( unsigned i=0; i<g.ny(); i++)
-        for( unsigned j=0; j<g.nx(); j++)
-        {
-            if(negative)
-                value -= v[cols + i*g.Nx()*g.nx() + j]*px[j]*py[i];
-            else
-                value += v[cols + i*g.Nx()*g.nx() + j]*px[j]*py[i];
-        }
+    for( unsigned i=0; i<valsy.size(); i++)
+        for( unsigned j=0; j<valsx.size(); j++)
+            value += v[colsy[i]*g.shape(0) + colsx[j]]*valsx[j]*valsy[i];
     return value;
 }
+
 
 } //namespace dg

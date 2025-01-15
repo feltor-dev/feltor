@@ -54,39 +54,6 @@ struct RealGrid;
 ///@endcond
 
 /**
- * @brief A utility class representing the most basic product space grid
- *
- * Each dimension just is a list of abscissas.
- * Can be used in \c dg::evaluate
- * @tparam ContainerType Vector type that holds the abscissas
- * @tparam Nd The number of dimensions
- */
-template<class ContainerType, size_t Nd>
-struct Box
-{
-    /// value type of abscissas
-    using value_type = dg::get_value_type<ContainerType>;
-    /// Dimensionality == Nd
-    constexpr static unsigned ndim() {return Nd;}
-
-    Box( std::array<ContainerType, Nd> abs) : m_abs(abs)
-    {
-        for( unsigned u=0; u<Nd; u++)
-            m_shape[u] = abs[u].size();
-    }
-    const ContainerType& abscissas(unsigned u=0) const {return m_abs[u];}
-    unsigned shape(unsigned u=0) const {return m_shape[u];}
-
-    const std::array<ContainerType, Nd>& get_abscissas() const {return m_abs;}
-    const std::array<unsigned, Nd>& get_shape() const {return m_shape;}
-
-
-    private:
-    std::array<ContainerType, Nd> m_abs;
-    std::array<unsigned, Nd> m_shape;
-};
-
-/**
  * @brief An abstract base class for N-dimensional grids
  * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @ingroup basictopology
@@ -99,7 +66,9 @@ struct aRealTopology
     /////////////////// TYPE TRAITS ////////////////////////////
     /// value type of abscissas and weights
     using value_type = real_type;
-    /// vector type of abscissas and weights
+    /// vector type of abscissas and weights; Is used to recognise shared
+    ///topology (vs MPI)
+    /// <tt> dg::is_vector_v< typename Topology::host_vector, SharedVectorTag> </tt>
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGrid<real_type, Nd>;
     /// Dimensionality == Nd
@@ -672,16 +641,6 @@ struct RealGrid : public aRealTopology<real_type, Nd>
     }
 
 };
-
-/// Used to discern grid types in interpolation and projection
-template<class Topology>
-using get_host_vector = typename Topology::host_vector;
-//
-//template<class Topology>
-//using get_host_grid = typename Topology::host_grid;
-//
-template<class Grid>
-using is_shared_grid = std::is_base_of< dg::SharedVectorTag, dg::get_tensor_category< get_host_vector<Grid>>>;
 
 ///@addtogroup gridtypes
 ///@{

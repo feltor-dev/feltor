@@ -108,7 +108,7 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
         container& vx, container& vy,
         const Geometry& g)
 {
-    using host_vec = get_host_vector<Geometry>;
+    using host_vec = typename Geometry::host_vector;
     host_vec out1 = pullback( vR, g);
     host_vec out2 = pullback( vZ, g);
     dg::tensor::multiply2d(g.jacobian(), out1, out2, out1, out2);
@@ -144,7 +144,7 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
         container& vx, container& vy, container& vz,
         const Geometry& g)
 {
-    using host_vec = get_host_vector<Geometry>;
+    using host_vec = typename Geometry::host_vector;
     host_vec out1 = pullback( vR, g);
     host_vec out2 = pullback( vZ, g);
     host_vec out3 = pullback( vPhi, g);
@@ -181,7 +181,7 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
         SparseTensor<container>& chi,
         const Geometry& g)
 {
-    using host_vec = get_host_vector<Geometry>;
+    using host_vec = typename Geometry::host_vector;
     host_vec chiRR_ = pullback( chiRR, g);
     host_vec chiRZ_ = pullback( chiRZ, g);
     host_vec chiZZ_ = pullback( chiZZ, g);
@@ -224,9 +224,9 @@ namespace create{
  * @return  The volume form
  */
 template< class Geometry>
-get_host_vector<Geometry> volume( const Geometry& g)
+typename Geometry::host_vector volume( const Geometry& g)
 {
-    using host_vector = get_host_vector<Geometry>;
+    using host_vector = typename Geometry::host_vector;
     host_vector vol = dg::tensor::volume(g.metric());
     host_vector weights = dg::create::weights( g);
     dg::blas1::pointwiseDot( weights, vol, vol);
@@ -243,9 +243,9 @@ get_host_vector<Geometry> volume( const Geometry& g)
  * @return  The inverse volume form
  */
 template< class Geometry>
-get_host_vector<Geometry> inv_volume( const Geometry& g)
+typename Geometry::host_vector inv_volume( const Geometry& g)
 {
-    using host_vector = get_host_vector<Geometry>;
+    using host_vector = typename Geometry::host_vector;
     using real_type = get_value_type<host_vector>;
     host_vector vol = volume(g);
     dg::blas1::transform( vol, vol, dg::INVERT<real_type>());
