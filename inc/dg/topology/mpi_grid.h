@@ -52,7 +52,9 @@ struct aRealMPITopology
     /////////////////// TYPE TRAITS ////////////////////////////
     /// value type of abscissas and weights
     using value_type = real_type;
-    /// vector type of abscissas and weights
+    /// vector type of abscissas and weights; Can be used to recognize MPI grid
+    ///via:
+    /// <tt> dg::is_vector_v< typename Topology::host_vector, MPIVectorTag> </tt>
     using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
     using host_grid = RealMPIGrid<real_type, Nd>;
     /// Dimensionality == Nd
@@ -378,6 +380,15 @@ struct aRealMPITopology
         m_l.display();
     }
 
+    template<size_t Md = Nd>
+    std::enable_if_t<(Md == 1), bool> contains( real_type x) const
+    {
+        return m_g.contains( x);
+    }
+
+    template<class Vector>
+    bool contains( const Vector& x)const { return m_g.contains(x);}
+
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
         // TODO shouldn't this test for m_l.size() ? How is this used?
@@ -642,11 +653,6 @@ void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
     m_g.set_bcs( bcs);
     m_l.set_bcs( bcs);
 }
-
-/// Used to recognize MPI specialisation of interpolation and projection functions
-/// Also used in file.h to recognize MPI output
-template<class Grid>
-using is_mpi_grid = std::is_base_of< dg::MPIVectorTag, dg::get_tensor_category< get_host_vector<Grid> > >;
 
 ///@endcond
 

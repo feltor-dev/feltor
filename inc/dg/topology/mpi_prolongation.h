@@ -12,7 +12,8 @@ namespace dg
 namespace create
 {
     // TODO documentation needed
-template<class MPITopology, size_t Md, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
+    typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
     const MPITopology& g_new, std::array<unsigned,Md> axes)
 {
@@ -22,7 +23,8 @@ dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
     return dg::MIHMatrix_t<real_type>( mat);
 }
 
-template<class MPITopology, size_t Md, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
+    typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> reduction(
     std::array<unsigned,Md> axes, const MPITopology& g_old)
 {
@@ -35,7 +37,9 @@ dg::MIHMatrix_t<typename MPITopology::value_type> reduction(
         axes, g_old.local()); // local rows, global cols
     return {  mat, dg::mpi_cart_kron( comms) };
 }
-template<class MPITopology, size_t Md, typename = std::enable_if_t<is_mpi_grid<MPITopology>::value >>
+
+template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
+    typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> projection(
     std::array<unsigned,Md> axes, const MPITopology& g_old)
 {
