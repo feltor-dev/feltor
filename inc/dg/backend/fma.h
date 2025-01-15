@@ -9,14 +9,17 @@ namespace dg
 ///@cond
 namespace detail
 {
-template<class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
+// Making T0, T1, T2 different fixes problem that any of them may be const reference types
+// overload A in std::fma
+// for cuda all types must be equal?
+template<class T0, class T1, class T2, class = std::enable_if_t<std::is_floating_point_v<T2> >>
 DG_DEVICE
-T dg_fma( T x, T y, T z)
+auto dg_fma( T0 x, T1 y, T2 z)
 {
     return fma( x, y, z);
 }
-template<class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
-std::complex<T> dg_fma( T x, std::complex<T> y, std::complex<T> z)
+template<class T0, class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
+std::complex<T> dg_fma( T0 x, std::complex<T> y, std::complex<T> z)
 {
     return {
         std::fma( x, y.real(), z.real()),
@@ -35,9 +38,9 @@ std::complex<T> dg_fma( std::complex<T> x, std::complex<T> y, std::complex<T> z)
         std::fma( x.imag(), y.real(), out.imag())
     };
 }
-template<class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
+template<class T0, class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
 DG_DEVICE
-thrust::complex<T> dg_fma( T x, thrust::complex<T> y, thrust::complex<T> z)
+thrust::complex<T> dg_fma( T0 x, thrust::complex<T> y, thrust::complex<T> z)
 {
     return {
         fma( x, y.real(), z.real()),
