@@ -19,9 +19,9 @@ int main(int argc, char* argv[])
     //create a grid and some data
 #endif
 #ifdef WITH_MPI
-    std::string filename = "testmpi.nc";
+    std::string filename = "filempi.nc";
 #else
-    std::string filename = "test.nc";
+    std::string filename = "file.nc";
 #endif
     std::filesystem::path current = std::filesystem::current_path();
     DG_RANK0 std::cout << "Current path is "<<current<<std::endl;
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
 #ifdef WITH_MPI
     // TODO Make mpi test
 #else
-    file.put_var("variable", data);
+    file.put_var("variable", {data}, data);
 #endif
 
     file.put_att("variable", {"long_name", "blabla"});

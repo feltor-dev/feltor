@@ -25,9 +25,9 @@ int main(int argc, char* argv[])
     dg::mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
 #endif
 #ifdef WITH_MPI
-    std::string filename = "testmpi.nc";
+    std::string filename = "dimsmpi.nc";
 #else
-    std::string filename = "test.nc";
+    std::string filename = "dims.nc";
 #endif
     DG_RANK0 std::cout << "WRITE AND CHECK A COUPLE OF DIMENSIONS IN "
                        << filename<<"\n";

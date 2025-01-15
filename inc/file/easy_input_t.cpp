@@ -37,7 +37,6 @@ int main(int argc, char* argv[])
 #endif
     DG_RANK0 std::cout << "READ A TIME-DEPENDENT SCALAR, SCALAR FIELD AND SUB-FIELDS TO NETCDF4 FILE "
                        << filename<<"\n";
-    DG_RANK0 std::cout << "THEN READ IT BACK IN AND TEST EQUALITY\n";
     double Tmax=2.*M_PI;
     double NT = 10;
     double h = Tmax/NT;
