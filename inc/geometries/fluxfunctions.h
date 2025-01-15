@@ -526,10 +526,10 @@ struct SquareNorm : public aCylindricalFunctor<SquareNorm>
  * @tparam Geometry3d A three-dimensional geometry
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
+dg::SparseTensor<typename Geometry3d::host_vector> createAlignmentTensor(
     const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
-    using host_vector = dg::get_host_vector<Geometry3d>;
+    using host_vector = typename Geometry3d::host_vector;
     SparseTensor<host_vector> t;
     std::array<host_vector,3> bt;
     dg::pushForward( bhat.x(), bhat.y(), bhat.z(), bt[0], bt[1], bt[2], g);
@@ -559,10 +559,10 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
  * @tparam Geometry3d A three-dimensional geometry
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor(
+dg::SparseTensor<typename Geometry3d::host_vector> createProjectionTensor(
     const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
-    using host_vector = dg::get_host_vector<Geometry3d>;
+    using host_vector = typename Geometry3d::host_vector;
     dg::SparseTensor<host_vector> t = dg::geo::createAlignmentTensor( bhat, g);
     dg::SparseTensor<host_vector> m = g.metric();
     dg::blas1::axpby( 1., m.value(0,0), -1., t.values()[0]);
