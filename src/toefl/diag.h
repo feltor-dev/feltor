@@ -14,7 +14,8 @@ struct Variables
 };
 
 // time - independent output (only called once)
-std::vector<dg::file::Record<void(dg::x::HVec&,Variables&)>> diagnostics2d_static_list = {
+std::vector<dg::file::Record<void(dg::x::HVec&,Variables&),
+dg::file::LongNameAttribute>> diagnostics2d_static_list = {
     { "xc", "x-coordinate in Cartesian coordinate system",
         []( dg::x::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.grid);
@@ -33,7 +34,9 @@ std::vector<dg::file::Record<void(dg::x::HVec&,Variables&)>> diagnostics2d_stati
 };
 
 // time - dependent output (called periodically)
-std::map<std::string, std::vector<dg::file::Record<void(dg::x::DVec&,Variables&)>>> diagnostics2d_list = {
+std::map<std::string,
+std::vector<dg::file::Record<void(dg::x::DVec&,Variables&),
+dg::file::LongNameAttribute>>> diagnostics2d_list = {
     { "global", {
     {"ne", "Electron density in 2d",
         []( dg::x::DVec& result, Variables& v) {
