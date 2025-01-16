@@ -91,7 +91,7 @@ inline static void assign_defaults( std::vector<std::string>& name_dims, const s
 ///@{
 
 /**
- * @brief Check if an unlimited dimension exists as if \c define_real_time was called
+ * @brief DEPRECATED Check if an unlimited dimension exists as if \c define_real_time was called
  *
  * This function returns false if the dimension with the given name does not exist.
  *
@@ -144,7 +144,7 @@ bool check_real_time( int ncid, const char* name, int* dimID, int* tvarID)
 }
 
 /**
- * @brief Define an unlimited time dimension and coordinate variable
+ * @brief DEPRECATED Define an unlimited time dimension and coordinate variable
  *
  * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
@@ -178,7 +178,7 @@ inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID
     return retval;
 }
 
-/// An alias for <tt> define_real_time<double> </tt>
+/// DEPRECATED An alias for <tt> define_real_time<double> </tt>
 static inline int define_time( int ncid, const char* name, int* dimID, int* tvarID)
 {
     return define_real_time<double>( ncid, name, dimID, tvarID);
@@ -215,7 +215,7 @@ static inline int define_limited_time( int ncid, const char* name, int size, int
 }
 
 /**
- * @brief Check if a dimension exists as if \c define_dimension was called
+ * @brief DEPRECATED Check if a dimension exists as if \c define_dimension was called
  *
  * This function returns false if the dimension with the given name does not exist.
  *
@@ -269,7 +269,7 @@ bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::str
 }
 
 /**
- * @brief Define a 1d dimension and associated coordinate variable
+ * @brief DEPRECATED Define a 1d dimension and associated coordinate variable
  *
  * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
@@ -303,7 +303,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
 }
 
 /**
- * @brief Define dimensions and associated coordiante variables
+ * @brief DEPRECATED Define dimensions and associated coordiante variables
  *
  * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
@@ -321,7 +321,7 @@ inline int define_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, s
  *
  * @return if anything goes wrong, return the NetCDF error code, else NC_NOERR
  */
-template<class Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value,bool > = true>
+template<class Topology, std::enable_if_t<dg::is_vector_v<typename Topology::host_vector, dg::SharedVectorTag>,bool > = true>
 int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     int retval = NC_NOERR;
@@ -339,7 +339,7 @@ int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
 }
 
 /**
- * @brief Define an unlimited time and grid dimensions together with their coordinate variables
+ * @brief DEPRECATED Define an unlimited time and grid dimensions together with their coordinate variables
  *
  * @note By <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
  * a variable with the same name as a dimension is
@@ -366,7 +366,7 @@ int define_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
  *
  * @return if anything goes wrong, return the NetCDF error code, else NC_NOERR
  */
-template<class Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value, bool > = true>
+template<class Topology, std::enable_if_t<dg::is_vector_v<typename Topology::host_vector, dg::SharedVectorTag>,bool > = true>
 int define_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     auto default_names = detail::dim_names(g);
@@ -380,7 +380,7 @@ int define_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, s
 }
 
 /**
- * @brief Check if dimensions exist as if \c define_dimensions was called
+ * @brief DEPRECATED Check if dimensions exist as if \c define_dimensions was called
  *
  * This function checks if the given file contains dimensions and their associated dimension variables
  * in the same way that the corresponding \c define_dimensions creates them. If anything is amiss, an error
@@ -396,7 +396,7 @@ int define_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, s
  * @return False if any dimension with given name does not exist, if no errors are thrown True
  * @sa check_dimension
  */
-template<class Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value, bool > = true>
+template<class Topology, std::enable_if_t<dg::is_vector_v<typename Topology::host_vector, dg::SharedVectorTag>,bool > = true>
 bool check_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<std::string> name_dims = {})
 {
     auto grids = detail::grids( g);
@@ -412,7 +412,7 @@ bool check_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
 }
 
 /**
- * @brief Check if dimensions exist as if \c define_dimensions was called
+ * @brief DEPRECATED Check if dimensions exist as if \c define_dimensions was called
  *
  * Semantically equivalent to the following:
  * @code
@@ -434,7 +434,7 @@ bool check_dimensions( int ncid, int *dimsIDs, const Topology& g, std::vector<st
  * @return False if any dimension with given name does not exist, if no errors are thrown True
  * @sa check_dimension check_real_time
  */
-template<class Topology, std::enable_if_t<dg::is_shared_grid<Topology>::value, bool > = true>
+template<class Topology, std::enable_if_t<dg::is_vector_v<typename Topology::host_vector, dg::SharedVectorTag>,bool > = true>
 bool check_dimensions( int ncid, int *dimsIDs, int* tvarID, const Topology& g, std::vector<std::string> name_dims = {})
 {
     auto default_names = detail::dim_names(g);
@@ -484,8 +484,8 @@ inline int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, con
 
 
 #ifdef MPI_VERSION
-/// All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
-template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
+/// DEPRECATED All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+template<class MPITopology, std::enable_if_t<dg::is_vector_v<typename MPITopology::host_vector, dg::MPIVectorTag>,bool > = true>
 inline int define_dimensions( int ncid, int* dimsIDs, const MPITopology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     int rank;
@@ -494,8 +494,8 @@ inline int define_dimensions( int ncid, int* dimsIDs, const MPITopology& g, std:
     else
         return NC_NOERR;
 }
-/// All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
-template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
+/// DEPRECATED All processes may call this but only master process has to and will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+template<class MPITopology, std::enable_if_t<dg::is_vector_v<typename MPITopology::host_vector, dg::MPIVectorTag>,bool > = true>
 inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const MPITopology& g, std::vector<std::string> name_dims = {}, bool full_check = false)
 {
     int rank;
@@ -504,17 +504,15 @@ inline int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const MPITopo
     else
         return NC_NOERR;
 }
-/// All processes may call this and all will execute!! Convenience function that just calls the corresponding serial version with the global grid.
-///@copydoc hide_parallel_read
-template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
+/// DEPRECATED All processes may call this and all will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+template<class MPITopology, std::enable_if_t<dg::is_vector_v<typename MPITopology::host_vector, dg::MPIVectorTag>,bool > = true>
 inline bool check_dimensions( int ncid, int* dimsIDs, const MPITopology& g, std::vector<std::string> name_dims = {})
 {
     // all processes can read NetCDF in parallel by default
     return check_dimensions( ncid, dimsIDs, g.global(), name_dims);
 }
-/// All processes may call this and all will execute!! Convenience function that just calls the corresponding serial version with the global grid.
-///@copydoc hide_parallel_read
-template<class MPITopology, typename = std::enable_if_t<dg::is_mpi_grid<MPITopology>::value >>
+/// DEPRECATED All processes may call this and all will execute!! Convenience function that just calls the corresponding serial version with the global grid.
+template<class MPITopology, std::enable_if_t<dg::is_vector_v<typename MPITopology::host_vector, dg::MPIVectorTag>,bool > = true>
 inline bool check_dimensions( int ncid, int* dimsIDs, int* tvarID, const MPITopology& g, std::vector<std::string> name_dims = {})
 {
     // all processes can read NetCDF in parallel by default
