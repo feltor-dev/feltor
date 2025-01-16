@@ -792,6 +792,24 @@ struct SerialNcFile
                 thrust::raw_pointer_cast(data.data()));
     }
 
+    /*! @brief Define and put a variable in one go
+     *
+     * Short for
+     *@code{.cpp}
+     *   def_var_as<dg::get_value_type<ContainerType>>( name, dim_names, atts);
+     *   put_var( name, slab, data);
+     *@endcode
+     */
+    template<class ContainerType, class Attributes = std::map<std::string, nc_att_t>,
+        std::enable_if_t< dg::is_vector_v<ContainerType, SharedVectorTag>, bool > = true>
+    void defput_var( std::string name, const std::vector<std::string>& dim_names,
+            const Attributes& atts, const NcHyperslab& slab,
+            const ContainerType& data)
+    {
+        def_var_as<dg::get_value_type<ContainerType>>( name, dim_names, atts);
+        put_var( name, slab, data);
+    }
+
     /*! @brief Write a single data point
      * @param name Name of the variable to write data to. Must be visible in
      * the current group

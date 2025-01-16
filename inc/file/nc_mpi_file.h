@@ -372,6 +372,19 @@ struct MPINcFile
             detail::put_vara_detail( grpid, varid, slab, data_ref, receive, m_comm);
     }
 
+    ///@copydoc SerialNcFile::defput_var
+    template<class ContainerType, class Attributes = std::map<std::string, nc_att_t>,
+        typename = std::enable_if_t<
+        dg::is_vector_v<ContainerType, dg::SharedVectorTag> or
+        dg::is_vector_v<ContainerType, dg::MPIVectorTag>>>
+    void defput_var( std::string name, const std::vector<std::string>& dim_names,
+            const Attributes& atts, const MPINcHyperslab& slab,
+            const ContainerType& data)
+    {
+        def_var_as<dg::get_value_type<ContainerType>>( name, dim_names, atts);
+        put_var( name, slab, data);
+    }
+
     ///@copydoc SerialNcFile::put_var(std::string,const std::vector<size_t>&,T)
     /// @note In MPI only the rank 0 writes data
     template<class T, typename = std::enable_if_t<dg::is_scalar_v<T>>>

@@ -88,9 +88,9 @@ struct Probes
         file.template defput_dim_as<double>( "ptime", NC_UNLIMITED, {{"axis" , "T"}});
         for( unsigned i=0; i<params.coords.size(); i++)
         {
-            file.template def_var_as<double>( params.coords_names[i], {"pdim"}, {});
             auto probes_vec = create_probes_vec( params.coords[0], grid);
-            file.put_var( params.coords_names[i], {probes_vec}, probes_vec);
+            file.defput_var( params.coords_names[i], {"pdim"}, {},
+                {probes_vec}, probes_vec);
         }
         file.set_grp("..");
     }
@@ -132,10 +132,8 @@ struct Probes
             dg::assign( result, m_resultH);
             dg::blas2::symv( m_probe_interpolate, m_resultH, m_simple_probes);
 
-            m_file->template def_var_as<dg::get_value_type<Result>>(
-                record.name, {"pdim"});
-            m_file->put_atts( record.name, record.atts);
-            m_file->put_var( record.name, {m_simple_probes}, m_simple_probes);
+            m_file->defput_var( record.name, {"pdim"}, record.atts,
+                {m_simple_probes}, m_simple_probes);
         }
         m_file->set_grp("..");
     }
