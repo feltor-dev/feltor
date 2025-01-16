@@ -8,6 +8,7 @@
 #include "nc_mpi_file.h"
 #endif
 #include "nc_file.h"
+#include "records.h"
 
 #include "dg/algorithm.h"
 
@@ -18,13 +19,8 @@ double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
 
 /// [doxygen]
-struct Record
-{
-    std::string name;
-    std::string long_name;
-    std::function<void( dg::x::DVec&, const dg::x::Grid3d&, double)> function;
-};
-std::vector<Record> records = {
+std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid3d&,double),
+    dg::file::LongNameAttribute>> records = {
     {"vectorX", "X-component of vector",
         [] ( dg::x::DVec& resultD, const dg::x::Grid3d& g, double time){
             resultD = dg::evaluate( gradientX, g);
@@ -78,6 +74,10 @@ int main(int argc, char* argv[])
     );
     //create NetCDF File
     dg::file::NcFile file( filename, dg::file::nc_clobber);
+
+    file.put_att( ".", {"title", "NetCDF test file"});
+    file.put_att( ".", {"history", dg::file::timestamp(argc, argv)});
+    file.put_atts( ".", dg::file::version_flags);
     file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
     // It is possible to write to any index in an unlimited variable
     file.put_var("time", {5}, Tmax);
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
     file.def_var_as<double>( "Energy", {"time"}, {{"long_name", "Energy"}});
     for( auto& record : records)
         file.def_var_as<double>( record.name, {"time", "z", "y", "x"},
-            {{"long_name", record.long_name}});
+            record.atts);
     file.def_grp( "projected");
     file.set_grp( "projected");
     auto grid_out = grid;
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
     file.defput_dim_as<double>( "ptime", NC_UNLIMITED, {{"axis", "T"}});
     for( auto& record : records)
         file.def_var_as<double>( record.name, {"ptime", "zr", "yr", "xr"},
-            {{"long_name", record.long_name}});
+            record.atts);
     file.set_grp("..");
     dg::MultiMatrix<dg::x::DMatrix, dg::x::DVec> project =
         dg::create::fast_projection( grid, 1, 2, 2);
@@ -142,47 +142,62 @@ int main(int argc, char* argv[])
     DG_RANK0 std::cout << "\n\n";
 
     // open and read back in
-    file.open( filename, dg::file::nc_nowrite);
-    auto variables = file.get_vars_r();
-    for ( auto name : variables["/"])
+    for( auto mode : {dg::file::nc_nowrite, dg::file::nc_write})
     {
-        if ( file.get_var_dims( name) == std::vector<std::string>{"time"})
-            DG_RANK0 std::cout << "Found 0d name "<<name<<"\n";
-        if ( file.get_var_dims( name) == std::vector<std::string>{"time", "z", "y", "x"})
-            DG_RANK0 std::cout << "Found 3d name "<<name<<"\n";
-    }
-    for ( auto name : variables["/projected"])
-        DG_RANK0 std::cout << "Found Projected 3d name "<<name<<"\n";
-
-    unsigned num_slices = file.get_dim_size("time");
-    assert(num_slices == NT+1);
-    DG_RANK0 std::cout << "Found "<<num_slices<<" timesteps in file\n";
-    // Test that dimension is indeed what we expect
-    auto abscissas = grid.abscissas(0), test( abscissas);
-    file.get_var( "x", {grid.axis(0)}, test);
-    dg::blas1::axpby( 1., abscissas, -1., test);
-    assert( dg::blas1::dot( test, test) == 0);
-
-    auto data = dg::evaluate( function, grid);
-    auto dataP = dg::evaluate( function, grid_out);
-    for(unsigned i=0; i<num_slices; i++)
-    {
-        DG_RANK0 std::cout<<"Read timestep "<<i<<"\n";
-        double time, energy;
-        file.get_var("time", {i}, time);
-        file.get_var("Energy", {i}, energy);
-        DG_RANK0 std::cout << "Time "<<time<<" Energy "<<energy<<"\t";
-        file.get_var( "vectorX", {i, grid}, data);
-        file.set_grp("projected");
-        file.get_var( "vectorX", {i, 1, grid_out}, dataP);
-        file.set_grp("..");
-#ifdef MPI_VERSION
-        DG_RANK0 std::cout << "data "<<data.data()[0]<<" dataP "<<dataP.data()[0]<<"\n";
+        std::cout << "TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n";
+        file.open( filename, mode);
+        // This is how to fully check a dimension
+        assert( file.dim_is_defined( "x"));
+        assert( file.var_is_defined( "x"));
+        assert( file.get_dim_size( "x") == grid.shape(0));
+        dg::x::HVec absx = grid.abscissas(0);
+        file.get_var( "x", {absx}, absx);
+#ifdef WITH_MPI
+        assert( absx.data() == grid.abscissas(0).data());
 #else
-        std::cout << "data "<<data[0]<<" dataP "<<dataP[0]<<"\n";
+        assert( absx == grid.abscissas(0));
 #endif
+        auto variables = file.get_vars_r();
+        for ( auto name : variables["/"])
+        {
+            if ( file.get_var_dims( name) == std::vector<std::string>{"time"})
+                DG_RANK0 std::cout << "Found 0d name "<<name<<"\n";
+            if ( file.get_var_dims( name) == std::vector<std::string>{"time", "z", "y", "x"})
+                DG_RANK0 std::cout << "Found 3d name "<<name<<"\n";
+        }
+        for ( auto name : variables["/projected"])
+            DG_RANK0 std::cout << "Found Projected 3d name "<<name<<"\n";
+
+        unsigned num_slices = file.get_dim_size("time");
+        assert(num_slices == NT+1);
+        DG_RANK0 std::cout << "Found "<<num_slices<<" timesteps in file\n";
+        // Test that dimension is indeed what we expect
+        auto abscissas = grid.abscissas(0), test( abscissas);
+        file.get_var( "x", {grid.axis(0)}, test);
+        dg::blas1::axpby( 1., abscissas, -1., test);
+        assert( dg::blas1::dot( test, test) == 0);
+
+        auto data = dg::evaluate( function, grid);
+        auto dataP = dg::evaluate( function, grid_out);
+        for(unsigned i=0; i<num_slices; i++)
+        {
+            DG_RANK0 std::cout<<"Read timestep "<<i<<"\n";
+            double time, energy;
+            file.get_var("time", {i}, time);
+            file.get_var("Energy", {i}, energy);
+            DG_RANK0 std::cout << "Time "<<time<<" Energy "<<energy<<"\t";
+            file.get_var( "vectorX", {i, grid}, data);
+            file.set_grp("projected");
+            file.get_var( "vectorX", {i, 1, grid_out}, dataP);
+            file.set_grp("..");
+#ifdef MPI_VERSION
+            DG_RANK0 std::cout << "data "<<data.data()[0]<<" dataP "<<dataP.data()[0]<<"\n";
+#else
+            std::cout << "data "<<data[0]<<" dataP "<<dataP[0]<<"\n";
+#endif
+        }
+        file.close();
     }
-    file.close();
 
 #ifdef WITH_MPI
     MPI_Finalize();

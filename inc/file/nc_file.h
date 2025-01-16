@@ -625,22 +625,15 @@ struct SerialNcFile
      * 1b for false)
      * @param atts An iterable containing all the attributes for the variable
      * or file. \c atts can be empty in which case no attribute is written.
-     * @tparam Iterable Can be e.g. <tt> std::vector<std::pair...>, std::map
-     * </tt> , etc.
+     * @tparam Attributes Any \c Iterable whose values can be used in \c put_att
+     * i.e. either a \c std::pair or \c std::tuple
      * @copydoc hide_attributes_overwrite
      */
-    template<class Iterable> // *it must be usable in put_att
-    void put_atts( std::string id, const Iterable& atts)
+    template<class Attributes = std::map<std::string, nc_att_t> > // *it must be usable in put_att
+    void put_atts( std::string id, const Attributes& atts)
     {
         int varid = name2varid( id, "Can't set attributes in a closed file!");
         dg::file::detail::put_atts( m_grp, varid, atts);
-    }
-    /// Short for <tt> put_atts<std::map<std::string, nc_att_t>( id, atts); </tt>
-    void put_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
-    {
-        if( atts.empty())
-            return;
-        put_atts<std::map<std::string, nc_att_t>>( id, atts);
     }
 
     // ///////////////// Attribute getters
@@ -733,10 +726,10 @@ struct SerialNcFile
      * @tparam T set the type of the variable
      * @param atts Attributes to put for the variable
      */
-    template<class T>
+    template<class T, class Attributes = std::map<std::string, nc_att_t>>
     void def_var_as( std::string name,
         const std::vector<std::string>& dim_names,
-        const std::map<std::string, nc_att_t>& atts = {})
+        const Attributes& atts = {})
     {
         def_var( name, detail::getNCDataType<T>(), dim_names);
     }
@@ -751,9 +744,10 @@ struct SerialNcFile
      * @param atts Attributes to put for the variable
      * @note This function overload is useful if you want to use a compound type
      */
+    template<class Attributes = std::map<std::string, nc_att_t>>
     void def_var( std::string name, nc_type xtype,
             const std::vector<std::string>& dim_names,
-            const std::map<std::string, nc_att_t>& atts = {})
+            const Attributes& atts = {})
     {
         file::NC_Error_Handle err;
         std::vector<int> dimids( dim_names.size());
@@ -836,9 +830,8 @@ struct SerialNcFile
      * @copydoc hide_unlimited_issue
      * @copydoc hide_dimension_hiding
      */
-    template<class T>
-    void defput_dim_as( std::string name, size_t size,
-            const std::map<std::string, nc_att_t>& atts)
+    template<class T, class Attributes = std::map<std::string, nc_att_t>>
+    void defput_dim_as( std::string name, size_t size, const Attributes& atts)
     {
         def_dim( name, size);
         def_var_as<T>( name, {name}, atts);
@@ -863,9 +856,9 @@ struct SerialNcFile
      * @endcode
      * @copydoc hide_container_type
      */
-    template<class ContainerType>
+    template<class ContainerType, class Attributes = std::map<std::string, nc_att_t>>
     void defput_dim( std::string name,
-            const std::map<std::string, nc_att_t>& atts,
+            const Attributes& atts,
             const ContainerType& abscissas)
     {
         def_dim( name, abscissas.size());
@@ -888,6 +881,9 @@ struct SerialNcFile
     {
         int varid = name2varid( name, "Can't write variable in a closed file!");
         file::NC_Error_Handle err;
+        int ndims;
+        err = nc_inq_varndims( m_grp, varid, &ndims);
+        assert( (unsigned)ndims == slab.ndim());
         if constexpr ( dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
             using value_type = dg::get_value_type<ContainerType>;
@@ -1061,16 +1057,16 @@ struct SerialNcFile
     }
 
     bool m_open = false;
-    int m_ncid = 0; // ncid can be different by opening the same file twice
-    int m_grp = 0; // the currently active group (All group ids in open files
-                   // are unique and thus group ids can be different by opening
-                   // the same file twice), dims can be seen by all child
-                   // groups
+    int m_ncid = 0; // ncid can change by closing and re-opening a file
+    int m_grp = 0; // the currently active group (All group ids in all open
+                   // files are unique and thus group ids can be different by
+                   // opening the same file twice), dims can be seen by all
+                   // child groups
 
     // Buffer for device to host transfer, and dg::assign
     mutable dg::detail::AnyVector<thrust::host_vector> m_buffer;
-    // Variable tracker (persists on closing and opening a different file)
-    // The problem with trying to track is
+    // ABANDONED: Variable tracker (persists on closing and opening a different
+    // file) The problem with trying to track is
     // 1) do we track every file that is opened?
     // 2) we cannot prevent someone from opening closing a file here and simply
     // opening the same file somewhere else. The info is lost or corrupted then

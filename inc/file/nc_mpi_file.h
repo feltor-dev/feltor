@@ -258,8 +258,8 @@ struct MPINcFile
             m_file.put_att( id, att);
     }
     ///@copydoc SerialNcFile::put_atts(std::string,const Iterable&)
-    template<class Iterable>
-    void put_atts( std::string id, const Iterable& atts)
+    template<class Attributes = std::map<std::string, nc_att_t> > // *it must be usable in put_att
+    void put_atts( std::string id, const Attributes& atts)
     {
         if( m_rank0)
             m_file.put_atts( id, atts);
@@ -319,18 +319,19 @@ struct MPINcFile
 
     // //////////// Variables ////////////////////////
     ///@copydoc SerialNcFile::def_var_as
-    template<class T>
+    template<class T, class Attributes = std::map<std::string, nc_att_t>>
     void def_var_as( std::string name,
         const std::vector<std::string>& dim_names,
-        const std::map<std::string, nc_att_t>& atts = {})
+        const Attributes& atts = {})
     {
         if( m_rank0)
             m_file.def_var_as<T>( name, dim_names, atts);
     }
     ///@copydoc SerialNcFile::def_var
+    template<class Attributes = std::map<std::string, nc_att_t>>
     void def_var( std::string name, nc_type xtype,
             const std::vector<std::string>& dim_names,
-            const std::map<std::string, nc_att_t>& atts = {})
+            const Attributes& atts = {})
     {
         if( m_rank0)
             m_file.def_var( name, xtype, dim_names, atts);
@@ -381,9 +382,8 @@ struct MPINcFile
     }
 
     ///@copydoc SerialNcFile::defput_dim_as
-    template<class T>
-    void defput_dim_as( std::string name, size_t size,
-            const std::map<std::string, nc_att_t>& atts)
+    template<class T, class Attributes = std::map<std::string, nc_att_t>>
+    void defput_dim_as( std::string name, size_t size, const Attributes& atts)
     {
         if( m_rank0)
             m_file.defput_dim_as<T>( name, size, atts);
@@ -393,9 +393,9 @@ struct MPINcFile
      * @note We use \c MPI_Reduce with \c abscissas.size() and \c
      * abscissas.communicator() to get the size of the dimension in MPI.
      */
-    template<class ContainerType>
+    template<class ContainerType, class Attributes = std::map<std::string, nc_att_t>>
     void defput_dim( std::string name,
-            std::map<std::string, nc_att_t> atts,
+            const Attributes& atts,
             const MPI_Vector<ContainerType>& abscissas)  // implicitly assume ordered by rank
     {
         unsigned size = abscissas.size(), global_size = 0;
@@ -416,10 +416,16 @@ struct MPINcFile
     void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
     {
-        file::NC_Error_Handle err;
         int grpid = 0, varid = 0;
         grpid = m_file.get_grpid();
-        err = nc_inq_varid( grpid, name.c_str(), &varid);
+        file::NC_Error_Handle err;
+        if( m_readonly or m_rank0)
+        {
+            err = nc_inq_varid( grpid, name.c_str(), &varid);
+            int ndims;
+            err = nc_inq_varndims( grpid, varid, &ndims);
+            assert( (unsigned)ndims == slab.ndim());
+        }
 
         using value_type = dg::get_value_type<ContainerType>;
         auto& receive = m_receive.template get<value_type>( );
