@@ -9,48 +9,22 @@
 
 #include "probes_params.h"
 #include "nc_file.h"
+#include "records.h"
 
 namespace dg
 {
 namespace file
 {
-
-///@cond
-namespace detail
-{
-
-template<class Signature>
-struct get_first_argument_type;
-
-template<class R, class Arg1, class ...A>
-struct get_first_argument_type<R(Arg1, A...)>
-{
-    using type = Arg1;
-};
-}//namespace detail
-///@endcond
-/// If <tt> Signature = R(Arg1, A...)</tt> return \c Arg1
-template<class Signature>
-using get_first_argument_type_t = std::decay_t<typename detail::get_first_argument_type<Signature>::type>;
-
-/// If <tt> Signature = R(Arg1, A...)</tt> return \c R
-template<class Signature>
-using get_result_type_t = typename std::function<Signature>::result_type;
 /**
- * @brief A realisation of the %Record concept. Helper to generate NetCDF variables.
- *
- * Supposed to be used in connection with a Records writer like \c WriteRecordList
- * @snippet netcdf_t.cpp doxygen
-   @tparam SignatureType Signature of the callable function
+ * @class hide_tparam_listclass
+ * @tparam ListClass
+ * A Type whose <tt> ListClass::value_type </tt> equals a %Record class (e.g. \c dg::file::Record)
+ * The Signature <tt> ListClass::value_type::Signature </tt> must have either \c void as return type
+ * or a primitive type. The latter indicates a scalar output and must coincide
+ * with <tt> Topology::ndim() == 0</tt>. If the return type is void then the
+ * **first argument type** must be a Vector type constructible from \c
+ * Topology::host_vector e.g. a \c dg::DVec.
  */
-template<class SignatureType>
-struct Record
-{
-    using Signature = SignatureType; //!< Signature of the \c function
-    std::string name; //!< Name of the variable to create
-    std::map<std::string, nc_att_t> atts; //!< Attributes of the variable
-    std::function<Signature> function; //!< The function to call that generates data for the variable
-};
 
 /**
  * @brief Facilitate output at selected points
@@ -123,7 +97,7 @@ struct Probes
 
     /*! @brief Directly write results of a list of callback functions to file
      *
-     * Each item in the list consists of a name, a long name and a callback function that
+     * Each item in the list consists of a name, attributes and a callback function that
      * is called with \c result as first argument and the given list of Params as additional arguments.
      * @code
         for ( auto& record : records)
@@ -175,6 +149,7 @@ struct Probes
      * device vector
      * @note No data is written to file and the netcdf file does not need to be open.
      * @note If \c param.probes was \c false in the constructor this function returns immediately
+     * @copydoc hide_tparam_listclass
      */
     template<class ListClass, class ...Params>
     void buffer( double time, const ListClass& probe_list, Params&& ... ps)

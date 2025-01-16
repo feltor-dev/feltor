@@ -29,13 +29,14 @@ std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid2d&,double)>> re
     }
 };
 
-std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&)>> records_static_list = {
-    {"Sine", {{"long_name", "A Sine function"}},
+std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&),
+    dg::file::LongNameAttribute>> records_static_list = {
+    {"Sine", "A Sine function",
         [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
             resultH = dg::evaluate( function, g);
         }
     },
-    {"Cosine", {{"long_name", "A Cosine function"}},
+    {"Cosine", "A Cosine function",
         [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
             resultH = dg::evaluate( cosine, g);
         }
