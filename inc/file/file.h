@@ -6,8 +6,6 @@
 
 #include "json_utilities.h"
 #include "nc_utilities.h"
-#include "writer.h"
-#include "reader.h"
 #include "probes.h"
 
 /*!@file

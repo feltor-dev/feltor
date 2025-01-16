@@ -151,9 +151,9 @@ void get_vara_detail(int ncid, int varid, unsigned slice,
         const MPITopology& grid, MPI_Vector<host_vector>& data,
         bool vara, bool parallel = false)
 {
-    MPINcHyperslab slab( grid, true);
+    MPINcHyperslab slab( grid);
     if( vara)
-        slab = MPINcHyperslab( slice, grid, true);
+        slab = MPINcHyperslab( slice, grid);
     if( parallel)
     {
         file::NC_Error_Handle err;
@@ -224,7 +224,7 @@ void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
     host_vector& data, bool parallel = true)
 {
     file::NC_Error_Handle err;
-    NcHyperslab slab( slice, grid, true);
+    NcHyperslab slab( slice, grid);
     err = detail::get_vara_T( ncid, varid, slab.startp(), slab.countp(),
             data.data());
 }

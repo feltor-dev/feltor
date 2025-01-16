@@ -10,6 +10,8 @@ INCLUDE+= -I../    # other project libraries
 TARGETS=easy_dims_t easy_dims_mpit\
 easy_output_t easy_output_mpit\
 easy_input_t easy_input_mpit\
+easy_atts_t easy_atts_mpit\
+nc_file_t nc_file_mpit\
 netcdf_t netcdf_mpit\
 probes_parser_t probes_parser_mpit\
 probes_t probes_mpit\
