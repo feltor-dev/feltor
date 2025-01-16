@@ -59,19 +59,13 @@ int main(int argc, char**argv)
     //std::cout << "Construction took "<<t.diff()<<"s\n";
     std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
     ///////////////////////////////////////////////////////////////////////////
-    int ncid;
-    dg::file::NC_Error_Handle ncerr;
-    ncerr = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::geo::CurvilinearGridX2d> writer( ncid, g2d, {"y", "x"});
+    dg::file::NcFile file( "testX.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g2d.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g2d.abscissas(1));
 
-    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.size(); i++)
-    {
-        X[i] = g2d.map()[0][i];
-        Y[i] = g2d.map()[1][i];
-    }
-    writer.def_and_put( "xc", {}, X);
-    writer.def_and_put( "yc", {}, Y);
+    file.defput_var( "xc", {"y", "x"}, {}, {g2d.grid()}, g2d.map()[0]);
+    file.defput_var( "yc", {"y", "x"}, {}, {g2d.grid()}, g2d.map()[1]);
+
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
     ////////////////////////blob solution////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
@@ -128,17 +122,11 @@ int main(int argc, char**argv)
     std::cout << hyX << "\t";
     std::cout<<t.diff()/(double)number<<"s"<<std::endl;
 
-    dg::assign( error, X);
-    writer.def_and_put( "error", {}, X);
-
-    dg::assign( x, X);
-    writer.def_and_put( "num_solution", {}, X);
-    dg::assign( solution, Y);
-    //dg::blas1::axpby( 1., X., -1, Y);
-    writer.def_and_put( "ana_solution", {}, Y);
-    dg::assign( chi, X);
-    writer.def_and_put( "chi", {}, X);
-    ncerr = nc_close( ncid);
+    file.defput_var( "error", {"y", "x"}, {}, {g2d.grid()}, error);
+    file.defput_var( "num_solution", {"y", "x"}, {}, {g2d.grid()}, x);
+    file.defput_var( "ana_solution", {"y", "x"}, {}, {g2d.grid()}, solution);
+    file.defput_var( "chi", {"y", "x"}, {}, {g2d.grid()}, chi);
+    file.close();
 
 
     return 0;

@@ -37,12 +37,11 @@ int main(int argc, char**argv)
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
-    int ncid;
-    dg::file::NC_Error_Handle ncerr;
-    ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::aGeometry2d> writer( ncid, *g2d, {"y", "x"});
-    writer.def_and_put( "xc", {}, g2d->map()[0]);
-    writer.def_and_put( "yc", {}, g2d->map()[1]);
+    dg::file::NcFile file( "testE.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g2d->abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g2d->abscissas(1));
+    file.defput_var( "xc", {"y", "x"}, {}, {*g2d}, g2d->map()[0]);
+    file.defput_var( "yc", {"y", "x"}, {}, {*g2d}, g2d->map()[1]);
 
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x = dg::evaluate( dg::zero, *g2d);
@@ -85,10 +84,10 @@ int main(int argc, char**argv)
     double result = dg::blas2::dot( x, vol3d, x);
     std::cout << "               distance to solution "<<sqrt( result)<<std::endl; //don't forget sqrt when comuting errors
 
-    writer.def_and_put( "error", {}, (dg::HVec)error);
-    writer.def_and_put( "num_solution", {}, (dg::HVec)x);
-    writer.def_and_put( "ana_solution", {}, (dg::HVec)solution);
-    ncerr = nc_close( ncid);
+    file.defput_var( "error", {"y", "x"}, {}, {*g2d}, error);
+    file.defput_var( "num_solution", {"y", "x"}, {}, {*g2d}, x);
+    file.defput_var( "ana_solution", {"y", "x"}, {}, {*g2d}, solution);
+    file.close();
 
 
     return 0;

@@ -183,11 +183,9 @@ int main( int argc, char* argv[])
     std::cout << "Construction successful!\n";
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     //////////////////////////////setup and write netcdf//////////////////
-    int ncid;
-    dg::file::NC_Error_Handle err;
-    std::string outfile = argc<3 ? "flux.nc" : argv[2];
-    err = nc_create( outfile.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::Grid2d> writer( ncid, g2d_periodic, {"y", "x"});
+    dg::file::NcFile file( argc < 3 ?"flux.nc" : argv[2], dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g2d_periodic.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g2d_periodic.abscissas(1));
 
     dg::SparseTensor<dg::HVec > metric = g2d->metric();
     std::map< std::string, std::function< void( dg::HVec&, const
@@ -275,9 +273,10 @@ int main( int argc, char* argv[])
     for( auto pair : output)
     {
         pair.second( temp, *g2d, mag);
-        writer.def_and_put( pair.first, {}, periodify( temp, g2d_periodic));
+        file.def_var_as<double>( pair.first, {"y", "x"});
+        file.put_var( pair.first, {g2d_periodic}, periodify( temp, g2d_periodic));
     }
-    err = nc_close( ncid);
+    file.close();
     ///////////////////////some further testing//////////////////////
 
     const dg::HVec vol3d = dg::create::volume( g3d);

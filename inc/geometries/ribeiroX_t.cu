@@ -97,31 +97,28 @@ int main( int argc, char* argv[])
     dg::Grid1d g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
-    int ncid;
-    dg::file::NC_Error_Handle err;
-    err = nc_create( "ribeiroX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::GridX3d> writer3d( ncid, g3d_periodic, {"z", "y", "x"});
-    dg::file::Writer<dg::Grid1d> writer1d( ncid, g1d, {"i"});
-    writer1d.def_and_put( "x_left", {}, x_left);
-    writer1d.def_and_put( "x_right", {}, x_right);
-    writer1d.def_and_put( "y_left", {}, y_left);
+    dg::file::NcFile file( "ribeiroX.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g3d_periodic.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g3d_periodic.abscissas(1));
+    file.defput_dim( "z", {{"axis", "Z"}}, g3d_periodic.abscissas(2));
+    file.defput_dim( "i", {{"axis", "X"}}, g1d.abscissas());
+    file.defput_var( "x_left", {"i"}, {}, {g1d}, x_left);
+    file.defput_var( "x_right", {"i"}, {}, {g1d}, x_right);
+    file.defput_var( "y_left", {"i"}, {}, {g1d}, y_left);
 
     thrust::host_vector<double> psi_p = dg::pullback( psip.f(), g2d);
     g2d.display();
-    writer3d.def_and_put( "psi", {}, periodify( psi_p, g3d_periodic));
-    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.size(); i++)
-    {
-        X[i] = g2d.map()[0][i];
-        Y[i] = g2d.map()[1][i];
-    }
+    file.defput_var( "psi", {"z", "y", "x"}, {}, {g3d_periodic.grid()}, periodify(
+        psi_p, g3d_periodic));
 
     dg::DVec ones = dg::evaluate( dg::one, g2d);
     dg::DVec temp0( g2d.size()), temp1(temp0);
     dg::DVec w2d = dg::create::weights( g2d);
 
-    writer3d.def_and_put( "xc", {}, periodify( X, g3d_periodic));
-    writer3d.def_and_put( "yc", {}, periodify( X, g3d_periodic));
+    file.defput_var( "xc", {"z", "y", "x"}, {}, {g3d_periodic.grid()},
+        periodify( g2d.map()[0], g3d_periodic));
+    file.defput_var( "yc", {"z", "y", "x"}, {}, {g3d_periodic.grid()},
+        periodify( g2d.map()[1], g3d_periodic));
 
     dg::SparseTensor<dg::DVec> metric = g2d.metric();
     dg::DVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
@@ -129,11 +126,8 @@ int main( int argc, char* argv[])
 
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    dg::assign( temp0, X);
-    writer3d.def_and_put( "deformation", {}, periodify( X, g3d_periodic));
-    dg::assign( vol, X);
-    dg::assign( g_yy,Y);
-    dg::blas1::pointwiseDot( Y, X, X);
+    file.defput_var( "deformation", {"z", "y", "x"}, {}, {g3d_periodic.grid()},
+        periodify( (dg::HVec)temp0, g3d_periodic));
 
     std::cout << "Construction successful!\n";
 
@@ -153,8 +147,8 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::assign( temp0, X);
-    writer3d.def_and_put( "volume", {}, periodify( X, g3d_periodic));
+    file.defput_var( "volume", {"z", "y", "x"}, {}, {g3d_periodic.grid()},
+        periodify( (dg::HVec)temp0, g3d_periodic));
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
@@ -180,7 +174,6 @@ int main( int argc, char* argv[])
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n";
-
-    err = nc_close( ncid);
+    file.close();
     return 0;
 }

@@ -59,17 +59,15 @@ int main( int argc, char* argv[])
     dg::ClonePtr<dg::aMPIGeometry2d> g2d = g3d.perp_grid();
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    int ncid;
-    dg::file::NC_Error_Handle err;
-    if(rank==0)err = nc_create( "test_mpi.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::aMPIGeometry2d> writer( ncid, *g2d, {"y", "x"});
+    dg::file::NcFile file( "test_mpi.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g2d->abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g2d->abscissas(1));
 
     dg::MHVec psi_p = dg::pullback( psip.f(), *g2d);
     //g.display();
-    writer.def_and_put( "psi", {}, psi_p);
-    dg::MHVec X = g2d->map()[0], Y = g2d->map()[1];
-    writer.def_and_put( "xc", {}, X);
-    writer.def_and_put( "yc", {}, Y);
+    file.defput_var( "psi", {"y", "x"}, {}, {*g2d}, psi_p);
+    file.defput_var( "xc", {"y", "x"}, {}, {*g2d}, g2d->map()[0]);
+    file.defput_var( "yc", {"y", "x"}, {}, {*g2d}, g2d->map()[1]);
 
     dg::MHVec temp0( dg::evaluate(dg::zero, *g2d)), temp1(temp0);
     dg::MHVec w2d = dg::create::weights( *g2d);
@@ -80,7 +78,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     const dg::MHVec ones = dg::evaluate( dg::one, *g2d);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    writer.def_and_put( "deformation", {}, temp0);
+    file.defput_var( "deformation", {"y", "x"}, {}, {*g2d}, temp0);
 
     if(rank==0)std::cout << "Construction successful!\n";
 
@@ -100,7 +98,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    writer.def_and_put( "volume", {}, temp0);
+    file.defput_var( "volume", {"y", "x"}, {}, {*g2d}, temp0);
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
     error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     if(rank==0)std::cout << "Rel Consistency  of volume is "<<error<<"\n";
@@ -132,7 +130,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     if(rank==0)std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
-    if(rank==0)err = nc_close( ncid);
+    file.close();
     MPI_Finalize();
 
 

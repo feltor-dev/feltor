@@ -794,6 +794,11 @@ struct SerialNcFile
 
     /*! @brief Define and put a variable in one go
      *
+     * Very convenient to "just write" a variable to a file:
+     * @code{.cpp}
+     * file.defput_var( "var", {"y", "x"}, {}, {g2d}, result);
+     * @endcode
+     *
      * Short for
      *@code{.cpp}
      *   def_var_as<dg::get_value_type<ContainerType>>( name, dim_names, atts);

@@ -68,19 +68,12 @@ int main(int argc, char**argv)
     std::cout << "Construction took "<<t.diff()<<"s\n";
     std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<" + "<<add_x<<" x "<<add_y<<" x "<<howmanyX<<" x "<<howmanyY<<"\n";
     ///////////////////////////////////////////////////////////////////////////
-    int ncid;
-    dg::file::NC_Error_Handle ncerr;
-    ncerr = nc_create( "testXrefined.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::geo::CurvilinearRefinedGridX2d> writer( ncid, g2d_fine, {"y", "x"});
+    dg::file::NcFile file( "testXrefined.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g2d_fine.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g2d_fine.abscissas(1));
 
-    dg::HVec X( g2d_fine.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d_fine.size(); i++)
-    {
-        X[i] = g2d_fine.map()[0][i];
-        Y[i] = g2d_fine.map()[1][i];
-    }
-    writer.def_and_put( "xc", {}, X);
-    writer.def_and_put( "yc", {}, Y);
+    file.defput_var( "xc", {"y", "x"}, {}, {g2d_fine.grid()}, g2d_fine.map()[0]);
+    file.defput_var( "yc", {"y", "x"}, {}, {g2d_fine.grid()}, g2d_fine.map()[1]);
     //////////////////blob solution////////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_coarse);
     //const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_fine);
@@ -191,14 +184,10 @@ int main(int argc, char**argv)
     std::cout << hyX << "\t";
     std::cout<<t.diff()/(double)number_di<<"s"<<std::endl;
 
-    dg::assign( error_direct, X);
-    writer.def_and_put( "error", {}, X);
-    dg::assign( x_fine_di, X);
-    writer.def_and_put( "num_solution", {}, X);
-    dg::assign( solutionFINE, Y);
-    //dg::blas1::axpby( 1., X., -1, Y);
-    writer.def_and_put( "ana_solution", {}, Y);
-    ncerr = nc_close( ncid);
+    file.defput_var( "error", {"y", "x"}, {}, {g2d_fine.grid()}, error_direct);
+    file.defput_var( "num_solution", {"y", "x"}, {}, {g2d_fine.grid()}, x_fine_di);
+    file.defput_var( "ana_solution", {"y", "x"}, {}, {g2d_fine.grid()}, solutionFINE);
+    file.close();
 
 
     return 0;

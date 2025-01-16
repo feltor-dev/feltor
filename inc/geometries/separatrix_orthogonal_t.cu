@@ -166,17 +166,18 @@ int main( int argc, char* argv[])
     X = dg::pullback( dg::geo::FuncDirNeu(mag, psi_0, psi_1, 420, -470, 50.,1.), g2d);
     map2d.emplace_back( "FuncDirNeu2", X, "FuncDirNeu");
     std::cout << "OPEN FILE orthogonalX.nc ...\n";
-    int ncid;
-    dg::file::NC_Error_Handle err;
-    err = nc_create( "orthogonalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::GridX3d> writer( ncid, g3d_periodic, {"z", "y", "x"});
+    dg::file::NcFile file( "orthogonalX.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g3d_periodic.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g3d_periodic.abscissas(1));
+    file.defput_dim( "z", {{"axis", "Z"}}, g3d_periodic.abscissas(2));
 
     for(auto tp : map2d)
     {
-        writer.def_and_put( std::get<0>(tp), dg::file::long_name( std::get<2>(tp)),
+        file.defput_var( std::get<0>(tp), {"z", "y", "x"},
+            {{"long_name", std::get<2>(tp)}}, {g3d_periodic.grid()},
             periodify( std::get<1>(tp), g3d_periodic));
     }
-    err = nc_close( ncid);
+    file.close();
     std::cout << "FILE orthogonalX.nc CLOSED AND READY TO USE NOW!\n" <<std::endl;
 
     std::cout << "TEST VOLUME IS:\n";

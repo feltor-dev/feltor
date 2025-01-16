@@ -53,12 +53,11 @@ int main(int argc, char**argv)
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
-    int ncid;
-    dg::file::NC_Error_Handle ncerr;
-    if(rank==0)ncerr = nc_create( "testE_mpi.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    dg::file::Writer<dg::aMPIGeometry2d> writer( ncid, *g2d, {"y", "x"});
-    writer.def_and_put( "xc", {}, g2d->map()[0]);
-    writer.def_and_put( "yc", {}, g2d->map()[1]);
+    dg::file::NcFile file( "testE_mpi.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g2d->abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g2d->abscissas(1));
+    file.defput_var( "xc", {"y", "x"}, {}, {*g2d}, g2d->map()[0]);
+    file.defput_var( "yc", {"y", "x"}, {}, {*g2d}, g2d->map()[1]);
     ///////////////////////////////////////////////////////////////////////////
     dg::MDVec x =    dg::evaluate( dg::zero, *g2d);
     const dg::MDVec b =    dg::pullback( dg::geo::EllipticDirPerM(mag, psi_0, psi_1, 4), *g2d);
@@ -101,15 +100,11 @@ int main(int argc, char**argv)
     double result = dg::blas2::dot( x, vol3d, x);
     if(rank==0)std::cout << "               distance to solution "<<sqrt( result)<<std::endl; //don't forget sqrt when comuting errors
 
-    dg::MHVec transfer;
-    dg::assign( error, transfer);
-    writer.def_and_put( "error", {}, transfer);
-    dg::assign( x, transfer);
-    writer.def_and_put( "num_solution", {}, transfer);
-    dg::assign( solution, transfer);
-    writer.def_and_put( "ana_solution", {}, transfer);
+    file.defput_var( "error", {"y", "x"}, {}, {*g2d}, error);
+    file.defput_var( "num_solution", {"y", "x"}, {}, {*g2d}, x);
+    file.defput_var( "ana_solution", {"y", "x"}, {}, {*g2d}, solution);
+    file.close();
 
-    if(rank==0)ncerr = nc_close( ncid);
     MPI_Finalize();
 
 
