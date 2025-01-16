@@ -40,16 +40,9 @@ int main(int argc, char* argv[])
 
     att["title"] = "Output file of feltor/src/toefl/toefl.cpp";
     att["Conventions"] = "CF-1.8";
-    ///Get local time and begin file history
-    auto ttt = std::time(nullptr);
-
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
+    att["history"] = dg::file::timestamp( argc, argv);
     att["source"] = "FELTOR";
-    att["git-hash"] = GIT_HASH;
+    att.insert( dg::file::version_flags.begin(), dg::file::version_flags.end());
     // Here we put the inputfile as a string without comments so that it can be read later by another parser
     att["inputfile"] = inputfile;
     dg::file::NC_Error_Handle err;
@@ -62,16 +55,16 @@ int main(int argc, char* argv[])
         std::visit( []( auto&& arg) { display(arg);}, at.second);
         std::cout << "\n";
     }
-    dg::file::set_atts( ncid, NC_GLOBAL, att);
+    dg::file::detail::put_atts( ncid, NC_GLOBAL, att);
     // TEST EMPTY Value
     std::map<std::string, dg::file::nc_att_t> empty;
-    dg::file::set_atts( ncid, NC_GLOBAL, empty);
+    dg::file::detail::put_atts( ncid, NC_GLOBAL, empty);
     err = nc_close(ncid);
     std::cout << "\n\nTEST BY USING ncdump -h atts.nc\n\n";
 
     std::cout << "NOW test reading of attributes\n";
     err = nc_open( "atts.nc", 0, &ncid);
-    auto read = dg::file::get_atts<dg::file::nc_att_t>( ncid, NC_GLOBAL);
+    auto read = dg::file::detail::get_atts_as<dg::file::nc_att_t>( ncid, NC_GLOBAL);
     std::cout << "Read attributes from \"atts.nc\"\n";
     for( auto& at : read)
     {
@@ -81,12 +74,14 @@ int main(int argc, char* argv[])
         assert( read[at.first] == att[at.first]);
     }
     assert( att == read);
+    std::cout << "History is\n"<<std::get<std::string>( read["history"]);
+    std::cout << "Git hash is\n"<<std::get<std::string>( read["GIT_HASH"]);
 
     err = nc_close(ncid);
     err = nc_open( "atts.nc", NC_WRITE, &ncid);
     // TEST const char text
-    dg::file::set_att( ncid, NC_GLOBAL, std::pair{ "Text" , "test"});
-    std::string test = std::get<std::string>(dg::file::get_att_t( ncid,
+    dg::file::detail::put_att( ncid, NC_GLOBAL, std::pair{ "Text" , "test"});
+    std::string test = std::get<std::string>(dg::file::detail::get_att_t( ncid,
                 NC_GLOBAL, "Text"));
     assert( test == "test");
     err = nc_close(ncid);
