@@ -68,7 +68,7 @@ namespace dg{
 #ifdef DG_CUDA_UNAWARE_MPI // TODO document in config README
 //{;
 #pragma message( "Assume CUDA-unaware MPI support as per user indication!")
-constexpr bool cuda_aware_mpi = false;
+static constexpr bool cuda_aware_mpi = false;
 //}
 #else // ! DG_CUDA_UNAWARE_MPI
 //{;
@@ -78,16 +78,16 @@ constexpr bool cuda_aware_mpi = false;
 // Open-MPI header defines MPIX_CUDA_AWARE if compiled with cuda
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
 #pragma message( "CUDA-aware MPI support detected! Yay!")
-constexpr bool cuda_aware_mpi = true;
+static constexpr bool cuda_aware_mpi = true;
 #else
 #pragma message( "No CUDA aware MPI installation! Falling back to regular MPI!")
-constexpr bool cuda_aware_mpi = false;
+static constexpr bool cuda_aware_mpi = false;
 #endif
 //}
 #else // Other than open-mpi there seems no way to determine cuda support
 //{;
 #pragma message( "We assume CUDA-aware MPI support! Compile with -DDG_CUDA_UNAWARE_MPI if we should not!")
-constexpr bool cuda_aware_mpi = true;
+static constexpr bool cuda_aware_mpi = true;
 //}
 #endif // OPEN_MPI
 //}
@@ -95,13 +95,13 @@ constexpr bool cuda_aware_mpi = true;
 //}
 #else // THRUST != CUDA
 //{;
-constexpr bool cuda_aware_mpi = false;
+static constexpr bool cuda_aware_mpi = false;
 //}
 #endif //THRUST == CUDA
 #endif //MPI_VERSION
 } // namespace dg
 
-//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
+//%%%%%%%%%%%%%%%Define DG_DEVICE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///@brief Expands to \__host__ \__device__ if compiled with nvcc else is empty
 #define DG_DEVICE
 #ifdef __CUDACC__
