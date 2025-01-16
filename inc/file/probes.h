@@ -15,6 +15,27 @@ namespace dg
 namespace file
 {
 
+///@cond
+namespace detail
+{
+
+template<class Signature>
+struct get_first_argument_type;
+
+template<class R, class Arg1, class ...A>
+struct get_first_argument_type<R(Arg1, A...)>
+{
+    using type = Arg1;
+};
+}//namespace detail
+///@endcond
+/// If <tt> Signature = R(Arg1, A...)</tt> return \c Arg1
+template<class Signature>
+using get_first_argument_type_t = std::decay_t<typename detail::get_first_argument_type<Signature>::type>;
+
+/// If <tt> Signature = R(Arg1, A...)</tt> return \c R
+template<class Signature>
+using get_result_type_t = typename std::function<Signature>::result_type;
 /**
  * @brief A realisation of the %Record concept. Helper to generate NetCDF variables.
  *
@@ -27,10 +48,9 @@ struct Record
 {
     using Signature = SignatureType; //!< Signature of the \c function
     std::string name; //!< Name of the variable to create
-    std::string long_name; //!< Attribute "long_name" of the variable
+    std::map<std::string, nc_att_t> atts; //!< Attributes of the variable
     std::function<Signature> function; //!< The function to call that generates data for the variable
 };
-    // TODO update docu with result vector
 
 /**
  * @brief Facilitate output at selected points
@@ -79,6 +99,7 @@ struct Probes
         unsigned num_pins = params.get_coords_sizes();
         // params.coords is empty on ranks other than master
 
+// TODO We could think about distributing the coords among ranks using grid.contains ...
         m_probe_interpolate = dg::create::interpolation( params.coords, grid,
             grid.get_bc(), "dg");
         // Create helper storage probe variables
@@ -108,7 +129,7 @@ struct Probes
         for ( auto& record : records)
         {
             record.name;
-            record.long_name;
+            record.atts;
             record.function( result, ps...);
         }
      * @endcode
@@ -122,11 +143,13 @@ struct Probes
      * @note If \c param.probes was \c false in the constructor this function returns immediately
      * @copydoc hide_tparam_listclass
      */
-    template<class ListClass, class Result, class ...Params>
-    void static_write( const ListClass& records, Result& result, Params&& ... ps)
+    template<class ListClass, class ...Params>
+    void static_write( const ListClass& records, Params&& ... ps)
     {
-        static_assert( dg::is_vector_v<Result>, "Result must be a vector type");
         if(!m_probes) return;
+        using Result = get_first_argument_type_t<typename ListClass::value_type::Signature>;
+        auto result = dg::construct<Result>( m_resultH);
+        static_assert( dg::is_vector_v<Result>, "Result must be a vector type");
         m_file->set_grp( m_grp);
 
         for ( auto& record : records)
@@ -137,16 +160,13 @@ struct Probes
 
             m_file->template def_var_as<dg::get_value_type<Result>>(
                 record.name, {"pdim"});
-            m_file->put_att( record.name, {"long_name", record.long_name});
+            m_file->put_atts( record.name, record.atts);
             m_file->put_var( record.name, {m_simple_probes}, m_simple_probes);
         }
         m_file->set_grp("..");
     }
 
     /*! @brief Write (time-dependent) results of a list of callback functions to internal buffer
-     *
-     * The \c probe_list must be the same as the one used in the constructor, where
-     * the corresponding variables (with one unlimited time-dimension) are created
      *
      * @param time The time value to store
      * @param probe_list the list of records to store (variables are defined in file on first write)
@@ -156,10 +176,12 @@ struct Probes
      * @note No data is written to file and the netcdf file does not need to be open.
      * @note If \c param.probes was \c false in the constructor this function returns immediately
      */
-    template<class ListClass, class Result, class ...Params>
-    void buffer( double time, const ListClass& probe_list, Result& result, Params&& ... ps)
+    template<class ListClass, class ...Params>
+    void buffer( double time, const ListClass& probe_list, Params&& ... ps)
     {
         if(!m_probes) return;
+        using Result = get_first_argument_type_t<typename ListClass::value_type::Signature>;
+        auto result = dg::construct<Result>( m_resultH);
         m_time_intern.push_back(time);
         if( m_simple_probes_intern.empty())
             init<dg::get_value_type<Result>>( probe_list);
@@ -207,10 +229,10 @@ struct Probes
         flush();
      * @endcode
      */
-    template<class ListClass, class Result, class ...Params>
-    void write( double time, const ListClass& probe_list, Result& result, Params&& ... ps)
+    template<class ListClass, class ...Params>
+    void write( double time, const ListClass& probe_list, Params&& ... ps)
     {
-        buffer( time, probe_list, result, std::forward<Params>(ps)...);
+        buffer( time, probe_list, std::forward<Params>(ps)...);
         flush();
     }
 
@@ -235,7 +257,7 @@ struct Probes
         {
             m_simple_probes_intern[record.name] = {}; // empty vectors
             m_file->template def_var_as<value_type>( record.name, {"ptime", "pdim"});
-            m_file->put_att( record.name, {"long_name", record.long_name});
+            m_file->put_atts( record.name, record.atts);
         }
         m_file->set_grp( "..");
     }

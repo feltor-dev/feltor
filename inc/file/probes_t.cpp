@@ -15,13 +15,13 @@ double gradientY(double x, double y){return sin(x)*cos(y);}
 double cosine( double x, double y){return cos(x)*cos(y);}
 
 std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid2d&,double)>> records_list = {
-    {"vectorX", "X-component of vector",
+    {"vectorX", {{"long_name", "X-component of vector"}, {"units", "rho_s"}},
         [] ( dg::x::DVec& resultD, const dg::x::Grid2d& g, double time){
             resultD = dg::evaluate( gradientX, g);
             dg::blas1::scal( resultD, cos( time));
         }
     },
-    {"vectorY", "Y-component of vector",
+    {"vectorY", {{"long_name", "Y-component of vector"}, {"units", "rho_s"}},
         [] ( dg::x::DVec& resultD, const dg::x::Grid2d& g, double time){
             resultD = dg::evaluate( gradientY, g);
             dg::blas1::scal( resultD, cos( time));
@@ -30,12 +30,12 @@ std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid2d&,double)>> re
 };
 
 std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&)>> records_static_list = {
-    {"Sine", "A Sine function",
+    {"Sine", {{"long_name", "A Sine function"}},
         [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
             resultH = dg::evaluate( function, g);
         }
     },
-    {"Cosine", "A Cosine function",
+    {"Cosine", {{"long_name", "A Cosine function"}},
         [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
             resultH = dg::evaluate( cosine, g);
         }
@@ -79,10 +79,9 @@ int main(int argc, char* argv[])
     file.defput_dim( "x", {{"axis", "X"},
         {"long_name", "x-coordinate in Cartesian system"}}, grid.abscissas(0));
 
-    dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
     dg::x::DVec resultD = dg::evaluate( dg::zero, grid);
     dg::file::Probes probes( file, grid, params);
-    probes.static_write( records_static_list, resultH, grid);
+    probes.static_write( records_static_list, grid);
 
     double Tmax=2.*M_PI;
     double NT = 10;
@@ -94,19 +93,19 @@ int main(int argc, char* argv[])
         if( i <= 3)
         {
             DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
-            probes.write( time, records_list, resultD, grid, time);
+            probes.write( time, records_list, grid, time);
         }
         else
         {
             if( i % 2)
             {
                 DG_RANK0 std::cout<<"Buffer timestep "<<i<<"\n";
-                probes.buffer( time, records_list, resultD, grid, time);
+                probes.buffer( time, records_list, grid, time);
             }
             else
             {
                 DG_RANK0 std::cout<<"Buffer & Flush timestep "<<i<<"\n";
-                probes.buffer( time, records_list, resultD, grid, time);
+                probes.buffer( time, records_list, grid, time);
                 probes.flush();
             }
         }
@@ -117,7 +116,7 @@ int main(int argc, char* argv[])
             if( i==0)
             {
                 file.def_var( record.name, NC_DOUBLE, {"time", "y", "x"});
-                file.put_att( record.name, {"long_name", record.long_name});
+                file.put_atts( record.name, record.atts);
             }
             file.put_var( record.name, {i,grid}, resultD);
         }
