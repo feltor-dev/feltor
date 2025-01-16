@@ -82,7 +82,7 @@ using is_scalar_or_same_base_category = std::conditional_t< std::is_base_of<deta
 
 //has trivial policy
 template< class T, class Tag = AnyPolicyTag>
-using has_policy = std::is_same<AnyPolicyTag, get_execution_policy<T>>;
+using has_policy = std::is_same<Tag, get_execution_policy<T>>;
 template< class T, class Tag = AnyPolicyTag>
 constexpr bool has_policy_v = has_policy<T, Tag>::value;
 

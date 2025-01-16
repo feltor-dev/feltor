@@ -10,8 +10,8 @@
 struct MyOwnScalar;
 namespace dg
 {
-    // This is necessary only for std::vector
-    // thrust::device_vector assumes a scalar by default
+// TensorTraits are necessary only for std::vector
+// thrust::device_vector assumes a scalar by default
 template<>
 struct TensorTraits<MyOwnScalar>
 {
@@ -28,49 +28,48 @@ struct TensorTraits<MyOwnScalar>
     using execution_policy  = dg::SerialTag ;
 #endif
 
+// This programs PASSES if it compiles!!
+
 int main()
 {
-    // std::vector
-    static_assert( std::is_same< dg::get_tensor_category<
+    // Test for equality of Tags:
+    { // std::vector
+    static_assert( std::is_same_v< dg::get_tensor_category<
             std::vector<std::complex<double>> >, dg::ThrustVectorTag
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_tensor_category<
+            >, " std ");
+    static_assert( std::is_same_v< dg::get_tensor_category<
             std::vector<double> >, dg::ThrustVectorTag
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_tensor_category<
+            >, " std ");
+    static_assert( std::is_same_v< dg::get_tensor_category<
             std::vector<std::vector<double>> >, dg::RecursiveVectorTag
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_tensor_category<
+            >, " std ");
+    static_assert( std::is_same_v< dg::get_tensor_category<
             std::vector<MyOwnScalar> >, dg::ThrustVectorTag
-            >::value, " std ");
+            >, " std ");
 
-    static_assert( std::is_same< dg::get_execution_policy<
-            std::vector<std::complex<double>> >, dg::SerialTag
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_execution_policy<
-            std::vector<double>>, dg::SerialTag
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_execution_policy<
-            std::vector<std::vector<double>>>, dg::SerialTag
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_execution_policy<
-            std::vector<MyOwnScalar> >, dg::SerialTag
-            >::value, " std ");
+    static_assert( dg::has_policy_v< std::vector<std::complex<double>>,
+        dg::SerialTag >, " std ");
+    static_assert( dg::has_policy_v< std::vector<double>, dg::SerialTag >,
+        " std ");
+    static_assert( dg::has_policy_v< std::vector<std::vector<double>>,
+        dg::SerialTag >, " std ");
+    static_assert( dg::has_policy_v< std::vector<MyOwnScalar>, dg::SerialTag >,
+        " std ");
 
-    static_assert( std::is_same< dg::get_value_type<
+    static_assert( std::is_same_v< dg::get_value_type<
             std::vector<std::complex<double>> >, std::complex<double>
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_value_type<
+            >, " std ");
+    static_assert( std::is_same_v< dg::get_value_type<
             std::vector<double> >, double
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_value_type<
+            >, " std ");
+    static_assert( std::is_same_v< dg::get_value_type<
             std::vector<std::vector<double>> >, double
-            >::value, " std ");
-    static_assert( std::is_same< dg::get_value_type<
+            >, " std ");
+    static_assert( std::is_same_v< dg::get_value_type<
             std::vector<MyOwnScalar> >, MyOwnScalar
-            >::value, " std ");
-
-    // thrust::device_vector
+            >, " std ");
+    }
+    { // thrust::device_vector
     static_assert( std::is_same< dg::get_tensor_category<
             thrust::device_vector<std::complex<double>> >, dg::ThrustVectorTag
             >::value, " thrust ");
@@ -81,26 +80,37 @@ int main()
             thrust::device_vector<MyOwnScalar> >, dg::ThrustVectorTag
             >::value, " thrust ");
 
-    static_assert( std::is_same< dg::get_execution_policy<
-            thrust::device_vector<std::complex<double>> >, execution_policy
-            >::value, " thrust ");
-    static_assert( std::is_same< dg::get_execution_policy<
-            thrust::device_vector<double>>, execution_policy
-            >::value, " thrust ");
-    static_assert( std::is_same< dg::get_execution_policy<
-            thrust::device_vector<MyOwnScalar>>, execution_policy
-            >::value, " thrust ");
+    static_assert( dg::has_policy_v<
+            thrust::device_vector<std::complex<double>>, execution_policy
+            >, " thrust ");
+    static_assert( dg::has_policy_v<
+            thrust::device_vector<double>, execution_policy
+            >, " thrust ");
+    static_assert( dg::has_policy_v<
+            thrust::device_vector<MyOwnScalar>, execution_policy
+            >, " thrust ");
 
-    static_assert( std::is_same< dg::get_value_type<
+    static_assert( std::is_same_v< dg::get_value_type<
             thrust::device_vector<thrust::complex<double>> >, thrust::complex<double>
-            >::value, " thrust ");
-    static_assert( std::is_same< dg::get_value_type<
+            >, " thrust ");
+    static_assert( std::is_same_v< dg::get_value_type<
             thrust::device_vector<double> >, double
-            >::value, " thrust ");
-    static_assert( std::is_same< dg::get_value_type<
+            >, " thrust ");
+    static_assert( std::is_same_v< dg::get_value_type<
             thrust::device_vector<MyOwnScalar> >, MyOwnScalar
-            >::value, " thrust ");
+            >, " thrust ");
+    }
 
+    { // Test is_scalar_v, is_vector_v, is_matrix_v, has_policy_v
+    static_assert( dg::is_scalar_v< MyOwnScalar>, "My own scalar");
+    static_assert( dg::is_vector_v< thrust::device_vector<double>,
+        dg::SharedVectorTag>, "Thrust is_vector_v");
+    static_assert( !dg::is_scalar_v< thrust::host_vector<int>>, "Not scalar");
+    static_assert( dg::has_policy_v< thrust::device_vector<double>,
+        execution_policy>, "Thrust has_policy_v");
+    static_assert( !dg::has_policy_v< std::vector<std::complex<double>>,
+        dg::CudaTag >, " std has not cuda policy");
+    }
     // ... continue
     return 0;
 }
