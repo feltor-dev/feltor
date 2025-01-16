@@ -16,7 +16,6 @@ netcdf_t netcdf_mpit\
 probes_parser_t probes_parser_mpit\
 probes_t probes_mpit\
 jsoncpp_wrapper_t jsonhpp_wrapper_t\
-jsoncpp_netcdf_t jsonhpp_netcdf_t\
 
 
 all: $(TARGETS)
