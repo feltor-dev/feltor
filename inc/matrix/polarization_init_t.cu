@@ -140,28 +140,16 @@ int main()
             std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, error)/ dg::blas2::dot( w2d, chi))<<std::endl;
         }
 //
-                    //Plot into netcdf file
-        size_t start = 0;
-        dg::file::NC_Error_Handle err;
-        int ncid;
-        err = nc_create( "visual.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-        int dim_ids[3], tvarID;
-        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid2d);
 
-        std::string names[3] = {"sol", "ana", "error"};
-        int dataIDs[3];
-        for( unsigned i=0; i<3; i++){
-        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+        //Plot into netcdf file
+        dg::file::NcFile file( "visual.nc", dg::file::nc_clobber);
+        file.defput_dim( "x", {{"axis", "X"}}, grid2d.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"}}, grid2d.abscissas(1));
 
-        dg::HVec transferH(dg::evaluate(dg::zero, grid2d));
-
-        dg::assign( x, transferH);
-        dg::file::put_vara_double( ncid, dataIDs[0], start, grid2d, transferH);
-        dg::assign( chi, transferH);
-        dg::file::put_vara_double( ncid, dataIDs[1], start, grid2d, transferH);
-        dg::assign( error, transferH);
-        dg::file::put_vara_double( ncid, dataIDs[2], start, grid2d, transferH);
-        err = nc_close(ncid);
+        file.defput_var( "sol", {"y", "x"}, {}, {grid2d}, x);
+        file.defput_var( "ana", {"y", "x"}, {}, {grid2d}, chi);
+        file.defput_var( "error", {"y", "x"}, {}, {grid2d}, error);
+        file.close();
 
 
     }

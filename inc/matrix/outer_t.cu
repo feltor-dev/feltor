@@ -18,8 +18,8 @@ int main()
     dg::HVec w2d =  dg::create::weights( g2d);
     dg::HVec w3d =  dg::create::weights( g3d);
     dg::HVec w2d_test (w2d), w3d_test(w3d);
-    dg::outer_product( w1dX, w1dY, w2d_test);
-    dg::outer_product( w1dX, w1dY, w1dZ, w3d_test);
+    dg::mat::outer_product( w1dX, w1dY, w2d_test);
+    dg::mat::outer_product( w1dX, w1dY, w1dZ, w3d_test);
     for( unsigned i=0; i<w2d.size(); i++)
         if( fabs(w2d[i] - w2d_test[i]) > 1e-15)
             std::cout << "2d TEST FAILED "<<w2d[i]<<" "<<w2d_test[i]<<"\n";

@@ -114,22 +114,13 @@ int main(int argc, char * argv[])
             "(-alpha A d )"
     };
     //Plot into netcdf file
-    size_t start = 0;
-    dg::file::NC_Error_Handle err;
-    int ncid;
-    err = nc_create( "visual11.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    int dim_ids[5], tvarID;
-    err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, g);
+    dg::file::NcFile file( "visual11.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"}}, g.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"}}, g.abscissas(1));
 
 //     std::string names[5] = {"K0","K0_prod","K0_prodadj","K0_prod_naive","K0_prodadj_naive"};
     std::string names[5] = {"K0","K0_prod","K0_prodadj","K0_app","K0_appadj"};
-    int dataIDs[5];
-    for( unsigned i=0; i<5; i++){
-        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids,
-                &dataIDs[i]);
-    }
 
-    dg::HVec transferH(dg::evaluate(dg::zero, g));
     for( unsigned k=0; k<outs_k.size(); k++)
     for( unsigned u=0; u<outs.size(); u++)
     {
@@ -253,8 +244,7 @@ int main(int argc, char * argv[])
             time = t.diff();
         }
         //write solution into file
-        dg::assign( x, transferH);
-        dg::file::put_vara_double( ncid, dataIDs[u], start, g, transferH);
+        file.defput_var( names[u], {"y", "x"}, {}, {g}, x);
         //Compute errors
         if (u==0)
         {
@@ -294,7 +284,7 @@ int main(int argc, char * argv[])
         std::cout << "    universal-time: "<<time<<"s \n";
         std::cout << "    universal-error: "<<erel  << "\n";
     }
-    err = nc_close(ncid);
+    file.close();
 
     return 0;
 }

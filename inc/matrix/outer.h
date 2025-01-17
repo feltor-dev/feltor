@@ -76,7 +76,7 @@ const thrust::host_vector<value_type>& volume,
     dg::blas1::scal( leftx.values, -1.);
     auto vol = dg::create::diagonal( volume );
     auto rightx =  dg::create::dx( g1d, bcx, dir).asCuspMatrix();
-    auto jumpx = dg::create::jump(g1d, bcx).asCuspMatrix();
+    auto jumpx = dg::create::jumpX(g1d, bcx).asCuspMatrix();
     dg::blas1::scal( jumpx.values, jfactor);
     cusp::coo_matrix<int, value_type, cusp::host_memory> A, CX, XX;
     cusp::multiply( vol, rightx, CX );
