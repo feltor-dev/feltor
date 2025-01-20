@@ -188,7 +188,7 @@ std::vector<std::tuple<std::string, dg::HVec, std::string> >
 /// ------------------- Compute 1d flux labels ---------------------//
 std::vector<std::tuple<std::string, dg::HVec, std::string> >
     compute_oneflux_labels(
-    dg::Average<dg::HVec>& poloidal_average,
+    dg::Average<dg::IHMatrix, dg::HVec>& poloidal_average,
     const dg::geo::CurvilinearGrid2d& gridX2d,
     const dg::geo::TokamakMagneticField& mod_mag,
     double psipO, double psipmax, double f0,

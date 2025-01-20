@@ -31,17 +31,15 @@ int main( int argc, char* argv[])
     std::cout << " -> "<<argv[argc-1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    dg::file::NC_Error_Handle err;
-    int ncid_in;
-    err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
-    dg::file::WrappedJsonValue jsin = dg::file::nc_attrs2json( ncid_in, NC_GLOBAL);
-    err = nc_close( ncid_in);
+    dg::file::NcFile file( argv[2], dg::file::nc_nowrite);
+
+    std::string intputfile = file.get_att_as<std::string>( ".", "inputfile");
+    file.close();
     // create output early so that netcdf failures register early
     // and simplesimdb knows that file is under construction
-    int ncid_out;
-    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
+    file.open( argv[arc-1], dg::file::nc_noclobber);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json(jsin["inputfile"].asString(), dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.toStyledString() <<  std::endl;
@@ -108,40 +106,33 @@ int main( int argc, char* argv[])
     //-----------------And 1d static output                     ----------//
 
     /// Set global attributes
-    dg::file::JsonType att;
+    std::map<std::string, dg::file::nc_att_t> att;
     att["title"] = "Output file of feltor/src/feltor/feltordiag.cpp";
     att["Conventions"] = "CF-1.7";
-    ///Get local time and begin file history
-    auto ttt = std::time(nullptr);
-    auto tm = *std::localtime(&ttt);
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
+    att["history"] = dg::file::timestamp(argc, argv);
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = jsin["inputfile"].asString();
     att["configfile"] = configfile;
-    dg::file::json2nc_attrs( att, ncid_out, NC_GLOBAL);
+    file.put_atts( ".", att);
 
-    dg::file::Writer<dg::x::Grid1d> writer_psi( ncid_out, g1d_out, {"psi"});
-    dg::file::Writer<dg::x::Grid2d> writer_X( ncid_out, {g1d_out,g1d_out_eta}, {"eta", "psi"});
+    file.defput_dim( "psi", {{"axis", "X"}}, g1d_out.abscissas());
+    file.defput_dim( "eta", {{"axis", "Y"}}, g1d_out_eta.abscissas());
     //write 1d static vectors (psi, q-profile, ...) into file
     for( auto tp : map1d)
     {
-        writer_psi.def_and_put( std::get<0>(tp), dg::file::long_name(
-            std::get<2>(tp)), std::get<1>(tp));
+        file.defput_var( std::get<0>(tp), {"psi"}, {{"long_name", std::get<2>(tp)}},
+                std::get<1>(tp));
     }
     for( auto tp : map2d)
     {
-        writer_X.def_and_put( std::get<0>(tp), dg::file::long_name(
-            std::get<2>(tp)), std::get<1>(tp));
+        file.defput_var( std::get<0>(tp), {"eta", "psi"}, {{"long_name",
+                std::get<2>(tp)}}, std::get<1>(tp));
     }
     if( p.calibrate )
     {
-        err = nc_close( ncid_out);
+        file.close();
         return 0;
     }
     //
@@ -162,13 +153,13 @@ int main( int argc, char* argv[])
     if( psipO > psipmax)
         dpsi = dg::create::dx( g1d_out, dg::forward);
     //although the first point outside LCFS is still wrong
+    file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}, {"long_name", "Time at which 2d fields are written"}});
+
     dg::file::Writer<dg::x::Grid0d> write0d( ncid_out, {}, {"time"});
     dg::file::Writer<dg::x::Grid2d> writer_g2d( ncid_out, g2d_out,
         {"time", "y", "x"});
     writer_psi = {ncid_out, g1d_out, {"time", "psi"}};
     writer_X = {ncid_out, {g1d_out,g1d_out_eta}, {"time", "eta", "psi"}};
-    //Write long description
-    write0d.def( "time", dg::file::long_name("Time at which 2d fields are written"));
 
 
     auto equation_list = feltor::generate_equation_list( js);
@@ -226,7 +217,7 @@ int main( int argc, char* argv[])
         if((diag=="ifs_norm") && (record_name[0] == 'j'))
             long_name = record.long_name + " (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)";
         if( diag == "ifs_norm" || diag == "ifs_lcfs")
-            write0d.def( name, dg::file::long_name(long_name));
+            file.def_var_as<double>( name, {"time"}, {{"long_name", long_name}});
         else if( diag == "fsa" || diag == "ifs" || diag == "std_fsa")
             writer_psi.def( name, dg::file::long_name(long_name));
         else if( diag == "cta2dX")
@@ -250,13 +241,14 @@ int main( int argc, char* argv[])
             config.get("cta-interpolation","dg").asString());
     }
     /////////////////////////////////////////////////////////////////////////
-    int ncid;
     std::cout << "Using flux-surface-average mode: "<<fsa_mode << "\n";
+    size_t stack = 0;
     for( int j=2; j<argc-1; j++)
     {
         std::cout << "Opening file "<<argv[j]<<"\n";
+        dg::file::NcFile file_in;
         try{
-            err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
+            file_in.open( argv[j], dg::file::nc_nowrite);
         } catch ( dg::file::NC_Error& error)
         {
             std::cerr << "An error occurded opening file "<<argv[j]<<"\n";
@@ -266,8 +258,8 @@ int main( int argc, char* argv[])
         }
         dg::file::Reader<dg::x::Grid0d> read0d( ncid, {},{"time"});
         dg::file::Reader<dg::x::Grid2d> read2d( ncid, g2d_out,{"time","y","x"});
-        size_t steps = read0d.size();
-        auto names = read2d.names();
+        size_t steps = file_in.get_dim_size("time");
+        auto names = file_in.names();
         //steps = 2; // for testing
         for( unsigned i=0; i<steps; i++)//timestepping
         {
@@ -485,9 +477,10 @@ int main( int argc, char* argv[])
                 }
             }
             } // equation_list
+            stack++;
         } //end timestepping
-        err = nc_close(ncid);
+        file_in.close();
     }
-    err = nc_close(ncid_out);
+    file.close();
     return 0;
 }

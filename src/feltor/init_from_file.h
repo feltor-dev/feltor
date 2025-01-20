@@ -11,7 +11,7 @@ namespace feltor
 using Feltor = feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
         dg::x::DMatrix, dg::x::DVec>;
 
-std::vector<dg::file::Record<void(dg::x::DVec&, Feltor&)>> restart3d_list = {
+std::vector<dg::file::Record<void(dg::x::DVec&, Feltor&), dg::file::LongNameAttribute>> restart3d_list = {
     {"restart_electrons", "electron density",
         []( dg::x::DVec& result, Feltor& f ) {
              dg::blas1::copy(f.restart_density(0), result);
@@ -50,12 +50,10 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     std::array<std::array<dg::x::DVec,2>,2> y0;
     ///////////////////read in and show inputfile
 
-    dg::file::NC_Error_Handle errIN;
-    int ncidIN;
-    errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
-    dg::file::WrappedJsonValue atts( dg::file::nc_attrs2json( ncidIN, NC_GLOBAL));
+    dg::file::NcFile file( file_name, dg::file::nc_nowrite);
     dg::file::WrappedJsonValue jsIN = dg::file::string2Json(
-        atts["inputfile"].asString(), dg::file::comments::are_forbidden);
+        file.get_att_as<std::string>(".", "inputfile"),
+        dg::file::comments::are_forbidden);
     feltor::Parameters pIN( jsIN);
     DG_RANK0 std::cout << "# RESTART from file "<<file_name<< std::endl;
     DG_RANK0 std::cout << "#  file parameters:" << std::endl;
@@ -76,7 +74,7 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     if( pIN.symmetric)
     {
         std::unique_ptr<dg::x::aGeometry2d> grid_perp( grid.perp_grid());
-        interpolateIN = dg::create::interpolation( grid, *grid_perp);
+        interpolateIN = dg::create::prolongation( grid, std::array{2u});
         transferIN = dg::evaluate(dg::zero, *grid_perp);
     }
     else
@@ -86,18 +84,16 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     }
     std::vector<dg::x::HVec> transferOUTvec( 5, dg::evaluate( dg::zero, grid));
 
-    dg::file::Reader<dg::x::CylindricalGrid3d> restart( ncidIN, grid, {"zr", "yr", "xr"});
-    dg::file::Reader<dg::x::Grid0d> reader0d( ncidIN, {}, {"time"});
     /////////////////////Get time length and initial data///////////////////////////
-    unsigned size_time = reader0d.size();
-    reader0d.get( "time", time, size_time-1);
+    unsigned size_time = file.get_dim_size("time");
+    file.get_var( "time", {size_time-1}, time);
     DG_RANK0 std::cout << "# Current time = "<< time <<  std::endl;
     for( unsigned i=0; i<restart3d_list.size(); i++)
     {
-        restart.get( restart3d_list[i].name, transferIN);
+        file.get_var( restart3d_list[i].name, {grid}, transferIN);
         dg::blas2::gemv( interpolateIN, transferIN, transferOUTvec[i]);
     }
-    errIN = nc_close(ncidIN);
+    file.close();
     /// ///////////////Now Construct initial fields ////////////////////////
     //
     //Convert to W

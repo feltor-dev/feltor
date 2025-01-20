@@ -8,10 +8,8 @@
 #define FELTORPERP 1
 
 #ifdef WRITE_POL_FILE
-int ncid_pol;
 int counter = 0;
-dg::file::NC_Error_Handle err_pol;
-dg::file::Writer<dg::x::CylindricalGrid3d> pol_writer;
+dg::file::NcFile file_pol;
 #endif // WRITE_POL_FILE
 
 
@@ -985,26 +983,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         counter++;
     if( counter == 10)
     {
-
-        dg::x::HVec transferH;
-        std::string names [6] = {"chi", "sol", "rhs", "ne", "Ni", "phiH"};
-        const Container* vecs [6] = {&m_multi_chi[0], &phi, &m_temp0, &density[0], &density[1], &m_old_phi.head()};
-        for ( unsigned i=0; i<6; i++)
-        {
-            dg::assign (*(vecs[i]), transferH);
-            pol_writer.def_and_put( names[i], {}, transferH);
-        }
+        typename dg::file::NcFile::Hyperslab slab( m_multigrid.grid(0));
+        pol_file.defput_var( "chi",  {"P","Z","R"}, {}, slab, m_multi_chi[0]);
+        pol_file.defput_var( "sol",  {"P","Z","R"}, {}, slab, phi);
+        pol_file.defput_var( "rhs",  {"P","Z","R"}, {}, slab, m_temp0);
+        pol_file.defput_var( "ne",   {"P","Z","R"}, {}, slab, density[0]);
+        pol_file.defput_var( "Ni",   {"P","Z","R"}, {}, slab, density[1]);
+        pol_file.defput_var( "phiH", {"P","Z","R"}, {}, slab, m_old_phi.head());
         m_old_phi.extrapolate( time, phi);
-        dg::assign ( phi, transferH);
-        pol_writer.def_and_put( "phi0", {}, transferH);
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif
-        DG_RANK0 err_pol = nc_close(ncid_pol);
-#ifdef MPI_VERSION
-        MPI_Barrier( MPI_COMM_WORLD);
-#endif
+        pol_file.defput_var( "phi0",  {"P","Z","R"}, {}, slab, phi);
+        pol_file.close();
         dg::abort_program();
     }
 #endif // WRITE_POL_FILE
