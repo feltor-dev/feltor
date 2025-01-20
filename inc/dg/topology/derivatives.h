@@ -56,6 +56,7 @@ EllSparseBlockMat<real_type> derivative( unsigned coord,
     detail::update_left_right( coord, dd, g);
     return dd;
 }
+
 /**
  * @brief Create a jump matrix along given coordinate
  *
@@ -66,7 +67,8 @@ EllSparseBlockMat<real_type> derivative( unsigned coord,
  * @return A host matrix
  */
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> jump( unsigned coord, const aRealTopology<real_type, Nd>& g, dg::bc bc)
+EllSparseBlockMat<real_type> jump( unsigned coord,
+    const aRealTopology<real_type, Nd>& g, dg::bc bc)
 {
     if( coord >= Nd)
         throw Error( Message(_ping_)<<"coord>=Nd not allowed! You typed: "<<coord<<" while Nd is "<<Nd);

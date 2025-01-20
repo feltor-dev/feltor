@@ -12,8 +12,6 @@
   @brief Creation of projection matrices
  */
 namespace dg{
-///@addtogroup interpolation
-///@{
 
 /**
  * @brief Greatest common divisor
@@ -54,6 +52,8 @@ T lcm( T a, T b)
 }
 
 namespace create{
+///@addtogroup interpolation
+///@{
 
 /**
  * @brief Create a diagonal matrix
