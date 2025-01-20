@@ -56,9 +56,9 @@ std::string timestamp( int argc, char* argv[])
  *
  * @code{.cpp}
  * std::map<std::string, std::string> version_flags = {
- *     {"GIT_HASH", GIT_HASH},
- *     {"GIT_BRANCH", GIT_BRANCH},
- *     {"COMPILE_TIME", COMPILE_TIME},
+ *     {"git_hash", GIT_HASH},
+ *     {"git_branch", GIT_BRANCH},
+ *     {"compile_time", COMPILE_TIME},
  * };
  * // Is intended to be used as NetCDF file attributes
  * file.set_atts( ".", dg::file::version_flags);
@@ -77,14 +77,16 @@ std::string timestamp( int argc, char* argv[])
  */
 static const std::map<std::string, std::string> version_flags =
 {
+    // We use underscore instead of "git-hash"  so that python netcdf can
+    // easily read it
 #ifdef GIT_HASH
-    {"GIT_HASH", GIT_HASH},
+    {"git_hash", GIT_HASH},
 #endif // GIT_HASH
 #ifdef GIT_BRANCH
-    {"GIT_BRANCH", GIT_BRANCH},
+    {"git_branch", GIT_BRANCH},
 #endif // GIT_BRANCH
 #ifdef COMPILE_TIME
-    {"COMPILE_TIME", COMPILE_TIME},
+    {"compile_time", COMPILE_TIME},
 #endif // COMPILE_TIME
 };
 

@@ -184,8 +184,11 @@ int main(int argc, char* argv[])
 #ifdef WITH_MPI
     // TODO Make mpi test
 #else
-    file.put_var("variable", {data}, data);
+    file.put_var("variable", {{0,0,0},{0,ysize,xsize}}, data);
 #endif
+    file.def_var_as<int>( "scalar", {}, {});
+    file.put_var( "scalar", {}, 42);
+    assert( file.get_var_dims("scalar").empty());
 
     file.put_att("variable", {"long_name", "blabla"});
     std::vector<int> data2(ysize, 42);
@@ -202,7 +205,7 @@ int main(int argc, char* argv[])
     file.def_var_as<double>( "variable", {"time", "x"});
     file.def_var_as<int>( "int_var", {"time", "y"});
     file.set_grp("..");
-    auto vars = file.get_vars_r();
+    auto vars = file.get_var_names_r();
     DG_RANK0 std::cout <<"ALL VARIABLES (compare to ncdump -h "<<filename<<")\n";
     for( auto& grp : vars)
     {
@@ -230,6 +233,10 @@ int main(int argc, char* argv[])
     assert( data.size() == vsize);
     assert( data[0] == 7);
 #endif
+    static_assert( dg::is_scalar_v<int>);
+    int scalar;
+    file.get_var( "scalar", {}, scalar);
+    assert( scalar == 42);
     DG_RANK0 std::cout << "PASSED Getters\n";
 
     file.close();

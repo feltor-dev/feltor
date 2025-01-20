@@ -40,6 +40,7 @@ namespace file
  */
 struct MPINcFile
 {
+    using Hyperslab = MPINcHyperslab;
     // ///////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
     /*! @brief Construct a File Handle not associated to any file
      *
@@ -493,16 +494,16 @@ struct MPINcFile
         return mpi_invoke( &SerialNcFile::get_var_dims, m_file, name);
     }
 
-    ///@copydoc SerialNcFile::get_vars
-    std::vector<std::string> get_vars() const
+    ///@copydoc SerialNcFile::get_var_names
+    std::vector<std::string> get_var_names() const
     {
-        return mpi_invoke( &SerialNcFile::get_vars, m_file);
+        return mpi_invoke( &SerialNcFile::get_var_names, m_file);
     }
 
-    ///@copydoc SerialNcFile::get_vars_r
-    auto get_vars_r() const
+    ///@copydoc SerialNcFile::get_var_names_r
+    auto get_var_names_r() const
     {
-        return mpi_invoke( &SerialNcFile::get_vars_r, m_file);
+        return mpi_invoke( &SerialNcFile::get_var_names_r, m_file);
     }
 
 

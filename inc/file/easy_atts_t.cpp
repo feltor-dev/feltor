@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     }
     assert( att == read);
     std::cout << "History is\n"<<std::get<std::string>( read["history"]);
-    std::cout << "Git hash is\n"<<std::get<std::string>( read["GIT_HASH"]);
+    std::cout << "Git hash is\n"<<std::get<std::string>( read["git_hash"]);
 
     err = nc_close(ncid);
     err = nc_open( "atts.nc", NC_WRITE, &ncid);

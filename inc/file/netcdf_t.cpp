@@ -114,6 +114,7 @@ int main(int argc, char* argv[])
     dg::x::DVec result = dg::evaluate( dg::zero, grid);
     dg::x::DVec tmp = dg::evaluate( dg::zero, grid_out);
 
+    typename dg::file::NcFile::Hyperslab slab{grid_out};
 
     for(unsigned i=0; i<=NT; i++)
     {
@@ -134,7 +135,8 @@ int main(int argc, char* argv[])
             file.put_var( record.name, {i, grid}, result);
             file.set_grp( "projected");
             dg::apply( project, result, tmp);
-            file.put_var( record.name, {i, grid_out}, tmp);
+            // Hyperslab can be constructed from hyperslab...
+            file.put_var( record.name, {i, slab}, tmp);
             file.set_grp( "..");
         }
     }
@@ -157,7 +159,7 @@ int main(int argc, char* argv[])
 #else
         assert( absx == grid.abscissas(0));
 #endif
-        auto variables = file.get_vars_r();
+        auto variables = file.get_var_names_r();
         for ( auto name : variables["/"])
         {
             if ( file.get_var_dims( name) == std::vector<std::string>{"time"})

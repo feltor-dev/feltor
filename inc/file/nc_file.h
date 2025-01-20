@@ -168,6 +168,7 @@ enum NcFileMode
 */
 struct SerialNcFile
 {
+    using Hyperslab = NcHyperslab;
     // ///////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
     /// Construct a File Handle not associated to any file
     SerialNcFile () = default;
@@ -541,6 +542,8 @@ struct SerialNcFile
         // https://github.com/Unidata/netcdf-c/issues/2873
         int ndims;
         err = nc_inq_dimids( m_grp, &ndims, NULL, include_parents);
+        if( ndims == 0)
+            return {};
         int dimids[ndims];
         err = nc_inq_dimids( m_grp, &ndims, dimids, include_parents);
         // Globally dimension ids are 0, 1, 2, ... in the order in which the
@@ -570,6 +573,8 @@ struct SerialNcFile
         int ndims;
         NC_Error_Handle err;
         err = nc_inq_unlimdims( m_grp, &ndims, NULL);
+        if( ndims == 0)
+            return {};
         int dimids[ndims];
         // Our tests indicate that this does not return the unlimited dimensions
         // of the parent group even though the documentation says so...
@@ -720,7 +725,8 @@ struct SerialNcFile
     /*! @brief Define a variable with given type, dimensions and (optionally)
      * attributes
      * @param name Name of the variable to define
-     * @param dim_names Names of visible dimensions in the current group
+     * @param dim_names Names of visible dimensions in the current group.
+     * Can be empty which makes the defined variable a scalar w/o dimensions.
      * @copydoc hide_dimension_order
      * @copydoc hide_dimension_hiding
      * @tparam T set the type of the variable
@@ -739,6 +745,7 @@ struct SerialNcFile
      * @param name Name of the variable to define
      * @param xtype NetCDF typeid
      * @param dim_names Names of visible dimensions in the current group
+     * Can be empty which makes the defined variable a scalar w/o dimensions.
      * @copydoc hide_dimension_order
      * @copydoc hide_dimension_hiding
      * @param atts Attributes to put for the variable
@@ -924,7 +931,8 @@ struct SerialNcFile
     /*! @brief Read scalar from position \c start from variable named \c name
      *
      * @param name of previously defined variable
-     * @param start coordinate to take scalar from
+     * @param start coordinate to take scalar from (can be empty for scalar
+     * variable)
      * @param data Result on output
      * into container \c data
      */
@@ -933,8 +941,16 @@ struct SerialNcFile
     {
         int varid = name2varid( name, "Can't get variable in a closed file!");
         file::NC_Error_Handle err;
-        std::vector<size_t> count( start.size(), 1);
-        err = detail::get_vara_T( m_grp, varid, &start[0], &count[0], &data);
+        int ndims;
+        err = nc_inq_varndims( m_grp, varid, &ndims);
+        assert( (unsigned)ndims == start.size());
+        if( ndims == 0)
+            err = detail::get_vara_T( m_grp, varid, NULL, NULL, &data);
+        else
+        {
+            std::vector<size_t> count( start.size(), 1);
+            err = detail::get_vara_T( m_grp, varid, &start[0], &count[0], &data);
+        }
     }
 
     /// Check if variable named \c name is defined in the current group
@@ -969,6 +985,8 @@ struct SerialNcFile
 
         int ndims;
         err = nc_inq_varndims( m_grp, varid, &ndims);
+        if( ndims == 0)
+            return {};
         int dimids[ndims];
         err = nc_inq_vardimid( m_grp, varid, dimids);
 
@@ -982,8 +1000,9 @@ struct SerialNcFile
         return dims;
     }
 
+    // TODO Retrun list or set to enable remove_if paradigm
     /// Get a list of variable names in the current group
-    std::vector<std::string> get_vars() const
+    std::vector<std::string> get_var_names() const
     {
         if( !m_open)
             throw std::runtime_error( "Can't check variables in closed file" );
@@ -993,7 +1012,7 @@ struct SerialNcFile
     /// Get a list of variable names in the current group and all subgroups
     /// @return <tt> std::map<std::filesystem::path, std::vector<std::string>> </tt>
     /// We use 'auto' as type so that the doxygen page looks neater
-    auto get_vars_r() const
+    auto get_var_names_r() const
     {
         std::map<int, std::filesystem::path> all_grps = get_grps_abs_r(m_grp);
         all_grps[m_grp] = get_current_path();

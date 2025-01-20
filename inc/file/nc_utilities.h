@@ -8,6 +8,10 @@
 #include "easy_dims.h"
 #include "easy_output.h"
 #include "easy_input.h"
+#ifdef MPI_VERSION
+#include "nc_mpi_file.h"
+#endif //MPI_VERSION
+#include "nc_file.h"
 
 /*!@file
  *
