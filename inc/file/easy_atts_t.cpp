@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ctime>
 #include <iomanip>
+#include "catch2/catch.hpp"
 
 #include "easy_atts.h"
 
@@ -19,8 +20,8 @@ void display( std::vector<T>& v)
     std::cout<< "]";
 }
 
-int main(int argc, char* argv[])
-{
+
+TEST_CASE( "Easy attributes"){
     std::string inputfile = "{\
     \"physical\": {\"value\" : 1.2,\n\
     \"another\" : \"something\"},\n\
@@ -37,6 +38,11 @@ int main(int argc, char* argv[])
     att["intarray"]   = std::vector{-11, 423};
     att["uintarray"]  = std::vector{11, 423};
     att["boolarray"]  = std::vector{true, false};
+    int argc = 1;
+    char *argv[] = {
+        (char*)"./easy_atts_t",
+        NULL
+    };
 
     att["title"] = "Output file of feltor/src/toefl/toefl.cpp";
     att["Conventions"] = "CF-1.8";
@@ -71,9 +77,9 @@ int main(int argc, char* argv[])
         std::cout << at.first <<" : ";
         std::visit( []( auto&& arg) { display(arg);}, at.second);
         std::cout << "\n";
-        assert( read[at.first] == att[at.first]);
+        REQUIRE( read[at.first] == att[at.first]);
     }
-    assert( att == read);
+    REQUIRE( att == read);
     std::cout << "History is\n"<<std::get<std::string>( read["history"]);
     std::cout << "Git hash is\n"<<std::get<std::string>( read["git_hash"]);
 
@@ -83,10 +89,7 @@ int main(int argc, char* argv[])
     dg::file::detail::put_att( ncid, NC_GLOBAL, std::pair{ "Text" , "test"});
     std::string test = std::get<std::string>(dg::file::detail::get_att_t( ncid,
                 NC_GLOBAL, "Text"));
-    assert( test == "test");
+    REQUIRE( test == "test");
     err = nc_close(ncid);
     std::cout << "\nPASSED!\n";
-
-
-    return 0;
 }

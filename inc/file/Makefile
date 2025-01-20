@@ -10,12 +10,13 @@ INCLUDE+= -I../    # other project libraries
 TARGETS=easy_dims_t easy_dims_mpit\
 easy_output_t easy_output_mpit\
 easy_input_t easy_input_mpit\
-easy_atts_t easy_atts_mpit\
 nc_file_t nc_file_mpit\
 netcdf_t netcdf_mpit\
 probes_parser_t probes_parser_mpit\
 probes_t probes_mpit\
 jsoncpp_wrapper_t jsonhpp_wrapper_t\
+#easy_atts_t easy_atts_mpit\
+#
 
 
 all: $(TARGETS)
@@ -24,7 +25,28 @@ all: $(TARGETS)
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) $(VERSION_FLAGS)
 
 %_mpit: %_t.cpp %.h
-	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) -DWITH_MPI
+	$(MPICC) $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) $(VERSION_FLAGS) -DWITH_MPI
+
+############### CATCH TESTS  - REQUIRES catch2 package #################
+%_t.o: %_t.cpp %.h
+	$(CC) -c $< $(CFLAGS) -g $(INCLUDE) $(LIBS) $(VERSION_FLAGS)
+
+%_mpit.o: %_t.cpp %.h
+	$(MPICC) -c $< -o $@ $(MPICFLAGS) -g $(INCLUDE) $(LIBS) $(VERSION_FLAGS) -DWITH_MPI
+
+catch-tests.o: catch-tests.cpp
+	$(CC) $(CFLAGS) -c $<
+
+catch-tests-mpi.o: catch-tests-mpi.cpp
+	$(MPICC) $(MPICFLAGS) -c $< -DWITH_MPI
+
+tests: catch-tests.o easy_atts_t.o
+	$(CC) -o tests catch-tests.o easy_atts_t.o $(LIBS)
+
+tests-mpi: catch-tests-mpi.o easy_atts_mpit.o
+	$(MPICC) -o tests-mpi catch-tests-mpi.o easy_atts_mpit.o $(LIBS)
+
+#######################################################################
 
 netcdf_t: netcdf_t.cpp
 	$(CC) $< -o $@ $(CFLAGS) -g $(INCLUDE) $(LIBS) $(JSONLIB)
