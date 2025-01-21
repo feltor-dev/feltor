@@ -7,7 +7,13 @@
 #include <sstream>
 
 int main( int argc, char* argv[] ) {
-    MPI_Init( &argc, &argv );
+#ifdef _OPENMP
+    int provided, error;
+    error = MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    assert( error == MPI_SUCCESS && "Threaded MPI lib required!\n");
+#else
+    MPI_Init(&argc, &argv);
+#endif
 
     std::stringstream ss;
 
