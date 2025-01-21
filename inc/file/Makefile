@@ -40,6 +40,12 @@ catch-tests.o: catch-tests.cpp
 catch-tests-mpi.o: catch-tests-mpi.cpp
 	$(MPICC) $(MPICFLAGS) -c $< -DWITH_MPI
 
+easy_atts_t: catch-tests.o easy_atts_t.o
+	$(CC) -o $@ catch-tests.o easy_atts_t.o $(LIBS)
+
+easy_atts_mpit: catch-tests-mpi.o easy_atts_mpit.o
+	$(MPICC) -o $@ catch-tests-mpi.o easy_atts_mpit.o $(LIBS)
+
 tests: catch-tests.o easy_atts_t.o
 	$(CC) -o tests catch-tests.o easy_atts_t.o $(LIBS)
 
@@ -78,4 +84,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGETS) *.o tests tests-mpi
