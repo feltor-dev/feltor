@@ -8,20 +8,23 @@
 template<class T>
 void display( const T& v)
 {
-    std::cout<< v;
+    UNSCOPED_INFO( v << "\n");
 }
 
 template<class T>
 void display( std::vector<T>& v)
 {
-    std::cout<< "[ ";
+    UNSCOPED_INFO( "[ ");
     for( unsigned u=0; u<v.size(); u++)
-        std::cout<< v[u]<<", ";
-    std::cout<< "]";
+        UNSCOPED_INFO( v[u]<<", ");
+    UNSCOPED_INFO( "]\n");
 }
 
+// Only serial testing, no MPI
 
-TEST_CASE( "Easy attributes"){
+TEST_CASE( "Easy attributes")
+{
+    INFO( "Write attributes to file and read them back in");
     std::string inputfile = "{\
     \"physical\": {\"value\" : 1.2,\n\
     \"another\" : \"something\"},\n\
@@ -54,34 +57,32 @@ TEST_CASE( "Easy attributes"){
     dg::file::NC_Error_Handle err;
     int ncid;
     err = nc_create( "atts.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
-    std::cout << "Attributes to write to \"atts.nc\"\n";
+    INFO( "Attributes to write to \"atts.nc\"\n");
     for( auto& at : att)
     {
-        std::cout << at.first <<" : ";
+        INFO( at.first <<" : ");
         std::visit( []( auto&& arg) { display(arg);}, at.second);
-        std::cout << "\n";
     }
     dg::file::detail::put_atts( ncid, NC_GLOBAL, att);
     // TEST EMPTY Value
     std::map<std::string, dg::file::nc_att_t> empty;
     dg::file::detail::put_atts( ncid, NC_GLOBAL, empty);
     err = nc_close(ncid);
-    std::cout << "\n\nTEST BY USING ncdump -h atts.nc\n\n";
+    INFO("\nTEST BY USING ncdump -h atts.nc\n");
 
-    std::cout << "NOW test reading of attributes\n";
+    INFO("NOW test reading of attributes");
     err = nc_open( "atts.nc", 0, &ncid);
     auto read = dg::file::detail::get_atts_as<dg::file::nc_att_t>( ncid, NC_GLOBAL);
-    std::cout << "Read attributes from \"atts.nc\"\n";
+    INFO("Read attributes from \"atts.nc\"\n");
     for( auto& at : read)
     {
-        std::cout << at.first <<" : ";
+        INFO( at.first <<" : ");
         std::visit( []( auto&& arg) { display(arg);}, at.second);
-        std::cout << "\n";
-        REQUIRE( read[at.first] == att[at.first]);
+        CHECK( read[at.first] == att[at.first]);
     }
-    REQUIRE( att == read);
-    std::cout << "History is\n"<<std::get<std::string>( read["history"]);
-    std::cout << "Git hash is\n"<<std::get<std::string>( read["git_hash"]);
+    CHECK( att == read);
+    INFO( "History is\n"<<std::get<std::string>( read["history"]));
+    INFO( "Git hash is\n"<<std::get<std::string>( read["git_hash"]));
 
     err = nc_close(ncid);
     err = nc_open( "atts.nc", NC_WRITE, &ncid);
@@ -89,7 +90,6 @@ TEST_CASE( "Easy attributes"){
     dg::file::detail::put_att( ncid, NC_GLOBAL, std::pair{ "Text" , "test"});
     std::string test = std::get<std::string>(dg::file::detail::get_att_t( ncid,
                 NC_GLOBAL, "Text"));
-    REQUIRE( test == "test");
+    CHECK( test == "test");
     err = nc_close(ncid);
-    std::cout << "\nPASSED!\n";
 }

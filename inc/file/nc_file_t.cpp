@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "catch2/catch.hpp"
 #ifdef WITH_MPI
 #include <mpi.h>
 #include "nc_mpi_file.h"
@@ -9,10 +10,9 @@
 #include "dg/backend/timer.h"
 
 
-int main(int argc, char* argv[])
+TEST_CASE( "Test the NcFile class")
 {
 #ifdef WITH_MPI
-    MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -27,12 +27,12 @@ int main(int argc, char* argv[])
     DG_RANK0 std::cout << "Current path is "<<current<<std::endl;
 
     dg::file::NcFile testfile( "../test.nc", dg::file::nc_clobber);
-    DG_RANK0 assert( std::filesystem::exists( "../test.nc"));
+    CHECK( std::filesystem::exists( "../test.nc"));
     DG_RANK0 std::filesystem::remove( "../test.nc");
     testfile.close();
     std::filesystem::path absolute = current / "absolute.nc";
     testfile.open( absolute, dg::file::nc_clobber);
-    DG_RANK0 assert( std::filesystem::exists( absolute));
+    CHECK( std::filesystem::exists( absolute));
     DG_RANK0 std::filesystem::remove( absolute);
     testfile.close();
     dg::file::NcFile file;
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     catch(dg::file::NC_Error & e)	{
         std::cerr << e.what();
     }
-    assert( file.is_open());
+    REQUIRE( file.is_open());
     ///////////////////////    Groups
     file.set_grp(".."); // test what happens on root
     file.def_grp("subgroup");
@@ -57,9 +57,9 @@ int main(int argc, char* argv[])
     file.set_grp("subgroup2/subgroup3");
     file.set_grp("."); // do nothing "." is current group
     file.set_grp(); // go back to root group
-    assert( file.grp_is_defined( "/subgroup/subgroup2/subgroup3"));
-    assert( file.grp_is_defined( "subgroup/subgroup2"));
-    assert( file.grp_is_defined( "subgroup"));
+    CHECK( file.grp_is_defined( "/subgroup/subgroup2/subgroup3"));
+    CHECK( file.grp_is_defined( "subgroup/subgroup2"));
+    CHECK( file.grp_is_defined( "subgroup"));
     auto all_grps = file.get_grps();
     for( auto grp : all_grps)
         DG_RANK0 std::cout << "Found "<<grp<<"\n";
@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
     };
     for( unsigned i=0; i<ana.size(); i++)
     {
-        assert( all_grps_r[i] == ana[i]);
+        CHECK( all_grps_r[i] == ana[i]);
     }
     DG_RANK0 std::cout << "Groups PASSED\n";
     ///////////////////////   Attributes
@@ -95,29 +95,29 @@ int main(int argc, char* argv[])
     file.open( filename, dg::file::nc_nowrite);
     // get attributes
     auto title = file.get_att_as<std::string>(".", "title");
-    assert( title == "Hello world");
+    CHECK( title == "Hello world");
     double t = file.get_att_as<double>(".", "ttt");
-    assert( t == 42);
+    CHECK( t == 42);
     auto ts = file.get_att_vec_as<double>(".", "real_vector"); // get all indices as vector
     std::vector<double> result = {1.0,2.0,3.0};
-    assert( ts == result );
+    CHECK( ts == result );
 
     std::map<std::string, dg::file::nc_att_t> atts = file.get_atts();
     std::string hello = "Hello world";
-    assert( std::get<std::string>(atts.at("title")) == hello);
+    CHECK( std::get<std::string>(atts.at("title")) == hello);
     int fortytwo = 42;
-    assert( std::get<int>(atts.at("ttt")) == fortytwo);
+    CHECK( std::get<int>(atts.at("ttt")) == fortytwo);
     file.close();
     DG_RANK0 std::cout << "Attributes Write PASSED\n";
 
     file.open( filename, dg::file::nc_write);
     file.del_att( ".", "same");
-    assert( not file.att_is_defined( ".", "same"));
+    CHECK( not file.att_is_defined( ".", "same"));
     file.rename_att( ".", "ttt", "truth");
     int truth = file.get_att_as<int>(".", "truth");
-    assert( not file.att_is_defined( ".", "ttt"));
-    assert( file.att_is_defined( ".", "truth"));
-    assert( truth == fortytwo);
+    CHECK( not file.att_is_defined( ".", "ttt"));
+    CHECK( file.att_is_defined( ".", "truth"));
+    CHECK( truth == fortytwo);
     DG_RANK0 std::cout << "Attributes Read PASSED\n";
 
     ////////////////// Dimensions
@@ -143,10 +143,10 @@ int main(int argc, char* argv[])
     file.defput_dim_as<double>("time", NC_UNLIMITED, {{"axis", "T"}});
 
     size_t xsize = file.get_dim_size("x");
-    assert( xsize == 42);
+    CHECK( xsize == 42);
 
     size_t ysize = file.get_dim_size("y");
-    assert( ysize == 5);
+    CHECK( ysize == 5);
     file.set_grp( "subgroup");
     file.def_dim( "y", 57);
     file.def_dim( "z", 12);
@@ -159,20 +159,20 @@ int main(int argc, char* argv[])
     {
     auto dims = file.get_dims( );
     std::vector<std::string> result = {"x", "y", "time"};
-    assert( dims == result);
+    CHECK( dims == result);
     }
     file.set_grp( "subgroup");
     {
     auto dims = file.get_dims( );
     std::vector<std::string> result = {"x", "y", "time", "z"};
-    assert( dims == result);
+    CHECK( dims == result);
     }
     file.set_grp( "");
     file.set_grp( "dimensions");
     {
     auto dims = file.get_unlim_dims( );
     std::vector<std::string> result = {"w"};
-    assert( dims == result);
+    CHECK( dims == result);
     }
     file.set_grp( "..");
     DG_RANK0 std::cout << "PASSED Dimensions\n";
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
 #endif
     file.def_var_as<int>( "scalar", {}, {});
     file.put_var( "scalar", {}, 42);
-    assert( file.get_var_dims("scalar").empty());
+    CHECK( file.get_var_dims("scalar").empty());
 
     file.put_att("variable", {"long_name", "blabla"});
     std::vector<int> data2(ysize, 42);
@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
     {
     double test;
     file.get_var("time", {52}, test);
-    assert( test == 10);
+    CHECK( test == 10);
     }
 
     file.set_grp( "subgroup");
@@ -230,13 +230,13 @@ int main(int argc, char* argv[])
 #else
     file.get_var( "variable", {{0,0,0}, {0, ysize, xsize}}, data);
     unsigned vsize = xsize*ysize;
-    assert( data.size() == vsize);
-    assert( data[0] == 7);
+    CHECK( data.size() == vsize);
+    CHECK( data[0] == 7);
 #endif
     static_assert( dg::is_scalar_v<int>);
     int scalar;
     file.get_var( "scalar", {}, scalar);
-    assert( scalar == 42);
+    CHECK( scalar == 42);
     DG_RANK0 std::cout << "PASSED Getters\n";
 
     file.close();
@@ -268,8 +268,4 @@ int main(int argc, char* argv[])
     DG_RANK0 std::cout << "Getting id of 1000 variables took "<<timer.diff()<<"s\n";
     file.close();
     DG_RANK0 std::filesystem::remove( "benchmark.nc");
-#ifdef WITH_MPI
-    MPI_Finalize();
-#endif
-    return 0;
 }

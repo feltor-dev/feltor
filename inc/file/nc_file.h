@@ -1,8 +1,8 @@
 #pragma once
 
 #include <filesystem>
-#include "dg/blas.h"
-#include "dg/backend/memory.h"
+#include "../dg/blas.h"
+#include "../dg/backend/memory.h"
 #include "nc_error.h"
 #include "easy_atts.h"
 #include "easy_output.h"

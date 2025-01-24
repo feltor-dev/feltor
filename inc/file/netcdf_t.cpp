@@ -3,6 +3,7 @@
 #include <netcdf.h>
 #include <cmath>
 
+#include "catch2/catch.hpp"
 #ifdef WITH_MPI
 #include <mpi.h>
 #include "nc_mpi_file.h"
@@ -12,10 +13,10 @@
 
 #include "dg/algorithm.h"
 
-double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
-double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
-double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
-double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
+static double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
+static double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
+static double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
+static double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
 
 /// [doxygen]
@@ -42,10 +43,9 @@ std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid3d&,double),
 };
 /// [doxygen]
 
-int main(int argc, char* argv[])
+TEST_CASE( "Input Output test of the NcFile class")
 {
 #ifdef WITH_MPI
-    MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     double NT = 10;
     double h = Tmax/NT;
     double x0 = 0., x1 = 2.*M_PI;
-    dg::x::Grid3d grid( x0,x1,x0,x1,x0,x1,3,20,20,20
+    dg::x::Grid3d grid( x0,x1,x0,x1,x0,x1,3,4,4,3
 #ifdef WITH_MPI
     , comm
 #endif
@@ -76,6 +76,11 @@ int main(int argc, char* argv[])
     dg::file::NcFile file( filename, dg::file::nc_clobber);
 
     file.put_att( ".", {"title", "NetCDF test file"});
+    int argc = 1;
+    char *argv[] = {
+        (char*)"./netcdf_t",
+        NULL
+    };
     file.put_att( ".", {"history", dg::file::timestamp(argc, argv)});
     file.put_atts( ".", dg::file::version_flags);
     file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
@@ -141,46 +146,46 @@ int main(int argc, char* argv[])
         }
     }
     file.close();
-    DG_RANK0 std::cout << "\n\n";
 
     // open and read back in
     for( auto mode : {dg::file::nc_nowrite, dg::file::nc_write})
     {
-        std::cout << "TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n";
+        INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n")
         file.open( filename, mode);
         // This is how to fully check a dimension
-        assert( file.dim_is_defined( "x"));
-        assert( file.var_is_defined( "x"));
-        assert( file.get_dim_size( "x") == grid.shape(0));
+        CHECK( file.dim_is_defined( "x"));
+        CHECK( file.var_is_defined( "x"));
+        CHECK( file.get_dim_size( "x") == grid.shape(0));
         dg::x::HVec absx = grid.abscissas(0);
         file.get_var( "x", {absx}, absx);
 #ifdef WITH_MPI
-        assert( absx.data() == grid.abscissas(0).data());
+        CHECK( absx.data() == grid.abscissas(0).data());
 #else
-        assert( absx == grid.abscissas(0));
+        CHECK( absx == grid.abscissas(0));
 #endif
         auto variables = file.get_var_names_r();
         for ( auto name : variables["/"])
         {
             if ( file.get_var_dims( name) == std::vector<std::string>{"time"})
-                DG_RANK0 std::cout << "Found 0d name "<<name<<"\n";
+                INFO("Found 0d name "<<name);
             if ( file.get_var_dims( name) == std::vector<std::string>{"time", "z", "y", "x"})
-                DG_RANK0 std::cout << "Found 3d name "<<name<<"\n";
+                INFO("Found 3d name "<<name);
         }
         for ( auto name : variables["/projected"])
-            DG_RANK0 std::cout << "Found Projected 3d name "<<name<<"\n";
+            INFO( "Found Projected 3d name "<<name);
 
         unsigned num_slices = file.get_dim_size("time");
-        assert(num_slices == NT+1);
-        DG_RANK0 std::cout << "Found "<<num_slices<<" timesteps in file\n";
+        INFO( "Found "<<num_slices<<" timesteps in file");
+        CHECK( num_slices == NT+1);
         // Test that dimension is indeed what we expect
         auto abscissas = grid.abscissas(0), test( abscissas);
         file.get_var( "x", {grid.axis(0)}, test);
         dg::blas1::axpby( 1., abscissas, -1., test);
-        assert( dg::blas1::dot( test, test) == 0);
+        CHECK( dg::blas1::dot( test, test) == 0);
 
         auto data = dg::evaluate( function, grid);
         auto dataP = dg::evaluate( function, grid_out);
+        // TODO this test must be more precise
         for(unsigned i=0; i<num_slices; i++)
         {
             DG_RANK0 std::cout<<"Read timestep "<<i<<"\n";
@@ -201,8 +206,4 @@ int main(int argc, char* argv[])
         file.close();
     }
 
-#ifdef WITH_MPI
-    MPI_Finalize();
-#endif
-    return 0;
 }

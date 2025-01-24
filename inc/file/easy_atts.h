@@ -41,7 +41,7 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
  * @return string containing current time followed by the parameters with which the program was invoked
  * @sa See history in <a href="https://docs.unidata.ucar.edu/netcdf-c/current/attribute_conventions.html">Attribute Convenctions</a>
  */
-std::string timestamp( int argc, char* argv[])
+inline static std::string timestamp( int argc, char* argv[])
 {
     ///Get local time
     auto ttt = std::time(nullptr);

@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "catch2/catch.hpp"
 #ifdef WITH_MPI
 #include <mpi.h>
 #endif
@@ -9,12 +10,12 @@
 #include "json_probes.h"
 #include "probes.h"
 
-double function( double x, double y){return sin(x)*sin(y);}
-double gradientX(double x, double y){return cos(x)*sin(y);}
-double gradientY(double x, double y){return sin(x)*cos(y);}
-double cosine( double x, double y){return cos(x)*cos(y);}
+static double function( double x, double y){return sin(x)*sin(y);}
+static double gradientX(double x, double y){return cos(x)*sin(y);}
+static double gradientY(double x, double y){return sin(x)*cos(y);}
+static double cosine( double x, double y){return cos(x)*cos(y);}
 
-std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid2d&,double)>> records_list = {
+static std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid2d&,double)>> records_list = {
     {"vectorX", {{"long_name", "X-component of vector"}, {"units", "rho_s"}},
         [] ( dg::x::DVec& resultD, const dg::x::Grid2d& g, double time){
             resultD = dg::evaluate( gradientX, g);
@@ -29,7 +30,7 @@ std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid2d&,double)>> re
     }
 };
 
-std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&),
+static std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&),
     dg::file::LongNameAttribute>> records_static_list = {
     {"Sine", "A Sine function",
         [] ( dg::x::HVec& resultH, const dg::x::Grid2d& g){
@@ -43,10 +44,9 @@ std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&),
     }
 };
 
-int main(int argc, char* argv[])
+TEST_CASE( "Probes")
 {
 #ifdef WITH_MPI
-    MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -65,8 +65,8 @@ int main(int argc, char* argv[])
 #else
     std::string filename = "probes.nc";
 #endif
-    DG_RANK0 std::cout << "WRITE A TIMEDEPENDENT VECTOR FIELD AND PROBE DATA TO NETCDF4 FILE "
-                       << filename<<"\n";
+    INFO("WRITE A TIME-DEPENDENT VECTOR FIELD AND PROBE DATA TO NETCDF4 FILE "
+                       << filename);
     dg::file::NcFile file( filename, dg::file::nc_clobber);
     double x0 = 0., x1 = 2.*M_PI;
     dg::x::Grid2d grid( x0,x1,x0,x1,3,100,100, dg::PER, dg::PER
@@ -127,9 +127,4 @@ int main(int argc, char* argv[])
 
 
     file.close();
-#ifdef WITH_MPI
-    MPI_Finalize();
-#endif
-
-    return 0;
 }

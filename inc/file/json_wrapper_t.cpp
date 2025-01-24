@@ -1,11 +1,15 @@
 #include <iostream>
 #include <cassert>
 
+#include "catch2/catch.hpp"
 #include "json_wrapper.h"
 
-int main()
+#ifdef DG_USE_JSONHPP
+TEST_CASE("Json HPP wrapper")
+#else
+TEST_CASE("Json CPP wrapper")
+#endif
 {
-
     auto js = dg::file::file2Json( "test.json");
     std::cout << "\n\n";
     using dg::file::error;
@@ -70,21 +74,20 @@ int main()
         std::cout << "Test correct access:\n";
         dg::file::WrappedJsonValue ws( js);
         std::string hello = ws["hello"].asString();
-        assert( hello == "world");
+        CHECK( hello == "world");
         int idx0 = ws[ "array"][0].asInt();
-        assert( ws["array"].size() == 2);
-        assert( idx0 == 42);
+        CHECK( ws["array"].size() == 2);
+        CHECK( idx0 == 42);
         idx0 = ws[ "array"].get(0,0).asInt();
-        assert( idx0 == 42);
+        CHECK( idx0 == 42);
         int idx1 = ws["array"][1].asInt();
-        assert( idx1 == 73);
+        CHECK( idx1 == 73);
         double hi = ws[ "nested"][ "hi"].asDouble();
-        assert( hi == 38);
+        CHECK( hi == 38);
         bool test = ws[ "nested"]["bool"].asBool(true);
-        assert( test == true);
+        CHECK( test == true);
         unsigned uint = ws["nested"]["another_nest"]["number"].asUInt();
-        assert( uint == 7);
-        std::cout << "TEST PASSED!\n";
+        CHECK( uint == 7);
         std::cout << "Test access string\n";
         std::cout << ws["nested"]["another_nest"]["number"].access_string()
                   <<" (nested: another_nest: number)\n";
@@ -92,9 +95,6 @@ int main()
 
     std::cout << "Test Vector 2 Json:\n";
     dg::file::WrappedJsonValue ws( dg::file::vec2json( {42, 73}));
-    assert( ws.get( 0,0).asInt() == 42);
-    assert( ws.get( 1,0).asInt() == 73);
-    std::cout << "TEST PASSED\n";
-
-    return 0;
+    CHECK( ws.get( 0,0).asInt() == 42);
+    CHECK( ws.get( 1,0).asInt() == 73);
 }

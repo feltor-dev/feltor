@@ -7,18 +7,19 @@
 #include <mpi.h>
 #endif
 
+#include "catch2/catch.hpp"
+
 #include "dg/algorithm.h"
 #define _FILE_INCLUDED_BY_DG_
 #include "easy_dims.h"
 #include "easy_input.h"
 
-double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
-double function( double x, double y){return sin(x)*sin(y);}
+static double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
+static double function( double x, double y){return sin(x)*sin(y);}
 
-int main(int argc, char* argv[])
+TEST_CASE( "Easy input")
 {
 #ifdef WITH_MPI
-    dg::mpi_init( argc, argv);
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -35,13 +36,13 @@ int main(int argc, char* argv[])
 #else
     std::string filename = "test.nc";
 #endif
-    DG_RANK0 std::cout << "READ A TIME-DEPENDENT SCALAR, SCALAR FIELD AND SUB-FIELDS TO NETCDF4 FILE "
-                       << filename<<"\n";
+    INFO( "READ A TIME-DEPENDENT SCALAR, SCALAR FIELD AND SUB-FIELDS FROM NETCDF4 FILE "
+                       << filename<<"\n");
     double Tmax=2.*M_PI;
     double NT = 10;
     double h = Tmax/NT;
     double x0 = 0., x1 = 2.*M_PI;
-    dg::x::CartesianGrid3d grid( x0,x1,x0,x1,x0,x1,3,10,10,20, dg::PER, dg::PER, dg::PER
+    dg::x::CartesianGrid3d grid( x0,x1,x0,x1,x0,x1,3,4,4,3, dg::PER, dg::PER, dg::PER
 #ifdef WITH_MPI
     , comm
 #endif
@@ -57,8 +58,8 @@ int main(int argc, char* argv[])
 
     int dim_ids[4], tvarID;
     bool exists = dg::file::check_dimensions( ncid, dim_ids, &tvarID, grid);
-    if( ! exists)
-        std::cerr << "Dimensions do not exist!\n";
+    INFO("Dimensions do not exist!\n");
+    CHECK( exists);
 
     int scalarID, arrayID, subArrayID;
     err = nc_inq_varid( ncid, "scalar", &scalarID);
@@ -95,8 +96,4 @@ int main(int argc, char* argv[])
     }
 
     DG_RANK0 err = nc_close(ncid);
-#ifdef WITH_MPI
-    MPI_Finalize();
-#endif
-    return 0;
 }
