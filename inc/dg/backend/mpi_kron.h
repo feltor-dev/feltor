@@ -85,7 +85,6 @@ inline void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int di
 inline void mpi_cart_create( MPI_Comm comm_old, std::vector<int> dims,
                     std::vector<int> periods, bool reorder, MPI_Comm * comm_cart)
 {
-    std::cout << "Create communicator "<<comm_old<<"\n";
     //TODO Update docu with more modern interface
     assert( dims.size() == periods.size());
     int ndims = dims.size();
@@ -95,8 +94,6 @@ inline void mpi_cart_create( MPI_Comm comm_old, std::vector<int> dims,
         throw Error(Message(_ping_)<<
                 "Cannot create Cartesian comm from given communicator");
     register_mpi_cart_create( comm_old, ndims, &dims[0], &periods[0], re, *comm_cart);
-    std::cout << "Created communicator "<<*comm_cart<<"\n";
-    detail::mpi_cart_registry_display( std::cout);
 }
 
 /*! @brief register a call to \c MPI_Cart_sub with the dg library
@@ -141,8 +138,6 @@ inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
 inline void mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, MPI_Comm *newcomm, bool duplicate = false)
 {
 
-    std::cout << "Searching "<<comm<<"\n";
-    detail::mpi_cart_registry_display( std::cout);
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     assert( (unsigned) ndims == remain_dims.size());
@@ -246,7 +241,6 @@ MPI_Comm mpi_cart_kron( Vector comms)
 template<size_t Nd>
 std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
 {
-    std::cout << "Split comm "<<comm<<"\n";
     // Should there be a std::vector version?
     // assert dimensionality of comm
     // Check that there is a Comm that was already split
