@@ -25,6 +25,7 @@ All functions and global variables in t.cpp programs need to be static.
 
  -# Include `#include "catch2/catch.hpp"`
  -# Replace main with `TEST_CASE( "test name")` and remove the return 0;
+ -# In MPI programs remove `MPI_Init` and  `MPI_Finalize` (catch calls it for us)
  -# Replace any `assert` with `CHECK`
  -# Replace any `std::cout` with `INFO`
  -# Make global functions in cpp file static

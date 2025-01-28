@@ -18,9 +18,11 @@ int main( int argc, char* argv[] ) {
 #else
     MPI_Init(&argc, &argv);
 #endif
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    int rank;
+
+    int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     int num_devices=0;
     cudaGetDeviceCount(&num_devices);
     if(num_devices == 0)
@@ -42,10 +44,6 @@ int main( int argc, char* argv[] ) {
 
     /* reset buffer */
     std::cout.rdbuf( cout_buf );
-
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
 
 
     std::stringstream printRank;

@@ -5,6 +5,8 @@
 
 #include "memory.h"
 
+#include "catch2/catch.hpp"
+
 struct aAnimal
 {
     virtual void speak()const = 0;
@@ -72,84 +74,80 @@ struct Verbose
 template<class T>
 using verbose_vec = std::vector<Verbose<T>>;
 
-int main()
+// This program should also be tested with valgrind
+// valgrind ./memory_t
+
+TEST_CASE( "ClonePtr")
 {
-    // These tests pass if there is no memory leak in valgrind
+    INFO("Test correct behaviour of handle: cat and mouse\n");
+    dg::ClonePtr<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
+    dg::ClonePtr<aAnimal> h2(*h1); //reference constructor
+    dg::ClonePtr<aAnimal> h3(h0); // copy an empty object
+    aAnimal* ptr = new Cat();
+    h0.reset(ptr); //pointer reset
+    h1.reset( *h2); //reference reset
+    *h1=*h2;//reference test
+    using std::swap;
+    swap(h1,h0); //swap test
+    h0->speak();
+    h1->speak();
+    h2->speak();
+    h1 = h0;
+    h1->speak();
+    h0.reset(nullptr);
     {
-        std::cout << "Test correct behaviour of handle: cat and mouse\n";
-        dg::ClonePtr<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
-        dg::ClonePtr<aAnimal> h2(*h1); //reference constructor
-        dg::ClonePtr<aAnimal> h3(h0); // copy an empty object
-        aAnimal* ptr = new Cat();
-        h0.reset(ptr); //pointer reset
-        h1.reset( *h2); //reference reset
-        *h1=*h2;//reference test
-        using std::swap;
-        swap(h1,h0); //swap test
-        h0->speak();
-        h1->speak();
-        h2->speak();
-        h1 = h0;
-        h1->speak();
-        h0.reset(nullptr);
-        {
-            Cat cat;
-            h0 = cat;
-        }
-        std::cout<< "Are you a cat?\n";
-        h0->speak();
-
+        Cat cat;
+        h0 = cat;
     }
+    std::cout<< "Are you a cat?\n";
+    h0->speak();
+}
+TEST_CASE( "AnyVector")
+{
+    INFO("\nTest AnyVector behaviour \n");
+    dg::detail::AnyVector<verbose_vec> buffer;
+    std::cout << "### Construct Verbose (Construct)\n";
+    buffer.set<double>( 10);
+
+    std::cout << "### auto reference cast Verbose (no copy!)\n";
+    // REMEMBER TO WRITE auto& NOT JUST auto!!
+    // T& ref = a;
+    // auto vv = ref; deduces auto == T NOT T&
+    auto& vv = buffer.get<double>();
+    // auto == std::vector<Verbose<double>>
+    vv[7].a = 1.7;
+    std::cout << buffer.get<double>()[7].a<<" (1.7)\n";
+    std::cout << "### Resize with same size shouldn't do anything\n";
+    buffer.set<double>( 10);
+
+    std::cout << "### Reset buffer (Construct)\n";
+    buffer.set<float>( 10); // Construct float
+    std::cout << "### Cast buffer (check that no copy or move is displayed)\n";
+    auto& w = buffer.get<float>();
+    w[7].a = 42.f;
+    std::cout << buffer.get<float>()[7].a<<" (42)\n";
+    std::cout << "### Test typeid\n";
+    try{
+        buffer.get<double>();
+    }catch ( std::bad_any_cast& e)
     {
-        std::cout << "\nTest AnyVector behaviour \n";
-        dg::detail::AnyVector<verbose_vec> buffer;
-        std::cout << "### Construct Verbose (Construct)\n";
-        buffer.set<double>( 10);
-
-        std::cout << "### auto reference cast Verbose (no copy!)\n";
-        // REMEMBER TO WRITE auto& NOT JUST auto!!
-        // T& ref = a;
-        // auto vv = ref; deduces auto == T NOT T&
-        auto& vv = buffer.get<double>();
-        // auto == std::vector<Verbose<double>>
-        vv[7].a = 1.7;
-        std::cout << buffer.get<double>()[7].a<<" (1.7)\n";
-        std::cout << "### Resize with same size shouldn't do anything\n";
-        buffer.set<double>( 10);
-
-        std::cout << "### Reset buffer (Construct)\n";
-        buffer.set<float>( 10); // Construct float
-        std::cout << "### Cast buffer (check that no copy or move is displayed)\n";
-        auto& w = buffer.get<float>();
-        w[7].a = 42.f;
-        std::cout << buffer.get<float>()[7].a<<" (42)\n";
-        std::cout << "### Test typeid\n";
-        try{
-            buffer.get<double>();
-        }catch ( std::bad_any_cast& e)
-        {
-            std::cerr<< "### Expected error: "<<e.what()<<"\n";
-        }
-        std::cout << "### Construct 2nd buffer\n";
-        dg::detail::AnyVector<verbose_vec> buffer2;
-        buffer2.set<double>(4);
-        std::cout << "### Test swap (no copies or moves) \n";
-        std::swap ( buffer, buffer2);
-        std::cout << buffer2.get<float>()[7].a<<" (42)\n";
-        std::cout << "### Construct verbose vector \n";
-        verbose_vec<float> to_swap( 4);
-        std::cout << "### Swap in verbose vector of same type (no copy or move) \n";
-        buffer2.swap( to_swap);
-        assert( to_swap.size() == 10);
-        std::cout << "### Construct verbose vector \n";
-        verbose_vec<double> to_swap_d( 3, 7.);
-        std::cout << "### Swap in verbose vector of another type (no copy or move) \n";
-        buffer2.swap( to_swap_d);
-        assert( to_swap_d.size() == 0);
-        std::cout << buffer2.get<double>()[2].a<<" (7)\n";
-
-
+        std::cerr<< "### Expected error: "<<e.what()<<"\n";
     }
-
-    return 0;
+    std::cout << "### Construct 2nd buffer\n";
+    dg::detail::AnyVector<verbose_vec> buffer2;
+    buffer2.set<double>(4);
+    std::cout << "### Test swap (no copies or moves) \n";
+    std::swap ( buffer, buffer2);
+    std::cout << buffer2.get<float>()[7].a<<" (42)\n";
+    std::cout << "### Construct verbose vector \n";
+    verbose_vec<float> to_swap( 4);
+    std::cout << "### Swap in verbose vector of same type (no copy or move) \n";
+    buffer2.swap( to_swap);
+    assert( to_swap.size() == 10);
+    std::cout << "### Construct verbose vector \n";
+    verbose_vec<double> to_swap_d( 3, 7.);
+    std::cout << "### Swap in verbose vector of another type (no copy or move) \n";
+    buffer2.swap( to_swap_d);
+    assert( to_swap_d.size() == 0);
+    std::cout << buffer2.get<double>()[2].a<<" (7)\n";
 }

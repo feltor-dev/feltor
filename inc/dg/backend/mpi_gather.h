@@ -471,6 +471,7 @@ struct MPIGather
         unsigned chunk_size, // can be 1 (contiguous indices in recvIdx are concatenated)
         MPI_Comm comm)
     {
+        // TODO Catch wrong size of recvIdx 
         static_assert( dg::is_vector_v<Vector<double>, SharedVectorTag>,
                 "Only Shared vectors allowed");
         // The idea is that recvIdx and sendIdx completely define the communication pattern

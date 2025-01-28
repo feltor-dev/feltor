@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <vector>
 #include <map>
 #include "exceptions.h"
@@ -36,6 +37,11 @@ inline void mpi_cart_registry_display( std::ostream& out = std::cout)
             out << " "<<re[i];
         out << std::endl;
     }
+}
+
+inline void mpi_cart_registry_clear( )
+{
+    mpi_cart_info_map.clear();
 }
 }
 ///@endcond
@@ -159,6 +165,7 @@ inline void mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, MPI_Comm 
         if( it->second.root == info.root && it->second.remain_dims == info.remain_dims)
         {
             *newcomm = it->first;
+            return;
         }
     }
     int err = MPI_Cart_sub( comm, &remain_dims[0], newcomm);
