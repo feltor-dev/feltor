@@ -4,9 +4,13 @@
 #include <mpi.h>
 #include "catch2/catch.hpp"
 
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h> //declare THRUST_DEVICE_SYSTEM
+
 #include <sstream>
 
 int main( int argc, char* argv[] ) {
+    // a copy of dg::mpi_init
 #ifdef _OPENMP
     int provided, error;
     error = MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
@@ -14,6 +18,20 @@ int main( int argc, char* argv[] ) {
 #else
     MPI_Init(&argc, &argv);
 #endif
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices == 0)
+    {
+        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
+        MPI_Abort(MPI_COMM_WORLD, -1);
+        exit(-1);
+    }
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    cudaSetDevice( device);
+#endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 
     std::stringstream ss;
 

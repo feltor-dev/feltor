@@ -5,6 +5,8 @@ We use [catch2](https://github.com/catchorg/Catch2) as a test framework for our 
 (On linux can be installed through package manager).
 We need catch version > 2.7
 
+## General
+
 What unit tests do is show compilation and correct behaviour of individual functions or class members.
 Tests are supposed to be written such that
  -# a test can run automatically and **does not need any user input**
@@ -18,3 +20,16 @@ The messages logged in INFO are printed only when using the `-s` command line op
 
 
 All functions and global variables in t.cpp programs need to be static.
+
+## Convert a program to catch
+
+ -# Include `#include "catch2/catch.hpp"`
+ -# Replace main with `TEST_CASE( "test name")` and remove the return 0;
+ -# Replace any `assert` with `CHECK`
+ -# Replace any `std::cout` with `INFO`
+ -# Make global functions in cpp file static
+
+## Some notable features
+`GENERATE` A "for" loop for tests
+
+`TEST_CASE_TEMPLATE` A static for loop for tests for various types

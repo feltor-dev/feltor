@@ -34,67 +34,71 @@ CATCHMPI=../../tests/catch-tests-mpi
 all: $(TARGETS) $(TARGETSMPI)
 
 ############### CATCH TESTS  - REQUIRES catch2 package #################
-$(CATCH).o: $(CATCH).cpp
-	$(CC) $(CFLAGS) -g -c $< -o $@
+# The catch main programs should not be compiled into objects
+# because we cannot mix different devices
 
-$(CATCHMPI).o: $(CATCHMPI).cpp
-	$(MPICC) $(MPICFLAGS) -g -c $< -o $@ -DWITH_MPI
+%_t.$(device).o: %_t.cpp %.h
+	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE) $(VERSION_FLAGS)
 
-%_t.o: %_t.cpp %.h
-	$(CC) $(CFLAGS) -c $< -g $(INCLUDE) $(VERSION_FLAGS)
+%_mpit.$(device).o: %_t.cpp %.h
+	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) $(VERSION_FLAGS) -DWITH_MPI
 
-%_mpit.o: %_t.cpp %.h
-	$(MPICC) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) $(VERSION_FLAGS) -DWITH_MPI
+%_t: $(CATCH).$(device).o %_t.$(device).o
+	$(CC) $(OPT) -o $@ $^ $(LIBS)
 
-%_t: $(CATCH).o %_t.o
-	$(CC) -o $@ $^ $(LIBS)
-
-%_mpit: $(CATCHMPI).o %_mpit.o
-	$(MPICC) -o $@ $^ $(LIBS)
+%_mpit: $(CATCHMPI).$(device)o %_mpit.$(device).o
+	$(MPICC) $(OPT) -o $@ $^ $(LIBS)
 
 #######################################################################
 
-probes_t.o: probes_t.cpp probes.h
-	$(CC) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
+probes_t.$(device).o: probes_t.cpp probes.h
+	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-probes_mpit.o: probes_t.cpp probes.h
-	$(MPICC) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
+probes_mpit.$(device).o: probes_t.cpp probes.h
+	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
-probes_parser_t.o: probes_parser_t.cpp probes_params.h json_probes.h
-	$(CC) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
+probes_parser_t.$(device).o: probes_parser_t.cpp probes_params.h json_probes.h
+	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-jsoncpp_wrapper_t.o: json_wrapper_t.cpp json_wrapper.h
-	$(CC) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
+jsoncpp_wrapper_t.$(device).o: json_wrapper_t.cpp json_wrapper.h
+	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-jsonhpp_wrapper_t.o: json_wrapper_t.cpp json_wrapper.h
-	$(CC) $(CFLAGS) -c $< -o $@ -g $(INCLUDE) -DDG_USE_JSONHPP
+jsonhpp_wrapper_t.$(device).o: json_wrapper_t.cpp json_wrapper.h
+	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE) -DDG_USE_JSONHPP
 
-probes_parser_mpit.o: probes_parser_t.cpp probes_params.h json_probes.h
-	$(MPICC) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
+probes_parser_mpit.$(device).o: probes_parser_t.cpp probes_params.h json_probes.h
+	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
-probes_t: probes_t.o $(CATCH).o
+probes_t: probes_t.$(device).o $(CATCH).$(device).o
+	$(CC) $(OPT) -o $@ $^ $(LIBS) $(JSONLIB)
+
+probes_mpit: probes_mpit.$(device).o $(CATCHMPI).$(device).o
+	$(MPICC) $(OPT) -o $@ $^ $(LIBS) $(JSONLIB) -DWITH_MPI
+
+probes_parser_t: probes_parser_t.$(device).o $(CATCH).$(device).o
+	$(CC) $(OPT) -o $@ $^ $(JSONLIB)
+
+probes_parser_mpit: probes_parser_mpit.$(device).o $(CATCHMPI).$(device).o
+	$(MPICC) $(OPT) -o $@ $^ $(JSONLIB) -DWITH_MPI
+
+jsoncpp_wrapper_t: jsoncpp_wrapper_t.$(device).o $(CATCH).$(device).o
+	$(CC) $(OPT) -o $@ $^ $(JSONLIB)
+
+# TODO Find a way to use both jsoncpp and jsonhpp in tests
+jsonhpp_wrapper_t: jsonhpp_wrapper_t.$(device).o $(CATCH).$(device).o
+	$(CC) $(OPT) -o $@ $^
+
+$(CATCH).$(device).o: $(CATCH).cpp
+	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
+
+$(CATCHMPI).$(device).o: $(CATCHMPI).cpp
+	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
+
+tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
 	$(CC) -o $@ $^ $(LIBS) $(JSONLIB)
 
-probes_mpit: probes_mpit.o $(CATCHMPI).o
-	$(MPICC) -o $@ $^ $(LIBS) $(JSONLIB) -DWITH_MPI
-
-probes_parser_t: probes_parser_t.o $(CATCH).o
-	$(CC) -o $@ $^ $(JSONLIB)
-
-probes_parser_mpit: probes_parser_mpit.o $(CATCHMPI).o
-	$(MPICC) -o $@ $^ $(JSONLIB) -DWITH_MPI
-
-jsoncpp_wrapper_t: jsoncpp_wrapper_t.o $(CATCH).o
-	$(CC) -o $@ $^ $(JSONLIB)
-
-jsonhpp_wrapper_t: jsonhpp_wrapper_t.o $(CATCH).o
-	$(CC) -o $@ $^
-
-tests: $(CATCH).o $(addsuffix .o,$(TARGETS))
-	$(CC) -o tests $^ $(LIBS) $(JSONLIB)
-
-tests-mpi: $(CATCHMPI).o easy_dims_mpit.o easy_output_mpit.o #  $(addsuffix .o,$(TARGETSMPI))
-	$(MPICC) -o tests-mpi $^ $(LIBS) $(JSONLIB)
+tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
+	$(MPICC) -o $@ $^ $(LIBS) $(JSONLIB)
 
 
 .PHONY: doc clean
