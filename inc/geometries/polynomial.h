@@ -142,12 +142,12 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
     Horner2d m_horner;
 };
 
-static inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp)
+inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp)
 {
     return CylindricalFunctorsLvl2( Psip(gp), PsipR(gp), PsipZ(gp),
         PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
 }
-static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
+inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
 {
     return CylindricalFunctorsLvl1( Constant( gp.pi), Constant(0), Constant(0));
 }
@@ -172,7 +172,7 @@ static inline dg::geo::CylindricalFunctorsLvl1 createIpol( Parameters gp)
  * @return A magnetic field object
  * @ingroup polynomial
  */
-static inline dg::geo::TokamakMagneticField createPolynomialField(
+inline dg::geo::TokamakMagneticField createPolynomialField(
     dg::geo::polynomial::Parameters gp)
 {
     MagneticFieldParameters params( gp.a, gp.elongation, gp.triangularity,

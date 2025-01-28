@@ -91,7 +91,7 @@ for f in format:
  * stores the coordinates in <tt>ProbesParams.coords[i]</tt> the others are empty
  * @ingroup Cpp
 */
-inline static ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
+inline ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error
     probes_err = file::error::is_silent)
 {
     ProbesParams out;

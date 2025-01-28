@@ -55,7 +55,7 @@ struct DivMonitor : public aCylindricalFunctor<DivMonitor>
  *
  * @return a metric tensor and its derivatives
  */
-static inline CylindricalSymmTensorLvl1 make_Xbump_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
+inline CylindricalSymmTensorLvl1 make_Xbump_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -89,7 +89,7 @@ static inline CylindricalSymmTensorLvl1 make_Xbump_monitor( const CylindricalFun
  *
  * @return a metric tensor and its derivatives
  */
-static inline CylindricalSymmTensorLvl1 make_Xconst_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
+inline CylindricalSymmTensorLvl1 make_Xconst_monitor( const CylindricalFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;

@@ -410,7 +410,7 @@ enum multistep_identifier{
 ///@cond
 namespace create{
 
-static std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
+inline const std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
     //Implicit-Explicit methods
     {"Euler", IMEX_EULER_1_1},
     {"Euler-1-1", IMEX_EULER_1_1},
@@ -458,14 +458,14 @@ static std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
     {"BDF-5-5", BDF_5_5},
     {"BDF-6-6", BDF_6_6},
 };
-static inline enum multistep_identifier str2lmstableau( std::string name)
+inline enum multistep_identifier str2lmstableau( std::string name)
 {
-    if( str2lmsid.find(name) == str2lmsid.end())
+    auto it = str2lmsid.find(name);
+    if( it == str2lmsid.end())
         throw dg::Error(dg::Message(_ping_)<<"Multistep coefficients for "<<name<<" not found!");
-    else
-        return str2lmsid[name];
+    return it->second;
 }
-static inline std::string lmstableau2str( enum multistep_identifier id)
+inline std::string lmstableau2str( enum multistep_identifier id)
 {
     for( auto name: str2lmsid)
     {

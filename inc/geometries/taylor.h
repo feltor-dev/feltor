@@ -290,11 +290,11 @@ struct IpolZ: public aCylindricalFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-static inline CylindricalFunctorsLvl2 createPsip( solovev::Parameters gp)
+inline CylindricalFunctorsLvl2 createPsip( solovev::Parameters gp)
 {
     return CylindricalFunctorsLvl2( Psip(gp), PsipR(gp), PsipZ(gp),PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
 }
-static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
+inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
     return CylindricalFunctorsLvl1( Ipol(gp), IpolR(gp), IpolZ(gp));
 }
@@ -311,7 +311,7 @@ static inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
  * @ingroup taylor
  * @attention The header \c taylor.h needs to be included seperately and depends on <a href="http://www.boost.org">boost</a>
  */
-static inline dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
+inline dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
 {
     MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
             equilibrium::solovev, modifier::none, str2description.at( gp.description)};

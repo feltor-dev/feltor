@@ -166,7 +166,7 @@ inline bool operator==( const dg::detail::MsgChunk& a, const dg::detail::MsgChun
     return a.idx == b.idx and a.size == b.size;
 }
 
-static inline thrust::host_vector<MsgChunk>
+inline thrust::host_vector<MsgChunk>
 find_contiguous_chunks(
     const thrust::host_vector<int>& in) // These are unsorted
 {
@@ -185,7 +185,7 @@ find_contiguous_chunks(
 }
 
 // for every size != 0 in sizes add map[idx] = size;
-static inline std::map<int,int> make_size_map( const thrust::host_vector<int>& sizes)
+inline std::map<int,int> make_size_map( const thrust::host_vector<int>& sizes)
 {
     std::map<int,int> out;
     for( unsigned u=0; u<sizes.size(); u++)
@@ -203,7 +203,7 @@ static inline std::map<int,int> make_size_map( const thrust::host_vector<int>& s
 template<class T>
 auto flatten ( const T& t);
 
-static inline thrust::host_vector<int> flatten ( const MsgChunk& t)
+inline thrust::host_vector<int> flatten ( const MsgChunk& t)
 {
     thrust::host_vector<int> flat(2);
     flat[0] = t.idx, flat[1] = t.size;
@@ -264,13 +264,13 @@ vector flatten_map(
 ////////////////// Functionality for unpacking mpi messages
 // unpack a vector of primitive types into original data type
 
-static inline void make_target(
+inline void make_target(
     const thrust::host_vector<int>& src, MsgChunk& target)
 {
     assert( src.size() == 2);
     target = {src[0], src[1]};
 }
-static inline void make_target(
+inline void make_target(
     const thrust::host_vector<int>& src, thrust::host_vector<MsgChunk>& target)
 {
     assert( src.size() % 2 == 0);
@@ -365,7 +365,7 @@ std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx
 // idx 0 is pid, idx 1 is localIndex on that pid
 // TODO gIdx can be unsorted and contain duplicate entries
 // TODO idx 0 is pid, idx 1 is localIndex on that pid
-// TODO Maybe be a static MPIGather function?
+// TODO Maybe be a MPIGather function?
 template<class ArrayVec = thrust::host_vector<std::array<int,2>>, class IntVec = thrust::host_vector<int>>
 std::map<int, IntVec> gIdx2unique_idx(
     const ArrayVec& gIdx, // unsorted (cannot be map)

@@ -1386,7 +1386,7 @@ enum tableau_identifier{
 ///@cond
 namespace create{
 
-static std::unordered_map<std::string, enum tableau_identifier> str2id{
+inline const std::unordered_map<std::string, enum tableau_identifier> str2id{
     //Explicit methods
     {"Euler", EXPLICIT_EULER_1_1},
     {"Midpoint-2-2", MIDPOINT_2_2},
@@ -1444,14 +1444,14 @@ static std::unordered_map<std::string, enum tableau_identifier> str2id{
     {"SSPRK-5-3", SSPRK_5_3},
     {"SSPRK-5-4", SSPRK_5_4},
 };
-static inline enum tableau_identifier str2tableau( std::string name)
+inline enum tableau_identifier str2tableau( std::string name)
 {
-    if( str2id.find(name) == str2id.end())
+    auto it = str2id.find(name);
+    if( it == str2id.end())
         throw dg::Error(dg::Message(_ping_)<<"Tableau "<<name<<" not found!");
-    else
-        return str2id[name];
+    return it->second;
 }
-static inline std::string tableau2str( enum tableau_identifier id)
+inline std::string tableau2str( enum tableau_identifier id)
 {
     for( auto name: str2id)
     {

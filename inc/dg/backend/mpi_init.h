@@ -4,6 +4,7 @@
 #include <cassert>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h> //declare THRUST_DEVICE_SYSTEM
+#include "config.h"
 #include "mpi_kron.h"
 #include "../enums.h"
 
@@ -15,10 +16,9 @@ enums need to be included before this
 
 namespace dg
 {
-    //TODO Write cout about cuda awareness (and maybe even test)
 
 /**
- * @brief Convencience shortcut: Calls MPI_Init or MPI_Init_thread
+ * @brief Convencience shortcut: Calls MPI_Init or MPI_Init_thread and inits CUDA devices
  *
  * Shortcut for
  * @code
@@ -29,12 +29,20 @@ namespace dg
 #else
     MPI_Init(&argc, &argv);
 #endif
+    //... init cuda devices if THRUST_DEVICE_SYSTEM_CUDA
  * @endcode
+ * @note Also sets the GPU a process should use via <tt> cudaSetDevice( rank
+ * \% num_devices_per_node) </tt> if <tt> THRUST_DEVICE_SYSTEM ==
+ * THRUST_DEVICE_SYSTEM_CUDA </tt>.  We assume that the number of GPUs per node
+ * is fixed.
+ * @attention Abort program if MPI does not support OpenMP and \c _OPENMP is
+ * defined or if no CUDA capable devices are found in case of \c
+ * THRUST_DEVICE_SYSTEM_CUDA
  * @param argc command line argument number
  * @param argv command line arguments
  * @ingroup misc
  */
-static inline void mpi_init( int argc, char* argv[])
+inline void mpi_init( int argc, char* argv[])
 {
 #ifdef _OPENMP
     int provided, error;
@@ -43,6 +51,20 @@ static inline void mpi_init( int argc, char* argv[])
 #else
     MPI_Init(&argc, &argv);
 #endif
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices == 0)
+    {
+        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
+        MPI_Abort(MPI_COMM_WORLD, -1);
+        exit(-1);
+    }
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    cudaSetDevice( device);
+#endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 
 /** @class hide_cart_warning
@@ -50,30 +72,18 @@ static inline void mpi_init( int argc, char* argv[])
  * \c MPI_COMM_WORLD because we set \c reorder=true in \c MPI_Cart_create. No
  * current MPI library actualy does that but do not rely on the fact that ranks
  * are the same just in case.
-* @attention Before creating a second Cartesian communicator consider freeing
-* existing ones with \c MPI_Comm_free. (Using \c mpi_init2d and \c mpi_init3d
-* in the same program has sometimes led to Segmentation faults in the past)
-  */
-/** @class hide_gpu
- *
- *@note
-* Also sets the GPU a process should use via <tt> cudaSetDevice( rank \%
-* num_devices_per_node) </tt> if <tt>
-* THRUST_DEVICE_SYSTEM == THRUST_DEVICE_SYSTEM_CUDA </tt>.
-* We assume that the number of GPUs per node is fixed.
-*/
+ */
 
 /**
 * @brief Create 1d Cartesian MPI communicator from MPI_COMM_WORLD
 *
-* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param comm (write only) \c MPI_COMM_WORLD as a 1d Cartesian MPI communicator
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 * @copydoc hide_cart_warning
 */
-static inline void mpi_init1d( dg::bc bcx, MPI_Comm& comm, bool verbose = true  )
+inline void mpi_init1d( dg::bc bcx, MPI_Comm& comm, bool verbose = true  )
 {
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -94,17 +104,15 @@ static inline void mpi_init1d( dg::bc bcx, MPI_Comm& comm, bool verbose = true  
     }
     dg::mpi_cart_create( MPI_COMM_WORLD, {np[0]}, {periods[0]}, true, &comm);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    int num_devices=0;
-    cudaGetDeviceCount(&num_devices);
-    if(num_devices == 0)
+    int device=0;
+    cudaGetDevice( &device);
+    if( rank==0 and verbose)
     {
-        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
-        MPI_Abort(MPI_COMM_WORLD, -1);
-        exit(-1);
+        std::cout << "# MPI is "
+                  <<(cuda_aware_mpi ? "cuda-aware" : "NOT cuda-aware")
+                  <<"!\n";
     }
-    int device = rank % num_devices; //assume # of gpus/node is fixed
     if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
-    cudaSetDevice( device);
 #endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 /**
@@ -117,7 +125,7 @@ static inline void mpi_init1d( dg::bc bcx, MPI_Comm& comm, bool verbose = true  
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-static inline void mpi_init1d(unsigned& n, unsigned& N, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init1d(unsigned& n, unsigned& N, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int rank;
     MPI_Comm_rank( comm, &rank);
@@ -134,7 +142,6 @@ static inline void mpi_init1d(unsigned& n, unsigned& N, MPI_Comm comm, std::istr
 /**
 * @brief Read in number of grid points and create Cartesian MPI communicator
 *
-* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param n  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
 * @param N  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
@@ -144,7 +151,7 @@ static inline void mpi_init1d(unsigned& n, unsigned& N, MPI_Comm comm, std::istr
 * @ingroup misc
 * @copydoc hide_cart_warning
 */
-static inline void mpi_init1d( dg::bc bcx, unsigned& n, unsigned& N, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init1d( dg::bc bcx, unsigned& n, unsigned& N, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     mpi_init1d( bcx,  comm, verbose);
     mpi_init1d( n, N, comm, is, verbose);
@@ -152,7 +159,6 @@ static inline void mpi_init1d( dg::bc bcx, unsigned& n, unsigned& N, MPI_Comm& c
 /**
 * @brief Read in number of processses and create Cartesian MPI communicator
 *
-* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param comm (write only) \c MPI_COMM_WORLD as a 2d Cartesian MPI communicator
@@ -160,8 +166,9 @@ static inline void mpi_init1d( dg::bc bcx, unsigned& n, unsigned& N, MPI_Comm& c
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 * @copydoc hide_cart_warning
+* @sa dg::mpi_cart_create
 */
-static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -194,17 +201,15 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istr
     dg::mpi_cart_create( MPI_COMM_WORLD, {np[0], np[1]}, {periods[0], periods[1]}, true, &comm);
 
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    int num_devices=0;
-    cudaGetDeviceCount(&num_devices);
-    if(num_devices == 0)
+    int device=0;
+    cudaGetDevice( &device);
+    if( rank==0 and verbose)
     {
-        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
-        MPI_Abort(MPI_COMM_WORLD, -1);
-        exit(-1);
+        std::cout << "# MPI is "
+                  <<(cuda_aware_mpi ? "cuda-aware" : "NOT cuda-aware")
+                  <<"!\n";
     }
-    int device = rank % num_devices; //assume # of gpus/node is fixed
     if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
-    cudaSetDevice( device);
 #endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 /**
@@ -218,7 +223,7 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istr
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-static inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int rank;
     MPI_Comm_rank( comm, &rank);
@@ -236,7 +241,6 @@ static inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm 
 /**
 * @brief Read in number of processses and grid size and create Cartesian MPI communicator
 *
-* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param n  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
@@ -248,7 +252,7 @@ static inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm 
 * @ingroup misc
 * @copydoc hide_cart_warning
 */
-static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     mpi_init2d( bcx, bcy, comm, is, verbose);
     mpi_init2d( n, Nx, Ny, comm, is, verbose);
@@ -258,7 +262,6 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx
 /**
 * @brief Read in number of processses and create Cartesian MPI communicator
 *
-* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param bcz if \c bcz==dg::PER then the communicator is periodic in z
@@ -268,7 +271,7 @@ static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx
 * @ingroup misc
 * @copydoc hide_cart_warning
 */
-static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -300,17 +303,15 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& com
     MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
     dg::mpi_cart_create( MPI_COMM_WORLD, {np[0],np[1],np[2]}, {periods[0],periods[1],periods[2]}, true, &comm);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    int num_devices=0;
-    cudaGetDeviceCount(&num_devices);
-    if(num_devices == 0)
+    int device=0;
+    cudaGetDevice( &device);
+    if( rank==0 and verbose)
     {
-        std::cerr << "# No CUDA capable devices found on rank "<<rank<<std::endl;
-        MPI_Abort(MPI_COMM_WORLD, -1);
-        exit(-1);
+        std::cout << "# MPI is "
+                  <<(cuda_aware_mpi ? "cuda-aware" : "NOT cuda-aware")
+                  <<"!\n";
     }
-    int device = rank % num_devices; //assume # of gpus/node is fixed
     if(verbose)std::cout << "# Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
-    cudaSetDevice( device);
 #endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 }
 /**
@@ -325,7 +326,7 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& com
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-static inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int rank;
     MPI_Comm_rank( comm, &rank);
@@ -344,7 +345,6 @@ static inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned&
 /**
 * @brief Read in number of processses and grid size and create Cartesian MPI communicator
 *
-* @copydoc hide_gpu
 * @param bcx if \c bcx==dg::PER then the communicator is periodic in x
 * @param bcy if \c bcy==dg::PER then the communicator is periodic in y
 * @param bcz if \c bcz==dg::PER then the communicator is periodic in z
@@ -358,12 +358,14 @@ static inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned&
 * @ingroup misc
 * @copydoc hide_cart_warning
 */
-static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     mpi_init3d( bcx, bcy, bcz, comm, is, verbose);
     mpi_init3d( n, Nx, Ny, Nz, comm, is, verbose);
 }
 
+//TODO not sure this should be public
+//It is used mainly in the file library
 /**
  * @brief Convert a global rank to a rank within a given communicator
  *
@@ -384,7 +386,7 @@ static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, 
  * if \c global_rank is not part of \c comm
 * @ingroup misc
  */
-static inline int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_Comm global_comm = MPI_COMM_WORLD )
+inline int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_Comm global_comm = MPI_COMM_WORLD )
 {
     MPI_Group local_group, global_group;
     MPI_Comm_group(comm, &local_group);//local call

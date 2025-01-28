@@ -77,7 +77,7 @@ template<class real_type>
 std::vector<std::string> axis_names( const aRealTopologyX3d<real_type>& g ) { return {"Z", "Y", "X"};}
 
 
-inline static void assign_defaults( std::vector<std::string>& name_dims, const std::vector<std::string>& default_names)
+inline void assign_defaults( std::vector<std::string>& name_dims, const std::vector<std::string>& default_names)
 {
     if( name_dims.empty())
         name_dims = default_names;
@@ -179,7 +179,7 @@ inline int define_real_time( int ncid, const char* name, int* dimID, int* tvarID
 }
 
 /// DEPRECATED An alias for <tt> define_real_time<double> </tt>
-static inline int define_time( int ncid, const char* name, int* dimID, int* tvarID)
+inline int define_time( int ncid, const char* name, int* dimID, int* tvarID)
 {
     return define_real_time<double>( ncid, name, dimID, tvarID);
 }
@@ -202,7 +202,7 @@ static inline int define_time( int ncid, const char* name, int* dimID, int* tvar
  *
  * @return NetCDF error code if any
  */
-static inline int define_limited_time( int ncid, const char* name, int size, int* dimID, int* tvarID)
+inline int define_limited_time( int ncid, const char* name, int size, int* dimID, int* tvarID)
 {
     int retval;
     if( (retval = nc_def_dim( ncid, name, size, dimID)) ){ return retval;}

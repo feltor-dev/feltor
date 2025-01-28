@@ -12,7 +12,7 @@ namespace toroidal{
  * @brief constant \f$\psi_p = 1\f$
  * @return
  */
-static inline CylindricalFunctorsLvl2 createPsip( )
+inline CylindricalFunctorsLvl2 createPsip( )
 {
     CylindricalFunctorsLvl2 psip( Constant(1), Constant(0), Constant(0),Constant(0), Constant(0), Constant(0));
     return psip;
@@ -21,7 +21,7 @@ static inline CylindricalFunctorsLvl2 createPsip( )
  * @brief constant \f$ I = 1\f$
  * @return
  */
-static inline CylindricalFunctorsLvl1 createIpol( )
+inline CylindricalFunctorsLvl1 createIpol( )
 {
     CylindricalFunctorsLvl1 ipol( Constant(1), Constant(0), Constant(0));
     return ipol;
@@ -88,7 +88,7 @@ struct PsipZ : public aCylindricalFunctor<PsipZ>
  * @param b the length of Z semi-axis
  * @return
  */
-static inline CylindricalFunctorsLvl2 createPsip( double R0, double a , double b )
+inline CylindricalFunctorsLvl2 createPsip( double R0, double a , double b )
 {
     return CylindricalFunctorsLvl2( Psip(R0, a, b), PsipR(R0, a), PsipZ(b),
         Constant(-2./a/a), Constant(0), Constant(-2./b/b));
@@ -97,7 +97,7 @@ static inline CylindricalFunctorsLvl2 createPsip( double R0, double a , double b
  * @brief constant \f$ I = I_0\f$
  * @return
  */
-static inline CylindricalFunctorsLvl1 createIpol( double I0 )
+inline CylindricalFunctorsLvl1 createIpol( double I0 )
 {
     CylindricalFunctorsLvl1 ipol( Constant(I0), Constant(0), Constant(0));
     return ipol;
@@ -115,7 +115,7 @@ static inline CylindricalFunctorsLvl1 createIpol( double I0 )
  * @note The solovev field can also be made to model a todoidal slab field
  * @note Chooses elongation=a=1, triangularity=0 and description as "none"
  */
-static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
+inline dg::geo::TokamakMagneticField createToroidalField( double R0)
 {
     MagneticFieldParameters params = { 1., 1., 0.,
             equilibrium::circular, modifier::none, description::none};
@@ -133,7 +133,7 @@ static inline dg::geo::TokamakMagneticField createToroidalField( double R0)
  * @ingroup circular
  * @note Chooses elongation=a=1, triangularity=0 and description as standardO
  */
-static inline dg::geo::TokamakMagneticField createCircularField( double R0, double I0, double a = 1, double b = 1)
+inline dg::geo::TokamakMagneticField createCircularField( double R0, double I0, double a = 1, double b = 1)
 {
     MagneticFieldParameters params = { a, 1., 0.,
             equilibrium::circular, modifier::none, description::standardO};

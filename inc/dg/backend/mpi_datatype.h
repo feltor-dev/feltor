@@ -8,7 +8,7 @@ namespace dg
 {
 ///@cond
 template<class value_type>
-static inline MPI_Datatype getMPIDataType(){ assert( false && "Type not supported!\n" ); return MPI_DATATYPE_NULL; }
+inline MPI_Datatype getMPIDataType(){ assert( false && "Type not supported!\n" ); return MPI_DATATYPE_NULL; }
 template<> inline MPI_Datatype getMPIDataType<char>(){ return MPI_CHAR;}
 template<> inline MPI_Datatype getMPIDataType<signed char>(){ return MPI_SIGNED_CHAR;}
 template<> inline MPI_Datatype getMPIDataType<unsigned char>(){ return MPI_UNSIGNED_CHAR;}

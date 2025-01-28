@@ -24,7 +24,7 @@ namespace dg
 namespace exblas{
 namespace cpu{
 
-static inline int64_t myllrint(double x) {
+inline int64_t myllrint(double x) {
 #if not defined _WITHOUT_VCL && not defined( _MSC_VER)
     return _mm_cvtsd_si64(_mm_set_sd(x));
 #else
@@ -32,7 +32,7 @@ static inline int64_t myllrint(double x) {
 #endif
 }
 
-static inline double myrint(double x)
+inline double myrint(double x)
 {
 #ifndef _WITHOUT_VCL
 #if defined( __GNUG__) || defined( _MSC_VER)
@@ -65,7 +65,7 @@ static inline double myrint(double x)
 //    return d;
 //}
 
-static inline int exponent(double x)
+inline int exponent(double x)
 {
     // simpler frexp
     union {
@@ -77,7 +77,7 @@ static inline int exponent(double x)
     return e;
 }
 
-static inline int biased_exponent(double x)
+inline int biased_exponent(double x)
 {
     union {
         double d;
@@ -89,7 +89,7 @@ static inline int biased_exponent(double x)
 }
 
 //MW: if x is a NaN this thing still returns a number??
-static inline double myldexp(double x, int e)
+inline double myldexp(double x, int e)
 {
     // Scale x by e
     union {
@@ -102,7 +102,7 @@ static inline double myldexp(double x, int e)
     return caster.d;
 }
 
-static inline double exp2i(int e)
+inline double exp2i(int e)
 {
     // simpler ldexp
     union {
@@ -115,7 +115,7 @@ static inline double exp2i(int e)
 }
 
 // Assumptions: th>tl>=0, no overlap between th and tl
-static inline double OddRoundSumNonnegative(double th, double tl)
+inline double OddRoundSumNonnegative(double th, double tl)
 {
     // Adapted from:
     // Sylvie Boldo, and Guillaume Melquiond. "Emulation of a FMA and correctly rounded sums: proved algorithms using rounding to odd." IEEE Transactions on Computers, 57, no. 4 (2008): 462-471.
@@ -141,7 +141,7 @@ static inline double OddRoundSumNonnegative(double th, double tl)
 #endif
 
 // signedcarry in {-1, 0, 1}
-inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
+inline int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 {
 
 //msvc doesn't allow inline assembler code
@@ -176,14 +176,14 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 }
 
 #ifndef _WITHOUT_VCL
-inline static bool horizontal_or(vcl::Vec8d const & a) {
+inline bool horizontal_or(vcl::Vec8d const & a) {
     //return _mm512_movemask_pd(a) != 0;
     vcl::Vec8db p = a != 0;
     return vcl::horizontal_or( p);
     //return !_mm512_testz_pd(p, p);
 }
 #else
-inline static bool horizontal_or( const double & a){
+inline bool horizontal_or( const double & a){
     return a!= 0;
 }
 #endif//_WITHOUT_VCL

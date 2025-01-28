@@ -236,21 +236,21 @@ enum func_tableau_identifier{
 ///@cond
 namespace create{
 
-static std::unordered_map<std::string, enum func_tableau_identifier> str2id{
+inline const std::unordered_map<std::string, enum func_tableau_identifier> str2id{
     //Explicit methods
     {"Euler", EXPLICIT_EULER_1_1},
     {"Midpoint-2-2", MIDPOINT_2_2},
     {"Runge-Kutta-4-4", CLASSIC_4_4},
     {"Hochbruck-3-3-4", HOCHBRUCK_3_3_4},
 };
-static inline enum func_tableau_identifier str2func_tableau( std::string name)
+inline enum func_tableau_identifier str2func_tableau( std::string name)
 {
-    if( str2id.find(name) == str2id.end())
+    auto it = str2id.find(name);
+    if( it == str2id.end())
         throw dg::Error(dg::Message(_ping_)<<"Tableau "<<name<<" not found!");
-    else
-        return str2id[name];
+    return it->second;
 }
-static inline std::string func_tableau2str( enum func_tableau_identifier id)
+inline std::string func_tableau2str( enum func_tableau_identifier id)
 {
     for( auto name: str2id)
     {

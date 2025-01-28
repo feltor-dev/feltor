@@ -31,7 +31,7 @@ enum class to
  * @return string as defined above
  * @ingroup time_utils
  */
-inline static std::string to2str( enum to mode)
+inline std::string to2str( enum to mode)
 {
     std::string s;
     switch(mode)

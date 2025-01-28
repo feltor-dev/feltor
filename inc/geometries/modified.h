@@ -172,7 +172,7 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
  *
  * @return  the modified flux function
  */
-static inline dg::geo::CylindricalFunctorsLvl2 createPsip(
+inline dg::geo::CylindricalFunctorsLvl2 createPsip(
         const std::function<bool(double,double)> predicate,
         const CylindricalFunctorsLvl2& psip,
     double psi0, double alpha, double sign = -1)
@@ -224,8 +224,8 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
     std::function<bool(double,double)> m_pred;
 };
 //some possible predicates
-static inline constexpr bool nowhere( double R, double Z){return false;}
-static inline constexpr bool everywhere( double R, double Z){return true;}
+inline constexpr bool nowhere( double R, double Z){return false;}
+inline constexpr bool everywhere( double R, double Z){return true;}
 // positive above certain Z value ( deprecated in favor of Above)
 struct HeavisideZ
 {

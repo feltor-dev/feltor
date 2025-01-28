@@ -41,7 +41,7 @@ namespace cpu{
  * \param acc1 superaccumulator of the first thread
  * \param acc2 superaccumulator of the second thread
  */
-inline static void ReductionStep(int step, int64_t * acc1, int64_t * acc2,
+inline void ReductionStep(int step, int64_t * acc1, int64_t * acc2,
     int volatile * ready)
 {
 #ifndef _WITHOUT_VCL
@@ -68,7 +68,7 @@ inline static void ReductionStep(int step, int64_t * acc1, int64_t * acc2,
  * \param tnum number of threads
  * \param acc superaccumulator
  */
-inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<int32_t>& ready,
+inline void Reduction(unsigned int tid, unsigned int tnum, std::vector<int32_t>& ready,
     std::vector<int64_t>& acc, int const linesize)
 {
     // Custom tree reduction

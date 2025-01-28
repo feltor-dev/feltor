@@ -71,7 +71,7 @@ namespace geo{
  * @return A magnetic field object
  * @ingroup geom
  */
-static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
+inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
 {
     std::string e = gs.get( "equilibrium", "solovev" ).asString();
     equilibrium equi = equilibrium::solovev;
@@ -130,7 +130,7 @@ static inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonVal
 ///@cond
 namespace detail{
 
-void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, double& sign0)
+inline void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, double& sign0)
 {
     double RO=mag.R0(), ZO=0.;
     dg::geo::findOpoint( mag.get_psip(), RO, ZO);
@@ -142,7 +142,7 @@ void transform_psi( TokamakMagneticField mag, double& psi0, double& alpha0, doub
     sign0 = sign0*((psipO>0)-(psipO<0));
 }
 
-static inline void createModifiedField(
+inline void createModifiedField(
         const dg::geo::TokamakMagneticField& mag,
         dg::file::WrappedJsonValue jsmod,
         modifier& mod,
@@ -419,7 +419,7 @@ or with additional modification in the private flux region "sol_pfr"
  * @param transition (out) On output contains the region where the transition of Psip to a constant value occurs, the functor returns 0<f<=1 for when there is a transition and 0 else
  * @return The modified magnetic field object
  */
-static inline TokamakMagneticField createModifiedField(
+inline TokamakMagneticField createModifiedField(
         dg::file::WrappedJsonValue gs, dg::file::WrappedJsonValue jsmod,
         CylindricalFunctor& wall, CylindricalFunctor& transition)
 {
@@ -452,7 +452,7 @@ static inline TokamakMagneticField createModifiedField(
 
 /// A convenience function call for \c dg::geo::createModifiedField that
 /// ignores the transition parameter and returns the wall functor
-static inline CylindricalFunctor createWallRegion( dg::geo::TokamakMagneticField mag,
+inline CylindricalFunctor createWallRegion( dg::geo::TokamakMagneticField mag,
     dg::file::WrappedJsonValue jsmod)
 {
     CylindricalFunctor wall, transition;
@@ -462,7 +462,7 @@ static inline CylindricalFunctor createWallRegion( dg::geo::TokamakMagneticField
     return wall;
 }
 /// DEPRECATED Same as <tt> createWallRegion( createMagneticField(gs), jsmod);</tt>
-static inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs,
+inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs,
     dg::file::WrappedJsonValue jsmod)
 {
     return createWallRegion( createMagneticField(gs), jsmod);
@@ -533,7 +533,7 @@ with \f$ \varphi_s = 2\pi b_s\f$.
  * @param sheath (out) contains the region recognized as sheath (returning +1 within
  * the sheath and 0 outside of it and something in-between in the transition region)
  */
-static inline void createSheathRegion(
+inline void createSheathRegion(
     dg::file::WrappedJsonValue jsmod, TokamakMagneticField mag,
     CylindricalFunctor wall, dg::Grid2d& sheath_walls,
     CylindricalFunctor& sheath)

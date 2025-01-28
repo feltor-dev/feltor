@@ -120,7 +120,7 @@ struct NablaPsiInvY: public aCylindricalFunctor<NablaPsiInvY>
 /**
  * @brief A container class that contains all NablaPsiInv functors
  */
-static inline CylindricalFunctorsLvl1 make_NablaPsiInvCollective( const CylindricalFunctorsLvl2& psi)
+inline CylindricalFunctorsLvl1 make_NablaPsiInvCollective( const CylindricalFunctorsLvl2& psi)
 {
     return CylindricalFunctorsLvl1( NablaPsiInv(psi), NablaPsiInvX(psi),
         NablaPsiInvY( psi));
@@ -251,7 +251,7 @@ struct DivLiseikinY : public aCylindricalFunctor<DivLiseikinY>
     CylindricalFunctorsLvl2 psi_;
 };
 
-static inline CylindricalSymmTensorLvl1 make_LiseikinCollective( const CylindricalFunctorsLvl2& psi, double k, double eps)
+inline CylindricalSymmTensorLvl1 make_LiseikinCollective( const CylindricalFunctorsLvl2& psi, double k, double eps)
 {
     return CylindricalSymmTensorLvl1( Liseikin_XX(psi,k,eps),
         Liseikin_XY(psi,k,eps), Liseikin_YY(psi,k,eps),

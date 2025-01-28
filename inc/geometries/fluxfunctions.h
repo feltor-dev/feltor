@@ -276,7 +276,7 @@ struct CylindricalFunctorsLvl2
  * 3 if saddle point
  * @ingroup misc_geo
  */
-static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
     std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
     X[0] = RC, X[1] = ZC;
@@ -333,7 +333,7 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
  * @return 1 if local minimum, 2 if local maximum,
  * @ingroup misc_geo
  */
-static inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
     int point = findCriticalPoint( psi, RC, ZC);
     if( point == 3 || point == 0 )
@@ -351,7 +351,7 @@ static inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, do
  * @param ZC start value on input, X-point on output
  * @ingroup misc_geo
  */
-static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
     int point = findCriticalPoint( psi, RC, ZC);
     if( point != 3)

@@ -41,7 +41,7 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
  * @return string containing current time followed by the parameters with which the program was invoked
  * @sa See history in <a href="https://docs.unidata.ucar.edu/netcdf-c/current/attribute_conventions.html">Attribute Convenctions</a>
  */
-inline static std::string timestamp( int argc, char* argv[])
+inline std::string timestamp( int argc, char* argv[])
 {
     ///Get local time
     auto ttt = std::time(nullptr);
@@ -75,7 +75,7 @@ inline static std::string timestamp( int argc, char* argv[])
  * @sa This approach follows
  <a href="https://stackoverflow.com/questions/44038428/include-git-commit-hash-and-or-branch-name-in-c-c-source/44038455#44038455">stackoverflow</a>.
  */
-static const std::map<std::string, std::string> version_flags =
+inline const std::map<std::string, std::string> version_flags =
 {
     // We use underscore instead of "git-hash"  so that python netcdf can
     // easily read it
@@ -95,7 +95,7 @@ static const std::map<std::string, std::string> version_flags =
 namespace detail
 {
 template<class value_type>
-static inline nc_type getNCDataType(){ assert( false && "Type not supported!\n" ); return NC_DOUBLE; }
+inline nc_type getNCDataType(){ assert( false && "Type not supported!\n" ); return NC_DOUBLE; }
 template<>
 inline nc_type getNCDataType<double>(){ return NC_DOUBLE;}
 template<>
@@ -284,7 +284,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
     return data;
 }
 
-inline static dg::file::nc_att_t get_att_t( int ncid, int varid,
+inline dg::file::nc_att_t get_att_t( int ncid, int varid,
         std::string att_name)
 {
     auto name = att_name.c_str();
@@ -336,7 +336,7 @@ void get_att_h( int ncid, int varid, std::string att_name, std::vector<T>& att)
 {
     att = get_att_v<T>( ncid, varid, att_name);
 }
-inline static void get_att_h( int ncid, int varid, std::string att_name, dg::file::nc_att_t& att)
+inline void get_att_h( int ncid, int varid, std::string att_name, dg::file::nc_att_t& att)
 {
     att = get_att_t( ncid, varid, att_name);
 }

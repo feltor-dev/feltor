@@ -29,28 +29,28 @@ namespace cpu {
 //********* Here, the change from float to double happens ***************//
 ///////////////////////////////////////////////////////////////////////////
 #ifndef _WITHOUT_VCL
-static inline vcl::Vec8d make_vcl_vec8d( double x, int i){
+inline vcl::Vec8d make_vcl_vec8d( double x, int i){
     return vcl::Vec8d(x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){
+inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){
     return vcl::Vec8d().load( x+i);
 }
-static inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){
     return vcl::Vec8d(x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){
     return vcl::Vec8d().load_partial( num, x+i);
 }
-static inline vcl::Vec8d make_vcl_vec8d( float x, int i){
+inline vcl::Vec8d make_vcl_vec8d( float x, int i){
     return vcl::Vec8d((double)x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i){
+inline vcl::Vec8d make_vcl_vec8d( const float* x, int i){
     return vcl::Vec8d( x[i], x[i+1], x[i+2], x[i+3], x[i+4], x[i+5], x[i+6], x[i+7]);
 }
-static inline vcl::Vec8d make_vcl_vec8d( float x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( float x, int i, int num){
     return vcl::Vec8d((double)x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
     double tmp[8];
     for(int j=0; j<num; j++)
         tmp[j] = (double)x[i+j];
@@ -169,7 +169,7 @@ inline T Round( const std::array<T,N>& fpe ) {
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
-static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
+inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
     // With atomic accumulator updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -216,7 +216,7 @@ static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @param x the double to add to the superaccumulator
 */
-static inline void Accumulate( int64_t* accumulator, double x) {
+inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
     //assert( !std::isnan(x) && "Detected NaN in dot product!!");
@@ -239,7 +239,7 @@ static inline void Accumulate( int64_t* accumulator, double x) {
     }
 }
 #ifndef _WITHOUT_VCL
-static inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
+inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
     double v[8];
     x.store(v);
 
@@ -267,7 +267,7 @@ static inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
 *
 * @return  carry in bit (sign)
 */
-static inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
+inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
     int64_t carry_in = accumulator[imin] >> DIGITS;
     accumulator[imin] -= carry_in << DIGITS;
     int i;
@@ -298,7 +298,7 @@ static inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @return the double precision number nearest to the superaccumulator
 */
-static inline double Round( int64_t * accumulator) {
+inline double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     bool negative = Normalize(accumulator, imin, imax);

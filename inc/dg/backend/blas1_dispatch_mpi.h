@@ -13,7 +13,7 @@
 ///@cond
 namespace dg {
 template<class value_type>
-static inline MPI_Datatype getMPIDataType();
+inline MPI_Datatype getMPIDataType();
 
 template<class to_ContainerType, class from_ContainerType, class ...Params>
 inline to_ContainerType construct( const from_ContainerType& src, Params&& ...ps);

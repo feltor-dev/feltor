@@ -9,7 +9,7 @@ namespace gpu
 
 //first define device function equivalent to mylibm.hpp
 //returns the original value at address
-__device__ static inline int64_t atomicAdd( int64_t* address, int64_t val)
+__device__ inline int64_t atomicAdd( int64_t* address, int64_t val)
 {
     unsigned long long int* address_as_ull =
         (unsigned long long int*)address;
@@ -26,7 +26,7 @@ __device__ static inline int64_t atomicAdd( int64_t* address, int64_t val)
     return (int64_t)(old);
 }
 // signedcarry in {-1, 0, 1}
-__device__ static inline int64_t xadd( int64_t &sa, int64_t x, unsigned char &of) {
+__device__ inline int64_t xadd( int64_t &sa, int64_t x, unsigned char &of) {
     // OF and SF  -> carry=1
     // OF and !SF -> carry=-1
     // !OF        -> carry=0
@@ -45,7 +45,7 @@ __device__ static inline int64_t xadd( int64_t &sa, int64_t x, unsigned char &of
 }
 // Assumptions: th>tl>=0, no overlap between th and tl
 __device__
-static inline double OddRoundSumNonnegative(double th, double tl) {
+inline double OddRoundSumNonnegative(double th, double tl) {
     // Adapted from:
     // Sylvie Boldo, and Guillaume Melquiond. "Emulation of a FMA and correctly rounded sums: proved algorithms using rounding to odd." IEEE Transactions on Computers, 57, no. 4 (2008): 462-471.
     union {
