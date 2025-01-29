@@ -22,7 +22,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/topology/evaluation_mpit program\n";
     //mpi_init2d( dg::PER, dg::PER, comm);
     MPI_Comm comm, commX, commY;
-    dg::mpi_cart_create( MPI_COMM_WORLD, {1,size}, {0,0}, false, &comm);
+    comm = dg::mpi_cart_create( MPI_COMM_WORLD, {1,size}, {0,0}, false);
     dg::mpi_cart_sub( comm, {1,0}, &commX);
     dg::mpi_cart_sub( comm, {0,1}, &commY);
     {

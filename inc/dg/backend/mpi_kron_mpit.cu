@@ -1,6 +1,7 @@
 #include <iostream>
 #include <mpi.h>
 
+#include "mpi_init.h"
 #include "mpi_kron.h"
 #include "catch2/catch.hpp"
 
@@ -9,45 +10,11 @@ TEST_CASE("MPI Kron test")
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    const auto& mm = dg::detail::mpi_cart_info_map;
-    SECTION( "Check registry entry creation")
-    {
-        int np3d[3] = {0,0,0};
-        MPI_Dims_create( size, 3, np3d);
-        int periods[3] = {false,false, false};
-        MPI_Comm comm;
-        MPI_Cart_create( MPI_COMM_WORLD, 3, np3d, periods, true, &comm);
-
-        dg::register_mpi_cart_create( MPI_COMM_WORLD, 3, np3d, periods, true, comm);
-
-        CHECK( mm.at(comm).root == comm);
-        std::vector<int> remain_dims{1,1,1};
-        CHECK( mm.at(comm).remain_dims == remain_dims);
-    }
-    SECTION( "Check direct entry creation")
-    {
-        if( size  % 2 == 0)
-        {
-            MPI_Comm comm;
-            std::vector<int> np3d = {0,0,2};
-            MPI_Dims_create( size, 3, &np3d[0]);
-
-            dg::mpi_cart_create( MPI_COMM_WORLD, np3d, {0,0,0}, true, &comm);
-
-            CHECK( mm.at(comm).root == comm);
-            std::vector<int> remain_dims = {1, 1, 1};
-            CHECK( mm.at(comm).remain_dims == remain_dims);
-        }
-        else
-            SUCCEED();
-    }
+    const auto& mm = dg::detail::mpi_cart_registry;
     SECTION( "Check sub entry creation")
     {
-        MPI_Comm comm;
-        std::vector<int> np3d = {0,0,0};
-        MPI_Dims_create( size, 3, &np3d[0]);
-
-        dg::mpi_cart_create( MPI_COMM_WORLD, np3d, {0,0,0}, true, &comm);
+        MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0},
+            {false,false,false}, true);
 
         std::vector<int> remain_dims = {1, 0, 0};
         MPI_Comm comm_sub100;
@@ -58,11 +25,10 @@ TEST_CASE("MPI Kron test")
         CHECK( mm.at(comm_sub100).root == comm);
         CHECK( mm.at(comm_sub100).remain_dims == remain_dims);
 
-        MPI_Comm same;
-        dg::mpi_cart_sub( comm, {1,0,0}, &same, false);
+        MPI_Comm same = dg::mpi_cart_sub( comm, {1,0,0}, false);
         CHECK( same == comm_sub100);
 
-        dg::mpi_cart_sub( comm, {0,0,1}, &same);
+        same = dg::mpi_cart_sub( comm, {0,0,1});
         remain_dims = {0,0,1};
         CHECK( mm.at(same).root == comm);
         CHECK( mm.at(same).remain_dims == remain_dims);
@@ -70,12 +36,12 @@ TEST_CASE("MPI Kron test")
 
     SECTION( "Direct kronecker")
     {
-        MPI_Comm comm, comm_sub100, comm_sub010, comm_sub001;
         std::vector<int> np3d = {0,0,0};
         MPI_Dims_create( size, 3, &np3d[0]);
-        dg::mpi_cart_create( MPI_COMM_WORLD, np3d, {0,0,0}, true, &comm);
-        dg::mpi_cart_sub( comm, {1,0,0}, &comm_sub100, false);
-        dg::mpi_cart_sub( comm, {0,0,1}, &comm_sub001, false);
+        MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, np3d, {0,0,0},
+            true);
+        MPI_Comm comm_sub100 = dg::mpi_cart_sub( comm, {1,0,0});
+        MPI_Comm comm_sub001 = dg::mpi_cart_sub( comm, {0,0,1});
 
         MPI_Comm kron = dg::mpi_cart_kron( {comm_sub100, comm_sub001}); // 100 + 001
         int coords[2], np[2] = {0,0}, periods[2];
@@ -84,7 +50,7 @@ TEST_CASE("MPI Kron test")
         CHECK( np[1] == np3d[2]);
         CHECK(mm.at(kron).root == comm);
         CHECK(mm.at(kron).remain_dims == std::vector<int>{1,0,1});
-        dg::mpi_cart_sub( comm, {0,1,0}, &comm_sub010);
+        MPI_Comm comm_sub010 = dg::mpi_cart_sub( comm, {0,1,0});
         MPI_Comm comm111;
         CHECK_THROWS_AS(
             // Cannot create kronecker in reverse order
@@ -96,7 +62,7 @@ TEST_CASE("MPI Kron test")
             doesNotWork =dg::mpi_cart_kron( {comm_sub010, comm_sub010}),
             dg::Error
         );
-        std::array<MPI_Comm,3> axes = dg::mpi_cart_split<3>( comm);
+        std::array<MPI_Comm,3> axes = dg::mpi_cart_split_as<3>( comm);
         CHECK( axes[0] == comm_sub100);
         CHECK( axes[1] == comm_sub010);
         CHECK( axes[2] == comm_sub001);
@@ -107,7 +73,7 @@ TEST_CASE("MPI Kron test")
         // A test originating from geometry_elliptic_mpib
         auto taxe = dg::mpi_cart_kron( {axes[0], axes[1]});
         //if(rank==0)dg::mpi_cart_registry_display();
-        auto paxes = dg::mpi_cart_split<2>( taxe);
+        auto paxes = dg::mpi_cart_split_as<2>( taxe);
         //if(rank==0)dg::mpi_cart_registry_display();
         auto kaxe = dg::mpi_cart_kron( paxes);
         //if(rank==0)dg::mpi_cart_registry_display();

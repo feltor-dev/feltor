@@ -686,7 +686,7 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
             unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
         aRealMPITopology<real_type,2>(
                 {x0,y0},{x1,y1},{n,n},{Nx,Ny},{dg::PER,dg::PER},
-                dg::mpi_cart_split<2>(comm))
+                dg::mpi_cart_split_as<2>(comm))
     { }
 
     /**
@@ -700,7 +700,7 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
             comm):
         aRealMPITopology<real_type,2>(
                 {x0,y0},{x1,y1},{n,n},{Nx,Ny},{bcx,bcy},
-                dg::mpi_cart_split<2>(comm))
+                dg::mpi_cart_split_as<2>(comm))
     { }
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_comm_parameters3d
@@ -710,7 +710,7 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
             unsigned Nz, MPI_Comm comm):
         aRealMPITopology<real_type,3>(
                 {x0,y0,z0},{x1,y1,z1},{n,n,1},{Nx,Ny,Nz},{dg::PER,dg::PER,dg::PER},
-                dg::mpi_cart_split<3>(comm))
+                dg::mpi_cart_split_as<3>(comm))
     { }
 
     ///@copydoc hide_grid_parameters3d
@@ -722,7 +722,7 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
             unsigned Nz, dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm comm):
         aRealMPITopology<real_type,3>(
                 {x0,y0,z0},{x1,y1,z1},{n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz},
-                dg::mpi_cart_split<3>(comm))
+                dg::mpi_cart_split_as<3>(comm))
     { }
 
     RealMPIGrid( const std::array<RealMPIGrid<real_type,1>,Nd>& grids) :

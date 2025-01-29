@@ -1,19 +1,19 @@
 #pragma once
 #include <cassert>
 #include <vector>
+#include <algorithm> // std::copy_n
 #include <map>
 #include "exceptions.h"
 
 
 namespace dg
 {
-// TODO I think the mpi registry should not be exposed to the User
+///@cond
+namespace detail{
+// I think the mpi registry should not be exposed to the User
 // It may be an idea to hint at it in the grid documentation
 // inline declared functions generate no warning about "defined but not used"...
 // and can be defined in multiple translation units
-// Maybe the vector interface functions can be exposed as utility
-///@cond
-namespace detail{
 struct MPICartInfo
 {
     MPI_Comm root;
@@ -23,12 +23,12 @@ struct MPICartInfo
 //we keep track of communicators that were created in the past
 // inline variables have the same address in multiple translation units
 // and have external linkage by default
-inline std::map<MPI_Comm, MPICartInfo> mpi_cart_info_map;
+inline std::map<MPI_Comm, MPICartInfo> mpi_cart_registry;
 
 inline void mpi_cart_registry_display( std::ostream& out = std::cout)
 {
     out << "MPI Cart registry\n";
-    for ( auto pair : detail::mpi_cart_info_map)
+    for ( auto pair : detail::mpi_cart_registry)
     {
         auto& re = pair.second.remain_dims;
         out << "Comm "<<pair.first<<" Root "<<pair.second.root<<" Remains size "<<re.size();
@@ -41,114 +41,73 @@ inline void mpi_cart_registry_display( std::ostream& out = std::cout)
 
 inline void mpi_cart_registry_clear( )
 {
-    mpi_cart_info_map.clear();
+    mpi_cart_registry.clear();
 }
 }
 ///@endcond
 /*! @class hide_mpi_cart_rationale
- * The reason to register/save calls to \c MPI_Cart_create and \c MPI_Cart_sub is that
- * the grids in the dg library are Kronecker product grids and we need to sub a Cartesian
- * communicator every time a grid is created, which is potentially often and MPI_Communicators
- * are a limited resource
+ * @note The reason the dg library provides \c dg::mpi_cart_sub and \c
+ * dg::mpi_cart_kron is that unfortunately the MPI standard does not provide a
+ * way to form the Kronecker product of Cartesian communicators without
+ * manually tracking their parent Cartesian communicators.  However, this is
+ * needed in the \c dg::blas1::kronecker and \c dg::kronecker functions.
  */
-/*! @brief register a call to \c MPI_Cart_create with the dg library
- *
- * The \c comm_cart parameter is the \c MPI_Comm that will be registered
- * @note The function does not check if \c comm_cart is already registered
- * (it will simply overwrite an existing entry)
- * @param comm_old parameter used in \c MPI_Cart_create
- * @param ndims parameter used in \c MPI_Cart_create
- * @param dims parameter used in \c MPI_Cart_create
- * @param periods parameter used in \c MPI_Cart_create
- * @param reorder parameter used in \c MPI_Cart_create
- * @param comm_cart parameter used in \c MPI_Cart_create
- * @ingroup mpi_structures
- */
-inline void register_mpi_cart_create( MPI_Comm comm_old, int ndims, const int dims[],
-                    const int periods[], int reorder, MPI_Comm comm_cart)
-{
-    std::vector<int> remain_dims( ndims, true);
-    detail::MPICartInfo info{ comm_cart, remain_dims};
-    detail::mpi_cart_info_map[comm_cart] = info;
-}
 
-/*! @brief Call and register a call to \c MPI_Cart_create with the dg library
+/*! @brief Manually register a call to \c MPI_Cart_sub with the dg library
  *
- * If MPI_Cart_create is successful this function is equivalent to
- * @code{.cpp}
-    MPI_Cart_create( comm_old, ndims, dims, periods, reorder, comm_cart);
-    dg::register_mpi_cart_create( comm_old, ndims, dims, periods, reorder, *comm_cart);
-    return MPI_SUCCESS;
- * @endcode
+ * @param comm communicator with Cartesian structure (handle) (parameter used
+ * in \c MPI_Cart_sub)
+ * @param remain_dims the i-th entry of \c remain_dims specifies whether the
+ * i-th dimension is kept in the subgrid (true) or is dropped (false), must
+ * have \c ndims entries. (parameter used in \c MPI_Cart_sub)
+ * @param newcomm communicator containing the subgrid that includes the calling
+ * process (handle) (parameter used in \c MPI_Cart_sub)
  * @ingroup mpi_structures
- * @param comm_old parameter used in \c MPI_Cart_create
- * @param dims parameter used in \c MPI_Cart_create (determines \c ndims)
- * @param periods parameter used in \c MPI_Cart_create (must have same size as
- * \c dims)
- * @param reorder parameter used in \c MPI_Cart_create
- * @param comm_cart parameter used in \c MPI_Cart_create
- */
-inline void mpi_cart_create( MPI_Comm comm_old, std::vector<int> dims,
-                    std::vector<int> periods, bool reorder, MPI_Comm * comm_cart)
-{
-    //TODO Update docu with more modern interface
-    assert( dims.size() == periods.size());
-    int ndims = dims.size();
-    int re = (int)reorder;
-    int err = MPI_Cart_create( comm_old, ndims, &dims[0], &periods[0], re, comm_cart);
-    if( err != MPI_SUCCESS)
-        throw Error(Message(_ping_)<<
-                "Cannot create Cartesian comm from given communicator");
-    register_mpi_cart_create( comm_old, ndims, &dims[0], &periods[0], re, *comm_cart);
-}
-
-/*! @brief register a call to \c MPI_Cart_sub with the dg library
- *
- * The \c newcomm parameter is the \c MPI_Comm that will be registered
- * @param comm parameter used in \c MPI_Cart_sub
- * @note \c comm must have Cartesian structure and needs to be already registered
- * @param remain_dims parameter used in \c MPI_Cart_sub (must have same size as in registry)
- * @param newcomm parameter used in \c MPI_Cart_sub
- * @ingroup mpi_structures
+ * @copydoc hide_mpi_cart_rationale
  */
 inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
 {
-    detail::MPICartInfo info = detail::mpi_cart_info_map.at(comm);
+    auto it = detail::mpi_cart_registry.find( comm);
+    if( it == detail::mpi_cart_registry.end())
+    {
+        int ndims;
+        MPI_Cartdim_get( comm, &ndims);
+        std::vector<int> remain_dims( ndims, true);
+        detail::MPICartInfo info{ comm, remain_dims};
+        detail::mpi_cart_registry[comm] = info;
+    }
+    detail::MPICartInfo info = detail::mpi_cart_registry.at(comm);
     for( unsigned u=0; u<info.remain_dims.size(); u++)
         info.remain_dims[u]  = remain_dims[u];
-    detail::mpi_cart_info_map[newcomm] = info;
+    detail::mpi_cart_registry[newcomm] = info;
 }
 
 /*! @brief Call and register a call to \c MPI_Cart_sub with the dg library
  *
- * If \c MPI_Cart_sub is successful and an equivalent sub communicator does not eixst already,
- * this function is equivalent to
- * @code{.cpp}
-    MPI_Cart_sub( comm, remain_dims, newcomm);
-    dg::register_mpi_cart_sub( comm, remain_dims, *newcomm);
-    return MPI_SUCCESS;
- * @endcode
- * @note \c comm needs to be already registered
- * @param comm parameter of \c MPI_Cart_sub
- * @param remain_dims parameter of \c MPI_Cart_sub
-    size of remain_dims must be comm ndims
- * @param newcomm parameter of \c MPI_Cart_sub
- * @param duplicate Determines what happens in case \c MPI_Cart_sub was already reigstered with the
- * same input parameters \c comm and \c remain_dims. True: call \c MPI_Cart_sub and register
- * the novel communicator even if a duplicate exists. False: first check if a communicator
- * that was subbed from \c comm with \c remain_dims was previously registered. In case one is found
- * set *newcomm = existing_comm. Else, call and register \c MPI_Cart_sub.
- * @return MPI success code
+ * @param comm communicator with Cartesian structure (handle) (parameter used
+ * in \c MPI_Cart_sub)
+ * @param remain_dims the i-th entry of \c remain_dims specifies whether the
+ * i-th dimension is kept in the subgrid (true) or is dropped (false), must
+ * have \c ndims entries. (parameter used in \c MPI_Cart_sub)
+ * @param duplicate Determines what happens in case \c MPI_Cart_sub was already
+ * reigstered with the same input parameters \c comm and \c remain_dims. True:
+ * call \c MPI_Cart_sub and generate a novel communicator even if a duplicate
+ * exists. False: first check if a communicator that was subbed from \c comm
+ * with \c remain_dims was previously registered. In case one is found
+ * <tt>return existing_comm;</tt>.  Else, call and register \c MPI_Cart_sub.
+ * @return communicator containing the subgrid that includes the calling
+ * process (handle) (parameter used in \c MPI_Cart_sub)
  * @ingroup mpi_structures
+ * @copydoc hide_mpi_cart_rationale
  */
-inline void mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, MPI_Comm *newcomm, bool duplicate = false)
+inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
+    duplicate = false)
 {
-
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
     assert( (unsigned) ndims == remain_dims.size());
 
-    detail::MPICartInfo info = detail::mpi_cart_info_map.at(comm);
+    detail::MPICartInfo info = detail::mpi_cart_registry.at(comm);
     // info.remain_dims may be larger than remain_dims because comm may have a parent
     // but exactly remain_dims.size() entries are true
     int counter =0;
@@ -159,48 +118,54 @@ inline void mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, MPI_Comm 
             counter ++;
         }
     assert( counter == (int)remain_dims.size());
-    if( ! duplicate)
+    if( not duplicate)
     {
-    for (auto it = detail::mpi_cart_info_map.begin(); it != detail::mpi_cart_info_map.end(); ++it)
-        if( it->second.root == info.root && it->second.remain_dims == info.remain_dims)
-        {
-            *newcomm = it->first;
-            return;
-        }
+        for (auto it = detail::mpi_cart_registry.begin(); it !=
+            detail::mpi_cart_registry.end(); ++it)
+            if( it->second.root == info.root && it->second.remain_dims ==
+                info.remain_dims)
+            {
+                return it->first;
+            }
     }
-    int err = MPI_Cart_sub( comm, &remain_dims[0], newcomm);
+    MPI_Comm newcomm;
+    int err = MPI_Cart_sub( comm, &remain_dims[0], &newcomm);
     if( err != MPI_SUCCESS)
         throw Error(Message(_ping_)<<
                 "Cannot create Cartesian sub comm from given communicator");
-    register_mpi_cart_sub( comm, &remain_dims[0], *newcomm);
+    register_mpi_cart_sub( comm, &remain_dims[0], newcomm);
+    return newcomm;
 }
 
 /*! @brief Form a Kronecker product among Cartesian communicators
  *
- * All input comms must be registered in the dg library as Cartesian communicators
- * that derive from the same root Cartesian communicator.
- * Furthermore the comms must be mutually orthogonal i.e. any \c true
- * entry in \c remain_dims can exist in only exactly one comm.
- * The resulting \c remain_dims of the output is then the union of all \c remain_dims
- * of the inputs.
+ * All input comms must be registered in the dg library as Cartesian
+ * communicators that derive from the same root Cartesian communicator.
+ * Furthermore the comms must be mutually orthogonal i.e. any \c true entry in
+ * \c remain_dims can exist in only exactly one comm.  The resulting \c
+ * remain_dims of the output is then the union of all \c remain_dims of the
+ * inputs.
  *
- * The returned communicator is then the one that hypothetically generated all input comms
- * through <tt> MPI_Cart_sub( return_comm, remain_dims[u], comms[u]); </tt>
- * for all <tt>u < comms.size()</tt>;
- * @note The order of communicators matters. The function will not transpose communicators
- * @param comms input communicators (their order is irrelevant, the result is the same if reordered)
- * @return Kronecker product of communicators (is automatically registered)
+ * The returned communicator is then the one that hypothetically generated all
+ * input comms through <tt>MPI_Cart_sub( return_comm, remain_dims[u],
+ * comms[u]);</tt> for all <tt>u < comms.size();</tt>
+ * @attention The order of communicators matters. The function will not
+ * transpose communicators
+ * @param comms input communicators
+ * @return Kronecker product of communicators
  * @ingroup mpi_structures
+ * @copydoc hide_mpi_cart_rationale
  */
 inline MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
 {
-    // This non-template interface must exist so compiler can deduce call mpi_cart_kron( {comm0, comm1});
+    // This non-template interface must exist so compiler can deduce call
+    // mpi_cart_kron( {comm0, comm1});
     if ( comms.empty())
         return MPI_COMM_NULL;
     std::vector<detail::MPICartInfo> infos(comms.size());
 
     for( unsigned u=0; u<comms.size(); u++)
-        infos [u] = detail::mpi_cart_info_map.at(comms[u]);
+        infos [u] = detail::mpi_cart_registry.at(comms[u]);
     MPI_Comm root = infos[0].root;
     for( unsigned u=0; u<comms.size(); u++)
         if( infos[u].root != root)
@@ -208,7 +173,7 @@ inline MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
                     "In mpi_cart_kron all comms must have same root comm "
                     <<root<<" Offending comm number "<<u<<" with root "
                     <<infos[u].root);
-    auto root_info = detail::mpi_cart_info_map.at(root);
+    auto root_info = detail::mpi_cart_registry.at(root);
     size_t ndims = root_info.remain_dims.size();
     std::vector<int> remain_dims( ndims, false) ;
     unsigned current_free_k=0;
@@ -227,44 +192,57 @@ inline MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
             current_free_k = k+1;
         }
     }
-    MPI_Comm newcomm;
-    dg::mpi_cart_sub( root_info.root, remain_dims, &newcomm, false);
-    return newcomm;
+    return dg::mpi_cart_sub( root_info.root, remain_dims, false);
 }
 
-// TODO document
+/*!
+ * @brief Convenience shortcut for <tt> return mpi_cart_kron(
+ * std::vector<MPI_Comm>(comms.begin(), comms.end()));</tt>
+ */
 template<class Vector>
 MPI_Comm mpi_cart_kron( Vector comms)
 {
     return mpi_cart_kron( std::vector<MPI_Comm>(comms.begin(), comms.end()));
 }
 
+
 /*! @brief Split a Cartesian communicator along each dimensions
  *
  * using repeated calls to \c dg::mpi_cart_sub
- * @tparam Nd number of dimensions
- * @param comm input Cartesian communicator must be of dimension Nd
+ * @param comm input Cartesian communicator
+ * @return Array of 1-dimensional Cartesian communicators
  */
-template<size_t Nd>
-std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
+inline std::vector<MPI_Comm> mpi_cart_split( MPI_Comm comm)
 {
-    // Should there be a std::vector version?
-    // assert dimensionality of comm
     // Check that there is a Comm that was already split
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
-    assert( (unsigned) ndims == Nd);
-    std::array<MPI_Comm, Nd> comms;
-    std::vector<int> remain_dims(Nd);
-    for( unsigned u=0; u<Nd; u++)
+
+    std::vector<MPI_Comm> comms(ndims);
+    std::vector<int> remain_dims(ndims);
+    for( int u=0; u<ndims; u++)
     {
-        for( unsigned k=0; k<Nd; k++)
+        for( int k=0; k<ndims; k++)
             remain_dims[k]=0;
         remain_dims[u] = 1;
-        mpi_cart_sub( comm, remain_dims, &comms[u], false);
+        comms[u] = mpi_cart_sub( comm, remain_dims, false);
     }
-
     return comms;
+}
+/*!
+ * @brief Same as \c mpi_cart_split but differen return type
+ *
+ * @tparam Nd Number of dimensions to copy from \c mpi_cart_split
+ * @param comm input Cartesian communicator ( <tt>Nd <= comm.ndims</tt>)
+ * @return Array of 1-dimensional Cartesian communicators
+ */
+template<size_t Nd>
+std::array<MPI_Comm, Nd> mpi_cart_split_as( MPI_Comm comm)
+{
+    auto split = mpi_cart_split( comm);
+    std::array<MPI_Comm, Nd> arr;
+    std::copy_n( split.begin(), Nd, arr.begin());
+    return arr;
 }
 
 
@@ -277,7 +255,7 @@ std::array<MPI_Comm, Nd> mpi_cart_split( MPI_Comm comm)
 // */
 //void unregister_mpi_comm( MPI_Comm comm)
 //{
-//    detail::mpi_cart_info_map.erase( comm);
+//    detail::mpi_cart_registry.erase( comm);
 //}
 //
 // /*! @brief call \c MPI_Comm_free(comm) followed by \c dg::unregister_mpi_comm(comm)
