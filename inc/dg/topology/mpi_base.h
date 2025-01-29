@@ -149,7 +149,7 @@ struct RealCartesianMPIGrid2d : public aRealMPIGeometry2d<real_type>
     RealCartesianMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1,
         unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
         aRealMPIGeometry2d<real_type>( {x0,y0},{x1,y1}, {n,n}, {Nx,Ny}, {dg::PER, dg::PER},
-            dg::mpi_cart_split<2>(comm))
+            dg::mpi_cart_split_as<2>(comm))
             {}
 
     ///@copydoc hide_grid_parameters2d
@@ -158,7 +158,7 @@ struct RealCartesianMPIGrid2d : public aRealMPIGeometry2d<real_type>
     RealCartesianMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1,
         unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         aRealMPIGeometry2d<real_type>( {x0,y0},{x1,y1}, {n,n}, {Nx,Ny}, {bcx, bcy},
-            dg::mpi_cart_split<2>(comm))
+            dg::mpi_cart_split_as<2>(comm))
             {}
     ///@copydoc aRealTopology2d::aRealTopology2d(RealGrid1d,RealGrid1d)
     ///@copydoc hide_comm_parameters2d
@@ -202,7 +202,7 @@ struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
         unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
         aRealProductMPIGeometry3d<real_type>(
             {x0,y0,z0},{x1,y1,z1}, {n,n,1}, {Nx,Ny,Nz}, {dg::PER, dg::PER,dg::PER},
-            dg::mpi_cart_split<3>(comm)){}
+            dg::mpi_cart_split_as<3>(comm)){}
 
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
@@ -211,7 +211,7 @@ struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
         unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         aRealProductMPIGeometry3d<real_type>(
             {x0,y0,z0},{x1,y1,z1}, {n,n,1}, {Nx,Ny,Nz}, {bcx, bcy, bcz},
-            dg::mpi_cart_split<3>(comm)){}
+            dg::mpi_cart_split_as<3>(comm)){}
 
     ///@brief Implicit type conversion from RealMPIGrid3d
     ///@param g existing grid object
@@ -259,14 +259,14 @@ struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
     ///@copydoc hide_comm_parameters3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R
     RealCylindricalMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        aRealProductMPIGeometry3d<real_type>( {x0,y0,z0},{x1,y1,z1}, {n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz}, dg::mpi_cart_split<3>(comm)){}
+        aRealProductMPIGeometry3d<real_type>( {x0,y0,z0},{x1,y1,z1}, {n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz}, dg::mpi_cart_split_as<3>(comm)){}
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters2d
     ///@note bcz is dg::PER
     ///@copydoc hide_comm_parameters3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R
     RealCylindricalMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, MPI_Comm comm):
-        aRealProductMPIGeometry3d<real_type>( {x0,y0,z0},{x1,y1,z1}, {n,n,1},{Nx,Ny,Nz},{bcx,bcy,dg::PER}, dg::mpi_cart_split<3>(comm)){}
+        aRealProductMPIGeometry3d<real_type>( {x0,y0,z0},{x1,y1,z1}, {n,n,1},{Nx,Ny,Nz},{bcx,bcy,dg::PER}, dg::mpi_cart_split_as<3>(comm)){}
 
     ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
     ///@copydoc hide_comm_parameters3d
