@@ -23,8 +23,8 @@ int main( int argc, char* argv[])
     //mpi_init2d( dg::PER, dg::PER, comm);
     MPI_Comm comm, commX, commY;
     comm = dg::mpi_cart_create( MPI_COMM_WORLD, {1,size}, {0,0}, false);
-    dg::mpi_cart_sub( comm, {1,0}, &commX);
-    dg::mpi_cart_sub( comm, {0,1}, &commY);
+    commX = dg::mpi_cart_sub( comm, {1,0});
+    commY = dg::mpi_cart_sub( comm, {0,1});
     {
     thrust::device_vector<double> v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
     MVec v1(v1p, comm), v2(v2p, comm), v3(v3p, comm), v4(v4p, comm), v5(v4p, comm);

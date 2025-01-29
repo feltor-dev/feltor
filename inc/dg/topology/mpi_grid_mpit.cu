@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     // TODO Check that all processes agree on the index
     // Assume that evaluate works
     dg::MPIGrid2d g2d( {0.,0.}, {1.,1.}, {nx,ny}, {Nx,Ny}, {dg::PER, dg::PER},
-            dg::mpi_cart_split<2>(comm));
+            dg::mpi_cart_split_as<2>(comm));
     auto local_vec = dg::evaluate( function, g2d);
     auto global_vec = dg::evaluate( function, g2d.global());
     auto local_vec2 = dg::global2local( global_vec, g2d);

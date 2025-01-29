@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "exblas/mpi_accumulate.h"
 #include "mpi_matrix.h"
 #include "blas1_dispatch_mpi.h"
 #include "blas2_dispatch_shared.h"
@@ -27,8 +28,9 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     //get communicator from MPIVector
     auto comm = get_idx<vector_idx>(x,y).communicator();
-    auto comm_mod = get_idx<vector_idx>(x,y).communicator_mod();
-    auto comm_red = get_idx<vector_idx>(x,y).communicator_mod_reduce();
+    MPI_Comm comm_mod, comm_red;
+    dg::exblas::mpi_reduce_communicator( comm, &comm_mod, &comm_red);
+    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
     return receive;
 }
@@ -45,7 +47,10 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
         m.data(),
         do_get_data(y, get_tensor_category<Vector2>()));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
-    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), m.communicator(), m.communicator_mod(), m.communicator_mod_reduce());
+    MPI_Comm comm_mod, comm_red;
+    dg::exblas::mpi_reduce_communicator( m.communicator(), &comm_mod, &comm_red);
+    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), m.communicator(),
+        comm_mod, comm_red);
 
     return receive;
 }

@@ -125,8 +125,7 @@ std::vector<get_mpi_view_type<MPIContainer> > split(
     int result;
     MPI_Comm_compare( in.communicator(), grid.communicator(), &result);
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-    MPI_Comm planeComm = grid.get_perp_comm(), comm_mod, comm_mod_reduce;
-    exblas::mpi_reduce_communicator( planeComm, &comm_mod, &comm_mod_reduce);
+    MPI_Comm planeComm = grid.get_perp_comm();
     //local size2d
     RealGrid3d<real_type> l = grid.local();
     unsigned size2d=l.shape(0)*l.shape(1);
@@ -135,7 +134,7 @@ std::vector<get_mpi_view_type<MPIContainer> > split(
     {
         out[i].data().construct( thrust::raw_pointer_cast(in.data().data())
             + i*size2d, size2d);
-        out[i].set_communicator( planeComm, comm_mod, comm_mod_reduce);
+        out[i].set_communicator( planeComm);
     }
     return out;
 }

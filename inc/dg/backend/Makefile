@@ -19,6 +19,7 @@ TARGETSMPI=mpi_gather_kron_mpit\
 mpi_gather_mpit\
 mpi_init_mpit\
 mpi_kron_mpit\
+mpi_exblas_mpit\
 mpi_permutation_mpit
 
 CATCH=../../../tests/catch-tests

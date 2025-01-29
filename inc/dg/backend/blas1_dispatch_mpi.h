@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include "exblas/mpi_accumulate.h"
 #include "mpi_kron.h"
 #include "mpi_vector.h"
 #include "tensor_traits.h"
@@ -25,8 +26,7 @@ template< class Vector1, class Vector2, class ...Params>
 Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
     Vector1 out;
-    out.set_communicator(in.communicator(), in.communicator_mod(),
-            in.communicator_mod_reduce());
+    out.set_communicator(in.communicator());
     using container1 = typename std::decay_t<Vector1>::container_type;
     out.data() = dg::construct<container1>( in.data(), std::forward<Params>(ps)...);
     return out;
@@ -34,8 +34,7 @@ Vector1 doConstruct( const Vector2& in, MPIVectorTag, MPIVectorTag, Params&& ...
 template< class Vector1, class Vector2, class ...Params>
 void doAssign( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag, Params&& ...ps)
 {
-    out.set_communicator(in.communicator(), in.communicator_mod(),
-            in.communicator_mod_reduce());
+    out.set_communicator(in.communicator());
     dg::assign( in.data(), out.data(), std::forward<Params>(ps)...);
 }
 
@@ -108,8 +107,8 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVect
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     //get communicator from MPIVector
     auto comm = get_idx<vector_idx>(x,y).communicator();
-    auto comm_mod = get_idx<vector_idx>(x,y).communicator_mod();
-    auto comm_red = get_idx<vector_idx>(x,y).communicator_mod_reduce();
+    MPI_Comm comm_mod, comm_red;
+    dg::exblas::mpi_reduce_communicator( comm, &comm_mod, &comm_red);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
     return receive;
 }
