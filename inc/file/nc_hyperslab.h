@@ -271,6 +271,38 @@ struct MPINcHyperslab
     NcHyperslab m_slab;
     MPI_Comm m_comm;
 };
+
+namespace detail
+{
+/**
+ * @brief Convert a global rank to a rank within a given communicator
+ *
+ * Essentially a utility wrapper around \c MPI_Group_translate_ranks
+ * This function can be used to determine if the world_rank 0 (the "master" process)
+ * belongs to the communicator of the calling process or not
+ * @code
+ * int local_master_rank = dg::mpi_comm_global2local_rank( comm, 0);
+ * if ( local_master_rank == MPI_UNDEFINED)
+ * // master process is not part of group
+ * else
+ * // do something
+ * @endcode
+ * @param comm The communicator / process group. Must be sub-group of or same as \c global_comm
+ * @param global_rank a rank within \c global_comm
+ * @param global_comm the communicator, which \c global_rank refers to
+ * @return rank of \c global_rank, \c global_comm in \c comm,
+ * \c MPI_UNDEFINED if \c global_rank is not part of \c comm
+ */
+inline int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_Comm global_comm = MPI_COMM_WORLD )
+{
+    MPI_Group local_group, global_group;
+    MPI_Comm_group(comm, &local_group);//local call
+    MPI_Comm_group(MPI_COMM_WORLD, &global_group);//local call
+    int local_root_rank;
+    MPI_Group_translate_ranks(global_group, 1, &global_rank, local_group, &local_root_rank);
+    return local_root_rank;
+}
+} // namespace detail
 #endif
 
 }//namespace file

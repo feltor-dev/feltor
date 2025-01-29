@@ -46,7 +46,7 @@ all: $(TARGETS) $(TARGETSMPI)
 %_t: $(CATCH).$(device).o %_t.$(device).o
 	$(CC) $(OPT) -o $@ $^ $(LIBS)
 
-%_mpit: $(CATCHMPI).$(device)o %_mpit.$(device).o
+%_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
 	$(MPICC) $(OPT) -o $@ $^ $(LIBS)
 
 #######################################################################

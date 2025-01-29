@@ -72,7 +72,6 @@ namespace file
  *  grid with a Cartesian communicator containing only one process (using e.g. \c MPI_Comm_split on \c MPI_COMM_WORLD followed by \c MPI_Cart_create)
  *  - Manually assemble the data on the MPI group that contains the master process (cf \c MPI_Cart_sub)
  *  .
- * @sa \c dg::mpi_comm_global2local_rank
  * @class hide_parallel_write
  * @attention With the serial NetCDF library only a single "master" process can **write** in a
  * NetCDF file (creation, defining dimension ids, variables ids, writing etc).
@@ -161,7 +160,8 @@ void put_vara_detail(int ncid, int varid,
     MPI_Comm comm = slab.communicator();
     // we need to identify the global root rank within the groups and mark the
     // entire group
-    int local_root_rank = dg::mpi_comm_global2local_rank(comm, 0, global_comm);
+    int local_root_rank = dg::file::detail::mpi_comm_global2local_rank(comm, 0,
+        global_comm);
     if (local_root_rank == MPI_UNDEFINED)
         return;
     unsigned ndim = slab.ndim(); // same on all processes

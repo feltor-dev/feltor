@@ -86,7 +86,8 @@ void get_vara_detail(int ncid, int varid,
     MPI_Comm comm = slab.communicator();
     // we need to identify the global root rank within the groups and mark the
     // entire group
-    int local_root_rank = dg::mpi_comm_global2local_rank(comm, 0, global_comm);
+    int local_root_rank = dg::file:.detail::mpi_comm_global2local_rank(comm, 0,
+        global_comm);
     if (local_root_rank == MPI_UNDEFINED)
         return;
     unsigned ndim = slab.ndim(); // same on all processes
