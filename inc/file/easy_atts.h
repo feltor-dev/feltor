@@ -3,6 +3,7 @@
 #include <variant>
 #include <vector>
 #include <map>
+#include <string>
 #include <cassert>
 #include <sstream>
 #include <iomanip> // std::put_time

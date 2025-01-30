@@ -165,7 +165,6 @@ void put_vara_detail(int ncid, int varid,
     if (local_root_rank == MPI_UNDEFINED)
         return;
     unsigned ndim = slab.ndim(); // same on all processes
-    file::NC_Error_Handle err;
     int rank, size;
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &size);
@@ -181,8 +180,17 @@ void put_vara_detail(int ncid, int varid,
                 local_root_rank, comm);
 
     MPI_Datatype mpitype = dg::getMPIDataType<get_value_type<host_vector>>();
+    int err = NC_NOERR; // store error flag
     if( rank == local_root_rank )
     {
+        // Sanity check
+        int ndims;
+        int e = nc_inq_varndims( ncid, varid, &ndims);
+        if( not e)
+            err = e;
+        if( (unsigned)ndims != slab.ndim())
+            err = 1001; // Our own error code
+
         std::vector<size_t> sizes( size, 1);
         for( int r = 0 ; r < size; r++)
             for( unsigned u=0; u<ndim; u++)
@@ -198,13 +206,16 @@ void put_vara_detail(int ncid, int varid,
                 MPI_Status status;
                 MPI_Recv( receive.data(), (int)sizes[r], mpitype,
                       r, r, comm, &status);
-                err = detail::put_vara_T( ncid, varid, &r_start[r*ndim],
+                int e = detail::put_vara_T( ncid, varid, &r_start[r*ndim],
                         &r_count[r*ndim], receive.data()); // write received
+                if( not e) err = e;
+
             }
             else // write own data
             {
-                err = detail::put_vara_T( ncid, varid, slab.startp(),
+                int e = detail::put_vara_T( ncid, varid, slab.startp(),
                         slab.countp(), thrust::raw_pointer_cast(data.data()));
+                if( not e) err = e;
             }
         }
     }
@@ -216,7 +227,9 @@ void put_vara_detail(int ncid, int varid,
         MPI_Send( thrust::raw_pointer_cast(data.data()), num, mpitype,
             local_root_rank, rank, comm);
     }
-    MPI_Barrier( comm);
+    MPI_Bcast( &err, 1, dg::getMPIDataType<int>(), local_root_rank, comm);
+    if( err)
+        throw NC_Error( err);
     return;
 }
 

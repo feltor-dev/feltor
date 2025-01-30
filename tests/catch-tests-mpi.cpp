@@ -34,36 +34,40 @@ int main( int argc, char* argv[] ) {
     int device = rank % num_devices; //assume # of gpus/node is fixed
     cudaSetDevice( device);
 #endif//THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    // The default error handler makes it very difficult to debug...
+    MPI_Comm_set_errhandler( MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
-    std::stringstream ss;
+    //std::stringstream ss;
 
     /* save old buffer and redirect output to string stream */
-    auto cout_buf = std::cout.rdbuf( ss.rdbuf() );
+    //auto cout_buf = std::cout.rdbuf( ss.rdbuf() );
 
     int result = Catch::Session().run( argc, argv );
 
     /* reset buffer */
-    std::cout.rdbuf( cout_buf );
+    //std::cout.rdbuf( cout_buf );
 
+    // The problem with catching the cout is that debugging becomes hard
+    // cause it's not printing when expected
 
-    std::stringstream printRank;
-    printRank << "Rank ";
-    printRank.width(2);
-    printRank << std::right << rank << ":\n";
+    //std::stringstream printRank;
+    //printRank << "Rank ";
+    //printRank.width(2);
+    //printRank << std::right << rank << ":\n";
 
-    for ( int i{1}; i<size; ++i ){
-        MPI_Barrier(MPI_COMM_WORLD);
-        if ( i == rank ){
-            /* if all tests are passed, it's enough if we hear that from
-             * the master. Otherwise, print results */
-            if ( ss.str().rfind("All tests passed") == std::string::npos )
-                std::cout << printRank.str() + ss.str();
-        }
-    }
-    /* have master print last, because it's the one with the most assertions */
-    MPI_Barrier(MPI_COMM_WORLD);
-    if ( rank == 0 )
-        std::cout << printRank.str() + ss.str();
+    //for ( int i{1}; i<size; ++i ){
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if ( i == rank ){
+    //        /* if all tests are passed, it's enough if we hear that from
+    //         * the master. Otherwise, print results */
+    //        if ( ss.str().rfind("All tests passed") == std::string::npos )
+    //            std::cout << printRank.str() + ss.str();
+    //    }
+    //}
+    ///* have master print last, because it's the one with the most assertions */
+    //MPI_Barrier(MPI_COMM_WORLD);
+    //if ( rank == 0 )
+    //    std::cout << printRank.str() + ss.str();
 
     MPI_Finalize();
     return result;

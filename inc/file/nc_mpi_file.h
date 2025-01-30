@@ -35,6 +35,7 @@ namespace file
  * @attention All ranks in the communicator \c comm given in the constructor
  * must participate in **all** member function calls. No exceptions!. Even if
  * e.g. the data to write only lies distributed only on a subgroup of ranks.
+ * If an error occurs **all participating ranks will throw**!
  * @sa SerialNcFile
  * @ingroup Cpp
  */
@@ -110,10 +111,7 @@ struct MPINcFile
         m_rank0 = (rank == 0);
         m_readonly = ( mode == nc_nowrite);
         // Classic file access, one process writes, everyone else reads
-        if( m_readonly or m_rank0)
-        {
-            m_file.open( filename, mode);
-        }
+        mpi_invoke_void( &SerialNcFile::open, m_file, filename, mode);
         MPI_Barrier( m_comm); // all ranks agree that file exists
     }
     ///@copydoc SerialNcFile::is_open
@@ -129,7 +127,7 @@ struct MPINcFile
      */
     void close()
     {
-        m_file.close();
+        mpi_invoke_void( &SerialNcFile::close, m_file);
         MPI_Barrier( m_comm); // all ranks agree that file is closed
         // removes lock from file
     }
@@ -137,15 +135,14 @@ struct MPINcFile
     ///@copydoc SerialNcFile::sync
     void sync()
     {
-        if( m_readonly or m_rank0)
-            m_file.sync();
+        mpi_invoke_void( &SerialNcFile::sync, m_file);
     }
     ///@copydoc SerialNcFile::get_ncid
     /// In MPI all ranks get an ncid but only rank 0 can actually use it,
-    ///except for \c nc_nowrite / when every rank can use it
-    int get_ncid() const
+    /// except for \c nc_nowrite when every rank can use it
+    int get_ncid() const noexcept
     {
-        return mpi_invoke( &SerialNcFile::get_ncid, m_file);
+        return m_file.get_ncid();
     }
 
     /// Return MPI communicator set in constructor
@@ -155,14 +152,12 @@ struct MPINcFile
     ///@copydoc SerialNcFile::def_grp
     void def_grp( std::string name)
     {
-        if( m_rank0)
-            m_file.def_grp(name);
+        mpi_invoke_void( &SerialNcFile::def_grp, m_file, name);
     }
     ///@copydoc SerialNcFile::def_grp_p
     void def_grp_p( std::filesystem::path path)
     {
-        if( m_rank0)
-            m_file.def_grp_p(path);
+        mpi_invoke_void( &SerialNcFile::def_grp_p, m_file, path);
     }
     ///@copydoc SerialNcFile::grp_is_defined
     bool grp_is_defined( std::filesystem::path path) const
@@ -172,20 +167,20 @@ struct MPINcFile
     ///@copydoc SerialNcFile::set_grp
     void set_grp( std::filesystem::path path = "")
     {
-        if( m_rank0)
-            m_file.set_grp(path);
+        mpi_invoke_void( &SerialNcFile::set_grp, m_file, path);
     }
     ///@copydoc SerialNcFile::rename_grp
     void rename_grp( std::string old_name, std::string new_name)
     {
-        if( m_rank0)
-            m_file.rename_grp(old_name, new_name);
+        mpi_invoke_void( &SerialNcFile::rename_grp, m_file, old_name, new_name);
     }
 
     ///@copydoc SerialNcFile::get_grpid
-    int get_grpid() const
+    /// In MPI all ranks get a grpid but only rank 0 can actually use it,
+    /// except for \c nc_nowrite when every rank can use it
+    int get_grpid() const noexcept
     {
-        return mpi_invoke( &SerialNcFile::get_grpid, m_file);
+        return m_file.get_grpid();
     }
 
     ///@copydoc SerialNcFile::get_current_path
@@ -195,12 +190,12 @@ struct MPINcFile
     }
 
     ///@copydoc SerialNcFile::get_grps
-    std::vector<std::filesystem::path> get_grps( ) const
+    std::list<std::filesystem::path> get_grps( ) const
     {
         return mpi_invoke( &SerialNcFile::get_grps, m_file);
     }
     ///@copydoc SerialNcFile::get_grps_r
-    std::vector<std::filesystem::path> get_grps_r( ) const
+    std::list<std::filesystem::path> get_grps_r( ) const
     {
         return mpi_invoke( &SerialNcFile::get_grps_r, m_file);
     }
@@ -209,14 +204,12 @@ struct MPINcFile
     ///@copydoc SerialNcFile::def_dim
     void def_dim( std::string name, size_t size)
     {
-        if( m_rank0)
-            m_file.def_dim( name, size);
+        mpi_invoke_void( &SerialNcFile::def_dim, m_file, name, size);
     }
     ///@copydoc SerialNcFile::rename_dim
     void rename_dim( std::string old_name, std::string new_name)
     {
-        if( m_rank0)
-            m_file.rename_dim( old_name, new_name);
+        mpi_invoke_void( &SerialNcFile::rename_dim, m_file, old_name, new_name);
     }
     ///@copydoc SerialNcFile::get_dim_size
     size_t get_dim_size( std::string name) const
@@ -248,28 +241,22 @@ struct MPINcFile
     ///@copydoc SerialNcFile::put_att
     void put_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
     {
-        if( m_rank0)
-            m_file.put_att( id, att);
+        // Fix unresolved type following
+        // https://stackoverflow.com/questions/45505017/how-comes-stdinvoke-does-not-handle-function-overloads
+        mpi_invoke_void( [this]( auto&&...xs) { m_file.put_att(
+            std::forward<decltype(xs)>(xs)...);}, id, att);
     }
     ///@copydoc SerialNcFile::put_att<S,T>
     template<class S, class T>
     void put_att( std::string id, const std::tuple<S,nc_type, T>& att)
     {
-        if( m_rank0)
-            m_file.put_att( id, att);
+        mpi_invoke_void( &SerialNcFile::put_att<S,T>, m_file, id, att);
     }
     ///@copydoc SerialNcFile::put_atts(std::string,const Iterable&)
     template<class Attributes = std::map<std::string, nc_att_t> > // *it must be usable in put_att
     void put_atts( std::string id, const Attributes& atts)
     {
-        if( m_rank0)
-            m_file.put_atts( id, atts);
-    }
-    ///@copydoc SerialNcFile::put_atts(std::string,const std::map<std::string,nc_att_t>&)
-    void put_atts( std::string id, const std::map<std::string, nc_att_t>& atts)
-    {
-        if( m_rank0)
-            m_file.put_atts( id, atts);
+        mpi_invoke_void( &SerialNcFile::put_atts<Attributes>, m_file, id, atts);
     }
 
     // ///////////////// Attribute getters
@@ -303,8 +290,7 @@ struct MPINcFile
     ///@copydoc SerialNcFile::del_att
     void del_att( std::string id, std::string att)
     {
-        if( m_rank0)
-            m_file.del_att( id, att);
+        mpi_invoke_void( &SerialNcFile::del_att, m_file, id, att);
     }
     ///@copydoc SerialNcFile::att_is_defined
     bool att_is_defined( std::string id, std::string att_name) const
@@ -312,10 +298,11 @@ struct MPINcFile
         return mpi_invoke( &SerialNcFile::att_is_defined, m_file, id, att_name);
     }
     ///@copydoc SerialNcFile::rename_att
-    void rename_att( std::string id, std::string old_att_name, std::string new_att_name)
+    void rename_att( std::string id, std::string old_att_name, std::string
+        new_att_name)
     {
-        if( m_rank0)
-            m_file.rename_att( id, old_att_name, new_att_name);
+        mpi_invoke_void( &SerialNcFile::rename_att, m_file, id, old_att_name,
+            new_att_name);
     }
 
     // //////////// Variables ////////////////////////
@@ -325,8 +312,7 @@ struct MPINcFile
         const std::vector<std::string>& dim_names,
         const Attributes& atts = {})
     {
-        if( m_rank0)
-            m_file.def_var_as<T>( name, dim_names, atts);
+        mpi_invoke_void( &SerialNcFile::def_var_as<T>, m_file, name, dim_names, atts);
     }
     ///@copydoc SerialNcFile::def_var
     template<class Attributes = std::map<std::string, nc_att_t>>
@@ -334,8 +320,8 @@ struct MPINcFile
             const std::vector<std::string>& dim_names,
             const Attributes& atts = {})
     {
-        if( m_rank0)
-            m_file.def_var( name, xtype, dim_names, atts);
+        mpi_invoke_void( &SerialNcFile::def_var<Attributes>, m_file, name,
+            xtype, dim_names, atts);
     }
 
     ///@copydoc SerialNcFile::put_var(std::string,const NcHyperslab&,const ContainerType&)
@@ -348,16 +334,18 @@ struct MPINcFile
     void put_var( std::string name, const MPINcHyperslab& slab,
             const ContainerType& data)
     {
-        int grpid = 0, varid = 0;
-        if( m_rank0)
+        int grpid = m_file.get_grpid(), varid = 0;
+        int e;
+        file::NC_Error_Handle err;
+        if( m_readonly or m_rank0)
         {
-            grpid = m_file.get_grpid();
-            file::NC_Error_Handle err;
-            err = nc_inq_varid( grpid, name.c_str(), &varid);
-            int ndims;
-            err = nc_inq_varndims( grpid, varid, &ndims);
-            assert( (unsigned)ndims == slab.ndim());
+            e = nc_inq_varid( grpid, name.c_str(), &varid);
         }
+        if ( not m_readonly)
+        {
+            MPI_Bcast( &e, 1, dg::getMPIDataType<int>(), 0, m_comm);
+        }
+        err = e;
         using value_type = dg::get_value_type<ContainerType>;
         m_receive.template set<value_type>(0);
         auto& receive = m_receive.template get<value_type>( );
@@ -391,16 +379,14 @@ struct MPINcFile
     template<class T, typename = std::enable_if_t<dg::is_scalar_v<T>>>
     void put_var( std::string name, const std::vector<size_t>& start, T data)
     {
-        if(m_rank0)
-            m_file.put_var( name, start, data);
+        mpi_invoke_void( &SerialNcFile::put_var<T>, m_file, name, start, data);
     }
 
-    ///@copydoc SerialNcFile::defput_dim_as
+    ///@copydoc SerialNcFile::def_dimvar_as
     template<class T, class Attributes = std::map<std::string, nc_att_t>>
-    void defput_dim_as( std::string name, size_t size, const Attributes& atts)
+    void def_dimvar_as( std::string name, size_t size, const Attributes& atts)
     {
-        if( m_rank0)
-            m_file.defput_dim_as<T>( name, size, atts);
+        mpi_invoke_void( &SerialNcFile::def_dimvar_as<T>, m_file, name, size, atts);
     }
     /*! @copydoc SerialNcFile::defput_dim
      *
@@ -415,9 +401,8 @@ struct MPINcFile
         unsigned size = abscissas.size(), global_size = 0;
         MPI_Reduce( &size, &global_size, 1, MPI_UNSIGNED, MPI_SUM, 0,
             abscissas.communicator());
-        if( m_rank0)
-            m_file.defput_dim_as<dg::get_value_type<ContainerType>>( name,
-                global_size, atts);
+        def_dimvar_as<dg::get_value_type<ContainerType>>( name, global_size,
+            atts);
         put_var( name, {abscissas}, abscissas);
     }
 
@@ -430,16 +415,18 @@ struct MPINcFile
     void get_var( std::string name, const MPINcHyperslab& slab,
             ContainerType& data) const
     {
-        int grpid = 0, varid = 0;
-        grpid = m_file.get_grpid();
+        int grpid = m_file.get_grpid(), varid = 0; // grpid does not throw
+        int e;
         file::NC_Error_Handle err;
         if( m_readonly or m_rank0)
         {
-            err = nc_inq_varid( grpid, name.c_str(), &varid);
-            int ndims;
-            err = nc_inq_varndims( grpid, varid, &ndims);
-            assert( (unsigned)ndims == slab.ndim());
+            e = nc_inq_varid( grpid, name.c_str(), &varid);
         }
+        if ( not m_readonly)
+        {
+            MPI_Bcast( &e, 1, dg::getMPIDataType<int>(), 0, m_comm);
+        }
+        err = e;
 
         using value_type = dg::get_value_type<ContainerType>;
         auto& receive = m_receive.template get<value_type>( );
@@ -470,8 +457,7 @@ struct MPINcFile
     template<class T, typename = std::enable_if_t<dg::is_scalar_v<T>> >
     void get_var( std::string name, const std::vector<size_t>& start, T& data) const
     {
-        if( m_readonly or m_rank0)
-            m_file.get_var( name, start, data);
+        mpi_invoke_void( &SerialNcFile::get_var<T>, m_file, name, start, data);
         if( not m_readonly)
             mpi_bcast( data);
     }
@@ -495,7 +481,7 @@ struct MPINcFile
     }
 
     ///@copydoc SerialNcFile::get_var_names
-    std::vector<std::string> get_var_names() const
+    std::list<std::string> get_var_names() const
     {
         return mpi_invoke( &SerialNcFile::get_var_names, m_file);
     }
@@ -505,7 +491,6 @@ struct MPINcFile
     {
         return mpi_invoke( &SerialNcFile::get_var_names_r, m_file);
     }
-
 
     private:
     template<class ContainerType>
@@ -554,8 +539,8 @@ struct MPINcFile
         size_t len = data.size();
         MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
         data.resize( len);
-
         for( unsigned u=0; u<len; u++)
+        {
             if constexpr ( std::is_same_v<T, bool>)
             {
                 bool b = data[u];
@@ -564,6 +549,16 @@ struct MPINcFile
             }
             else
                 mpi_bcast( data[u]);
+        }
+    }
+    template<class T>
+    void mpi_bcast( std::list<T>& data) const
+    {
+        size_t len = data.size();
+        MPI_Bcast( &len, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+        data.resize( len);
+        for( auto it = data.begin(); it != data.end(); it++)
+            mpi_bcast( *it);
     }
     template<class K, class T>
     void mpi_bcast( std::map<K,T>& data) const
@@ -588,11 +583,32 @@ struct MPINcFile
                 data[keys[u]] = values[u];
         }
     }
+    // Adapted from
+    // https://stackoverflow.com/questions/60564132/default-constructing-an-stdvariant-from-index
+    template <class Variant, std::size_t I = 0>
+    Variant variant_from_index(std::size_t index) const
+    {
+        // I increases so we need to stop
+        if constexpr( I >= std::variant_size_v<Variant>)
+            return {};
+        else
+            return index == 0
+                ? Variant{std::in_place_index<I>}
+                : variant_from_index<Variant, I + 1>(index - 1);
+    }
     void mpi_bcast( nc_att_t& data) const
     {
-        std::visit( [this]( auto&& arg) { mpi_bcast(arg); }, data);
+        // We need to make sure that data holds the correct type on non-rank0
+        size_t idx = data.index();
+        MPI_Bcast( &idx, 1, dg::getMPIDataType<size_t>(), 0, m_comm);
+        if( not m_rank0)
+            data = variant_from_index<nc_att_t>( idx);
+        // ... so that visit calls the correct bcast overload
+        std::visit( [this]( auto&& arg) { mpi_bcast(arg);}, data);
     }
 
+    // Here we handle errors, such that if they occur on rank0 all ranks will
+    // throw
     template<class F, class ... Args>
     std::invoke_result_t<F, Args...> mpi_invoke( F&& f, Args&& ...args) const
     {
@@ -601,14 +617,44 @@ struct MPINcFile
         {
             return std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
         }
+        int err = NC_NOERR;
         R r;
         if( m_rank0)
         {
-            r = std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            try
+            {
+                r = std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            }
+            catch( const NC_Error& e) { err = e.error();}
         }
+        mpi_bcast( err);
+        if( err)
+            throw NC_Error( err);
         mpi_bcast( r);
         return r;
     }
+    template<class F, class ... Args>
+    void mpi_invoke_void( F&& f, Args&& ... args) const
+    {
+        if ( m_readonly)
+        {
+            std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            return;
+        }
+        int err = NC_NOERR;
+        if( m_rank0)
+        {
+            try
+            {
+                std::invoke(std::forward<F>(f), std::forward<Args>(args)...);
+            }
+            catch(const NC_Error& e) { err = e.error(); }
+        }
+        mpi_bcast( err); // this makes all calls blocking if not readonly!
+        if( err)
+            throw NC_Error( err);
+    }
+
 
 
     bool m_rank0;
