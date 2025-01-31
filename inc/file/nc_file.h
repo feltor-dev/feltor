@@ -727,7 +727,7 @@ struct SerialNcFile
         const std::vector<std::string>& dim_names,
         const Attributes& atts = {})
     {
-        def_var( name, detail::getNCDataType<T>(), dim_names);
+        def_var( name, detail::getNCDataType<T>(), dim_names, atts);
     }
 
     /*! @brief Define a variable with given type, dimensions and (optionally)

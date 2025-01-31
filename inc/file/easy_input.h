@@ -131,14 +131,13 @@ void get_vara_detail(int ncid, int varid,
             {
                 int e = detail::get_vara_T( ncid, varid, &r_start[r*ndim],
                         &r_count[r*ndim], to_send.data()); // read data
-                MPI_Send( to_send.data(), (int)sizes[r], mpitype,
-                      r, r, comm);
+                MPI_Send( to_send.data(), (int)sizes[r], mpitype, r, r, comm);
                 if( not e) err = e;
             }
             else // read own data
             {
                 int e = detail::get_vara_T( ncid, varid, slab.startp(),
-                        slab.countp(), data.data());
+                        slab.countp(), thrust::raw_pointer_cast(data.data()));
                 if( not e) err = e;
             }
         }
@@ -149,7 +148,7 @@ void get_vara_detail(int ncid, int varid,
         for( unsigned u=0; u<ndim; u++)
             num*= slab.count()[u];
         MPI_Status status;
-        MPI_Recv( data.data(), num, mpitype,
+        MPI_Recv( thrust::raw_pointer_cast(data.data()), num, mpitype,
                   local_root_rank, rank, comm, &status);
     }
     MPI_Bcast( &err, 1, dg::getMPIDataType<int>(), local_root_rank, comm);

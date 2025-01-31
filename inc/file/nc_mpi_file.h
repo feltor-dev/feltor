@@ -312,7 +312,7 @@ struct MPINcFile
         const std::vector<std::string>& dim_names,
         const Attributes& atts = {})
     {
-        mpi_invoke_void( &SerialNcFile::def_var_as<T>, m_file, name, dim_names, atts);
+        mpi_invoke_void( &SerialNcFile::def_var_as<T, Attributes>, m_file, name, dim_names, atts);
     }
     ///@copydoc SerialNcFile::def_var
     template<class Attributes = std::map<std::string, nc_att_t>>
@@ -447,7 +447,8 @@ struct MPINcFile
         {
             if( m_readonly)
                 err = detail::get_vara_T( grpid, varid,
-                    slab.startp(), slab.countp(), data_ref.data());
+                    slab.startp(), slab.countp(),
+                    thrust::raw_pointer_cast(data_ref.data()));
             else
                 detail::get_vara_detail( grpid, varid, slab, data_ref, receive, m_comm);
         }
