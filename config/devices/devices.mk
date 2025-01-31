@@ -14,10 +14,6 @@ MPICFLAGS+= -x cu $(NVCCARCH) $(NVCCFLAGS)
 #MPICFLAGS+=-D_MWAITXINTRIN_H_INCLUDED # solves issue with std=c++11
 endif #device=gpu
 
-ifeq ($(strip $(device)),cpp)
-CFLAGS+=-x c++ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
-MPICFLAGS+=$(CFLAGS)
-endif #device=cpp
 ifeq ($(strip $(device)),cpu)
 CFLAGS+=-x c++ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
 MPICFLAGS+=$(CFLAGS)
