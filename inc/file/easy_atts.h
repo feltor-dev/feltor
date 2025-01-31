@@ -25,22 +25,20 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
       std::vector<int>, std::vector<unsigned>, std::vector<float>,
       std::vector<double>, std::vector<bool>>;
 
-/*! @brief Generate a line entry for the history global attribute
+/*! @brief Generate one line entry for the history global attribute
  *
- * Short for:
- * @code{.cpp}
- *  ///Get local time
- *  auto ttt = std::time(nullptr);
- *  std::ostringstream oss;
- *  ///time string  + program-name + args
- *  oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
- *  for( int i=0; i<argc; i++) oss << " "<<argv[i];
- *  return oss.str();
- * @endcode
+ * This will generate a string containing a whitespace seperated list of
+ *  -# the current day in  <tt>"%Y-%m-%d" (the ISO 8601 date format)</tt>
+ *  -# the current time in <tt>"%H:%M:%S" (the ISO 8601 time format)</tt>
+ *  -# locale-dependent time zone name or abbreviation <tt>"%Z%"</tt>
+ *  -# all given argv (whitespace separated)
+ *  -# A newline
+ *  .
  * @param argc from main function
  * @param argv from main function
  * @return string containing current time followed by the parameters with which the program was invoked
  * @sa See history in <a href="https://docs.unidata.ucar.edu/netcdf-c/current/attribute_conventions.html">Attribute Convenctions</a>
+ * @sa std::put_time
  */
 inline std::string timestamp( int argc, char* argv[])
 {
@@ -49,7 +47,8 @@ inline std::string timestamp( int argc, char* argv[])
     std::ostringstream oss;
     ///time string  + program-name + args
     oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i]<<std::endl;
+    for( int i=0; i<argc; i++) oss << " "<<argv[i];
+    oss << std::endl;
     return oss.str();
 }
 
@@ -68,10 +67,9 @@ inline std::string timestamp( int argc, char* argv[])
  * Use <tt>-DVERSION_FLAGS</tt> during compilation to define all otherwise it remains empty.
  * This is the corresponding entry in \c feltor/config/version.mk
  * @code{.sh}
- * GIT_HASH=`git rev-parse HEAD`
- * COMPILE_TIME=`date +'%F %T %Z'`
- * GIT_BRANCH=`git branch | grep "^\*" | sed 's/^..//'`
- * export VERSION_FLAGS=-DGIT_HASH="\"$(GIT_HASH)\"" -DCOMPILE_TIME="\"$(COMPILE_TIME)\"" -DGIT_BRANCH="\"$(GIT_BRANCH)\""
+ * GIT_HASH=$(git rev-parse HEAD)
+ * COMPILE_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+ * GIT_BRANCH=$(git branch --show-current)
  * @endcode
  * @sa This approach follows
  <a href="https://stackoverflow.com/questions/44038428/include-git-commit-hash-and-or-branch-name-in-c-c-source/44038455#44038455">stackoverflow</a>.
@@ -91,7 +89,6 @@ inline const std::map<std::string, std::string> version_flags =
 #endif // COMPILE_TIME
 };
 
-// TODO update docu
 ///@cond
 namespace detail
 {
@@ -111,7 +108,6 @@ template<>
 inline nc_type getNCDataType<std::string>(){ return NC_STRING;}
 template<>
 inline nc_type getNCDataType<const char*>(){ return NC_STRING;}
-
 
 // Variant for user defined data types (compound types)
 // S allows both std::string and const char* to be used

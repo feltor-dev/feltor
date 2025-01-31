@@ -1,4 +1,4 @@
-device=cpp
+device=cpu
 #configure machine
 include ../../config/default.mk
 include ../../config/*.mk
@@ -34,8 +34,6 @@ CATCHMPI=../../tests/catch-tests-mpi
 all: $(TARGETS) $(TARGETSMPI)
 
 ############### CATCH TESTS  - REQUIRES catch2 package #################
-# The catch main programs should not be compiled into objects
-# because we cannot mix different devices
 
 %_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE) $(VERSION_FLAGS)
