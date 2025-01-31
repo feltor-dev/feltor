@@ -33,6 +33,23 @@ TEST_CASE("MPI Kron test")
         CHECK( mm.at(same).root == comm);
         CHECK( mm.at(same).remain_dims == remain_dims);
     }
+    SECTION( "Check double sub does not segfault")
+    {
+        // This test never actually segfaulted but if it ever happens
+        // again, try to make this test fail
+        std::vector<int> dims = {0,0,0};
+        MPI_Dims_create( size, 3, &dims[0]);
+        MPI_Comm comm0 = dg::mpi_cart_create( MPI_COMM_WORLD, dims,
+            {1,1,1}, true);
+        auto comms0 = dg::mpi_cart_split_as<3>( comm0);
+        MPI_Dims_create( size, 3, &dims[0]);
+        CHECK( comms0.size() == 3);
+        MPI_Comm comm1 = dg::mpi_cart_create( MPI_COMM_WORLD, dims,
+            {1,1,1}, true);
+        auto comms1 = dg::mpi_cart_split_as<3>( comm1);
+        CHECK( comms1.size() == 3);
+
+    }
 
     SECTION( "Direct kronecker")
     {

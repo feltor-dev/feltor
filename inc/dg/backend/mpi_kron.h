@@ -43,6 +43,20 @@ inline void mpi_cart_registry_clear( )
 {
     mpi_cart_registry.clear();
 }
+
+inline void mpi_cart_register_cart( MPI_Comm comm)
+{
+    // Register Cartesian comm if not already there
+    auto it = detail::mpi_cart_registry.find( comm);
+    if( it == detail::mpi_cart_registry.end())
+    {
+        int ndims;
+        MPI_Cartdim_get( comm, &ndims);
+        std::vector<int> remain_dims( ndims, true);
+        detail::MPICartInfo info{ comm, remain_dims};
+        detail::mpi_cart_registry[comm] = info;
+    }
+}
 }
 ///@endcond
 /*! @class hide_mpi_cart_rationale
@@ -67,15 +81,7 @@ inline void mpi_cart_registry_clear( )
  */
 inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
 {
-    auto it = detail::mpi_cart_registry.find( comm);
-    if( it == detail::mpi_cart_registry.end())
-    {
-        int ndims;
-        MPI_Cartdim_get( comm, &ndims);
-        std::vector<int> remain_dims( ndims, true);
-        detail::MPICartInfo info{ comm, remain_dims};
-        detail::mpi_cart_registry[comm] = info;
-    }
+    detail::mpi_cart_register_cart( comm);
     detail::MPICartInfo info = detail::mpi_cart_registry.at(comm);
     for( unsigned u=0; u<info.remain_dims.size(); u++)
         info.remain_dims[u]  = remain_dims[u];
@@ -90,11 +96,12 @@ inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
  * i-th dimension is kept in the subgrid (true) or is dropped (false), must
  * have \c ndims entries. (parameter used in \c MPI_Cart_sub)
  * @param duplicate Determines what happens in case \c MPI_Cart_sub was already
- * reigstered with the same input parameters \c comm and \c remain_dims. True:
- * call \c MPI_Cart_sub and generate a novel communicator even if a duplicate
- * exists. False: first check if a communicator that was subbed from \c comm
- * with \c remain_dims was previously registered. In case one is found
- * <tt>return existing_comm;</tt>.  Else, call and register \c MPI_Cart_sub.
+ * registered with (at least MPI_CONGRUENT) \c comm and the same \c
+ * remain_dims. True: call \c MPI_Cart_sub and generate a novel communicator
+ * even if a duplicate exists. False: first check if a communicator that was
+ * subbed from \c comm with \c remain_dims was previously registered. In case
+ * one is found <tt>return existing_comm;</tt>.  Else, call and register \c
+ * MPI_Cart_sub.
  * @return communicator containing the subgrid that includes the calling
  * process (handle) (parameter used in \c MPI_Cart_sub)
  * @ingroup mpi_structures
@@ -107,6 +114,7 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
     MPI_Cartdim_get( comm, &ndims);
     assert( (unsigned) ndims == remain_dims.size());
 
+    detail::mpi_cart_register_cart( comm);
     detail::MPICartInfo info = detail::mpi_cart_registry.at(comm);
     // info.remain_dims may be larger than remain_dims because comm may have a parent
     // but exactly remain_dims.size() entries are true
@@ -122,14 +130,22 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
     {
         for (auto it = detail::mpi_cart_registry.begin(); it !=
             detail::mpi_cart_registry.end(); ++it)
-            if( it->second.root == info.root && it->second.remain_dims ==
-                info.remain_dims)
+        {
+            int comp_root;
+            // Catching MPI_Comm_compare fixes a very mysterious MPI bug where MPI_Cart_sub segfaults
+            MPI_Comm_compare( it->second.root, info.root, &comp_root);
+            if( (comp_root == MPI_IDENT or comp_root == MPI_CONGRUENT) and
+                it->second.remain_dims == info.remain_dims)
             {
                 return it->first;
             }
+        }
     }
     MPI_Comm newcomm;
-    int err = MPI_Cart_sub( comm, &remain_dims[0], &newcomm);
+    int rr[3] = {remain_dims[0], remain_dims[1], remain_dims[2]};
+    MPI_Cartdim_get( comm, &ndims);
+    int err = MPI_Cart_sub( comm, rr, &newcomm);
+    //int err = MPI_Cart_sub( comm, &remain_dims[0], &newcomm);
     if( err != MPI_SUCCESS)
         throw Error(Message(_ping_)<<
                 "Cannot create Cartesian sub comm from given communicator");
@@ -219,11 +235,9 @@ inline std::vector<MPI_Comm> mpi_cart_split( MPI_Comm comm)
     MPI_Cartdim_get( comm, &ndims);
 
     std::vector<MPI_Comm> comms(ndims);
-    std::vector<int> remain_dims(ndims);
     for( int u=0; u<ndims; u++)
     {
-        for( int k=0; k<ndims; k++)
-            remain_dims[k]=0;
+        std::vector<int> remain_dims(ndims, 0);
         remain_dims[u] = 1;
         comms[u] = mpi_cart_sub( comm, remain_dims, false);
     }
