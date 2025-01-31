@@ -31,7 +31,8 @@ TEST_CASE( "Test the NcFile class")
     }
     SECTION("No-clobber throws")
     {
-        REQUIRE( not std::filesystem::exists( "test.nc"));
+        if( std::filesystem::exists( "test.nc"))
+            DG_RANK0 std::filesystem::remove( "test.nc");
         dg::file::NcFile file;
         file.open("test.nc", dg::file::nc_noclobber);
         CHECK( file.is_open());
@@ -126,60 +127,6 @@ TEST_CASE( "Open, groups, dims, atts")
         };
         CHECK( all_grps_r == ana);
     }
-    ///////////////////////   Attributes
-    SECTION( "Attributes")
-    {
-        // set attributes
-
-        file.put_att(".", {"title", "Hello"} );
-        file.put_att(".", {"same", "thing"} );
-        file.put_att(".", {"title", "Hello world"});
-        file.put_att(".", {"ttt", 42} );
-        std::map<std::string, dg::file::nc_att_t> map_atts = {
-            {"anumber", 42},
-            {"axis", "X"},
-            {"real_vector", std::vector{1.0,2.0,3.0}},
-            {"int_vector", std::vector{1,2,3}}
-        };
-        file.put_atts(".", map_atts);
-        file.put_atts(".", {{ "this", "is"}, {"a", 42}, {"map",
-            std::vector{1,2,3}}});
-        file.close();
-        CHECK_THROWS_AS( file.put_att( ".", {"title", "Blurp"}),
-            dg::file::NC_Error);
-
-        for( auto mode : {dg::file::nc_nowrite, dg::file::nc_write})
-        {
-            file.open( "test.nc", mode);
-            // What if Attribute does not exist?
-            CHECK_THROWS_AS( file.get_att_as<double>( ".", "Does not exist"),
-                dg::file::NC_Error);
-            // get attributes
-            auto title = file.get_att_as<std::string>(".", "title");
-            CHECK( title == "Hello world");
-            double t = file.get_att_as<double>(".", "ttt");
-            CHECK( t == 42);
-            auto ts = file.get_att_vec_as<double>(".", "real_vector"); // get all indices as vector
-            std::vector<double> result = {1.0,2.0,3.0};
-            CHECK( ts == result );
-
-            std::map<std::string, dg::file::nc_att_t> atts = file.get_atts();
-            std::string hello = "Hello world";
-            CHECK( std::get<std::string>(atts.at("title")) == hello);
-            CHECK( std::get<int>(atts.at("ttt")) == 42);
-            file.close();
-        }
-        file.open( "test.nc", dg::file::nc_write);
-        // Check attribute deletion
-        file.del_att( ".", "same");
-        CHECK( not file.att_is_defined( ".", "same"));
-        // Check attribute rename
-        file.rename_att( ".", "ttt", "truth");
-        int truth = file.get_att_as<int>(".", "truth");
-        CHECK( not file.att_is_defined( ".", "ttt"));
-        CHECK( file.att_is_defined( ".", "truth"));
-        CHECK( truth == 42);
-    }
     ////////////////// Dimensions
     SECTION( "Dimensions")
     {
@@ -240,6 +187,93 @@ TEST_CASE( "Open, groups, dims, atts")
 #endif
 }
 
+TEST_CASE( "Attributes")
+{
+#ifdef WITH_MPI
+    int rank, size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    //create a grid and some data
+#endif
+    dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    ///////////////////////   Attributes
+    SECTION( "Read/ write individual Attributes")
+    {
+        // set attributes
+        file.put_att(".", {"title", "Hello"} );
+        INFO( "Silently overwrite existing attribute");
+        CHECK_NOTHROW( file.put_att(".", {"title", "Hello world"}));
+        file.put_att(".", {"truth", 42} );
+        file.put_atts(".", {{ "this", "is"}, {"a", 42}, {"vector",
+            std::vector{1,2,3}}});
+        file.close();
+        CHECK_THROWS_AS( file.put_att( ".", {"title", "Blurp"}),
+            dg::file::NC_Error);
+
+        for( auto mode : {dg::file::nc_nowrite, dg::file::nc_write})
+        {
+            file.open( "test.nc", mode);
+            // What if Attribute does not exist?
+            CHECK_THROWS_AS( file.get_att_as<double>( ".", "Does not exist"),
+                dg::file::NC_Error);
+            // get attributes
+            auto title = file.get_att_as<std::string>(".", "title");
+            CHECK( title == "Hello world");
+            double t = file.get_att_as<double>(".", "truth");
+            CHECK( t == 42);
+            int tint = file.get_att_as<int>(".", "truth");
+            CHECK( tint == 42);
+            auto ts = file.get_att_vec_as<double>(".", "vector"); // get all indices as vector
+            std::vector<double> result = {1.0,2.0,3.0};
+            CHECK( ts == result );
+
+            file.close();
+        }
+    }
+    SECTION( "nc_att_t map attributes")
+    {
+        std::map<std::string, dg::file::nc_att_t> att;
+        att["text"] = "Hello World!";
+        att["number"] = 3e-4;
+        att["int"] = -1;
+        att["uint"] = 10;
+        att["bool"] = true;
+        att["realarray"]  = std::vector{-1.1, 42.3};
+        att["realarray"]  = std::vector{-1.1, 42.3};
+        att["realnumber"] = -1.1;
+        att["intarray"]   = std::vector{-11, 423};
+        att["uintarray"]  = std::vector{11, 423};
+        att["boolarray"]  = std::vector{true, false};
+        file.put_atts(".", att);
+        file.close();
+        auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
+        file.open( "test.nc", mode);
+        auto read = file.get_atts();
+        CHECK( read == att);
+    }
+    SECTION( "Deleting and renaming")
+    {
+        file.put_att(".", {"same", "thing"} );
+        CHECK( file.att_is_defined( ".", "same"));
+        file.del_att( ".", "same");
+        CHECK( not file.att_is_defined( ".", "same"));
+        // Check attribute rename
+        file.put_att(".", {"ttt", 42} );
+        CHECK( file.att_is_defined( ".", "ttt"));
+        file.rename_att( ".", "ttt", "truth");
+        CHECK( not file.att_is_defined( ".", "ttt"));
+        CHECK( file.att_is_defined( ".", "truth"));
+
+        int truth = file.get_att_as<int>(".", "truth");
+        CHECK( truth == 42);
+    }
+    file.close();
+    DG_RANK0 std::filesystem::remove( "test.nc");
+#ifdef WITH_MPI
+    MPI_Barrier( MPI_COMM_WORLD);
+#endif
+}
+
 TEST_CASE( "Test variables in the NcFile class")
 {
 #ifdef WITH_MPI
@@ -277,12 +311,22 @@ TEST_CASE( "Test variables in the NcFile class")
         file.put_att("variable", {"long_name", "blabla"});
         auto att = file.get_att_as<std::string>( "variable", "long_name");
         CHECK( att == "blabla");
+        std::map<std::string, dg::file::nc_att_t> atts = {{"axis", "T"}};
+        file.def_var_as<double>("another", {"time"}, atts);
+        att = file.get_att_as<std::string>( "another", "axis");
+        CHECK( att == "T");
     }
     SECTION( "Unlimited Variable can write anywhere")
     {
-        file.def_dimvar_as<double>("time", NC_UNLIMITED, {});
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
         file.put_var("time", {52}, 10);
+        file.close();
         double test;
+        auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
+        file.open( "test.nc", mode);
+        CHECK( file.var_is_defined( "time"));
+        CHECK( file.att_is_defined( "time", "axis"));
+        CHECK( file.get_att_as<std::string>( "time", "axis") == "T");
         file.get_var("time", {52}, test);
         CHECK( test == 10);
     }

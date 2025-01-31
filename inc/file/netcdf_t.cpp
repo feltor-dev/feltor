@@ -13,7 +13,6 @@
 
 #include "dg/algorithm.h"
 
-static double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
 static double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
 static double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 static double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
@@ -49,23 +48,18 @@ TEST_CASE( "Input Output test of the NcFile class")
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    MPI_Comm comm;
-    int dims[3] = {0,0,0};
-    MPI_Dims_create( size, 3, dims);
-    std::stringstream ss;
-    ss<< dims[0]<<" "<<dims[1]<<" "<<dims[2];
-    dg::mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
+    std::vector<int> dims = {0,0,0};
+    MPI_Dims_create( size, 3, &dims[0]);
+    auto i = GENERATE( 0,1,2,3,4,5);
+    std::sort( dims.begin(), dims.end());
+    for( int u=0; u<i; u++)
+        std::next_permutation( dims.begin(), dims.end());
+    INFO( "Permutation of dims "<<dims[0]<<" "<<dims[1]<<" "<<dims[2]);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, dims, {1, 1, 1}, false);
 #endif
-#ifdef WITH_MPI
-    std::string filename = "netcdfmpi.nc";
-#else
-    std::string filename = "netcdf.nc";
-#endif
-    DG_RANK0 std::cout << "WRITE A TIMEDEPENDENT SCALAR, SCALAR FIELD, AND VECTOR FIELD TO NETCDF4 FILE "
-                       << filename<<"\n";
+    INFO( "WRITE A TIMEDEPENDENT SCALAR, SCALAR FIELD, AND VECTOR FIELD TO NETCDF4 FILE "
+                   << "test.nc");
     double Tmax=2.*M_PI;
-    double NT = 10;
-    double h = Tmax/NT;
     double x0 = 0., x1 = 2.*M_PI;
     dg::x::Grid3d grid( x0,x1,x0,x1,x0,x1,3,4,4,3
 #ifdef WITH_MPI
@@ -73,137 +67,157 @@ TEST_CASE( "Input Output test of the NcFile class")
 #endif
     );
     //create NetCDF File
-    dg::file::NcFile file( filename, dg::file::nc_clobber);
-
-    file.put_att( ".", {"title", "NetCDF test file"});
-    int argc = 1;
-    char *argv[] = {
-        (char*)"./netcdf_t",
-        NULL
-    };
-    file.put_att( ".", {"history", dg::file::timestamp(argc, argv)});
-    file.put_atts( ".", dg::file::version_flags);
-    file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
-    // It is possible to write to any index in an unlimited variable
-    file.put_var("time", {5}, Tmax);
-    file.defput_dim( "z", {{"axis", "Z"},
-        {"long_name", "z-coordinate in Cartesian system"}}, grid.abscissas(2));
-    file.defput_dim( "y", {{"axis", "Y"},
-        {"long_name", "y-coordinate in Cartesian system"}}, grid.abscissas(1));
-    file.defput_dim( "x", {{"axis", "X"},
-        {"long_name", "x-coordinate in Cartesian system"}}, grid.abscissas(0));
-    file.def_var_as<double>( "Energy", {"time"}, {{"long_name", "Energy"}});
-    for( auto& record : records)
-        file.def_var_as<double>( record.name, {"time", "z", "y", "x"},
-            record.atts);
-    file.def_grp( "projected");
-    file.set_grp( "projected");
-    auto grid_out = grid;
-    grid_out.multiplyCellNumbers( 0.5, 0.5);
-    file.defput_dim( "xr", {{"axis", "X"},
-        {"long_name", "reduced x-coordinate in Cartesian system"}},
-        grid_out.abscissas(0));
-    file.defput_dim( "yr", {{"axis", "Y"},
-        {"long_name", "reduced y-coordinate in Cartesian system"}},
-        grid_out.abscissas(1));
-    file.defput_dim( "zr", {{"axis", "Z"},
-        {"long_name", "reduced z-coordinate in Cartesian system"}},
-        grid_out.abscissas(2));
-    file.defput_dim_as<double>( "ptime", NC_UNLIMITED, {{"axis", "T"}});
-    for( auto& record : records)
-        file.def_var_as<double>( record.name, {"ptime", "zr", "yr", "xr"},
-            record.atts);
-    file.set_grp("..");
-    dg::MultiMatrix<dg::x::DMatrix, dg::x::DVec> project =
-        dg::create::fast_projection( grid, 1, 2, 2);
-    dg::x::DVec result = dg::evaluate( dg::zero, grid);
-    dg::x::DVec tmp = dg::evaluate( dg::zero, grid_out);
-
-    typename dg::file::NcFile::Hyperslab slab{grid_out};
-
-    for(unsigned i=0; i<=NT; i++)
+    dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    REQUIRE( file.is_open());
+    REQUIRE( std::filesystem::exists( "test.nc"));
+    SECTION( "Dimensions from grid")
     {
-        DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
-        double time = i*h;
-        auto data = dg::evaluate( function, grid);
-        dg::blas1::scal( data, cos( time));
-        double energy = dg::blas1::dot( data, data);
-        if( i%2 == 0)
-            file.put_var( "Energy", {i}, energy);
-        file.put_var("time", {i}, time);
-        file.set_grp( "projected");
-        file.put_var( "ptime", {i}, time);
-        file.set_grp( "..");
+        file.defput_dim( "x", {{"axis", "X"},
+            {"long_name", "x-coordinate in Cartesian system"}},
+            grid.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"},
+            {"long_name", "y-coordinate in Cartesian system"}},
+            grid.abscissas(1));
+        file.defput_dim( "z", {{"axis", "Z"},
+            {"long_name", "z-coordinate in Cartesian system"}},
+            grid.abscissas(2));
+        file.close();
+        auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
+        file.open( "test.nc", mode);
+        // This is how to fully check a dimension
+        std::map<std::string, int> map {{"x",0}, {"y",1}, {"z", 2}};
+        for( auto str : map)
+        {
+            CHECK( file.dim_is_defined( str.first));
+            CHECK( file.var_is_defined( str.first));
+            CHECK( file.get_dim_size( str.first) == grid.shape(str.second));
+            auto abs = grid.abscissas(str.second) , test(abs);
+            file.get_var( str.first, {grid.axis(str.second)}, test);
+            dg::blas1::axpby( 1.,abs,-1., test);
+            double result = dg::blas1::dot( 1., test);
+            CHECK( result == 0);
+        }
+    }
+    SECTION( "Test record variables")
+    {
+        file.def_dim("y", 2);
+        file.def_dim("x", 2);
         for( auto& record : records)
         {
-            record.function ( result, grid, time);
-            file.put_var( record.name, {i, grid}, result);
-            file.set_grp( "projected");
-            dg::apply( project, result, tmp);
-            // Hyperslab can be constructed from hyperslab...
-            file.put_var( record.name, {i, slab}, tmp);
-            file.set_grp( "..");
+            file.def_var_as<double>( record.name, {"y", "x"},
+                record.atts);
+        }
+        file.get_att_as<std::string>( "vectorX", "long_name");
+        for( auto str : {"vectorX", "vectorY", "vectorZ"})
+        {
+            CHECK(file.var_is_defined( str));
+            CHECK(file.att_is_defined( str, "long_name"));
+            CHECK(file.get_var_dims( str).size() == 2);
         }
     }
-    file.close();
-
-    // open and read back in
-    for( auto mode : {dg::file::nc_nowrite, dg::file::nc_write})
+    SECTION( "Variables can be written intermittently")
     {
-        INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n")
-        file.open( filename, mode);
-        // This is how to fully check a dimension
-        CHECK( file.dim_is_defined( "x"));
-        CHECK( file.var_is_defined( "x"));
-        CHECK( file.get_dim_size( "x") == grid.shape(0));
-        dg::x::HVec absx = grid.abscissas(0);
-        file.get_var( "x", {absx}, absx);
-#ifdef WITH_MPI
-        CHECK( absx.data() == grid.abscissas(0).data());
-#else
-        CHECK( absx == grid.abscissas(0));
-#endif
-        auto variables = file.get_var_names_r();
-        for ( auto name : variables["/"])
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+        file.def_var_as<double>( "Energy", {"time"}, {{"long_name", "Energy"}});
+        for( unsigned i=0; i<=6; i++)
         {
-            if ( file.get_var_dims( name) == std::vector<std::string>{"time"})
-                INFO("Found 0d name "<<name);
-            if ( file.get_var_dims( name) == std::vector<std::string>{"time", "z", "y", "x"})
-                INFO("Found 3d name "<<name);
-        }
-        for ( auto name : variables["/projected"])
-            INFO( "Found Projected 3d name "<<name);
-
-        unsigned num_slices = file.get_dim_size("time");
-        INFO( "Found "<<num_slices<<" timesteps in file");
-        CHECK( num_slices == NT+1);
-        // Test that dimension is indeed what we expect
-        auto abscissas = grid.abscissas(0), test( abscissas);
-        file.get_var( "x", {grid.axis(0)}, test);
-        dg::blas1::axpby( 1., abscissas, -1., test);
-        CHECK( dg::blas1::dot( test, test) == 0);
-
-        auto data = dg::evaluate( function, grid);
-        auto dataP = dg::evaluate( function, grid_out);
-        // TODO this test must be more precise
-        for(unsigned i=0; i<num_slices; i++)
-        {
-            DG_RANK0 std::cout<<"Read timestep "<<i<<"\n";
-            double time, energy;
-            file.get_var("time", {i}, time);
-            file.get_var("Energy", {i}, energy);
-            DG_RANK0 std::cout << "Time "<<time<<" Energy "<<energy<<"\t";
-            file.get_var( "vectorX", {i, grid}, data);
-            file.set_grp("projected");
-            file.get_var( "vectorX", {i, 1, grid_out}, dataP);
-            file.set_grp("..");
-#ifdef MPI_VERSION
-            DG_RANK0 std::cout << "data "<<data.data()[0]<<" dataP "<<dataP.data()[0]<<"\n";
-#else
-            std::cout << "data "<<data[0]<<" dataP "<<dataP[0]<<"\n";
-#endif
+            file.put_var("time", {i}, i);
+            if( i%2 == 0)
+                file.put_var( "Energy", {i}, i);
         }
         file.close();
+        auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
+        file.open( "test.nc", mode);
+        double time, energy;
+        for( unsigned i=0; i<=6; i++)
+        {
+            file.get_var("time", {i}, time);
+            CHECK( time == (double)i);
+            file.get_var("Energy", {i}, energy);
+            if( i%2 == 0)
+                CHECK( energy == (double)i);
+        }
     }
+    SECTION( "Write projected variables")
+    {
+        file.def_grp( "projected");
+        file.set_grp( "projected");
+        auto grid_out = grid;
+        grid_out.multiplyCellNumbers( 0.5, 0.5);
+        file.defput_dim( "xr", {{"axis", "X"},
+            {"long_name", "reduced x-coordinate in Cartesian system"}},
+            grid_out.abscissas(0));
+        file.defput_dim( "yr", {{"axis", "Y"},
+            {"long_name", "reduced y-coordinate in Cartesian system"}},
+            grid_out.abscissas(1));
+        file.defput_dim( "zr", {{"axis", "Z"},
+            {"long_name", "reduced z-coordinate in Cartesian system"}},
+            grid_out.abscissas(2));
+        file.def_dimvar_as<double>( "ptime", NC_UNLIMITED, {{"axis", "T"}});
+        for( auto& record : records)
+            file.def_var_as<double>( record.name, {"ptime", "zr", "yr", "xr"},
+                record.atts);
+        dg::MultiMatrix<dg::x::DMatrix, dg::x::DVec> project =
+            dg::create::fast_projection( grid, 1, 2, 2);
+        dg::x::DVec result = dg::evaluate( dg::zero, grid);
+        dg::x::DVec tmp = dg::evaluate( dg::zero, grid_out);
+
+        typename dg::file::NcFile::Hyperslab slab{grid_out};
+
+        for(unsigned i=0; i<2; i++)
+        {
+            INFO("Write timestep "<<i<<"\n");
+            double time = i*Tmax/2.;
+            file.put_var( "ptime", {i}, time);
+            for( auto& record : records)
+            {
+                record.function ( result, grid, time);
+                dg::apply( project, result, tmp);
+                // Hyperslab can be constructed from hyperslab...
+                file.put_var( record.name, {i, slab}, tmp);
+            }
+        }
+
+        file.close();
+        auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
+        INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n")
+        file.open( "test.nc", mode);
+
+        file.set_grp( "projected");
+        unsigned num_slices = file.get_dim_size("ptime");
+        INFO( "Found "<<num_slices<<" timesteps in file");
+        CHECK( num_slices == 2);
+        auto variables = file.get_var_names();
+        for( auto str : {"ptime", "vectorX", "vectorY", "vectorZ"})
+            CHECK_NOTHROW( std::find( variables.begin(), variables.end(), str)
+                != variables.end());
+        // Test: we read what we have written ...
+        for(unsigned i=0; i<2; i++)
+        {
+            INFO("Read timestep "<<i<<"\n");
+            double time;
+            file.get_var( "ptime", {i}, time);
+            CHECK ( time == (double)i*Tmax/2.);
+
+            for( auto& record : records)
+            {
+                record.function ( result, grid, time);
+                dg::apply( project, result, tmp);
+                // Hyperslab can be constructed from hyperslab...
+                auto test (tmp);
+                file.get_var( record.name, {i, slab}, test);
+                dg::blas1::axpby( 1.,tmp,-1., test);
+                double result = dg::blas1::dot( 1., test);
+                CHECK( result == 0);
+            }
+        }
+
+
+    }
+    file.close();
+    DG_RANK0 std::filesystem::remove( "test.nc");
+#ifdef WITH_MPI
+    MPI_Barrier( MPI_COMM_WORLD);
+#endif
 
 }
