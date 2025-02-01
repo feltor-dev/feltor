@@ -11,6 +11,8 @@ typedef thrust::host_vector<double> HVec;
 typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
 }
 
+// TODO What does this test?
+
 const unsigned n = 3;
 const unsigned Nx = 40, Ny = 40;
 

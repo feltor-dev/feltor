@@ -7,6 +7,7 @@
 #include "tensor.h"
 
 
+#include "catch2/catch.hpp"
 
 struct TestGrid : public dg::aRealGeometry2d<double>
 {
@@ -64,41 +65,49 @@ double test_function( double x, double y){
     return ( x*x + y*y);
 }
 
-int main()
+TEST_CASE( "Transform")
 {
     TestGrid  test;
-    dg::HVec points = dg::pullback( test_function, test);
-    std::cout << "Test transform functionality!\n";
-    std::cout << "Test pullback\n";
-    std::cout << points[0]<< " (0) "<<points[1]<<" (1) "<<points[2]<<" (2) "<<points[3]<< " (1)\n";
-    if( points[0] != 0 || points[1] != 1 || points[2] != 2 || points[3] != 1)
-        std::cerr << "Pullback FAILED\n";
-    else
-        std::cerr << "Pullback PASSED\n";
-    std::cout << "Test pushForwardPerp\n";
-    dg::HVec vx(points), vy(points), vz(points);
-    dg::pushForwardPerp( dg::CONSTANT(4), dg::CONSTANT(5), vx, vy, test);
-    std::cout << vx[0]<< " (1.4) "<<vy[0]<< " (3.2)\n";
-    if( vx[0] - 1.4 > 1e-15 || vy[0] - 3.2 > 1e-15 )
-        std::cerr << "PushForwardPerp FAILED\n";
-    else
-        std::cerr << "PushForwardPerp PASSED\n";
-    std::cout << "Test pushForward\n";
-    dg::pushForward( dg::CONSTANT(4), dg::CONSTANT(5), dg::CONSTANT(6), vx, vy, vz, test);
-    std::cout << vx[0]<< " (1.4) "<<vy[0]<<" (3.2) "<<vz[0]<< " (6)\n";
-    if( vx[0] - 1.4 > 1e-15 || vy[0] - 3.2 > 1e-15 || vz[0] - 6 > 1e-15 )
-        std::cerr << "PushForward FAILED\n";
-    else
-        std::cerr << "PushForward PASSED\n";
-    std::cout << "Test pushForwardPerp Tensor\n";
-    dg::SparseTensor<dg::HVec> tensor;
-    dg::pushForwardPerp( dg::CONSTANT(2), dg::CONSTANT(3), dg::CONSTANT(4), tensor, test);
-    std::cout << tensor.value(0,0)[0]<<" (0.30) "<< tensor.value(0,1)[0]<<" (0.68) "<<std::endl;
-    std::cout << tensor.value(1,0)[0]<<" (0.68) "<< tensor.value(1,1)[0]<<" (1.54)"<<std::endl;
-    if( tensor.value(0,0)[0] - 0.30 > 1e-15 || tensor.value(0,1)[0] - 0.68 > 1e-15 ||
-        tensor.value(1,0)[0] - 0.68 > 1e-15 || tensor.value(1,1)[0] - 1.54 > 1e-15)
-        std::cerr << "PushForwardPerp Tensor FAILED\n";
-    else
-        std::cerr << "PushForwardPerp Tensor PASSED\n";
-    return 0;
+    SECTION( "pullback")
+    {
+        dg::HVec points = dg::pullback( test_function, test);
+        INFO( points[0]<< " (0) "<<points[1]<<" (1) "<<points[2]<<" (2) "
+                <<points[3]<< " (1)");
+        CHECK( points[0] == 0);
+        CHECK( points[1] == 1);
+        CHECK( points[2] == 2);
+        CHECK( points[3] == 1);
+    }
+    SECTION( "pushForwardPerp")
+    {
+        dg::HVec points = dg::pullback( test_function, test);
+        dg::HVec vx(points), vy(points);
+        dg::pushForwardPerp( dg::CONSTANT(4), dg::CONSTANT(5), vx, vy, test);
+        INFO( vx[0]<< " (1.4) "<<vy[0]<< " (3.2)");
+        CHECK( vx[0] - 1.4 < 1e-15);
+        CHECK( vy[0] - 3.2 < 1e-15);
+    }
+    SECTION( "pushForward")
+    {
+        dg::HVec points = dg::pullback( test_function, test);
+        dg::HVec vx(points), vy(points), vz(points);
+        dg::pushForward( dg::CONSTANT(4), dg::CONSTANT(5), dg::CONSTANT(6), vx,
+                vy, vz, test);
+        INFO( vx[0]<< " (1.4) "<<vy[0]<<" (3.2) "<<vz[0]<< " (6)");
+        CHECK( vx[0] - 1.4 < 1e-15);
+        CHECK( vy[0] - 3.2 < 1e-15);
+        CHECK( vz[0] - 6 < 1e-15 );
+    }
+    SECTION( "pushForwardPerp Tensor");
+    {
+        dg::SparseTensor<dg::HVec> tensor;
+        dg::pushForwardPerp( dg::CONSTANT(2), dg::CONSTANT(3), dg::CONSTANT(4),
+                tensor, test);
+        INFO( tensor.value(0,0)[0]<<" (0.30) "<< tensor.value(0,1)[0]<<" (0.68)");
+        INFO( tensor.value(1,0)[0]<<" (0.68) "<< tensor.value(1,1)[0]<<" (1.54)");
+        CHECK( tensor.value(0,0)[0] - 0.30 < 1e-15);
+        CHECK( tensor.value(0,1)[0] - 0.68 < 1e-15);
+        CHECK( tensor.value(1,0)[0] - 0.68 < 1e-15);
+        CHECK( tensor.value(1,1)[0] - 1.54 < 1e-15);
+    }
 }

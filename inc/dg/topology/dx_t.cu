@@ -7,62 +7,52 @@
 #include "evaluation.h"
 #include "weights.h"
 
+#include "catch2/catch.hpp"
 
-double function( double x) { return sin(x);}
-double derivative( double x) { return cos(x);}
-double zero( double x) { return 0;}
+static double function( double x) { return sin(x);}
+static double derivative( double x) { return cos(x);}
 
-typedef dg::HVec Vector;
-typedef dg::EllSparseBlockMat<double> Matrix;
+using Vector = dg::HVec;
+using Matrix = dg::EllSparseBlockMat<double>;
 
-int main ()
+TEST_CASE( "Dx")
 {
-    unsigned n, N;
-    std::cout << "Type in n and Nx!\n";
-    std::cin >> n>> N;
-    std::cout << "# of Legendre nodes " << n <<"\n";
-    std::cout << "# of cells          " << N <<"\n";
-    dg::Grid1d gPER( 0.1, 2*M_PI+0.1, n, N, dg::PER);
-    dg::Grid1d gDIR( 0, M_PI, n, N, dg::DIR);
-    dg::Grid1d gNEU( M_PI/2., 3*M_PI/2., n, N, dg::NEU);
-    dg::Grid1d gDIR_NEU( 0, M_PI/2., n, N, dg::DIR_NEU);
-    dg::Grid1d gNEU_DIR( M_PI/2., M_PI, n, N, dg::NEU_DIR);
-    dg::Grid1d g[] = {gPER, gDIR, gNEU, gDIR_NEU,gNEU_DIR};
+    unsigned n=7, N=33;
+    auto bcx = GENERATE( dg::PER, dg::DIR, dg::NEU, dg::DIR_NEU, dg::NEU_DIR);
+    auto dir = GENERATE( dg::centered, dg::forward, dg::backward);
+    dg::Grid1d g1d( 0.1, 2*M_PI+0.1, n, N, bcx);
+    if( bcx == dg::DIR)
+        g1d = dg::Grid1d( 0, M_PI, n, N, bcx);
+    else if( bcx == dg::NEU)
+        g1d = dg::Grid1d( M_PI/2., 3*M_PI/2., n, N, bcx);
+    else if( bcx == dg::DIR_NEU)
+        g1d = dg::Grid1d( 0, M_PI/2., n, N, bcx);
+    else if( bcx == dg::NEU_DIR)
+        g1d = dg::Grid1d( M_PI/2., M_PI, n, N, bcx);
 
-    std::cout << "TEST NORMAL TOPOLOGY: YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
-    for( unsigned i=0; i<5; i++)
-    {
-        Matrix hs = dg::create::dx( g[i], g[i].bcx(), dg::centered);
-        Matrix hf = dg::create::dx( g[i], g[i].bcx(), dg::forward);
-        Matrix hb = dg::create::dx( g[i], g[i].bcx(), dg::backward);
-        Matrix js = dg::create::jumpX( g[i], g[i].bcx());
-        const Vector func = dg::evaluate( function, g[i]);
-        Vector error = func;
-        const Vector w1d = dg::create::weights( g[i]);
-        const Vector deri = dg::evaluate( derivative, g[i]);
-        const Vector null = dg::evaluate( zero, g[i]);
+    const Vector func = dg::evaluate( function, g1d);
+    const Vector w1d = dg::create::weights( g1d);
+    const Vector deri = dg::evaluate( derivative, g1d);
+    const Vector null = dg::evaluate( dg::zero, g1d);
+    Matrix js = dg::create::jumpX( g1d, g1d.bcx());
+    Vector error = func;
+    dg::blas2::symv( js, func, error);
+    dg::blas1::axpby( 1., null , -1., error);
+    double dist = sqrt( dg::blas2::dot( w1d, error));
+    INFO("Distance to true solution (jump     ): "<<dist);
+    CHECK( dist < 1e-10);
 
-        dg::blas2::symv( hs, func, error);
-        dg::blas1::axpby( 1., deri, -1., error);
-        std::cout << "Distance to true solution (symmetric): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
-        dg::blas2::symv( hf, func, error);
-        dg::blas1::axpby( 1., deri, -1., error);
-        std::cout << "Distance to true solution (forward  ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
-        dg::blas2::symv( hb, func, error);
-        dg::blas1::axpby( 1., deri, -1., error);
-        std::cout << "Distance to true solution (backward ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n";
-        dg::blas2::symv( js, func, error);
-        dg::blas1::axpby( 1., null , -1., error);
-        std::cout << "Distance to true solution (jump     ): "<<sqrt(dg::blas2::dot( w1d, error) )<<"\n\n";
-    }
+    Matrix hs = dg::create::dx( g1d, g1d.bcx(), dir);
+
+    dg::blas2::symv( hs, func, error);
+    dg::blas1::axpby( 1., deri, -1., error);
+    dist = sqrt( dg::blas2::dot( w1d, error));
+    INFO( "Distance to true solution "<<dg::direction2str(dir )<<dist);
+    CHECK( dist < 1e-10);
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1
     //n = 3 -> p = 3      3
     //n = 4 -> p = 3      3
     //n = 5 -> p = 5      5
-
-
-
-    return 0;
 }

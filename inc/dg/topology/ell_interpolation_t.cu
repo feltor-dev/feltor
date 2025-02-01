@@ -12,6 +12,8 @@ int main(){
 #include "xspacelib.h"
 #include "ell_interpolation.cuh"
 
+// TODO DEPRECATED, REMOVE
+//
 const unsigned n = 3;
 const unsigned Nx = 5;
 const unsigned Ny = 7;
