@@ -4,6 +4,12 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "../backend/mpi_init.h"
+#include "mpi_evaluation.h"
+#include "mpi_weights.h"
+#endif
 
 #include "dg/blas.h"
 #include "dg/functors.h"
@@ -27,21 +33,26 @@ static double function3d( double x, double y, double z)
     return exp(x)*exp(y)*exp(z);
 }
 
+//This program tests the exblas::dot function. The tests succeed only if
+//the evaluation and grid functions but also the weights and especially the
+//exblas::dot function are correctly implemented and compiled. Furthermore,
+//the compiler implementation of the exp function in the math library must
+//be consistent across platforms to get reproducible results
 
 TEST_CASE( "Evaluation")
 {
-    //This program tests the exblas::dot function. The tests succeed only if
-    //the evaluation and grid functions but also the weights and especially the
-    //exblas::dot function are correctly implemented and compiled. Furthermore,
-    //the compiler implementation of the exp function in the math library must
-    //be consistent across platforms to get reproducible results
     SECTION( "1d grid")
     {
+#ifdef WITH_MPI
+        MPI_Comm comm1d = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {1});
+        dg::x::Grid1d g1d( 1, 2, 3, 12, comm1d);
+#else
+        dg::x::Grid1d g1d( 1, 2, 3, 12);
+#endif
         INFO("On Grid 3 x 12");
-        dg::Grid1d g1d( 1, 2, 3, 12);
-        const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( exp,
+        const dg::x::DVec func1d = dg::construct<dg::x::DVec>( dg::evaluate( exp,
                     g1d));
-        const dg::DVec w1d = dg::construct<dg::DVec>( dg::create::weights( g1d));
+        const dg::x::DVec w1d = dg::construct<dg::x::DVec>( dg::create::weights( g1d));
         dg::exblas::udouble res;
         double integral = dg::blas1::dot( w1d, func1d); res.d = integral;
         double sol = (exp(2.) -exp(1));
@@ -60,13 +71,19 @@ TEST_CASE( "Evaluation")
 
     SECTION( "2d grid")
     {
-        INFO("On Grid 3 x 48 x 48");
-        dg::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3,
+#ifdef WITH_MPI
+        MPI_Comm comm2d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
+        dg::x::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3,
+                48, 48, comm2d);
+#else
+        dg::x::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3,
                 48, 48);
+#endif
+        INFO("On Grid 3 x 48 x 48");
         //dg::Grid2d g2d( {0.0, 6.2831853071795862, 3, 48}, {0.0, 6.2831853071795862, 5, 28});
-        const dg::DVec func2d = dg::construct<dg::DVec>( dg::evaluate(
+        const dg::x::DVec func2d = dg::construct<dg::x::DVec>( dg::evaluate(
                     function<double>, g2d));
-        const dg::DVec w2d = dg::construct<dg::DVec>( dg::create::weights( g2d));
+        const dg::x::DVec w2d = dg::construct<dg::x::DVec>( dg::create::weights( g2d));
         dg::exblas::udouble res;
         double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
         double sol2d = 0;
@@ -85,12 +102,18 @@ TEST_CASE( "Evaluation")
 
     SECTION( "2d grid float")
     {
-        INFO("On Grid 3 x 48 x 48 ");
-        dg::RealGrid<float,2> gf2d( 0.0, 6.2831853071795862, 0.0,
+#ifdef WITH_MPI
+        MPI_Comm comm2d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
+        dg::x::RealGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0,
+                6.2831853071795862, 3, 48, 48, comm2d);
+#else
+        dg::x::RealGrid2d<float> gf2d( 0.0, 6.2831853071795862, 0.0,
                 6.2831853071795862, 3, 48, 48);
-        const dg::fDVec funcf2d = dg::construct<dg::fDVec>( dg::evaluate(
+#endif
+        INFO("On Grid 3 x 48 x 48 ");
+        const dg::x::fDVec funcf2d = dg::construct<dg::x::fDVec>( dg::evaluate(
                     function<float>, gf2d));
-        const dg::fDVec wf2d = dg::construct<dg::fDVec>( dg::create::weights( gf2d));
+        const dg::x::fDVec wf2d = dg::construct<dg::x::fDVec>( dg::create::weights( gf2d));
         dg::exblas::ufloat resf;
         float integralf2d = dg::blas1::dot( wf2d, funcf2d); resf.f = integralf2d;
         float solf2d = 0;
@@ -105,14 +128,20 @@ TEST_CASE( "Evaluation")
     SECTION( "3d grid")
     {
         unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
+#ifdef WITH_MPI
+        MPI_Comm comm3d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
+        dg::x::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER,
+                dg::PER, comm3d);
+#else
+        dg::x::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER,
+                dg::PER);
+#endif
         INFO("On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz);
 
-        dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
-        //dg::Grid3d g3d( {1, 2, n, Nx,},{ 3, 4, 7, Ny},{ 5, 6, 4, Nx});
-
-        const dg::DVec func3d = dg::construct<dg::DVec>( dg::evaluate(
+        const dg::x::DVec func3d = dg::construct<dg::x::DVec>( dg::evaluate(
                     function3d, g3d));
-        const dg::DVec w3d = dg::construct<dg::DVec>( dg::create::weights( g3d));
+        const dg::x::DVec w3d = dg::construct<dg::x::DVec>(
+                dg::create::weights( g3d));
 
         dg::exblas::udouble res;
         double integral3d = dg::blas1::dot( w3d, func3d); res.d = integral3d;
@@ -134,12 +163,18 @@ TEST_CASE( "Evaluation")
 
 TEST_CASE( "vdot test")
 {
-
     SECTION( "Size of vector test")
     {
         unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
-        dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
-        const dg::DVec v = dg::construct<dg::DVec>( dg::evaluate( function3d,
+#ifdef WITH_MPI
+        MPI_Comm comm3d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
+        dg::x::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER,
+                dg::PER, comm3d);
+#else
+        dg::x::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER,
+                dg::PER);
+#endif
+        const dg::x::DVec v = dg::construct<dg::x::DVec>( dg::evaluate( function3d,
                     g3d));
 
         unsigned size = dg::blas1::vdot( []DG_DEVICE(double x){ return 1u;},
@@ -149,13 +184,15 @@ TEST_CASE( "vdot test")
     }
 }
 
+// Non-MPI tests
+#ifndef WITH_MPI
 TEST_CASE( "compiler specific math")
 {
     INFO( "TEST result of a sin and exp function to compare compiler specific"
           <<"math libraries:\n");
     SECTION( "sin function")
     {
-        dg::DVec x(10, 6.12610567450009658);
+        dg::x::DVec x(10, 6.12610567450009658);
         dg::blas1::transform( x, x, [] DG_DEVICE ( double x){ return sin(x);} );
         dg::exblas::udouble res;
         res.d = x[0];
@@ -166,7 +203,7 @@ TEST_CASE( "compiler specific math")
 
     SECTION( "exp function")
     {
-        dg::DVec y(10, 5.9126151457310376);
+        dg::x::DVec y(10, 5.9126151457310376);
         dg::blas1::transform( y, y,[] DG_DEVICE ( double x){ return exp(x);} );
             dg::exblas::udouble res;
         res.d = y[0];
@@ -179,11 +216,11 @@ TEST_CASE( "compiler specific math")
 TEST_CASE("Integral")
 {
     using namespace Catch::Matchers;
-    dg::Grid1d g1d( 1, 2, 7, 12);
+    dg::x::Grid1d g1d( 1, 2, 7, 12);
     auto dir = GENERATE( dg::forward, dg::backward);
     //TEST OF INTEGRAL
-    dg::HVec integral_num = dg::integrate( cos, g1d, dir);
-    dg::HVec integral_ana = dg::evaluate( sin, g1d);
+    dg::x::HVec integral_num = dg::integrate( cos, g1d, dir);
+    dg::x::HVec integral_ana = dg::evaluate( sin, g1d);
     dg::blas1::plus( integral_ana, dir == dg::forward ? -sin(g1d.x0()) :
             -sin(g1d.x1()));
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
@@ -193,17 +230,6 @@ TEST_CASE("Integral")
     CHECK_THAT( norm, WithinAbs(  0, 1e-15));
 }
 
-TEST_CASE( "Dot throws")
-{
-    // TEST if dot throws on NaN
-    INFO( "TEST if dot throws on Inf or Nan");
-    dg::DVec x(10, -10);
-    dg::blas1::transform( x,x, dg::LN<double>());
-    bool hasnan = dg::blas1::reduce( x, false,
-            thrust::logical_or<bool>(), dg::ISNFINITE<double>());
-    REQUIRE( hasnan);
-    CHECK_THROWS_AS( dg::blas1::dot( x,x), std::exception);
-}
 TEST_CASE( "MinMod function")
 {
     dg::MinMod minmod;
@@ -215,16 +241,16 @@ TEST_CASE( "MinMod function")
 }
 TEST_CASE( "Accuracy Dense Matrix")
 {
+    dg::x::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3, 48,
+            48);
     using namespace Catch::Matchers;
-    dg::Grid2d g2d( 0.0, 6.2831853071795862, 0.0, 6.2831853071795862, 3,
-                48, 48);
     // massage a scalar product into dg::blas2::symv
-    const dg::HVec func_h = dg::evaluate( function<double>, g2d);
-    const dg::HVec w_h = dg::create::weights( g2d);
-    std::vector<dg::DVec> matrix( func_h.size());
+    const dg::x::HVec func_h = dg::evaluate( function<double>, g2d);
+    const dg::x::HVec w_h = dg::create::weights( g2d);
+    std::vector<dg::x::DVec> matrix( func_h.size());
     for( unsigned i=0; i<func_h.size(); i++)
-        matrix[i] = dg::DVec( 2, func_h[i]);
-    dg::DVec integral_d( 2);
+        matrix[i] = dg::x::DVec( 2, func_h[i]);
+    dg::x::DVec integral_d( 2);
     dg::blas2::symv( 1., dg::asDenseMatrix( dg::asPointers( matrix)), w_h,
             0., integral_d);
     dg::exblas::udouble res;
@@ -238,20 +264,45 @@ TEST_CASE( "Accuracy Dense Matrix")
     INFO( "2d error is               "<<(res.d-sol2d));
     CHECK_THAT( fabs(res.d - sol2d), WithinAbs( 0, 1e-13));
 }
+#endif
+
+TEST_CASE( "Dot throws")
+{
+    // TEST if dot throws on NaN
+    INFO( "TEST if dot throws on Inf or Nan");
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    // only some ranks throw?
+    dg::MDVec x { dg::DVec{10, rank%2 ? -10 : +10}, MPI_COMM_WORLD};
+#else
+    dg::DVec x(10, -10);
+#endif
+    dg::blas1::transform( x,x, dg::LN<double>());
+    bool hasnan = dg::blas1::reduce( x, false,
+            thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+    REQUIRE( hasnan);
+    CHECK_THROWS_AS( dg::blas1::dot( x,x), std::exception);
+}
+
 TEST_CASE( "Complex scalar products")
 {
     using namespace Catch::Matchers;
     SECTION( "3d grid")
     {
         unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
-        dg::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
-        const dg::DVec w3d = dg::construct<dg::DVec>( dg::create::weights( g3d));
+#ifdef WITH_MPI
+        MPI_Comm comm3d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
+        dg::x::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER,
+                dg::PER, comm3d);
+#else
+        dg::x::Grid3d g3d( 1, 2, 3, 4, 5, 6, n, Nx, Ny, Nz, dg::PER, dg::PER,
+                dg::PER);
+#endif
+        const dg::x::DVec w3d = dg::construct<dg::x::DVec>( dg::create::weights( g3d));
 
-        const dg::DVec func3d = dg::construct<dg::DVec>( dg::evaluate(
+        const dg::x::cDVec cc3d = dg::construct<dg::x::cDVec>( dg::evaluate(
                     function3d, g3d));
-        thrust::device_vector<thrust::complex<double>> cc3d( func3d.size());
-        dg::blas1::transform( func3d, cc3d, []DG_DEVICE(double x){ return
-                thrust::complex<double>{x,x};});
         thrust::complex<double> cintegral = dg::blas1::dot( w3d, cc3d);
         dg::exblas::udouble res;
         res.d =cintegral.real();
@@ -267,13 +318,17 @@ TEST_CASE( "Complex scalar products")
 
     SECTION( "1d grid")
     {
-        dg::Grid1d g1d( 1, 2, 3, 12);
-        const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( exp,
-                    g1d));
-        thrust::device_vector<thrust::complex<double>> cc1d( func1d.size());
-        dg::blas1::transform( func1d, cc1d, []DG_DEVICE(double x){ return
-                thrust::complex<double>{x,x};});
-        const dg::DVec w1d = dg::construct<dg::DVec>( dg::create::weights( g1d));
+#ifdef WITH_MPI
+        MPI_Comm comm1d = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {1});
+        dg::x::Grid1d g1d( 1, 2, 3, 12, comm1d);
+#else
+        dg::x::Grid1d g1d( 1, 2, 3, 12);
+#endif
+        // complex vectors can be constructed from real vectors
+        const dg::x::cDVec cc1d = dg::construct<dg::x::cDVec>( dg::evaluate(
+                    exp, g1d));
+        const dg::x::DVec w1d = dg::construct<dg::x::DVec>(
+                dg::create::weights( g1d));
         thrust::complex<double> cintegral = dg::blas1::dot( w1d, cc1d);
         dg::exblas::udouble res;
         res.d =cintegral.real();
@@ -288,16 +343,18 @@ TEST_CASE( "Complex scalar products")
     }
     SECTION( "Vector valued scalar product")
     {
-        dg::Grid1d g1d( 1, 2, 7, 12);
-        const dg::DVec func1d = dg::construct<dg::DVec>( dg::evaluate( exp,
-                    g1d));
-        thrust::device_vector<thrust::complex<double>> cc1d( func1d.size());
-        dg::blas1::transform( func1d, cc1d, []DG_DEVICE(double x){ return
-                thrust::complex<double>{x,x};});
-        std::vector<thrust::device_vector<thrust::complex<double>>> vx( 4,
-                cc1d);
-        const dg::DVec w1d = dg::construct<dg::DVec>( dg::create::weights( g1d));
-        std::vector<thrust::device_vector<double>> vw1d( 4, w1d);
+#ifdef WITH_MPI
+        MPI_Comm comm1d = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {1});
+        dg::x::Grid1d g1d( 1, 2, 7, 12, comm1d);
+#else
+        dg::x::Grid1d g1d( 1, 2, 7, 12);
+#endif
+        const dg::x::cDVec cc1d = dg::construct<dg::x::cDVec>( dg::evaluate(
+                    exp, g1d));
+        std::vector<dg::x::cDVec> vx( 4, cc1d);
+        const dg::x::DVec w1d = dg::construct<dg::x::DVec>(
+                dg::create::weights( g1d));
+        std::vector<dg::x::DVec> vw1d( 4, w1d);
         auto cintegral = dg::blas1::dot( vw1d, vx);
         double sol = 4*(exp(2.) -exp(1));
         INFO( "Correct integral is       "<<std::setw(6)<<sol);

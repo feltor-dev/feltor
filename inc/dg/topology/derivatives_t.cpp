@@ -1,5 +1,12 @@
 #include <iostream>
 #include <cmath>
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "dg/backend/mpi_init.h"
+#include "mpi_evaluation.h"
+#include "mpi_derivatives.h"
+#include "mpi_weights.h"
+#endif
 #include "dg/blas.h"
 #include "dg/functors.h"
 #include "evaluation.h"
@@ -8,8 +15,8 @@
 
 #include "catch2/catch.hpp"
 
-using Matrix = dg::DMatrix;
-using Vector = dg::DVec;
+using Matrix = dg::x::DMatrix;
+using Vector = dg::x::DVec;
 using value_t = double;
 
 static value_t zero( value_t x, value_t y) { return 0;}
@@ -24,6 +31,21 @@ static value_t cosz( value_t x, value_t y, value_t z) { return cos(z)*sin(x)*sin
 
 TEST_CASE( "Derivatives")
 {
+#ifdef WITH_MPI
+    int size;
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    std::vector<int> dims = {0,0,0};
+    MPI_Dims_create( size, 3, &dims[0]);
+    auto i = GENERATE( 0,1,2,3,4,5);
+    std::sort( dims.begin(), dims.end());
+    for( int u=0; u<i; u++)
+        std::next_permutation( dims.begin(), dims.end());
+    INFO( "Permutation of dims "<<dims[0]<<" "<<dims[1]<<" "<<dims[2]);
+    std::vector<int> dims2d = {dims[0], dims[1]};
+    MPI_Comm comm3d = dg::mpi_cart_create( MPI_COMM_WORLD, dims, {0, 1, 0});
+    auto comms1d = dg::mpi_cart_split( comm3d);
+    MPI_Comm comm2d = dg::mpi_cart_kron( {comms1d[0], comms1d[1]});
+#endif
     INFO("This program tests the creation and application of two-dimensional"
             <<"and three-dimensional derivatives!");
     unsigned n = 3, Nx = 24, Ny = 28, Nz = 100;
@@ -31,7 +53,12 @@ TEST_CASE( "Derivatives")
     SECTION( "Two dimensional")
     {
         INFO("On Grid "<<n<<" x "<<Nx<<" x "<<Ny);
-        dg::RealGrid2d<value_t> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
+        dg::x::RealGrid2d<value_t> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny,
+                bcx, bcy
+#ifdef WITH_MPI
+                , comm2d
+#endif
+                );
         const Vector w2d = dg::create::weights( g2d);
 
         Matrix dx2 = dg::create::dx( g2d, g2d.bcx(), dg::forward);
@@ -59,8 +86,12 @@ TEST_CASE( "Derivatives")
     SECTION( "Three dimensional")
     {
         INFO("On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz);
-        dg::RealGrid3d<value_t> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n,
-                Nx, Ny, Nz, bcx, bcy, bcz);
+        dg::x::RealGrid3d<value_t> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI,
+                n, Nx, Ny, Nz, bcx, bcy, bcz
+#ifdef WITH_MPI
+                , comm3d
+#endif
+                );
         const Vector w3d = dg::create::weights( g3d);
         Matrix dx3 = dg::create::dx( g3d, g3d.bcx(), dg::forward);
         Matrix dy3 = dg::create::dy( g3d, g3d.bcy(), dg::centered);
@@ -88,15 +119,24 @@ TEST_CASE( "Derivatives")
     }
     SECTION( "Symv captures NaN")
     {
-        dg::RealGrid3d<value_t> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n,
-                Nx, Ny, Nz, bcx, bcy, bcz);
+        dg::x::RealGrid3d<value_t> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI,
+                n, Nx, Ny, Nz, bcx, bcy, bcz
+#ifdef WITH_MPI
+                , comm3d
+#endif
+                );
         Matrix dx3 = dg::create::dx( g3d, g3d.bcx(), dg::forward);
         const Vector f3d = dg::evaluate( sine, g3d);
         Vector error = dg::evaluate( zero, g3d);
+#ifdef WITH_MPI
+        error.data()[0]  = NAN;
+        error.data()[1] = NAN;
+#else
         error[0]  = NAN;
         error[10] = NAN;
+#endif
         dg::blas2::symv(  dx3, f3d, error);
-        thrust::host_vector<double> x( error);
+        dg::x::HVec x( error);
         bool hasnan = dg::blas1::reduce( x, false,
                 thrust::logical_or<bool>(), dg::ISNFINITE<double>());
         INFO("Symv contains NaN: "<<std::boolalpha<<hasnan<<" (false)");

@@ -48,28 +48,28 @@ backscatter_t: backscatter_t.cpp xspacelib.h
 %_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-%_mpit: %_mpit.cpp
-	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS) $< -o $@ -g
-#%_mpit.$(device).o: %_t.cpp %.h
-#	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
+#%_mpit: %_mpit.cpp
+#	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS) $< -o $@ -g
+%_mpit.$(device).o: %_t.cpp %.h
+	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
 	$(CC) $(OPT) -o $@ $^
 
-#%_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
-#	$(MPICC) $(OPT) -o $@ $^
+%_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
+	$(MPICC) $(OPT) -o $@ $^
 
 $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
 
-#$(CATCHMPI).$(device).o: $(CATCHMPI).cpp
-#	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
+$(CATCHMPI).$(device).o: $(CATCHMPI).cpp
+	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
 	$(CC) -o $@ $^
 
-#tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
-#	$(MPICC) -o $@ $^
+tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
+	$(MPICC) -o $@ $^
 
 .PHONY: clean
 
