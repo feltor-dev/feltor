@@ -17,11 +17,13 @@ namespace dg{
 template<class T>
 using HVec_t  = thrust::host_vector<T>; //!< Host Vector
 using HVec  = thrust::host_vector<double>; //!< Host Vector
+using cHVec = thrust::host_vector<thrust::complex<double>>; //!< complex Host Vector
 using iHVec = thrust::host_vector<int>; //!< integer Host Vector
 using fHVec = thrust::host_vector<float>; //!< Host Vector
 
 using DVec  = thrust::device_vector<double>; //!< Device Vector. The device can be an OpenMP parallelized cpu or a gpu. This depends on the value of the macro THRUST_DEVICE_SYSTEM, which can be either THRUST_DEVICE_SYSTEM_OMP for openMP or THRUST_DEVICE_SYSTEM_CUDA for a gpu or THRUST_DEVICE_SYSTEM_CPP for a cpu.
 using iDVec = thrust::device_vector<int>; //!< integer Device Vector
+using cDVec = thrust::device_vector<thrust::complex<double>>; //!< complex Device Vector
 using fDVec = thrust::device_vector<float>; //!< Device Vector. The device can be an OpenMP parallelized cpu or a gpu. This depends on the value of the macro THRUST_DEVICE_SYSTEM, which can be either THRUST_DEVICE_SYSTEM_OMP for openMP or THRUST_DEVICE_SYSTEM_CUDA for a gpu or THRUST_DEVICE_SYSTEM_CPP for a cpu.
 
 //derivative matrices
@@ -61,8 +63,10 @@ namespace dg{
 template<class T>
 using MHVec_t   = dg::MPI_Vector<dg::HVec_t<T> >; //!< MPI Host Vector s.a. dg::HVec_t
 using MHVec     = dg::MPI_Vector<dg::HVec >; //!< MPI Host Vector s.a. dg::HVec
+using cMHVec    = dg::MPI_Vector<dg::cHVec >; //!< MPI Host Vector s.a. dg::cHVec
 using fMHVec    = dg::MPI_Vector<dg::fHVec >; //!< MPI Host Vector s.a. dg::fHVec
 using MDVec     = dg::MPI_Vector<dg::DVec >; //!< MPI Device Vector s.a. dg::DVec
+using cMDVec    = dg::MPI_Vector<dg::cDVec >; //!< MPI Device Vector s.a. dg::cDVec
 using fMDVec    = dg::MPI_Vector<dg::fDVec >; //!< MPI Device Vector s.a. dg::fDVec
 
 // TODO These may be private
@@ -100,9 +104,11 @@ namespace dg{
 namespace x{
 #ifdef MPI_VERSION
 using HVec  = MHVec;
+using cHVec = cMHVec;
 using fHVec = fMHVec;
 
 using DVec  = MDVec;
+using cDVec = cMDVec;
 using fDVec = fMDVec;
 
 //derivative matrices
@@ -115,9 +121,11 @@ using IHMatrix = MIHMatrix;
 using IDMatrix = MIDMatrix;
 #else
 using HVec  = HVec;
+using cHVec = cHVec;
 using fHVec = fHVec;
 
 using DVec  = DVec;
+using cDVec = cDVec;
 using fDVec = fDVec;
 
 //derivative matrices

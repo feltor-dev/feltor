@@ -1,4 +1,11 @@
 #include <iostream>
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "../backend/mpi_init.h"
+#include "mpi_evaluation.h"
+#include "mpi_derivatives.h"
+#include "mpi_weights.h"
+#endif
 
 #include "dg/blas.h"
 #include "dx.h"
@@ -12,23 +19,32 @@
 static double function( double x) { return sin(x);}
 static double derivative( double x) { return cos(x);}
 
-using Vector = dg::HVec;
-using Matrix = dg::EllSparseBlockMat<double>;
+using Vector = dg::x::HVec;
+using Matrix = dg::x::HMatrix;
 
 TEST_CASE( "Dx")
 {
     unsigned n=7, N=33;
+#ifdef WITH_MPI
+    MPI_Comm comm1d = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {0});
+    MPI_Comm comm1dPER = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {1});
+#endif
     auto bcx = GENERATE( dg::PER, dg::DIR, dg::NEU, dg::DIR_NEU, dg::NEU_DIR);
     auto dir = GENERATE( dg::centered, dg::forward, dg::backward);
-    dg::Grid1d g1d( 0.1, 2*M_PI+0.1, n, N, bcx);
+    dg::x::Grid1d g1d( 0.1, 2*M_PI+0.1, n, N, bcx
+#ifdef WITH_MPI
+            , bcx == dg::PER ? comm1dPER : comm1d
+#endif
+    );
+
     if( bcx == dg::DIR)
-        g1d = dg::Grid1d( 0, M_PI, n, N, bcx);
+        g1d.set_pq( {0}, {M_PI});
     else if( bcx == dg::NEU)
-        g1d = dg::Grid1d( M_PI/2., 3*M_PI/2., n, N, bcx);
+        g1d.set_pq( {M_PI/2.}, {3.*M_PI/2.});
     else if( bcx == dg::DIR_NEU)
-        g1d = dg::Grid1d( 0, M_PI/2., n, N, bcx);
+        g1d.set_pq( {0.}, {M_PI/2.});
     else if( bcx == dg::NEU_DIR)
-        g1d = dg::Grid1d( M_PI/2., M_PI, n, N, bcx);
+        g1d.set_pq( {M_PI/2.}, {M_PI});
 
     const Vector func = dg::evaluate( function, g1d);
     const Vector w1d = dg::create::weights( g1d);

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <cmath>
-#include "dg/backend/mpi_vector.h"
+#include "../backend/mpi_vector.h"
+#include "../backend/mpi_kron.h"
 #include "dg/enums.h"
 #include "grid.h"
 
@@ -342,7 +343,7 @@ struct aRealMPITopology
      */
     void set_pq( std::array<real_type,Nd> p, std::array<real_type,Nd> q)
     {
-        do_set( p, q);
+        do_set_pq( p, q);
     }
     /**
      * @brief reset the boundary conditions of the grid
