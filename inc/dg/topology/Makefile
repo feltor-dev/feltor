@@ -36,21 +36,21 @@ transform_t\
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-backscatter_t: backscatter_t.cu xspacelib.h
+backscatter_t: backscatter_t.cpp xspacelib.h
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
 
-%_mpib: %_mpib.cu
+%_mpib: %_mpib.cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE)
 
-%_b: %_b.cu
+%_b: %_b.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -g
 
-%_t.$(device).o: %_t.cu %.h
+%_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-%_mpit: %_mpit.cu
+%_mpit: %_mpit.cpp
 	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS) $< -o $@ -g
-#%_mpit.$(device).o: %_t.cu %.h
+#%_mpit.$(device).o: %_t.cpp %.h
 #	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
