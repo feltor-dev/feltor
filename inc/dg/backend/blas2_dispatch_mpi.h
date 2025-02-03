@@ -31,7 +31,6 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     MPI_Comm comm_mod, comm_red;
     dg::exblas::mpi_reduce_communicator( comm, &comm_mod, &comm_red);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
-    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
     return receive;
 }
 template< class Vector1, class Matrix, class Vector2 >

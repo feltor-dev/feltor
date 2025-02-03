@@ -245,51 +245,67 @@ TEST_CASE("blas1")
         dg::blas1::axpby( 2., w1, 3., w2, w3);
         INFO( "2*2+ 3*3 = " << result(w3) <<" (13)");
         CHECK( equal_rec<ArrVec,value_type>( w3, 13));
+
         dg::blas1::axpby( 0., w1, 3., w2, w3);
         INFO( "0*2+ 3*3 = " << result(w3) <<" (9)");
         CHECK( equal_rec<ArrVec,value_type>( w3, 9));
+
         dg::blas1::axpby( 2., w1, 0., w2, w3);
         INFO( "2*2+ 0*3 = " << result(w3) <<" (4)");
         CHECK( equal_rec<ArrVec,value_type>( w3, 4));
+
         dg::blas1::pointwiseDot( w1, w2, w3);
         INFO( "2*3 = "<<result(w3)<<" (6)");
         CHECK( equal_rec<ArrVec,value_type>( w3, 6));
+
         dg::blas1::pointwiseDot( 2., w1, w2, -4., w3);
         INFO( "2*2*3 -4*6 = "<<result(w3)<<" (-12)");
         CHECK( equal_rec<ArrVec,value_type>( w3, -12));
+
         dg::blas1::pointwiseDot( 2., w1, w2,w4, -4., w3);
         INFO( "2*2*3*4 -4*(-12) = "<<result(w3)<<" (96)");
         CHECK( equal_rec<ArrVec,value_type>( w3, 96));
+
         dg::blas1::pointwiseDot( 2., w1, w2, -4., w1, w2, 0., w2);
         INFO( "2*2*3 -4*2*3 = "<<result(w2)<<" (-12)");
         CHECK( equal_rec<ArrVec,value_type>( w2, -12));
+
         dg::blas1::axpby( 2., w1, 3., w2);
         INFO( "2*2+ 3*(-12) = " << result(w2) <<" (-32)");
         CHECK( equal_rec<ArrVec,value_type>( w2, -32));
+
         dg::blas1::axpby( 2.5, w1, 0., w2);
         INFO( "2.5*2+ 0 = " << result(w2) <<" (5)");
         CHECK( equal_rec<ArrVec,value_type>( w2, 5));
+
         dg::blas1::axpbypgz( 2.5, w1, 2., w2, -0.125, w3);
         INFO( "2.5*2+ 2.*5-0.125*96 = " << result(w3) <<" (3)");
         CHECK( equal_rec<ArrVec,value_type>( w3, 3));
+
         dg::blas1::pointwiseDivide( 5.,w1,5.,-1,w3);
         INFO( "5*2/5-1*3 = " << result(w3) <<" (-1)");
         CHECK( equal_rec<ArrVec,value_type>( w3, -1));
+
         dg::blas1::pointwiseDivide( w1,5.,w3);
         INFO( "2/5 = " << result(w3) <<" (0.4)");
         CHECK( equal_rec<ArrVec,value_type>( w3, 0.4));
+
         dg::blas1::copy( w2, w1);
         INFO( "5 = " << result(w1) <<" (5)");
         CHECK( equal_rec<ArrVec,value_type>( w1, 5));
+
         dg::blas1::scal( w1, 0.4);
         INFO( "5*0.5 = " << result(w1) <<" (2)");
         CHECK( equal_rec<ArrVec,value_type>( w1, 2));
+
         dg::blas1::evaluate( w4, dg::equals(),dg::AbsMax<>(), w1, w2);
         INFO( "absMax( 2, 5) = " << result(w4) <<" (5)");
         CHECK( equal_rec<ArrVec,value_type>( w4, 5));
+
         dg::blas1::transform( w1, w3, dg::EXP<>());
         INFO( "e^2 = " << result(w3) <<" (7.389056...)");
         CHECK( equal_rec<ArrVec,value_type>( w3, exp(2)));
+
         dg::blas1::plus( w3, -7.0);
         INFO( "e^2-7 = " << result(w3) <<" (0.389056...)");
         CHECK( equal_rec<ArrVec,value_type>( w3, exp(2)-7.0));
