@@ -2,7 +2,7 @@
 #include <cmath>
 #ifdef WITH_MPI
 #include <mpi.h>
-#include "dg/backend/mpi_init.h"
+#include "../backend/mpi_init.h"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
 #include "mpi_weights.h"
