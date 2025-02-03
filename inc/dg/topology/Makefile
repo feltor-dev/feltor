@@ -42,6 +42,7 @@ mpi_average_t\
 mpi_grid_mpit\
 filter_mpit\
 interpolation_mpit\
+mpi_projection_t\
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
