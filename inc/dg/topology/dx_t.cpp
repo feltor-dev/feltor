@@ -22,6 +22,7 @@ static double derivative( double x) { return cos(x);}
 using Vector = dg::x::HVec;
 using Matrix = dg::x::HMatrix;
 
+//TODO What happens for N=1?
 TEST_CASE( "Dx")
 {
     unsigned n=7, N=33;

@@ -34,11 +34,11 @@ stencil_t\
 tensor_t\
 transform_t\
 
-TARGETSMPI=average_t.mpi\
-evaluation_t.mpi\
-dx_t.mpi\
-derivatives_t.mpi\
-average_t.mpi\
+TARGETSMPI=mpi_average_t\
+mpi_evaluation_t\
+mpi_dx_t\
+mpi_derivatives_t\
+mpi_average_t\
 mpi_grid_mpit\
 filter_mpit\
 interpolation_mpit\
@@ -57,7 +57,11 @@ backscatter_t: backscatter_t.cpp xspacelib.h
 %_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-%_t.mpi.$(device).o: %_t.cpp %.h
+mpi_%_t.$(device).o: %_t.cpp mpi_%.h
+	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
+
+# There is no mpi_dx.h
+mpi_dx_t.$(device).o: dx_t.cpp mpi_derivatives.h derivativesT.h
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_mpit.$(device).o: %_mpit.cpp %.h
@@ -66,7 +70,7 @@ backscatter_t: backscatter_t.cpp xspacelib.h
 %_t: $(CATCH).$(device).o %_t.$(device).o
 	$(CC) $(OPT) -o $@ $^
 
-%_t.mpi: $(CATCHMPI).$(device).o %_t.mpi.$(device).o
+mpi_%_t: $(CATCHMPI).$(device).o mpi_%_t.$(device).o
 	$(MPICC) $(OPT) -o $@ $^
 
 %_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o

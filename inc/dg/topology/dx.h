@@ -8,7 +8,6 @@
 #include "operator.h"
 #include "weights.h"
 
-//What happens for N=1?
 /*! @file
   @brief Simple 1d derivatives
   */
