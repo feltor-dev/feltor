@@ -41,6 +41,7 @@ mpi_derivatives_t\
 mpi_average_t\
 mpi_grid_mpit\
 filter_mpit\
+stencil_mpit\
 interpolation_mpit\
 mpi_projection_t\
 
@@ -63,6 +64,9 @@ mpi_%_t.$(device).o: %_t.cpp mpi_%.h
 
 # There is no mpi_dx.h
 mpi_dx_t.$(device).o: dx_t.cpp mpi_derivatives.h derivativesT.h
+	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
+# There is no mpi_average.h
+mpi_average_t.$(device).o: average_t.cpp average.h
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_mpit.$(device).o: %_mpit.cpp %.h

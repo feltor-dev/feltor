@@ -11,6 +11,7 @@ static int function( double x, double y)
 {
     return int(10000*x*y);
 }
+// TODO Test what happens if # processes is larger than N?
 TEST_CASE( "MPI Grid")
 {
     int rank, size;
@@ -24,9 +25,9 @@ TEST_CASE( "MPI Grid")
             dg::mpi_cart_split_as<2>(comm));
     auto local_vec = dg::evaluate( function, g2d);
     auto global_vec = dg::evaluate( function, g2d.global());
-    auto local_vec2 = dg::global2local( global_vec, g2d);
-    SECTION( "local2globalIdx")
+    SECTION( "global2local")
     {
+        auto local_vec2 = dg::global2local( global_vec, g2d);
         int local_size  = g2d.local_size();
         for( int i=0; i<local_size; i++)
             CHECK( local_vec.data()[i] == local_vec2.data()[i]);
