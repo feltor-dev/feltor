@@ -34,6 +34,14 @@ stencil_t\
 tensor_t\
 transform_t\
 
+TARGETSMPI=average_t.mpi\
+evaluation_t.mpi\
+dx_t.mpi\
+derivatives_t.mpi\
+average_t.mpi\
+mpi_grid_mpit\
+filter_mpit\
+
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
 backscatter_t: backscatter_t.cpp xspacelib.h
@@ -48,13 +56,17 @@ backscatter_t: backscatter_t.cpp xspacelib.h
 %_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-#%_mpit: %_mpit.cpp
-#	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS) $< -o $@ -g
-%_mpit.$(device).o: %_t.cpp %.h
+%_t.mpi.$(device).o: %_t.cpp %.h
+	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
+
+%_mpit.$(device).o: %_mpit.cpp %.h
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
 	$(CC) $(OPT) -o $@ $^
+
+%_t.mpi: $(CATCHMPI).$(device).o %_t.mpi.$(device).o
+	$(MPICC) $(OPT) -o $@ $^
 
 %_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
 	$(MPICC) $(OPT) -o $@ $^
