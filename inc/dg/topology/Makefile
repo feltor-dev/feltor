@@ -41,6 +41,7 @@ derivatives_t.mpi\
 average_t.mpi\
 mpi_grid_mpit\
 filter_mpit\
+interpolation_mpit\
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
