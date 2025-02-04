@@ -369,8 +369,8 @@ ButcherTableau<real_type> fehlberg_3_2_3()
         0,0,0,
         1.,0,0,
         0.25, 0.25, 0.};
-    real_type b[3] = {1./2., 1./2., 0.};
-    real_type bt[3] = {1./6., 1./6., 2./3.};
+    real_type bt[3] = {1./2., 1./2., 0.};
+    real_type b[3] = {1./6., 1./6., 2./3.};
     real_type c[3] = {0.,1., 0.5};
     return ButcherTableau<real_type>(3,2,3, a, b, bt, c);
 }
@@ -1021,7 +1021,7 @@ ButcherTableau<real_type> sanchez_3_3()
         b[0], b[1]/2., 0.,
         b[0], b[1], b[2]/2.};
     real_type c[3] = {b[0]/2.,b[0]+b[1]/2., b[0]+b[1]+b[2]/2.};
-    return ButcherTableau<real_type>(3,4,a,b,c);
+    return ButcherTableau<real_type>(3,3,a,b,c);
 }
 template<class real_type>
 ButcherTableau<real_type> sanchez_3_4()
@@ -1622,8 +1622,8 @@ ButcherTableau<real_type> tableau( std::string name)
  *   SSPRK-5-4              | dg::SSPRK_5_4                  | <a href="https://epubs.siam.org/doi/pdf/10.1137/S0036142901389025">SSPRK (5,4)</a> CFL_eff = 0.37 "Shu-Osher-Form"
  *   Heun-Euler-2-1-2       | dg::HEUN_EULER_2_1_2       | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Heun-Euler-2-1-2</a>
  *   Cavaglieri-3-1-2 (explicit) | dg::CAVAGLIERI_3_1_2 |<a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> IMEXRKCB2 scheme
- *   Fehlberg-3-2-3 | dg::FEHLBERG_3_2_3 | The original uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
- *   Fehlberg-4-2-3 | dg::FEHLBERG_4_2_3 | The original uses the embedding as the solution [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987] (fsal)
+ *   Fehlberg-3-2-3 | dg::FEHLBERG_3_2_3 | The original uses the embedding as the solution (but we do not) [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987]
+ *   Fehlberg-4-2-3 | dg::FEHLBERG_4_2_3 | The original uses the embedding as the solution (but we do not) [Hairer, Noersett, Wanner, Solving ordinary differential Equations I, 1987] (fsal)
  *   Bogacki-Shampine-4-2-3 | dg::BOGACKI_SHAMPINE_4_2_3 | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Bogacki-Shampine</a> (fsal)
  *   Cavaglieri-4-2-3 (explicit) | dg::CAVAGLIERI_4_2_3 | <a href="https://doi.org/10.1016/j.jcp.2015.01.031">Low-storage implicit/explicit Runge-Kutta schemes for the simulation of stiff high-dimensional ODE systems</a> The SSP scheme IMEXRKCB3c (explicit part)
  *   ARK-4-2-3 (explicit)   | dg::ARK324L2SA_ERK_4_2_3   | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-4-2-3 (explicit)</a>
@@ -1631,7 +1631,7 @@ ButcherTableau<real_type> tableau( std::string name)
  *   ARK-6-3-4 (explicit)   | dg::ARK436L2SA_ERK_6_3_4   | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">ARK-6-3-4 (explicit)</a>
  *   Sayfy_Aburub-6-3-4     | dg::SAYFY_ABURUB_6_3_4     | <a href="https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html">Sayfy_Aburub_6_3_4</a>
  *   Cash_Karp-6-4-5        | dg::CASH_KARP_6_4_5        | <a href="https://en.wikipedia.org/wiki/List_of_Runge%E2%80%93Kutta_methods">Cash-Karp</a>
- *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
+ *   Fehlberg-6-4-5         | dg::FEHLBERG_6_4_5         | The original uses the embedding as the solution (but we do not) <a href="https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta%E2%80%93Fehlberg_method">Runge-Kutta-Fehlberg</a>
  *   Dormand-Prince-7-4-5   | dg::DORMAND_PRINCE_7_4_5   | <a href="https://en.wikipedia.org/wiki/Dormand%E2%80%93Prince_method">Dormand-Prince method</a> (fsal)
  *   Tsitouras09-7-4-5   | dg::TSITOURAS09_7_4_5   | <a href="https://doi.org/10.1063/1.3241561">Tsitouras 5(4) method from 2009</a> (fsal), The default method in Julia
  *   Tsitouras11-7-4-5   | dg::TSITOURAS11_7_4_5   | <a href="https://doi.org/10.1016/j.camwa.2011.06.002">Tsitouras 5(4) method from 2011</a> (fsal) Further improves Tsitouras09 (Note that in the paper b-bt is printed instead of bt)
