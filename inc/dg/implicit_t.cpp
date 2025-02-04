@@ -2,10 +2,15 @@
 #include <iomanip>
 
 #include <thrust/device_vector.h>
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "backend/mpi_init.h"
+#endif
 
 #include "implicit.h"
 #include "elliptic.h"
 
+#include "catch2/catch.hpp"
 
 template< class Geometry, class Matrix, class Container>
 struct Diffusion
@@ -44,57 +49,56 @@ struct Diffusion
     dg::Elliptic<Geometry, Matrix,Container> m_LaplacianM;
 };
 
-const double lx = M_PI;
-const double ly = 2.*M_PI;
-const double nu = 1e-3;
-const unsigned order = 2;
-const double alpha = -0.01;
-dg::bc bcx = dg::DIR;
-dg::bc bcy = dg::PER;
 
+inline const double alpha = -0.01;
+inline const double nu = 1e-3;
+inline const unsigned order = 2;
+static double rhs( double x, double y) { return (1.-alpha*pow(2.*nu,order))*sin(x)*sin(y);}
+static double sol(double x, double y)  { return sin( x)*sin(y);}
+static double initial( double x, double y) {return rhs(x,y);}
 
-double rhs( double x, double y) { return (1.-alpha*pow(2.*nu,order))*sin(x)*sin(y);}
-double sol(double x, double y)  { return sin( x)*sin(y);}
-double initial( double x, double y) {return rhs(x,y);}
-//double initial( double x, double y) {return 0.;}
+// TODO Should we use a logging system for feltor algorithms?
 
-
-int main()
+TEST_CASE( "Default solver interface")
 {
-    unsigned n, Nx, Ny;
-    double eps;
-	n = 3;
-	Nx = Ny = 48;
-	eps = 1e-10;
+#ifdef WITH_MPI
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {0,1});
+#endif
+    const double lx = M_PI;
+    const double ly = 2.*M_PI;
+    const dg::bc bcx = dg::DIR;
+    const dg::bc bcy = dg::PER;
+
+    unsigned n = 3, Nx = 48, Ny = 48;
+    double eps = 1e-10;
     unsigned max_iter = 1000;
 
-	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
-    std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
-    std::cin >> eps >> jfactor;*/
-
-    std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
-	dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    dg::DVec w2d = dg::create::weights( grid);
+    INFO( "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny);
+	dg::x::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy
+#ifdef WITH_MPI
+    , comm
+#endif
+    );
+    dg::x::DVec w2d = dg::create::weights( grid);
     //create functions A(chi) x = b
-    dg::DVec x =    dg::evaluate( initial, grid);
-    const dg::DVec b =    dg::evaluate( rhs, grid);
-    Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diff( grid, nu, order);
+    dg::x::DVec x =    dg::evaluate( initial, grid);
+    const dg::x::DVec b =    dg::evaluate( rhs, grid);
+    Diffusion<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> diff( grid, nu, order);
 
     //compute error
-    const dg::DVec solution = dg::evaluate( sol, grid);
+    const dg::x::DVec solution = dg::evaluate( sol, grid);
     const double norm = dg::blas2::dot( w2d, solution);
-    dg::DVec error( solution);
+    dg::x::DVec error( solution);
     dg::exblas::udouble res;
-    std::cout << "###########################################\n";
-    std::cout << "Default Solver\n";
-    dg::DefaultSolver<dg::DVec> solver( diff, x, max_iter, eps);
+    dg::DefaultSolver solver( diff, x, max_iter, eps);
+    solver.set_benchmark(false);
     x  =    dg::evaluate( initial, grid);
     solver( alpha, 1., x, b);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
     err = sqrt( err/norm); res.d = err;
-    std::cout << " Error "<<err << "\t"<<res.i<<"\n";
-
-    return 0;
+    INFO( " Error "<<err << "\t"<<res.i);
+    CHECK( err < 1e-6);
+    CHECK( abs(res.i - 4503686874401734415) < 2);
 }
 
