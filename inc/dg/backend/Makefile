@@ -33,7 +33,7 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 %_t.$(device).o: %_t.cu
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
-%_mpit.$(device).o: %_mpit.cu
+%_mpit.$(device).o: %_mpit.cpp
 	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS) -c $< -o $@ -g
 
 version: version.cu

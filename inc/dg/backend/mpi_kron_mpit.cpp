@@ -3,6 +3,7 @@
 
 #include "mpi_init.h"
 #include "mpi_kron.h"
+#include "exblas/mpi_accumulate.h"
 #include "catch2/catch.hpp"
 
 TEST_CASE("MPI Kron test")
@@ -35,19 +36,17 @@ TEST_CASE("MPI Kron test")
     }
     SECTION( "Check double sub does not segfault")
     {
-        // This test never actually segfaulted but if it ever happens
-        // again, try to make this test fail
-        std::vector<int> dims = {0,0,0};
-        MPI_Dims_create( size, 3, &dims[0]);
-        MPI_Comm comm0 = dg::mpi_cart_create( MPI_COMM_WORLD, dims,
-            {1,1,1}, true);
-        auto comms0 = dg::mpi_cart_split_as<3>( comm0);
-        MPI_Dims_create( size, 3, &dims[0]);
-        CHECK( comms0.size() == 3);
-        MPI_Comm comm1 = dg::mpi_cart_create( MPI_COMM_WORLD, dims,
-            {1,1,1}, true);
-        auto comms1 = dg::mpi_cart_split_as<3>( comm1);
-        CHECK( comms1.size() == 3);
+        int rank, size;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_size( MPI_COMM_WORLD, &size);
+
+        MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
+        auto comms = dg::mpi_cart_split_as<2>(comm);
+        MPI_Comm comm_join = dg::mpi_cart_kron(comms);
+        MPI_Comm comm_mod, comm_red;
+        dg::exblas::mpi_reduce_communicator( comm_join, &comm_mod, &comm_red);
+        MPI_Comm comm2 = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
+        auto comms2 = dg::mpi_cart_split_as<2>(comm2);
 
     }
 
