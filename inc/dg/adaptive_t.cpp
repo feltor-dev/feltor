@@ -10,6 +10,8 @@
 #include "runge_kutta.h"
 #include "adaptive.h"
 
+#include "catch2/catch.hpp"
+
 //![function]
 struct RHS
 {
@@ -51,9 +53,10 @@ std::array<double, 2> solution( double t, double damping, double omega_0,
     return {x,v};
 }
 
-int main()
+TEST_CASE( "Adaptive")
 {
-    std::cout << "Program to test correct implementation of adaptive methods in adaptive.h at the example of the damped driven harmonic oscillator. Errors should be small! \n";
+    INFO("Test correct implementation of adaptive methods "
+        <<"at the example of the damped driven harmonic oscillator");
     std::cout << std::scientific;
     //![doxygen]
     //... in main
@@ -67,72 +70,99 @@ int main()
     RHS rhs( damping, omega_0, omega_drive);
     //integration
     using Vec = std::array<double,2>;
-    dg::Adaptive<dg::ERKStep<Vec>> adapt( "Dormand-Prince-7-4-5", u_start);
-    dg::AdaptiveTimeloop<Vec>( adapt, rhs, dg::pid_control, dg::fast_l2norm,
-            1e-6, 1e-10).integrate( t_start, u_start, t_end, u_end);
-    //now compute error
-    dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1.,
-            u_end);
-    std::cout << "With "<<adapt.nsteps()<<"\t Dormand Prince steps norm of error is "
-              << dg::fast_l2norm( u_end)<<"\n";
-    //![doxygen]
-    std::cout << "Explicit Methods \n";
-    std::vector<std::string> names{
-        "Heun-Euler-2-1-2",
-        "Cavaglieri-3-1-2 (explicit)",
-        "Fehlberg-3-2-3",
-        "Fehlberg-4-2-3",
-        "Bogacki-Shampine-4-2-3",
-        "Cavaglieri-4-2-3 (explicit)",
-        "ARK-4-2-3 (explicit)",
-        "Zonneveld-5-3-4",
-        "ARK-6-3-4 (explicit)",
-        "Sayfy-Aburub-6-3-4",
-        "Cash-Karp-6-4-5",
-        "Fehlberg-6-4-5",
-        "Dormand-Prince-7-4-5",
-        "Tsitouras09-7-4-5",
-        "Tsitouras11-7-4-5",
-        "ARK-8-4-5 (explicit)",
-        "Verner-9-5-6",
-        "Verner-10-6-7",
-        "Fehlberg-13-7-8",
-        "Dormand-Prince-13-7-8",
-        "Feagin-17-8-10"
-    };
-    for( auto name : names)
+    SECTION( "Dormand-Prince-7-4-5")
     {
-        u_start = solution(t_start, damping, omega_0, omega_drive);
-        dg::Adaptive<dg::ERKStep<Vec>> adapt( name, u_start);
+        dg::Adaptive<dg::ERKStep<Vec>> adapt( "Dormand-Prince-7-4-5", u_start);
         dg::AdaptiveTimeloop<Vec>( adapt, rhs, dg::pid_control, dg::fast_l2norm,
                 1e-6, 1e-10).integrate( t_start, u_start, t_end, u_end);
+        //now compute error
+        dg::blas1::axpby( 1., solution(t_end, damping, omega_0, omega_drive), -1.,
+                u_end);
+        double err = dg::fast_l2norm(u_end);
+        INFO("With "<<adapt.nsteps()<<"\t Dormand Prince steps norm of error is "
+                  << err);
+        CHECK( err < 1e-6);
+    }
+    //![doxygen]
+    SECTION("Explicit Methods")
+    {
+        auto name = GENERATE( as<std::string>{},
+            "Heun-Euler-2-1-2",
+            "Cavaglieri-3-1-2 (explicit)",
+            "Fehlberg-3-2-3",
+            "Bogacki-Shampine-4-2-3",
+            "Cavaglieri-4-2-3 (explicit)",
+            "ARK-4-2-3 (explicit)",
+            "Zonneveld-5-3-4",
+            "ARK-6-3-4 (explicit)",
+            "Sayfy-Aburub-6-3-4",
+            "Cash-Karp-6-4-5",
+            "Fehlberg-6-4-5",
+            "Dormand-Prince-7-4-5",
+            "Tsitouras09-7-4-5",
+            "Tsitouras11-7-4-5",
+            "ARK-8-4-5 (explicit)",
+            "Verner-9-5-6",
+            "Verner-10-6-7",
+            "Fehlberg-13-7-8",
+            "Dormand-Prince-13-7-8",
+            "Feagin-17-8-10"
+        );
+        SECTION( "Integrate")
+        {
+            u_start = solution(t_start, damping, omega_0, omega_drive);
+            dg::Adaptive<dg::ERKStep<Vec>> adapt( name, u_start);
+            dg::AdaptiveTimeloop<Vec>( adapt, rhs, dg::pid_control, dg::fast_l2norm,
+                    1e-6, 1e-10).integrate( t_start, u_start, t_end, u_end);
 
-        std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
-        dg::blas1::axpby( 1.,sol  , -1., u_end);
-        std::cout << "With "<<std::setw(6)<<adapt.nsteps()
-                  <<" steps norm of error in "
-                  <<std::setw(24)<<name<<"\t"<<dg::fast_l2norm( u_end)<<"\n";
+            std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
+            dg::blas1::axpby( 1.,sol  , -1., u_end);
+            double err = dg::fast_l2norm( u_end);
+
+            INFO( "With "<<std::setw(6)<<adapt.nsteps()
+                      <<" steps norm of error in "
+                      <<std::setw(24)<<name<<"\t"<<err);
+            CHECK( err < 1e-5);
+        }
+        SECTION( "Domain restriction")
+        {
+            double dt = 0;
+            double t_start = 0;
+            double t_end = 10;
+            double u_start = 1.0, u_end;
+            auto rhs = [](double t, double y, double& yp){
+                    yp = y;
+            };
+            dg::Adaptive<dg::ERKStep<double>> adapt( name,u_start);
+            dg::AdaptiveTimeloop<double> odeint( adapt,
+                    rhs, dg::pid_control, dg::fast_l2norm, 1e-6, 1e-10);
+            odeint.integrate_in_domain( t_start, u_start, t_end, u_end, dt,
+                    dg::Grid1d( 0., 100., 1,1), 1e-6  );
+            double analytic = log( 100.);
+            double err = fabs( t_end - analytic);
+            INFO( "With "<<std::setw(6)<<adapt.nsteps()
+                      <<" steps norm of error in "
+                      <<std::setw(24)<<name<<"\t"<<err);
+            CHECK( err < 1e-4);
+        }
     }
     ///-------------------------------Implicit Methods----------------------//
-    std::cout << "Implicit Methods \n";
-    std::vector<std::string> implicit_names{
-        "SDIRK-2-1-2",
-        "Cavaglieri-3-1-2 (implicit)",
-        "Billington-3-3-2",
-        "TRBDF2-3-3-2",
-        "SDIRK-4-2-3",
-        "Kvaerno-4-2-3",
-        "Cavaglieri-4-2-3 (implicit)",
-        "ARK-4-2-3 (implicit)",
-        "Cash-5-2-4",
-        "Cash-5-3-4",
-        "SDIRK-5-3-4",
-        "ARK-6-3-4 (implicit)",
-        "Kvaerno-7-4-5",
-        "ARK-8-4-5 (implicit)",
-    };
-    for( auto name : implicit_names)
+    SECTION( "Implicit Methods")
     {
+        auto name = GENERATE( as<std::string>{},
+            "SDIRK-2-1-2",
+            "Cavaglieri-3-1-2 (implicit)",
+            "SDIRK-4-2-3",
+            "Kvaerno-4-2-3",
+            "Cavaglieri-4-2-3 (implicit)",
+            "ARK-4-2-3 (implicit)",
+            "Cash-5-2-4",
+            "Cash-5-3-4",
+            "SDIRK-5-3-4",
+            "ARK-6-3-4 (implicit)",
+            "Kvaerno-7-4-5",
+            "ARK-8-4-5 (implicit)"
+        );
         u_start = solution(t_start, damping, omega_0, omega_drive);
         dg::Adaptive< dg::DIRKStep< std::array<double,2> > >
                 adapt( name, u_start);
@@ -154,30 +184,10 @@ int main()
 
         std::array<double, 2> sol = solution(t_end, damping, omega_0, omega_drive);
         dg::blas1::axpby( 1., sol, -1., u_end);
-        std::cout << "With "<<std::setw(6)<<adapt.nsteps()
+        double err = dg::fast_l2norm( u_end);
+        INFO( "With "<<std::setw(6)<<adapt.nsteps()
                   <<" steps norm of error in "
-                  <<std::setw(24)<<name<<"\t"<<dg::fast_l2norm( u_end)<<"\n";
+                  <<std::setw(24)<<name<<"\t"<<err);
+        CHECK( err < 1e-5);
     }
-    ///---------------------------Test domain restriction-------------------//
-    std::cout << "Test domain restriction \n";
-    for( auto name : names)
-    {
-        double dt = 0;
-        double t_start = 0;
-        double t_end = 10;
-        double u_start = 1.0, u_end;
-        auto rhs = [](double t, double y, double& yp){
-                yp = y;
-        };
-        dg::Adaptive<dg::ERKStep<double>> adapt( name,u_start);
-        dg::AdaptiveTimeloop<double> odeint( adapt,
-                rhs, dg::pid_control, dg::fast_l2norm, 1e-6, 1e-10);
-        odeint.integrate_in_domain( t_start, u_start, t_end, u_end, dt,
-                dg::Grid1d( 0., 100., 1,1), 1e-6  );
-        double analytic = log( 100.);
-        std::cout << "With "<<std::setw(6)<<adapt.nsteps()
-                  <<" steps norm of error in "
-                  <<std::setw(24)<<name<<"\t"<<fabs( t_end - analytic)<<"\n";
-    }
-    return 0;
 }

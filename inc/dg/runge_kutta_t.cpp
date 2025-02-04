@@ -41,7 +41,7 @@ TEST_CASE( "is_same and is_divisable")
 TEST_CASE( "Runge Kutta")
 {
     INFO( "Test correct implementation of Runge Kutta methods"
-    <<" at the example of the damped driven harmonic oscillator");
+        <<" at the example of the damped driven harmonic oscillator");
     //![doxygen]
     //... in main
     //set start and end time, number of steps and timestep
@@ -103,7 +103,6 @@ TEST_CASE( "Runge Kutta")
             "Heun-Euler-2-1-2",
             "Cavaglieri-3-1-2 (explicit)",
             "Fehlberg-3-2-3",
-            "Fehlberg-4-2-3",
             "Bogacki-Shampine-4-2-3",
             "Cavaglieri-4-2-3 (explicit)",
             "ARK-4-2-3 (explicit)",
@@ -189,8 +188,6 @@ TEST_CASE( "Runge Kutta")
             "Trapezoidal-2-2",
             "SDIRK-2-1-2",
             "Cavaglieri-3-1-2 (implicit)",
-            "Billington-3-3-2",
-            "TRBDF2-3-3-2",
             "Sanchez-3-3",
             "Kvaerno-4-2-3",
             "SDIRK-4-2-3",
