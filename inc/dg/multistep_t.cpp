@@ -5,6 +5,8 @@
 #include "multistep.h"
 #include "adaptive.h"
 
+#include "catch2/catch.hpp"
+
 //method of manufactured solution
 std::array<double,2> solution( double t, double nu) {
     return {exp( -nu*t) + cos(t), exp( -nu*t) + sin(t)};
@@ -69,14 +71,11 @@ struct FullImplicit
 
 //const unsigned NT = (unsigned)(nu*T*n*n*N*N/0.01/lx/lx);
 
-int main()
+TEST_CASE( "Multistep")
 {
-    std::cout << "Program tests Multistep and Semi-Implicit methods on a manufactured PDE\n";
+    INFO("Multistep and Semi-Implicit methods on a manufactured PDE");
     const double T = 1;
-    const double NT= 40;
-    const double dt = (T/NT);
     const double nu = 0.01;
-    FullImplicit full( nu);
     //evaluate the initial condition
     const std::array<double,2> init( solution(0.,nu));
     std::array<double,2> y0(init);
@@ -84,88 +83,158 @@ int main()
     const std::array<double,2> sol = solution(T,nu);
     const double norm_sol = dg::blas1::dot( sol, sol);
     double time = 0.;
-    dg::exblas::udouble res;
-    std::cout << "### Test Explicit Multistep methods with "<<NT<<" steps\n";
-    std::vector<std::string> ex_names{
-    "AB-1-1", "AB-2-2", "AB-3-3", "AB-4-4", "AB-5-5",
-    "eBDF-1-1", "eBDF-2-2", "eBDF-3-3", "eBDF-4-4", "eBDF-5-5", "eBDF-6-6",
-    "TVB-1-1", "TVB-2-2", "TVB-3-3", "TVB-4-4", "TVB-5-5", "TVB-6-6",
-    "SSP-1-1", "SSP-2-2", "SSP-3-2", "SSP-4-2", "SSP-5-3", "SSP-6-3",
-    };
-    for( auto name : ex_names)
-    {
-        time = 0., y0 = init;
-        dg::ExplicitMultistep< std::array<double,2> > ab( name, y0);
-        dg::MultistepTimeloop<std::array<double,2>>( ab, full, time, init,
-                dt).integrate( 0, init, T, y0);
-        dg::blas1::axpby( -1., sol, 1., y0);
-        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
-    }
-    std::cout << "### Test implicit multistep methods with "<<NT<<" steps\n";
-    std::vector<std::string> imex_names{
-    "Euler", "ImEx-Koto-2-2", "ImEx-Adams-2-2", "ImEx-Adams-3-3", "ImEx-BDF-2-2",
-    "ImEx-BDF-3-3", "ImEx-BDF-4-4", "ImEx-BDF-5-5", "ImEx-BDF-6-6",
-    "ImEx-TVB-3-3", "ImEx-TVB-4-4", "ImEx-TVB-5-5",
-    };
-    for( auto name : imex_names)
-    {
-        time = 0., y0 = init;
-        dg::ImplicitMultistep< std::array<double,2>> bdf( name, y0);
-        dg::MultistepTimeloop<std::array<double,2>> odeint( bdf, std::tie(
-                    full, full), time, y0, dt);
-        // Test integrate at least
-        unsigned maxout = 3;
-        double deltaT = T/(double)maxout;
-        double time = 0;
-        for( unsigned u=1; u<=maxout; u++)
-        {
-            odeint.integrate( time, y0, 0 + u*deltaT, y0,
-                u<maxout ? dg::to::at_least :  dg::to::exact);
-        }
-        dg::blas1::axpby( -1., sol, 1., y0);
-        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
-    }
-    std::cout << "### Test ImEx multistep methods with "<<NT<<" steps\n";
     Explicit ex( nu);
     Implicit im( nu);
-    // Test Semi-Implicit methods
-    for( auto name : imex_names)
+    FullImplicit full( nu);
+    SECTION( "Explicit Multistep methods")
     {
-        //![karniadakis]
-        //construct time stepper
-        dg::ImExMultistep< std::array<double,2> > imex( name, y0);
-        time = 0., y0 = init; //y0 and init are of type std::array<double,2> and contain the initial condition
-        //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
-        imex.init( std::tie(ex, im, im), time, y0, dt);
-        //main time loop (NT = 20)
-        for( unsigned k=0; k<NT; k++)
-            imex.step( std::tie(ex, im, im), time, y0); //inplace step
-        //![karniadakis]
-        dg::blas1::axpby( -1., sol, 1., y0);
-        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
+        auto name = GENERATE( as<std::string>{},
+        "AB-1-1", "AB-2-2", "AB-3-3", "AB-4-4", "AB-5-5",
+        "eBDF-1-1", "eBDF-2-2", "eBDF-3-3", "eBDF-4-4", "eBDF-5-5", "eBDF-6-6",
+        "TVB-1-1", "TVB-2-2", "TVB-3-3", "TVB-4-4", "TVB-5-5", "TVB-6-6",
+        "SSP-1-1", "SSP-2-2", "SSP-3-2", "SSP-4-2", "SSP-5-3", "SSP-6-3"
+        );
+        auto b = dg::create::lmstableau<double>(name);
+        std::vector<unsigned> NTs = {30,40};
+        if( b.order() > 5)
+            NTs = {39,40};
+        std::vector<double> err(NTs.size());
+        for( unsigned k = 0; k<NTs.size(); k++)
+        {
+            unsigned N = NTs[k];
+            double dt = T/ (double)N;
+            time = 0., y0 = init;
+            dg::ExplicitMultistep< std::array<double,2> > ab( name, y0);
+            dg::MultistepTimeloop<std::array<double,2>>( ab, full, time, init,
+                    dt).integrate( 0, init, T, y0);
+            dg::blas1::axpby( -1., sol, 1., y0);
+            err[k] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+        }
+        double order = log( err[0]/err[1])/log( (double)NTs[1]/(double)NTs[0]);
+        INFO( "Number of steps "<<NTs[0]<<" "<<NTs[1]);
+        INFO("Norm of error in "<<std::setw(20) <<name<<"\t"<<err[1]<<" order "
+            <<order<<" expected "<<b.order());
+        CHECK( fabs( (order  - b.order())/double(b.order())) < 0.05);
     }
-    std::cout << "### Test semi-implicit ARK methods with 40 steps\n";
-    std::vector<std::string> ark_names{"Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4", "ARK-8-4-5"};
-    for( auto name : ark_names)
+    SECTION( "Implicit multistep methods")
     {
-        dg::ARKStep< std::array<double,2> > imex( name, y0);
-        std::array<double,2> delta{0,0};
-        time = 0., y0 = init;
-        //main time loop (NT = 20)
-        for( unsigned k=0; k<NT; k++)
-            imex.step( std::tie(ex, im, im), time, y0, time, y0, dt, delta ); //inplace step
-        dg::blas1::axpby( -1., sol, 1., y0);
-        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << "Relative error: "<<std::setw(20) <<name<<"\t"<< res.d<<"\t"<<res.i<<std::endl;
+        auto name = GENERATE( as<std::string>{},
+            "Euler", "ImEx-Koto-2-2", "ImEx-Adams-2-2",
+            "ImEx-BDF-2-2", "ImEx-BDF-3-3", "ImEx-BDF-4-4", "ImEx-BDF-5-5",
+            "ImEx-BDF-6-6", "ImEx-TVB-3-3", "ImEx-TVB-4-4", "ImEx-TVB-5-5"
+        );
+        auto b = dg::create::lmstableau<double>(name);
+        //std::vector<unsigned> NTs = {4,8};
+        //if( b.order() == 1)
+        //    NTs = {20, 40};
+        //if( b.order() > 5)
+        //    NTs = {2,4};
+        std::vector<unsigned> NTs = {30,40};
+        if( b.order() > 5)
+            NTs = {39,40};
+        std::vector<double> err(NTs.size());
+        SECTION( "Implicit")
+        {
+            for( unsigned k = 0; k<NTs.size(); k++)
+            {
+                time = 0., y0 = init;
+                unsigned NT = NTs[k];
+                double dt = T/ (double)NT;
+                dg::ImplicitMultistep< std::array<double,2>> bdf( name, y0);
+                dg::MultistepTimeloop<std::array<double,2>> odeint( bdf,
+                    std::tie( full, full), time, y0, dt);
+                // Test integrate at least
+                unsigned maxout = 3;
+                double deltaT = T/(double)maxout;
+                double time = 0;
+                for( unsigned u=1; u<=maxout; u++)
+                {
+                    odeint.integrate( time, y0, 0 + u*deltaT, y0,
+                        u<maxout ? dg::to::at_least :  dg::to::exact);
+                }
+                dg::blas1::axpby( -1., sol, 1., y0);
+                err[k] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+            }
+        }
+        SECTION( "ImEx multistep methods")
+        {
+            for( unsigned k = 0; k<NTs.size(); k++)
+            {
+                //![karniadakis]
+                //construct time stepper
+                dg::ImExMultistep< std::array<double,2> > imex( name, y0);
+                time = 0., y0 = init; //y0 and init are of type std::array<double,2> and contain the initial condition
+                //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
+                unsigned NT = NTs[k];
+                double dt = T/ (double)NT;
+                imex.init( std::tie(ex, im, im), time, y0, dt);
+                //main time loop (NT = 20)
+                for( unsigned k=0; k<NT; k++)
+                    imex.step( std::tie(ex, im, im), time, y0); //inplace step
+                //![karniadakis]
+                dg::blas1::axpby( -1., sol, 1., y0);
+                err[k] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+            }
+        }
+        double order = log( err[0]/err[1])/log( (double)NTs[1]/(double)NTs[0]);
+        INFO("Norm of error in "<<std::setw(20) <<name<<"\t"<<err[1]
+            <<" order " <<order<<" expected "<<b.order());
+        CHECK( fabs( (order  - b.order())/double(b.order())) < 0.05);
+    }
+}
+
+TEST_CASE( "ARK methods")
+{
+    const double T = 1;
+    const double nu = 0.01;
+    //evaluate the initial condition
+    const std::array<double,2> init( solution(0.,nu));
+    std::array<double,2> y0(init);
+
+    const std::array<double,2> sol = solution(T,nu);
+    const double norm_sol = dg::blas1::dot( sol, sol);
+    double time = 0.;
+    Explicit ex( nu);
+    Implicit im( nu);
+    FullImplicit full( nu);
+    SECTION( "Semi-implicit ARK methods")
+    {
+        auto name = GENERATE( as<std::string>{},
+            "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4",
+            "ARK-8-4-5");
+        auto b = dg::create::tableau<double>(name + " (explicit)");
+        std::vector<unsigned> NTs = {4,8};
+        if( b.order() == 1)
+            NTs = {20, 40};
+        if( b.order() > 5)
+            NTs = {2,4};
+        std::vector<double> err(NTs.size());
+        for( unsigned k = 0; k<NTs.size(); k++)
+        {
+            dg::ARKStep< std::array<double,2> > imex( name, y0);
+            std::array<double,2> delta{0,0};
+            unsigned NT = NTs[k];
+            double dt = T/ (double)NT;
+            time = 0., y0 = init;
+            //main time loop (NT = 20)
+            for( unsigned k=0; k<NT; k++)
+                imex.step( std::tie(ex, im, im), time, y0, time, y0, dt, delta ); //inplace step
+            dg::blas1::axpby( -1., sol, 1., y0);
+            err[k] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+        }
+        double order = log( err[0]/err[1])/log( (double)NTs[1]/(double)NTs[0]);
+        INFO("Norm of error in "<<std::setw(20) <<name<<"\t"<<err[1]
+            <<" order " <<order<<" expected "<<b.order());
+        // Allow order to be larger
+        CHECK( (b.order() - order)/double(b.order()) < 0.012);
     }
 
-    std::cout << "### Test adaptive semi-implicit ARK methods\n";
-    double rtol = 1e-7, atol = 1e-10;
-    for( auto name : ark_names)
+    SECTION( "Adaptive semi-implicit ARK methods")
     {
+        const double rtol = 1e-7, atol = 1e-10;
+        auto name = GENERATE( as<std::string>{},
+            "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4",
+            "ARK-8-4-5");
         //![adaptive]
         time = 0., y0 = init;
         dg::Adaptive<dg::ARKStep<std::array<double,2>>> adapt( name, y0);
@@ -182,30 +251,43 @@ int main()
         }
         //![adaptive]
         dg::blas1::axpby( -1., sol, 1., y0);
-        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << counter <<" steps! ";
-        std::cout << "Relative error "<<name<<" is "<< res.d<<"\t"<<res.i<<std::endl;
+        double err = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+        INFO("# steps "<< counter);
+        INFO( "Relative error "<<name<<" is "<< err);
+        CHECK( err < 1e-6);
     }
+}
+TEST_CASE( "Operator splitting")
+{
+    const double T = 1;
+    const double nu = 0.01;
+    //evaluate the initial condition
+    const std::array<double,2> init( solution(0.,nu));
+    std::array<double,2> y0(init);
 
-    std::cout << "### Test Strang operator splitting\n";
-    std::vector<std::string> rk_names{
-        "Heun-Euler-2-1-2",
-        "Bogacki-Shampine-4-2-3",
-        "ARK-4-2-3 (explicit)",
-        "Zonneveld-5-3-4",
-        "ARK-6-3-4 (explicit)",
-        "Sayfy-Aburub-6-3-4",
-        "Cash-Karp-6-4-5",
-        "Fehlberg-6-4-5",
-        "Dormand-Prince-7-4-5",
-        "ARK-8-4-5 (explicit)"
-    };
-    for( auto name : rk_names)
+    const std::array<double,2> sol = solution(T,nu);
+    const double norm_sol = dg::blas1::dot( sol, sol);
+    double time = 0.;
+    Explicit ex( nu);
+    Implicit im( nu);
+    SECTION( "Strang operator splitting")
     {
+        const double rtol = 1e-7, atol = 1e-10;
+        auto name = GENERATE( as<std::string>{},
+            "Heun-Euler-2-1-2",
+            "Bogacki-Shampine-4-2-3",
+            "ARK-4-2-3 (explicit)",
+            "Zonneveld-5-3-4",
+            "ARK-6-3-4 (explicit)",
+            "Sayfy-Aburub-6-3-4",
+            "Cash-Karp-6-4-5",
+            "Fehlberg-6-4-5",
+            "Dormand-Prince-7-4-5",
+            "ARK-8-4-5 (explicit)"
+        );
         time = 0., y0 = init;
         dg::Adaptive<dg::ERKStep<std::array<double,2>>> adapt( name, y0);
         dg::ImplicitRungeKutta<std::array<double,2>> dirk( "Trapezoidal-2-2", y0 );
-        double time = 0;
         double dt = 1e-6;
         int counter=0;
         adapt.stepper().ignore_fsal();
@@ -221,9 +303,10 @@ int main()
             counter ++;
         }
         dg::blas1::axpby( -1., sol, 1., y0);
-        res.d = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
-        std::cout << std::setw(4)<<counter <<" steps! ";
-        std::cout << "Relative error: "<<std::setw(24) <<name<<"\t"<<res.d<<"\n";
+        double err = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+        INFO( "# steps "<<counter);
+        INFO( "Relative error: "<<std::setw(24) <<name<<" "<<err);
+        // Very lax condition here, not sure if there is a better test
+        CHECK( err < 1e-3);
     }
-    return 0;
 }
