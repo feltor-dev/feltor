@@ -30,13 +30,13 @@ CUFILES=$(wildcard *.cu)
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-%_t.$(device).o: %_t.cu
+%_t.$(device).o: %_t.cpp
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
 %_mpit.$(device).o: %_mpit.cpp
 	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS) -c $< -o $@ -g
 
-version: version.cu
+version: version.cpp
 	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
 	./$@
 
