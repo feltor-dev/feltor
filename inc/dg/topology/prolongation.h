@@ -52,7 +52,7 @@ template<class Topology, size_t Md>
 std::array<unsigned,Topology::ndim()-Md> complement( const Topology& g, std::array<unsigned,Md> axes)
 {
     // The axes that remain
-    std::array<unsigned,Topology::ndim()-Md> comp;
+    std::array<unsigned,Topology::ndim()-Md> comp = {0u};
     auto bools = axes2bools( g, axes);
     unsigned counter = 0;
     for ( unsigned u=0; u<Topology::ndim(); u++)
