@@ -26,9 +26,7 @@ namespace dg
 template< class T>
 Operator<T> tensorproduct( const Operator<T>& op1, const Operator<T>& op2)
 {
-#ifdef DG_DEBUG
     assert( op1.size() == op2.size());
-#endif //DG_DEBUG
     unsigned n = op1.size();
     Operator<T> prod( n*n);
     for( unsigned i=0; i<n; i++)

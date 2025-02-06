@@ -81,15 +81,12 @@ class Operator
 
     /*! @brief access operator
      *
-     * A range check is performed if DG_DEBUG is defined
      * @param i row index
      * @param j column index
      * @return reference to value at that location
      */
-    T& operator()(const size_t i, const size_t j){
-#ifdef DG_DEBUG
-        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
-#endif
+    T& operator()(const size_t i, const size_t j)
+    {
         return data_[ i*n_+j];
     }
     /*! @brief const access operator
@@ -99,9 +96,6 @@ class Operator
      * @return const value at that location
      */
     const T& operator()(const size_t i, const size_t j) const {
-#ifdef DG_DEBUG
-        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
-#endif
         return data_[ i*n_+j];
     }
 
@@ -200,9 +194,6 @@ class Operator
      */
     Operator& operator+=( const Operator& op)
     {
-#ifdef DG_DEBUG
-        assert( op.size() == this->size());
-#endif//DG_DEBUG
         for( unsigned i=0; i<n_*n_; i++)
             data_[i] += op.data_[i];
         return *this;
@@ -216,9 +207,6 @@ class Operator
      */
     Operator& operator-=( const Operator& op)
     {
-#ifdef DG_DEBUG
-        assert( op.size() == this->size());
-#endif//DG_DEBUG
         for( unsigned i=0; i<n_*n_; i++)
             data_[i] -= op.data_[i];
         return *this;
@@ -303,9 +291,6 @@ class Operator
     friend Operator operator*( const Operator& lhs, const Operator& rhs)
     {
         unsigned n_ = lhs.n_;
-#ifdef DG_DEBUG
-        assert( lhs.size() == rhs.size());
-#endif//DG_DEBUG
         Operator temp(n_, 0.);
         for( unsigned i=0; i< n_; i++)
             for( unsigned j=0; j<n_; j++)
