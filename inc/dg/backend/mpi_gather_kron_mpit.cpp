@@ -13,8 +13,7 @@
 
 TEST_CASE( "Kronecker Gather")
 {
-    MPI_Comm comm1d;
-    mpi_init1d( dg::PER, comm1d, true  );
+    MPI_Comm comm1d = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {1});
     int rank, size;
     MPI_Comm_rank( comm1d, &rank);
     MPI_Comm_size( comm1d, &size);

@@ -61,4 +61,4 @@ tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
 .PHONY: clean
 
 clean:
-	rm -f *.o *_t *_mpit version
+	rm -f *.o *_t *_mpit version tests tests-mpi
