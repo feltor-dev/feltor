@@ -7,9 +7,7 @@
 #include "tensor_traits.h"
 #include "predicate.h"
 
-#ifdef DG_DEBUG
 #include <cassert>
-#endif //DG_DEBUG
 
 ///@cond
 namespace dg {
@@ -44,29 +42,29 @@ namespace blas1{
 namespace detail{
 
 
-template< class Vector1, class Vector2>
-void do_mpi_assert( const Vector1& x, const Vector2& y, AnyVectorTag, AnyVectorTag)
-{
-    return;
-}
-template< class Vector1, class Vector2>
-void do_mpi_assert( const Vector1& x, const Vector2& y, MPIVectorTag, MPIVectorTag)
-{
-    int compare;
-    MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
-    assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
-}
-template< class Vector1, class Vector2>
-void mpi_assert( const Vector1& x, const Vector2&y)
-{
-    do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
-}
+//template< class Vector1, class Vector2>
+//void do_mpi_assert( const Vector1& x, const Vector2& y, AnyVectorTag, AnyVectorTag)
+//{
+//    return;
+//}
+//template< class Vector1, class Vector2>
+//void do_mpi_assert( const Vector1& x, const Vector2& y, MPIVectorTag, MPIVectorTag)
+//{
+//    int compare;
+//    MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
+//    assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
+//}
+//template< class Vector1, class Vector2>
+//void mpi_assert( const Vector1& x, const Vector2&y)
+//{
+//    do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
+//}
 
 template<class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
-void doDot_fpe( MPIVectorTag, std::array<T,N>& fpe, Functor f, const ContainerType& x, const ContainerTypes& ...xs)
+void doDot_fpe( MPIVectorTag, int* status, std::array<T,N>& fpe, Functor f, const ContainerType& x, const ContainerTypes& ...xs)
 {
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>::value;
-    doDot_fpe( fpe, f,
+    doDot_fpe( status, fpe, f,
         do_get_data(x, get_tensor_category<ContainerType>()),
         do_get_data(xs, get_tensor_category<ContainerTypes>())...);
 
@@ -82,26 +80,21 @@ void doDot_fpe( MPIVectorTag, std::array<T,N>& fpe, Functor f, const ContainerTy
     //reduce received data (serial execution)
     for( unsigned k=0; k<N; k++)
         fpe[k] = T(0);
-    int status = 0;
     for ( unsigned u=0; u<(unsigned)size; u++)
         for (unsigned k = 0; k < N; ++k)
-            exblas::cpu::Accumulate( reduction[u*N+k], fpe, &status);
-    if( status != 0)
-    for( unsigned u=0; u<N; u++)
-    if( fpe[u] - fpe[u] != T(0))
-        throw dg::Error(dg::Message(_ping_)<<"MPI FPE Dot failed since one of the inputs contains NaN or Inf");
+            exblas::cpu::Accumulate( reduction[u*N+k], fpe, status);
+    // Communicate the status to all
+    MPI_Allreduce( MPI_IN_PLACE, status, 1, MPI_INT, MPI_MAX, comm);
 }
 
 template< class Vector1, class Vector2>
-std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVectorTag)
+std::vector<int64_t> doDot_superacc( int* status, const Vector1& x, const Vector2& y, MPIVectorTag)
 {
     //find out which one is the MPIVector and determine category
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
-#ifdef DG_DEBUG
-    mpi_assert( x,y);
-#endif //DG_DEBUG
+    //mpi_assert( x,y);
     //local compuation
-    std::vector<int64_t> acc = doDot_superacc(
+    std::vector<int64_t> acc = doDot_superacc( status,
         do_get_data(x,get_tensor_category<Vector1>()),
         do_get_data(y,get_tensor_category<Vector2>()));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
@@ -110,6 +103,8 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVect
     MPI_Comm comm_mod, comm_red;
     dg::exblas::mpi_reduce_communicator( comm, &comm_mod, &comm_red);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
+    // Communicate the status to all
+    MPI_Allreduce( MPI_IN_PLACE, status, 1, MPI_INT, MPI_MAX, comm);
     return receive;
 }
 

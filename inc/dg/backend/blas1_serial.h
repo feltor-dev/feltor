@@ -13,32 +13,25 @@ namespace blas1
 namespace detail
 {
 template<class T, size_t N, class Functor, class ...PointerOrValues>
-inline void doDot_fpe_dispatch( SerialTag, unsigned size, std::array<T,N>& fpe,
+inline void doDot_fpe_dispatch( SerialTag, int * status, unsigned size, std::array<T,N>& fpe,
     Functor f, PointerOrValues ...xs_ptr)
 {
-    int status = 0;
-    exblas::fpedot_cpu<T,N,Functor,PointerOrValues...>( &status, size, fpe, f, xs_ptr...);
-    if( status != 0)
-    for( unsigned u=0; u<N; u++)
-    if( fpe[u] - fpe[u] != T(0))
-        throw dg::Error(dg::Message(_ping_)<<"CPU FPE Dot failed since one of the inputs contains NaN or Inf");
+    exblas::fpedot_cpu<T,N,Functor,PointerOrValues...>( status, size, fpe, f, xs_ptr...);
 }
 template<class PointerOrValue1, class PointerOrValue2>
-inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
+inline std::vector<int64_t> doDot_dispatch( SerialTag, int* status, unsigned size,
+    PointerOrValue1 x_ptr, PointerOrValue2 y_ptr)
+{
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status = 0;
-    exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0],&status) ;
-    if(status != 0)
-        throw dg::Error(dg::Message(_ping_)<<"CPU Dot failed since one of the inputs contains NaN or Inf");
+    exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0], status) ;
     return h_superacc;
 }
 template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3>
-inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr) {
+inline std::vector<int64_t> doDot_dispatch( SerialTag, int* status, unsigned size,
+    PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr)
+{
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status = 0;
-    exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0], &status) ;
-    if(status != 0)
-        throw dg::Error(dg::Message(_ping_)<<"CPU Dot failed since one of the inputs contains NaN or Inf");
+    exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0], status) ;
     return h_superacc;
 }
 

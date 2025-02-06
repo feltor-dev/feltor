@@ -37,7 +37,7 @@ inline void symv( MatrixType&& M,
 namespace detail{
 
 template< class ContainerType1, class MatrixType, class ContainerType2>
-inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const MatrixType& m, const ContainerType2& y);
+inline std::vector<int64_t> doDot_superacc( int * status, const ContainerType1& x, const MatrixType& m, const ContainerType2& y);
 
 //thrust vector preconditioner
 template< class Vector1, class Vector2>
@@ -47,29 +47,40 @@ void doTransfer( const Vector1& in, Vector2& out, AnyVectorTag, AnyVectorTag)
 }
 
 template< class Vector1, class Matrix, class Vector2>
-std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag, SharedVectorTag)
+std::vector<int64_t> doDot_superacc( int* status, const Vector1& x,
+    const Matrix& m, const Vector2& y, SharedVectorTag, SharedVectorTag)
 {
-    static_assert( std::is_convertible_v<get_value_type<Vector1>, double>, "We only support double precision dot products at the moment!");
-    static_assert( std::is_convertible_v<get_value_type<Matrix>, double>, "We only support double precision dot products at the moment!");
-    static_assert( std::is_convertible_v<get_value_type<Vector2>, double>, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector1>, double>,
+        "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Matrix>, double>,
+        "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible_v<get_value_type<Vector2>, double>,
+        "We only support double precision dot products at the moment!");
     //find out which one is the SharedVector and determine category and policy
     using execution_policy = get_execution_policy<Matrix>;
     static_assert( dg::has_any_or_same_policy<Vector1, execution_policy>::value &&
             dg::has_any_or_same_policy<Vector2, execution_policy>::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
 
-    return dg::blas1::detail::doDot_dispatch( execution_policy(), m.size(), do_get_pointer_or_reference(x,get_tensor_category<Vector1>()), do_get_pointer_or_reference(m,get_tensor_category<Matrix>()), do_get_pointer_or_reference(y,get_tensor_category<Vector2>()));
+    return dg::blas1::detail::doDot_dispatch( execution_policy(), status,
+        m.size(),
+        do_get_pointer_or_reference(x,get_tensor_category<Vector1>()),
+        do_get_pointer_or_reference(m,get_tensor_category<Matrix>()),
+        do_get_pointer_or_reference(y,get_tensor_category<Vector2>()));
 }
 
 template< class Vector1, class Matrix, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag, RecursiveVectorTag)
+inline std::vector<int64_t> doDot_superacc( int* status, const Vector1& x,
+    const Matrix& m, const Vector2& y, SharedVectorTag, RecursiveVectorTag)
 {
     //find out which one is the RecursiveVector and determine category
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
     auto size = get_idx<vector_idx>(x,y).size();
     std::vector<std::vector<int64_t>> acc( size);
     for( unsigned i=0; i<size; i++)
-        acc[i] = doDot_superacc( do_get_vector_element(x,i,get_tensor_category<Vector1>()), m, do_get_vector_element(y,i,get_tensor_category<Vector2>()));
+        acc[i] = doDot_superacc( status,
+            do_get_vector_element(x,i,get_tensor_category<Vector1>()), m,
+            do_get_vector_element(y,i,get_tensor_category<Vector2>()));
     for( unsigned i=1; i<size; i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;

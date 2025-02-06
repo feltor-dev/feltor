@@ -28,7 +28,7 @@ namespace blas1
 namespace detail
 {
 template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
-inline void doDot_fpe( AnyScalarTag, std::array<T,N>& fpe, Functor f,
+inline void doDot_fpe( AnyScalarTag, int* status, std::array<T,N>& fpe, Functor f,
     const ContainerType& x, const ContainerTypes& ...xs)
 {
     fpe[0] = f(x,xs...);
@@ -37,7 +37,7 @@ inline void doDot_fpe( AnyScalarTag, std::array<T,N>& fpe, Functor f,
 }
 
 template< class Vector1, class Vector2>
-std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, AnyScalarTag)
+std::vector<int64_t> doDot_superacc( int* status, const Vector1& x, const Vector2& y, AnyScalarTag)
 {
     //both Vectors are scalars
     static_assert( std::is_convertible_v<get_value_type<Vector1>, double>, "We only support double precision dot products at the moment!");
@@ -46,10 +46,8 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, AnyScal
     const get_value_type<Vector2>* y_ptr = &y;
     //since we only accumulate up to two values (multiplication and rest) reduce the size of the FPE
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    int status = 0;
-    exblas::exdot_cpu<const get_value_type<Vector1>*, const get_value_type<Vector2>*, 2>( 1, x_ptr,y_ptr, &h_superacc[0], &status) ;
-    if(status != 0)
-        throw dg::Error(dg::Message(_ping_)<<"CPU Dot failed since one of the inputs contains NaN or Inf");
+    exblas::exdot_cpu<const get_value_type<Vector1>*, const
+        get_value_type<Vector2>*, 2>( 1, x_ptr,y_ptr, &h_superacc[0], status) ;
 
     return h_superacc;
 }

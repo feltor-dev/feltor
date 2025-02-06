@@ -98,16 +98,29 @@ auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
     // with two arguments
     using T = std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>;
 
+    int status = 0;
     if constexpr( std::is_integral_v<T>)
     {
         std::array<T, 1> fpe;
-        dg::blas1::detail::doDot_fpe( fpe, f, x, xs ...);
+        dg::blas1::detail::doDot_fpe( &status, fpe, f, x, xs ...);
+        if( fpe[0] - fpe[0] != T(0))
+            throw dg::Error(dg::Message(_ping_)
+                <<"FPE Dot failed "
+                <<"since one of the inputs contains NaN or Inf");
         return fpe[0];
     }
     else
     {
-        std::array<T, 3> fpe;
-        dg::blas1::detail::doDot_fpe( fpe, f, x, xs ...);
+        constexpr size_t N = 3;
+        std::array<T, N> fpe;
+        dg::blas1::detail::doDot_fpe( &status, fpe, f, x, xs ...);
+        for( unsigned u=0; u<N; u++)
+        {
+            if( fpe[u] - fpe[u] != T(0))
+                throw dg::Error(dg::Message(_ping_)
+                    <<"FPE Dot failed "
+                    <<"since one of the inputs contains NaN or Inf");
+        }
         return exblas::cpu::Round(fpe);
     }
 }
@@ -147,7 +160,12 @@ inline auto dot( const ContainerType1& x, const ContainerType2& y)
     if constexpr (std::is_floating_point_v<get_value_type<ContainerType1>> &&
                   std::is_floating_point_v<get_value_type<ContainerType2>>)
     {
-        std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( x,y);
+        int status = 0;
+        std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( &status,
+            x,y);
+        if( status != 0)
+            throw dg::Error(dg::Message(_ping_)<<"Dot product failed "
+                <<"since one of the inputs contains NaN or Inf");
         return exblas::cpu::Round(acc.data());
     }
     else
@@ -639,7 +657,8 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
 namespace detail{
 
 template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
-inline void doDot_fpe( std::array<T,N>& fpe, Functor f, const ContainerType& x, const ContainerTypes& ...xs)
+inline void doDot_fpe( int* status, std::array<T,N>& fpe, Functor f,
+    const ContainerType& x, const ContainerTypes& ...xs)
 {
     static_assert( ( dg::is_vector_v<ContainerType> && ...
                   && dg::is_vector_v<ContainerTypes>),
@@ -649,12 +668,12 @@ inline void doDot_fpe( std::array<T,N>& fpe, Functor f, const ContainerType& x, 
     static_assert( ( dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value &&
               ... && dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    return doDot_fpe( tensor_category(), fpe, f, x, xs ...);
+    return doDot_fpe( tensor_category(), status, fpe, f, x, xs ...);
 
 }
 
 template< class ContainerType1, class ContainerType2>
-inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const ContainerType2& y)
+inline std::vector<int64_t> doDot_superacc( int * status, const ContainerType1& x, const ContainerType2& y)
 {
     static_assert( ( dg::is_vector_v<ContainerType1> && dg::is_vector_v<ContainerType2>),
         "All container types must have a vector data layout (AnyVector)!");
@@ -663,7 +682,7 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Conta
     static_assert( ( dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value
                   && dg::is_scalar_or_same_base_category<ContainerType2, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    return doDot_superacc( x, y, tensor_category());
+    return doDot_superacc( status, x, y, tensor_category());
 }
 
 }//namespace detail

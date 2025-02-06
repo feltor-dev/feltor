@@ -54,14 +54,15 @@ inline void kronecker( ContainerType& y, BinarySubroutine f, Functor g, const Co
 namespace detail
 {
 template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
-inline void doDot_fpe( std::array<T,N>& fpe, Functor f, const ContainerType&, const ContainerTypes& ...xs);
+inline void doDot_fpe( int* status,
+    std::array<T,N>& fpe, Functor f, const ContainerType&, const ContainerTypes& ...xs);
 template< class ContainerType1, class ContainerType2>
-inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const ContainerType2& y);
+inline std::vector<int64_t> doDot_superacc( int* status, const ContainerType1& x, const ContainerType2& y);
 //we need to distinguish between Scalars and Vectors
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
-inline void doDot_fpe( SharedVectorTag, std::array<T,N>& fpe, Functor f,
+inline void doDot_fpe( SharedVectorTag, int* status, std::array<T,N>& fpe, Functor f,
     const ContainerType& x, const ContainerTypes& ...xs)
 {
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
@@ -72,6 +73,7 @@ inline void doDot_fpe( SharedVectorTag, std::array<T,N>& fpe, Functor f,
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
     doDot_fpe_dispatch(
             get_execution_policy<vector_type>(),
+            status,
             get_idx<vector_idx>( x, xs...).size(),
             fpe,
             f,
@@ -81,7 +83,7 @@ inline void doDot_fpe( SharedVectorTag, std::array<T,N>& fpe, Functor f,
 }
 
 template< class Vector1, class Vector2>
-std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedVectorTag)
+std::vector<int64_t> doDot_superacc( int* status, const Vector1& x, const Vector2& y, SharedVectorTag)
 {
     static_assert( std::is_convertible_v<get_value_type<Vector1>, double>, "We only support double precision dot products at the moment!");
     static_assert( std::is_convertible_v<get_value_type<Vector2>, double>, "We only support double precision dot products at the moment!");
@@ -95,7 +97,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedV
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     //maybe assert size here?
     auto size = get_idx<vector_idx>(x,y).size();
-    return dg::blas1::detail::doDot_dispatch( execution_policy(), size,
+    return dg::blas1::detail::doDot_dispatch( execution_policy(), status, size,
             do_get_pointer_or_reference(x, get_tensor_category<Vector1>()),
             do_get_pointer_or_reference(y, get_tensor_category<Vector2>()));
 }
