@@ -15,8 +15,13 @@ CPPFILES=$(wildcard *.cpp)
 CUFILES=$(wildcard *.cu)
 
 TARGETS=blas_t\
+runge_kutta_t\
+adaptive_t\
+multistep_t\
+arakawa_t\
 
 TARGETSMPI=mpi_average_t\
+mpi_arakawa_t
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
