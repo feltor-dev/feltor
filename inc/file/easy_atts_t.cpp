@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ctime>
 #include <iomanip>
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "nc_file.h"
 

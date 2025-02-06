@@ -4,7 +4,7 @@
 #include "typedefs.h"
 #include "../blas1.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 
 TEST_CASE( "The view class")

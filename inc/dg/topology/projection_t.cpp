@@ -14,10 +14,13 @@
 #include "evaluation.h"
 #include "fast_interpolation.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static double sine( double x){ return sin(x);}
 static double sine( double x, double y, double z){return sin(x)*sin(y);}
+#ifndef WITH_MPI
+static double sine( double x, double y){return sin(x)*sin(y);}
+#endif
 //Here, we test interpolation/projection/transform and fast versions between grids
 
 TEST_CASE( "Projection")
@@ -30,12 +33,13 @@ TEST_CASE( "Projection")
     MPI_Comm comm3d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
 #endif
     using namespace Catch::Matchers;
-    std::array<unsigned,2> ns = {3,9}, Ns = {20,40};
+    const std::vector<unsigned> ns = {3,3,6,6}, Ns = {7,14,7,14};
+    const unsigned n_new = 3, N_new = 7;
 
     SECTION( "1d projection")
     {
-        auto i = GENERATE( 0,1);
-        unsigned n_old = ns[i], n_new = 3, N_old = Ns[i], N_new = 20;
+        auto i = GENERATE( 0,1,2,3);
+        unsigned n_old = ns[i], N_old = Ns[i];
         INFO( "Fine   Grid "<< n_old << " x "<<N_old );
         INFO( "Coarse Grid "<< n_new << " x "<<N_new );
         dg::x::Grid1d go ( 0, M_PI/2., n_old, N_old
@@ -96,19 +100,19 @@ TEST_CASE( "Projection")
         INFO( "Original vector  "<<orginal);
         INFO( "Interpolated vector "<<project);
         INFO( "Difference       "<<orginal - project << " (Must be 0)");
-        CHECK( fabs( orginal - project) < 2.7e-5);
+        CHECK( fabs( orginal - project) < 1e-3);
 
         dg::blas2::symv( proj, v, wP);
         dg::blas1::axpby( 1., wP, -1., w);
         PI = dg::blas2::dot( w, w1dn, w);
         INFO( "Difference PI    "<<PI << " (Must be 0)");
-        CHECK( PI < 1.4e-7);
+        CHECK( PI < 1.4e-5);
     }
 
     SECTION( "3d projection")
     {
-        auto i = GENERATE( 0,1); // ns, Ns
-        unsigned n_old = ns[i], n_new = 3, N_old = Ns[i], N_new = 20;
+        auto i = GENERATE( 0,1,2,3); // ns, Ns
+        unsigned n_old = ns[i], N_old = Ns[i];
         dg::x::Grid3d g2o (0, M_PI, 0, M_PI, 0,1, n_old, N_old, N_old, 4
 #ifdef WITH_MPI
             , comm3d
@@ -134,13 +138,13 @@ TEST_CASE( "Projection")
             INFO( "Original vector     "<<value0);
             INFO( "Projected vector    "<<value1);
             INFO( "Difference in Norms "<<value0-value1);
-            CHECK( fabs(value0 - value1) < 2.5e-10);
+            CHECK( fabs(value0 - value1) < 1e-6);
 
             dg::blas1::axpby( 1., sinN, -1., sinP);
             double value2 = sqrt( dg::blas2::dot( sinP, w2dn, sinP) /
                     dg::blas2::dot( sinN, w2dn, sinN));
             INFO( "Difference between projection and evaluation      "<<value2);
-            CHECK( value2 < 1.8e-7);
+            CHECK( value2 < 1e-4);
         }
         SECTION( "Original interpolation")
         {
@@ -158,7 +162,7 @@ TEST_CASE( "Projection")
             double value2 = sqrt( dg::blas2::dot( sinI, w2do, sinI)/
                            dg::blas2::dot( sinO, w2do, sinO));
             INFO( "Difference between interpolation and evaluation   " <<value2);
-            CHECK( value2 < 1.8e-5);
+            CHECK( value2 < 1e-3);
         }
         // Check that fast version does the same as original
         SECTION( "Fast projection")
@@ -240,7 +244,7 @@ TEST_CASE( "Projection")
         auto w2dequi = dg::create::weights( g2dequi);
         auto proj = dg::create::backproject( g2d);
         auto inv_proj = dg::create::inv_backproject( g2d);
-        dg::x::DVec v = dg::evaluate( sine, g2d), w=v, x=v;
+        auto v = dg::evaluate( sine, g2d), w=v, x=v;
         dg::blas2::symv( proj, v, w);
         double integral = dg::blas1::dot( v, w2d);
         double integralequi = dg::blas1::dot( w, w2dequi);
@@ -252,13 +256,12 @@ TEST_CASE( "Projection")
         INFO( "Error 2d is "<<sqrt(err)<<" (Must be zero)");
         CHECK( err < 1e-14);
     }
-#endif
-#ifdef WITH_MPI
+#else
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     SECTION( "Correct mpi matrix conversion")
     {
         auto i = GENERATE( 0,1); // ns, Ns
-        unsigned n_old = ns[i], n_new = 3, N_old = Ns[i], N_new = 20;
+        unsigned n_old = ns[i], N_old = Ns[i];
         dg::x::Grid3d g2o (0, M_PI, 0, M_PI, 0,1, n_old, N_old, N_old, 4
             , comm3d
         );

@@ -10,7 +10,7 @@
 #include "mpi_weights.h"
 #include "filter.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static double function( double x, double y){return sin(x)*sin(y);}
 static double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}

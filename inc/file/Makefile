@@ -42,10 +42,10 @@ all: $(TARGETS) $(TARGETSMPI)
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) $(VERSION_FLAGS) -DWITH_MPI
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
-	$(CC) $(OPT) -o $@ $^ $(LIBS)
+	$(CC) $(OPT) -o $@ $^ -lCatch2 $(LIBS)
 
 %_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
-	$(MPICC) $(OPT) -o $@ $^ $(LIBS)
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2 $(LIBS)
 
 #######################################################################
 
@@ -68,23 +68,23 @@ probes_parser_mpit.$(device).o: probes_parser_t.cpp probes_params.h json_probes.
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 probes_t: probes_t.$(device).o $(CATCH).$(device).o
-	$(CC) $(OPT) -o $@ $^ $(LIBS) $(JSONLIB)
+	$(CC) $(OPT) -o $@ $^ $(LIBS) $(JSONLIB) -lCatch2
 
 probes_mpit: probes_mpit.$(device).o $(CATCHMPI).$(device).o
-	$(MPICC) $(OPT) -o $@ $^ $(LIBS) $(JSONLIB) -DWITH_MPI
+	$(MPICC) $(OPT) -o $@ $^ $(LIBS) $(JSONLIB) -DWITH_MPI -lCatch2
 
 probes_parser_t: probes_parser_t.$(device).o $(CATCH).$(device).o
-	$(CC) $(OPT) -o $@ $^ $(JSONLIB)
+	$(CC) $(OPT) -o $@ $^ $(JSONLIB) -lCatch2
 
 probes_parser_mpit: probes_parser_mpit.$(device).o $(CATCHMPI).$(device).o
-	$(MPICC) $(OPT) -o $@ $^ $(JSONLIB) -DWITH_MPI
+	$(MPICC) $(OPT) -o $@ $^ $(JSONLIB) -DWITH_MPI -lCatch2
 
 jsoncpp_wrapper_t: jsoncpp_wrapper_t.$(device).o $(CATCH).$(device).o
-	$(CC) $(OPT) -o $@ $^ $(JSONLIB)
+	$(CC) $(OPT) -o $@ $^ $(JSONLIB) -lCatch2
 
 # TODO Find a way to use both jsoncpp and jsonhpp in tests
 jsonhpp_wrapper_t: jsonhpp_wrapper_t.$(device).o $(CATCH).$(device).o
-	$(CC) $(OPT) -o $@ $^
+	$(CC) $(OPT) -o $@ $^ -lCatch2
 
 $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
@@ -93,10 +93,10 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
-	$(CC) -o $@ $^ $(LIBS) $(JSONLIB)
+	$(CC) -o $@ $^ -lCatch2 $(LIBS) $(JSONLIB)
 
 tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
-	$(MPICC) -o $@ $^ $(LIBS) $(JSONLIB)
+	$(MPICC) -o $@ $^ -lCatch2 $(LIBS) $(JSONLIB)
 
 
 .PHONY: doc clean

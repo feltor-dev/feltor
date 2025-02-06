@@ -8,7 +8,7 @@
 #include "transform.h"
 #include "refined_grid.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static double function( double x, double y){return sin(x)*cos(y);}
 

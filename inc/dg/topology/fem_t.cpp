@@ -3,7 +3,7 @@
 #include "dg/algorithm.h"
 #include "fem.h"
 #include "fem_weights.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static double function( double x, double y){return sin(x)*cos(y);}
 static double function( double x, double y, double z){return sin(x)*cos(y)*cos(z);}

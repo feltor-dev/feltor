@@ -3,8 +3,9 @@
 
 
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
+// TODO Find a test to test accumulation for >128 threads
 TEST_CASE( "Accumulate reuses comm")
 {
     int rank;

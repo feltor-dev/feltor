@@ -10,7 +10,7 @@
 
 #include "blas.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 struct Expression{
    DG_DEVICE
@@ -73,7 +73,7 @@ TEST_CASE( "blas")
         CHECK( dg::blas1::reduce( arr1, 0, thrust::maximum<float>()) == 4);
 
         dg::blas1::axpby( 2., arr1, 3., vec2);
-        INFO( "Recursive Vec Scalar addition")
+        INFO( "Recursive Vec Scalar addition");
         CHECK( vec2[0] == 34.);
 
         dg::blas1::axpby( 2., vec1, 3., arr2);

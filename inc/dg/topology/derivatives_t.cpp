@@ -13,7 +13,7 @@
 #include "derivatives.h"
 #include "derivativesT.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 using Matrix = dg::x::DMatrix;
 using Vector = dg::x::DVec;

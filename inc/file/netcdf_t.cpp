@@ -3,7 +3,7 @@
 #include <netcdf.h>
 #include <cmath>
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 #ifdef WITH_MPI
 #include <mpi.h>
 #include "nc_mpi_file.h"
@@ -180,7 +180,7 @@ TEST_CASE( "Input Output test of the NcFile class")
 
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
-        INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n")
+        INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n");
         file.open( "test.nc", mode);
 
         file.set_grp( "projected");

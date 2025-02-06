@@ -3,7 +3,7 @@
 #include <mpi.h>
 
 #include "mpi_init.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 // run with mpirun -n 10 --oversubscribe ./mpi_init_mpit
 

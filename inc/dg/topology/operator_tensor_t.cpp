@@ -5,7 +5,7 @@
 #include "dlt.h"
 #include "functions.h"
 #include "operator_tensor.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 TEST_CASE( "Operator tensorproduct")
 {

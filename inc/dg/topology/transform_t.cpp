@@ -7,7 +7,7 @@
 #include "tensor.h"
 
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 struct TestGrid : public dg::aRealGeometry2d<double>
 {

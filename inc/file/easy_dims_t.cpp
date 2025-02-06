@@ -7,7 +7,7 @@
 #include <mpi.h>
 #endif
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "dg/algorithm.h"
 #include "easy_dims.h"

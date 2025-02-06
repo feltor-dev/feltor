@@ -45,7 +45,8 @@ stencil_mpit\
 interpolation_mpit\
 mpi_projection_t\
 
-all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
+#all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
+all: $(TARGETS) $(TARGETSMPI)
 
 backscatter_t: backscatter_t.cpp xspacelib.h
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
@@ -73,13 +74,13 @@ mpi_average_t.$(device).o: average_t.cpp average.h
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
-	$(CC) $(OPT) -o $@ $^
+	$(CC) $(OPT) -o $@ $^ -lCatch2
 
 mpi_%_t: $(CATCHMPI).$(device).o mpi_%_t.$(device).o
-	$(MPICC) $(OPT) -o $@ $^
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2
 
 %_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
-	$(MPICC) $(OPT) -o $@ $^
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2
 
 $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
@@ -88,10 +89,10 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ -lCatch2
 
 tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
-	$(MPICC) -o $@ $^
+	$(MPICC) -o $@ $^ -lCatch2
 
 .PHONY: clean
 

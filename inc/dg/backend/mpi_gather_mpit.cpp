@@ -8,7 +8,7 @@
 #include <mpi.h>
 #include "../blas1.h"
 #include "mpi_gather.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 // If you get cuIpcCloseMemHandle failed errors when executing with cuda
 // The cause the IN_PLACE option in mpi functions

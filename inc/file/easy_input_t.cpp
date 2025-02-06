@@ -7,7 +7,7 @@
 #include <mpi.h>
 #endif
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include "dg/algorithm.h"
 #define _FILE_INCLUDED_BY_DG_

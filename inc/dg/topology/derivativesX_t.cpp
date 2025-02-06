@@ -4,7 +4,7 @@
 #include "evaluationX.h"
 #include "derivativesT.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static double zero( double x, double y) { return 0;}
 static double zero( double x, double y, double z) { return 0;}
@@ -69,7 +69,7 @@ TEST_CASE( "Derivatives X")
         Vector sol2[] = {dx2d, dy2d, null2, null2};
 
         //"WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!";
-        INFO( "TEST 2D: DX, DY, JX, JY")
+        INFO( "TEST 2D: DX, DY, JX, JY");
         auto i = GENERATE( 0,1,2,3);
         Vector error = f2d;
         dg::blas2::symv( m2[i], f2d, error);

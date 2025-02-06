@@ -4,7 +4,7 @@
 #include "tensor.h"
 #include "multiply.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 template<class container>
 std::vector<double> line_element( const dg::SparseTensor<container >& t)

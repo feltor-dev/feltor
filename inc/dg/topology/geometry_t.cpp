@@ -9,7 +9,7 @@
 #include "evaluation.h"
 
 #include "../blas2.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 inline double R_0 = 4.*M_PI;
 

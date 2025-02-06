@@ -96,7 +96,7 @@ inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
  * i-th dimension is kept in the subgrid (true) or is dropped (false), must
  * have \c ndims entries. (parameter used in \c MPI_Cart_sub)
  * @param duplicate Determines what happens in case \c MPI_Cart_sub was already
- * registered with (at least MPI_CONGRUENT) \c comm and the same \c
+ * registered with \c comm and the same \c
  * remain_dims. True: call \c MPI_Cart_sub and generate a novel communicator
  * even if a duplicate exists. False: first check if a communicator that was
  * subbed from \c comm with \c remain_dims was previously registered. In case
@@ -131,11 +131,12 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
         for (auto it = detail::mpi_cart_registry.begin(); it !=
             detail::mpi_cart_registry.end(); ++it)
         {
-            int comp_root;
-            // Catching MPI_Comm_compare fixes a very mysterious MPI bug where MPI_Cart_sub segfaults
-            MPI_Comm_compare( it->second.root, info.root, &comp_root);
-            if( (comp_root == MPI_IDENT or comp_root == MPI_CONGRUENT) and
-                it->second.remain_dims == info.remain_dims)
+//            int comp_root;
+//            MPI_Comm_compare( it->second.root, info.root, &comp_root);
+//            if( (comp_root == MPI_IDENT or comp_root == MPI_CONGRUENT) and
+//                it->second.remain_dims == info.remain_dims)
+            if( it->second.root == info.root && it->second.remain_dims ==
+                info.remain_dims)
             {
                 return it->first;
             }
@@ -155,16 +156,18 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
 
 /*! @brief Form a Kronecker product among Cartesian communicators
  *
- * All input comms must be registered in the dg library as Cartesian
- * communicators that derive from the same root Cartesian communicator.
+ * Find communicator as the one that hypothetically generated all
+ * input comms through <tt>MPI_Cart_sub( return_comm, remain_dims[u],
+ * comms[u]);</tt> for all <tt>u < comms.size();</tt>
+ *
+ * Unless \c comms is empty or contains only 1 communicator all input comms
+ * must be registered in the dg library as Cartesian communicators that derive
+ * from the same root Cartesian communicator.
  * Furthermore the comms must be mutually orthogonal i.e. any \c true entry in
  * \c remain_dims can exist in only exactly one comm.  The resulting \c
  * remain_dims of the output is then the union of all \c remain_dims of the
  * inputs.
  *
- * The returned communicator is then the one that hypothetically generated all
- * input comms through <tt>MPI_Cart_sub( return_comm, remain_dims[u],
- * comms[u]);</tt> for all <tt>u < comms.size();</tt>
  * @attention The order of communicators matters. The function will not
  * transpose communicators
  * @param comms input communicators
@@ -178,10 +181,23 @@ inline MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
     // mpi_cart_kron( {comm0, comm1});
     if ( comms.empty())
         return MPI_COMM_NULL;
+    if( comms.size() == 1)
+        return comms[0];
+
     std::vector<detail::MPICartInfo> infos(comms.size());
 
     for( unsigned u=0; u<comms.size(); u++)
+    {
+    try{
         infos [u] = detail::mpi_cart_registry.at(comms[u]);
+    }catch( std::exception& e)
+    {
+        std::cerr << "Did not find "<<comms[u]<<" in Registry!\n";
+        detail::mpi_cart_registry_display();
+        throw e;
+
+    }
+    }
     MPI_Comm root = infos[0].root;
     for( unsigned u=0; u<comms.size(); u++)
         if( infos[u].root != root)

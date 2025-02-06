@@ -7,7 +7,7 @@
 #include "mpi_projection.h"
 #include "mpi_evaluation.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 
 const double shift = 0.2;

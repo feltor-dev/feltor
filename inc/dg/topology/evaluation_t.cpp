@@ -17,7 +17,7 @@
 #include "evaluation.h"
 #include "weights.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 template<class T>
 T function(T x, T y)
@@ -229,7 +229,7 @@ TEST_CASE("Integral")
     dg::blas1::axpby( 1., integral_ana, -1., integral_num);
     double norm = dg::blas2::dot( integral_num, dg::create::weights( g1d),
             integral_num);
-    INFO( " Error norm of  1d integral function ("<<dg::direction2str(dir)<< ") "<<norm)
+    INFO( " Error norm of  1d integral function ("<<dg::direction2str(dir)<< ") "<<norm);
     CHECK_THAT( norm, WithinAbs(  0, 1e-15));
 }
 

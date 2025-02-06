@@ -14,7 +14,7 @@
 #include "evaluation.h"
 #include "weights.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static double function( double x) { return sin(x);}
 static double derivative( double x) { return cos(x);}

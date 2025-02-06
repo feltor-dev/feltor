@@ -7,7 +7,7 @@
 #include "backend/tensor_traits_cusp.h"
 #include "backend/tensor_traits_std.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 struct MyOwnScalar;
 namespace dg

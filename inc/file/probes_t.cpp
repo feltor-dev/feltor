@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 #ifdef WITH_MPI
 #include <mpi.h>
 #endif

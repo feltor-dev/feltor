@@ -5,7 +5,7 @@
 #include "filter.h"
 #include "../blas2.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 // TODO This test needs to improve
 TEST_CASE( "Stencil")

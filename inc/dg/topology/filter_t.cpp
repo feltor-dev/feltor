@@ -7,7 +7,7 @@
 #include "evaluation.h"
 #include "filter.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 double function( double x, double y){return sin(x)*sin(y);}
 double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
@@ -28,10 +28,10 @@ TEST_CASE("Filter")
     {
         row_offsets[1] = i;
         median_filter( 0, row_offsets, &column_indices[0], &x[0], &x[0], &result);
-        INFO( "Median of [")
+        INFO( "Median of [");
         int k=0;
         for( k=0; k<row_offsets[1]-1; k++)
-            INFO( x[k]<<", ")
+            INFO( x[k]<<", ");
         INFO(x[k]<<"] is "<<result<<" ("<<medians[i-1]<<")");
         CHECK( result == medians[i-1]);
     }

@@ -1,8 +1,8 @@
-#define CATCH_CONFIG_RUNNER
+// #define CATCH_CONFIG_RUNNER // no longer needed in catch2 v3
 // Copied and adapted from
 // https://stackoverflow.com/questions/58289895/is-it-possible-to-use-catch2-for-testing-an-mpi-code
 #include <mpi.h>
-#include "catch2/catch.hpp"
+#include <catch2/catch_session.hpp>
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h> //declare THRUST_DEVICE_SYSTEM

@@ -41,10 +41,10 @@ version: version.cpp
 	./$@
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
-	$(CC) $(OPT) -o $@ $^
+	$(CC) $(OPT) -o $@ $^ -lCatch2
 
 %_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
-	$(MPICC) $(OPT) -o $@ $^
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2
 
 $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
@@ -53,10 +53,10 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
-	$(CC) -o $@ $^ $(LIBS) $(JSONLIB)
+	$(CC) -o $@ $^ -lCatch2
 
 tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
-	$(MPICC) -o $@ $^ $(LIBS) $(JSONLIB)
+	$(MPICC) -o $@ $^ -lCatch2
 
 .PHONY: clean
 

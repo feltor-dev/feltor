@@ -10,7 +10,7 @@
 #include "implicit.h"
 #include "elliptic.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 template< class Geometry, class Matrix, class Container>
 struct Diffusion

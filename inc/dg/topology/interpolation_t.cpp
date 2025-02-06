@@ -7,7 +7,7 @@
 #include "../blas.h"
 #include "evaluation.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static double function( double x){return sin(x);}
 static double function( double x, double y){return sin(x)*sin(y);}

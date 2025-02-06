@@ -2,7 +2,7 @@
 #include <iomanip>
 #include "interpolation.h"
 #include "grid.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 
 TEST_CASE( "The grid class")

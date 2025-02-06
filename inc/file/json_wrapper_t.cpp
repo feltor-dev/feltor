@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cassert>
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 #include "json_wrapper.h"
 
 #ifdef DG_USE_JSONHPP

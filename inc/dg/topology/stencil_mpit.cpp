@@ -7,7 +7,7 @@
 #include "filter.h"
 #include "../blas2.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 // TODO Fix Test gets stuck with mpirun -n 4
 

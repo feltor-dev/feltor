@@ -6,7 +6,7 @@
 #include "../backend/mpi_init.h"
 #endif
 #include "base_geometry.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 
 TEST_CASE( "Base geometry")

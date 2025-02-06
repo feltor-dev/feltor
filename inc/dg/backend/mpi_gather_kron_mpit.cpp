@@ -8,7 +8,7 @@
 #include "../blas1.h"
 #include "mpi_gather_kron.h"
 #include "mpi_init.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 
 TEST_CASE( "Kronecker Gather")

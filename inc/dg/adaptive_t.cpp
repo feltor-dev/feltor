@@ -10,7 +10,7 @@
 #include "runge_kutta.h"
 #include "adaptive.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 //![function]
 struct RHS

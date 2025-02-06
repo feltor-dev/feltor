@@ -13,7 +13,7 @@
 #include "functors.h"
 
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 //test program that (should ) call every blas1 function for every specialization
 
 //using Vector = std::array<double,2>;

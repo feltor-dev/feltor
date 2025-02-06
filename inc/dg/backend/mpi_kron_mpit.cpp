@@ -4,7 +4,7 @@
 #include "mpi_init.h"
 #include "mpi_kron.h"
 #include "exblas/mpi_accumulate.h"
-#include "catch2/catch.hpp"
+#include "catch2/catch_test_macros.hpp"
 
 TEST_CASE("MPI Kron test")
 {
@@ -36,6 +36,9 @@ TEST_CASE("MPI Kron test")
     }
     SECTION( "Check double sub does not segfault")
     {
+        // This tests for issue in openmpi 4.0.0
+        // https://github.com/open-mpi/ompi/issues/13081
+        // Test passes if no segfault
         int rank, size;
         MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -47,7 +50,6 @@ TEST_CASE("MPI Kron test")
         dg::exblas::mpi_reduce_communicator( comm_join, &comm_mod, &comm_red);
         MPI_Comm comm2 = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
         auto comms2 = dg::mpi_cart_split_as<2>(comm2);
-
     }
 
     SECTION( "Direct kronecker")

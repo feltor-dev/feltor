@@ -5,7 +5,7 @@
 #include "mpi_grid.h"
 #include "mpi_evaluation.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 static int function( double x, double y)
 {

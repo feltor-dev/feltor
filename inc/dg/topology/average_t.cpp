@@ -7,7 +7,7 @@
 #include "average.h"
 #include "dg/blas.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 // 2d
 static double function( double x, double y) {return cos(x)*sin(y);}
@@ -69,7 +69,7 @@ TEST_CASE( "2d Average in x and y direction")
         dg::x::DVec solution = dg::evaluate( pol_average, g.gx());
         dg::blas1::axpby( 1., solution, -1., average_y);
         double res = sqrt( dg::blas2::dot( average_y, w1d, average_y));
-        INFO("Distance to solution is: "<<res<<"\t(Should be 0)")
+        INFO("Distance to solution is: "<<res<<"\t(Should be 0)");
         CHECK_THAT( res, WithinAbs( 0.0, 1e-13));
     }
     SECTION( "TEST prolongation y")

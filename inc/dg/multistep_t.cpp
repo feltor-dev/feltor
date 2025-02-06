@@ -5,7 +5,7 @@
 #include "multistep.h"
 #include "adaptive.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 //method of manufactured solution
 std::array<double,2> solution( double t, double nu) {
