@@ -15,6 +15,7 @@
 #include "backend/timer.h"
 #include "blas.h"
 #include "topology/filter.h"
+#include "topology/fem.h"
 #include "topology/tensor.h"
 #include "topology/multiply.h"
 #include "topology/average.h"
@@ -248,6 +249,24 @@ int main( int argc, char* argv[])
 
 #ifndef WITH_MPI
     // Only for shared memory
+    using MassMatrix = dg::KroneckerTriDiagonal2d<Vector>;
+    using InvMassMatrix = dg::InverseKroneckerTriDiagonal2d<Vector>;
+    MassMatrix fem_mass = dg::create::fem_mass2d( grid);
+    dg::blas2::symv( fem_mass, x[0], y[0]);
+    t.tic();
+    for( unsigned i=0; i<multi*x.size(); i++)
+        dg::blas2::symv( fem_mass, x[0], y[0]);
+    t.toc();
+    DG_RANK0 std::cout<<"SYMV (y=Sx) FEM                  "
+             <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    InvMassMatrix inv_fem_mass = dg::create::inv_fem_mass2d( grid);
+    dg::blas2::symv( inv_fem_mass, y[0], x[0]);
+    t.tic();
+    for( unsigned i=0; i<multi*x.size(); i++)
+        dg::blas2::symv( inv_fem_mass, y[0], x[0]);
+    t.toc();
+    DG_RANK0 std::cout<<"Thomas SYMV (y=S^{-1}x) FEM      "
+             <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     unsigned ysize = y[0].size();
     for( int i=0; i<multi; i++)
@@ -292,29 +311,6 @@ int main( int argc, char* argv[])
     t.toc();
     DG_RANK0 std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     //////////////////////these functions are more mean to dot
-    DG_RANK0 std::cout<<"\nAverages\n";
-    dg::Average<dg::x::IDMatrix, dg::x::DVec> pol(grid, dg::coo3d::x);
-    t.tic();
-    for( int i=0; i<multi; i++)
-        pol( x[0], y[0]);
-    t.toc();
-    DG_RANK0 std::cout << "Average vector over x took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
-    pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::y);
-    t.tic();
-    for( int i=0; i<multi; i++)
-        pol( x[0], y[0]);
-    t.toc();
-    DG_RANK0 std::cout << "Average vector over y took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
-    if( grid.Nz() > 1)
-    {
-        pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::z);
-        t.tic();
-        for( int i=0; i<multi; i++)
-            pol( x[0], y[0]);
-        t.toc();
-        DG_RANK0 std::cout << "Average vector over z took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
-    }
-
     DG_RANK0 std::cout<<"\nGlobal communication\n";
     x = dg::construct<ArrayVec>( dg::evaluate( left, grid));
     y = dg::construct<ArrayVec>( dg::evaluate( right, grid));
@@ -355,6 +351,30 @@ int main( int argc, char* argv[])
         cintegral += dg::blas2::dot( cc3d,w2d,cc);
     t.toc();
     DG_RANK0 std::cout<<"vDOT2(x,w,y) (complex) took      " <<t.diff()/multi<<"s\t"<<5*gbytes*multi/t.diff()<<"GB/s\n";
+    ////////////////////////////////////////////////////////////////
+    DG_RANK0 std::cout<<"\nAverages\n";
+    dg::Average<dg::x::IDMatrix, dg::x::DVec> pol(grid, dg::coo3d::x);
+    t.tic();
+    for( int i=0; i<multi; i++)
+        pol( x[0], y[0]);
+    t.toc();
+    DG_RANK0 std::cout << "Average vector over x took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
+    pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::y);
+    t.tic();
+    for( int i=0; i<multi; i++)
+        pol( x[0], y[0]);
+    t.toc();
+    DG_RANK0 std::cout << "Average vector over y took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
+    if( grid.Nz() > 1)
+    {
+        pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::z);
+        t.tic();
+        for( int i=0; i<multi; i++)
+            pol( x[0], y[0]);
+        t.toc();
+        DG_RANK0 std::cout << "Average vector over z took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
+    }
+
 
 #ifndef WITH_MPI
     DG_RANK0 std::cout << "\nSequential recursive calls";
