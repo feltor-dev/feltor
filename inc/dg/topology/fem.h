@@ -13,7 +13,7 @@ namespace dg{
  *
  * Consists of the three diagonal vectors [M, O, P] (for "Minus", "ZerO", "Plus), i.e.
  * M is the subdiagonal, O the diagonal and P the superdiagonal vector.
- * @note It is fast to apply using \c dg::blas2::parallel_for (which only works on shared memory vectors though)
+ * @note Implemented using \c dg::blas2::parallel_for (which only works on shared memory vectors though)
  * @tparam Container One of the shared memory containers
  */
 template<class Container>

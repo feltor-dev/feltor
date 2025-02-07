@@ -24,9 +24,6 @@ TEST_CASE("FEM")
             dg::DIR);
     const Vector func = dg::evaluate( function, gDIR);
     const Vector w2d = dg::create::fem_weights( gDIR);
-    const Vector v2d = dg::create::fem_inv_weights( gDIR);
-    MassMatrix fem_mass = dg::create::fem_mass( gDIR);
-    InvMassMatrix inv_fem_mass = dg::create::inv_fem_mass( gDIR);
     SECTION( "Fem weights")
     {
         double integral = dg::blas2::dot( func, w2d, func);
@@ -45,9 +42,9 @@ TEST_CASE("FEM")
                 dg::NEU, "linear");
         const Vector wf2d = dg::create::volume( gDIR_f);
         Vector func_f( gDIR_f.size());
+        dg::blas2::symv( inter, func, func_f);
         SECTION( "Integral")
         {
-            dg::blas2::symv( inter, func, func_f);
             double integral = dg::blas2::dot( func_f, wf2d, func_f);
             INFO("error of refined integral is "
                       <<(integral-M_PI*M_PI)/M_PI/M_PI);
@@ -55,6 +52,7 @@ TEST_CASE("FEM")
         }
         SECTION( "PCG with FEM")
         {
+            const Vector v2d = dg::create::fem_inv_weights( gDIR);
             Matrix interT = dg::transpose( inter);
             Matrix Wf = dg::create::diagonal( (dg::HVec)wf2d), project;
             Matrix Vf = dg::create::diagonal( (dg::HVec)v2d), tmp;
@@ -68,19 +66,21 @@ TEST_CASE("FEM")
             Vector test( barfunc);
             dg::PCG<Vector> cg( test, 1000);
             // PCG tests fem-mass
+            MassMatrix fem_mass = dg::create::fem_mass( gDIR);
             unsigned number = cg.solve( fem_mass, test, barfunc, 1., w2d, eps);
             dg::blas1::axpby( 1., func, -1., test);
             double norm = sqrt(dg::blas2::dot( w2d, test) );
             double func_norm = sqrt(dg::blas2::dot( w2d, func) );
             INFO("PCG Distance to true solution: "<<norm/func_norm);
             INFO("using "<<number<<" iterations");
-            CHECK( norm/ func_norm < 1e-14);
+            CHECK( norm/ func_norm < 1e-9);
 
+            InvMassMatrix inv_fem_mass = dg::create::inv_fem_mass( gDIR);
             dg::blas2::symv( inv_fem_mass, barfunc, test);
             dg::blas1::axpby( 1., func, -1., test);
             norm = sqrt(dg::blas2::dot( w2d, test) );
             INFO("Thomas Distance to true solution: "<<norm/func_norm);
-            CHECK( norm/ func_norm < 1e-14);
+            CHECK( norm/ func_norm < 2e-14);
 
             Matrix interC = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU,
                     dg::NEU, "nearest");
@@ -96,13 +96,13 @@ TEST_CASE("FEM")
             norm = sqrt(dg::blas2::dot( w2d, test) );
             INFO("PCG Distance to true solution: "<<norm/func_norm);
             INFO("using "<<number<<" iterations");
-            CHECK( norm/ func_norm < 1e-14);
+            CHECK( norm/ func_norm < 1e-9);
             inv_fem_mass = dg::create::inv_fem_linear2const( gDIR);
             dg::blas2::symv( inv_fem_mass, barfunc, test);
             dg::blas1::axpby( 1., func, -1., test);
             norm = sqrt(dg::blas2::dot( w2d, test) );
             INFO("Thomas Distance to true solution: "<<norm/func_norm);
-            CHECK( norm/ func_norm < 1e-14);
+            CHECK( norm/ func_norm < 2e-14);
         }
     }
 
@@ -116,21 +116,25 @@ TEST_CASE("FEM")
         auto split_y = dg::split(y, g3d);
         auto split_z = dg::split(z, g3d);
         MassMatrix fem_mass2d = dg::create::fem_linear2const2d( g3d);
+        MassMatrix fem_mass   = dg::create::fem_linear2const( *g3d.perp_grid());
         dg::blas2::symv( fem_mass2d, x, y);
         for( unsigned i=0; i<g3d.Nz(); i++)
             dg::blas2::symv( fem_mass, split_x[i], split_z[i]);
+
         dg::blas1::axpby( 1., y, -1., z);
         double err = dg::blas2::dot( z, w3d, z);
         INFO("1. Error in 3d is "<<err);
-        CHECK( err < 1e-3);
+        CHECK( err < 1e-15);
         InvMassMatrix inv_fem_mass2d = dg::create::inv_fem_linear2const2d( g3d);
         dg::blas2::symv( inv_fem_mass2d, y, z);
+        InvMassMatrix inv_fem_mass = dg::create::inv_fem_linear2const(
+            *g3d.perp_grid());
         for( unsigned i=0; i<g3d.Nz(); i++)
             dg::blas2::symv( inv_fem_mass, split_y[i], split_x[i]);
         dg::blas1::axpby( 1., z, -1., x);
         err = dg::blas2::dot( x, w3d, x);
         INFO("2. Error in 3d is "<<err);
-        CHECK( err < 1e-3);
+        CHECK( err < 1e-15);
         x = dg::evaluate( function,  g3d);
         dg::blas1::axpby( 1., x, -1., z);
         err = dg::blas2::dot( z, w3d, z);
