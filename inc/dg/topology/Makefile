@@ -51,12 +51,6 @@ all: $(TARGETS) $(TARGETSMPI)
 backscatter_t: backscatter_t.cpp xspacelib.h
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
 
-%_mpib: %_mpib.cpp
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE)
-
-%_b: %_b.cpp
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -g
-
 %_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 
@@ -97,4 +91,4 @@ tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
 .PHONY: clean
 
 clean:
-	rm -f *.o *_t *_b *_mpit *_mpib tests tests-mpi
+	rm -f *.o *_t *_mpit tests tests-mpi
