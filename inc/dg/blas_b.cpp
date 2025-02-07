@@ -15,6 +15,7 @@
 #include "backend/timer.h"
 #include "blas.h"
 #include "topology/filter.h"
+#include "topology/average.h"
 #include "topology/derivativesA.h"
 #include "topology/evaluation.h"
 #include "topology/fast_interpolation.h"
@@ -264,6 +265,29 @@ int main( int argc, char* argv[])
     t.toc();
     DG_RANK0 std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     //////////////////////these functions are more mean to dot
+    DG_RANK0 std::cout<<"\nAverages\n";
+    dg::Average<dg::x::IDMatrix, dg::x::DVec> pol(grid, dg::coo3d::x);
+    t.tic();
+    for( int i=0; i<multi; i++)
+        pol( x[0], y[0]);
+    t.toc();
+    DG_RANK0 std::cout << "Average vector over x took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
+    pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::y);
+    t.tic();
+    for( int i=0; i<multi; i++)
+        pol( x[0], y[0]);
+    t.toc();
+    DG_RANK0 std::cout << "Average vector over y took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
+    if( grid.Nz() > 1)
+    {
+        pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::z);
+        t.tic();
+        for( int i=0; i<multi; i++)
+            pol( x[0], y[0]);
+        t.toc();
+        DG_RANK0 std::cout << "Average vector over z took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
+    }
+
     DG_RANK0 std::cout<<"\nGlobal communication\n";
     x = dg::construct<ArrayVec>( dg::evaluate( left, grid));
     y = dg::construct<ArrayVec>( dg::evaluate( right, grid));
