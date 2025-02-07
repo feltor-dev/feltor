@@ -182,7 +182,7 @@ int main( int argc, char* argv[])
     for( int i=0; i<multi; i++)
         dg::tensor::multiply2d( 1., g, x[0], y[0], 0., x[0], y[0]);
     t.toc();
-    std::cout<<"Multiply2d Unit tensor inplace took       "<<t.diff()/multi<<"s\t"<<6/3*gbytes*multi/t.diff()<<"GB/s\n";
+    DG_RANK0 std::cout<<"Multiply2d Unit tensor inplace took       "<<t.diff()/multi<<"s\t"<<6/3*gbytes*multi/t.diff()<<"GB/s\n";
 
     g.idx(0,0) = 0, g.idx(0,1) = g.idx(1,0) = 1, g.idx(1,1) = 2;
     g.values().resize(3);
@@ -191,12 +191,12 @@ int main( int argc, char* argv[])
     for( int i=0; i<multi; i++)
         dg::tensor::multiply2d( 1., g, x[0], y[0], 0., x[0], y[0]);
     t.toc();
-    std::cout<<"multiply_inplace(g,x,y) took              "<<t.diff()/multi<<"s\t"<<7/3*gbytes*multi/t.diff()<<"GB/s\n";
+    DG_RANK0 std::cout<<"multiply_inplace(g,x,y) took              "<<t.diff()/multi<<"s\t"<<7/3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::tensor::multiply2d( 1., g, x[0], y[0], 0., u[0], v[0]);
     t.toc();
-    std::cout<<"multiply2d(g,x,y,u,v) took                "<<t.diff()/multi<<"s\t"<<9/3*gbytes*multi/t.diff()<<"GB/s\n";
+    DG_RANK0 std::cout<<"multiply2d(g,x,y,u,v) took                "<<t.diff()/multi<<"s\t"<<9/3*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////
     DG_RANK0 std::cout<<"\nLocal communication\n";
     Matrix M;
