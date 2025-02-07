@@ -86,18 +86,33 @@ inline T doReduce_dispatch( OmpTag, int size, Pointer x, T init, BinaryOp op,
 template<class F, class G, size_t N, class Pointer, class ...PointerOrValues>
 void doKronecker_omp( Pointer y, size_t size, F f, G g, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
 {
-#pragma omp for nowait
-    for( unsigned u=0; u<size; u++)
+//#pragma omp for nowait
+//for( unsigned u=0; u<size; u++)
+    unsigned int tid = omp_get_thread_num();
+    unsigned int tnum = omp_get_num_threads();
+    int l = tid * size / tnum;
+    int r = ((tid+1) * size / tnum)  - 1;
+    std::array<size_t, N> current;
+    // Compute initial current
+    current[0] = l%sizes[0];
+    size_t remain = l/sizes[0];
+    for( unsigned k=1; k<N; k++)
     {
-        std::array<size_t, N> current;
-        current[0] = u%sizes[0];
-        size_t remain = u/sizes[0];
-        for( unsigned k=1; k<N; k++)
+        current[k] = remain%sizes[k];
+        remain = remain/sizes[k];
+    }
+    for(int i = l; i <= r; i++)
+    {
+        call_host_F( f, g, y, i, &current[0], std::make_index_sequence<N>(), xs ...);
+        // Counting is faster than re-computing modulo operations
+        for( unsigned k=0; k<N; k++)
         {
-            current[k] = remain%sizes[k];
-            remain = remain/sizes[k];
+            current[k] ++;
+            if( current[k] == sizes[k])
+                current[k] = 0;
+            else
+                break;
         }
-        call_host_F( f, g, y, u, &current[0], std::make_index_sequence<N>(), xs ...);
     }
 }
 template<class F, class G, size_t N, class Pointer, class ...PointerOrValues>

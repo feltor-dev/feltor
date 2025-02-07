@@ -70,17 +70,26 @@ void call_host_F( B binary, F f, Pointer y, unsigned u, size_t* a, std::index_se
 template<class B, class F, size_t N, class Pointer, class ...PointerOrValues>
 void doKronecker_dispatch( dg::SerialTag, Pointer y, size_t size, B binary, F f, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
 {
-    std::array<size_t, N> current;
+    std::array<size_t, N> current = {0};
     for( unsigned u=0; u<size; u++)
     {
-        current[0] = u%sizes[0];
-        size_t remain = u/sizes[0];
-        for( unsigned k=1; k<N; k++)
-        {
-            current[k] = remain%sizes[k];
-            remain = remain/sizes[k];
-        }
+        //current[0] = u%sizes[0];
+        //size_t remain = u/sizes[0];
+        //for( unsigned k=1; k<N; k++)
+        //{
+        //    current[k] = remain%sizes[k];
+        //    remain = remain/sizes[k];
+        //}
         call_host_F( binary, f, y, u, &current[0], std::make_index_sequence<N>(), xs ...);
+        // Counting is MUCH faster than modulo operations on CPU
+        for( unsigned k=0; k<N; k++)
+        {
+            current[k] ++;
+            if( current[k] == sizes[k])
+                current[k] = 0;
+            else
+                break;
+        }
     }
 }
 

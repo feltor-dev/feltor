@@ -97,9 +97,6 @@ int main( int argc, char* argv[])
     dg::x::RealGrid3d<value_type> grid_half = grid;
     grid_half.multiplyCellNumbers(0.5, 0.5);
 
-    Vector absx = grid.abscissas(0);
-    Vector absy = grid.abscissas(1);
-    Vector absz = grid.abscissas(2);
     Vector w2d = dg::construct<Vector>( dg::create::weights(grid));
     Vector XX( w2d);
 
@@ -150,6 +147,9 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     DG_RANK0 std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
+    Vector absx = grid.abscissas(0);
+    Vector absy = grid.abscissas(1);
+    Vector absz = grid.abscissas(2);
     t.tic();
     for( int i=0; i<multi*(int)x.size(); i++)
         dg::blas1::kronecker( XX, dg::equals(), []DG_DEVICE(double x, double y,
@@ -198,6 +198,9 @@ int main( int argc, char* argv[])
     t.toc();
     DG_RANK0 std::cout<<"multiply2d(g,x,y,u,v) took                "<<t.diff()/multi<<"s\t"<<9/3*gbytes*multi/t.diff()<<"GB/s\n";
     /////////////////////SYMV////////////////////////////////
+    /// Note: here we re-initialize x and y, note that if we didn't do that we
+    /// get different timings on cpu and omp for symv. Why?
+    x = dg::construct<ArrayVec>( dg::evaluate( left, grid)), y=x;
     DG_RANK0 std::cout<<"\nLocal communication\n";
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::backward), M);

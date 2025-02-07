@@ -48,7 +48,7 @@ TEST_CASE( "Derivatives")
     auto comms1d = dg::mpi_cart_split( comm3d);
     MPI_Comm comm2d = dg::mpi_cart_kron( {comms1d[0], comms1d[1]});
 #endif
-    INFO("This program tests the creation and application of two-dimensional"
+    INFO("This program tests the creation and application of two-dimensional "
             <<"and three-dimensional derivatives!");
     unsigned n = 3, Nx = 24, Ny = 28, Nz = 100;
     dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
