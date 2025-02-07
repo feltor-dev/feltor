@@ -20,7 +20,6 @@
 #include "blas.h"
 #include "helmholtz.h"
 #include "pcg.h"
-#include "precond.h"
 #include "bicgstabl.h"
 #include "andersonacc.h"
 #include "lgmres.h"
