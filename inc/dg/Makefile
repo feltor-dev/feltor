@@ -35,8 +35,8 @@ cluster_mpib: cluster_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -g
 
 
-%_mpib: %_mpib.cpp
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE)
+%_mpib: %_b.cpp
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -DWITH_MPI
 
 %_b: %_b.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -g
