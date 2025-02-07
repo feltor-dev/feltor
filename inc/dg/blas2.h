@@ -92,7 +92,7 @@ inline auto dot( const ContainerType1& x, const MatrixType& m, const ContainerTy
         std::vector<int64_t> acc = dg::blas2::detail::doDot_superacc( &status,
             x,m,y);
         if( status != 0)
-            throw dg::Error(dg::Message(_ping_)<<"Dot product failed "
+            throw dg::Error(dg::Message(_ping_)<<"dg::blas2::dot failed "
                 <<"since one of the inputs contains NaN or Inf");
         return exblas::cpu::Round(acc.data());
     }

@@ -83,7 +83,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
         A.cols_idx[0*3+0] = 0;
         A.data_idx[0*3+1] = 2; //b
         A.cols_idx[0*3+1] = 1;
-        A.data_idx[0*3+2] = invalid_idx; //0
+        A.data_idx[0*3+2] = 2; //
         A.cols_idx[0*3+2] = invalid_idx; //prevent unnecessary data fetch
         for( int i=1; i<N-1; i++)
             for( int d=0; d<3; d++)
@@ -95,7 +95,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
         A.cols_idx[(N-1)*3+0] = N-2;
         A.data_idx[(N-1)*3+1] = 4; //a_bound_right
         A.cols_idx[(N-1)*3+1] = N-1;
-        A.data_idx[(N-1)*3+2] = invalid_idx; //0
+        A.data_idx[(N-1)*3+2] = 4; //0
         A.cols_idx[(N-1)*3+2] = invalid_idx; //prevent unnecessary data fetch
         return A;
 
@@ -180,7 +180,7 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
             }
         A.data_idx[(N-1)*2+0] = 3; //a_bound_right
         A.cols_idx[(N-1)*2+0] = N-1;
-        A.data_idx[(N-1)*2+1] = invalid_idx; //0
+        A.data_idx[(N-1)*2+1] = 3; //0
         A.cols_idx[(N-1)*2+1] = invalid_idx; //prevent unnecessary data fetch
         return A;
 
@@ -254,7 +254,7 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
         }
         A.data_idx[0*2+0] = 2; //a_bound_left
         A.cols_idx[0*2+0] = 0;
-        A.data_idx[0*2+1] = invalid_idx; //0
+        A.data_idx[0*2+1] = 2; //0
         A.cols_idx[0*2+1] = invalid_idx; //prevent data fetch
         for( int i=1; i<N-1; i++) //a
             for( int d=0; d<2; d++)
@@ -340,7 +340,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
         A.cols_idx[0*3+0] = 0;
         A.data_idx[0*3+1] = 2; //b
         A.cols_idx[0*3+1] = 1;
-        A.data_idx[0*3+2] = invalid_idx; //0
+        A.data_idx[0*3+2] = 2; //0
         A.cols_idx[0*3+2] = invalid_idx; //prevent unnecessary data fetch
         for( int i=1; i<N-1; i++) //a
             for( int d=0; d<3; d++)
@@ -352,7 +352,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
         A.cols_idx[(N-1)*3+0] = N-2;
         A.data_idx[(N-1)*3+1] = 4; //a_bound_right
         A.cols_idx[(N-1)*3+1] = N-1;
-        A.data_idx[(N-1)*3+2] = invalid_idx; //0
+        A.data_idx[(N-1)*3+2] = 4; //0
         A.cols_idx[(N-1)*3+2] = invalid_idx; //prevent unnecessary data fetch
         return A;
 

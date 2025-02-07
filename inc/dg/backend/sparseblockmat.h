@@ -47,6 +47,7 @@ template<class real_type>
 struct EllSparseBlockMat
 {
     /// Value used to pad the rows of the cols_idx array
+    /// The data_idx must always be valid
     static constexpr int invalid_index = -1;
     ///@brief default constructor does nothing
     EllSparseBlockMat() = default;

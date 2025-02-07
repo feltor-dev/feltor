@@ -99,13 +99,13 @@ auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
     using T = std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>;
 
     int status = 0;
-    if constexpr( std::is_integral_v<T>)
+    if constexpr( std::is_integral_v<T>) // e.g. T = int
     {
         std::array<T, 1> fpe;
         dg::blas1::detail::doDot_fpe( &status, fpe, f, x, xs ...);
         if( fpe[0] - fpe[0] != T(0))
             throw dg::Error(dg::Message(_ping_)
-                <<"FPE Dot failed "
+                <<"dg::blas1::vdot (integral type) failed "
                 <<"since one of the inputs contains NaN or Inf");
         return fpe[0];
     }
@@ -118,7 +118,7 @@ auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
         {
             if( fpe[u] - fpe[u] != T(0))
                 throw dg::Error(dg::Message(_ping_)
-                    <<"FPE Dot failed "
+                    <<"dg::blas1::vdot (floating type) failed "
                     <<"since one of the inputs contains NaN or Inf");
         }
         return exblas::cpu::Round(fpe);
@@ -164,7 +164,7 @@ inline auto dot( const ContainerType1& x, const ContainerType2& y)
         std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( &status,
             x,y);
         if( status != 0)
-            throw dg::Error(dg::Message(_ping_)<<"Dot product failed "
+            throw dg::Error(dg::Message(_ping_)<<"dg::blas1::dot failed "
                 <<"since one of the inputs contains NaN or Inf");
         return exblas::cpu::Round(acc.data());
     }
