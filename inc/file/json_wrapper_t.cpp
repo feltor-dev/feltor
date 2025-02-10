@@ -1,16 +1,33 @@
 #include <iostream>
 #include <cassert>
+#include <filesystem>
 
 #include "catch2/catch_all.hpp"
 #include "json_wrapper.h"
 
+// TODO Needs to be more precise
 #ifdef DG_USE_JSONHPP
 TEST_CASE("Json HPP wrapper")
 #else
 TEST_CASE("Json CPP wrapper")
 #endif
 {
-    auto js = dg::file::file2Json( "test.json");
+    std::ofstream file( "file.json");
+    file << R"unique({
+        "hello": "world",
+        "array": [ 42, 73],
+        "nested":
+        {
+            "hi" : 38.0,
+            "bool" : true,
+            "another_nest":
+            {
+                "number" : 7
+            }
+        }
+    })unique";
+    file.close();
+    auto js = dg::file::file2Json( "file.json");
     std::cout << "\n\n";
     using dg::file::error;
 
@@ -93,8 +110,12 @@ TEST_CASE("Json CPP wrapper")
                   <<" (nested: another_nest: number)\n";
     }
 
-    std::cout << "Test Vector 2 Json:\n";
-    dg::file::WrappedJsonValue ws( dg::file::vec2json( {42, 73}));
-    CHECK( ws.get( 0,0).asInt() == 42);
-    CHECK( ws.get( 1,0).asInt() == 73);
+    SECTION( "Test Vector 2 Json");
+    {
+        dg::file::WrappedJsonValue ws( dg::file::vec2json( {42, 73}));
+        CHECK( ws.get( 0,0).asInt() == 42);
+        CHECK( ws.get( 1,0).asInt() == 73);
+    }
+    std::filesystem::remove( "file.json");
+
 }
