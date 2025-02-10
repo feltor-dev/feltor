@@ -344,13 +344,10 @@ TEST_CASE( "Test variables in the NcFile class")
         auto pred = [&file]( std::string name) {
             return file.get_var_type(name) != NC_DOUBLE;
         };
-        auto vars = file.get_var_names_r();
-        CHECK_NOTHROW( vars.at( "/") );
-        CHECK_NOTHROW( vars.at( "/subgroup") );
         file.set_grp("subgroup");
-        vars.at("/subgroup").remove_if( pred);
-        CHECK( vars.at("/").empty() );
-        CHECK( vars.at("/subgroup") == std::list<std::string>{"variable", "another"} );
+        auto vars = file.get_var_names();
+        vars.remove_if( pred);
+        CHECK( vars == std::list<std::string>{"variable", "another"} );
     }
     file.close();
     DG_RANK0 std::filesystem::remove( "test.nc");

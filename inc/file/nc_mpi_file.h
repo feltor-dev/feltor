@@ -487,12 +487,6 @@ struct MPINcFile
         return mpi_invoke( &SerialNcFile::get_var_names, m_file);
     }
 
-    ///@copydoc SerialNcFile::get_var_names_r
-    auto get_var_names_r() const
-    {
-        return mpi_invoke( &SerialNcFile::get_var_names_r, m_file);
-    }
-
     private:
     template<class ContainerType>
     const ContainerType& get_ref( const MPI_Vector<ContainerType>& x, dg::MPIVectorTag) const

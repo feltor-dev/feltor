@@ -1020,25 +1020,6 @@ struct SerialNcFile
         return get_var_names_private( m_grp);
     }
 
-    /*!
-     * @brief Get a list of variable names in the current group and all subgroups
-     *
-     * @return <tt> std::map<std::filesystem::path, std::list<std::string>> </tt>
-     * We use 'auto' as type so that the doxygen page looks neater
-     */
-    auto get_var_names_r() const
-    {
-        check_open();
-        std::map<int, std::filesystem::path> all_grps = get_grps_abs_r(m_grp);
-        all_grps[m_grp] = get_current_path();
-        std::map<std::filesystem::path, std::list<std::string>> vars;
-        for( auto grp : all_grps)
-        {
-            vars[grp.second] = get_var_names_private(grp.first );
-        }
-        return vars;
-    }
-
     private:
     int name2varid( std::string id) const
     {
