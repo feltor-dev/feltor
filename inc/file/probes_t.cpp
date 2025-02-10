@@ -44,6 +44,7 @@ static std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&),
     }
 };
 
+// TODO More precise test
 TEST_CASE( "Probes")
 {
 #ifdef WITH_MPI
@@ -64,7 +65,7 @@ TEST_CASE( "Probes")
     , comm
 #endif
     );
-    file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+    file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
     file.defput_dim( "y", {{"axis", "Y"},
         {"long_name", "y-coordinate in Cartesian system"}}, grid.abscissas(1));
     file.defput_dim( "x", {{"axis", "X"},
@@ -107,7 +108,7 @@ TEST_CASE( "Probes")
             if( i==0)
             {
                 file.def_var( record.name, NC_DOUBLE, {"time", "y", "x"});
-                file.put_atts( record.name, record.atts);
+                file.put_atts( record.atts, record.name);
             }
             file.put_var( record.name, {i,grid}, resultD);
         }

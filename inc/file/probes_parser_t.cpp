@@ -75,6 +75,7 @@ TEST_CASE( "Probes Parser")
 #ifdef WITH_MPI
         MPI_Barrier( MPI_COMM_WORLD);
 #endif
+        REQUIRE( std::filesystem::exists( "file.json"));
         std::string probes = R"unique({
             "probes":
             {

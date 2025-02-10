@@ -83,9 +83,9 @@ struct Probes
         file.def_grp( "probes");
         m_grp = file.get_current_path() / "probes";
         file.set_grp( m_grp);
-        file.put_att( ".", {"format", params.format});
+        file.put_att( {"format", params.format});
         file.def_dim( "pdim", num_pins);
-        file.template defput_dim_as<double>( "ptime", NC_UNLIMITED, {{"axis" , "T"}});
+        file.template def_dimvar_as<double>( "ptime", NC_UNLIMITED, {{"axis" , "T"}});
         for( unsigned i=0; i<params.coords.size(); i++)
         {
             auto probes_vec = create_probes_vec( params.coords[0], grid);
@@ -230,7 +230,7 @@ struct Probes
         {
             m_simple_probes_intern[record.name] = {}; // empty vectors
             m_file->template def_var_as<value_type>( record.name, {"ptime", "pdim"});
-            m_file->put_atts( record.name, record.atts);
+            m_file->put_atts( record.atts, record.name);
         }
         m_file->set_grp( "..");
     }

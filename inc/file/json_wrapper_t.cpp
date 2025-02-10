@@ -27,6 +27,7 @@ TEST_CASE("Json CPP wrapper")
         }
     })unique";
     file.close();
+    REQUIRE( std::filesystem::exists( "file.json"));
     auto js = dg::file::file2Json( "file.json");
     std::cout << "\n\n";
     using dg::file::error;
