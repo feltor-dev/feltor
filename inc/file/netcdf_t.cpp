@@ -57,7 +57,7 @@ TEST_CASE( "Input Output test of the NcFile class")
     INFO( "Permutation of dims "<<dims[0]<<" "<<dims[1]<<" "<<dims[2]);
     MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, dims, {1, 1, 1}, false);
 #endif
-    INFO( "WRITE A TIMEDEPENDENT SCALAR, SCALAR FIELD, AND VECTOR FIELD TO NETCDF4 FILE "
+    INFO( "Write a timedependent scalar, scalar field, and vector field to NetCDF4 file "
                    << "test.nc");
     double Tmax=2.*M_PI;
     double x0 = 0., x1 = 2.*M_PI;
@@ -107,11 +107,11 @@ TEST_CASE( "Input Output test of the NcFile class")
             file.def_var_as<double>( record.name, {"y", "x"},
                 record.atts);
         }
-        file.get_att_as<std::string>( "vectorX", "long_name");
+        file.get_att_as<std::string>( "long_name", "vectorX");
         for( auto str : {"vectorX", "vectorY", "vectorZ"})
         {
             CHECK(file.var_is_defined( str));
-            CHECK(file.att_is_defined( str, "long_name"));
+            CHECK(file.att_is_defined( "long_name", str));
             CHECK(file.get_var_dims( str).size() == 2);
         }
     }

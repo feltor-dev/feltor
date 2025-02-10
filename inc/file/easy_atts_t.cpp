@@ -18,9 +18,9 @@ TEST_CASE( "Easy attributes")
             (char*)"input.json",
             NULL
         };
-        file.put_att( ".", {"history", dg::file::timestamp(argc, argv)});
-        file.put_atts( ".", dg::file::version_flags);
-        auto history = file.get_att_as<std::string>( ".", "history");
+        file.put_att( {"history", dg::file::timestamp(argc, argv)});
+        file.put_atts( dg::file::version_flags);
+        auto history = file.get_att_as<std::string>( "history");
         INFO("history "<<history);
         std::istringstream ss( history);
         std::tm t = {};
@@ -37,12 +37,12 @@ TEST_CASE( "Easy attributes")
     }
     SECTION( "Special version flags attribute")
     {
-        file.put_atts(".", dg::file::version_flags);
-        CHECK_NOTHROW( file.get_att_as<std::string>(".", "git_hash"));
-        CHECK_NOTHROW( file.get_att_as<std::string>(".", "git_branch"));
-        CHECK_NOTHROW( file.get_att_as<std::string>(".", "compile_time"));
-        CHECK( file.get_att_as<std::string>(".", "git_hash").size() == 40);
-        std::string compile = file.get_att_as<std::string>(".", "compile_time");
+        file.put_atts(dg::file::version_flags);
+        CHECK_NOTHROW( file.get_att_as<std::string>("git_hash"));
+        CHECK_NOTHROW( file.get_att_as<std::string>("git_branch"));
+        CHECK_NOTHROW( file.get_att_as<std::string>("compile_time"));
+        CHECK( file.get_att_as<std::string>("git_hash").size() == 40);
+        std::string compile = file.get_att_as<std::string>("compile_time");
         std::istringstream ss( compile);
         std::tm t = {};
         ss >> std::get_time( &t, "%Y-%m-%d %H:%M:%S");

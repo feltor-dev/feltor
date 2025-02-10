@@ -61,7 +61,7 @@ inline std::string timestamp( int argc, char* argv[])
  *     {"compile_time", COMPILE_TIME},
  * };
  * // Is intended to be used as NetCDF file attributes
- * file.set_atts( ".", dg::file::version_flags);
+ * file.set_atts( dg::file::version_flags);
  * @endcode
  * The entries in the map are filled only if the corresponding MACROs are defined at compile time.
  * Use <tt>-DVERSION_FLAGS</tt> during compilation to define all otherwise it remains empty.

@@ -31,23 +31,23 @@ namespace file
     atts["uint"] = 10;
     atts["bool"] = true;
     atts["realarray"] = std::vector{-1.1, 42.3};
-    file.put_atts( ".", atts);
+    file.put_atts( atts);
     // OR
-    file.put_att( ".", {"text", "Hello World!"});
-    file.put_att( ".", {"number", 3e-4});
+    file.put_att( {"text", "Hello World!"});
+    file.put_att( {"number", 3e-4});
     file.close();
 
     // read attributes back
 
     file.open( "atts.nc", dg::file::nc_nowrite);
-    auto read = file.get_atts( ".");
+    auto read = file.get_atts( );
     // read and atts are the same now
 
     bool is_true = std::get<bool>(read["bool"]);
     double number = std::get<double>(read["number"]);
     // OR
-    is_true = file.get_att_as<bool>( ".", "bool");
-    number = file.get_att_as<double>( ".", "number");
+    is_true = file.get_att_as<bool>( "bool");
+    number = file.get_att_as<double>( "number");
     file.close();
  * @endcode
  */
@@ -591,23 +591,25 @@ struct SerialNcFile
     /////////////// Attributes setters
     /*! @brief Put an individual attribute
      * @copydoc hide_atts_NetCDF_example
-     * @param id Variable name or "." for the current group
+     * @param id Variable name in the current group or empty string, in which
+     * case the attribute refers to the current group
      * @copydoc hide_attributes_overwrite
      */
-    void put_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
+    void put_att( const std::pair<std::string, nc_att_t>& att, std::string id = "")
     {
         int varid = name2varid( id);
         dg::file::detail::put_att( m_grp, varid, att);
     }
 
-    /*! @brief Put an individual attribute of preset type
+    /*! @brief Put an individual attribute of preset type to variable id
      * @tparam S std::string or const char*
      * @tparam T Cannot be an nc_att_t
-     * @param id Variable name or "." for the current group
+     * @param id Variable name in the current group or empty string, in which
+     * case the attribute refers to the current group
      * @copydoc hide_attributes_overwrite
      */
     template<class S, class T> // T cannot be nc_att_t
-    void put_att( std::string id, const std::tuple<S,nc_type, T>& att)
+    void put_att( const std::tuple<S,nc_type, T>& att, std::string id = "")
     {
         int varid = name2varid( id);
         dg::file::detail::put_att( m_grp, varid, att);
@@ -618,14 +620,16 @@ struct SerialNcFile
      * @copydoc hide_atts_NetCDF_example
      * @note boolean values are mapped to byte NetCDF attributes (0b for true,
      * 1b for false)
-     * @param atts An iterable containing all the attributes for the variable
-     * or file. \c atts can be empty in which case no attribute is written.
      * @tparam Attributes Any \c Iterable whose values can be used in \c put_att
      * i.e. either a \c std::pair or \c std::tuple
+     * @param atts An iterable containing all the attributes for the variable
+     * or file. \c atts can be empty in which case no attribute is written.
+     * @param id Variable name in the current group or empty string, in which
+     * case the attributes refer to the current group
      * @copydoc hide_attributes_overwrite
      */
     template<class Attributes = std::map<std::string, nc_att_t> > // *it must be usable in put_att
-    void put_atts( std::string id, const Attributes& atts)
+    void put_atts(const Attributes& atts, std::string id = "")
     {
         int varid = name2varid( id);
         dg::file::detail::put_atts( m_grp, varid, atts);
@@ -639,12 +643,13 @@ struct SerialNcFile
      * @tparam T Any type in \c dg::file::nc_att_t or \c nc_att_t
      * in which case the type specific nc attribute getters are called
      * or \c std::vector<type> in which case the general \c nc_get_att is called
-     * @param id Variable name or "." for the current group
+     * @param id Variable name in the current group or empty string, in which
+     * case the attribute refers to the current group
      * @param att_name Name of the attribute
      * @return Attribute cast to type \c T
      */
     template<class T>
-    T get_att_as( std::string id, std::string att_name) const
+    T get_att_as(std::string att_name, std::string id = "") const
     {
         int varid = name2varid( id);
         return dg::file::detail::get_att_as<T>( m_grp, varid, att_name);
@@ -652,9 +657,9 @@ struct SerialNcFile
 
     /// Short for <tt> get_att_as<std::vector<T>>( id, att_name);</tt>
     template<class T>
-    std::vector<T> get_att_vec_as( std::string id, std::string att_name) const
+    std::vector<T> get_att_vec_as(std::string att_name, std::string id = "") const
     {
-        return get_att_as<std::vector<T>>( id, att_name);
+        return get_att_as<std::vector<T>>( att_name, id);
     }
 
     /*! @brief Read all NetCDF attributes of a certain type
@@ -664,36 +669,41 @@ struct SerialNcFile
      * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
      * @return A Dictionary containing all the attributes of a certain type
      * for the variable or file. Can be empty if no attribute is present.
-     * @param id Variable name or "." for current group
+     * @param id Variable name in the current group or empty string, in which
+     * case the attributes refer to the current group
      * @tparam T can be a primitive type like \c int or \c double or a vector
      * thereof \c std::vector<int> or a \c dg::file::nc_att_t in which case
      * attributes of heterogeneous types are captured
      */
     template<class T>
-    std::map<std::string, T> get_atts_as( std::string id = ".") const
+    std::map<std::string, T> get_atts_as( std::string id = "") const
     {
         int varid = name2varid( id);
         return dg::file::detail::get_atts_as<T>( m_grp, varid);
     }
 
     /// Short for <tt> get_atts_as<nc_att_t>( id) </tt>
-    std::map<std::string, nc_att_t> get_atts( std::string id = ".") const
+    std::map<std::string, nc_att_t> get_atts( std::string id = "") const
     {
         return get_atts_as<nc_att_t>( id);
     }
 
-    /// Remove an attribute named \c att_name
-    /// @note Attributes are the only thing you can delete in a NetCDF file.
-    /// You cannot delete variables or dimensions or groups
-    void del_att( std::string id, std::string att_name)
+    /*!
+     * @brief Remove an attribute named \c att_name from variable \c id
+     * @param id Variable name in the current group or empty string, in which
+     * case the attributes refer to the current group
+     * @note Attributes are the only thing you can delete in a NetCDF file.
+     * You cannot delete variables or dimensions or groups
+     */
+    void del_att(std::string att_name, std::string id = "")
     {
         int varid = name2varid( id);
         auto name = att_name.c_str();
         NC_Error_Handle err;
         err = nc_del_att( m_grp, varid, name);
     }
-    /// Check for existence of the attribute named \c att_name
-    bool att_is_defined( std::string id, std::string att_name) const
+    /// Check for existence of the attribute named \c att_name in variable \c id
+    bool att_is_defined(std::string att_name, std::string id = "") const
     {
         int varid = name2varid( id);
         int attid;
@@ -701,8 +711,8 @@ struct SerialNcFile
         return retval == NC_NOERR;
     }
     /// Rename an attribute
-    void rename_att( std::string id, std::string old_att_name, std::string
-            new_att_name)
+    void rename_att(std::string old_att_name, std::string
+            new_att_name, std::string id = "")
     {
         int varid = name2varid( id);
         auto old_name = old_att_name.c_str();
@@ -753,7 +763,7 @@ struct SerialNcFile
         int varid;
         err = nc_def_var( m_grp, name.c_str(), xtype, dim_names.size(),
                 &dimids[0], &varid);
-        put_atts( name, atts);
+        put_atts( atts, name);
     }
 
     /*! @brief Write data to a variable
@@ -1036,7 +1046,7 @@ struct SerialNcFile
         check_open();
         NC_Error_Handle err;
         int varid;
-        if ( id == ".")
+        if ( id == "")
             varid = NC_GLOBAL;
         else
         {

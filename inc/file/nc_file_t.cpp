@@ -71,21 +71,21 @@ TEST_CASE( "Open, groups, dims, atts")
     REQUIRE( std::filesystem::exists( "test.nc"));
     SECTION( "Opening modes save or remove data")
     {
-        file.put_att(".", {"title", "Hello"} );
-        CHECK( file.att_is_defined( ".", "title"));
+        file.put_att({"title", "Hello"} );
+        CHECK( file.att_is_defined( "title"));
         file.close();
         file.open("test.nc", dg::file::nc_nowrite);
         CHECK( file.is_open());
-        CHECK( file.att_is_defined( ".", "title"));
+        CHECK( file.att_is_defined( "title"));
         file.close();
         file.open("test.nc", dg::file::nc_write);
         CHECK( file.is_open());
-        CHECK( file.att_is_defined( ".", "title"));
+        CHECK( file.att_is_defined( "title"));
         file.close();
         // clobber deletes file content
         file.open("test.nc", dg::file::nc_clobber);
         CHECK( file.is_open());
-        CHECK( not file.att_is_defined( ".", "title"));
+        CHECK( not file.att_is_defined( "title"));
     }
     ///////////////////////    Groups
     SECTION( "Managing groups")
@@ -200,30 +200,30 @@ TEST_CASE( "Attributes")
     SECTION( "Read/ write individual Attributes")
     {
         // set attributes
-        file.put_att(".", {"title", "Hello"} );
+        file.put_att({"title", "Hello"} );
         INFO( "Silently overwrite existing attribute");
-        CHECK_NOTHROW( file.put_att(".", {"title", "Hello world"}));
-        file.put_att(".", {"truth", 42} );
-        file.put_atts(".", {{ "this", "is"}, {"a", 42}, {"vector",
+        CHECK_NOTHROW( file.put_att({"title", "Hello world"}));
+        file.put_att({"truth", 42} );
+        file.put_atts({{ "this", "is"}, {"a", 42}, {"vector",
             std::vector{1,2,3}}});
         file.close();
-        CHECK_THROWS_AS( file.put_att( ".", {"title", "Blurp"}),
+        CHECK_THROWS_AS( file.put_att( {"title", "Blurp"}),
             dg::file::NC_Error);
 
         for( auto mode : {dg::file::nc_nowrite, dg::file::nc_write})
         {
             file.open( "test.nc", mode);
             // What if Attribute does not exist?
-            CHECK_THROWS_AS( file.get_att_as<double>( ".", "Does not exist"),
+            CHECK_THROWS_AS( file.get_att_as<double>( "Does not exist"),
                 dg::file::NC_Error);
             // get attributes
-            auto title = file.get_att_as<std::string>(".", "title");
+            auto title = file.get_att_as<std::string>("title");
             CHECK( title == "Hello world");
-            double t = file.get_att_as<double>(".", "truth");
+            double t = file.get_att_as<double>("truth");
             CHECK( t == 42);
-            int tint = file.get_att_as<int>(".", "truth");
+            int tint = file.get_att_as<int>("truth");
             CHECK( tint == 42);
-            auto ts = file.get_att_vec_as<double>(".", "vector"); // get all indices as vector
+            auto ts = file.get_att_vec_as<double>("vector"); // get all indices as vector
             std::vector<double> result = {1.0,2.0,3.0};
             CHECK( ts == result );
 
@@ -244,7 +244,7 @@ TEST_CASE( "Attributes")
         att["intarray"]   = std::vector{-11, 423};
         att["uintarray"]  = std::vector{11, 423};
         att["boolarray"]  = std::vector{true, false};
-        file.put_atts(".", att);
+        file.put_atts(att);
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         file.open( "test.nc", mode);
@@ -253,18 +253,18 @@ TEST_CASE( "Attributes")
     }
     SECTION( "Deleting and renaming")
     {
-        file.put_att(".", {"same", "thing"} );
-        CHECK( file.att_is_defined( ".", "same"));
-        file.del_att( ".", "same");
-        CHECK( not file.att_is_defined( ".", "same"));
+        file.put_att({"same", "thing"});
+        CHECK( file.att_is_defined( "same"));
+        file.del_att( "same", "");
+        CHECK( not file.att_is_defined( "same"));
         // Check attribute rename
-        file.put_att(".", {"ttt", 42} );
-        CHECK( file.att_is_defined( ".", "ttt"));
-        file.rename_att( ".", "ttt", "truth");
-        CHECK( not file.att_is_defined( ".", "ttt"));
-        CHECK( file.att_is_defined( ".", "truth"));
+        file.put_att({"ttt", 42} );
+        CHECK( file.att_is_defined( "ttt"));
+        file.rename_att( "ttt", "truth");
+        CHECK( not file.att_is_defined( "ttt", ""));
+        CHECK( file.att_is_defined( "truth"));
 
-        int truth = file.get_att_as<int>(".", "truth");
+        int truth = file.get_att_as<int>("truth");
         CHECK( truth == 42);
     }
     file.close();
@@ -308,12 +308,12 @@ TEST_CASE( "Test variables in the NcFile class")
     {
         file.def_dim("time", NC_UNLIMITED);
         file.def_var_as<double>("variable", {"time"});
-        file.put_att("variable", {"long_name", "blabla"});
-        auto att = file.get_att_as<std::string>( "variable", "long_name");
+        file.put_att({"long_name", "blabla"}, "variable");
+        auto att = file.get_att_as<std::string>( "long_name", "variable");
         CHECK( att == "blabla");
         std::map<std::string, dg::file::nc_att_t> atts = {{"axis", "T"}};
         file.def_var_as<double>("another", {"time"}, atts);
-        att = file.get_att_as<std::string>( "another", "axis");
+        att = file.get_att_as<std::string>( "axis", "another");
         CHECK( att == "T");
     }
     SECTION( "Unlimited Variable can write anywhere")
@@ -325,8 +325,8 @@ TEST_CASE( "Test variables in the NcFile class")
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         file.open( "test.nc", mode);
         CHECK( file.var_is_defined( "time"));
-        CHECK( file.att_is_defined( "time", "axis"));
-        CHECK( file.get_att_as<std::string>( "time", "axis") == "T");
+        CHECK( file.att_is_defined( "axis", "time"));
+        CHECK( file.get_att_as<std::string>( "axis", "time") == "T");
         file.get_var("time", {52}, test);
         CHECK( test == 10);
     }
@@ -379,7 +379,7 @@ TEST_CASE( "File Benchmarks")
     DG_RANK0 std::cout << "Defining 1000 variables took "<<timer.diff()<<"s\n";
     timer.tic();
     for( unsigned u=0; u<1000; u++)
-        file.put_att( "var"+std::to_string(u), {"long_name", std::to_string(u)});
+        file.put_att({"long_name", std::to_string(u)}, "var"+std::to_string(u));
     timer.toc();
     DG_RANK0 std::cout << "Set attribute of 1000 variables took "<<timer.diff()<<"s\n";
     timer.tic();

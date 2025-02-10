@@ -239,70 +239,70 @@ struct MPINcFile
     }
     // ///////////// Attributes setters
     ///@copydoc SerialNcFile::put_att
-    void put_att ( std::string id, const std::pair<std::string, nc_att_t>& att)
+    void put_att ( const std::pair<std::string, nc_att_t>& att, std::string id = "")
     {
         // Fix unresolved type following
         // https://stackoverflow.com/questions/45505017/how-comes-stdinvoke-does-not-handle-function-overloads
         mpi_invoke_void( [this]( auto&&...xs) { m_file.put_att(
-            std::forward<decltype(xs)>(xs)...);}, id, att);
+            std::forward<decltype(xs)>(xs)...);}, att, id);
     }
     ///@copydoc SerialNcFile::put_att<S,T>
     template<class S, class T>
-    void put_att( std::string id, const std::tuple<S,nc_type, T>& att)
+    void put_att( const std::tuple<S,nc_type, T>& att, std::string id = "")
     {
-        mpi_invoke_void( &SerialNcFile::put_att<S,T>, m_file, id, att);
+        mpi_invoke_void( &SerialNcFile::put_att<S,T>, m_file, att, id);
     }
     ///@copydoc SerialNcFile::put_atts(std::string,const Iterable&)
     template<class Attributes = std::map<std::string, nc_att_t> > // *it must be usable in put_att
-    void put_atts( std::string id, const Attributes& atts)
+    void put_atts( const Attributes& atts, std::string id = "")
     {
-        mpi_invoke_void( &SerialNcFile::put_atts<Attributes>, m_file, id, atts);
+        mpi_invoke_void( &SerialNcFile::put_atts<Attributes>, m_file, atts, id);
     }
 
     // ///////////////// Attribute getters
 
     ///@copydoc SerialNcFile::get_att_as
     template<class T>
-    T get_att_as( std::string id, std::string att_name) const
+    T get_att_as(std::string att_name, std::string id = "") const
     {
-        return mpi_invoke( &SerialNcFile::get_att_as<T>, m_file, id, att_name);
+        return mpi_invoke( &SerialNcFile::get_att_as<T>, m_file, att_name, id);
     }
     ///@copydoc SerialNcFile::get_att_vec_as
     template<class T>
-    std::vector<T> get_att_vec_as( std::string id, std::string att_name) const
+    std::vector<T> get_att_vec_as( std::string att_name, std::string id = "") const
     {
-        return mpi_invoke( &SerialNcFile::get_att_vec_as<T>, m_file, id,
-            att_name);
+        return mpi_invoke( &SerialNcFile::get_att_vec_as<T>, m_file,
+            att_name, id);
     }
 
     ///@copydoc SerialNcFile::get_atts_as
     template<class T>
-    std::map<std::string, T> get_atts_as( std::string id = ".") const
+    std::map<std::string, T> get_atts_as( std::string id = "") const
     {
         return mpi_invoke( &SerialNcFile::get_atts_as<T>, m_file, id);
     }
     ///@copydoc SerialNcFile::get_atts
-    std::map<std::string, nc_att_t> get_atts( std::string id = ".") const
+    std::map<std::string, nc_att_t> get_atts( std::string id = "") const
     {
         return get_atts_as<nc_att_t>( id);
     }
 
     ///@copydoc SerialNcFile::del_att
-    void del_att( std::string id, std::string att)
+    void del_att( std::string att, std::string id = "")
     {
-        mpi_invoke_void( &SerialNcFile::del_att, m_file, id, att);
+        mpi_invoke_void( &SerialNcFile::del_att, m_file, att, id);
     }
     ///@copydoc SerialNcFile::att_is_defined
-    bool att_is_defined( std::string id, std::string att_name) const
+    bool att_is_defined( std::string att_name, std::string id = "") const
     {
-        return mpi_invoke( &SerialNcFile::att_is_defined, m_file, id, att_name);
+        return mpi_invoke( &SerialNcFile::att_is_defined, m_file, att_name, id);
     }
     ///@copydoc SerialNcFile::rename_att
-    void rename_att( std::string id, std::string old_att_name, std::string
-        new_att_name)
+    void rename_att( std::string old_att_name, std::string
+        new_att_name, std::string id = "")
     {
-        mpi_invoke_void( &SerialNcFile::rename_att, m_file, id, old_att_name,
-            new_att_name);
+        mpi_invoke_void( &SerialNcFile::rename_att, m_file, old_att_name,
+            new_att_name, id);
     }
 
     // //////////// Variables ////////////////////////

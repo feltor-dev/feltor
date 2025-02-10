@@ -59,7 +59,7 @@ TEST_CASE( "Easy dims")
             err = dg::file::define_dimensions( ncid, dim2_ids, *grid2d_ptr),
             dg::file::NC_Error
         );
-        bool exists;
+        bool exists = false;
         REQUIRE_NOTHROW(
             exists = dg::file::check_dimensions( ncid, dim2_ids, *grid2d_ptr)
         );
