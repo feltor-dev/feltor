@@ -10,7 +10,6 @@ INCLUDE+= -I../    # other project libraries
 
 TARGETS=easy_dims_t\
 easy_output_t\
-easy_input_t\
 nc_file_t\
 netcdf_t\
 probes_parser_t\
@@ -21,7 +20,6 @@ easy_atts_t
 
 TARGETSMPI=easy_dims_mpit\
 easy_output_mpit\
-easy_input_mpit\
 nc_file_mpit\
 netcdf_mpit\
 probes_parser_mpit\

@@ -50,24 +50,14 @@ TEST_CASE( "Probes")
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    MPI_Comm comm;
-    int dims[2] = {0,0};
-    MPI_Dims_create( size, 2, dims);
-    std::stringstream ss;
-    ss<< dims[0]<<" "<<dims[1];
-    dg::mpi_init2d( dg::PER, dg::PER, comm, ss);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1, 1});
 #endif
     auto js_direct = dg::file::file2Json("probes_direct.json");
     auto params = dg::file::parse_probes( js_direct);
 
-#ifdef WITH_MPI
-    std::string filename = "probesmpi.nc";
-#else
-    std::string filename = "probes.nc";
-#endif
-    INFO("WRITE A TIME-DEPENDENT VECTOR FIELD AND PROBE DATA TO NETCDF4 FILE "
-                       << filename);
-    dg::file::NcFile file( filename, dg::file::nc_clobber);
+    INFO("Write a time-dependent vector field and probe data to netcdf4 file "
+                       << "probes.nc");
+    dg::file::NcFile file( "probes.nc", dg::file::nc_clobber);
     double x0 = 0., x1 = 2.*M_PI;
     dg::x::Grid2d grid( x0,x1,x0,x1,3,100,100, dg::PER, dg::PER
 #ifdef WITH_MPI
@@ -93,19 +83,19 @@ TEST_CASE( "Probes")
         time = i*dt;
         if( i <= 3)
         {
-            DG_RANK0 std::cout<<"Write timestep "<<i<<"\n";
+            INFO("Write timestep "<<i);
             probes.write( time, records_list, grid, time);
         }
         else
         {
             if( i % 2)
             {
-                DG_RANK0 std::cout<<"Buffer timestep "<<i<<"\n";
+                INFO("Buffer timestep "<<i);
                 probes.buffer( time, records_list, grid, time);
             }
             else
             {
-                DG_RANK0 std::cout<<"Buffer & Flush timestep "<<i<<"\n";
+                INFO("Buffer & Flush timestep "<<i);
                 probes.buffer( time, records_list, grid, time);
                 probes.flush();
             }

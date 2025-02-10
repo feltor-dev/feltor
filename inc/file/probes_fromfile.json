@@ -1,9 +1,0 @@
-{
-    "probes":
-    {
-        "input" : "file",
-        "file" : "probes_file.json",
-        "scale" : [10,0.5]
-    }
-}
-

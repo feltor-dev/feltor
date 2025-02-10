@@ -1,8 +1,0 @@
-{
-    "coords-names" : ["x", "y"],
-    "format" : [
-        {"name" : "divertor", "pos" : [0,1], "shape" : [2]},
-        {"name" : "omp", "pos" : [1,3], "shape" : [3]}],
-    "x" : [0,1,2,3],
-    "y" : [0,1,2,3]
-}

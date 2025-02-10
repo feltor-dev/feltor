@@ -89,6 +89,8 @@ for f in format:
  * @return parsed values
  * @attention In MPI all threads will read in the probes. Only the master thread
  * stores the coordinates in <tt>ProbesParams.coords[i]</tt> the others are empty
+ * (and thus also the <tt>ProbesParams.get_coords_sizes()</tt> function will
+ * return zero on non-master ranks)
  * @ingroup Cpp
 */
 inline ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum error

@@ -42,6 +42,7 @@ std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid3d&,double),
 };
 /// [doxygen]
 
+// TODO Add a sliced write test similar to easy_output_t.cpp
 TEST_CASE( "Input Output test of the NcFile class")
 {
 #ifdef WITH_MPI
@@ -55,7 +56,7 @@ TEST_CASE( "Input Output test of the NcFile class")
     for( int u=0; u<i; u++)
         std::next_permutation( dims.begin(), dims.end());
     INFO( "Permutation of dims "<<dims[0]<<" "<<dims[1]<<" "<<dims[2]);
-    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, dims, {1, 1, 1}, false);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, dims, {1, 1, 1});
 #endif
     INFO( "Write a timedependent scalar, scalar field, and vector field to NetCDF4 file "
                    << "test.nc");
