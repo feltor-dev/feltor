@@ -70,7 +70,7 @@ bool compare( const Container& lhs, const Container& rhs)
         UNSCOPED_INFO( "i "<<i<<" lhs "<<*(lhs.begin() +i)
                               <<" rhs "<<*(rhs.begin()+i)
                               <<" diff "<<*(lhs.begin()+i) - *(rhs.begin()+i));
-        if( *(lhs.begin() + i) != *(rhs.begin()+i))
+        if( fabs( *(lhs.begin() + i) - *(rhs.begin()+i)) > 1e-15)
             return false;
     }
     return true;

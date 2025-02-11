@@ -19,22 +19,22 @@ static double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(
 
 
 /// [doxygen]
-std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid3d&,double),
+std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::CartesianGrid3d&,double),
     dg::file::LongNameAttribute>> records = {
     {"vectorX", "X-component of vector",
-        [] ( dg::x::DVec& resultD, const dg::x::Grid3d& g, double time){
+        [] ( dg::x::DVec& resultD, const dg::x::CartesianGrid3d& g, double time){
             resultD = dg::evaluate( gradientX, g);
             dg::blas1::scal( resultD, cos( time));
         }
     },
     {"vectorY", "Y-component of vector",
-        [] ( dg::x::DVec& resultD, const dg::x::Grid3d& g, double time){
+        [] ( dg::x::DVec& resultD, const dg::x::CartesianGrid3d& g, double time){
             resultD = dg::evaluate( gradientY, g);
             dg::blas1::scal( resultD, cos( time));
         }
     },
     {"vectorZ", "Z-component of vector",
-        [] ( dg::x::DVec& resultD, const dg::x::Grid3d& g, double time){
+        [] ( dg::x::DVec& resultD, const dg::x::CartesianGrid3d& g, double time){
             resultD = dg::evaluate( gradientZ, g);
             dg::blas1::scal( resultD, cos( time));
         }
@@ -42,7 +42,6 @@ std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::Grid3d&,double),
 };
 /// [doxygen]
 
-// TODO Add a sliced write test similar to easy_output_t.cpp
 TEST_CASE( "Input Output test of the NcFile class")
 {
 #ifdef WITH_MPI
@@ -62,7 +61,7 @@ TEST_CASE( "Input Output test of the NcFile class")
                    << "test.nc");
     double Tmax=2.*M_PI;
     double x0 = 0., x1 = 2.*M_PI;
-    dg::x::Grid3d grid( x0,x1,x0,x1,x0,x1,3,4,4,3
+    dg::x::CartesianGrid3d grid( x0,x1,x0,x1,x0,x1,3,4,4,3
 #ifdef WITH_MPI
     , comm
 #endif
@@ -95,8 +94,8 @@ TEST_CASE( "Input Output test of the NcFile class")
             auto abs = grid.abscissas(str.second) , test(abs);
             file.get_var( str.first, {grid.axis(str.second)}, test);
             dg::blas1::axpby( 1.,abs,-1., test);
-            double result = dg::blas1::dot( 1., test);
-            CHECK( result == 0);
+            double result = sqrt(dg::blas1::dot( test, test));
+            CHECK( result < 1e-15);
         }
     }
     SECTION( "Test record variables")
@@ -208,12 +207,47 @@ TEST_CASE( "Input Output test of the NcFile class")
                 auto test (tmp);
                 file.get_var( record.name, {i, slab}, test);
                 dg::blas1::axpby( 1.,tmp,-1., test);
-                double result = dg::blas1::dot( 1., test);
-                CHECK( result == 0);
+                double result = sqrt(dg::blas1::dot( test, test));
+                CHECK( result < 1e-15);
             }
         }
 
 
+    }
+    SECTION( "Write sliced variable")
+    {
+        std::unique_ptr<dg::x::aGeometry2d> perp_grid_ptr( grid.perp_grid());
+        dg::x::Grid2d grid2d = (dg::x::Grid2d)*perp_grid_ptr;
+        dg::x::HVec data = dg::evaluate( gradientX, grid);
+        auto sliced_data = dg::split( data, grid); // a vector of views
+        file.defput_dim( "x", {{"axis", "X"},
+            {"long_name", "x-coordinate in Cartesian system"}},
+            grid2d.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"},
+            {"long_name", "y-coordinate in Cartesian system"}},
+            grid2d.abscissas(1));
+        // In MPI only the group containing rank 0 in file comm writes
+        file.defput_var( "test", {"y", "x"}, {}, grid2d, sliced_data[0]);
+        file.close();
+        auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
+        INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n");
+        file.open( "test.nc", mode);
+        dg::x::HVec result = dg::evaluate( dg::zero, grid2d), ana(result);
+        dg::blas1::copy( sliced_data[0], ana);
+        // In MPI when mode == nc_write only the group containing rank 0 in file comm reads
+        file.get_var( "test", grid2d, result);
+        dg::blas1::axpby( 1.,ana,-1., result);
+        double norm = sqrt(dg::blas1::dot( result, result));
+        if( mode == dg::file::nc_write)
+        {
+            DG_RANK0 INFO( "Norm is "<<norm);
+            DG_RANK0 CHECK( norm < 1e-14);
+        }
+        else
+        {
+            INFO( "Norm is "<<norm);
+            CHECK( norm < 1e-14);
+        }
     }
     file.close();
     DG_RANK0 std::filesystem::remove( "test.nc");

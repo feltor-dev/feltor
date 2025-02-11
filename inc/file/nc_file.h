@@ -187,7 +187,6 @@ struct SerialNcFile
     SerialNcFile(const std::filesystem::path& filename,
             enum NcFileMode mode = nc_nowrite)
     {
-        // TODO Can filename be a std::filesystem::path?
         open( filename, mode);
     }
     /*! @brief  There can only be exactly one file handle per physical file.
