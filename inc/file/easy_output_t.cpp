@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 #include <string>
 #include <netcdf.h>
 #include <cmath>
@@ -205,4 +206,5 @@ TEST_CASE( "Easy output")
     }
 
     DG_RANK0 err = nc_close(ncid);
+    DG_RANK0 std::filesystem::remove( "test.nc");
 }

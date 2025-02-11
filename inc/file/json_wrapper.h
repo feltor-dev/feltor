@@ -116,8 +116,8 @@ try{
  * js["hello"]["world"] = dg::file::file2Json("test.json")
  * @endcode
  *
- * @note If the Marco \c DG_USE_JSONHPP is defined, the <tt> \#include <nlohmann/json.hpp> </tt>
- * parser is used instead of <tt> \#include <json/json.h> </tt> Since the former is header-only
+ * @note If the Marco \c DG_USE_JSONHPP is defined, the <tt>\#include <nlohmann/json.hpp></tt>
+ * parser is used instead of <tt>\#include <json/json.h></tt> Since the former is header-only
  * no additional linker options must be present at compilation.
  */
 struct WrappedJsonValue
