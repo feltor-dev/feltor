@@ -19,10 +19,7 @@ namespace dg
 namespace file
 {
 /**
- * @defgroup json Json utilities
- * \#include "dg/file/json_utilities.h" (link -ljsoncpp)
- *
- * @addtogroup json
+ * @addtogroup wrapper
  * @{
  */
 
@@ -331,7 +328,10 @@ struct WrappedJsonValue
     error m_mode;
     std::string m_access_str = "";
 };
+///@}
 
+///@addtogroup json
+///@{
 /**
  * @brief Convenience wrapper to open a file and parse it into a JsonType
  *
@@ -505,17 +505,8 @@ dg::file::JsonType vec2json( std::initializer_list<T> shared)
     std::vector<T> cc( shared);
     return vec2json(cc);
 }
-
-///Convert a string to a json object \c js with <tt> js["long_name"] = long_name</tt>
-/// Useful in connection with \c dg::file::Record
-inline dg::file::JsonType long_name( const std::string& long_name)
-{
-    dg::file::JsonType att;
-    att["long_name"] = long_name;
-    return att;
-}
-
-
 ///@}
+
+
 }//namespace file
 }//namespace dg

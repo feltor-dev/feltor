@@ -20,6 +20,7 @@ namespace file
  *
  *  @note Unfortunately, user defined types exist so not every attribute can be
  *  an nc_att_t
+ *  @ingroup netcdf
 */
 using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
       std::vector<int>, std::vector<unsigned>, std::vector<float>,
@@ -34,18 +35,20 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
  *  -# all given argv (whitespace separated)
  *  -# A newline
  *  .
+ * @snippet easy_atts_t.cpp timestamp
  * @param argc from main function
  * @param argv from main function
  * @return string containing current time followed by the parameters with which the program was invoked
  * @sa See history in <a href="https://docs.unidata.ucar.edu/netcdf-c/current/attribute_conventions.html">Attribute Convenctions</a>
- * @sa std::put_time
+ * @sa <a href="https://en.cppreference.com/w/cpp/io/manip/put_time">std::put_time</a>
+ * @ingroup netcdf
  */
 inline std::string timestamp( int argc, char* argv[])
 {
-    ///Get local time
+    // Get local time
     auto ttt = std::time(nullptr);
     std::ostringstream oss;
-    ///time string  + program-name + args
+    // time string  + program-name + args
     oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
     for( int i=0; i<argc; i++) oss << " "<<argv[i];
     oss << std::endl;
@@ -54,15 +57,11 @@ inline std::string timestamp( int argc, char* argv[])
 
 /*! @brief Version compile time constants available as a map
  *
- * @code{.cpp}
- * std::map<std::string, std::string> version_flags = {
- *     {"git_hash", GIT_HASH},
- *     {"git_branch", GIT_BRANCH},
- *     {"compile_time", COMPILE_TIME},
- * };
- * // Is intended to be used as NetCDF file attributes
- * file.set_atts( dg::file::version_flags);
- * @endcode
+ * Is intended to be used as NetCDF file attributes
+ * @snippet easy_atts_t.cpp timestamp
+ * @note We use underscore instead of "git-hash"  so that python netcdf can
+ *   more easily read the attribute
+ *
  * The entries in the map are filled only if the corresponding MACROs are defined at compile time.
  * Use <tt>-DVERSION_FLAGS</tt> during compilation to define all otherwise it remains empty.
  * This is the corresponding entry in \c feltor/config/version.mk
@@ -73,11 +72,10 @@ inline std::string timestamp( int argc, char* argv[])
  * @endcode
  * @sa This approach follows
  <a href="https://stackoverflow.com/questions/44038428/include-git-commit-hash-and-or-branch-name-in-c-c-source/44038455#44038455">stackoverflow</a>.
+ *  @ingroup netcdf
  */
 inline const std::map<std::string, std::string> version_flags =
 {
-    // We use underscore instead of "git-hash"  so that python netcdf can
-    // easily read it
 #ifdef GIT_HASH
     {"git_hash", GIT_HASH},
 #endif // GIT_HASH

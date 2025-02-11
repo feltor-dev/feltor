@@ -12,6 +12,7 @@ TEST_CASE( "Easy attributes")
     {
         // history can be parsed
         // https://en.cppreference.com/w/cpp/io/manip/get_time
+        // ! [timestamp]
         int argc = 2;
         char *argv[] = {
             (char*)"./netcdf_t",
@@ -19,7 +20,6 @@ TEST_CASE( "Easy attributes")
             NULL
         };
         file.put_att( {"history", dg::file::timestamp(argc, argv)});
-        file.put_atts( dg::file::version_flags);
         auto history = file.get_att_as<std::string>( "history");
         INFO("history "<<history);
         std::istringstream ss( history);
@@ -34,9 +34,11 @@ TEST_CASE( "Easy attributes")
         ss >> arg;
         CHECK( arg == "input.json");
         CHECK( not ss.fail());
+        // ! [timestamp]
     }
     SECTION( "Special version flags attribute")
     {
+        // ! [version_flags]
         file.put_atts(dg::file::version_flags);
         CHECK_NOTHROW( file.get_att_as<std::string>("git_hash"));
         CHECK_NOTHROW( file.get_att_as<std::string>("git_branch"));
@@ -47,6 +49,7 @@ TEST_CASE( "Easy attributes")
         std::tm t = {};
         ss >> std::get_time( &t, "%Y-%m-%d %H:%M:%S");
         CHECK( not ss.fail());
+        // ! [version_flags]
     }
     file.close();
     DG_RANK0 std::filesystem::remove( "test.nc");

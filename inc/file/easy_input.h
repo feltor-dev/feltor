@@ -15,16 +15,10 @@
  * Define variable readers
  */
 
-// Variable ids are persistent once created
-// Attribute ids can change if one deletes attributes
 namespace dg
 {
 namespace file
 {
-/**
- * @addtogroup Input
- * @{
- */
 
 ///@cond
 namespace detail
@@ -183,7 +177,11 @@ void get_vara_detail(int ncid, int varid, unsigned slice,
 ///@endcond
 
 /**
-* @brief Convenience wrapper around \c nc_get_var
+ * @addtogroup legacy
+ * @{
+ */
+/**
+* @brief DEPRECATED Convenience wrapper around \c nc_get_var
 *
 * The purpose of this function is mainly to simplify input in an MPI environment and to provide
 * the same interface also in a shared memory system for uniform programming.
@@ -211,7 +209,7 @@ void get_var( int ncid, int varid, const Topology& grid,
 }
 
 /**
-* @brief Convenience wrapper around \c nc_get_vara()
+* @brief DEPRECATED Convenience wrapper around \c nc_get_vara()
 *
 * The purpose of this function is mainly to simplify input in an MPI environment and to provide
 * the same interface also in a shared memory system for uniform programming.
@@ -243,7 +241,7 @@ void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
 // scalar data
 
 /**
- * @brief Read a scalar from the netcdf file
+ * @brief DEPRECATED Read a scalar from the netcdf file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
  * @tparam T Determines data type to read
@@ -264,7 +262,7 @@ void get_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
     err = detail::get_var_T( ncid, varid, &data);
 }
 /**
- * @brief Read a scalar to the netcdf file
+ * @brief DEPRECATED Read a scalar to the netcdf file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
  * @tparam T Determines data type to read
@@ -289,6 +287,7 @@ void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>&
     err = detail::get_vara_T( ncid, varid, &start, &count, &data);
 }
 
+///@}
 
 ///@cond
 #ifdef MPI_VERSION
@@ -326,6 +325,5 @@ void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_typ
 #endif //MPI_VERSION
 ///@endcond
 
-///@}
 }//namespace file
 }//namespace dg

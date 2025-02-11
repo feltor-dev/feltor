@@ -13,12 +13,13 @@
 
 #include "dg/algorithm.h"
 
+static double function( double x, double y){ return sin(x)*sin(y);}
 static double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
 static double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 static double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
 
-/// [doxygen]
+/// [record]
 std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::CartesianGrid3d&,double),
     dg::file::LongNameAttribute>> records = {
     {"vectorX", "X-component of vector",
@@ -40,7 +41,7 @@ std::vector<dg::file::Record<void(dg::x::DVec&,const dg::x::CartesianGrid3d&,dou
         }
     }
 };
-/// [doxygen]
+/// [record]
 
 TEST_CASE( "Input Output test of the NcFile class")
 {
@@ -84,6 +85,7 @@ TEST_CASE( "Input Output test of the NcFile class")
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         file.open( "test.nc", mode);
+        //! [check_dim]
         // This is how to fully check a dimension
         std::map<std::string, int> map {{"x",0}, {"y",1}, {"z", 2}};
         for( auto str : map)
@@ -97,6 +99,7 @@ TEST_CASE( "Input Output test of the NcFile class")
             double result = sqrt(dg::blas1::dot( test, test));
             CHECK( result < 1e-15);
         }
+        //! [check_dim]
     }
     SECTION( "Test record variables")
     {
@@ -117,6 +120,7 @@ TEST_CASE( "Input Output test of the NcFile class")
     }
     SECTION( "Variables can be written intermittently")
     {
+        // ! [def_dimvar]
         file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
         file.def_var_as<double>( "Energy", {"time"}, {{"long_name", "Energy"}});
         for( unsigned i=0; i<=6; i++)
@@ -125,6 +129,7 @@ TEST_CASE( "Input Output test of the NcFile class")
             if( i%2 == 0)
                 file.put_var( "Energy", {i}, i);
         }
+        // ! [def_dimvar]
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         file.open( "test.nc", mode);
@@ -162,6 +167,7 @@ TEST_CASE( "Input Output test of the NcFile class")
         dg::x::DVec result = dg::evaluate( dg::zero, grid);
         dg::x::DVec tmp = dg::evaluate( dg::zero, grid_out);
 
+        //! [put_var]
         typename dg::file::NcFile::Hyperslab slab{grid_out};
 
         for(unsigned i=0; i<2; i++)
@@ -177,6 +183,7 @@ TEST_CASE( "Input Output test of the NcFile class")
                 file.put_var( record.name, {i, slab}, tmp);
             }
         }
+        //! [put_var]
 
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
@@ -254,5 +261,79 @@ TEST_CASE( "Input Output test of the NcFile class")
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
 #endif
+}
+TEST_CASE( "Documentation")
+{
+    //! [ncfile]
+    // This example compiles in both serial and MPI environments
+#ifdef WITH_MPI
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1, 1});
+#endif
+    // Open file and put some attributes
+    dg::file::NcFile file( "test.nc", dg::file::nc_clobber);
+    file.put_att( {"title", "Hello world"});
+    file.put_att( {"truth", 42});
 
+    //![defput_dim]
+    // Generate a grid
+    const double x0 = 0., x1 = 2.*M_PI;
+    dg::x::CartesianGrid2d grid( x0,x1,x0,x1,3,10,10
+#ifdef WITH_MPI
+    , comm
+#endif
+    );
+    // and put dimensions to file
+    file.defput_dim( "x", {{"axis", "X"},
+        {"long_name", "x-coordinate in Cartesian system"}},
+        grid.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"},
+        {"long_name", "y-coordinate in Cartesian system"}},
+        grid.abscissas(1));
+    //![defput_dim]
+    //! [defput_var]
+    // Generate some data and write to file
+    dg::x::HVec data = dg::evaluate( function, grid);
+    // Defne and write a variable in one go
+    file.defput_var( "variable", {"y", "x"},
+                {{"long_name", "A long explanation"}, {"unit", "m/s"}},
+                grid, data);
+    //! [defput_var]
+
+    // Generate an unlimited dimension and define another variable
+    file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+    file.def_var_as<double>( "dependent", {"time", "y", "x"},
+        {{"long_name", "Really interesting"}});
+    // Write timeseries
+    for( unsigned u=0; u<=2; u++)
+    {
+        double time = u*0.01;
+        file.put_var("time", {u}, time);
+        // We can write directly from GPU
+        dg::x::DVec data = dg::evaluate( function, grid);
+        dg::blas1::scal( data, cos(time));
+        file.put_var( "dependent", {u, grid}, data);
+    }
+    file.close();
+
+    // Open file for reading
+    file.open( "test.nc", dg::file::nc_nowrite);
+    std::string title = file.get_att_as<std::string>( "title");
+    //![get_var]
+    // In MPI all ranks automatically get the right chunk of data
+    file.get_var( "variable", grid, data);
+    //![get_var]
+    //![get_dim_size]
+    unsigned NT = file.get_dim_size( "time");
+    CHECK( NT == 3);
+    //![get_dim_size]
+    double time;
+    file.get_var( "time", {0}, time);
+    file.close();
+    //! [ncfile]
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Barrier( MPI_COMM_WORLD);
+#endif
+    DG_RANK0 std::filesystem::remove( "test.nc");
 }

@@ -20,16 +20,8 @@
  * The define_dimensions functions
  */
 
-// TODO DEPRECATED!?
 namespace dg
 {
-/**
-* @brief Namespace for NetCDF output related classes and functions following the
- <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html">CF-conventions</a>
- and
- <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">NetCDF conventions</a>
- @sa @ref json and @ref netcdf
-*/
 namespace file
 {
 
@@ -87,7 +79,7 @@ inline void assign_defaults( std::vector<std::string>& name_dims, const std::vec
 } // namespace detail
 ///@endcond
 
-///@addtogroup Dimensions
+///@addtogroup legacy
 ///@{
 
 /**

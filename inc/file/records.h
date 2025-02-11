@@ -22,16 +22,19 @@ struct get_first_argument_type<R(Arg1, A...)>
 }//namespace detail
 ///@endcond
 /// If <tt> Signature = R(Arg1, A...)</tt> return \c Arg1
+/// @ingroup netcdf
 template<class Signature>
 using get_first_argument_type_t = std::decay_t<typename detail::get_first_argument_type<Signature>::type>;
 
 /// If <tt> Signature = R(Arg1, A...)</tt> return \c R
+/// @ingroup netcdf
 template<class Signature>
 using get_result_type_t = typename std::function<Signature>::result_type;
 
 /*!@brief Facilitate construction of CF attribute "long_name"  in records lists
  *
  * @sa Can be used as the \c Attributes class in \c dg::file::Record
+ * @ingroup netcdf
  */
 struct LongNameAttribute
 {
@@ -55,11 +58,12 @@ struct LongNameAttribute
  * @brief A realisation of the %Record concept. Helper to generate NetCDF variables.
  *
  * Supposed to be used to generate variable lists to write to NetCDF
- * @snippet netcdf_t.cpp doxygen
+ * @snippet nc_utilities_t.cpp record
    @tparam SignatureType Signature of the callable function
    @tparam Attributes Type of the attributes list, needs to be Iterable i.e.
    \c begin() and \c end() (e.g. \c dg::file::LongNameAttribute)
    @sa For the list of recommended variable attributes see <a href="https://docs.unidata.ucar.edu/netcdf-c/current/attribute_conventions.html">Attribute Convenctions</a>
+   @ingroup netcdf
  */
 template<class SignatureType, class Attributes = std::map<std::string, nc_att_t>>
 struct Record

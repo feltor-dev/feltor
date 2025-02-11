@@ -21,7 +21,7 @@ namespace file{
  * @sa <a href="https://docs.unidata.ucar.edu/netcdf-c/4.9.2/programming_notes.html">specify a hyperslab</a>
  *
  * @copydoc hide_dimension_order
- * @ingroup Cpp
+ * @ingroup netcdf
  */
 struct NcHyperslab
 {
@@ -81,7 +81,7 @@ struct NcHyperslab
      * @tparam Topology Topolgy::start() and *::count() need to return an
      * iterable that can be used to construct <tt> std::vector<size_t></tt>
      * @param grid explicitly set start and count
-     * @param copdoc hide_dimension_order
+     * @copydoc hide_dimension_order
      */
     template<class Topology, std::enable_if_t<
         !dg::is_vector_v<Topology>, bool> = true>
@@ -145,7 +145,7 @@ struct NcHyperslab
  * in \c file.communicator() actually hold relevant data.
  *
  * @copydetails NcHyperslab
- * @ingroup Cpp
+ * @ingroup netcdf
  */
 struct MPINcHyperslab
 {
@@ -214,7 +214,7 @@ struct MPINcHyperslab
      * MPITopology.communicator() needs to return the communicator of ranks
      * that hold data
      * @param grid explicitly set start and count and comm
-     * @param copdoc hide_dimension_order
+     * @copydoc hide_dimension_order
      */
     template<class MPITopology, std::enable_if_t<!dg::is_vector_v<MPITopology>,
     bool> = true>
@@ -230,7 +230,6 @@ struct MPINcHyperslab
     {
     }
     /*! @brief <tt>{start0, MPINcHyperslab( param).start()}, {count0, MPINcHyperslab(param).count(), MPINcHyperslab.communicator()}</tt>
-     * grid.communicator()</tt>
      *
      * @tparam MPITopology MPITopolgy::start() and *::count() need to return an
      * iterable that can be used to construct <tt>std::vector<size_t></tt>
@@ -250,28 +249,29 @@ struct MPINcHyperslab
         m_slab.count().insert( m_slab.count().begin(), count0);
     }
 
-    ///@copdoc NcHyperslab::ndim()
+    ///@copydoc NcHyperslab::ndim()
     unsigned ndim() const { return m_slab.ndim();}
 
-    ///@copdoc NcHyperslab::start()
+    ///@copydoc NcHyperslab::start()
     const std::vector<size_t>& start() const { return m_slab.start();}
-    ///@copdoc NcHyperslab::count()
+    ///@copydoc NcHyperslab::count()
     const std::vector<size_t>& count() const { return m_slab.count();}
-    ///@copdoc NcHyperslab::start()
+    ///@copydoc NcHyperslab::start()
     std::vector<size_t>& start() { return m_slab.start();}
-    ///@copdoc NcHyperslab::count()
+    ///@copydoc NcHyperslab::count()
     std::vector<size_t>& count() { return m_slab.count();}
     /// @return MPI Communicator specifying participating ranks
     MPI_Comm communicator() const { return m_comm;}
-    ///@copdoc NcHyperslab::startp()
+    ///@copydoc NcHyperslab::startp()
     const size_t* startp() const { return m_slab.startp();}
-    ///@copdoc NcHyperslab::countp()
+    ///@copydoc NcHyperslab::countp()
     const size_t* countp() const { return m_slab.countp();}
     private:
     NcHyperslab m_slab;
     MPI_Comm m_comm;
 };
 
+///@cond
 namespace detail
 {
 /**
@@ -303,6 +303,7 @@ inline int mpi_comm_global2local_rank( MPI_Comm comm, int global_rank = 0, MPI_C
     return local_root_rank;
 }
 } // namespace detail
+///@endcond
 #endif
 
 }//namespace file

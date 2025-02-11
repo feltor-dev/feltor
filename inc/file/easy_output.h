@@ -16,14 +16,12 @@
  * Define variable writers
  */
 
-// Variable ids are persistent once created
-// Attribute ids can change if one deletes attributes
 namespace dg
 {
 namespace file
 {
 /**
- * @addtogroup Output
+ * @addtogroup legacy
  * @{
  * @class hide_tparam_host_vector
  * @tparam host_vector For shared Topology: Type with \c data() member that
@@ -261,7 +259,7 @@ void put_vara_detail(int ncid, int varid, unsigned slice,
 
 /**
 *
-* @brief Write an array to NetCDF file
+* @brief DEPRECATED Write an array to NetCDF file
 *
 * Convenience wrapper around \c nc_put_var
 *
@@ -291,7 +289,7 @@ void put_var( int ncid, int varid, const Topology& grid,
 }
 
 /**
-* @brief Write an array to NetCDF file
+* @brief DEPRECATED Write an array to NetCDF file
 *
 * Convenience wrapper around \c nc_put_vara
 *
@@ -326,7 +324,7 @@ void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
 // scalar data
 
 /**
- * @brief Write a scalar to the NetCDF file
+ * @brief DEPRECATED Write a scalar to the NetCDF file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
  * @tparam T Determines data type to write
@@ -347,7 +345,7 @@ void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
     err = detail::put_var_T( ncid, varid, &data);
 }
 /**
- * @brief Write a scalar to the NetCDF file
+ * @brief DEPRECATED Write a scalar to the NetCDF file
  *
  * @note This function throws a \c dg::file::NC_Error if an error occurs
  * @tparam T Determines data type to write
@@ -372,6 +370,7 @@ void put_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>&
     err = detail::put_vara_T( ncid, varid, &start, &count, &data);
 }
 
+///@}
 
 ///@cond
 #ifdef MPI_VERSION
@@ -433,6 +432,5 @@ void put_vara_double(int ncid, int varid, unsigned slice, const Topology& grid,
 }
 ///@endcond
 
-///@}
 }//namespace file
 }//namespace dg

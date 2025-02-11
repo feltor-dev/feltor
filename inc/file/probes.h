@@ -37,14 +37,13 @@ namespace file
  * writes happen only when calling \c flush
  * @note in an MPI program all processes in the \c file.communicator() have to
  * create the class and call its methods.
- * @copydoc hide_tparam_topology
  * @note It is the topology of the simulation grid that is needed here, i.e.
  * the Topology **from which** to interpolate, not the topology of the 1d probe
  * array. The class automatically constructs the latter itself.
  * @attention Because the paraview NetCDF reader is faulty, it is recommended that
  * \c Probes is constructed only after all other root dimensions in the file
  * are defined. This is because of the dimension numbering in NetCDF-4.
- * @ingroup Cpp
+ * @ingroup probes
  */
 template<class NcFile, class Topology>
 struct Probes
@@ -53,8 +52,9 @@ struct Probes
     /**
      * @brief Construct from parameter struct
      *
-     * @param ncid NetCDF id; a "probes" group will be generated that contains all fields this class writes to file
-     * (probe dimensions are called "ptime" and "pdim"). The file must be open.
+     * @param file NetCDF file; a "probes" group will be generated in the
+     * current group that contains all fields this class writes to file (probe
+     * dimensions are called "ptime" and "pdim"). The file must be open.
      * @param grid The interpolation matrix is generated with the \c grid and \c params.coords . \c grid.ndim
      * must equal \c param.coords.size()
      * @param params Typically read in from file with \c dg::file::parse_probes

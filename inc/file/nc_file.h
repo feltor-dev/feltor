@@ -20,66 +20,11 @@ namespace dg
 {
 namespace file
 {
-/*! @class hide_atts_NetCDF_example
- * @code{.cpp}
-    dg::file::NcFile file( "atts.nc", dg::file::nc_clobber);
-
-    std::map<std::string, dg::file::nc_att_t> atts;
-    atts["text"] = "Hello World!";
-    atts["number"] = 3e-4;
-    atts["int"] = -1;
-    atts["uint"] = 10;
-    atts["bool"] = true;
-    atts["realarray"] = std::vector{-1.1, 42.3};
-    file.put_atts( atts);
-    // OR
-    file.put_att( {"text", "Hello World!"});
-    file.put_att( {"number", 3e-4});
-    file.close();
-
-    // read attributes back
-
-    file.open( "atts.nc", dg::file::nc_nowrite);
-    auto read = file.get_atts( );
-    // read and atts are the same now
-
-    bool is_true = std::get<bool>(read["bool"]);
-    double number = std::get<double>(read["number"]);
-    // OR
-    is_true = file.get_att_as<bool>( "bool");
-    number = file.get_att_as<double>( "number");
-    file.close();
- * @endcode
- */
 /*! @class hide_grps_NetCDF_example
  * Groups can be thought of as directories in a NetCDF-4 file and we therefore
  * use \c std::filesystem::path and use bash equivalent operations to
  * manipulate them
- * @code{.cpp}
-    dg::file::NcFile file( "grps.nc", dg::file::nc_clobber);
-    // mkdir subgroup
-    file.def_grp( "subgrp");
-    // cd subgroup
-    file.set_grp( "subgrp");
-    // mkdir -p
-    file.def_grp_p("/subgrp/subgrp2/subgrp3/subgrp4");
-    assert( file.grp_is_defined( "/subgrp/subgrp2/subgrp3"));
-
-    // cd ..
-    file.set_grp(".."); // go to parent group
-    // cd
-    file.set_grp(); // go to root group
-
-    // mv subgrp sub
-    file.rename_grp( subgrp, sub);
-
-    // ls
-    auto subgrps = file.get_grps()
-    // ls -R
-    auto allgrps = file.get_grps_r()
-
-    file.close();
- * @endcode
+ * @snippet{trimleft} nc_file_t.cpp groups
  */
 /*! @class hide_dimension_hiding
  *
@@ -138,7 +83,7 @@ namespace file
 @code{.cpp}
 auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
 @endcode
-@ingroup Cpp
+@ingroup utilities
 */
 enum NcFileMode
 {
@@ -153,26 +98,27 @@ enum NcFileMode
  * Our take on a modern C++ implementation of
 <a href="https://docs.unidata.ucar.edu/netcdf-c/4.9.2/netcdf_data_model.html">the NetCDF-4 data model</a>
  *
- * The class hides all integer ids that the NetCDF C-library uses
- * ("Ids do not exist in the Netcdf-4 data model!")
+ * See here a usage example
+ * @snippet nc_utilities_t.cpp ncfile
  *
  * @note This is a singleton that cannot be copied/assigned but only
  * moved/move-assign
- *
  * @note Only Netcdf-4 files are supported
- *
+ * @note The class hides all integer ids that the NetCDF C-library uses
+ * ("Ids do not exist in the Netcdf-4 data model!")
  * @note Most member functions will throw if they are called on a closed file
  * @sa Conventions to follow are the
  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html">CF-conventions</a>
  and
  <a href="https://docs.unidata.ucar.edu/nug/current/best_practices.html">netCDF conventions</a>
- * @ingroup Cpp
+ * @ingroup ncfile
 */
 struct SerialNcFile
 {
     using Hyperslab = NcHyperslab;
     // ///////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
     /// Construct a File Handle not associated to any file
+    /// @snippet{trimleft} nc_file_t.cpp default
     SerialNcFile () = default;
     /*!
      * @brief Open/Create a netCDF file.
@@ -182,6 +128,8 @@ struct SerialNcFile
      * std::filesystem::current_path()
      * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
      * nc_noclobber)
+     *
+     * @snippet{trimleft} nc_file_t.cpp constructor
      * @sa NcFileMode
      */
     SerialNcFile(const std::filesystem::path& filename,
@@ -206,7 +154,7 @@ struct SerialNcFile
     SerialNcFile& operator =(SerialNcFile && rhs) = default;
 
     /// @brief Close open nc file and release all resources
-    /// @note A destructor never throws any errors so we / will just print a
+    /// @note A destructor never throws any errors and we will just print a
     /// warning to \c std::cerr if something goes wrong
     ~SerialNcFile()
     {
@@ -231,6 +179,8 @@ struct SerialNcFile
      * nc_noclobber)
      * @note Just like \c std::fstream opening fails if a file is already
      * associated (\c is_open()) \c close() it before opening a new file.
+     *
+     * @snippet{trimleft} nc_file_t.cpp default
     */
     void open(const std::filesystem::path& filename,
             enum NcFileMode mode = nc_nowrite)
@@ -264,6 +214,7 @@ struct SerialNcFile
         m_grp = m_ncid;
     }
     /// Check if a file is associated (i.e. it is open)
+    /// @snippet{trimleft} nc_file_t.cpp default
     bool is_open() const noexcept
     {
         // is_closed() == not is_open()
@@ -276,6 +227,7 @@ struct SerialNcFile
      * released. After closing a new file can be associated to this handle
      * again.
      *
+     * @snippet{trimleft} nc_file_t.cpp default
      * @note This function may throw
      */
     void close()
@@ -301,7 +253,8 @@ struct SerialNcFile
     /*! @brief Get the \c ncid of the underlying NetCDF C-API
      *
      * Just if for whatever reason you want to call a NetCDF C-function
-     * yourself
+     * yourself ... just don't use it for something nasty, like
+     * closing the file or whatever
      */
     int get_ncid() const noexcept{ return m_ncid;}
 
@@ -409,6 +362,7 @@ struct SerialNcFile
         }
     }
     /// rename a subgroup in the current group from \c old_name to \c new_name
+    /// @copydoc hide_grps_NetCDF_example
     void rename_grp( std::string old_name, std::string new_name)
     {
         check_open();
@@ -491,6 +445,7 @@ struct SerialNcFile
     }
     /*! @brief Get the size of the dimension named \c name
      *
+     * @snippet{trimleft} nc_utilities_t.cpp get_dim_size
      * @note The size of an unlimited dimension is the maximum of the sizes
      * of all variables that share this dimension.
      * @copydoc hide_unlimited_issue
@@ -523,6 +478,7 @@ struct SerialNcFile
      * @param include_parents per default the parent groups will be included in
      * the search for dimensions, if \c false they are excluded
      * @return All visible dimension names. Hidden names do not appear.
+     * @snippet{trimleft} nc_file_t.cpp get_dims
      */
     std::vector<std::string> get_dims( bool include_parents = true) const
     {
@@ -581,6 +537,7 @@ struct SerialNcFile
     }
 
     /// Check for existence of the dimension named \c name
+    /// @snippet{trimleft} nc_utilities_t.cpp check_dim
     bool dim_is_defined( std::string name) const
     {
         int dimid=0;
@@ -589,7 +546,8 @@ struct SerialNcFile
     }
     /////////////// Attributes setters
     /*! @brief Put an individual attribute
-     * @copydoc hide_atts_NetCDF_example
+     * @snippet{trimleft} nc_file_t.cpp put_att
+     * @param att Attribute consisting of name and value
      * @param id Variable name in the current group or empty string, in which
      * case the attribute refers to the current group
      * @copydoc hide_attributes_overwrite
@@ -603,9 +561,11 @@ struct SerialNcFile
     /*! @brief Put an individual attribute of preset type to variable id
      * @tparam S std::string or const char*
      * @tparam T Cannot be an nc_att_t
+     * @param att Attribute consisting of name, type and value
      * @param id Variable name in the current group or empty string, in which
      * case the attribute refers to the current group
      * @copydoc hide_attributes_overwrite
+     * @snippet{trimleft} nc_file_t.cpp put_att_x
      */
     template<class S, class T> // T cannot be nc_att_t
     void put_att( const std::tuple<S,nc_type, T>& att, std::string id = "")
@@ -616,7 +576,7 @@ struct SerialNcFile
     /*! @brief Write a collection of attributes to a NetCDF variable or file
      *
      * Example code
-     * @copydoc hide_atts_NetCDF_example
+     * @snippet{trimleft} nc_file_t.cpp put_atts
      * @note boolean values are mapped to byte NetCDF attributes (0b for true,
      * 1b for false)
      * @tparam Attributes Any \c Iterable whose values can be used in \c put_att
@@ -638,7 +598,6 @@ struct SerialNcFile
 
     /*! @brief Get an attribute named \c att_name of the group or variable \c id
      *
-     * @copydoc hide_atts_NetCDF_example
      * @tparam T Any type in \c dg::file::nc_att_t or \c nc_att_t
      * in which case the type specific nc attribute getters are called
      * or \c std::vector<type> in which case the general \c nc_get_att is called
@@ -646,6 +605,7 @@ struct SerialNcFile
      * case the attribute refers to the current group
      * @param att_name Name of the attribute
      * @return Attribute cast to type \c T
+     * @snippet{trimleft} nc_file_t.cpp put_att_x
      */
     template<class T>
     T get_att_as(std::string att_name, std::string id = "") const
@@ -664,7 +624,6 @@ struct SerialNcFile
     /*! @brief Read all NetCDF attributes of a certain type
      *
      * For example
-     * @copydoc hide_atts_NetCDF_example
      * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
      * @return A Dictionary containing all the attributes of a certain type
      * for the variable or file. Can be empty if no attribute is present.
@@ -682,6 +641,7 @@ struct SerialNcFile
     }
 
     /// Short for <tt> get_atts_as<nc_att_t>( id) </tt>
+    /// @snippet{trimleft} nc_file_t.cpp put_atts
     std::map<std::string, nc_att_t> get_atts( std::string id = "") const
     {
         return get_atts_as<nc_att_t>( id);
@@ -689,10 +649,13 @@ struct SerialNcFile
 
     /*!
      * @brief Remove an attribute named \c att_name from variable \c id
+     * @param att_name Attribute to delete
      * @param id Variable name in the current group or empty string, in which
      * case the attributes refer to the current group
      * @note Attributes are the only thing you can delete in a NetCDF file.
      * You cannot delete variables or dimensions or groups
+     *
+     * @snippet{trimleft} nc_file_t.cpp del_att
      */
     void del_att(std::string att_name, std::string id = "")
     {
@@ -702,6 +665,7 @@ struct SerialNcFile
         err = nc_del_att( m_grp, varid, name);
     }
     /// Check for existence of the attribute named \c att_name in variable \c id
+    /// @snippet{trimleft} nc_file_t.cpp del_att
     bool att_is_defined(std::string att_name, std::string id = "") const
     {
         int varid = name2varid( id);
@@ -710,6 +674,7 @@ struct SerialNcFile
         return retval == NC_NOERR;
     }
     /// Rename an attribute
+    /// @snippet{trimleft} nc_file_t.cpp rename_att
     void rename_att(std::string old_att_name, std::string
             new_att_name, std::string id = "")
     {
@@ -730,6 +695,8 @@ struct SerialNcFile
      * @copydoc hide_dimension_hiding
      * @tparam T set the type of the variable
      * @param atts Attributes to put for the variable
+     *
+     * @snippet{trimleft} nc_file_t.cpp def_var_as
      */
     template<class T, class Attributes = std::map<std::string, nc_att_t>>
     void def_var_as( std::string name,
@@ -773,6 +740,8 @@ struct SerialNcFile
      * @param data to write. Size must be at least that of the slab
      * @copydoc hide_container_type
      * @copydoc hide_unlimited_issue
+     *
+     * @snippet{trimleft} nc_utilities_t.cpp put_var
      */
     template<class ContainerType, std::enable_if_t< dg::is_vector_v<
         ContainerType, SharedVectorTag>, bool > = true>
@@ -801,9 +770,7 @@ struct SerialNcFile
     /*! @brief Define and put a variable in one go
      *
      * Very convenient to "just write" a variable to a file:
-     * @code{.cpp}
-     * file.defput_var( "var", {"y", "x"}, {}, {g2d}, result);
-     * @endcode
+     * @snippet{trimleft} nc_utilities_t.cpp defput_var
      *
      * Short for
      *@code{.cpp}
@@ -828,6 +795,8 @@ struct SerialNcFile
      * data to
      * @param data to write
      * @tparam T must be convertible to the datatype of the variable \c name
+     *
+     * @snippet{trimleft} nc_utilities_t.cpp def_dimvar
      * @copydoc hide_unlimited_issue
      */
     template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
@@ -853,9 +822,7 @@ struct SerialNcFile
      * recognize the dimension as the time axis
      * @note This function is mainly intended to define an unlimited dimension
      * as in
-     * @code{.cpp}
-     * file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
-     * @endcode
+     * @snippet{trimleft} nc_utilities_t.cpp def_dimvar
      * @copydoc hide_unlimited_issue
      * @copydoc hide_dimension_hiding
      */
@@ -877,12 +844,9 @@ struct SerialNcFile
      * @param abscissas values to write to the dimension variable (the
      * dimension size is inferred from \c abscissas.size() and the type is
      * inferred from \c ContainerType
-     * @note This function is mainly intended to define a dimension from a grid
+     * @note This function is mainly intended to define dimensions from a grid
      * as in
-     * @code{.cpp}
-     * file.defput_dim( "x", {{"axis", "X"}, {"long_name", "x-coordinate in
-     * Cartesian grid"}, grid.abscissas(0));
-     * @endcode
+     * @snippet{trimleft} nc_utilities_t.cpp defput_dim
      * @copydoc hide_container_type
      */
     template<class ContainerType, class Attributes = std::map<std::string, nc_att_t>>
@@ -898,6 +862,7 @@ struct SerialNcFile
     /*! @brief Read hyperslab \c slab from variable named \c name into
      * container \c data
      *
+     * @snippet{trimleft} nc_utilities_t.cpp get_var
      * @param name of previously defined variable
      * @param slab Hyperslab to read
      * @param data Result on output
@@ -929,6 +894,7 @@ struct SerialNcFile
 
     /*! @brief Read scalar from position \c start from variable named \c name
      *
+     * @snippet{trimleft} nc_file_t.cpp get_var
      * @param name of previously defined variable
      * @param start coordinate to take scalar from (can be empty for scalar
      * variable)
@@ -953,6 +919,7 @@ struct SerialNcFile
     }
 
     /// Check if variable named \c name is defined in the current group
+    /// @snippet{trimleft} nc_file_t.cpp var_is_defined
     bool var_is_defined( std::string name) const
     {
         check_open();
@@ -962,6 +929,7 @@ struct SerialNcFile
     }
 
     /// Get the NetCDF typeid of the variable named \c name
+    /// @snippet{trimleft} nc_file_t.cpp get_var_type
     nc_type get_var_type(std::string name) const
     {
         int varid = name2varid( name);
@@ -972,6 +940,7 @@ struct SerialNcFile
     }
     /*! @brief Get the dimension names associated to variable \c name
      *
+     * @snippet{trimleft} nc_file_t.cpp get_var_dims
      * @param name of the variable
      * @return list of dimension names associated with variable
      * @copydoc hide_dimension_hiding
@@ -1003,15 +972,9 @@ struct SerialNcFile
      *
      * We use \c std::list here because of how easy it is
      * to sort or filter elemenets there
-     * For example to get a list of names with 2 dimensions
-     * @code{.cpp}
-     * auto pred = [&file](std::stringn name) {
-     *     return file.get_var_dims(name).size() != 2;
-     * };
-     * auto names2d = file.get_var_names( );
-     * names2d.remove_if( pred);
-     * @endcode
-     * @return lits of variables name that fulfill \c pred
+     * For example
+     * @snippet{trimleft} nc_file_t.cpp get_var_names
+     * @return list of variable names in current group
      */
     std::list<std::string> get_var_names() const
     {
@@ -1022,6 +985,8 @@ struct SerialNcFile
     private:
     int name2varid( std::string id) const
     {
+        // Variable ids are persistent once created
+        // Attribute ids can change if one deletes attributes
         // This is fast even for lots variables (1000 vars take <ms)
         check_open();
         NC_Error_Handle err;
@@ -1120,7 +1085,7 @@ struct SerialNcFile
 
 #ifndef MPI_VERSION
 /// Convenience typedef for platform independent code
-/// @ingrpup Cpp
+/// @ingroup ncfile
 using NcFile = SerialNcFile;
 #endif // MPI_VERSION
 

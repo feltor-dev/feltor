@@ -45,7 +45,7 @@ struct NC_Error : public std::exception
 };
 
 /**
- * @brief Empty utitlity class that handles return values of netcdf
+ * @brief DEPRECATED Empty utitlity class that handles return values of netcdf
  * functions and throws NC_Error(status) if( status != NC_NOERR)
  *
  * For example
@@ -64,7 +64,7 @@ struct NC_Error : public std::exception
  * @endcode
  *
  * This allows for a C++ style error handling of netcdf errors in that the program either terminates if the NC_Error is not caught or does something graceful in a try catch statement.
- * @ingroup netcdf
+ * @ingroup legacy
  */
 struct NC_Error_Handle
 {

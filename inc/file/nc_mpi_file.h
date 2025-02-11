@@ -30,6 +30,9 @@ namespace file
  * If \c nc_nowrite the reads are parallel and involve no MPI communication, otherwise
  * all data is communicated to/from rank 0.
  *
+ * See here an example of its use
+ * @snippet nc_utilities_t.cpp ncfile
+ *
  * @note When compiling you thus need to link only to the normal **serial**
  * NetCDF-C library, **not parallel** NetCDF
  * @attention All ranks in the communicator \c comm given in the constructor
@@ -37,7 +40,7 @@ namespace file
  * e.g. the data to write only lies distributed only on a subgroup of ranks.
  * If an error occurs **all participating ranks will throw**!
  * @sa SerialNcFile
- * @ingroup Cpp
+ * @ingroup ncfile
  */
 struct MPINcFile
 {
@@ -45,6 +48,7 @@ struct MPINcFile
     // ///////////////////////////// CONSTRUCTORS/DESTRUCTOR /////////
     /*! @brief Construct a File Handle not associated to any file
      *
+     * @snippet{trimleft} nc_file_t.cpp default
      * @param comm All ranks in comm must participate in all subsequent member
      * function calls
      */
@@ -246,13 +250,13 @@ struct MPINcFile
         mpi_invoke_void( [this]( auto&&...xs) { m_file.put_att(
             std::forward<decltype(xs)>(xs)...);}, att, id);
     }
-    ///@copydoc SerialNcFile::put_att<S,T>
+    ///@copydoc SerialNcFile::put_att(const std::tuple<S,nc_type,T>&,std::string)
     template<class S, class T>
     void put_att( const std::tuple<S,nc_type, T>& att, std::string id = "")
     {
         mpi_invoke_void( &SerialNcFile::put_att<S,T>, m_file, att, id);
     }
-    ///@copydoc SerialNcFile::put_atts(std::string,const Iterable&)
+    ///@copydoc SerialNcFile::put_atts(const Attributes&,std::string)
     template<class Attributes = std::map<std::string, nc_att_t> > // *it must be usable in put_att
     void put_atts( const Attributes& atts, std::string id = "")
     {
@@ -288,9 +292,9 @@ struct MPINcFile
     }
 
     ///@copydoc SerialNcFile::del_att
-    void del_att( std::string att, std::string id = "")
+    void del_att( std::string att_name, std::string id = "")
     {
-        mpi_invoke_void( &SerialNcFile::del_att, m_file, att, id);
+        mpi_invoke_void( &SerialNcFile::del_att, m_file, att_name, id);
     }
     ///@copydoc SerialNcFile::att_is_defined
     bool att_is_defined( std::string att_name, std::string id = "") const
@@ -406,7 +410,7 @@ struct MPINcFile
         put_var( name, {abscissas}, abscissas);
     }
 
-    ///@copydoc SerialNcFile::get_var(std::string,const NcHyperslab&,ContainerType&,ContainerType&)
+    ///@copydoc SerialNcFile::get_var(std::string,const NcHyperslab&,ContainerType&)const
     /// @note The comm in \c MPINcHyperslab must be at least a subgroup of \c communicator()
     /// @note The \c ContainerType in MPI can have either a \c dg::SharedVectorTag or \c dg::MPIVectorTag
     template<class ContainerType, typename = std::enable_if_t<
@@ -454,7 +458,7 @@ struct MPINcFile
         }
     }
 
-    ///@copydoc SerialNcFile::get_var(std::string,const std::vector<size_t>&,T&)
+    ///@copydoc SerialNcFile::get_var(std::string,const std::vector<size_t>&,T&)const
     template<class T, typename = std::enable_if_t<dg::is_scalar_v<T>> >
     void get_var( std::string name, const std::vector<size_t>& start, T& data) const
     {
@@ -661,7 +665,8 @@ struct MPINcFile
 };
 
 /// Convenience typedef for platform independent code
-/// @ingrpup Cpp
+/// If \c MPI_VERSION is defined, expands to \c dg::file::MPINcFile else to \c dg::file::SerialNcFile
+/// @ingroup ncfile
 using NcFile = MPINcFile;
 
 }// namespace file

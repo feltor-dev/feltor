@@ -11,7 +11,7 @@ INCLUDE+= -I../    # other project libraries
 TARGETS=easy_dims_t\
 easy_output_t\
 nc_file_t\
-netcdf_t\
+nc_utilities_t\
 probes_parser_t\
 probes_t\
 jsoncpp_wrapper_t\
@@ -21,7 +21,7 @@ easy_atts_t
 TARGETSMPI=easy_dims_mpit\
 easy_output_mpit\
 nc_file_mpit\
-netcdf_mpit\
+nc_utilities_mpit\
 probes_parser_mpit\
 probes_mpit
 
