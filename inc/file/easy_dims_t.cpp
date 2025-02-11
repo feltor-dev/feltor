@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 #include <string>
 #include <netcdf.h>
 #include <cmath>
@@ -16,24 +17,14 @@
 TEST_CASE( "Easy dims")
 {
 #ifdef WITH_MPI
-    MPI_Barrier( MPI_COMM_WORLD);
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    MPI_Comm comm;
     //create a grid and some data
-    int dims[3] = {0,0,0};
-    MPI_Dims_create( size, 3, dims);
-    std::stringstream ss;
-    ss<< dims[0]<<" "<<dims[1]<<" "<<dims[2];
-    dg::mpi_init3d( dg::PER, dg::PER, dg::PER, comm, ss);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1, 1, 1});
 #endif
-#ifdef WITH_MPI
-    std::string filename = "dimsmpi.nc";
-#else
     std::string filename = "dims.nc";
-#endif
-    INFO( "WRITE AND CHECK A COUPLE OF DIMENSIONS IN "
+    INFO( "Write and check a couple of dimensions in "
                        << filename<<"\n");
     double x0 = 0., x1 = 2.*M_PI;
     dg::x::CartesianGrid3d grid( x0,x1,x0,x1,x0,x1,3,10,10,20
@@ -71,4 +62,5 @@ TEST_CASE( "Easy dims")
     }
 
     DG_RANK0 err = nc_close(ncid);
+    DG_RANK0 std::filesystem::remove( filename);
 }

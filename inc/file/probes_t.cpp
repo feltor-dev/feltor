@@ -172,9 +172,6 @@ TEST_CASE( "Probes")
         }
     }
 
-
-
-
-
     file.close();
+    DG_RANK0 std::filesystem::remove( "probes.nc");
 }
