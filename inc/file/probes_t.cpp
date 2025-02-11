@@ -44,23 +44,36 @@ static std::vector<dg::file::Record<void( dg::x::HVec&, const dg::x::Grid2d&),
     }
 };
 
-// TODO More precise test
 TEST_CASE( "Probes")
 {
+    using namespace Catch::Matchers;
 #ifdef WITH_MPI
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1, 1});
 #endif
-    auto js_direct = dg::file::file2Json("probes_direct.json");
+    std::string json = R"unique({
+        "probes":
+        {
+            "input" : "coords",
+            "coords" :
+            {
+                "coords-names" : ["x", "y"],
+                "format" : {},
+                "x" : [0,1,2,3],
+                "y" : [0,1,2,3]
+            }
+        }
+    })unique";
+    auto js_direct = dg::file::string2Json(json);
     auto params = dg::file::parse_probes( js_direct);
 
     INFO("Write a time-dependent vector field and probe data to netcdf4 file "
                        << "probes.nc");
     dg::file::NcFile file( "probes.nc", dg::file::nc_clobber);
     double x0 = 0., x1 = 2.*M_PI;
-    dg::x::Grid2d grid( x0,x1,x0,x1,3,100,100, dg::PER, dg::PER
+    dg::x::Grid2d grid( x0,x1,x0,x1,5,25,25, dg::PER, dg::PER
 #ifdef WITH_MPI
     , comm
 #endif
@@ -115,6 +128,52 @@ TEST_CASE( "Probes")
         //write time
         file.put_var( "time", {i}, time);
     }
+    file.close();
+    file.open( "probes.nc", dg::file::nc_nowrite);
+    REQUIRE(file.grp_is_defined( "probes"));
+    file.set_grp( "probes");
+    CHECK( file.att_is_defined( "format"));
+    std::list<std::string> names  = {"x", "y", "vectorX", "vectorY", "Sine", "Cosine"};
+    for( auto name : names)
+    {
+        INFO( "Checking "<<name);
+        CHECK( file.var_is_defined( name));
+        CHECK( file.att_is_defined( "long_name", name));
+    }
+    auto dims = file.get_var_dims( "x");
+    CHECK( file.get_dim_size( dims[0]) == 4);
+    CHECK( file.dim_is_defined( "ptime"));
+    CHECK( file.get_dim_size( "ptime") == NT+1);
+    double point, x, y;
+    for( unsigned u=0; u<4; u++)
+    {
+        file.get_var("x", {u}, x);
+        CHECK( x == u);
+        file.get_var("y", {u}, y);
+        CHECK( y == u);
+
+        file.get_var("Sine", {u}, point);
+        INFO( "Sine "<<point<<" "<<sin(x)*sin(y)<<" "<<point - sin(x)*sin(y));
+        CHECK( fabs( point - sin(x)*sin(y) ) < 1e-7);
+
+        file.get_var("Cosine", {u}, point);
+        INFO( "Cosine "<<point<<" "<<cos(x)*cos(y)<<" "<<point - cos(x)*cos(y));
+        CHECK_THAT( point, WithinAbs( cos(x)*cos(y) , 1e-7));
+        for( unsigned k=0; k<NT; k++)
+        {
+            double time = k*dt;
+            file.get_var( "ptime", {k}, point);
+            INFO( "Time "<<time<<" "<<point);
+            CHECK( time == point);
+            file.get_var("vectorX", {k,u}, point);
+            CHECK_THAT( point, WithinAbs( gradientX(x,y)*cos(time), 1e-7));
+            file.get_var("vectorY", {k,u}, point);
+            CHECK_THAT( point, WithinAbs( gradientY(x,y)*cos(time), 1e-7));
+        }
+    }
+
+
+
 
 
     file.close();

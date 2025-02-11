@@ -89,7 +89,8 @@ struct Probes
         for( unsigned i=0; i<params.coords.size(); i++)
         {
             auto probes_vec = create_probes_vec( params.coords[0], grid);
-            file.defput_var( params.coords_names[i], {"pdim"}, {},
+            file.defput_var( params.coords_names[i], {"pdim"},
+                {{"long_name" , "Coordinate variable for probe position"}},
                 {probes_vec}, probes_vec);
         }
         file.set_grp("..");
