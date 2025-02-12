@@ -76,9 +76,12 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     //basically we check which direction is the largest and parallelize that one
     if(right_size==1)
     {
-    //trivial means that the data blocks do not change among rows
+    // trivial means that the data blocks do not change among rows
+    // that are not the first or the last row (where BCs usually live)
     bool trivial = true;
-    for( int i=1; i<num_rows-1; i++)
+    if( num_rows < 4) // need at least 3 rows for this to make sense
+        trivial = false;
+    for( int i=2; i<num_rows-1; i++)
         for( int d=0; d<blocks_per_line; d++)
         {
             if( data_idx[i*blocks_per_line+d]

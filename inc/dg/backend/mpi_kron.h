@@ -143,10 +143,7 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
         }
     }
     MPI_Comm newcomm;
-    int rr[3] = {remain_dims[0], remain_dims[1], remain_dims[2]};
-    MPI_Cartdim_get( comm, &ndims);
-    int err = MPI_Cart_sub( comm, rr, &newcomm);
-    //int err = MPI_Cart_sub( comm, &remain_dims[0], &newcomm);
+    int err = MPI_Cart_sub( comm, &remain_dims[0], &newcomm);
     if( err != MPI_SUCCESS)
         throw Error(Message(_ping_)<<
                 "Cannot create Cartesian sub comm from given communicator");

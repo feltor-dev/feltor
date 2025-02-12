@@ -47,7 +47,6 @@ TEST_CASE( "mpi filter")
         INFO( "Error by filtering: "<<error);
         CHECK( error < 1e-14);
     }
-    //MPI_Comm_free(&comm); // TODO Fix Segmentation fault without this line for unknown reasons!?
     SECTION( "Test 3d exponential filter")
     {
         MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});

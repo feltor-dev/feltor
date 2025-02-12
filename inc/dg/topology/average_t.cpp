@@ -98,16 +98,15 @@ TEST_CASE( "2d Average in x and y direction")
 
 TEST_CASE( "3d Average in x and z direction")
 {
-    // TODO something is wrong: Takes forever to run for more mpi processes
 #ifdef WITH_MPI
     int size;
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     std::vector<int> dims = {0,0,0};
     MPI_Dims_create( size, 3, &dims[0]);
-    //auto i = GENERATE( 0,1,2,3,4,5);
-    //std::sort( dims.begin(), dims.end());
-    //for( int u=0; u<i; u++)
-        // std::next_permutation( dims.begin(), dims.end());
+    auto i = GENERATE( 0,1,2,3,4,5);
+    std::sort( dims.begin(), dims.end());
+    for( int u=0; u<i; u++)
+         std::next_permutation( dims.begin(), dims.end());
     INFO( "Permutation of dims "<<dims[0]<<" "<<dims[1]<<" "<<dims[2]);
     MPI_Comm comm3d = dg::mpi_cart_create( MPI_COMM_WORLD, dims, {1, 1, 1});
 #endif
@@ -143,7 +142,6 @@ TEST_CASE( "3d Average in x and z direction")
         const dg::x::DVec w2d = dg::create::weights( gxy);
         dg::x::DVec solution = dg::evaluate( z_average, gxy);
         dg::blas1::axpby( 1., solution, -1., average_z);
-        // TODO update those values
         dg::exblas::udouble res;
         res.d = sqrt( dg::blas2::dot( average_z, w2d, average_z));
         INFO( "(Converges with 2nd order).");

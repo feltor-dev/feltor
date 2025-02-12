@@ -38,8 +38,6 @@ static double function3d( double x, double y, double z)
 //exblas::dot function are correctly implemented and compiled. Furthermore,
 //the compiler implementation of the exp function in the math library must
 //be consistent across platforms to get reproducible results
-//
-//TODO Fix: Fails for MPI
 
 TEST_CASE( "Evaluation")
 {
