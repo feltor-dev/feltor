@@ -11,7 +11,7 @@ namespace dg
 {
 namespace create
 {
-///@copydoc dg::create::prolongation
+// TODO document
 template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
@@ -23,7 +23,7 @@ dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
     return dg::MIHMatrix_t<real_type>( mat);
 }
 
-///@copydoc dg::create::reduction
+// TODO document
 template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> reduction(
@@ -39,7 +39,7 @@ dg::MIHMatrix_t<typename MPITopology::value_type> reduction(
     return {  mat, dg::mpi_cart_kron( comms) };
 }
 
-///@copydoc dg::create::projection(std::array<unsigned,Md>,const aRealTopologyNd<real_type,Nd>&)
+// TODO document
 template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> projection(

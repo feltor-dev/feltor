@@ -2,7 +2,7 @@
 ##Packages needed on linux for compilation of doxygen doc
 ##sudo apt install
 
-#doxygen >= 1.9.1
+#doxygen >= 1.12
 #libjs-mathjax (for nice mathematical formulas)
 #graphviz (for nice graphical nodes)
 #doxygen-awesome

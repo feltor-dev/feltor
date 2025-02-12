@@ -17,7 +17,7 @@ enums need to be included before this
 namespace dg
 {
 
-///@addtogroup mpi_structures
+///@addtogroup mpi_utility
 ///@{
 
 /**
@@ -75,6 +75,7 @@ inline void mpi_init( int argc, char* argv[])
  * @tparam T the type of value to read from \c is
  * @param num The number of values to read
  * @param comm The communicator to which to broadcast
+ * @param is Input stream rank 0 reads \c num parameters of type \c T from
  */
 template<class T>
 std::vector<T> mpi_read_as( unsigned num, MPI_Comm comm, std::istream& is = std::cin)
@@ -163,8 +164,9 @@ inline void mpi_read_grid( unsigned& n, std::vector<unsigned*> N, MPI_Comm comm,
  *   return comm_cart;
  * @endcode
  * @param comm_old input communicator (handle) (parameter used in \c MPI_Cart_create)
- * @param dims specify number of processes in each dimensions. (\c dims.size() determines \c ndims
- * parameter used in \c MPI_Cart_create)
+ * @param dims specify number of processes in each dimensions. (\c dims.size()
+ * determines \c ndims parameter used in \c MPI_Cart_create). Elements can be 0
+ * in which case a distribution is automatically chosen in that direction.
  * @param periods logical array of size \c ndims specifying whether the grid is
  * periodic (true) or not (false) in each dimension (parameter used in \c
  * MPI_Cart_create

@@ -12,16 +12,17 @@
 
 namespace dg{
 
+
 /**
 * @brief A square nxn matrix
 *
-* @ingroup densematrix
 * An enhanced square dynamic matrix
 * for which arithmetic operators are overloaded.
 * It is not meant for performance critical code but is very convenient
 * for example for the assembly of matrices.
 * @sa \c dg::create::inverse, \c dg::create::lu_pivot, \c dg::create::lu_solve
 * @tparam T value type
+* @ingroup operator
 */
 template< class T>
 class Operator
@@ -347,6 +348,9 @@ class Operator
 
 namespace create
 {
+///@addtogroup operator
+///@{
+
 /*! @brief LU Decomposition with partial pivoting
  *
  * @tparam T value type
@@ -356,7 +360,6 @@ namespace create
  * @return determinant of \c m
  * @note uses extended accuracy of \c dg::exblas which makes it quite robust
  * against almost singular matrices
- * @ingroup densematrix
  * @sa \c dg::create::lu_solve
  */
 template< class T>
@@ -424,7 +427,6 @@ T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
  * @param lu result of \c dg::create::lu_pivot
  * @param p pivot vector from \c dg::create::lu_pivot
  * @param b right hand side (contains solution on output)
- * @ingroup densematrix
  */
 template<class T>
 void lu_solve( const dg::Operator<T>& lu, const std::vector<unsigned>& p, std::vector<T>& b)
@@ -460,7 +462,6 @@ void lu_solve( const dg::Operator<T>& lu, const std::vector<unsigned>& p, std::v
  * @tparam T value type
  * @param in input matrix
  *
- * @ingroup densematrix
  * @return the inverse of in if it exists
  * @throw std::runtime_error if in is singular
  */
@@ -484,10 +485,6 @@ dg::Operator<T> inverse( const dg::Operator<T>& in)
     }
     return out;
 }
-
-///@addtogroup lowlevel
-///@{
-
 /**
  * @brief Create the unit matrix
  *
@@ -503,140 +500,6 @@ Operator<real_type> delta( unsigned n)
         op( i,i) = 1.;
     return op;
 }
-/**
- * @brief Create the S-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> pipj( unsigned n)
-{
-    Operator<real_type> op(n, 0);
-    for( unsigned i=0; i<n; i++)
-        op( i,i) = 2./(real_type)(2*i+1);
-    return op;
-}
-/**
- * @brief Create the T-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> pipj_inv( unsigned n)
-{
-    Operator<real_type> op(n, 0);
-    for( unsigned i=0; i<n; i++)
-        op( i,i) = (real_type)(2*i+1)/2.;
-    return op;
-}
-/**
- * @brief Create the D-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> pidxpj( unsigned n)
-{
-    Operator<real_type> op(n, 0);
-    for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
-        {
-            if( i < j)
-            {
-                if( (i+j)%2 != 0)
-                    op( i, j) = 2;
-            }
-        }
-    return op;
-}
-/**
- * @brief Create the R-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> rirj( unsigned n)
-{
-    return Operator<real_type>( n, 1.);
-}
-/**
- * @brief Create the RL-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> rilj( unsigned n)
-{
-    Operator<real_type> op( n, -1.);
-    for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
-            if( j%2 == 0)
-                op( i,j) = 1.;
-    return op;
-}
-/**
- * @brief Create the LR-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> lirj( unsigned n) {
-    return rilj<real_type>( n).transpose();
-}
-/**
- * @brief Create the L-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> lilj( unsigned n)
-{
-    Operator<real_type> op( n, -1.);
-    for( unsigned i=0; i<n; i++)
-        for( unsigned j=0; j<n; j++)
-            if( ((i+j)%2) == 0)
-                op( i,j) = 1.;
-    return op;
-}
-
-/**
- * @brief Create the N-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> ninj( unsigned n)
-{
-    Operator<real_type> op( n, 0.);
-    for( int i=0; i<(int)n; i++)
-        for( int j=0; j<(int)n; j++)
-        {
-            if( i == j+1)
-                op( i,j) = 2./(2*i+1)/(2*j+1);
-            if( i == j-1)
-                op( i,j) = -2./(2*i+1)/(2*j+1);
-        }
-    op(0,0) = 2;
-    return op;
-}
-
-
 /**
  * @brief Construct a diagonal operator with weights
  *
@@ -669,18 +532,109 @@ Operator<real_type> inv_weights( const DLT<real_type>& dlt)
         op(i,i) = 1./dlt.weights()[i];
     return op;
 }
+
+///@cond
+
+// S-matrix
+template<class real_type>
+Operator<real_type> pipj( unsigned n)
+{
+    Operator<real_type> op(n, 0);
+    for( unsigned i=0; i<n; i++)
+        op( i,i) = 2./(real_type)(2*i+1);
+    return op;
+}
+// T-matrix
+template<class real_type>
+Operator<real_type> pipj_inv( unsigned n)
+{
+    Operator<real_type> op(n, 0);
+    for( unsigned i=0; i<n; i++)
+        op( i,i) = (real_type)(2*i+1)/2.;
+    return op;
+}
+// D-matrix
+template<class real_type>
+Operator<real_type> pidxpj( unsigned n)
+{
+    Operator<real_type> op(n, 0);
+    for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            if( i < j)
+            {
+                if( (i+j)%2 != 0)
+                    op( i, j) = 2;
+            }
+        }
+    return op;
+}
+// R-matrix
+template<class real_type>
+Operator<real_type> rirj( unsigned n)
+{
+    return Operator<real_type>( n, 1.);
+}
+// RL-matrix
+template<class real_type>
+Operator<real_type> rilj( unsigned n)
+{
+    Operator<real_type> op( n, -1.);
+    for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+            if( j%2 == 0)
+                op( i,j) = 1.;
+    return op;
+}
+// LR-matrix
+template<class real_type>
+Operator<real_type> lirj( unsigned n) {
+    return rilj<real_type>( n).transpose();
+}
+// L-matrix
+template<class real_type>
+Operator<real_type> lilj( unsigned n)
+{
+    Operator<real_type> op( n, -1.);
+    for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+            if( ((i+j)%2) == 0)
+                op( i,j) = 1.;
+    return op;
+}
+
+// N-matrix
+template<class real_type>
+Operator<real_type> ninj( unsigned n)
+{
+    Operator<real_type> op( n, 0.);
+    for( int i=0; i<(int)n; i++)
+        for( int j=0; j<(int)n; j++)
+        {
+            if( i == j+1)
+                op( i,j) = 2./(2*i+1)/(2*j+1);
+            if( i == j-1)
+                op( i,j) = -2./(2*i+1)/(2*j+1);
+        }
+    op(0,0) = 2;
+    return op;
+}
+///@endcond
+
+
 ///@}
 }//namespace create
 
 
 ///@brief Alias for \c dg::create::inverse. Compute inverse of square matrix
 ///@copydetails dg::create::inverse(const dg::Operator<T>&)
-///@ingroup densematrix
+///@ingroup operator
 template<class T>
 dg::Operator<T> invert( const dg::Operator<T>& in)
 {
     return dg::create::inverse(in);
 }
+///@}
 
 } //namespace dg
 

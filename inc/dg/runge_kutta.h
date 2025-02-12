@@ -784,8 +784,8 @@ You can provide your own coefficients or use one of our predefined methods (incl
 The following code snippet demonstrates how to use the class for the integration of
 the harmonic oscillator:
 
-@snippet runge_kutta_t.cu function
-@snippet runge_kutta_t.cu doxygen
+@snippet runge_kutta_t.cpp function
+@snippet runge_kutta_t.cpp doxygen
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType

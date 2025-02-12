@@ -752,7 +752,7 @@ inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const C
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to assign objects of Type \c ContainerType
  * @copydoc hide_ContainerType
- * @ingroup backend
+ * @ingroup utility
  */
 template<class from_ContainerType, class ContainerType, class ...Params>
 inline void assign( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
@@ -777,7 +777,7 @@ inline void assign( const from_ContainerType& from, ContainerType& to, Params&& 
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to construct objects of Type \c ContainerType
  * @copydoc hide_ContainerType
- * @ingroup backend
+ * @ingroup utility
  */
 template<class ContainerType, class from_ContainerType, class ...Params>
 inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
@@ -842,7 +842,7 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * @copydoc hide_ContainerType
  *
  * @sa dg::blas1::kronecker dg::mpi_cart_kron
- * @ingroup backend
+ * @ingroup utility
  */
 template<class ContainerType, class Functor, class ...ContainerTypes>
 auto kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)

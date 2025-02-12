@@ -7,7 +7,7 @@
 
 namespace dg{
 
-///@addtogroup sparsematrix
+///@addtogroup tridiagonal
 ///@{
 /*!@brief Fast (shared memory) tridiagonal sparse matrix
  *

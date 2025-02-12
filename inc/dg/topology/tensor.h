@@ -43,7 +43,7 @@ namespace dg
 * which in code can be assembled as
 * @snippet{trimleft} multiply_t.cpp sparse tensor
 * @tparam container must be default constructible and copyable.
-* @ingroup sparsematrix
+* @ingroup tensor
 * @sa dg::tensor
 */
 template<class container>

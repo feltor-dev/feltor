@@ -22,8 +22,8 @@ namespace dg
  * Computes \f[ \{f,g\} := \chi/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
  * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space and \f$ \chi\f$ is an optional factor.
  * If \f$ \chi=1\f$, then the discretization conserves, mass, energy and enstrophy.
- * @snippet arakawa_t.cu function
- * @snippet arakawa_t.cu doxygen
+ * @snippet arakawa_t.cpp function
+ * @snippet arakawa_t.cpp doxygen
  * @note This is the algorithm published in
  * <a href="https://doi.org/10.1016/j.cpc.2014.07.007">L. Einkemmer, M. Wiesenberger A conservative discontinuous Galerkin scheme for the 2D incompressible Navier-Stokes equations Computer Physics Communications 185, 2865-2873 (2014)</a>
  * @sa A discussion of this and other advection schemes can also be found here https://mwiesenberger.github.io/advection

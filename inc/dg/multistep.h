@@ -140,9 +140,9 @@ struct ExplicitMultistep
  * The necessary Inversion in the implicit part is provided by the \c Implicit class.
  *
  * The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
- * @snippet multistep_t.cu function
+ * @snippet multistep_t.cpp function
  * In the main function:
- * @snippet multistep_t.cu karniadakis
+ * @snippet multistep_t.cpp karniadakis
  * @note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms may significantly reduce the required number of time steps. This
 outweighs the increased computational cost of the additional matrix inversions.

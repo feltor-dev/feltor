@@ -218,7 +218,7 @@ class Elliptic1d
  @copydoc hide_note_jump
 
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
- * @snippet elliptic2d_b.cu pcg
+ * @snippet elliptic2d_b.cpp pcg
  * @copydoc hide_geometry_matrix_container
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.
@@ -542,7 +542,7 @@ using Elliptic = Elliptic2d<Geometry, Matrix, Container>;
 
 
  The following code snippet demonstrates the use of \c Elliptic3d in an inversion problem
- * @snippet elliptic_b.cu invert
+ * @snippet elliptic_b.cpp invert
  * @copydoc hide_geometry_matrix_container
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.

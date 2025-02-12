@@ -64,13 +64,13 @@ TEST_CASE( "2d Average in x and y direction")
         const dg::x::DVec vector = dg::evaluate( function ,g);
         dg::x::DVec average_y;
         pol( vector, average_y, false);
-        //![doxygen]
         const dg::x::DVec w1d = dg::create::weights( g.gx());
         dg::x::DVec solution = dg::evaluate( pol_average, g.gx());
         dg::blas1::axpby( 1., solution, -1., average_y);
         double res = sqrt( dg::blas2::dot( average_y, w1d, average_y));
         INFO("Distance to solution is: "<<res<<"\t(Should be 0)");
         CHECK_THAT( res, WithinAbs( 0.0, 1e-13));
+        //![doxygen]
     }
     SECTION( "TEST prolongation y")
     {

@@ -23,7 +23,7 @@ namespace dg
  * Computes \f[ \{f,g\} := \chi/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
  * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space and \f$ \chi\f$ is an optional factor.
  * Has the possitility to use mixed boundary conditions
- * @snippet poisson_t.cu doxygen
+ * @snippet poisson_t.cpp doxygen
  * @sa A discussion of this and other advection schemes can also be found here https://mwiesenberger.github.io/advection
  * @ingroup arakawa
  * @copydoc hide_geometry_matrix_container

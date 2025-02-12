@@ -58,7 +58,7 @@ void transpose( unsigned nx, unsigned ny, const ContainerType& in, ContainerType
  * element (does
  * not know about geometry)
  *
- * @snippet topology/average_t.cu doxygen
+ * @snippet topology/average_t.cpp doxygen
  * @ingroup utilities
  */
 template<class IMatrix, class ContainerType>

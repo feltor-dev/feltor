@@ -187,7 +187,7 @@ struct Tolerance
  *
  * For an example on how to use this class in a practical example consider the
  * following code snippet:
- * @snippet multistep_t.cu adaptive
+ * @snippet multistep_t.cpp adaptive
  * @copydoc hide_stepper
  * @note On step rejection, choosing timesteps and introducing restrictions on
  * the controller: here is a quote from professor G. Söderlind (the master of

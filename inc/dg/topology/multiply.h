@@ -184,6 +184,8 @@ struct TensorDeterminant3d
 };
 ///@}
 
+///@addtogroup tensor
+///@{
 /**
  * @namespace dg::tensor
  * @brief Utility functions used in connection with the SparseTensor class
@@ -192,8 +194,6 @@ struct TensorDeterminant3d
 namespace tensor
 {
 
-///@addtogroup tensor
-///@{
 
 /**
  * @brief \f$ t^{ij} = \mu t^{ij} \ \forall i,j \f$
@@ -574,7 +574,7 @@ void scalar_product3d(
             mu,
             w0, w1, w2);
 }
-///@}
 
 }//namespace tensor
+///@}
 }//namespace dg

@@ -492,7 +492,7 @@ void fmg_solve(
 * @note The preconditioner and weights for the \c dg::PCG solver are taken from the
 * \c precond() and \c weights() method in the \c MatrixType class
 *
-* @snippet elliptic2d_b.cu multigrid
+* @snippet elliptic2d_b.cpp multigrid
 * @copydoc hide_geometry_matrix_container
 * @sa \c Extrapolation to generate an initial guess
 */
