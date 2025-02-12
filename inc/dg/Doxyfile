@@ -1049,6 +1049,7 @@ EXCLUDE_SYMBOLS        = hide_*
 
 EXAMPLE_PATH           = andersonacc_t.cpp \
                          blas1_t.cpp \
+                         nullstelle_t.cpp \
                          cg2d_t.cpp \
                          arakawa_t.cpp \
                          poisson_t.cpp \
@@ -1061,6 +1062,7 @@ EXAMPLE_PATH           = andersonacc_t.cpp \
                          helmholtzg2_b.cpp \
                          topology/interpolation_t.cpp \
                          topology/average_t.cpp \
+                         topology/multiply_t.cpp \
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and
