@@ -4,63 +4,55 @@
  * classes defined and used by the discontinuous Galerkin library.
  */
 /*!
- * @defgroup backend Level 1: Vectors, Matrices and basic operations
+ * @defgroup level1 Level 1: Vectors, Matrices and basic operations
  * @{
- *     @defgroup blas Basic container independent subroutines
+ *    @defgroup blas1 BLAS level 1 routines: Vector-Vector
+ *    @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
- * These routines form the heart of our container free numerical algorithms.
- * They are called by all our numerical algorithms like conjugate gradient or
- * ODE integrators.
- *     @{
- *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
- *         @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
+ *      @note Successive calls to blas routines are executed sequentially
+ *      @note A manual synchronization of threads or devices is never needed in
+ *      an application using these functions. All functions returning a value
+ *      block until the value is ready.
+ *    @defgroup blas2 BLAS level 2 routines: Matrix-Vector
+ *    @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
- * @note Successive calls to blas routines are executed sequentially
- * @note A manual synchronization of threads or devices is never needed in an application
- * using these functions. All functions returning a value block until the value is ready.
- *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
- *         @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
+ *      @note Successive calls to blas routines are executed sequentially
+ *      @note A manual synchronization of threads or devices is never needed in an application
+ *      using these functions. All functions returning a value block until the value is ready.
+ *    @defgroup typedefs Useful Typedefs
+ *    @defgroup backend The Backend
+ *    @{
+ *        @defgroup sparsematrix Sparse matrix formats
+ *        @defgroup densematrix Dense matrix formats
+ *        @defgroup view Vector view
+ *        @defgroup mpi_structures MPI backend
  *
- * @note Successive calls to blas routines are executed sequentially
- * @note A manual synchronization of threads or devices is never needed in an application
- * using these functions. All functions returning a value block until the value is ready.
- *         @defgroup tensor Tensor-Vector operations
- *         @brief \f$ v^i = T^{ij} w_j\f$
- *
- * Although a tensor needs a topology to be well-defined mathematically,
- * we do not need a grid to perform basic operations computationally.
- * This is why the tensor operations can appear already in Level 1
- * of this library.
- *     @}
- *     @defgroup typedefs Useful Typedefs
- *     @defgroup sparsematrix Sparse matrix formats
- *     @defgroup densematrix Dense matrix formats
- *     @defgroup view Vector view
- *     @defgroup mpi_structures MPI backend
- *
- * In this section the blas functions are implemented for the MPI+X
- * hardware architectures, where X is e.g. CPU, GPU, accelerator
- * cards...
- * The general idea to achieve this is to separate global
- * communication from local computations and thus readily reuse the
- * existing, optimized library for the local part.
- *     @defgroup dispatch The tag dispatch system
- *     @{
- *          @defgroup traits All TensorTraits specialisations
- *     @}
+ *    In this section the blas functions are implemented for the MPI+X
+ *    hardware architectures, where X is e.g. CPU, GPU, accelerator
+ *    cards...
+ *    The general idea to achieve this is to separate global
+ *    communication from local computations and thus readily reuse the
+ *    existing, optimized library for the local part.
+ *        @defgroup dispatch The tag dispatch system
+ *        @{
+ *           @defgroup traits All TensorTraits specialisations
+ *        @}
+ *    @}
  * @}
- * @defgroup numerical0 Level 2: Basic numerical algorithms
+ * @defgroup lvevl2 Level 2: Basic numerical algorithms
  * @{
  *     @defgroup time ODE integration
  *     @brief \f$ \dot y = f(y,t) \f$
- *     @defgroup time_utils Utilities for ODE integrators
+ *     @{
+ *       @defgroup time_utils Utilities for ODE integrators
+ *     @}
  *     @defgroup integration Quadrature
  *     @brief \f$ \int_{t_0}^T u(t) dt \f$
  *     @defgroup extrapolation Extrapolation
  *     @defgroup invert Linear and nonlinear solvers
  *     @brief Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
  * @}
- * @defgroup geo Level 3: Topology and Geometry
+ * @defgroup level3 Level 3: Topology and Geometry
  * @{
  *     @defgroup grid Topological grids and operations
  *
@@ -99,6 +91,9 @@
  * These routines form the heart of our geometry free numerical algorithms.
  * They are called by our geometric operators like the Poisson bracket.
  *     @{
+ *         @defgroup tensor Tensor-Vector operations
+ *         @brief \f$ v^i = T^{ij} w_j\f$
+ *
  *         @defgroup basicgeometry Geometry base classes
  *         @defgroup pullback pullback and pushforward
  *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
@@ -109,7 +104,7 @@
  *     @defgroup fem Finite Element Methods
  *     @defgroup gridtypes Useful Typedefs
  * @}
- * @defgroup numerical1 Level 4: Advanced numerical schemes
+ * @defgroup lvel4 Level 4: Advanced numerical schemes
  *
  * These routines make use of both the basic operations as well as the
  * interfaces defined in the Geometry section.
@@ -121,7 +116,7 @@
  *     @defgroup multigrid Multigrid matrix inversion
  *     @brief \f$ A x = b\f$
  * @}
- * @defgroup misc Level 0: Miscellaneous additions
+ * @defgroup misc Level 99: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
  *     @brief  t.tic(); t.toc(); t.diff();
