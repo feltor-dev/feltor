@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 
+#include "../backend/typedefs.h"
 #include "tensor.h"
 #include "multiply.h"
 
@@ -18,7 +19,7 @@ std::vector<double> line_element( const dg::SparseTensor<container >& t)
 }
 
 
-TEST_CASE( "Sparse Tensor")
+TEST_CASE( "dg::tensor")
 {
     const thrust::host_vector<double> one(1,1), two(1,2), three(1,3),
        four(1,4), five(1,5), six(1,6), seven(1,7), eight(1,8), nine(1,9),
@@ -124,5 +125,30 @@ TEST_CASE( "Sparse Tensor")
         double det2d = dg::tensor::determinant2d(t)[0];
         INFO( "Determinant2d of T: "<<det2d<<" (-36)");
         CHECK( det2d == -36);
+    }
+}
+
+TEST_CASE( "Documentation")
+{
+    SECTION( "SparseTensor")
+    {
+        //! [sparse tensor]
+        dg::SparseTensor<dg::HVec> metric; // allocate 3x3 index matrix
+        metric.idx(0,0) = 1, metric.idx(0,1) = 0, metric.idx(0,2) = 0;
+        metric.idx(1,0) = 0, metric.idx(1,1) = 2, metric.idx(1,2) = 0;
+        metric.idx(2,0) = 0, metric.idx(2,1) = 0, metric.idx(2,2) = 3;
+        std::vector<dg::HVec> values( 4);
+        values[0] = dg::HVec( 100, 0);   // the zero element
+        values[1] = dg::HVec( 100, 20.); // construct gxx element
+        values[2] = dg::HVec( 100, 30.); // construct gyy element
+        values[3] = dg::HVec( 100, 1.); // construct gzz element
+        metric.values() = values;
+        // then we can for example use dg::tensor functions:
+        dg::HVec det = dg::tensor::determinant( metric);
+        CHECK( det == dg::HVec( 100, 20*30));
+        // the individual elements can be accessed via the access operator
+        dg::HVec gxx = metric.value(0,0);
+        CHECK( gxx == dg::HVec( 100, 20));
+        //! [sparse tensor]
     }
 }

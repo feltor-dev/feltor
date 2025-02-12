@@ -23,7 +23,6 @@ TEST_CASE( "dg::SparseTensor")
     const thrust::host_vector<double> zero(0,10), one(1,10), two(1,20),
        three(1,30), four(1,40), five(1,50), six(1,60), seven(1,70),
        eight(1,80), nine(1,90);
-    // TODO What is the difference to multiply_t.cu
     dg::Grid2d grid( 0,1,0,1, 1, 10, 1); //grid with 10 elements
     dg::SparseTensor<thrust::host_vector<double> > dense2d(grid);
     dense2d.idx(0,0) = 0, dense2d.idx(0,1) = 1;
