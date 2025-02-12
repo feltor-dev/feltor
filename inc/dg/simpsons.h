@@ -10,24 +10,26 @@
 namespace dg{
 
 /**
-* @brief Time integration based on Simpson's rule
-*
-* The intention of this class is to provide a means to continuously
-* integrate a sample of \f$( t_i, u_i)\f$ pairs that become available
-* one after the
-* other (e.g. from the integration of an ODE) and approximate
-*
- \f[ \int_{t_0}^T u(t) dt \f]
-
- @note The algorithm simply integrates the Lagrange-polynomial through up to three data points. For equidistant Data points this equals either the Trapezoidal (linear) or the Simpson's rule (quadratic)
-* @sa For an explanation of Simpson's rule: https://en.wikipedia.org/wiki/Simpson%27s_rule
-
-The class works by first calling the init function to set the left-side
-boundary and then adding values as they become available.
-* @snippet simpsons_t.cu docu
-* @copydoc hide_ContainerType
-* @ingroup integration
-*/
+ * @brief Time integration based on Simpson's rule
+ *
+ * The intention of this class is to provide a means to continuously
+ * integrate a sample of \f$( t_i, u_i)\f$ pairs that become available
+ * one after the
+ * other (e.g. from the integration of an ODE) and approximate
+ *
+ * \f[ \int_{t_0}^T u(t) dt \f]
+ *
+ * @note The algorithm simply integrates the Lagrange-polynomial through up to three data points. For equidistant Data points this equals either the Trapezoidal (linear) or the Simpson's rule (quadratic)
+ * @sa For an explanation of Simpson's rule: https://en.wikipedia.org/wiki/Simpson%27s_rule
+ *
+ * The class works by first calling the \c init function to set the left-side
+ * boundary and then adding values as they become available.
+ * Calling the \c flush member resets the integral to 0 and the right boundary as
+ * the new left boundary
+ * @snippet{trimleft} simpsons_t.cpp docu
+ * @copydoc hide_ContainerType
+ * @ingroup integration
+ */
 template<class ContainerType>
 struct Simpsons
 {
@@ -82,7 +84,7 @@ struct Simpsons
      */
     void add( value_type t_new, const ContainerType& u_new){
         if( t_new < m_t.front())
-            throw dg::Error(dg::Message()<<"New time must be strictly larger than old time!");
+            throw dg::Error(dg::Message()<<"New time must be strictly larger than old time (or you forgot to call the init function)!");
         auto pt0 = m_t.begin();
         auto pt1 = std::next( pt0);
         auto pu0 = m_u.begin();
