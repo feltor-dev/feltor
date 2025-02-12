@@ -319,5 +319,262 @@ TEST_CASE("blas1")
         CHECK( equal_rec( w22[0], value_type(13)));
         CHECK( equal_rec( w22[1], value_type(13)));
     }
+
 }
+#ifndef WITH_MPI
+TEST_CASE( "Documentation")
+{
+    SECTION( "vdot")
+    {
+        //! [vdot]
+        dg::DVec two( 100,2), three(100,3);
+        int result = dg::blas1::vdot([] DG_DEVICE( double x, double y){
+            return int(x*x*y);}, two, three);
+        CHECK( result == 1200); //100*(2*2*3)
+        //! [vdot]
+    }
+    SECTION( "dot")
+    {
+        //! [dot]
+        dg::DVec two( 100,2), three(100,3);
+        int result = dg::blas1::dot(two, three);
+        CHECK( result == 600); //100*(2*3)
+        //! [dot]
+
+    }
+    SECTION( "reduce")
+    {
+        //! [reduce nan]
+        //Check if a vector contains Inf or NaN
+        thrust::device_vector<double> x( 100, NAN );
+        bool hasnan = false;
+        hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
+            dg::ISNFINITE<double>());
+        CHECK( hasnan == true);
+        //! [reduce nan]
+        //! [reduce min]
+        // Find minimum and maximum of a vector
+        for( int u=0; u<100; u++)
+            x[u] = (double)(u-10)*(u-10);
+        // Notice the zero elements of the min and max functions
+        double min = dg::blas1::reduce( x, +1e308, thrust::minimum<double>());
+        double max = dg::blas1::reduce( x, -1e308, thrust::maximum<double>());
+        CHECK( min == 0);
+        CHECK( max == 89*89);
+        //! [reduce min]
+    }
+    SECTION( "copy")
+    {
+        //! [copy]
+        dg::DVec two( 100,2), two_copy(100);
+        dg::blas1::copy( two, two_copy);
+        CHECK( two_copy == two);
+        //! [copy]
+    }
+    SECTION( "scal")
+    {
+        //! [scal]
+        dg::DVec two( 100,2);
+        dg::blas1::scal( two, 0.5);
+        CHECK( two == dg::DVec( 100, 1));
+        //! [scal]
+    }
+    SECTION( "plus")
+    {
+        //! [plus]
+        dg::DVec two( 100,2);
+        dg::blas1::plus( two, 3.);
+        CHECK( two == dg::DVec( 100, 5.));
+        //! [plus]
+    }
+    SECTION( "axpby")
+    {
+        //! [axpby]
+        dg::DVec two( 100,2), three(100,3);
+        dg::blas1::axpby( 2, two, 3., three);
+        CHECK( three == dg::DVec( 100, 13.)); // 2*2+3*3
+        //! [axpby]
+    }
+    SECTION( "axpbypgz")
+    {
+        //! [axpbypgz]
+        dg::DVec two(100,2), five(100,5), result(100, 12);
+        dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
+        CHECK( result == dg::DVec( 100, -21.)); // 2.5*2+2*5-3*12
+        //! [axpbypgz]
+    }
+    SECTION( "axpbyz")
+    {
+        //! [axpbyz]
+        dg::DVec two( 100,2), three(100,3), result(100);
+        dg::blas1::axpby( 2, two, 3., three, result);
+        CHECK( result == dg::DVec( 100, 13.)); // 2*2+3*3
+        //! [axpbyz]
+    }
+    SECTION( "pointwiseDot")
+    {
+        //! [pointwiseDot]
+        dg::DVec two( 100,2), three( 100,3), result(100,6);
+        dg::blas1::pointwiseDot(2., two,  three, -4., result );
+        CHECK( result == dg::DVec( 100, -12.)); // 2*2*3-4*6
+        //! [pointwiseDot]
+    }
+    SECTION( "pointwiseDot 2")
+    {
+        //! [pointwiseDot 2]
+        dg::DVec two( 100,2), three( 100,3), result(100);
+        dg::blas1::pointwiseDot( two,  three, result );
+        CHECK( result == dg::DVec( 100, 6.)); // 2*3
+        //! [pointwiseDot 2]
+    }
+    SECTION( "pointwiseDot 3")
+    {
+        //! [pointwiseDot 3]
+        dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
+        dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
+        CHECK( result == dg::DVec( 100, 24.)); // 2*2*3*4-4*6
+        //! [pointwiseDot 3]
+    }
+    SECTION( "pointwiseDot 4")
+    {
+        //! [pointwiseDot 4]
+        dg::DVec two(100,2), three(100,3), four(100,4), five(100,5), result(100,6);
+        dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
+        CHECK( result == dg::DVec( 100, -56.)); // 2*2*3-4*4*5+2*6
+        //! [pointwiseDot 4]
+    }
+    SECTION( "pointwiseDivide")
+    {
+        //! [pointwiseDivide]
+        dg::DVec two( 100,2), three( 100,3), result(100,1);
+        dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
+        CHECK( result == dg::DVec( 100, 7.)); // 3*2/3+5*1
+        //! [pointwiseDivide]
+    }
+    SECTION( "pointwiseDivide 2")
+    {
+        //! [pointwiseDivide 2]
+        dg::DVec two( 100,2), three( 100,3), result(100);
+        dg::blas1::pointwiseDivide( two,  three, result );
+        CHECK( result == dg::DVec( 100, 2./3.));
+        //! [pointwiseDivide 2]
+    }
+    SECTION( "transform")
+    {
+        //! [transform]
+        dg::DVec two( 100,2), result(100);
+        dg::blas1::transform( two, result, dg::EXP<double>());
+        CHECK( result == dg::DVec( 100, exp(2.)));
+        //! [transform]
+    }
+    SECTION( "evaluate")
+    {
+        //! [evaluate]
+        auto function = [](double x, double y){
+            return sin(x)*sin(y);
+        };
+        dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
+        dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
+        CHECK( result == dg::HVec( 20, -1.)); // sin(M_PI/2.)*sin(3*M_PI/2.) = -1
+        //! [evaluate]
+    }
+    SECTION( "subroutine")
+    {
+        //! [subroutine]
+        struct Routine{
+            DG_DEVICE
+            void operator()( double x, double y, double& z){
+               z = 7*x+y + z ;
+            }
+        } routine;
+        dg::DVec two( 100,2), four(100,4);
+        dg::blas1::subroutine( routine, two, 3., four);
+        CHECK( four == dg::HVec( 100, 21.)); // 7*2+3+4
+        //! [subroutine]
+    }
+    SECTION( "kronecker")
+    {
+        //! [kronecker]
+        auto function = []( double x, double y) {
+            return x+y;
+        };
+        std::vector<double> xs{1,2,3,4}, ys{ 10,20,30,40}, y(16, 0);
+        dg::blas1::kronecker( y, dg::equals(), function, xs, ys);
+        // Note how xs varies fastest in result:
+        std::vector<double> result = { 11,12,13,14,21,22,23,24,31,32,33,34,41,42,43,44};
+        CHECK( y == result);
+
+        // Note that the following code is equivalent
+        // but that dg::blas1::kronecker has a performance advantage since
+        // it never explicitly forms XS or YS
+        std::vector<double> XS(16), YS(16);
+        for( unsigned i=0; i<4; i++)
+        for( unsigned k=0; k<4; k++)
+        {
+            XS[i*4+k] = xs[k];
+            YS[i*4+k] = ys[i];
+        }
+        dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
+        CHECK( y == result);
+
+        // Finally, we could also write
+        dg::blas1::kronecker( XS, dg::equals(), []( double x, double y){ return x;}, xs, ys);
+        dg::blas1::kronecker( YS, dg::equals(), []( double x, double y){ return y;}, xs, ys);
+        dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
+        CHECK( y == result);
+        //! [kronecker]
+    }
+    SECTION( "dg kronecker")
+    {
+        //! [dg kronecker]
+        auto function = []( double x, double y) {
+            return x+y;
+        };
+        std::vector<double> xs{1,2,3,4}, ys{ 10,20,30,40};
+        auto y = dg::kronecker( function, xs, ys);
+        // Note how xs varies fastest in result:
+        std::vector<double> result = { 11,12,13,14,21,22,23,24,31,32,33,34,41,42,43,44};
+        CHECK( y == result);
+        //! [dg kronecker]
+    }
+    SECTION( "assign")
+    {
+        //! [assign]
+        dg::HVec host( 100, 1.);
+        dg::DVec device(100);
+        dg::assign( host, device );
+        CHECK( device == dg::DVec( 100, 1.));
+
+        //let us construct a std::vector of 3 dg::DVec from a host vector
+        std::vector<dg::DVec> device_vec;
+        dg::assign( host, device_vec, 3);
+        REQUIRE( device_vec.size() == 3);
+        for( unsigned u=0; u<3; u ++)
+            CHECK( device_vec[u] == device);
+        //! [assign]
+    }
+    SECTION( "construct")
+    {
+        //! [construct]
+        dg::HVec host( 100, 1.);
+        auto device = dg::construct<dg::DVec>( host );
+        CHECK( device == dg::DVec( 100, 1.));
+
+        auto device_arr = dg::construct<std::array<dg::DVec, 3>>( host );
+        for( unsigned u=0; u<3; u ++)
+            CHECK( device_arr[u] == device);
+
+        //let us construct a std::vector of 3 dg::DVec from a host vector
+        auto device_vec = dg::construct<std::vector<dg::DVec>>( host, 3);
+        REQUIRE( device_vec.size() == 3);
+        for( unsigned u=0; u<3; u++)
+            CHECK( device_vec[u] == device);
+
+        // Can also be used to change value type, e.g. complex:
+        auto complex_dev = dg::construct<dg::cDVec>( host );
+        CHECK( complex_dev == dg::cDVec( 100, thrust::complex<double>(1.)));
+        //! [construct]
+    }
+}
+#endif
 

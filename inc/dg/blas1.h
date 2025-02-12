@@ -61,12 +61,8 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
  * This routine computes \f[ \sum_i f(x_{0i}, x_{1i}, ...)\f]
  * @copydoc hide_iterations
  *
-For example
-@code{.cpp}
-dg::DVec two( 100,2), three(100,3);
-int result = dg::blas1::dot([] DG_DEVICE( double x, double y){ return int(x*x*y);}, two, three);
-// result = 1200 (100*(2*2*3))
-@endcode
+ * For example
+ * @snippet{trimleft} blas1_t.cpp vdot
  * @note The main motivator for this version of \c dot is that it works for complex numbers.
  * @attention if one of the input vectors contains \c Inf or \c NaN or the
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
@@ -130,11 +126,8 @@ auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
  * @copydoc hide_iterations
  *
-For example
-@code{.cpp}
-dg::DVec two( 100,2), three(100,3);
-double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
-@endcode
+ * For example
+ * @snippet{trimleft} blas1_t.cpp dot
  * @attention if one of the input vectors contains \c Inf or \c NaN or the
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
  * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
@@ -185,24 +178,10 @@ inline auto dot( const ContainerType1& x, const ContainerType2& y)
  * which means that the associated reduction looses precision due to inexact arithmetic. For binary reproducible exactly rounded results use the dg::blas1::dot function.
  * However, this function is more general and faster to execute than dg::blas1::dot.
 
-For example
-@code{.cpp}
-//Check if a vector contains Inf or NaN
-thrust::device_vector<double> x( 100);
-bool hasnan = false;
-hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
-    dg::ISNFINITE<double>());
-std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
-@endcode
-or finding minimum / maximum
-@code{.cpp}
-// Find minimum and maximum of a vector
-thrust::device_vector<double> x( 100);
-// ... fill x with values
-double min = dg::blas1::reduce( x, +1e308, thrust::minimum<double>());
-double max = dg::blas1::reduce( x, -1e308, thrust::maximum<double>());
-// Notice the zero elements of the min and max functions
-@endcode
+ * For example
+ * @snippet{trimleft} blas1_t.cpp reduce nan
+ * or
+ * @snippet{trimleft} blas1_t.cpp reduce min
  * @param x Container to reduce
  * @param zero The neutral element with respect to binary_op that is
  * <tt> x == binary_op( zero, x) </tt>. Determines the \c OutputType so make
@@ -245,6 +224,9 @@ inline OutputType reduce( const ContainerType& x, OutputType zero, BinaryOp
  *
  * explicit pointwise assignment \f$ y_i = x_i\f$
  * @copydoc hide_iterations
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp copy
  * @param source vector to copy
  * @param target (write-only) destination
  * @note in contrast to the \c dg::assign functions the \c copy function uses
@@ -265,11 +247,9 @@ inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
  *
  * This routine computes \f[ \alpha x_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2);
-dg::blas1::scal( two,  0.5 )); // result[i] = 1.
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp scal
  * @param alpha Scalar
  * @param x (read/write) x
  * @copydoc hide_naninf
@@ -287,11 +267,9 @@ inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
  *
  * This routine computes \f[ x_i + \alpha \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2);
-dg::blas1::plus( two,  3. )); // two[i] = 5.
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp plus
  * @param alpha Scalar
  * @param x (read/write) x
  * @copydoc hide_naninf
@@ -309,11 +287,9 @@ inline void plus( ContainerType& x, get_value_type<ContainerType> alpha)
  *
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three(100,3);
-dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp axpby
  * @param alpha Scalar
  * @param x ContainerType x may alias y
  * @param beta Scalar
@@ -340,12 +316,9 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two(100,2), five(100,5), result(100, 12);
-dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
-// result[i] = -21 (2.5*2+2*5-3*12)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp axpby
  * @param alpha Scalar
  * @param x ContainerType x may alias result
  * @param beta Scalar
@@ -388,11 +361,10 @@ inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1&
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three(100,3), result(100);
-dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp axpbyz
+ *
  * @param alpha Scalar
  * @param x ContainerType x may alias z
  * @param beta Scalar
@@ -412,12 +384,10 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  *
  * Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100,6);
-dg::blas1::pointwiseDot(2., two,  three, -4., result );
-// result[i] = -12. (2*2*3-4*6)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp pointwiseDot
+ *
  * @param alpha scalar
  * @param x1 ContainerType x1
  * @param x2 ContainerType x2 may alias x1
@@ -451,11 +421,10 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 *
 * Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100);
-dg::blas1::pointwiseDot( two,  three, result ); // result[i] = 6.
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDot 2
+*
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
 * @param y (write-only) ContainerType y contains result on output ( may alias x1 or x2)
@@ -473,12 +442,10 @@ inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, Co
 *
 * Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
-dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
-// result[i] = 24. (2*2*3*4-4*6)
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDot 3
+*
 * @param alpha scalar
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
@@ -504,12 +471,10 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 * Divides two vectors element by element: \f[ y_i = \alpha x_{1i}/x_{2i} + \beta y_i \f]
 
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100,1);
-dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
-// result[i] = 7 (3*2/3+5*1)
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDivide
+*
 * @param alpha scalar
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
@@ -538,12 +503,10 @@ inline void pointwiseDivide( get_value_type<ContainerType> alpha, const Containe
 *
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100);
-dg::blas1::pointwiseDivide( two,  three, result );
-// result[i] = -0.666... (2/3)
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDivide 2
+*
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
 * @param y  (write-only) ContainerType y contains result on output ( may alias x1 and/or x2)
@@ -561,12 +524,10 @@ inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2,
 *
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
-dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
-// result[i] = -56.
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDot 4
+*
 * @param alpha scalar
 * @param x1 ContainerType x1
 * @param y1 ContainerType y1
@@ -600,12 +561,10 @@ void pointwiseDot(  get_value_type<ContainerType> alpha, const ContainerType1& x
  *
  * This routine computes \f[ y_i = op(x_i) \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), result(100);
-dg::blas1::transform( two, result, dg::EXP<double>());
-// result[i] = 7.389056... (e^2)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp transform
+ *
  * @param x ContainerType x may alias y
  * @param y (write-only) ContainerType y contains result, may alias x
  * @param op unary %Operator to use on every element
@@ -625,14 +584,9 @@ inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
  * This routine elementwise evaluates \f[ f(g(x_{0i}, x_{1i}, ...), y_i) \f]
  * @copydoc hide_iterations
  *
-@code{.cpp}
-double function( double x, double y) {
-    return sin(x)*sin(y);
-}
-dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
-dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
-// result[i] = sin(M_PI/2.)*sin(3*M_PI/2.) = -1
-@endcode
+ * For example
+ * @snippet{trimleft} blas1_t.cpp evaluate
+ *
  * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
  * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
@@ -695,18 +649,9 @@ inline std::vector<int64_t> doDot_superacc( int * status, const ContainerType1& 
  * \f[ f(x_{0i}, x_{1i}, ...)  \f]
  * @copydoc hide_iterations
  *
-@code{.cpp}
-struct Routine{
-DG_DEVICE
-void operator()( double x, double y, double& z){
-   z = 7*x+y + z ;
-}
-};
-dg::DVec two( 100,2), four(100,4);
-dg::blas1::subroutine( Routine(), two, 3., four);
-// four[i] now has the value 21 (7*2+3+4)
-@endcode
-
+ * For example
+ * @snippet{trimleft} blas1_t.cpp subroutine
+ *
  * @param f the subroutine, see @ref variadic_subroutines for a collection of predefind subroutines to use here
  * @param x the first argument
  * @param xs other arguments
@@ -748,33 +693,11 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
  * The order of evaluations is undefined.
  * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
  *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp kronecker
+ *
  * @note This function is trivially parallel and the MPI version simply calls the appropriate shared memory version
  * The user is responsible for making sure that the result has the correct communicator
-@code{.cpp}
-double function( double x, double y) {
-    return x+y;
-}
-dg::HVec xs{1,2,3,4}, ys{ 10,20,30,40}, y(16, 0);
-dg::blas1::kronecker( y, dg::equals(), function, xs, ys);
-// y contains in order: 11,12,13,14,21,22,23,...,43,44
-
-// Note that the following code is equivalent
-dg::HVec XS(16), YS(16), y(16);
-for( unsigned i=0; i<4; i++)
-for( unsigned k=0; k<4; k++)
-{
-    XS[i*4+k] = xs[k];
-    YS[i*4+k] = ys[i];
-}
-dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
-// however dg::blas1::kronecker has a performance advantage since
-// it never explicitly forms XS or YS
-
-// Finally, we could also write
-dg::blas1::kronecker( XS, dg::equals(), []( double x, double y){ return x;}, xs, ys);
-dg::blas1::kronecker( YS, dg::equals(), []( double x, double y){ return y;}, xs, ys);
-dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
-@endcode
  * @note For the function \f$ f(x_0, x_1, ..., x_{n-1}) = x_0 x_1 ... x_{n-1} \f$ <tt> dg::blas1::kronecker(y, dg::equals(), x_0, x_1, ...) </tt>computes the actual Kronecker product of the arguments **in reversed order** \f[ y = x_{n-1} \otimes x_{n-2} \otimes ... \otimes x_1 \otimes x_0\f] (or the outer product)
  * With this behaviour we can in e.g. Cartesian coordinates naturally define functions \f$ f(x,y,z)\f$ and evaluate this function on product space coordinates and have **\f$ x \f$ as the fastest varying coordinate in memory**.
  *
@@ -820,14 +743,7 @@ inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const C
  * to achieve what you want.
 
  * For example
- * @code{.cpp}
-dg::HVec host( 100, 1.);
-dg::DVec device(100);
-dg::assign( host, device );
-//let us construct a std::vector of 3 dg::DVec from a host vector
-std::vector<dg::DVec> device_vec(3);
-dg::assign( host, device_vec, 3);
- * @endcode
+ * @snippet{trimleft} blas1_t.cpp assign
  * @param from source vector
  * @param to target vector contains a copy of \c from on output (memory is automatically resized if necessary)
  * @param ps additional parameters usable for the transfer operation
@@ -850,15 +766,9 @@ inline void assign( const from_ContainerType& from, ContainerType& to, Params&& 
  * The idea of this function is to convert between types with the same data
  * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector)
  * If the layout differs, additional parameters can be used to achieve what you want.
-
+ *
  * For example
- * @code{.cpp}
-dg::HVec host( 100, 1.);
-dg::DVec device = dg::construct<dg::DVec>( host );
-std::array<dg::DVec, 3> device_arr = dg::construct<std::array<dg::DVec, 3>>( host );
-//let us construct a std::vector of 3 dg::DVec from a host vector
-std::vector<dg::DVec> device_vec = dg::construct<std::vector<dg::DVec>>( host, 3);
- * @endcode
+ * @snippet{trimleft} blas1_t.cpp construct
  * @param from source vector
  * @param ps additional parameters necessary to construct a \c ContainerType object
  * @return \c from converted to the new format (memory is allocated accordingly)
@@ -915,6 +825,8 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * function is called.
  * .
  *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp dg kronecker
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
  * @attention \c Functor must be callable on the device in use. In particular,
  * with CUDA it must be a functor tpye (@b not a function) and its signature
