@@ -8,6 +8,13 @@
 
 namespace dg
 {
+/*! @class hide_mpi_cart_rationale
+ * @note The reason the dg library provides \c dg::mpi_cart_sub and \c
+ * dg::mpi_cart_kron is that unfortunately the MPI standard does not provide a
+ * way to form the Kronecker product of Cartesian communicators without
+ * manually tracking their parent Cartesian communicators.  However, this is
+ * needed in the \c dg::blas1::kronecker and \c dg::kronecker functions.
+ */
 ///@cond
 namespace detail{
 // I think the mpi registry should not be exposed to the User
@@ -59,14 +66,9 @@ inline void mpi_cart_register_cart( MPI_Comm comm)
 }
 }
 ///@endcond
-/*! @class hide_mpi_cart_rationale
- * @note The reason the dg library provides \c dg::mpi_cart_sub and \c
- * dg::mpi_cart_kron is that unfortunately the MPI standard does not provide a
- * way to form the Kronecker product of Cartesian communicators without
- * manually tracking their parent Cartesian communicators.  However, this is
- * needed in the \c dg::blas1::kronecker and \c dg::kronecker functions.
- */
 
+///@addtogroup mpi_utility
+///@{
 /*! @brief Manually register a call to \c MPI_Cart_sub with the dg library
  *
  * @param comm communicator with Cartesian structure (handle) (parameter used
@@ -76,7 +78,6 @@ inline void mpi_cart_register_cart( MPI_Comm comm)
  * have \c ndims entries. (parameter used in \c MPI_Cart_sub)
  * @param newcomm communicator containing the subgrid that includes the calling
  * process (handle) (parameter used in \c MPI_Cart_sub)
- * @ingroup mpi_structures
  * @copydoc hide_mpi_cart_rationale
  */
 inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
@@ -165,11 +166,13 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
  * remain_dims of the output is then the union of all \c remain_dims of the
  * inputs.
  *
+ * For example
+ * @snippet{trimleft} mpi_kron_mpit.cpp split and join
+ *
  * @attention The order of communicators matters. The function will not
  * transpose communicators
  * @param comms input communicators
  * @return Kronecker product of communicators
- * @ingroup mpi_structures
  * @copydoc hide_mpi_cart_rationale
  */
 inline MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
@@ -239,7 +242,8 @@ MPI_Comm mpi_cart_kron( Vector comms)
  *
  * using repeated calls to \c dg::mpi_cart_sub
  * @param comm input Cartesian communicator
- * @return Array of 1-dimensional Cartesian communicators
+ * @return Array of 1-dimensional Cartesian communicators. The i-th
+ * communicator corresponds to the i-th axis in \c comm
  */
 inline std::vector<MPI_Comm> mpi_cart_split( MPI_Comm comm)
 {
@@ -259,6 +263,7 @@ inline std::vector<MPI_Comm> mpi_cart_split( MPI_Comm comm)
 /*!
  * @brief Same as \c mpi_cart_split but differen return type
  *
+ * @snippet{trimleft} mpi_kron_mpit.cpp split and join
  * @tparam Nd Number of dimensions to copy from \c mpi_cart_split
  * @param comm input Cartesian communicator ( <tt>Nd <= comm.ndims</tt>)
  * @return Array of 1-dimensional Cartesian communicators
@@ -278,7 +283,6 @@ std::array<MPI_Comm, Nd> mpi_cart_split_as( MPI_Comm comm)
 // /*! @brief unregister a communicator
 // * For example if a communicator was freed
 // * @param comm delete associated registry entry
-// * @ingroup mpi_structures
 // */
 //void unregister_mpi_comm( MPI_Comm comm)
 //{
@@ -287,13 +291,14 @@ std::array<MPI_Comm, Nd> mpi_cart_split_as( MPI_Comm comm)
 //
 // /*! @brief call \c MPI_Comm_free(comm) followed by \c dg::unregister_mpi_comm(comm)
 // * @param comm free communicator and delete associated registry entry
-// * @ingroup mpi_structures
 // */
 //void mpi_comm_free( MPI_Comm * comm)
 //{
 //    MPI_Comm_free(comm);
 //    unregister_mpi_comm( *comm);
 //}
+
+///@}
 
 
 }

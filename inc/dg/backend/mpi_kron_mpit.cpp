@@ -50,6 +50,9 @@ TEST_CASE("MPI Kron test")
         dg::exblas::mpi_reduce_communicator( comm_join, &comm_mod, &comm_red);
         MPI_Comm comm2 = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
         auto comms2 = dg::mpi_cart_split_as<2>(comm2);
+
+        CHECK( comms.size() == 2);
+        CHECK( comms2.size() == 2);
     }
 
     SECTION( "Direct kronecker")
@@ -96,6 +99,21 @@ TEST_CASE("MPI Kron test")
         auto kaxe = dg::mpi_cart_kron( paxes);
         //if(rank==0)dg::mpi_cart_registry_display();
         CHECK( kaxe == taxe);
+    }
+    SECTION( "Documentation")
+    {
+        //! [split and join]
+        // Create a Cartesian communicator
+        MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {0,0,0});
+        // Split into 3 axes
+        std::array<MPI_Comm,3> axes3d = dg::mpi_cart_split_as<3>( comm);
+        // Join the first and third axis
+        MPI_Comm comm_101 = dg::mpi_cart_kron( {axes3d[0], axes3d[2]});
+        // Split up again
+        std::array<MPI_Comm,2> axes2d = dg::mpi_cart_split_as<2>( comm_101);
+        CHECK( axes2d[0] == axes3d[0]);
+        CHECK( axes2d[1] == axes3d[2]);
+        //! [split and join]
     }
 
     dg::detail::mpi_cart_registry_clear();
