@@ -50,3 +50,18 @@ doc/index.html
 ## From _minted
 *.pygtex
 *.pygstyle
+
+# CMake, modified from https://github.com/github/gitignore/blob/main/CMake.gitignore
+!CMakeLists.txt
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+CMakeUserPresets.json
+build
