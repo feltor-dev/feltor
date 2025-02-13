@@ -13,7 +13,7 @@
 
 
 
-std::array<double, 2> solution( double t, double damping, double omega_0, double omega_drive)
+inline std::array<double, 2> solution( double t, double damping, double omega_0, double omega_drive)
 {
     double tmp1 = (2.*omega_0*damping);
     double tmp2 = (omega_0*omega_0 - omega_drive*omega_drive)/omega_drive;

@@ -8,7 +8,7 @@
 #include "catch2/catch_all.hpp"
 
 //method of manufactured solution
-std::array<double,2> solution( double t, double nu) {
+inline std::array<double,2> solution( double t, double nu) {
     return {exp( -nu*t) + cos(t), exp( -nu*t) + sin(t)};
 }
 
@@ -158,14 +158,14 @@ TEST_CASE( "Multistep")
         }
         SECTION( "ImEx multistep methods")
         {
-            for( unsigned k = 0; k<NTs.size(); k++)
+            for( unsigned u = 0; u<NTs.size(); u++)
             {
                 //![karniadakis]
                 //construct time stepper
                 dg::ImExMultistep< std::array<double,2> > imex( name, y0);
                 time = 0., y0 = init; //y0 and init are of type std::array<double,2> and contain the initial condition
                 //initialize the timestepper (ex and im are objects of type Explicit and Implicit defined above)
-                unsigned NT = NTs[k];
+                unsigned NT = NTs[u];
                 double dt = T/ (double)NT;
                 imex.init( std::tie(ex, im, im), time, y0, dt);
                 //main time loop (NT = 20)
@@ -173,7 +173,7 @@ TEST_CASE( "Multistep")
                     imex.step( std::tie(ex, im, im), time, y0); //inplace step
                 //![karniadakis]
                 dg::blas1::axpby( -1., sol, 1., y0);
-                err[k] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+                err[u] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
             }
         }
         double order = log( err[0]/err[1])/log( (double)NTs[1]/(double)NTs[0]);
@@ -209,18 +209,18 @@ TEST_CASE( "ARK methods")
         if( b.order() > 5)
             NTs = {2,4};
         std::vector<double> err(NTs.size());
-        for( unsigned k = 0; k<NTs.size(); k++)
+        for( unsigned u = 0; u<NTs.size(); u++)
         {
             dg::ARKStep< std::array<double,2> > imex( name, y0);
             std::array<double,2> delta{0,0};
-            unsigned NT = NTs[k];
+            unsigned NT = NTs[u];
             double dt = T/ (double)NT;
             time = 0., y0 = init;
             //main time loop (NT = 20)
             for( unsigned k=0; k<NT; k++)
                 imex.step( std::tie(ex, im, im), time, y0, time, y0, dt, delta ); //inplace step
             dg::blas1::axpby( -1., sol, 1., y0);
-            err[k] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
+            err[u] = sqrt(dg::blas1::dot( y0, y0)/norm_sol);
         }
         double order = log( err[0]/err[1])/log( (double)NTs[1]/(double)NTs[0]);
         INFO("Norm of error in "<<std::setw(20) <<name<<"\t"<<err[1]

@@ -481,14 +481,10 @@ TEST_CASE( "Blas1 documentation")
     SECTION( "subroutine")
     {
         //! [subroutine]
-        struct Routine{
-            DG_DEVICE
-            void operator()( double x, double y, double& z){
-               z = 7*x+y + z ;
-            }
-        } routine;
         dg::DVec two( 100,2), four(100,4);
-        dg::blas1::subroutine( routine, two, 3., four);
+        dg::blas1::subroutine( []DG_DEVICE( double x, double y, double& z){
+            z = 7*x + y +z;
+        }, two, 3., four);
         CHECK( four == dg::HVec( 100, 21.)); // 7*2+3+4
         //! [subroutine]
     }

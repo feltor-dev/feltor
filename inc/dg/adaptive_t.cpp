@@ -39,7 +39,7 @@ struct RHS
 };
 //![function]
 
-std::array<double, 2> solution( double t, double damping, double omega_0,
+inline std::array<double, 2> solution( double t, double damping, double omega_0,
         double omega_drive)
 {
     double tmp1 = (2.*omega_0*damping);

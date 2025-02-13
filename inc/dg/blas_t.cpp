@@ -160,19 +160,6 @@ TEST_CASE( "blas")
         dg::blas2::symv( f, arrdvec1[0], dvec1);
         INFO( "symv with functor ");
         CHECK( result(dvec1) == 52);
-
-#ifndef WITH_MPI
-        // parallel for function
-        dg::DVec dvec2 = dvec1;
-        dvec1[1] = 53., dvec1[2] = 50.;
-        dg::blas2::parallel_for( []DG_DEVICE( unsigned i, const double* x, double* y, int mod){
-            y[i] = x[(i+1)%mod] - x[i];
-        }, 3, dvec1, dvec2, 3);
-        INFO( "parallel_for forward difference");
-        CHECK(dvec2[0] == 1);
-        CHECK(dvec2[1] == -3);
-        CHECK(dvec2[2] == 2);
-#endif
     }
     //Check compiler error:
     //NoFunctor nof;
@@ -192,3 +179,29 @@ TEST_CASE( "blas")
     }
 
 }
+#ifndef WITH_MPI
+TEST_CASE( "Blas2 documentation")
+{
+    SECTION( "dot")
+    {
+        //! [dot]
+        dg::DVec two( 100,2), three(100,3);
+        int result = dg::blas2::dot(two, 42., three);
+        CHECK( result == 25200); //100*(2*42*3)
+        //! [dot]
+    }
+    SECTION( "parallel_for")
+    {
+        //! [parallel_for]
+        std::vector<double> vec1 = {11,12,13}, vec2(3);
+        dg::blas2::parallel_for(
+            []DG_DEVICE( unsigned i, const double* x, double* y, int mod)
+            {
+                y[i] = x[(i+1)%mod] - x[i];
+            }, 3, vec1, vec2, 3);
+        INFO( "parallel_for forward difference");
+        CHECK( vec2 == std::vector{ 1.,1.,-2.});
+        //! [parallel_for]
+    }
+}
+#endif
