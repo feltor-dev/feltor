@@ -43,7 +43,7 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
  * @code{.cpp}
  * return dg::kronecker( f, g.abscissas(0), g.abscissas(1));
  * @endcode
- * @copydoc hide_code_evaluate2d
+ * @snippet{trimleft} evaluation_t.cpp evaluate2d
  * @tparam Topology A fixed sized grid type with member functions <tt> static
  * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and
  * <tt> vector_type Topology::abscissas( unsigned dim)</tt> giving the
@@ -132,10 +132,10 @@ thrust::host_vector<real_type> integrate( const thrust::host_vector<real_type>& 
     }
 
 
-    dg::Operator<real_type> forward = dg::DLT<real_type>::forward(n);
-    dg::Operator<real_type> backward = dg::DLT<real_type>::backward(n);
-    dg::Operator<real_type> ninj = create::ninj<real_type>( n );
-    Operator<real_type> t = create::pipj_inv<real_type>(n);
+    dg::SquareMatrix<real_type> forward = dg::DLT<real_type>::forward(n);
+    dg::SquareMatrix<real_type> backward = dg::DLT<real_type>::backward(n);
+    dg::SquareMatrix<real_type> ninj = create::ninj<real_type>( n );
+    SquareMatrix<real_type> t = create::pipj_inv<real_type>(n);
     t *= h/2.;
     ninj = backward*t*ninj*forward;
     real_type constant = 0.;

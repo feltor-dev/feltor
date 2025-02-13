@@ -575,7 +575,7 @@ void aRealTopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
  * @brief The simplest implementation of aRealTopology
  *
  * @ingroup grid
- * @copydoc hide_code_evaluate2d
+ * @snippet{trimleft} evaluation_t.cpp evaluate2d
  */
 template<class real_type, size_t Nd>
 struct RealGrid : public aRealTopology<real_type, Nd>

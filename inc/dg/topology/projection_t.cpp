@@ -14,7 +14,7 @@
 #include "evaluation.h"
 #include "fast_interpolation.h"
 
-#include "catch2/catch_all.hpp"
+#include <catch2/catch_all.hpp>
 
 static double sine( double x){ return sin(x);}
 static double sine( double x, double y, double z){return sin(x)*sin(y);}

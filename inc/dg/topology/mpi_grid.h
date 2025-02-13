@@ -660,7 +660,7 @@ void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
 /**
  * @brief The simplest implementation of aRealMPITopology3d
  * @ingroup grid
- * @copydoc hide_code_mpi_evaluate3d
+ * @snippet{trimleft} evaluation_t.cpp evaluate2d
  */
 template<class real_type, size_t Nd>
 struct RealMPIGrid : public aRealMPITopology<real_type,Nd>

@@ -322,7 +322,7 @@ TEST_CASE("blas1")
 
 }
 #ifndef WITH_MPI
-TEST_CASE( "Documentation")
+TEST_CASE( "Blas1 documentation")
 {
     SECTION( "vdot")
     {
@@ -540,12 +540,13 @@ TEST_CASE( "Documentation")
     SECTION( "assign")
     {
         //! [assign]
+        //Assign a host vector to a device vector
         dg::HVec host( 100, 1.);
         dg::DVec device(100);
         dg::assign( host, device );
         CHECK( device == dg::DVec( 100, 1.));
 
-        //let us construct a std::vector of 3 dg::DVec from a host vector
+        //Assign a host vector to all elements of a std::vector of 3 dg::DVec
         std::vector<dg::DVec> device_vec;
         dg::assign( host, device_vec, 3);
         REQUIRE( device_vec.size() == 3);
@@ -556,15 +557,17 @@ TEST_CASE( "Documentation")
     SECTION( "construct")
     {
         //! [construct]
+        //Construct a device vector from host vector
         dg::HVec host( 100, 1.);
         auto device = dg::construct<dg::DVec>( host );
         CHECK( device == dg::DVec( 100, 1.));
 
+        // Construct an array of vectors
         auto device_arr = dg::construct<std::array<dg::DVec, 3>>( host );
         for( unsigned u=0; u<3; u ++)
             CHECK( device_arr[u] == device);
 
-        //let us construct a std::vector of 3 dg::DVec from a host vector
+        //Construct a std::vector of 3 dg::DVec from a host vector
         auto device_vec = dg::construct<std::vector<dg::DVec>>( host, 3);
         REQUIRE( device_vec.size() == 3);
         for( unsigned u=0; u<3; u++)

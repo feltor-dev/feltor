@@ -7,10 +7,10 @@
 #include "operator_tensor.h"
 #include "catch2/catch_all.hpp"
 
-TEST_CASE( "Operator tensorproduct")
+TEST_CASE( "SquareMatrix tensorproduct")
 {
-    dg::Operator<double> Op1 = dg::create::delta<double>( 3);
-    dg::Operator<double> Op2 = dg::DLT<double>::forward(3);
+    dg::SquareMatrix<double> Op1 = dg::create::delta<double>( 3);
+    dg::SquareMatrix<double> Op2 = dg::DLT<double>::forward(3);
     auto op = dg::tensorproduct( Op1, Op2);
     for( int i=0; i<3; i++)
     for( int k=0; k<3; k++)

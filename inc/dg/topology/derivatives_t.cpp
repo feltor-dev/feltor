@@ -153,3 +153,43 @@ TEST_CASE( "Derivatives")
         CHECK( not hasnan);
     }
 }
+
+TEST_CASE( "Documentation dx")
+{
+    SECTION("derive")
+    {
+        //! [derive]
+        // This code snippet demonstrates how to derive a function on a device
+#ifdef WITH_MPI
+        // In an MPI environment define a 2d Cartesian communicator
+        MPI_Comm comm2d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {0,1});
+#endif
+        // create a grid of the domain [0,2]x[0,2] with 20 cells in x and y and
+        // 3 polynomial coefficients
+        dg::x::Grid2d g2d( 0, 2, 0, 2, 3, 20, 20, dg::DIR, dg::PER
+#ifdef WITH_MPI
+        , comm2d // in MPI distribute among processes
+#endif
+        );
+        // define a function to derive
+        auto function = [](double x, double y){
+            return sin(x)*sin(y);
+        };
+
+        //Define a device matrix
+        dg::x::DMatrix dx = dg::create::dx( g2d);
+
+        //discretize the function on the grid and transfer the result to the device
+        const dg::x::DVec x = dg::evaluate( function, g2d);
+
+        //allocate memory for the result
+        dg::x::DVec y=x;
+
+        //apply the derivative to x and store result in y
+        dg::blas2::symv(dx, x, y);
+
+        //or equivalently
+        dg::blas2::symv(1., dx, x, 0., y);
+        //! [derive]
+    }
+}

@@ -159,7 +159,7 @@ struct ButcherTableau{
         return true;
     }
     private:
-    dg::Operator<real_type> m_a;
+    dg::SquareMatrix<real_type> m_a;
     std::vector<real_type> m_b, m_c, m_bt;
     unsigned m_q, m_p, m_s;
     bool m_embedded = false;
@@ -192,8 +192,8 @@ struct ShuOsherTableau
         // parse the input into matrices
         m_stages = stages;
         m_order = order;
-        m_alpha = dg::Operator<real_type>(stages, 0);
-        m_beta = dg::Operator<real_type>(stages, 0);
+        m_alpha = dg::SquareMatrix<real_type>(stages, 0);
+        m_beta = dg::SquareMatrix<real_type>(stages, 0);
         unsigned j=0;
         for( unsigned i=0; i<stages; i++)
             for( unsigned k=0; k<i+1; k++)
@@ -214,7 +214,7 @@ struct ShuOsherTableau
         //the converse is not unique:
         //AN  EXTENSION  AND  ANALYSIS OF  THE
         //SHU-OSHER  REPRESENTATION OF  RUNGE-KUTTA  METHODS
-        dg::Operator<real_type> a(m_stages, 0);
+        dg::SquareMatrix<real_type> a(m_stages, 0);
         std::vector< real_type > b(m_stages), c(m_stages);
         //convert to Butcher tableau
         for( unsigned i=1; i<m_stages; i++)
@@ -265,7 +265,7 @@ struct ShuOsherTableau
     }
     private:
     unsigned m_stages, m_order;
-    dg::Operator<real_type> m_alpha, m_beta;
+    dg::SquareMatrix<real_type> m_alpha, m_beta;
 };
 ///@cond
 namespace tableau{

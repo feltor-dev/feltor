@@ -17,7 +17,7 @@
 #include "evaluation.h"
 #include "weights.h"
 
-#include "catch2/catch_all.hpp"
+#include <catch2/catch_all.hpp>
 
 template<class T>
 T function(T x, T y)
@@ -369,4 +369,45 @@ TEST_CASE( "Complex scalar products")
         INFO( "Relative 1d error is      "<<err);
         CHECK_THAT( err, WithinAbs(  0, 1e-15));
     }
+}
+
+TEST_CASE( "Documentation Evaluate")
+{
+    SECTION( "evaluate2d")
+    {
+        //! [evaluate2d]
+        // This code snippet demonstrates how to discretize and compute the norm of a
+        // function on both shared and distributed memory systems
+#ifdef WITH_MPI
+        // In an MPI environment define a 2d Cartesian communicator
+        MPI_Comm comm2d = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
+#endif
+        // create a grid of the domain [0,2]x[0,2] with 20 cells in x and y and
+        // 3 polynomial coefficients
+        dg::x::Grid2d g2d( 0, 2, 0, 2, 3, 20, 20
+#ifdef WITH_MPI
+        , comm2d // in MPI distribute among processes
+#endif
+        );
+
+        // define the function to integrate
+        const double amp = 2.;
+        auto function = [=] (double x, double y){
+            return amp*exp(x)*exp(y);
+        };
+
+        // create the Gaussian weights (volume form) for the integration
+        const dg::x::DVec w2d = dg::create::weights( g2d);
+
+        // discretize the function on the grid
+        const dg::x::DVec vec = dg::evaluate( function, g2d);
+
+        // now compute the scalar product (the L2 norm)
+        double square_norm = dg::blas2::dot( vec, w2d, vec);
+
+        // norm is now (or at least converges to): (e^4-1)^2
+        CHECK( fabs( square_norm - (exp(4)-1)*(exp(4)-1)) < 1e-6);
+        //! [evaluate2d]
+    }
+
 }

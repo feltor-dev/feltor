@@ -47,7 +47,7 @@ auto do_weights( const Topology& g, std::index_sequence<I...>)
  *  output vector <tt> w = dg::kronecker( dg::Product(), w_0, w_1, ...)</tt>
  *  The **0 dimension is the contiguous dimension** in the return vector \c w
  * .
- * @copydoc hide_code_evaluate2d
+ * @snippet{trimleft} evaluation_t.cpp evaluate2d
  * @tparam Topology A fixed sized grid type with member functions <tt> static
  * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and
  * <tt> vector_type Topology::weights( unsigned dim)</tt> giving the integration

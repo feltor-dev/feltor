@@ -37,12 +37,12 @@ namespace create
  * @ingroup misc
  */
 template<class UnaryOp>
-dg::Operator<std::invoke_result_t<UnaryOp, unsigned>> modal_filter( UnaryOp op, unsigned n )
+dg::SquareMatrix<std::invoke_result_t<UnaryOp, unsigned>> modal_filter( UnaryOp op, unsigned n )
 {
     using real_type = std::invoke_result_t<UnaryOp, unsigned>;
-    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
-    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
-    Operator<real_type> filter( n, 0);
+    SquareMatrix<real_type> backward=dg::DLT<real_type>::backward(n);
+    SquareMatrix<real_type> forward=dg::DLT<real_type>::forward(n);
+    SquareMatrix<real_type> filter( n, 0);
     for( unsigned i=0; i<n; i++)
         filter(i,i) = op( i);
     filter = backward*filter*forward;
