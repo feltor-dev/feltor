@@ -26,7 +26,6 @@ namespace exblas {
  * ranks and \c comm_mod may contain 1 rank fewer than the others in the last
  * columns
  *
- * @ingroup highlevel
  * @param comm the input communicator (unmodified, may not be \c MPI_COMM_NULL)
  * @param comm_mod the line communicator in \c comm, consists of all rank/mod
  * ranks
@@ -78,7 +77,6 @@ inline void mpi_reduce_communicator(MPI_Comm comm,
  * are involved. This function normalizes, reduces, normalizes, reduces and
  * broadcasts the result to all participating processes.  As usual the resulting
  * superaccumulator is unnormalized.
- * @ingroup highlevel
  * @param num_superacc number of Superaccumulators eaach process holds
  * @param in unnormalized input superaccumulators ( must be of size
  * num_superacc*\c exblas::BIN_COUNT, allocated on the cpu) (read/write,

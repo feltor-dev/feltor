@@ -23,7 +23,6 @@ namespace exblas{
  *
  * Computes the extended precision reduction \f[ \sum_{i=0}^{N-1} f(x_{0i}, x_{1i}, ... )\f]
  * using floating point expansions
- * @ingroup highlevel
  * @tparam T the return type of \c Functor.
  * @tparam N size of the floating point expansion (should be between 3 and 8)
  * @tparam Functor a Functor

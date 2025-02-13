@@ -120,7 +120,6 @@ void Accumulate(T x, std::array<T,N>& fpe , int* status)
 /**
 * @brief Convert a fpe to the nearest number (CPU version)
 *
-* @ingroup highlevel
 * @param fpe a pointer to N doubles on the CPU (representing the fpe)
 * @return the double precision number nearest to the fpe
 */
@@ -212,7 +211,6 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 /**
 * @brief Accumulate a double to the superaccumulator
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @param x the double to add to the superaccumulator
 */
@@ -260,7 +258,6 @@ inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
 /**
 * @brief Normalize a superaccumulator
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @param imin the first index in the accumulator
 * @param imax the last index in the accumulator
@@ -294,7 +291,6 @@ inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
 /**
 * @brief Convert a superaccumulator to the nearest double precision number (CPU version)
 *
-* @ingroup highlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @return the double precision number nearest to the superaccumulator
 */

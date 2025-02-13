@@ -115,7 +115,6 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride =
 /**
 * @brief Accumulate a double to the superaccumulator (GPU version)
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
 * @param x the double to add to the superaccumulator
 * @param stride stride in which accumulator is to be accessed
@@ -152,7 +151,6 @@ inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //tran
 /**
 * @brief Normalize a superaccumulator (GPU version)
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
 * @param imin the first index in the accumulator
 * @param imax the last index in the accumulator
@@ -187,7 +185,6 @@ inline int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1
 /**
 * @brief Convert a superaccumulator to the nearest double precision number (GPU version)
 *
-* @ingroup highlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
 * @return the double precision number nearest to the superaccumulator
 */

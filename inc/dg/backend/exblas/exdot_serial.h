@@ -163,7 +163,6 @@ void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c
  * @attention the product \f$ x_iy_i\f$ of numbers is **not** computed with infinite precision only the sum is (this does not break the reproducibility)
  * @note The algorithm is described in the paper
  <a href = "https://hal.archives-ouvertes.fr/hal-00949355v3">Sylvain Collange, David Defour, Stef Graillat, Roman Iakymchuk. "Numerical Reproducibility for the Parallel Reduction on Multi- and Many-Core Architectures", 2015. </a>
- * @ingroup highlevel
  * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
  * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
  * @param size size N of the arrays to sum
@@ -182,7 +181,6 @@ void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c
  * @attention the product \f$ x_iw_iy_i\f$ of numbers is **not** computed with infinite precision only the sum is (this does not break the reproducibility)
  * @note The algorithm is described in the paper
  <a href = "https://hal.archives-ouvertes.fr/hal-00949355v3">Sylvain Collange, David Defour, Stef Graillat, Roman Iakymchuk. "Numerical Reproducibility for the Parallel Reduction on Multi- and Many-Core Architectures", 2015. </a>
- * @ingroup highlevel
  * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
  * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
  * @param size size N of the arrays to sum
