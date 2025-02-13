@@ -103,9 +103,9 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> limiter_stencil(
     unsigned num_cols = global.size();
     int L0 = round((local.x0() - global.x0())/global.h())*global.n();
     // We need the first two lines of forward
-    dg::Operator<real_type> forward = dg::DLT<real_type>::forward(local.n());
+    dg::SquareMatrix<real_type> forward = dg::DLT<real_type>::forward(local.n());
     // and the second column of backward
-    dg::Operator<real_type> backward = dg::DLT<real_type>::backward(local.n());
+    dg::SquareMatrix<real_type> backward = dg::DLT<real_type>::backward(local.n());
     if( global.n() == 1)
         throw dg::Error( dg::Message(_ping_) << "Limiter stencil not possible for n==1!");
 

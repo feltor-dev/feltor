@@ -174,9 +174,9 @@ template<class real_type>
 dg::IHMatrix_t<real_type> backscatter( const RealGrid1d<real_type>& g)
 {
     //create equidistant backward transformation
-    dg::Operator<real_type> backwardeq( dg::DLT<real_type>::backwardEQ(g.n()));
-    dg::Operator<real_type> forward( dg::DLT<real_type>::forward(g.n()));
-    dg::Operator<real_type> backward1d = backwardeq*forward;
+    dg::SquareMatrix<real_type> backwardeq( dg::DLT<real_type>::backwardEQ(g.n()));
+    dg::SquareMatrix<real_type> forward( dg::DLT<real_type>::forward(g.n()));
+    dg::SquareMatrix<real_type> backward1d = backwardeq*forward;
 
     return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), backward1d);
 }
@@ -216,9 +216,9 @@ template<class real_type>
 dg::IHMatrix_t<real_type> inv_backscatter( const RealGrid1d<real_type>& g)
 {
     //create equidistant backward transformation
-    dg::Operator<real_type> backwardeq( dg::DLT<real_type>::backwardEQ(g.n()));
-    dg::Operator<real_type> backward( dg::DLT<real_type>::backward(g.n()));
-    dg::Operator<real_type> forward1d = backward*dg::invert(backwardeq);
+    dg::SquareMatrix<real_type> backwardeq( dg::DLT<real_type>::backwardEQ(g.n()));
+    dg::SquareMatrix<real_type> backward( dg::DLT<real_type>::backward(g.n()));
+    dg::SquareMatrix<real_type> forward1d = backward*dg::invert(backwardeq);
 
     return (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(), forward1d);
 }

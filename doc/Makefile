@@ -2,7 +2,7 @@
 ##Packages needed on linux for compilation of doxygen doc
 ##sudo apt install
 
-#doxygen >= 1.12
+#doxygen >= 1.10 <= 1.12
 #libjs-mathjax (for nice mathematical formulas)
 #graphviz (for nice graphical nodes)
 #doxygen-awesome
@@ -31,7 +31,12 @@
 ###
 
 # doxygen-awesome-css path
-dapath=/usr/share/doxygen-awesome-css
+#  if installed via system package manager
+#dapath=/usr/share/doxygen-awesome-css
+# installed via make install
+dapath=/usr/local/share/doxygen-awesome-css
+# Relative paths won't work!!
+#dapath=../../doxygen-awesome-css
 
 all: doc
 

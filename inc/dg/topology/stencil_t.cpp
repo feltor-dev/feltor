@@ -7,7 +7,7 @@
 
 #include "catch2/catch_all.hpp"
 
-// TODO This test needs to improve
+// TODO This test (and documentation organisation) needs to improve
 TEST_CASE( "Stencil")
 {
     std::vector<dg::bc> bcs = {dg::DIR, dg::NEU, dg::PER};

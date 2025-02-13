@@ -170,7 +170,7 @@ struct SparseTensor
     }
 
     private:
-    dg::Operator<int> m_mat_idx;
+    dg::SquareMatrix<int> m_mat_idx;
     std::vector<container> m_values;
 };
 

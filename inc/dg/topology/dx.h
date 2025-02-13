@@ -35,17 +35,17 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
 {
     constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
 
-    Operator<real_type> l = create::lilj<real_type>(n);
-    Operator<real_type> r = create::rirj<real_type>(n);
-    Operator<real_type> lr = create::lirj<real_type>(n);
-    Operator<real_type> rl = create::rilj<real_type>(n);
-    Operator<real_type> d = create::pidxpj<real_type>(n);
-    Operator<real_type> t = create::pipj_inv<real_type>(n);
+    SquareMatrix<real_type> l = create::lilj<real_type>(n);
+    SquareMatrix<real_type> r = create::rirj<real_type>(n);
+    SquareMatrix<real_type> lr = create::lirj<real_type>(n);
+    SquareMatrix<real_type> rl = create::rilj<real_type>(n);
+    SquareMatrix<real_type> d = create::pidxpj<real_type>(n);
+    SquareMatrix<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
 
-    Operator< real_type> a = 1./2.*t*(d-d.transpose());
+    SquareMatrix< real_type> a = 1./2.*t*(d-d.transpose());
     //bcx = PER
-    Operator<real_type> a_bound_right(a), a_bound_left(a);
+    SquareMatrix<real_type> a_bound_right(a), a_bound_left(a);
     //left boundary
     if( bcx == DIR || bcx == DIR_NEU )
         a_bound_left += 0.5*t*l;
@@ -58,11 +58,11 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
         a_bound_right += 0.5*t*r;
     if( bcx == PER ) //periodic bc
         a_bound_left = a_bound_right = a;
-    Operator<real_type> b = t*(1./2.*rl);
-    Operator<real_type> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
+    SquareMatrix<real_type> b = t*(1./2.*rl);
+    SquareMatrix<real_type> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
     //transform to XSPACE
-    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
-    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
+    SquareMatrix<real_type> backward=dg::DLT<real_type>::backward(n);
+    SquareMatrix<real_type> forward=dg::DLT<real_type>::forward(n);
     a = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     bp = backward*bp*forward;
@@ -135,25 +135,25 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
 {
     constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
 
-    Operator<real_type> l = create::lilj<real_type>(n);
-    Operator<real_type> r = create::rirj<real_type>(n);
-    Operator<real_type> lr = create::lirj<real_type>(n);
-    Operator<real_type> rl = create::rilj<real_type>(n);
-    Operator<real_type> d = create::pidxpj<real_type>(n);
-    Operator<real_type> t = create::pipj_inv<real_type>(n);
+    SquareMatrix<real_type> l = create::lilj<real_type>(n);
+    SquareMatrix<real_type> r = create::rirj<real_type>(n);
+    SquareMatrix<real_type> lr = create::lirj<real_type>(n);
+    SquareMatrix<real_type> rl = create::rilj<real_type>(n);
+    SquareMatrix<real_type> d = create::pidxpj<real_type>(n);
+    SquareMatrix<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
-    Operator<real_type>  a = t*(-l-d.transpose());
+    SquareMatrix<real_type>  a = t*(-l-d.transpose());
     //if( dir == backward) a = -a.transpose();
-    Operator<real_type> a_bound_left = a; //PER, NEU and NEU_DIR
-    Operator<real_type> a_bound_right = a; //PER, DIR and NEU_DIR
+    SquareMatrix<real_type> a_bound_left = a; //PER, NEU and NEU_DIR
+    SquareMatrix<real_type> a_bound_right = a; //PER, DIR and NEU_DIR
     if( bcx == dg::DIR || bcx == dg::DIR_NEU)
         a_bound_left = t*(-d.transpose());
     if( bcx == dg::NEU || bcx == dg::DIR_NEU)
         a_bound_right = t*(d);
-    Operator<real_type> b = t*rl;
+    SquareMatrix<real_type> b = t*rl;
     //transform to XSPACE
-    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
-    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
+    SquareMatrix<real_type> backward=dg::DLT<real_type>::backward(n);
+    SquareMatrix<real_type> forward=dg::DLT<real_type>::forward(n);
     a = backward*a*forward, a_bound_left = backward*a_bound_left*forward;
     b = backward*b*forward, a_bound_right = backward*a_bound_right*forward;
     //assemble the matrix
@@ -218,25 +218,25 @@ template<class real_type>
 EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
 {
     constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
-    Operator<real_type> l = create::lilj<real_type>(n);
-    Operator<real_type> r = create::rirj<real_type>(n);
-    Operator<real_type> lr = create::lirj<real_type>(n);
-    Operator<real_type> rl = create::rilj<real_type>(n);
-    Operator<real_type> d = create::pidxpj<real_type>(n);
-    Operator<real_type> t = create::pipj_inv<real_type>(n);
+    SquareMatrix<real_type> l = create::lilj<real_type>(n);
+    SquareMatrix<real_type> r = create::rirj<real_type>(n);
+    SquareMatrix<real_type> lr = create::lirj<real_type>(n);
+    SquareMatrix<real_type> rl = create::rilj<real_type>(n);
+    SquareMatrix<real_type> d = create::pidxpj<real_type>(n);
+    SquareMatrix<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
-    Operator<real_type>  a = t*(l+d);
+    SquareMatrix<real_type>  a = t*(l+d);
     //if( dir == backward) a = -a.transpose();
-    Operator<real_type> a_bound_right = a; //PER, NEU and DIR_NEU
-    Operator<real_type> a_bound_left = a; //PER, DIR and DIR_NEU
+    SquareMatrix<real_type> a_bound_right = a; //PER, NEU and DIR_NEU
+    SquareMatrix<real_type> a_bound_left = a; //PER, DIR and DIR_NEU
     if( bcx == dg::DIR || bcx == dg::NEU_DIR)
         a_bound_right = t*(-d.transpose());
     if( bcx == dg::NEU || bcx == dg::NEU_DIR)
         a_bound_left = t*d;
-    Operator<real_type> bp = -t*lr;
+    SquareMatrix<real_type> bp = -t*lr;
     //transform to XSPACE
-    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
-    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
+    SquareMatrix<real_type> backward=dg::DLT<real_type>::backward(n);
+    SquareMatrix<real_type> forward=dg::DLT<real_type>::forward(n);
     a  = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
     bp = backward*bp*forward, a_bound_right = backward*a_bound_right*forward;
 
@@ -302,24 +302,24 @@ template<class real_type>
 EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
 {
     constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
-    Operator<real_type> l = create::lilj<real_type>(n);
-    Operator<real_type> r = create::rirj<real_type>(n);
-    Operator<real_type> lr = create::lirj<real_type>(n);
-    Operator<real_type> rl = create::rilj<real_type>(n);
-    Operator<real_type> a = l+r;
-    Operator<real_type> a_bound_left = a;//DIR and PER
+    SquareMatrix<real_type> l = create::lilj<real_type>(n);
+    SquareMatrix<real_type> r = create::rirj<real_type>(n);
+    SquareMatrix<real_type> lr = create::lirj<real_type>(n);
+    SquareMatrix<real_type> rl = create::rilj<real_type>(n);
+    SquareMatrix<real_type> a = l+r;
+    SquareMatrix<real_type> a_bound_left = a;//DIR and PER
     if( bcx == NEU || bcx == NEU_DIR)
         a_bound_left = r;
-    Operator<real_type> a_bound_right = a; //DIR and PER
+    SquareMatrix<real_type> a_bound_right = a; //DIR and PER
     if( bcx == NEU || bcx == DIR_NEU)
         a_bound_right = l;
-    Operator<real_type> b = -rl;
-    Operator<real_type> bp = -lr;
+    SquareMatrix<real_type> b = -rl;
+    SquareMatrix<real_type> bp = -lr;
     //transform to XSPACE
-    Operator<real_type> t = create::pipj_inv<real_type>(n);
+    SquareMatrix<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
-    Operator<real_type> backward=dg::DLT<real_type>::backward(n);
-    Operator<real_type> forward=dg::DLT<real_type>::forward(n);
+    SquareMatrix<real_type> backward=dg::DLT<real_type>::backward(n);
+    SquareMatrix<real_type> forward=dg::DLT<real_type>::forward(n);
     a = backward*t*a*forward, a_bound_left  = backward*t*a_bound_left*forward;
     b = backward*t*b*forward, a_bound_right = backward*t*a_bound_right*forward;
     bp = backward*t*bp*forward;

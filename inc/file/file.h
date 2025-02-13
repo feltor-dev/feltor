@@ -13,7 +13,7 @@
  * Combined json and netcdf utilities
  *
  * @defgroup section Json utilities
- * \#include "dg/file/json_utilities.h" (link -ljsoncpp )
+ * @brief \#include "dg/file/json_utilities.h" (link -ljsoncpp )
  * @{
  *  @defgroup wrapper The WrappedJsonValue class
  *  @defgroup json Utility functions
@@ -22,7 +22,7 @@
  * If the Macro \c DG_USE_JSONHPP is defined before inclusion then the (header-only) nlohmann-json library is used
  * instead of jsoncpp
  * @defgroup high A high level C++ interface to NetCDF-4
- * \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5[_serial] -lhdf5[_serial]_hl)
+ * @brief \#include "dg/file/nc_utilities.h" (link -lnetcdf -lhdf5[_serial] -lhdf5[_serial]_hl)
  * @{
  *  @defgroup ncfile The dg::file::NcFile
  *  @{

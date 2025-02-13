@@ -11,7 +11,7 @@ namespace detail{
 
 // delete 1st column and shift everything to the left once
 template<class ContainerType, class value_type>
-void QRdelete1( std::vector<ContainerType>& Q, dg::Operator<value_type>& R, unsigned mMax)
+void QRdelete1( std::vector<ContainerType>& Q, dg::SquareMatrix<value_type>& R, unsigned mMax)
 {
     for(unsigned i = 0; i<mMax-1;i++){
         value_type temp = sqrt(R(i,i+1)*R(i,i+1)+R(i+1,i+1)*R(i+1,i+1));
@@ -150,7 +150,7 @@ struct AndersonAcceleration
     ContainerType m_g_old, m_fval, m_f_old;
     std::vector<ContainerType> m_DG, m_Q;
     std::vector<value_type> m_gamma;
-    dg::Operator<value_type> m_R;
+    dg::SquareMatrix<value_type> m_R;
 
     unsigned m_mMax;
     bool m_throw_on_fail = true;

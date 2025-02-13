@@ -567,7 +567,7 @@ void pointwiseDot(  get_value_type<ContainerType> alpha, const ContainerType1& x
  *
  * @param x ContainerType x may alias y
  * @param y (write-only) ContainerType y contains result, may alias x
- * @param op unary %Operator to use on every element
+ * @param op unary %SquareMatrix to use on every element
  * @tparam UnaryOp Functor with signature: <tt> value_type operator()( value_type) </tt>
  * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_naninf
@@ -744,6 +744,7 @@ inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const C
 
  * For example
  * @snippet{trimleft} blas1_t.cpp assign
+ *
  * @param from source vector
  * @param to target vector contains a copy of \c from on output (memory is automatically resized if necessary)
  * @param ps additional parameters usable for the transfer operation
@@ -752,7 +753,7 @@ inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const C
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to assign objects of Type \c ContainerType
  * @copydoc hide_ContainerType
- * @ingroup utility
+ * @ingroup blas1
  */
 template<class from_ContainerType, class ContainerType, class ...Params>
 inline void assign( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
@@ -777,7 +778,7 @@ inline void assign( const from_ContainerType& from, ContainerType& to, Params&& 
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to construct objects of Type \c ContainerType
  * @copydoc hide_ContainerType
- * @ingroup utility
+ * @ingroup blas1
  */
 template<class ContainerType, class from_ContainerType, class ...Params>
 inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
@@ -842,7 +843,7 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * @copydoc hide_ContainerType
  *
  * @sa dg::blas1::kronecker dg::mpi_cart_kron
- * @ingroup utility
+ * @ingroup blas1
  */
 template<class ContainerType, class Functor, class ...ContainerTypes>
 auto kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)

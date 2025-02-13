@@ -277,11 +277,11 @@ B &   &   &   &   & \\
  * @sa dg::DLT
  */
 template<class real_type>
-dg::HMatrix_t<real_type> fast_transform1d( const dg::Operator<real_type>& opx, const RealGrid1d<real_type>& t)
+dg::HMatrix_t<real_type> fast_transform1d( const dg::SquareMatrix<real_type>& opx, const RealGrid1d<real_type>& t)
 {
     EllSparseBlockMat<real_type> A( t.N(), t.N(), 1, 1, t.n());
     if( opx.size() != t.n())
-        throw Error( Message(_ping_)<< "Operator must have same n as grid!");
+        throw Error( Message(_ping_)<< "SquareMatrix must have same n as grid!");
     dg::assign( opx.data(), A.data);
     for( unsigned i=0; i<t.N(); i++)
     {
@@ -316,11 +316,11 @@ EllSparseBlockMat<real_type> fast_projection( unsigned coord,
     return trafo;
 }
 
-///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@copydoc fast_transform(dg::SquareMatrix<real_type>,const RealGrid1d<real_type>&)
 ///@copydoc hide_coo3d_param
 
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> fast_transform( unsigned coord, const dg::Operator<real_type>& opx,
+EllSparseBlockMat<real_type> fast_transform( unsigned coord, const dg::SquareMatrix<real_type>& opx,
     const aRealTopology<real_type, Nd>& t)
 {
     auto trafo = dg::create::fast_transform1d( opx, t.axis(coord));
@@ -354,10 +354,10 @@ dg::MHMatrix_t<real_type> fast_projection( unsigned coord,
         detail::local_global_grid(coord, t), dividen, divideNx),
             t_rows, t.axis(coord));
 }
-///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@copydoc fast_transform(dg::SquareMatrix<real_type>,const RealGrid1d<real_type>&)
 ///@copydoc hide_coo3d_param
 template<class real_type, size_t Nd>
-MHMatrix_t<real_type> fast_transform( unsigned coord, dg::Operator<real_type> opx,
+MHMatrix_t<real_type> fast_transform( unsigned coord, dg::SquareMatrix<real_type> opx,
     const aRealMPITopology<real_type, Nd>& t)
 {
     return make_mpi_sparseblockmat( dg::create::fast_transform( coord, opx,
@@ -390,10 +390,10 @@ auto fast_projection( const Topology& t, unsigned dividen, unsigned divideNx, un
     auto interY = dg::create::fast_projection( 1, tX, dividen, divideNy);
     return dg::detail::multiply( interY, interX, t);
 }
-///@copydoc fast_transform(dg::Operator<real_type>,const RealGrid1d<real_type>&)
+///@copydoc fast_transform(dg::SquareMatrix<real_type>,const RealGrid1d<real_type>&)
 ///@param opy the block B for the y transform
 template<class Topology>
-auto fast_transform( dg::Operator<typename Topology::value_type> opx, dg::Operator<typename Topology::value_type> opy, const Topology& t)
+auto fast_transform( dg::SquareMatrix<typename Topology::value_type> opx, dg::SquareMatrix<typename Topology::value_type> opy, const Topology& t)
 {
     auto interX = dg::create::fast_transform( 0, opx, t);
     auto interY = dg::create::fast_transform( 1, opy, t);
