@@ -681,7 +681,6 @@ dg::SquareMatrix<T> invert( const dg::SquareMatrix<T>& in)
 {
     return dg::create::inverse(in);
 }
-///@}
 ///
 /// @brief The old name for SquareMatrix was Operator
 /// @ingroup densematrix

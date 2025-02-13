@@ -11,7 +11,7 @@
 // TODO make inclusion of tensor_traits easier if all you want is to use the full traits system in feltor
 
 namespace dg{
-///@addtogroup traits
+///@addtogroup dispatch
 ///@{
 
 

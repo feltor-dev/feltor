@@ -274,6 +274,74 @@ enum dist_type
  where \f$ M_i\f$ is the inner matrix which requires no communication, while
  \f$ M_o\f$ is the outer matrix containing all elements which require
  communication from the Collective object.
+
+@subsection mpi_matrix MPI Matrices and the symv function
+
+Contrary to a vector a matrix can be distributed among processes in two ways:
+\a row-wise and \a column-wise. When we implement a matrix-vector
+multiplication the order of communication and computation depends on the
+distribution of the matrix.
+
+\subsubsection mpi_row Row distributed matrices
+
+In a row-distributed matrix each process holds the rows of the matrix that
+correspond to the portion of the \c MPI_Vector it holds.  When we implement a
+matrix-vector multiplication each process first has to gather all the elements
+of the input vector it needs to be able to compute the elements of its output.
+In general this requires MPI communication.  (read the documentation of \c
+dg::aCommunicator for more info of how global scatter/gather operations work).
+After the elements have been gathered into a buffer the local matrix-vector
+multiplications can be executed.  Formally, the gather operation can be written
+as a matrix \f$G\f$ of \f$1'\f$s and \f$0'\f$s and we write.
+\f[
+M v = R\cdot G v
+\f]
+where \f$R\f$ is the row-distributed matrix with modified indices into a buffer
+vector and \f$G\f$ is the gather matrix, in which the MPI-communication takes
+place.  In this way we achieve a simple split between communication \f$ w=Gv\f$
+and computation \f$ Rw\f$. Since the computation of \f$ R w\f$ is entirely
+local we can reuse the existing implementation for shared memory systems.
+Correspondingly, we define the structure \c dg::MPIDistMat as a simple a
+wrapper around a \c LocalMatrix type object and an instance of a \c
+dg::aCommunicator.
+
+\subsubsection mpi_column Column distributed matrices
+
+In a column-distributed matrix each process holds the columns of the matrix
+that correspond to the portion of the \c MPI_Vector it holds.  In a column
+distributed matrix the local matrix-vector multiplication can be executed first
+because each processor already has all vector elements it needs.  However the
+resulting elements have to be communicated back to the process they belong to.
+Furthermore, a process has to sum all elements it receives from other processes
+on the same index. This is a scatter and reduce operation and it can be written
+as a scatter matrix \f$S\f$ (s.a. \c dg::aCommunicator).
+\f[
+M v= S\cdot C v
+\f]
+where \f$S\f$ is the scatter matrix and \f$C\f$ is the column distributed
+matrix with modified indices.  Again, we can reuse our shared memory algorithms
+to implement the local matrix-vector operation \f$ w=Cv\f$ before the
+communication step \f$ S w\f$.  This is also implemented in \c dg::MPIDistMat.
+
+\subsubsection mpi_row_col Row and Column distributed
+The \c dg::RowColDistMat goes one step further on a row distributed matrix and
+separates the matrix \f$ R = R_{inner} + R_{outer}\f$ into a part that can be
+computed entirely on the local process and a part that needs communication.
+This enables the implementation of overlapping communication and computation.
+(s.a. \c dg::NearestNeighborComm)
+\subsubsection mpi_transpose Transposition
+It turns out that a row-distributed matrix can be transposed by transposition
+of both the local matrix and the gather matrix (s.a. \c dg::transpose): \f[
+M^\mathrm{T} = G^\mathrm{T} R^\mathrm{T}\f] The result is then a column
+distributed matrix.  Analogously, the transpose of a column distributed matrix
+is a row-distributed matrix.
+\subsubsection mpi_create Creation
+You can create a row-distributed MPI matrix given its local parts on each
+process with local row and global column indices by our \c dg::convert
+function.  If you have a column distributed matrix with its local parts on each
+process with global row and local columns indices, you can use a combination of
+\c dg::convertLocal2GlobalCols and \c dg::convertGlobal2LocalRows to bring it
+to a row-distributed form. The latter can then be used in \c dg::convert again.
 * @tparam LocalMatrixInner The class of the matrix for local computations of the inner points.
  symv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points.

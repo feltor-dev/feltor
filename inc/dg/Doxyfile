@@ -1004,20 +1004,12 @@ RECURSIVE              = NO
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = topology/ell_interpolation.cuh \
-                         backend/average_cpu.h \
-                         backend/average_gpu.cuh \
-                         backend/average_omp.h \
-                         backend/config.h \
-                         backend/densematrix_serial.h \
-                         backend/densematrix_omp.h \
-                         backend/densematrix_cuda.h \
-                         backend/predicate.h \
+EXCLUDE                = backend/exblas/ \
+                         geometries/ \
+                         file/ \
                          backend/sparseblockmat_gpu_kernels.cuh \
                          backend/sparseblockmat_omp_kernels.h \
-                         backend/exblas/ \
-                         geometries/ \
-                         file/
+                         backend/config.h \
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

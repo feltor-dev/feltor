@@ -7,6 +7,7 @@
 #include "tensor_traits.h"
 
 namespace dg{
+///@cond
 namespace detail{
 template<template <typename> class Predicate, unsigned n, class Default, class... Ts>
 struct find_if_impl;
@@ -47,27 +48,55 @@ using find_if_t = typename detail::find_if_impl<Predicate,0, Default, T, Ts...>:
 //find the corresponding element's index in the parameter pack
 template<template <typename> class Predicate, class Default, class T, class... Ts>
 using find_if_v = std::integral_constant<unsigned, detail::find_if_impl<Predicate,0, Default, T, Ts...>::value>;
+///@endcond
 
 /////////////////////////////////////////////////////////////////////////////////
-//TODO Some of these can be made public
-//is scalar
+/// @addtogroup dispatch
+/// @{
+
+/// @brief Does a type have a tensor_category derived from \c Tag
+/// @sa dg::is_scalar_v
 template< class T, class Tag = AnyScalarTag>
 using is_scalar = typename std::is_base_of<Tag, get_tensor_category<T>>::type;
-template< class T, class Tag = AnyScalarTag>
-using is_not_scalar = std::conditional_t< !std::is_base_of<Tag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
-//is vector (or scalar)
+/// @brief Does a type have a tensor_category derived from \c Tag
+/// @sa dg::is_vector_v
 template< class T, class Tag = AnyVectorTag>
 using is_vector = typename std::is_base_of<Tag, get_tensor_category<T>>::type;
-//is matrix (or vector or scalar)
+/// @brief Does a type have a tensor_category derived from \c Tag
+/// @sa dg::is_matrix_v
 template< class T, class Tag = AnyMatrixTag>
 using is_matrix = typename std::is_base_of<Tag, get_tensor_category<T>>::type;
 
+/// Utility typedef
 template< class T, class Tag = AnyScalarTag>
 constexpr bool is_scalar_v = is_scalar<T, Tag>::value;
+/// Utility typedef
 template< class T, class Tag = AnyVectorTag>
 constexpr bool is_vector_v = is_vector<T, Tag>::value;
+/// Utility typedef
 template< class T, class Tag = AnyMatrixTag>
 constexpr bool is_matrix_v = is_matrix<T, Tag>::value;
+
+/// @brief Does a type have a execution_policy derived from \c Tag
+/// @sa dg::has_policy_v
+template< class T, class Tag = AnyPolicyTag>
+using has_policy = std::is_same<Tag, get_execution_policy<T>>;
+/// Utility typedef
+template< class T, class Tag = AnyPolicyTag>
+constexpr bool has_policy_v = has_policy<T, Tag>::value;
+
+/*! This is a utility class to get type information at compile time for
+ * debugging purposes Use like
+ * @code{.cpp}
+ * dg::WhichType<T>{};
+ * @endcode
+ */
+template< typename ...> struct WhichType;
+/// @}
+/// @cond
+
+template< class T, class Tag = AnyScalarTag>
+using is_not_scalar = std::conditional_t< !std::is_base_of<Tag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
 
 namespace detail
 {
@@ -78,13 +107,6 @@ using find_base_category = std::conditional_t< std::is_base_of<SharedVectorTag, 
 //is scalar or same base vector category
 template<class T, class Category>
 using is_scalar_or_same_base_category = std::conditional_t< std::is_base_of<detail::find_base_category<Category>, get_tensor_category<T>>::value || is_scalar<T>::value , std::true_type, std::false_type>;
-
-
-//has trivial policy
-template< class T, class Tag = AnyPolicyTag>
-using has_policy = std::is_same<Tag, get_execution_policy<T>>;
-template< class T, class Tag = AnyPolicyTag>
-constexpr bool has_policy_v = has_policy<T, Tag>::value;
 
 template< class T>
 using has_any_policy = has_policy<T, AnyPolicyTag>;
@@ -99,7 +121,7 @@ using is_not_scalar_has_not_any_policy = std::conditional_t< !is_scalar<T>::valu
 
 /////////////////////////////////////////////////////////////////////////////////
 
-template< typename ...> struct WhichType; //!< This is a utility class to get type information at compile time for debugging purposes Use like @code dg::WhichType<T>{};@endcode
+/// @endcond
 
 
 }//namespace dg

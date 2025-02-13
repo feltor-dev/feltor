@@ -14,18 +14,23 @@ namespace dg
 {
 
 /**
- * @brief mpi Vector class
+ * @brief A simple wrapper around a container object and an MPI_Comm.
  *
  * @ingroup mpi_structures
  *
- * This class is a simple wrapper around a container object and an MPI_Comm.
- * The blas1 and blas2 functionality is available iff it is available for the
- * container type.  We use mpi to communicate (e.g. boundary points in
- * matrix-vector multiplications) and use the existing blas functions for the
- * local computations.  (At the blas level 1 communication is needed only for
- * scalar products)
+ * This enables the tag dispatch system for e.g. blas1 and blas2 functions
+ * to choose the corresponding MPI implementation of a function over its
+ * shared memory analogon.
+ *
+ * In the dg library MPI_Vectors are generated notably via the \c dg::evaluate
+ * function when called with a \c dg::RealMPIGrid
+ * @note The design choice to keep a communicator with the local data was made
+ * to allow to write global reductions like \c dg::blas1::dot in the
+ * same way as in shared memory code without an additional \c comm parameter.
+ *
  * @tparam container local container type. Must have a \c size() and a \c
  * swap() member function and a specialization of the \c TensorTraits class.
+ * @sa dg::x::HVec dg::MHVec dg::MDVec dg::x::DVec and others
  */
 template<class container>
 struct MPI_Vector
