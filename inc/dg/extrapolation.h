@@ -20,14 +20,7 @@ namespace dg
  * @note With a little trick this function can be used to compute the least squares
  * fit through a given list of points
  *
- * @code{.c}
-dg::HVec x(100), y(100);
-// ... fill in x and y coordinates
-dg::HVec ones(100, 1.);
-// The ones signify the constant a_1 in the formula y = a_0x + a_1
-auto a = dg::least_squares<dg::HVec>( {x, ones}, y);
-// size of a is 2
-    @endcode
+ * @snippet{trimleft} extrapolation_t.cpp least_squares
  *
  * @note the algorithm used directly computes the components of \f$ B^T W B\f$
  * followed by an LU decomposition.
@@ -48,7 +41,7 @@ std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const 
     // Solve B^T B a = B^T b
     unsigned size = bs.size();
     // B^T B is the "Gram matrix"
-    dg::Operator<double> op( size, 0.); // B^T B
+    dg::SquareMatrix<double> op( size, 0.); // B^T B
     std::vector<double> rhs( size, 0.);
     std::vector<double> a(size,0.);
     for( unsigned i=0; i<size; i++)
@@ -62,7 +55,7 @@ std::vector<double> least_squares( const std::vector<ContainerType0>& bs, const 
     // possibly replace with Cholesky factorization?
     std::vector<unsigned> p;
     dg::create::lu_pivot( op, p);
-    dg::create::lu_solve<double>( op, p, rhs);
+    dg::lu_solve<double>( op, p, rhs);
     return rhs;
 }
 
@@ -91,13 +84,7 @@ GPU-ACCELERATED INCOMPRESSIBLE FLOW SOLVER (2021)</a>. This means it works for m
  * @note This works best if the unkown function \f$ \vec y = f(\vec x) \f$ is linear and
  * if the \f$ x_i\f$ are orthogonal
  *
- * @code{.c}
-dg::LeastSquaresExtrapolation<dg::HVec, dg::HVec> extra(3,copyable, copyable);
-extra.update( x0, y0);
-extra.update( x1, y1);
-extra.update( x1, y1); // will be rejected because already there
-extra.extrapolate( x, y); // y contains the new guess
-    @endcode
+ * @snippet{trimleft} extrapolation_t.cpp LeastSquaresExtrapolation
  * @ingroup extrapolation
  * @copydoc hide_ContainerType
  */
@@ -132,9 +119,9 @@ struct LeastSquaresExtrapolation
 
     /**
     * @brief extrapolate value at a new unkown value \f$ y = \alpha f(x) + \beta y \f$
-    * @param alpha Quality of live parameter
+    * @param alpha Quality of life parameter
     * @param x (read only) value to extrapolate for
-    * @param beta Quality of live parameter
+    * @param beta Quality of life parameter
     * @param y (write only) contains extrapolated value on output
     */
     void extrapolate( double alpha, const ContainerType0& x, double beta,
@@ -175,7 +162,7 @@ struct LeastSquaresExtrapolation
     void update( const ContainerType0& x_new, const ContainerType1& y_new){
         if( m_max == 0) return;
         unsigned size = m_counter < m_max ? m_counter + 1 : m_max;
-        dg::Operator<double> op( size, 0.), op_inv( size, 0.); // B^T B
+        dg::SquareMatrix<double> op( size, 0.), op_inv( size, 0.); // B^T B
         //i = 0
         op(0,0) = dg::blas1::dot( x_new, x_new);
         for( unsigned j=1; j<size; j++)
@@ -207,7 +194,7 @@ struct LeastSquaresExtrapolation
     unsigned m_max, m_counter;
     std::vector<ContainerType0> m_x;
     std::vector<ContainerType1> m_y;
-    dg::Operator<double> m_op, m_op_inv;
+    dg::SquareMatrix<double> m_op, m_op_inv;
 };
 
 /**
@@ -224,6 +211,8 @@ struct LeastSquaresExtrapolation
  are then used to compute the coefficients \c alpha_i (using Lagrange interpolation).
  Otherwise an equidistant distribution is assumed.
 *
+ * @snippet{trimleft} extrapolation_t.cpp Extrapolation
+ *
 * @note Since extrapolation with higher order polynomials is so prone to oscillations
 * anything higher than linear rarely leads to anything useful. So best stick to
 * constant or linear extrapolation
