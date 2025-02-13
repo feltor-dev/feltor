@@ -32,7 +32,7 @@ void symv( get_value_type<ContainerType1> alpha,
                   ContainerType2& y);
 }//namespace blas2
 
-///@addtogroup mpi_structures
+///@addtogroup mpi_matvec
 ///@{
 
 template<template<class > class Vector, class LocalMatrixInner, class LocalMatrixOuter = LocalMatrixInner>
@@ -257,25 +257,9 @@ enum dist_type
 // }// namespace detail
 // /// @endcond
 
-
 /**
-* @brief Distributed memory matrix class, asynchronous communication
-*
-* The idea of this mpi matrix is to separate communication and computation in
-* order to reuse existing optimized matrix formats for the computation. It can
-* be expected that this works particularly well for cases in which the
-* communication to computation ratio is low. This class assumes that the matrix
-* and vector elements are distributed either rowwise or column-wise among mpi processes.
-* The matrix elements are then further separated into rows that do not require communication
-* and the ones that do, i.e.
-* \f[
- M=M_i+M_o
- \f]
- where \f$ M_i\f$ is the inner matrix which requires no communication, while
- \f$ M_o\f$ is the outer matrix containing all elements which require
- communication from the Collective object.
-
-@subsection mpi_matrix MPI Matrices and the symv function
+ * @addtogroup mpi_matvec
+@section mpi_matrix MPI Matrices and the symv function
 
 Contrary to a vector a matrix can be distributed among processes in two ways:
 \a row-wise and \a column-wise. When we implement a matrix-vector
@@ -288,8 +272,8 @@ In a row-distributed matrix each process holds the rows of the matrix that
 correspond to the portion of the \c MPI_Vector it holds.  When we implement a
 matrix-vector multiplication each process first has to gather all the elements
 of the input vector it needs to be able to compute the elements of its output.
-In general this requires MPI communication.  (read the documentation of \c
-dg::aCommunicator for more info of how global scatter/gather operations work).
+In general this requires MPI communication.  (s.a. \ref mpigather
+for more info of how global scatter/gather operations work).
 After the elements have been gathered into a buffer the local matrix-vector
 multiplications can be executed.  Formally, the gather operation can be written
 as a matrix \f$G\f$ of \f$1'\f$s and \f$0'\f$s and we write.
@@ -337,11 +321,31 @@ distributed matrix.  Analogously, the transpose of a column distributed matrix
 is a row-distributed matrix.
 \subsubsection mpi_create Creation
 You can create a row-distributed MPI matrix given its local parts on each
-process with local row and global column indices by our \c dg::convert
+process with local row and global column indices by our \c dg::make_mpi_matrix
 function.  If you have a column distributed matrix with its local parts on each
 process with global row and local columns indices, you can use a combination of
 \c dg::convertLocal2GlobalCols and \c dg::convertGlobal2LocalRows to bring it
-to a row-distributed form. The latter can then be used in \c dg::convert again.
+to a row-distributed form. The latter can then be used in \c dg::make_mpi_matrix again.
+*/
+
+
+/**
+* @brief Distributed memory matrix class, asynchronous communication
+*
+* The idea of this mpi matrix is to separate communication and computation in
+* order to reuse existing optimized matrix formats for the computation. It can
+* be expected that this works particularly well for cases in which the
+* communication to computation ratio is low. This class assumes that the matrix
+* and vector elements are distributed either rowwise or column-wise among mpi processes.
+* The matrix elements are then further separated into rows that do not require communication
+* and the ones that do, i.e.
+* \f[
+ M=M_i+M_o
+ \f]
+ where \f$ M_i\f$ is the inner matrix which requires no communication, while
+ \f$ M_o\f$ is the outer matrix containing all elements which require
+ communication from the Collective object.
+
 * @tparam LocalMatrixInner The class of the matrix for local computations of the inner points.
  symv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points.

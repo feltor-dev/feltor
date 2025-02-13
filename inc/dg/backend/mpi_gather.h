@@ -12,8 +12,6 @@
 #include "index.h"
 
 namespace dg{
-//TODO Docu of Vector and @ingroup
-//Also this discussion holds for all our "MPIGather" objects
 ///@cond
 namespace detail{
 
@@ -80,6 +78,7 @@ struct MPIAllreduce
  *   (not in the constructor), thus an MPI_Type can only be commited during the
  *   send process which may be expensive
  * - We assume that the actual communication is with nearest neigbors mostly
+ *
  */
 struct MPIContiguousGather
 {
@@ -272,11 +271,12 @@ struct MPIContiguousGather
 ///@endcond
 
 /**
- * @brief Perform MPI distributed gather and its transpose (scatter) operation across processes
- * on distributed vectors using MPI
+ * @addtogroup mpi_comm
+ * @section mpigather MPI distributed gather and scatter operations
  *
- * In order to understand what this class does you should first really(!) understand what
- gather and scatter operations are, so grab pen and paper:
+ * In order to understand what this is about you should first really(!)
+ * understand what gather and scatter operations are, so grab pen and paper!
+ * @subsection primer Primer: Gather and scatter operations
 
  First, we note that gather and scatter are most often used in the context
  of memory buffers. The buffer needs to be filled wih values (gather) or these
@@ -328,12 +328,12 @@ All of the following statements are true
     reproduces the index map
 - If the entries of w are \f$ w_j = j\f$ then \f$ m \neq Sw\f$ does **not**
     reproduce the index map
-- In a "coo" formatted sparse matrix format the gather matrix is obtained:
+- In a "coo" formatted sparse matrix format the gather matrix is assembled via:
     \f$ m \f$ rows, \f$ N\f$ columns and \f$ m\f$ non-zeroes,
     the values array would consist only of "1"s,
     the row array is just the index \f$i\f$
     and the column array is the map \f$ g[i]\f$.
-- In a "coo" formatted sparse matrix format the scatter matrix is obtained:
+- In a "coo" formatted sparse matrix format the scatter matrix is assembled via:
     \f$ N \f$ rows, \f$ m\f$ columns and \f$ m\f$ non-zeroes,
     the values array would consist only of "1"s,
     the row array is the map \f$g[j]\f$
@@ -361,17 +361,18 @@ The following statements are all true
 - Symmetric permutations can be implemented "in-place" i.e. the source and buffer can be identical
 
 
+@subsection mpi_dist_gather MPI distributed gather and scatter
 
-This class performs these operations for the case that v and w are distributed
-across processes.  Accordingly, the index map \f$ g\f$  is also distributed
-across processes (in the same way w is).  The elements of \f$ g\f$ are
-**global** indices into v that have to be transformed to pairs (local index
-        into v, rank in communicator) according to a user provided function. Or
-the user can directly provide the index map as vector of mentioned pairs.
+Now we turn the case that v and w are distributed across processes.
+Accordingly, the index map \f$ g\f$  is also distributed across processes (in
+        the same way w is).  The elements of \f$ g\f$ are **global** indices
+into v that have to be transformed to pairs (local index into v, rank in
+        communicator) according to a user provided function. Or the user can
+directly provide the index map as vector of mentioned pairs.
 
 Imagine now that we want to perform a globally distributed gather operation.
 Then, the following steps are performed
- - From the given index array a MPI communication matrix (of size
+ - From the given index map a MPI communication matrix (of size
  \f$ s \times s\f$ where \f$ s\f$ is the number of processes in the MPI
  communicator) can be inferred. Each row shows how many elements a
  given rank ( the row index) receives from each of the other ranks in the
@@ -387,8 +388,8 @@ Then, the following steps are performed
  an optimal call of MPI Sends and Recvs. The implementation then provides two
  index maps. The first one must be used to gather values from v into the
  MPI send buffer and the second one can be used to gather values from the
- receive buffer into the target buffer. Notice that these two operations are
- **local** and require no MPI communication.
+ receive buffer into the target buffer. Notice that these two operations
+ are **local** and require no MPI communication.
 
  In total we thus describe the global gather as
  \f[ w = G v = G_1 P_{G,MPI} G_2 v\f]
@@ -415,20 +416,14 @@ Then, the following steps are performed
 
  @note Locally, a gather operation is trivially parallel but a scatter operation
  is not in general (because of the possible reduction operation).
- @sa LocalGatherMatrix
+ */
 
- * @ingroup mpi_structures
- * @code
- int i = myrank;
- double values[8] = {i,i,i,i, 9,9,9,9};
- thrust::host_vector<double> hvalues( values, values+8);
- int pids[8] =      {0,1,2,3, 0,1,2,3};
- thrust::host_vector<int> hpids( pids, pids+8);
- BijectiveComm coll( hpids, MPI_COMM_WORLD);
- thrust::host_vector<double> hrecv = coll.global_gather( hvalues); //for e.g. process 0 hrecv is now {0,9,1,9,2,9,3,9}
- thrust::host_vector<double> hrecv2( hvalues.size());
- coll.global_scatter_reduce( hrecv, hrecv2); //hrecv2 now equals hvalues independent of process rank
- @endcode
+ /**
+ * @brief Optimized MPI gather operation for row distributed matrices
+ *
+ *
+ * @sa LocalGatherMatrix
+ * @ingroup mpi_comm
  * @tparam Vector a thrust Vector
  */
 template< template <class> class Vector>

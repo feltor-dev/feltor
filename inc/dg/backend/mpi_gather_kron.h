@@ -130,7 +130,7 @@ struct MPIContiguousKroneckerGather
 *
 * @note the corresponding gather map is of general type and the communication
 *  can also be modeled in \c MPIGather
-* @ingroup mpi_structures
+* @ingroup mpi_comm
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
 * @tparam Buffer the container for the pointers to the buffer arrays
 * @tparam Vector the vector container type must have a resize() function and work

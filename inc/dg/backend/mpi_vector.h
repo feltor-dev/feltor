@@ -16,7 +16,7 @@ namespace dg
 /**
  * @brief A simple wrapper around a container object and an MPI_Comm.
  *
- * @ingroup mpi_structures
+ * @ingroup mpi_matvec
  *
  * This enables the tag dispatch system for e.g. blas1 and blas2 functions
  * to choose the corresponding MPI implementation of a function over its

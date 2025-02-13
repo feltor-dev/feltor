@@ -65,7 +65,6 @@ inline void mpi_cart_register_cart( MPI_Comm comm)
     }
 }
 }
-///@endcond
 
 ///@addtogroup mpi_utility
 ///@{
@@ -88,6 +87,8 @@ inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
         info.remain_dims[u]  = remain_dims[u];
     detail::mpi_cart_registry[newcomm] = info;
 }
+// Can't decide whether to make register_mpi_cart_sub public ...
+///@endcond
 
 /*! @brief Call and register a call to \c MPI_Cart_sub with the dg library
  *
@@ -105,7 +106,6 @@ inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
  * MPI_Cart_sub.
  * @return communicator containing the subgrid that includes the calling
  * process (handle) (parameter used in \c MPI_Cart_sub)
- * @ingroup mpi_structures
  * @copydoc hide_mpi_cart_rationale
  */
 inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool

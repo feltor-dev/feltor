@@ -356,16 +356,17 @@ std::map<int,int> get_size_map( const std::map<int, thrust::host_vector<T>>& idx
 
 
 }// namespace detail
-///@endcond
-//
-// TODO Maybe this can be public
-// Convert a unsorted and possible duplicate global index list to unique
-// stable_sorted by pid and duplicates map
-// bufferIdx gives
-// idx 0 is pid, idx 1 is localIndex on that pid
-// TODO gIdx can be unsorted and contain duplicate entries
-// TODO idx 0 is pid, idx 1 is localIndex on that pid
+// TODO Maybe this can be public? Why would anyone call these functions directly?
 // TODO Maybe be a MPIGather function?
+/**
+ * @brief Convert an unsorted and possible duplicate global index list to unique
+ * stable_sorted by pid and duplicates map
+
+ * bufferIdx gives
+ * @note gIdx can be unsorted and contain duplicate entries
+ * @param gIdx idx 0 is pid, idx 1 is localIndex on that pid
+ * @param bufferIdx Same size as gIdx. Index into flattened map
+*/
 template<class ArrayVec = thrust::host_vector<std::array<int,2>>, class IntVec = thrust::host_vector<int>>
 std::map<int, IntVec> gIdx2unique_idx(
     const ArrayVec& gIdx, // unsorted (cannot be map)
@@ -431,4 +432,5 @@ std::map<int, IntVec> gIdx2unique_idx(
     // TODO update docu on local_size() ( if we don't scatter we don't need it)
     return gIdx2unique_idx( gIdx2gIdx(globalIndexMap), bufferIdx);
 }
+///@endcond
 } // namespace dg

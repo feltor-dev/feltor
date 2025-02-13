@@ -13,14 +13,22 @@ TEST_CASE( "MPI permutation")
 
     SECTION( "Send each following rank an integer")
     {
+        //! [permute]
+        int rank, size;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        MPI_Comm_size( MPI_COMM_WORLD, &size);
+        // Send an integer to the next process in a "circle"
         std::map<int, int> messages = { {(rank + 1)%size, rank}};
         INFO( "Rank "<<rank<<" send message "<<messages[(rank+1)%size]<<"\n");
-        CHECK( (size==1 or dg::is_communicating( messages, MPI_COMM_WORLD)));
         auto recv = dg::mpi_permute( messages, MPI_COMM_WORLD);
+        // Each rank received a message from the previous rank
         INFO("Rank "<<rank<<" received message "<<recv[(rank+size-1)%size]<<"\n");
         CHECK( recv[(rank+size-1)%size] == (rank+size-1)%  size);
+        // If we permute again we send everything back
         auto messages_num = dg::mpi_permute( recv, MPI_COMM_WORLD);
         CHECK( messages == messages_num);
+        //! [permute]
+        CHECK( (size==1 or dg::is_communicating( messages, MPI_COMM_WORLD)));
     }
     SECTION( "Send each following rank a vector")
     {

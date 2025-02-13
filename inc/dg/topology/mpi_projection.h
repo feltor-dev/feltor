@@ -36,7 +36,7 @@ namespace dg
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed the collective communicator will have zero size.
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
- * @ingroup mpi_structures
+ * @ingroup mpi_matvec
  */
 template<class ConversionPolicy, class real_type>
 dg::MIHMatrix_t<real_type> make_mpi_matrix(
@@ -148,7 +148,7 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
  * @return a row distributed MPI matrix. If no MPI communication is needed it simply has row-indices
  * converted from global to local indices. \c num_cols is the one from \c global
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
- * @ingroup mpi_structures
+ * @ingroup mpi_matvec
  */
 template<class ConversionPolicy, class real_type>
 dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_type>& global, const ConversionPolicy& row_policy)
@@ -209,7 +209,7 @@ dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_typ
  * @param policy the conversion object
  *
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
- * @ingroup mpi_structures
+ * @ingroup mpi_matvec
  */
 template<class ConversionPolicy, class real_type>
 void convertLocal2GlobalCols( dg::IHMatrix_t<real_type>& local, const ConversionPolicy& policy)

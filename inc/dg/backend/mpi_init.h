@@ -297,6 +297,7 @@ inline MPI_Comm mpi_cart_create(
  *   comm = mpi_cart_create( {bcx}, is, MPI_COMM_WORLD, true, verbose,
  *   std::cout);
  * @endcode
+ * @ingroup mpi_legacy
  */
 inline void mpi_init1d( dg::bc bcx, MPI_Comm& comm, std::istream& is =
 std::cin, bool verbose = true)
@@ -310,6 +311,7 @@ std::cin, bool verbose = true)
  *   comm = mpi_cart_create( {bcx,bcy}, is, MPI_COMM_WORLD, true, verbose,
  *   std::cout);
  * @endcode
+ * @ingroup mpi_legacy
  */
 inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream&
 is = std::cin, bool verbose = true)
@@ -324,6 +326,7 @@ is = std::cin, bool verbose = true)
  *   comm = mpi_cart_create( {bcx,bcy,bcz}, is, MPI_COMM_WORLD, true, verbose,
  *   std::cout);
  * @endcode
+ * @ingroup mpi_legacy
  */
 inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm,
 std::istream& is = std::cin, bool verbose = true  )
@@ -341,6 +344,7 @@ std::istream& is = std::cin, bool verbose = true  )
  *       std::cout);
  *   mpi_read_grid( n, {&N}, comm, is, verbose, std::cout);
  * @endcode
+ * @ingroup mpi_legacy
  */
 inline void mpi_init1d( dg::bc bcx, unsigned& n, unsigned& N, MPI_Comm& comm,
 std::istream& is = std::cin, bool verbose = true  )
@@ -359,6 +363,7 @@ std::istream& is = std::cin, bool verbose = true  )
  *       std::cout);
  *   mpi_read_grid( n, {&Nx, &Ny}, comm, is, verbose, std::cout);
  * @endcode
+ * @ingroup mpi_legacy
  */
 inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx,
 unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true
@@ -379,6 +384,7 @@ unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true
  *       std::cout);
  *   mpi_read_grid( n, {&Nx, &Ny, &Nz}, comm, is, verbose, std::cout);
  * @endcode
+ * @ingroup mpi_legacy
  */
 inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n,
 unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is =

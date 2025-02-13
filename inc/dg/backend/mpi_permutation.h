@@ -12,67 +12,49 @@
 
 namespace dg{
 
+///@addtogroup mpi_utility
+///@{
 
-    /**
-     * @brief engine for mpi permutating (i.e. bijective)
-     *  gather and scatter operations
-     *
-     * We call the two vectors involved the "buffer" w  and the "store" array v.
-     * The buffer array is the one that is associated with the index map
-     * that we give in the constructor i.e
-     * in the constructor you can specify how many values from each process
-     * the buffer array receives or how many values to each process
-     * the buffer array sends:
-     * \f$ w = G v\f$
-     *
-     * In this way we gather values from the buffer array into the store array
-     * while scatter inverts the operation
-     * \f$ v = S w = G^T w = G^{-1} w\f$
-     * @note The global size of buffer and store are equal. The local buffer
-     * size is the accumulation of the \c connect values in the constructor
-     * The store size is infered from the connection matrix.
-     *
-     * @b Scatter is the following: The first sendTo[0] elements of the buffer array
-     * are sent to rank 0, The next sendTo[1] elements are sent to rank 1 and so
-     * on; the first recvFrom[0] elements in the store array are the values (in
-     * order) sent from rank 0, etc.
-     * @b Gather: The first recvFrom[0] elements of the buffer array on the calling
-     * rank are received from the "rank slot" in the store array on rank 0. etc.
-     *
-     * If the collaboration matrix is symmetric scatter and gather are the same
-     * operation and "in-place" operation can be used, i.e. buffer and store
-     * can be the same array
-     */
-// TODO MAybe make a group mpi_utilities
-// I think this is fairly intuitive to understand which is good
 /**
- * @brief Bootstrap irregular communication between processes
+ * @brief Exchange messages between processes in a communicator
  *
- * @param messages (in) <tt> messages[PID] </tt> contains the message that the calling rank
- * sends to PID
+ * For example
+ * @snippet{trimleft} mpi_permutation_mpit.cpp permute
+ *
+ * @tparam MessageType Can be one of the following
+ *  -# A primitive type like \c int or \c double
+ *  -# A (host) vector of primitive types like \c std::vector<int> or \c
+ *  thrust::host_vector<double>
+ *  -# A (host) vector of std::array of primitive types like \c
+ *  thrust::host_vector<std::array<double,3>>
+ *  .
+ * @param messages (in) <tt>messages[PID]</tt> contains the message that the
+ * calling rank sends to PID
  * @param comm Communicator
- * @return <tt> received elements[PID] </tt> contains the message that the calling rank
- *  receveived from PID
+ * @return <tt>received elements[PID]</tt> contains the message that the
+ * calling rank receveived from PID
  *
  * @note Calls \c MPI_Allgather with given communicator to send the sizes
- * followed by \c MPI_Alltoall to send the actual data. This means all processes in comm
- * need to call this function
- * @note This can be used to bootstrap mpi gather operations if elements is an index map
- * "recvIdx" of local indices of messages to receive from PID, because it "tells" every
- * process which messages to send
+ * followed by \c MPI_Alltoall to send the actual data. This means all
+ * processes in comm need to call this function
+ * @note This can be used to bootstrap mpi gather operations if elements is an
+ * index map "recvIdx" of local indices of messages to receive from PID,
+ * because it "tells" every process which messages to send
  * @note Also can be used to invert a bijective mpi gather map
  *
  * @note This function is a permutation i.e.
  * @code{.cpp}
- * recvIdx == mpi_permute( mpi_permute(recvIdx, comm), comm);
+ * recvIdx == dg::mpi_permute( dg::mpi_permute(recvIdx, comm), comm);
  * @endcode
  * @tparam ContainerType Shared ContainerType.
+ * @sa \ref mpigather
  */
 template<class MessageType>
 std::map<int,MessageType> mpi_permute(
     const std::map<int,MessageType>& messages,
     MPI_Comm comm)
 {
+    // I think this function is fairly intuitive to understand which is good
     int rank, comm_size;
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &comm_size);
@@ -116,6 +98,8 @@ std::map<int,MessageType> mpi_permute(
  * @return false if no process in comm sends or receives any
  * message to another process, true else
  * @tparam M message type (\c M.size() must be callable)
+ * @note This involves MPI communication because all ranks need to know if they
+ * themselves send message **and** if all other ranks also send any messages
  */
 template<class MessageType>
 bool is_communicating(
@@ -141,7 +125,20 @@ bool is_communicating(
     return isCommunicating;
 }
 
-// un-optimized version (mainly used for testing)
+/**
+ * @brief Un-optimized distributed gather operation
+ *
+ * @tparam ContainerType A (host) vector
+ * @param gather_map Each element consists of <tt>{rank, local index on that
+ * rank}</tt> pairs, which is equivalent to the global address of a vector
+ * element in \c gatherFrom
+ * @param gatherFrom Local part of the vector from which the calling and other
+ * ranks can gather indices
+ * @param result (Same size as gather_map on output) On output contains the
+ * elements that \c gather_map referenced
+ * @param comm The MPI communicator within which to exchange elements
+ * @sa \ref mpigather
+ */
 template<class ContainerType>
 void mpi_gather( const thrust::host_vector<std::array<int,2>>& gather_map,
     const ContainerType& gatherFrom, ContainerType& result, MPI_Comm comm)
@@ -159,11 +156,29 @@ void mpi_gather( const thrust::host_vector<std::array<int,2>>& gather_map,
     result.resize( bufferIdx.size());
     thrust::gather( bufferIdx.begin(), bufferIdx.end(), flat.begin(), result.begin());
 }
-// un-optimized version (mainly used for testing), only works for host arrays (only works for injective)
+/**
+ * @brief Un-optimized distributed scatter operation
+ *
+ * @tparam ContainerType A (host) vector
+ * @param scatter_map Each element consists of <tt>{rank, local index on that
+ * rank}</tt> pairs, which is equivalent to the global address of an element
+ * in \c result
+ *
+ * @attention Must be injective i.e. globally distinct elements in \c toScatter must
+ * map to distince elements in \c result
+ * @param toScatter Same size as \c scatter_map. The \c scatter_map tells where
+ * each element in this vector is sent to
+ * @param result In principle we must know the size of \c result beforehand
+ * (because how else did you come up with a \c scatter_map)
+ * @param comm The MPI communicator within which to exchange elements
+ * @resize_result If true we resize the result to the correct size (mainly needed for \c mpi_invert_permutation)
+ * @sa \ref mpigather
+ */
 template<class ContainerType>
 void mpi_scatter( const thrust::host_vector<std::array<int,2>>& scatter_map,
-    const ContainerType& toScatter, ContainerType& result, // result needs to have correct size!
-    MPI_Comm comm, bool resize_result = false // if true we resize the result (needed for invert_permutation)
+    const ContainerType& toScatter, ContainerType& result,
+    MPI_Comm comm,
+    bool resize_result = false
     )
 {
     thrust::host_vector<int> bufferIdx;
@@ -185,10 +200,22 @@ void mpi_scatter( const thrust::host_vector<std::array<int,2>>& scatter_map,
     thrust::scatter( res.begin(), res.end(), scatter.begin(), result.begin());
 }
 
-// TODO document ( only works on host)
+/**
+ * @brief Invert a globally bijective index map
+ *
+ * @param p Each element consists of <tt>{rank, local index on that
+ * rank}</tt> pairs, which is equivalent to the global address of a vector element
+ *
+ * @attention Must be bijective i.e. globally distinct elements in \c toScatter must
+ * map to distince elements in \c result and all elements in \c result must be mapped
+ * @param comm The MPI communicator within which to exchange elements
+ * @return inverse map
+ * @sa \ref mpigather
+ */
 template<class Integer>
 thrust::host_vector<std::array<Integer,2>>
-    mpi_invert_permutation( const thrust::host_vector<std::array<Integer,2>>& p, MPI_Comm comm)
+    mpi_invert_permutation( const thrust::host_vector<std::array<Integer,2>>& p,
+            MPI_Comm comm)
 {
     thrust::host_vector<Integer> seq( p.size());
     thrust::host_vector<std::array<Integer,2>> seq_arr( p.size());
@@ -203,6 +230,7 @@ thrust::host_vector<std::array<Integer,2>>
     return sort_map;
 
 }
+///@}
 
 
 } // namespace dg

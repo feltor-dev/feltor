@@ -31,6 +31,10 @@
  *        @defgroup typedefs Typedefs for Vectors and Matrices
  *    @}
  *    @defgroup mpi_structures MPI backend
+ *    @{
+ *        @defgroup mpi_matvec Distributed Matrix and Vector
+ *        @defgroup mpi_comm MPI Distributed Gather and Scatter
+ *    @}
  *    @brief \#include <mpi.h> before any other dg header file
  * @}
  * @defgroup lvevl2 Level 2: Basic numerical algorithms
@@ -139,6 +143,9 @@
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *     @defgroup mpi_utility MPI utility functions
+ *     @{
+ *          @defgroup mpi_legacy Legacy MPI functions
+ *     @}
  *
  * @}
  *
