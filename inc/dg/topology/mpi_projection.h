@@ -15,7 +15,8 @@ namespace dg
 {
 
 /**
- * @brief Convert a (row-distributed) matrix with local row and global column indices to a row distributed MPI matrix
+ * @brief Convert a (row-distributed) matrix with local row and global column
+ * indices to a row distributed MPI matrix
  *
 @code{.cpp}
     dg::IHMatrix_t<real_type> mat = dg::create::interpolation(
@@ -25,16 +26,20 @@ namespace dg
     auto mpi_mat = dg::make_mpi_matrix(  mat, g_old);
 @endcode
  * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
- *  - <tt> bool global2localIdx(unsigned,unsigned&,unsigned&) const; </tt>
+ *  - <tt>bool global2localIdx(unsigned,unsigned&,unsigned&) const;</tt>
  * where the first parameter is the global index and the
  * other two are the output pair (localIdx, rank).
    return true if successful, false if global index is not part of the grid
- *  - <tt> MPI_Comm %communicator() const; </tt>  returns the communicator to use in the gather/scatter
- *  - <tt> local_size(); </tt> return the local vector size
- * @param global the local part of the matrix (different on each process) with **global column indices** and num_cols but **local row indices** and num_rows
+ *  - <tt>MPI_Comm %communicator() const;</tt>  returns the communicator to use in the gather/scatter
+ *  - <tt>unsigned local_size() const;</tt> return the local vector size
+ *  .
+ * @param global the local part of the matrix (different on each process) with
+ * **global column indices** and num_cols but **local row indices** and
+ * num_rows
  * @param policy the conversion object
  *
- * @return a row distributed MPI matrix. If no MPI communication is needed the collective communicator will have zero size.
+ * @return a row distributed MPI matrix. If no MPI communication is needed the
+ * collective communicator will have zero size.
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
  * @ingroup mpi_matvec
  */

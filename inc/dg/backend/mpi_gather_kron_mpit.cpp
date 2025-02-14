@@ -38,7 +38,6 @@ TEST_CASE( "Kronecker Gather")
         }
     thrust::host_vector<int> bufferIdx;
     auto gather_map = dg::gIdx2unique_idx( gIdx, bufferIdx);
-    dg::LocalGatherMatrix<thrust::host_vector> gather(bufferIdx);
 
     dg::MPIKroneckerGather<thrust::host_vector>
         mpi_gather( test == 0 ? 1 : 3, gather_map, 1, 3, test == 0 ? 3 : 1, comm1d);
@@ -46,7 +45,7 @@ TEST_CASE( "Kronecker Gather")
     thrust::host_vector<const double*> ptrs(gIdx.size());
     mpi_gather.global_gather_init( v);
     mpi_gather.global_gather_wait( v, ptrs_g);
-    gather.gather( ptrs_g, ptrs);
+    thrust::gather( bufferIdx.begin(), bufferIdx.end(), ptrs_g.begin(), ptrs.begin());
     for( unsigned u=0; u<ptrs.size(); u++)
     {
         for( int k=0; k<3; k++)

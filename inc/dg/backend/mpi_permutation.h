@@ -11,8 +11,42 @@
 
 
 namespace dg{
+///@cond
+/*! @brief Check if communication map involves actual mpi communication
 
-///@addtogroup mpi_utility
+ * @param messages (in) messages[PID] is the message the calling rank sends to PID
+ * @return false if no process in comm sends or receives any
+ * message to another process, true else
+ * @tparam M message type (\c M.size() must be callable)
+ * @note This involves MPI communication because all ranks need to know if they
+ * themselves send message **and** if all other ranks also send any messages
+ */
+template<class MessageType>
+bool is_communicating(
+    const std::map<int,MessageType>& messages,
+    MPI_Comm comm)
+{
+    int comm_size;
+    MPI_Comm_size( comm, &comm_size);
+    thrust::host_vector<int> sendTo( comm_size, 0 );
+    thrust::host_vector<int> global( comm_size*comm_size);
+    auto flat_vals = detail::flatten_values( messages);
+    for( auto& send : flat_vals)
+        sendTo[send.first] = send.second.size();
+    // everyone knows howmany messages everyone is sending
+    MPI_Allgather( sendTo.data(), comm_size, MPI_INT,
+                   global.data(), comm_size, MPI_INT,
+                   comm);
+    bool isCommunicating = false;
+    for( int i=0; i<comm_size; i++)
+        for( int k=0; k<comm_size; k++)
+            if( k != i and global[i*comm_size+k] != 0)
+                isCommunicating = true;
+    return isCommunicating;
+}
+///@endcond
+
+///@addtogroup mpi_comm
 ///@{
 
 /**
@@ -91,38 +125,6 @@ std::map<int,MessageType> mpi_permute(
                    recv_ptr, recvFrom_ptr, accR_ptr, type,
                    comm);
     return detail::make_map_t<MessageType>( recv, detail::make_size_map( recvFrom) );
-}
-/*! @brief Check if communication map involves actual mpi communication
-
- * @param messages (in) messages[PID] is the message the calling rank sends to PID
- * @return false if no process in comm sends or receives any
- * message to another process, true else
- * @tparam M message type (\c M.size() must be callable)
- * @note This involves MPI communication because all ranks need to know if they
- * themselves send message **and** if all other ranks also send any messages
- */
-template<class MessageType>
-bool is_communicating(
-    const std::map<int,MessageType>& messages,
-    MPI_Comm comm)
-{
-    int comm_size;
-    MPI_Comm_size( comm, &comm_size);
-    thrust::host_vector<int> sendTo( comm_size, 0 );
-    thrust::host_vector<int> global( comm_size*comm_size);
-    auto flat_vals = detail::flatten_values( messages);
-    for( auto& send : flat_vals)
-        sendTo[send.first] = send.second.size();
-    // everyone knows howmany messages everyone is sending
-    MPI_Allgather( sendTo.data(), comm_size, MPI_INT,
-                   global.data(), comm_size, MPI_INT,
-                   comm);
-    bool isCommunicating = false;
-    for( int i=0; i<comm_size; i++)
-        for( int k=0; k<comm_size; k++)
-            if( k != i and global[i*comm_size+k] != 0)
-                isCommunicating = true;
-    return isCommunicating;
 }
 
 /**

@@ -8,13 +8,13 @@
 #include "mpi_permutation.h"
 #include "tensor_traits.h"
 #include "memory.h"
-#include "gather.h"
 #include "index.h"
 
 namespace dg{
 ///@cond
 namespace detail{
 
+// Used for Average operation
 struct MPIAllreduce
 {
     MPIAllreduce( MPI_Comm comm = MPI_COMM_NULL) : m_comm(comm){}
@@ -62,7 +62,14 @@ struct MPIAllreduce
     mutable detail::AnyVector<thrust::host_vector>  m_h_buffer;
 };
 
-/*!@brief A hand implemented \c MPI_Ialltoallv for a contiguous \c MPI_Type_contiguous/\c MPI_Type_vector
+/*!@brief A hand implemented \c MPI_Ialltoallv for a contiguous \c
+ * MPI_Type_contiguous/\c MPI_Type_vector
+ *
+ * This class just send/recv the communication pattern from the constructor
+ * without analysing or memory allocation (except host buffer for not cuda
+ * aware)
+ * @note Messages are received in the order that <tt>for( auto& msg : recvMsg)</tt>
+ * is unrolled
  *
  * What we are doing here is implementing an \c MPI_Ialltoallv for
  * a contiguous chunked \c MPI_Type_contiguous or \c MPI_Type_vector
@@ -70,25 +77,32 @@ struct MPIAllreduce
  * clever combinations of \c MPI_Type_contiguous and \c MPI_Type_vector
  *
  * We are doing this by hand in terms of \c MPI_Isend \c MPI_Irecv because
- * - we capture cuda unaware MPI and manage the associated host memory
+ * - we capture cuda unaware MPI and manage the associated host memory.
+ *   So here in principle an MPI library should be able to handle that but
+ *   specifically OpenMPI
+ *   https://docs.open-mpi.org/en/main/tuning-apps/networking/cuda.html#what-kind-of-cuda-support-exists-in-open-mpi
+ *   has the worrying statement that "non-contiguous datatypes currently have
+ *   high overhead because of the many calls to the CUDA function cuMemcpy() to
+ *   copy all the pieces of the buffer into the intermediate buffer"
  * - according to OpenMPI implementation \c MPI_Ialltoallv is not implemented for cuda
- * - we use more convenient map datatype for a more convenient setup
- * - we manage the associated \c MPI_Request handles
  * - the datatypes (double/complex) to send are only available when sending
  *   (not in the constructor), thus an MPI_Type can only be commited during the
- *   send process which may be expensive
- * - We assume that the actual communication is with nearest neigbors mostly
- *
+ *   send process which may be expensive (this could however be handled by
+ *   caching e.g. a static map of committed types)
+ * - we use more convenient map datatype for a more convenient setup
+ *   (however this is a minor issue of how to expose all this to the user)
+ * - we manage the associated \c MPI_Request handles
+ * - Isend and Irecv should be fine for typical nearest neighbor communication
+ *   patterns
  */
 struct MPIContiguousGather
 {
-    ///@copydoc MPIGather<Vector>::MPIGather(comm)
     MPIContiguousGather( MPI_Comm comm = MPI_COMM_NULL)
     : m_comm(comm), m_communicating(false){ }
-    /*!@brief Construct from indices in units of \c chunk_size
+    /*!@brief Bootstrap communication pattern from indices in units of \c chunk_size
      *
      * @param recvMsg recvMsg[PID] consists of the local indices on PID
-     * that the calling receives from that PID
+     * that the calling process receives from that PID ( = gather map)
      * @param comm
      */
     MPIContiguousGather(
@@ -419,8 +433,7 @@ Then, the following steps are performed
  */
 
  /**
- * @brief Optimized MPI gather operation for row distributed matrices
- *
+ * @brief Optimized MPI Gather operation for row distributed matrices
  *
  * @sa LocalGatherMatrix
  * @ingroup mpi_comm
@@ -432,41 +445,36 @@ struct MPIGather
 
     /*!@brief no communication
      *
-     * @param comm optional MPI communicator: the purpose is to be able to store
-     MPI communicator even if no communication is involved in order to
-     construct MPI_Vector with it
+     * @param comm optional MPI communicator: the purpose is to be able to
+     * store MPI communicator even if no communication is involved in order to
+     * construct MPI_Vector with it
      */
     MPIGather( MPI_Comm comm = MPI_COMM_NULL) : m_mpi_gather(comm){ }
-    //TODO  update docu
-    /**
-    * @brief Construct from local indices and PIDs index map
-    *
-    * The indices in the index map are written with respect to the buffer
-    * vector.  Each location in the source vector is uniquely specified by a
-    * local vector index and the process rank.
-    * @param local_size local size of a \c dg::MPI_Vector (same for all
-    * processes)
-    * @param localIndexMap Each element <tt>localIndexMap[i]</tt> represents a
-    * local vector index from (or to) where to take the value
-    * <tt>buffer[i]</tt>. There are <tt>local_buffer_size =
-    * localIndexMap.size()</tt> elements.
-    * @param pidIndexMap Each element <tt>pidIndexMap[i]</tt> represents the
-    * pid/rank to which the corresponding index <tt>localIndexMap[i]</tt> is
-    * local.  Same size as \c localIndexMap.  The pid/rank needs to be element
-    * of the given communicator.
-    * @param comm The MPI communicator participating in the gather
-    * operations
-    */
+
+    /// Short for <tt>MPIGather( recvIdx, 1, comm)</tt>
     MPIGather(
         const std::map<int, thrust::host_vector<int>>& recvIdx, // should be unique global indices (->gIdx2unique)
         MPI_Comm comm) : MPIGather( recvIdx, 1, comm)
     { }
+    /**
+    * @brief Construct from global index map
+    *
+    * @param recvIdx recvIdx[PID] consists of the local indices on PID
+    * that the calling process receives from that PID ( = gather map)
+    * @param chunk_size If the communication pattern consists of equally sized
+    * chunks one can specify in \c recvIdx only the starting indices of each
+    * chunk and use \c chunk_size to specify how many indices should be sent
+    * @param comm The MPI communicator participating in the gather
+    * operations
+     * @note Messages will be received in \c buffer in the order that <tt>for(
+     * auto& msg : recvIdx)</tt> is unrolled
+    */
     MPIGather(
         const std::map<int, thrust::host_vector<int>>& recvIdx, // in units of chunk size
         unsigned chunk_size, // can be 1 (contiguous indices in recvIdx are concatenated)
         MPI_Comm comm)
     {
-        // TODO Catch wrong size of recvIdx 
+        // TODO Catch wrong size of recvIdx
         static_assert( dg::is_vector_v<Vector<double>, SharedVectorTag>,
                 "Only Shared vectors allowed");
         // The idea is that recvIdx and sendIdx completely define the communication pattern
@@ -511,7 +519,7 @@ struct MPIGather
                 }
                 start += idx.second.size();
             }
-            m_g2 = LocalGatherMatrix<Vector>(g2);
+            m_g2 = g2;
             // bootstrap communication pattern back to recvIdx
             // (so that recvIdx has index into same store)
             auto store_recvIdx = mpi_permute( sendIdx, comm);
@@ -523,7 +531,29 @@ struct MPIGather
             m_mpi_gather = detail::MPIContiguousGather( recvChunks, comm);
 
     }
+    /**
+     * @brief Convert an unsorted and possible duplicate global index list to unique
+     * stable_sorted by pid and duplicates map
 
+     * @param gather_map Each element consists of <tt>{rank, local index on that
+     * rank}</tt> pairs, which is equivalent to the global address of a vector
+     * element in \c gatherFrom. \c gather_map can be unsorted and contain duplicate
+     * entries. The implementation will only send the unique indices through
+     * the network
+     * @param bufferIdx (Write only) On output resized to \c gather_map.size().
+     * On output contains index into the resulting buffer vector in \c
+     * global_gather_init and \c global_gather_wait that corresponds to the
+     * requested \c gather_map
+    */
+    template<class ArrayVec = thrust::host_vector<std::array<int,2>>,
+        class IntVec = thrust::host_vector<int>>
+    MPIGather(
+        const ArrayVec& gather_map, // unsorted (cannot be map)
+        IntVec& bufferIdx,
+        MPI_Comm comm) // gIdx size, gather gIdx from flatten_map
+        : MPIGather( gIdx2unique_idx ( gather_map, bufferIdx), comm)
+    {
+    }
 
     /// https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
     template< template<class> class OtherVector>
@@ -558,9 +588,10 @@ struct MPIGather
     /**
     * @brief The local size of the buffer vector w = local map size
     *
-    * Consider that both the source vector v and the buffer w are distributed across processes.
-    * In Feltor the vector v is (usually) distributed equally among processes and the local size
-    * of v is the same for all processes. However, the buffer size might be different for each process.
+    * Consider that both the source vector v and the buffer w are distributed
+    * across processes.  In Feltor the vector v is (usually) distributed
+    * equally among processes and the local size of v is the same for all
+    * processes. However, the buffer size might be different for each process.
     * @return buffer size (may be different for each process)
     * @note may return 0
     * @attention it is NOT a good idea to check for zero buffer size if you
@@ -599,14 +630,19 @@ struct MPIGather
     /**
      * @brief \f$ w = G v\f$. Globally (across processes) asynchronously gather data into a buffer
      *
-     * @param values source vector v; data is collected from this vector
-     * @note If <tt> !isCommunicating() </tt> then this call will not involve
-     * MPI communication but will still gather values according to the given
-     * index map
+     * @tparam ContainerType Can be any shared vector container on host or device, e.g.
+     *  - thrust::host_vector<double>
+     *  - thrust::device_vector<double>
+     *  - thrust::device_vector<thrust::complex<double>>
+     *  .
+     * @param gatherFrom source vector v; data is collected from this vector
+     * @param buffer The buffer vector w, must have \c buffer_size()
      * @attention It is @b unsafe to write values to \c gatherFrom
      * or to read values in \c buffer until \c global_gather_wait
      * has been called
-     * @sa The transpose operation is <tt> global_scatter_reduce() </tt>
+     * @note If <tt> !isCommunicating() </tt> then this call will not involve
+     * MPI communication but will still gather values according to the given
+     * index map
      */
     template<class ContainerType0, class ContainerType1>
     void global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer) const
@@ -614,21 +650,23 @@ struct MPIGather
         using value_type = dg::get_value_type<ContainerType0>;
         if( not m_contiguous)
         {
-            m_store.template set<value_type>( m_g2.index_map().size());
+            m_store.template set<value_type>( m_g2.size());
             auto& store = m_store.template get<value_type>();
-            m_g2.gather( gatherFrom, store);
+            thrust::gather( m_g2.begin(), m_g2.end(), gatherFrom.begin(),
+                store.begin());
             m_mpi_gather.global_gather_init( store, buffer);
         }
         else
             m_mpi_gather.global_gather_init( gatherFrom, buffer);
     }
     /**
-    * @brief Wait for asynchronous communication to finish and gather received data into buffer
+    * @brief Wait for asynchronous communication to finish and gather received
+    * data into buffer
     *
-    * Call \c MPI_Waitall on internal \c MPI_Request variables
-    * and manage host memory in case of cuda-unaware MPI.
-    * After this call returns it is safe to use the buffer and the \c gatherFrom variable
-    * from the corresponding \c global_gather_init call
+    * Call \c MPI_Waitall on internal \c MPI_Request variables and manage host
+    * memory in case of cuda-unaware MPI.  After this call returns it is safe
+    * to use the buffer and the \c gatherFrom variable from the corresponding
+    * \c global_gather_init call
     * @param buffer (write only) where received data resides on return; must be
     * identical to the one given in a previous call to \c global_gather_init()
     */
@@ -641,7 +679,7 @@ struct MPIGather
     private:
 
     bool m_contiguous = false;
-    LocalGatherMatrix<Vector> m_g2;
+    Vector<int> m_g2;
     dg::detail::MPIContiguousGather m_mpi_gather;
     // These are mutable and we never expose them to the user
     //unsigned m_store_size;// not needed because g2.index_map.size()

@@ -191,7 +191,7 @@ struct MPIKroneckerGather
             for( unsigned k=0; k<right_size; k++)
                 g2[((l*n+j)*left_size+i)*right_size + k] =
                      ((i*num_cols + uni.unique[l])*n + j)*right_size + k;
-            m_g2 = LocalGatherMatrix<Vector>(g2);
+            m_g2 = g2;
         }
         else
             m_mpi_gather = detail::MPIContiguousKroneckerGather<Vector>(
@@ -222,9 +222,10 @@ struct MPIKroneckerGather
         using value_type = dg::get_value_type<ContainerType>;
         if( not m_contiguous)
         {
-            m_store.template set<value_type>( m_g2.index_map().size());
+            m_store.template set<value_type>( m_g2.size());
             auto& store = m_store.template get<value_type>();
-            m_g2.gather( gatherFrom, store);
+            thrust::gather( m_g2.begin(), m_g2.end(), gatherFrom.begin(),
+                store.begin());
             m_mpi_gather.global_gather_init( store);
         }
         else
@@ -247,7 +248,7 @@ struct MPIKroneckerGather
     }
     private:
     bool m_contiguous=false;
-    LocalGatherMatrix<Vector> m_g2;
+    Vector<int> m_g2;
     dg::detail::MPIContiguousKroneckerGather<Vector> m_mpi_gather;
     mutable detail::AnyVector<Vector>  m_store;
 };
