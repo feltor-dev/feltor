@@ -1,7 +1,42 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 # Project name and version
 project(feltor VERSION 1.0 LANGUAGES CXX)
+
+## Usage:
+##
+## Configure the project using:
+##
+##   cmake -Bbuild .
+##
+## This will configure the project to build in the `build` directory, and will
+## build a plain C++ project. To enable MPI, OpenMP, or GPU support, set the
+## options -DFELTOR_USE_MPI=ON, -DFELTOR_USE_OMP=ON, or -DFELTOR_USE_GPU=ON.
+## Note that OpenMP and GPU support are mutually exclusive.
+##
+## After configuring the project, build it using:
+##
+##   cmake --build build
+##
+## This will compile all targets in the project, including all benchmarks and
+## tests. A smaller subset of targets can be built using the `--target` flag:
+##
+##   cmake --build build --target dg_benchmarks  # Build all dg benchmarks
+##   cmake --build build --target dg_tests       # Build all dg tests
+##   cmake --build build --target dg_blas_b      # Build only inc/dg/blas_b.cu
+##   cmake --build build --target dg_blas_t      # Build only inc/dg/blas_t.cu
+##
+## Compilation can be sped up by supplying the `--parallel` flag, while the
+## `--clean-first` flag will force a clean build. Compiled benchmarks may be
+## found in `build/benchmarks`, and compiled tests can be found in
+## `build/tests`. To run the tests, use the `ctest` command:
+##
+##   ctest --test-dir=build
+##
+## However, some tests currently require user input, and will hang when run.
+## Individual tests may be run using:
+##
+##   ctest --test-dir=build -R dg_blas_t
 
 # Enable support for IDEs like Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -18,8 +53,8 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 option(FELTOR_USE_MPI "Switch on multiprocessing with MPI.")
 option(FELTOR_USE_OMP "Switch on OpenMP multithreading.")
 option(FELTOR_USE_GPU "Switch on GPU acceleration.")
-option(FELTOR_BUILD_TESTS "Build tests.")
-option(FELTOR_BUILD_BENCHMARKS "Build benchmarks.")
+option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
 if(FELTOR_USE_OMP AND FELTOR_USE_GPU)
   message(FATAL_ERROR "Cannot set both FELTOR_USE_OMP and FELTOR_USE_GPU")
@@ -28,6 +63,30 @@ endif()
 if(FELTOR_USE_GPU)
   enable_language(CUDA)
 endif()
+
+# ============================================
+# Set up compiler-specific flags
+
+if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set(FELTOR_FLAGS_CXX 
+    "-Wall"
+    "-Wextra"
+    "-Wpedantic"
+    "-mfma"
+    "-mavx"
+    "-march=native"
+  )
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(FELTOR_FLAGS_CXX "/W4")
+else()
+  set(FELTOR_FLAGS_CXX "")
+endif()
+
+set(FELTOR_FLAGS_CUDA 
+  "-arch=sm_61"
+  "-Xcompiler=\"${FELTOR_FLAGS_CXX}\""
+  "--extended-lambda"
+)
 
 # ============================================
 # Create DG library target
@@ -39,16 +98,18 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
 # As a header-only library, this must be an interface library.
 # This means it has no sources, but can link/be linked to other
 # libraries, have dependencies, etc.
-add_library(dg INTERFACE ${DG_CXX_HEADERS})
-if(FELTOR_USE_GPU)
-  target_sources(dg INTERFACE ${DG_CU_HEADERS})
-endif()
+add_library(dg INTERFACE ${DG_HEADERS})
 # Ensure that `#include "dg/..."` works
 target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
 # Set the minimum C++ standard
 target_compile_features(dg INTERFACE cxx_std_14)
+# Set flags, whether using C++ or CUDA
+target_compile_options(dg INTERFACE 
+  $<$<COMPILE_LANGUAGE:CXX>:${FELTOR_FLAGS_CXX}>
+  $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
+)
 
-# Create an alias: This can be used to link to library from external projects.
+# Create an alias: used to link to the library from external projects.
 add_library(feltor::dg ALIAS dg)
 
 # ============================================
@@ -87,31 +148,8 @@ endif()
 # Add dg benchmarks
 
 if(FELTOR_BUILD_BENCHMARKS)
+  include(FeltorBenchmarks)
   add_custom_target(dg_benchmarks)
-
-  function(add_dg_benchmark benchmark_path)
-    # Get a unique name for the benchmark
-    cmake_path(GET benchmark_path STEM benchmark_stem)
-    set(benchmark_name "dg_${benchmark_stem}")
-    # Optionally treat .cu files as .cpp files
-    if(NOT FELTOR_USE_GPU)
-      set_source_files_properties(${benchmark_path} PROPERTIES
-        LANGUAGE CXX
-        COMPILE_FLAGS "-x c++"
-      )
-    endif()
-    # Create the benchmark executable and link dependencies
-    add_executable(${benchmark_name} "${benchmark_path}")
-    target_link_libraries(${benchmark_name} PRIVATE feltor::dg)
-    # Set compile warnings
-    target_compile_options(${benchmark_name} PRIVATE -Wall -Wextra -pedantic)
-    # Add as dependency to the dg_benchmarks target
-    add_dependencies(dg_benchmarks ${benchmark_name})
-    # Ensure built benchmarks are built in their own directory
-    set_target_properties(${benchmark_name} PROPERTIES 
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmarks"
-    )
-  endfunction()
 
   foreach(benchmark_path IN LISTS DG_BENCHMARKS)
     add_dg_benchmark("${benchmark_path}")
@@ -136,34 +174,9 @@ endif()
 
 if(FELTOR_BUILD_TESTS)
   include(CTest)
+  include(FeltorTests)
   enable_testing()
   add_custom_target(dg_tests)
-
-  function(add_dg_test test_path)
-    # Get a unique name for the test
-    cmake_path(GET test_path STEM test_stem)
-    set(test_name "dg_${test_stem}")
-    # Optionally treat .cu files as .cpp files
-    if(NOT FELTOR_USE_GPU)
-      set_source_files_properties(${test_path} PROPERTIES
-        LANGUAGE CXX
-        COMPILE_FLAGS "-x c++"
-      )
-    endif()
-    # Create the test executable and link dependencies
-    add_executable(${test_name} "${test_path}")
-    target_link_libraries(${test_name} PRIVATE feltor::dg)
-    # Set compile warnings
-    target_compile_options(${test_name} PRIVATE -Wall -Wextra -pedantic)
-    # Add as dependency to the dg_tests target
-    add_dependencies(dg_tests ${test_name})
-    # Ensure built tests are built in their own directory
-    set_target_properties(${test_name} PROPERTIES 
-      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
-    )
-    # Register the test with CTest
-    add_test(NAME ${test_name} COMMAND "tests/${test_name}")
-  endfunction()
 
   foreach(test_path IN LISTS DG_TESTS)
     add_dg_test("${test_path}")

@@ -1,6 +1,5 @@
 # Sets the following variables
-# - DG_CXX_HEADERS
-# - DG_CU_HEADERS
+# - DG_HEADERS
 # - DG_BENCHMARKS
 # - DG_MPI_BENCHMARKS
 # - DG_TESTS
@@ -142,9 +141,7 @@ set(DG_CXX_HEADERS
   topology/weights.h
   topology/weightsX.h
   topology/xspacelib.h
-)
-
-set(DG_CU_HEADERS
+  # CUDA headers
   backend/average_gpu.cuh
   backend/blas1_cuda.cuh
   backend/exblas/accumulate.cuh
@@ -265,8 +262,7 @@ function(absolutize PATH_LIST)
   set(${PATH_LIST} "${ABSOLUTIZED}" PARENT_SCOPE)
 endfunction()
 
-absolutize(DG_CXX_HEADERS)
-absolutize(DG_CU_HEADERS)
+absolutize(DG_HEADERS)
 absolutize(DG_BENCHMARKS)
 absolutize(DG_MPI_BENCHMARKS)
 absolutize(DG_TESTS)
@@ -274,8 +270,7 @@ absolutize(DG_DRAW_TESTS)
 absolutize(DG_MPI_TESTS)
 
 # Expose the variables to the parent scope
-set(DG_CXX_HEADERS "${DG_CXX_HEADERS}" PARENT_SCOPE)
-set(DG_CU_HEADERS "${DG_CU_HEADERS}" PARENT_SCOPE)
+set(DG_HEADERS "${DG_HEADERS}" PARENT_SCOPE)
 set(DG_BENCHMARKS "${DG_BENCHMARKS}" PARENT_SCOPE)
 set(DG_MPI_BENCHMARKS "${DG_MPI_BENCHMARKS}" PARENT_SCOPE)
 set(DG_TESTS "${DG_TESTS}" PARENT_SCOPE)
