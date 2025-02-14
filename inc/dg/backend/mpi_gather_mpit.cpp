@@ -108,8 +108,7 @@ TEMPLATE_TEST_CASE( "Gather MPI", "", int, double)
     }
     thrust::device_vector<TestType> v_d = v, ana_d = ana;
     thrust::host_vector<int> bufferIdx;
-    auto recv_map = dg::gIdx2unique_idx( gIdx, bufferIdx);
-    dg::MPIGather<thrust::device_vector> mpi_gather(recv_map, MPI_COMM_WORLD);
+    dg::MPIGather<thrust::device_vector> mpi_gather(gIdx, bufferIdx, MPI_COMM_WORLD);
     thrust::device_vector<int> local_gather(bufferIdx);
     thrust::device_vector<TestType> buffer( mpi_gather.buffer_size());
     mpi_gather.global_gather_init( v_d, buffer);
@@ -125,10 +124,8 @@ TEMPLATE_TEST_CASE( "Gather MPI", "", int, double)
     if( bijective) // Scatter the index
     {
         auto sIdx = dg::mpi_invert_permutation( gIdx, MPI_COMM_WORLD);
-        auto recv_map = dg::gIdx2unique_idx( sIdx, bufferIdx);
+        dg::MPIGather<thrust::device_vector > mpi_gather(sIdx, bufferIdx, MPI_COMM_WORLD);
         thrust::device_vector<int> local_gather(bufferIdx);
-
-        dg::MPIGather<thrust::device_vector > mpi_gather(recv_map, MPI_COMM_WORLD);
         num_d = v_d;
         dg::blas1::copy( 0, num_d);
         thrust::device_vector<TestType> buffer( mpi_gather.buffer_size());

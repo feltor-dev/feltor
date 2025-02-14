@@ -25,12 +25,14 @@ namespace dg
     // mat has local row and global column indices
     auto mpi_mat = dg::make_mpi_matrix(  mat, g_old);
 @endcode
- * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
- *  - <tt>bool global2localIdx(unsigned,unsigned&,unsigned&) const;</tt>
- * where the first parameter is the global index and the
- * other two are the output pair (localIdx, rank).
+ * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the
+ * members:
+ *  - <tt>bool global2localIdx(unsigned,unsigned&,unsigned&) const;</tt> where
+ *  the first parameter is the global index and the other two are the output
+ *  pair (localIdx, rank).
    return true if successful, false if global index is not part of the grid
- *  - <tt>MPI_Comm %communicator() const;</tt>  returns the communicator to use in the gather/scatter
+ *  - <tt>MPI_Comm %communicator() const;</tt>  returns the communicator to use
+ *  in the gather/scatter
  *  - <tt>unsigned local_size() const;</tt> return the local vector size
  *  .
  * @param global the local part of the matrix (different on each process) with
@@ -40,7 +42,8 @@ namespace dg
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed the
  * collective communicator will have zero size.
- * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
+ * @sa basictopology the MPI %grids defined in Level 3 can all be used as a
+ * ConversionPolicy
  * @ingroup mpi_matvec
  */
 template<class ConversionPolicy, class real_type>
@@ -124,11 +127,12 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
 
 
 /**
- * @brief Convert a (column-distributed) matrix with global row and column indices to a row distributed matrix
+ * @brief Convert a (column-distributed) matrix with global row and column
+ * indices to a row distributed matrix
  *
- * Send all elements with a global row-index that does not belong to the calling process to the
- * process where it belongs to.
- * This can be used to convert a column distributed matrix to a row-distributed matrix as in
+ * Send all elements with a global row-index that does not belong to the
+ * calling process to the process where it belongs to.  This can be used to
+ * convert a column distributed matrix to a row-distributed matrix as in
  * @code{.cpp}
     dg::IHMatrix_t<real_type> mat = dg::create::projection(
         g_new.global(), g_old.local(), method);
@@ -140,23 +144,28 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
     // now mat is row distributed with global column indices
     auto mpi_mat = dg::make_mpi_matrix(  mat_loc, g_old);
  * @endcode
- * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
+ * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the
+ * members:
  *  - <tt> bool global2localIdx(unsigned,unsigned&,unsigned&) const; </tt>
- * where the first parameter is the global index and the
- * other two are the output pair (localIdx, rank).
-   return true if successful, false if global index is not part of the grid
- *  - <tt> MPI_Comm %communicator() const; </tt>  returns the communicator to use in the gather/scatter
+ * where the first parameter is the global index and the other two are the
+ * output pair (localIdx, rank).  return true if successful, false if global
+ * index is not part of the grid
+ *  - <tt> MPI_Comm %communicator() const; </tt>  returns the communicator to
+ *  use in the gather/scatter
  *  - <tt> local_size(); </tt> return the local vector size
  * @param global the row indices and num_rows need to be global
  * @param policy the conversion object
  *
- * @return a row distributed MPI matrix. If no MPI communication is needed it simply has row-indices
- * converted from global to local indices. \c num_cols is the one from \c global
- * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
+ * @return a row distributed MPI matrix. If no MPI communication is needed it
+ * simply has row-indices converted from global to local indices. \c num_cols
+ * is the one from \c global
+ * @sa basictopology the MPI %grids defined in Level 3 can all be used as a
+ * ConversionPolicy;
  * @ingroup mpi_matvec
  */
 template<class ConversionPolicy, class real_type>
-dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_type>& global, const ConversionPolicy& row_policy)
+dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const
+    dg::IHMatrix_t<real_type>& global, const ConversionPolicy& row_policy)
 {
     // 0. Convert to coo matrix
     cusp::coo_matrix<int, real_type, cusp::host_memory> A = global;
@@ -188,9 +197,9 @@ dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_typ
     // .... Maybe later
 }
 
-//TODO streamline this docu
 /**
- * @brief Convert a matrix with local column indices to a matrix with global column indices
+ * @brief Convert a matrix with local column indices to a matrix with global
+ * column indices
  *
  * Simply call policy.local2globalIdx for every column index
  * @code{.cpp}
@@ -204,16 +213,20 @@ dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const dg::IHMatrix_t<real_typ
     // now mat is row distributed with global column indices
     auto mpi_mat = dg::make_mpi_matrix(  mat_loc, g_old);
  * @endcode
- * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the members:
- *  - <tt> bool local2globalIdx(unsigned,unsigned&,unsigned&) const; </tt>
+ * @tparam ConversionPolicy (can be one of the MPI %grids ) has to have the
+ * members:
+ *  - <tt>bool local2globalIdx(unsigned,unsigned&,unsigned&) const;</tt>
  * where the first two parameters are the pair (localIdx, rank).
  * and the last one is the global index and the
    return true if successful, false if index is not part of the grid
- *  - <tt> unsigned %size() const; </tt>  returns what will become the new \c num_cols
- * @param local the column indices and num_cols need to be local, will be global on output
+ *  - <tt>unsigned %size() const;</tt>  returns what will become the new \c
+ *  num_cols
+ * @param local the column indices and num_cols need to be local, will be
+ * global on output
  * @param policy the conversion object
  *
- * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
+ * @sa basictopology the MPI %grids defined in Level 3 can all be used as a
+ * ConversionPolicy
  * @ingroup mpi_matvec
  */
 template<class ConversionPolicy, class real_type>
@@ -234,7 +247,7 @@ namespace create
 ///@addtogroup interpolation
 //
 ///@{
-//TODO document
+///@copydoc interpolation(const aRealTopology<real_type,Nd>&,const aRealTopology<real_type,Nd>&,std::string)
 template<class MPITopology, typename = std::enable_if_t<dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> interpolation( const MPITopology&
@@ -255,7 +268,7 @@ dg::MIHMatrix_t<typename MPITopology::value_type> interpolation( const MPITopolo
 //    return make_mpi_matrix(  mat, g_old);
 //}
 
-//TODO document
+///@copydoc projection(const aRealTopology<real_type,Nd>&,const aRealTopology<real_type,Nd>&,std::string)
 template<class MPITopology, typename = std::enable_if_t<dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> projection( const MPITopology&
@@ -268,6 +281,7 @@ dg::MIHMatrix_t<typename MPITopology::value_type> projection( const MPITopology&
     return make_mpi_matrix(  mat_loc, g_old);
 }
 
+///@copydoc interpolation(const RecursiveHostVector&,const aRealTopology<real_type,Nd>&,std::array<dg::bc,Nd>,std::string)
 template<class RecursiveHostVector, class real_type, size_t Nd>
 dg::MIHMatrix_t<real_type> interpolation(
         const RecursiveHostVector& x,
@@ -290,7 +304,7 @@ dg::MIHMatrix_t<real_type> interpolation(
  * return dg::make_mpi_matrix( mat, g);
  * @endcode
  *
- * @copydetails interpolation(const thrust::host_vector<real_type>&,const RealGrid1d<real_type>&,dg::bc,std::string)
+ * @copydetails interpolation(const host_vector&,const RealGrid1d<real_type>&,dg::bc,std::string)
  */
 template<class host_vector, class real_type>
 dg::MIHMatrix_t<real_type> interpolation(
@@ -313,7 +327,7 @@ dg::MIHMatrix_t<real_type> interpolation(
  * return dg::make_mpi_matrix( mat, g);
  * @endcode
  *
- * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc,std::string)
+ * @copydetails interpolation(const host_vector&,const host_vector&,const aRealTopology2d<real_type>&,dg::bc,dg::bc,std::string)
  */
 template<class host_vector, class real_type>
 dg::MIHMatrix_t<real_type> interpolation(
@@ -338,7 +352,7 @@ dg::MIHMatrix_t<real_type> interpolation(
  * return dg::make_mpi_matrix( mat, g);
  * @endcode
  *
- * @copydetails interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology3d<real_type>&,dg::bc,dg::bc,dg::bc,std::string)
+ * @copydetails interpolation(const host_vector&,const host_vector&,const host_vector&,const aRealTopology3d<real_type>&,dg::bc,dg::bc,dg::bc,std::string)
  */
 template<class host_vector, class real_type>
 dg::MIHMatrix_t<real_type> interpolation(

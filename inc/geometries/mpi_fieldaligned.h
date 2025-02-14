@@ -293,9 +293,9 @@ struct Fieldaligned< ProductMPIGeometry, MIMatrix, MPI_Vector<LocalContainer> >
             // multiT has global rows and local column indices
             dg::convertLocal2GlobalCols( multiT, *grid_transform);
             // now multiT has global rows and global column indices
-            auto multi = dg::convertGlobal2LocalRows( multiT, *grid_transform);
+            auto mat = dg::convertGlobal2LocalRows( multiT, *grid_transform);
             // now mat is row distributed with global column indices
-            auto mpi_mat = dg::make_mpi_matrix(  multi, *grid_transform);
+            auto mpi_mat = dg::make_mpi_matrix(  mat, *grid_transform);
             dg::blas2::transfer( mpi_mat, *resultT[u]);
             m_have_adjoint = true;
         }

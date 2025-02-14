@@ -423,6 +423,24 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
  * **communication in mpi**.
  */
 
+/*! @brief Create interpolation matrix of a list of points in given grid
+ *
+ * The created matrix has \c g.size() columns and <tt>x[0].size()</tt> rows.
+ * Per default it uses polynomial interpolation given by the dG polynomials,
+ * i.e. the interpolation has order \c g.n(u) in each direction. When applied
+ * to a vector the result contains the interpolated values at the given
+ * interpolation points. The given boundary conditions determine how
+ * interpolation points outside the grid domain are treated.
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj"
+ * target="_blank">Introduction to dg methods</a>
+ * @tparam Nd Number of dimensions
+ * @param x Must be of size \c Nd coordinates of interpolation points
+ * (<tt>x[0]</tt> is the list of x-coordinates, <tt>x[1]</tt> is the list of
+ * y-coordinates, etc.
+ * @param g The Grid on which to operate
+ * @copydoc hide_bcx_doc
+ * @copydoc hide_method
+ */
 template<class RecursiveHostVector, class real_type, size_t Nd>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
         const RecursiveHostVector& x,
@@ -559,19 +577,22 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
 /**
  * @brief Create interpolation between two grids
  *
- * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
- * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
- * @sa for integer multiples between old and new %grid you may want to consider the dg::create::fast_interpolation %functions
+ * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian
+ * nodes of the new grid \c g_new. The interpolation is of the order \c
+ * g_old.n()
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj"
+ * target="_blank">Introduction to dg methods</a>
+ * @sa for integer multiples between old and new %grid you may want to consider
+ * the dg::create::fast_interpolation %functions
  *
  * @param g_new The new grid
- * @param g_old The old grid
+ * @param g_old The old grid.  The boundaries of the old grid must lie within
+ * the boundaries of the new grid
  * @copydoc hide_method
  *
- * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
+ * @return Interpolation matrix with \c g_old.size() columns and \c
+ * g_new.size() rows
  * @attention Explicit zeros in the returned matrix are removed
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- * @note When interpolating a 2d grid to a 3d grid the third coordinate is simply ignored, i.e. the 2d vector will be trivially copied Nz times into the 3d vector
- * @note also check the transformation matrix, which is the more general solution
  */
 template<class real_type, size_t Nd>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(

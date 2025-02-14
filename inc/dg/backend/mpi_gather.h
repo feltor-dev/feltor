@@ -11,6 +11,163 @@
 #include "index.h"
 
 namespace dg{
+
+/**
+ * @addtogroup mpi_comm
+ * @section mpigather MPI distributed gather and scatter operations
+ *
+ * In order to understand what this is about you should first really(!)
+ * understand what gather and scatter operations are, so grab pen and paper!
+ * @note The dg library only implements optimized MPI gather operations.  There
+ * is an un-optimized \c dg::mpi_scatter though.  The reason is that gather
+ * operations are more easy to understand and implement because of the possible
+ * reduction in scatter operations.
+ * @subsection primer Primer: Gather and scatter operations
+
+ First, we note that gather and scatter are most often used in the context
+ of memory buffers. The buffer needs to be filled wih values (gather) or these
+ values need to be written back into the original place (scatter).
+
+ Imagine a buffer vector w and an index map \f$ \text{g}[i]\f$
+ that gives to every index \f$ i\f$ in this vector w
+ an index \f$ \text{g}[i]\f$ into a source vector v.
+
+We can now define:
+ @b Gather values from v and put them into w according to
+  \f$ w[i] = v[\text{g}[i]] \f$
+
+ Loosely we think of @b Scatter as the reverse operation, i.e. take the values
+ in w and write them back into v. However, simply writing
+ \f$ v[\text{g}[j]] = w[j] \f$ is a very **bad** definition.
+ What should happen if \f$ g[j] = g[k]\f$
+ for some j and k? What if some indices \f$ v_i\f$ are not mapped at all?
+
+It is more accurate to represent the gather and scatter operation
+by a matrix.
+
+@b Gather matrix: A matrix \f$ G\f$ of size \f$ m \times N\f$ is a gather
+ matrix if it consists of only 1's and 0's and has exactly one "1" in each row.
+ \f$ m\f$ is the buffer size, \f$ N \f$ is the vector size and \f$ N\f$ may be smaller,
+ same or larger than \f$m\f$.
+ If \f$ \text{g}[i]\f$ is the index map then \f[ G_{ij} := \delta_{\text{g}[i] j}\f]
+ We have \f$ w = G v\f$
+
+@b Scatter matrix: A matrix \f$ S \f$ is a
+ scatter matrix if its transpose is a gather matrix.
+
+ This means that \f$ S\f$ has size \f$ N \times m \f$
+ consists of only 1's and 0's and has exactly one "1" in each column.
+ If \f$ \text{g}[j]\f$ is the index map then \f[ S_{ij} := \delta_{i \text{g}[j]}\f]
+ We have \f$ v = S w\f$
+
+All of the following statements are true
+
+- The transpose of a gather matrix is a scatter matrix \f$ S  = G^\mathrm{T}\f$.
+    The associated index map of \f$ S\f$ is identical to the index map of \f$ G\f$.
+- The transpose of a scatter matrix is a gather matrix \f$ G  = S^\mathrm{T}\f$.
+    The associated index map of \f$ G\f$ is identical to the index map of \f$ S\f$.
+- From a given index map we can construct two matrices (\f$ G \f$ and \f$ S\f$)
+- A simple consistency test is given by \f$ (Gv)\cdot (Gv) = S(Gv)\cdot v\f$.
+- A scatter matrix can have zero, one or more "1"s in each row.
+- A gather matrix can have zero, one or more "1"s in each column.
+- If v is filled with its indices i.e. \f$ v_i = i\f$ then \f$ m = Gv\f$ i.e. the gather operation
+    reproduces the index map
+- If the entries of w are \f$ w_j = j\f$ then \f$ m \neq Sw\f$ does **not**
+    reproduce the index map
+- In a "coo" formatted sparse matrix format the gather matrix is assembled via:
+    \f$ m \f$ rows, \f$ N\f$ columns and \f$ m\f$ non-zeroes,
+    the values array would consist only of "1"s,
+    the row array is just the index \f$i\f$
+    and the column array is the map \f$ g[i]\f$.
+- In a "coo" formatted sparse matrix format the scatter matrix is assembled via:
+    \f$ N \f$ rows, \f$ m\f$ columns and \f$ m\f$ non-zeroes,
+    the values array would consist only of "1"s,
+    the row array is the map \f$g[j]\f$
+    and the column array is the index \f$ j\f$.
+- \f$ G' = G_1 G_2 \f$, i.e. the multiplication of two gather matrices is again a gather
+- \f$ S' = S_1 S_2 \f$, i.e. the multiplication of two scatter matrices is again a scatter
+
+Of the scatter and gather matrices permutations are especially interesting
+A matrix is a **permutation** if and only if it is both a scatter and a gather matrix.
+    In such a case it is square \f$ m \times m\f$ and \f[ P^{-1} = P^T\f].
+    The buffer \f$ w\f$ and vector \f$ v\f$ have the same size \f$m\f$.
+
+
+The following statements are all true
+- The index map of a permutation is bijective i.e. invertible i.e. each element
+    of the source vector v maps to exactly one location in the buffer vector w.
+- The scatter matrix \f$ S = G^T \equiv G'\neq G\f$ is a gather matrix (in
+    general unequal \f$ G\f$) with the associate index map \f$ m^{-1}\f$.
+    Since the index map is recovered by applying the gather operation to the vector
+    containing its index as values, we have
+    \f[ m^{-1} = G' \vec i = S \vec i\f]
+- \f$ S' = P_1 S P_2 \f$, i.e. multiplication of a scatter matrix by a permutation is again a scatter matrix
+- \f$ G' = P_1 G P_2 \f$, i.e. multiplication of a gather matrix by a permutation is again a gather matrix
+- A Permutation is **symmetric** if and only if it has identical scatter and gather maps
+- Symmetric permutations can be implemented "in-place" i.e. the source and buffer can be identical
+
+
+@subsection mpi_dist_gather MPI distributed gather and scatter
+
+Now we turn the case that v and w are distributed across processes.
+Accordingly, the index map \f$ g\f$  is also distributed across processes (in
+the same way w is).  The elements of \f$ g\f$ are **global** indices into v
+that have to be transformed to pairs \f[ i = [r, j]\f] where j is the local
+index into v and r is the rank in communicator) according to a user provided
+function. The user has to provide the index map as vector of mentioned
+pairs.
+
+Imagine now that we want to perform a globally distributed gather operation.
+Notice that there a **Bootstrap** problem involved. The given index map tells
+each rank from where to receive data but each rank also needs to know where to
+send its own data to. This means in order to setup the communication we need to
+communicate to start with:
+ - From the given index map a MPI communication matrix (of size
+ \f$ s \times s\f$ where \f$ s\f$ is the number of processes in the MPI
+ communicator) can be inferred. Each row shows how many elements a
+ given rank ( the row index) receives from each of the other ranks in the
+ communicator (the column indices). Each column of this map describe the
+ sending pattern, i.e. how many elements a given rank (the column index) has to
+ send each of the other ranks in the communicator.  If the MPI communication
+ matrix is symmetric we can  perform MPI communications **in-place**
+ - The information from the communication matrix can be used to allocate
+ appropriately sized MPI send and receive buffers. Furthermore, it is possible
+ to define a **permutation** across different processes. It is important to
+ note that the index map associated to that permutation is immplementation
+ defined i.e.  the implementation analyses the communication matrix and chooses
+ an optimal call of MPI Sends and Recvs. The implementation then provides two
+ index maps. The first one must be used to gather values from v into the
+ MPI send buffer and the second one can be used to gather values from the
+ receive buffer into the target buffer. Notice that these two operations
+ are **local** and require no MPI communication.
+
+ In total we thus describe the global gather as
+ \f[ w = G v = G_1 P_{G,MPI} G_2 v\f]
+
+ The global scatter operation is then simply
+ \f[ v = S w = G_2^T P^T_{G,MPI} G^T_1 w = S_2 P_{S,MPI} S_1 w \f]
+ (The scatter operation is constructed the same way as the gather operation, it is just the execution that is different)
+
+ @note If the scatter/gather operations are part of a matrix-vector multiplication
+ then \f$ G_1\f$ or \f$ S_1\f$ can be absorbed into the matrix
+
+ \f[ M v = R G v  = R G_1 P_{G,MPI} G_2 v = R' P_{G,MPI} G_2 v\f]. If R was a
+ coo matrix the simple way to obtain R' is replacing the column indices with
+ the map \f$ g_1\f$.
+ @note To give the involved vectors unique names we call v the "vector", \f$ s = G_2 v\f$ is the "store" and, \f$ b = P s\f$ is the "buffer".
+
+ For \f[ M v = S C v = S_2 P_{S,MPI} S_1 C v = S_2 P_{S,MPI} C' v\f]. Again, if
+ C was a coo matrix the simple way to obtain C' is replacing the row indices
+ with the map \f$ g_1\f$.
+
+ Simplifications can be achieved if \f$ G_2 = S_2 = I\f$ is the identity
+ or if \f$ P_{G,MPI} = P_{S,MPI} = P_{MPI}\f$ is symmetric, which means that
+ in-place communication can be used.
+
+ @note Locally, a gather operation is trivially parallel but a scatter operation
+ is not in general (because of the possible reduction operation).
+ */
+
 ///@cond
 namespace detail{
 
@@ -283,161 +440,15 @@ struct MPIContiguousGather
 };
 }//namespace detail
 ///@endcond
-
-/**
- * @addtogroup mpi_comm
- * @section mpigather MPI distributed gather and scatter operations
- *
- * In order to understand what this is about you should first really(!)
- * understand what gather and scatter operations are, so grab pen and paper!
- * @subsection primer Primer: Gather and scatter operations
-
- First, we note that gather and scatter are most often used in the context
- of memory buffers. The buffer needs to be filled wih values (gather) or these
- values need to be written back into the original place (scatter).
-
- Imagine a buffer vector w and an index map \f$ \text{g}[i]\f$
- that gives to every index \f$ i\f$ in this vector w
- an index \f$ \text{g}[i]\f$ into a source vector v.
-
-We can now define:
- @b Gather values from v and put them into w according to
-  \f$ w[i] = v[\text{g}[i]] \f$
-
- Loosely we think of @b Scatter as the reverse operation, i.e. take the values
- in w and write them back into v. However, simply writing
- \f$ v[\text{g}[j]] = w[j] \f$ is a very **bad** definition.
- What should happen if \f$ g[j] = g[k]\f$
- for some j and k? What if some indices \f$ v_i\f$ are not mapped at all?
-
-It is more accurate to represent the gather and scatter operation
-by a matrix.
-
-@b Gather matrix: A matrix \f$ G\f$ of size \f$ m \times N\f$ is a gather
- matrix if it consists of only 1's and 0's and has exactly one "1" in each row.
- \f$ m\f$ is the buffer size, \f$ N \f$ is the vector size and \f$ N\f$ may be smaller,
- same or larger than \f$m\f$.
- If \f$ \text{g}[i]\f$ is the index map then \f[ G_{ij} := \delta_{\text{g}[i] j}\f]
- We have \f$ w = G v\f$
-
-@b Scatter matrix: A matrix \f$ S \f$ is a
- scatter matrix if its transpose is a gather matrix.
-
- This means that \f$ S\f$ has size \f$ N \times m \f$
- consists of only 1's and 0's and has exactly one "1" in each column.
- If \f$ \text{g}[j]\f$ is the index map then \f[ S_{ij} := \delta_{i \text{g}[j]}\f]
- We have \f$ v = S w\f$
-
-All of the following statements are true
-
-- The transpose of a gather matrix is a scatter matrix \f$ S  = G^\mathrm{T}\f$.
-    The associated index map of \f$ S\f$ is identical to the index map of \f$ G\f$.
-- The transpose of a scatter matrix is a gather matrix \f$ G  = S^\mathrm{T}\f$.
-    The associated index map of \f$ G\f$ is identical to the index map of \f$ S\f$.
-- From a given index map we can construct two matrices (\f$ G \f$ and \f$ S\f$)
-- A simple consistency test is given by \f$ (Gv)\cdot (Gv) = S(Gv)\cdot v\f$.
-- A scatter matrix can have zero, one or more "1"s in each row.
-- A gather matrix can have zero, one or more "1"s in each column.
-- If v is filled with its indices i.e. \f$ v_i = i\f$ then \f$ m = Gv\f$ i.e. the gather operation
-    reproduces the index map
-- If the entries of w are \f$ w_j = j\f$ then \f$ m \neq Sw\f$ does **not**
-    reproduce the index map
-- In a "coo" formatted sparse matrix format the gather matrix is assembled via:
-    \f$ m \f$ rows, \f$ N\f$ columns and \f$ m\f$ non-zeroes,
-    the values array would consist only of "1"s,
-    the row array is just the index \f$i\f$
-    and the column array is the map \f$ g[i]\f$.
-- In a "coo" formatted sparse matrix format the scatter matrix is assembled via:
-    \f$ N \f$ rows, \f$ m\f$ columns and \f$ m\f$ non-zeroes,
-    the values array would consist only of "1"s,
-    the row array is the map \f$g[j]\f$
-    and the column array is the index \f$ j\f$.
-- \f$ G' = G_1 G_2 \f$, i.e. the multiplication of two gather matrices is again a gather
-- \f$ S' = S_1 S_2 \f$, i.e. the multiplication of two scatter matrices is again a scatter
-
-Of the scatter and gather matrices permutations are especially interesting
-A matrix is a **permutation** if and only if it is both a scatter and a gather matrix.
-    In such a case it is square \f$ m \times m\f$ and \f[ P^{-1} = P^T\f].
-    The buffer \f$ w\f$ and vector \f$ v\f$ have the same size \f$m\f$.
-
-
-The following statements are all true
-- The index map of a permutation is bijective i.e. invertible i.e. each element
-    of the source vector v maps to exactly one location in the buffer vector w.
-- The scatter matrix \f$ S = G^T \equiv G'\neq G\f$ is a gather matrix (in
-    general unequal \f$ G\f$) with the associate index map \f$ m^{-1}\f$.
-    Since the index map is recovered by applying the gather operation to the vector
-    containing its index as values, we have
-    \f[ m^{-1} = G' \vec i = S \vec i\f]
-- \f$ S' = P_1 S P_2 \f$, i.e. multiplication of a scatter matrix by a permutation is again a scatter matrix
-- \f$ G' = P_1 G P_2 \f$, i.e. multiplication of a gather matrix by a permutation is again a gather matrix
-- A Permutation is **symmetric** if and only if it has identical scatter and gather maps
-- Symmetric permutations can be implemented "in-place" i.e. the source and buffer can be identical
-
-
-@subsection mpi_dist_gather MPI distributed gather and scatter
-
-Now we turn the case that v and w are distributed across processes.
-Accordingly, the index map \f$ g\f$  is also distributed across processes (in
-        the same way w is).  The elements of \f$ g\f$ are **global** indices
-into v that have to be transformed to pairs (local index into v, rank in
-        communicator) according to a user provided function. Or the user can
-directly provide the index map as vector of mentioned pairs.
-
-Imagine now that we want to perform a globally distributed gather operation.
-Then, the following steps are performed
- - From the given index map a MPI communication matrix (of size
- \f$ s \times s\f$ where \f$ s\f$ is the number of processes in the MPI
- communicator) can be inferred. Each row shows how many elements a
- given rank ( the row index) receives from each of the other ranks in the
- communicator (the column indices). Each column of this map describe the
- sending pattern, i.e. how many elements a given rank (the column index) has to
- send each of the other ranks in the communicator.  If the MPI communication
- matrix is symmetric we can  perform MPI communications **in-place**
- - The information from the communication matrix can be used to allocate
- appropriately sized MPI send and receive buffers. Furthermore, it is possible
- to define a **permutation** across different processes. It is important to
- note that the index map associated to that permutation is immplementation
- defined i.e.  the implementation analyses the communication matrix and chooses
- an optimal call of MPI Sends and Recvs. The implementation then provides two
- index maps. The first one must be used to gather values from v into the
- MPI send buffer and the second one can be used to gather values from the
- receive buffer into the target buffer. Notice that these two operations
- are **local** and require no MPI communication.
-
- In total we thus describe the global gather as
- \f[ w = G v = G_1 P_{G,MPI} G_2 v\f]
-
- The global scatter operation is then simply
- \f[ v = S w = G_2^T P^T_{G,MPI} G^T_1 w = S_2 P_{S,MPI} S_1 w \f]
- (The scatter operation is constructed the same way as the gather operation, it is just the execution that is different)
-
- @note If the scatter/gather operations are part of a matrix-vector multiplication
- then \f$ G_1\f$ or \f$ S_1\f$ can be absorbed into the matrix
-
- \f[ M v = R G v  = R G_1 P_{G,MPI} G_2 v = R' P_{G,MPI} G_2 v\f]. If R was a
- coo matrix the simple way to obtain R' is replacing the column indices with
- the map \f$ g_1\f$.
- @note To give the involved vectors unique names we call v the "vector", \f$ s = G_2 v\f$ is the "store" and, \f$ b = P s\f$ is the "buffer".
-
- For \f[ M v = S C v = S_2 P_{S,MPI} S_1 C v = S_2 P_{S,MPI} C' v\f]. Again, if
- C was a coo matrix the simple way to obtain C' is replacing the row indices
- with the map \f$ g_1\f$.
-
- Simplifications can be achieved if \f$ G_2 = S_2 = I\f$ is the identity
- or if \f$ P_{G,MPI} = P_{S,MPI} = P_{MPI}\f$ is symmetric, which means that
- in-place communication can be used.
-
- @note Locally, a gather operation is trivially parallel but a scatter operation
- is not in general (because of the possible reduction operation).
- */
-
  /**
- * @brief Optimized MPI Gather operation for row distributed matrices
+ * @brief Optimized MPI Gather operation
  *
- * @sa LocalGatherMatrix
+ * This class stores the communication pattern given in its constructor and derives
+ * an optimized MPI communication to implement it.
  * @ingroup mpi_comm
- * @tparam Vector a thrust Vector
+ * @tparam Vector a thrust Vector e.g. \c thrust::host_vector or \c thrust::device_vector
+ * Determines the internal buffer type of the \f$ G_2\f$ gather operation
+ * @sa \ref mpigather A un-optimized version is available in \c dg::mpi_gather
  */
 template< template <class> class Vector>
 struct MPIGather
@@ -539,18 +550,22 @@ struct MPIGather
      * rank}</tt> pairs, which is equivalent to the global address of a vector
      * element in \c gatherFrom. \c gather_map can be unsorted and contain duplicate
      * entries. The implementation will only send the unique indices through
-     * the network
+     * the network.
      * @param bufferIdx (Write only) On output resized to \c gather_map.size().
      * On output contains index into the resulting buffer vector in \c
      * global_gather_init and \c global_gather_wait that corresponds to the
      * requested \c gather_map
+     * @note \c bufferIdx is the index map for \f$ G_1\f$ in \ref mpi_dist_gather
+     * If \c gather_map stems from the column indices of a row
+     * distributed matrix then \c bufferIdx becomes the new column index of
+     * that matrix acting on the local \c buffer
     */
     template<class ArrayVec = thrust::host_vector<std::array<int,2>>,
         class IntVec = thrust::host_vector<int>>
     MPIGather(
-        const ArrayVec& gather_map, // unsorted (cannot be map)
+        const ArrayVec& gather_map,
         IntVec& bufferIdx,
-        MPI_Comm comm) // gIdx size, gather gIdx from flatten_map
+        MPI_Comm comm)
         : MPIGather( gIdx2unique_idx ( gather_map, bufferIdx), comm)
     {
     }
@@ -584,6 +599,7 @@ struct MPIGather
     */
     MPI_Comm communicator() const{return m_mpi_gather.communicator();}
 
+    /// Check whether the message from the constructor is contiguous in memory
     bool isContiguous() const { return m_contiguous;}
     /**
     * @brief The local size of the buffer vector w = local map size
@@ -599,12 +615,13 @@ struct MPIGather
     * not. The first reason is that even if no communication is happening the
     * buffer_size is not zero as there may still be local gather/scatter
     * operations. The right way to do it is to call <tt> isCommunicating() </tt>
-    * @sa local_size() isCommunicating()
+    * @sa isCommunicating()
     */
     unsigned buffer_size() const { return m_mpi_gather.buffer_size();}
 
     /**
-     * @brief True if the gather/scatter operation involves actual MPI communication
+     * @brief True if the gather/scatter operation involves actual MPI
+     * communication
      *
      * This is more than just a test for zero message size.  This is because
      * even if a process has zero message size indicating that it technically
@@ -628,7 +645,7 @@ struct MPIGather
         return m_mpi_gather.isCommunicating();
     }
     /**
-     * @brief \f$ w = G v\f$. Globally (across processes) asynchronously gather data into a buffer
+     * @brief \f$ w' = P_{G,MPI} G_2 v\f$. Globally (across processes) asynchronously gather data into a buffer
      *
      * @tparam ContainerType Can be any shared vector container on host or device, e.g.
      *  - thrust::host_vector<double>

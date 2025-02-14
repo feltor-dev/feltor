@@ -16,6 +16,7 @@ namespace dg
 namespace detail
 {
 // Gather into internal buffer and provide pointers from Contiguous Gather without self-messages
+// i.e. this class is in charge of handling pointers
 template<template< typename> typename Vector>
 struct MPIContiguousKroneckerGather
 {
@@ -105,8 +106,15 @@ struct MPIContiguousKroneckerGather
 //TODO update this docu
 //TODO should this be in detail? Seeing that onyl MPISparseBlockMat is supposed to use it
 /**
-* @brief Communicator for asynchronous communication of MPISparseBlockMat
+* @brief Communicator for asynchronous communication of \c MPISparseBlockMat
 *
+* @subsubsection rrr Rationale
+* This is a version of \c MPIGather that is optimised for the Kronecker
+* type communication pattern ("Hyperblocks") present in our \c EllSparseBlockMat
+* It avoids data movement to the greatest possible extent and exposes send
+* and receive buffers via pointers.
+*
+* @subsubsection ccc Design
 * Imagine a communicator with Cartesian topology and further imagine that the
 * grid topology is also Cartesian (vectors form a box) in Nd dimensions.  A
 * Sparseblockmat typically requires to gather slices of given index from other
@@ -131,10 +139,8 @@ struct MPIContiguousKroneckerGather
 * @note the corresponding gather map is of general type and the communication
 *  can also be modeled in \c MPIGather
 * @ingroup mpi_comm
-* @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
-* @tparam Buffer the container for the pointers to the buffer arrays
-* @tparam Vector the vector container type must have a resize() function and work
-* in the thrust library functions ( i.e. must a thrust::host_vector or thrust::device_vector)
+* @tparam Vector a thrust Vector e.g. \c thrust::host_vector or \c thrust::device_vector
+* Determines the internal buffer type of the \f$ G_2\f$ gather operation
 * @sa dg::RowColDistMat
 */
 template<template< typename> typename Vector>
@@ -143,25 +149,28 @@ struct MPIKroneckerGather
     ///@copydoc MPIGather<Vector>::MPIGather(comm)
     MPIKroneckerGather( MPI_Comm comm = MPI_COMM_NULL) : m_mpi_gather(comm){ }
     /**
-    * @brief Construct
+    * @brief Construct from communication pattern
     *
-    * @tparam Nd the dimensionality of the vector and the MPI Communicator
-    * @param n depth of the halo
-    * @param shape local # of vector elements in each direction
-    * @param comm the (cartesian) communicator (must be of dimension Nd)
+    * @param left_size (local) left size in \c EllSparseBlockMat (determines chunk size)
+    * @param recvIdx 1d block index in units of chunk size.
+    * <tt>recvIdx[PID]</tt> contains the block indices on rank PID (in \c comm_1d) that the
+    * calling rank receives.  The \c global_gather_wait function returns one
+    * pointer for each element of \c recvIdx pointing to a block of memory of
+    * size \c chunk_size=n*left_size*right_size.
+    * @param n block size of \c EllSparseBlockMat (determines chunk size)
+    * @param num_cols local number of blocks columns in \c EllSparseBlockMat
+    * @param right_size (local) right size of \c EllSparseBlockMat (determines chunk size)
+    * @param comm_1d the one dimensional Cartesian communicator along which to exchange the hyperblocks
     * @param direction coordinate along which to exchange halo e.g. 0 is x, 1 is y, 2 is z
+    * @note not all participating pids need to have the same number of hyperblocks or have the same shape
+    * even though left_size, n, num_cols, and right_size must be equal between any two communicating pids
+    * @sa \c dg::make_mpi_sparseblockmat
     */
-    // The goal here is to minimize data movement especially when the data
-    // is contiguous in memory, then the only write is to the local receive buffer
-    // TODO comm is the communicator that the pids refer to
-    //
-    // not all participating pids need to have the same number of hyperblocks or have the same shape
-    // even though left_size, n, num_cols, and right_size must be equal between any two communicating pids
-    MPIKroneckerGather( unsigned left_size, // (local) of SparseBlockMat
-        const std::map<int, thrust::host_vector<int>>& recvIdx, // 1d block index in units of chunk size
-        unsigned n, // block size
-        unsigned num_cols, // (local) number of block columns (of gatherFrom)
-        unsigned right_size, // (local) of SparseBlockMat
+    MPIKroneckerGather( unsigned left_size,
+        const std::map<int, thrust::host_vector<int>>& recvIdx,
+        unsigned n,
+        unsigned num_cols,
+        unsigned right_size,
         MPI_Comm comm_1d)
     {
         m_contiguous = (left_size==1);
@@ -197,9 +206,12 @@ struct MPIKroneckerGather
             m_mpi_gather = detail::MPIContiguousKroneckerGather<Vector>(
                 recvIdx, n*left_size*right_size, comm_1d);
     }
-    template< template<class> class OtherVector>
-    friend class MPIKroneckerGather; // enable copy
 
+    /// Enable copy from different Vector type
+    template< template<class> class OtherVector>
+    friend class MPIKroneckerGather;
+
+    ///@copydoc MPIGather::MPIGather(const MPIGather<OtherVector>&)
     template< template<typename > typename OtherVector>
     MPIKroneckerGather( const MPIKroneckerGather<OtherVector>& src)
     :   m_contiguous( src.m_contiguous),
@@ -208,14 +220,28 @@ struct MPIKroneckerGather
     {
     }
 
-    ///@copydoc aCommunicator::communicator()
+    ///@copydoc MPIGather::communicator()
     MPI_Comm communicator() const{return m_mpi_gather.communicator();}
-    // Number of pointers in receive buffer is number of indices in m_recvIdx
+    /// Number of pointers in receive buffer is number of indices in recvIdx
     unsigned buffer_size() const { return m_mpi_gather.buffer_size(); }
+    /// \c n*left_size*right_size
     unsigned chunk_size() const { return m_mpi_gather.chunk_size(); }
+    ///@copydoc MPIGather::isCommunicating()
     bool isCommunicating() const{ return m_mpi_gather.isCommunicating(); }
 
-// TODO docu
+    /**
+     * @brief \f$ w' = P_{G,MPI} G_2 v\f$. Globally (across processes) asynchronously gather data into a buffer
+     *
+     * @tparam ContainerType Can be any shared vector container on host or device, e.g.
+     *  - thrust::host_vector<double>
+     *  - thrust::device_vector<double>
+     *  - thrust::device_vector<thrust::complex<double>>
+     *  .
+     * @param gatherFrom source vector v; data is collected from this vector
+     * @note If <tt> !isCommunicating() </tt> then this call will not involve
+     * MPI communication but will still gather values according to the given
+     * index map
+     */
     template<class ContainerType>
     void global_gather_init( const ContainerType& gatherFrom) const
     {
@@ -231,7 +257,18 @@ struct MPIKroneckerGather
         else
             m_mpi_gather.global_gather_init( gatherFrom);
     }
-// TODO docu
+    /**
+    * @brief Wait for asynchronous communication to finish and gather received
+    * data into buffer and return pointers to it
+    *
+    * Call \c MPI_Waitall on internal \c MPI_Request variables and manage host
+    * memory in case of cuda-unaware MPI.  After this call returns it is safe
+    * to use the buffer and the \c gatherFrom variable from the corresponding
+    * \c global_gather_init call
+    * @param gatherFrom source vector v; data is collected from this vector
+    * @param buffer_ptrs (write only) pointers coresponding to \c recvIdx
+    * from the constructor
+    */
     template<class ContainerType>
     void global_gather_wait( const ContainerType& gatherFrom,
         Vector<const dg::get_value_type<ContainerType>*>& buffer_ptrs) const
