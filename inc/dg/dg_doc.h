@@ -19,10 +19,6 @@
  *      @note Successive calls to blas routines are executed sequentially
  *      @note A manual synchronization of threads or devices is never needed in an application
  *      using these functions. All functions returning a value block until the value is ready.
- *    @defgroup dispatch The tag dispatch system
- *    @{
- *       @defgroup traits All TensorTraits specialisations
- *    @}
  *    @defgroup mpi_structures MPI backend
  *    @{
  *        @defgroup mpi_matvec Distributed Matrix and Vector
@@ -30,6 +26,10 @@
  *    @}
  *    @defgroup utility Utility
  *    @{
+ *        @defgroup dispatch The tag dispatch system
+ *        @{
+ *           @defgroup traits All TensorTraits specialisations
+ *        @}
  *        @defgroup sparsematrix Sparse matrix formats
  *        @defgroup densematrix Dense matrix formats
  *        @defgroup view Vector view
@@ -58,8 +58,9 @@
  * Objects that store topological information (which point is neighbour of
  * which other point) about the grid.
  *     @{
- *         @defgroup basictopology Topology base classes
- *         @defgroup evaluation evaluate
+ *         @defgroup basictopology Discontinuous Galerkin Nd grid
+ *         @defgroup basicXtopology Discontinuous Galerkin grids with X-point
+ *         @defgroup evaluation evaluate and integrate
  *         @brief \f$ f_i = f(\vec x_i) \f$
  *
  * The function discretisation routines compute the dG discretisation

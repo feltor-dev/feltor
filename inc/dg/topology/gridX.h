@@ -61,7 +61,7 @@ struct RealGridX3d;
 * The left boundary is x0 and the right x1, the inner boundaries lie at
 * x0 + f*Lx and x1-f*Lx
 * therefore f must be smaller than 0.5
-* @ingroup grid
+* @ingroup basicXtopology
 */
 template<class real_type>
 struct RealGridX1d
@@ -250,7 +250,7 @@ struct RealGridX1d
     fy*ly
  @endcode
  *
- * @ingroup basictopology
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct aRealTopologyX2d
@@ -507,7 +507,7 @@ struct aRealTopologyX2d
 };
 /**
  * @brief The simplest implementation of aRealTopologyX2d
- * @ingroup grid
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct RealGridX2d : public aRealTopologyX2d<real_type>
@@ -534,7 +534,7 @@ struct RealGridX2d : public aRealTopologyX2d<real_type>
     |--- ---------- ---|
     fy*Ly
  @endcode
- * @ingroup basictopology
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct aRealTopologyX3d
@@ -799,7 +799,7 @@ struct aRealTopologyX3d
 
 /**
  * @brief The simplest implementation of aRealTopologyX3d
- * @ingroup grid
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct RealGridX3d : public aRealTopologyX3d<real_type>

@@ -39,10 +39,12 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
  *  return vector \c v
  * .
  *
- * For example fo a 2d grid the implementation is equivalent to
+ * For example for a 2d grid the implementation is equivalent to
  * @code{.cpp}
  * return dg::kronecker( f, g.abscissas(0), g.abscissas(1));
  * @endcode
+ *
+ * See here an application example
  * @snippet{trimleft} evaluation_t.cpp evaluate2d
  * @tparam Topology A fixed sized grid type with member functions <tt> static
  * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and

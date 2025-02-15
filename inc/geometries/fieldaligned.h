@@ -2,6 +2,7 @@
 #include <cmath>
 #include <array>
 #include <cusp/csr_matrix.h>
+#include <cusp/transpose.h>
 
 #include "dg/algorithm.h"
 #include "magnetic_field.h"
@@ -534,8 +535,8 @@ struct Fieldaligned
     bool m_have_adjoint = false;
     void updateAdjoint( )
     {
-        m_plusT = dg::transpose( m_plus);
-        m_minusT = dg::transpose( m_minus);
+        cusp::transpose( m_plus, m_plusT);
+        cusp::transpose( m_minus, m_minusT);
         m_have_adjoint = true;
     }
 };

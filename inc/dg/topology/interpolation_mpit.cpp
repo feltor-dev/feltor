@@ -2,7 +2,6 @@
 #include <sstream>
 #include <mpi.h>
 #include "dg/backend/mpi_init.h"
-#include "dg/backend/transpose.h"
 #include "dg/blas.h"
 #include "mpi_projection.h"
 #include "mpi_evaluation.h"

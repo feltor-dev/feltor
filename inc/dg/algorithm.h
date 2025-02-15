@@ -7,7 +7,6 @@
  */
 #include "backend/config.h"
 #include "backend/timer.h"
-#include "backend/transpose.h"
 #include "topology/split_and_join.h"
 #include "topology/xspacelib.h"
 #include "topology/evaluationX.h"

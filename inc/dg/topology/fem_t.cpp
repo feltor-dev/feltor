@@ -53,7 +53,8 @@ TEST_CASE("FEM")
         SECTION( "PCG with FEM")
         {
             const Vector v2d = dg::create::fem_inv_weights( gDIR);
-            Matrix interT = dg::transpose( inter);
+            Matrix interT;
+            cusp::transpose( inter, interT);
             Matrix Wf = dg::create::diagonal( (dg::HVec)wf2d), project;
             Matrix Vf = dg::create::diagonal( (dg::HVec)v2d), tmp;
             cusp::multiply( interT, Wf, tmp);
@@ -84,7 +85,7 @@ TEST_CASE("FEM")
 
             Matrix interC = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU,
                     dg::NEU, "nearest");
-            interT = dg::transpose( interC);
+            cusp::transpose( interC, interT);
             cusp::multiply( interT, Wf, tmp);
             cusp::multiply( Vf, tmp, project);
             project.sort_by_row_and_column();
