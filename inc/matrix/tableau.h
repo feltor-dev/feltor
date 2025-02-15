@@ -217,14 +217,14 @@ FunctionalButcherTableau<real_type> hochbruck_3_3_4()
 /**
 * @brief Identifiers for Butcher Tableaus
 *
-* We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html
+* We follow the naming convention of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html
 * as **NAME-S-P-Q** or **NAME-S-Q**, where
 *  - NAME is the author or name of the method
 *  - S is the number of stages in the method
 *  - P is the global order of the embedding
 *  - Q is the global order of the method
 *
-*  @ingroup time_utils
+*  @ingroup exp_int
 */
 enum func_tableau_identifier{
     EXPLICIT_EULER_1_1, //!
@@ -288,7 +288,7 @@ FunctionalButcherTableau<real_type> func_tableau( std::string name)
 
 /*! @class hide_func_explicit_butcher_tableaus
  *
- * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+ * We follow the naming convention of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html (They also provide nice stability plots for their methods)
  * as **NAME-S-P-Q** or **NAME-S-Q**, where
  *  - NAME is the author or name of the method
  *  - S is the number of stages in the method
@@ -316,7 +316,7 @@ FunctionalButcherTableau<real_type> func_tableau( std::string name)
  *
  * @copydoc hide_func_explicit_butcher_tableaus
  * @param real_type The type of the coefficients in the FunctionalButcherTableau
- * @ingroup time_utils
+ * @ingroup exp_int
  */
 template<class real_type>
 struct ConvertsToFunctionalButcherTableau

@@ -208,7 +208,6 @@ class MCG
     /**
      * @brief Return the vector \f$ \vec e_1\f$ with size \c get_iter()
      *
-     * @param iter size
      * @return e_1
      */
     HVec make_e1( ) {

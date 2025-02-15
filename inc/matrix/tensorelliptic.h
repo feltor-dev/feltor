@@ -80,7 +80,10 @@ struct TensorElliptic
         *this = TensorElliptic( std::forward<Params>( ps)...);
     }
 
-    ///@copydoc Elliptic::weights()const
+    /**
+     * @brief Return the weights making the operator self-adjoint
+     * @return weights
+     */
     const Container& weights()const {return m_laplaceM_chi.weights();}
     /**
     * @brief Preconditioner to use in conjugate gradient solvers
