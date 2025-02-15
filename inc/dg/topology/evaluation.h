@@ -30,13 +30,15 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
  * %Evaluate is equivalent to the following:
  *
  * -# from the given Nd dimensional grid generate Nd one-dimensional lists of
- *  grid coordinates <tt> x_i = g.abscissas( i)</tt> representing the given
+ *  grid coordinates <tt>x_i = g.abscissas( i)</tt> representing the given
  *  computational space discretization in each dimension
  * -# evaluate the given function or functor at these coordinates and store the
  *  result in the output vector <tt> v = dg::kronecker( f, x_0, x_1, ...)</tt>
  *  The dimension number \c i is thus mapped to the argument number of the
  *  function \c f. The **0 dimension is the contiguous dimension** in the
- *  return vector \c v
+ *  return vector \c v e.g. in 2D the first element of the resulting vector
+ *  lies in the grid corner \f$ (x_0,y_0)\f$, the second is \f$(x_1, y_0)\f$
+ *  and so on.
  * .
  *
  * For example for a 2d grid the implementation is equivalent to

@@ -397,7 +397,7 @@ Unfortunately, the msvc compiler only supports an outdated OpenMP version so
 consider a performance penalty of approximately a factor 2, when running the OpenMP backend on Windows.
 ____
 
-===== Basic Setup
+==== Basic Setup
 
 We suggest to install the Github desktop https://desktop.github.com.
 Please clone all four of the following URLs using `File -> Clone repository...`
@@ -411,7 +411,7 @@ https://www.github.com/vectorclass/version1 # local path "vcl"
 ----
 Please also have a look at the relevant <<tab_requirements, system requirements>> Table.
 
-===== Creating a basic FELTOR Property Sheet
+==== Creating a basic FELTOR Property Sheet
 In Visual Studio we suggest to create a Property Sheet for FELTOR.
 The Property Sheet can then be conveniently added to any project that includes
 the FELTOR library headers `dg/algorithm.h` and/or `dg/geometries/geometries.h`
@@ -437,7 +437,7 @@ ____
 We suggest that you generate a new project for each executable program.
 ____
 
-===== Basic test
+==== Basic test
 In order to test the Feltor Property Sheet let us add a source file to
  the project and compile
 
@@ -452,7 +452,7 @@ set `Properties -> Linker -> System -> SubSystem -> Console (/SUBSYSTEM:CONSOLE)
 in your Property Sheet.
 ____
 
-===== Advanced simulation projects
+==== Advanced simulation projects
 
 Our simulation codes typically depend on jsoncpp for parameter input,
 glfw3 for plotting or
@@ -495,7 +495,7 @@ Install https://miktex.org/[MikTex] and https://texstudio.org[TeXstudio] (in tha
 compile the tex file(s) of the documentation.
 
 === Troubleshooting [[sec_troubleshooting]]
-===== I get a compile error: identifier "__thrust_compiler_fence" is undefined
+==== I get a compile error: identifier "__thrust_compiler_fence" is undefined
 
 This is an error of the unmaintained cusp that does not like the newly
 updated thrust version on github. Currently, you can either go back to

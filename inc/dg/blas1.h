@@ -206,6 +206,7 @@ inline auto dot( const ContainerType1& x, const ContainerType2& y)
  * @tparam OutputType The type of the result. Infered from \c zero so make sure
  * \c zero's type is clear to the compiler.
  * @copydoc hide_ContainerType
+ * @sa For partial reductions see \c dg::Average
  */
 template< class ContainerType, class OutputType, class BinaryOp, class UnaryOp
     = IDENTITY>

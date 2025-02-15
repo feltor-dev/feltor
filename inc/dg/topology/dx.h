@@ -15,8 +15,7 @@ namespace dg
 {
 namespace create
 {
-///@addtogroup lowlevel
-///@{
+///@cond
 
 
 /**
@@ -399,7 +398,7 @@ EllSparseBlockMat<real_type> dx_normed( int n, int N, real_type h, bc bcx, direc
         return create::dx_minus(n, N, h, bcx);
     return EllSparseBlockMat<real_type>();
 }
-///@}
+///@endcond
 
 } //namespace create
 } //namespace dg

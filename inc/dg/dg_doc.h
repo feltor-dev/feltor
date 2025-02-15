@@ -60,22 +60,8 @@
  *     @{
  *         @defgroup basictopology Discontinuous Galerkin Nd grid
  *         @defgroup basicXtopology Discontinuous Galerkin grids with X-point
- *         @defgroup evaluation evaluate and integrate
+ *         @defgroup evaluation evaluate, integrate, weights
  *         @brief \f$ f_i = f(\vec x_i) \f$
- *
- * The function discretisation routines compute the dG discretisation
- * of analytic functions on a given grid. In 1D the discretisation
- * simply consists of n function values per grid cell ( where n is the number
- * of Legendre coefficients used; currently \f$ 1 <= n <= 20\f$  ) evaluated at
- * the Gaussian abscissas in the respective cell. In 2D and 3D we simply
- * use the product space.
- * @note We choose x to be the contiguous direction.
- * E.g. in 2D the first element of the resulting vector lies in the grid corner \f$ (x_0,y_0)\f$ and the last
- * in \f$(x_1, y_1)\f$ .
- *         @defgroup highlevel create weights
- *
- * overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
- * available topologies
  *         @defgroup creation create derivatives
  *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *

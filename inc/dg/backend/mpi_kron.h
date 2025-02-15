@@ -66,8 +66,6 @@ inline void mpi_cart_register_cart( MPI_Comm comm)
 }
 }
 
-///@addtogroup mpi_utility
-///@{
 /*! @brief Manually register a call to \c MPI_Cart_sub with the dg library
  *
  * @param comm communicator with Cartesian structure (handle) (parameter used
@@ -89,6 +87,8 @@ inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
 }
 // Can't decide whether to make register_mpi_cart_sub public ...
 ///@endcond
+///@addtogroup mpi_utility
+///@{
 
 /*! @brief Call and register a call to \c MPI_Cart_sub with the dg library
  *
