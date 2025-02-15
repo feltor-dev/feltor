@@ -374,9 +374,12 @@ inline void gemv( MatrixType&& M,
  * for(unsigned i=0; i<N; i++)
  *     f( i, &x_0[0], &x_1[0], ...);
  * @endcode
- * With this function very general for-loops can be parallelized like for example a forward finite difference:
+ * With this function very general for-loops can be parallelized like for
+ * example
  * @snippet{trimleft} blas_t.cpp parallel_for
-
+ * or
+ * @snippet{trimleft} blas_t.cpp parallel_transpose
+ *
  * @note In a way this function is a generalization of \c dg::blas1::subroutine
  * to non-trivial parallelization tasks. However, this comes at a price:
  * this function only works for containers with the \c dg::SharedVectorTag and sclar types.

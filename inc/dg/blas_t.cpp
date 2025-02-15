@@ -193,15 +193,27 @@ TEST_CASE( "Blas2 documentation")
     SECTION( "parallel_for")
     {
         //! [parallel_for]
+        // Compute forward difference of vector
         std::vector<double> vec1 = {11,12,13}, vec2(3);
         dg::blas2::parallel_for(
             []DG_DEVICE( unsigned i, const double* x, double* y, int mod)
             {
                 y[i] = x[(i+1)%mod] - x[i];
             }, 3, vec1, vec2, 3);
-        INFO( "parallel_for forward difference");
         CHECK( vec2 == std::vector{ 1.,1.,-2.});
         //! [parallel_for]
+        //! [parallel_transpose]
+        // Compute transpose of vector
+        const unsigned nx = 3, ny = 3;
+        std::vector<double> vec = {11,12,13, 21,22,23, 31,32,33}, vecT(9);
+        dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const
+                    double* ii, double* oo)
+            {
+                unsigned i = k/nx, j =  k%nx;
+                oo[j*ny+i] = ii[i*nx+j];
+            }, nx*ny, vec, vecT);
+        CHECK( vecT == std::vector<double>{ 11,21,31, 12,22,32, 13,23,33});
+        //! [parallel_transpose]
     }
 }
 #endif
