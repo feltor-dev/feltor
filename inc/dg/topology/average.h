@@ -29,13 +29,13 @@ namespace dg{
  * the x, y, z directions but also over all points in the xy (xz or yz) planes.
  * We are left with two- (respectively three-)dimensional vectors.
  *
- * @sa Average is essentially a \c dg::create::projection scaled with the
+ * @sa Average is essentially a \c dg::create::projection(std::array<unsigned,Md>,const aRealTopology<real_type,Nd>&) scaled with the
  * inverse area @note The integrals include the dG weights but not the volume
  * element (does
  * not know about geometry)
  *
  * @snippet topology/average_t.cpp doxygen
- * @ingroup utilities
+ * @ingroup average
  */
 template<class IMatrix, class ContainerType>
 struct Average

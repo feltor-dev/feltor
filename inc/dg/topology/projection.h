@@ -79,13 +79,13 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
 /**
  * @brief Create a projection between two grids
  *
- * This matrix can be applied to vectors defined on the old (fine) grid to obtain
- * its values projected on the new (coarse) grid. (Projection means that the
- * projection integrals over the base polynomials are computed).
- * If the fine grid is a multiple of the coarse grid, the integral value
- of the projected vector will be conserved and the difference in the L2 norm
- between old and new vector small.
- * The projection matrix is the adjoint of the interpolation matrix
+ * This matrix can be applied to vectors defined on the old (fine) grid to
+ * obtain its values projected on the new (coarse) grid. (Projection means that
+ * the projection integrals over the base polynomials are computed).  If the
+ * fine grid is a multiple of the coarse grid, the integral value of the
+ * projected vector will be conserved and the difference in the L2 norm between
+ * old and new vector small.  The projection matrix is the adjoint of the
+ * interpolation matrix
  * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @sa for integer multiples between old and new grid you may want to consider the dg::create::fast_projection functions
  *
@@ -94,11 +94,13 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
  * @copydoc hide_method
  *
  * @return Projection matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- * @note also check \c dg::create::transformation, which is the more general solution
- * @attention Projection only works if the number of cells in the
- * fine grid is a multiple of the number of cells in the coarse grid
- * and if the number of polynomial coefficients is lower or the same in the new grid
+ * @note The boundaries of the old grid must lie within the boundaries of the
+ * new grid
+ * @note also check \c dg::create::transformation, which is the more general
+ * solution
+ * @attention Projection only works if the number of cells in the fine grid is
+ * a multiple of the number of cells in the coarse grid and if the number of
+ * polynomial coefficients is lower or the same in the new grid
  */
 template<class real_type, size_t Nd>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection(

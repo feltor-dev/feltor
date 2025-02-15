@@ -68,7 +68,7 @@ std::array<unsigned,Topology::ndim()-Md> complement( const Topology& g, std::arr
 
 } // namespace detail
 ///@endcond
-///@addtogroup interpolation
+///@addtogroup average
 ///@{
 
 /*!@brief Prolongation matrix along given axes / Transpose of reduction

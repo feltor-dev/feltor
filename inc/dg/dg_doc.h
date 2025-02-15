@@ -68,8 +68,11 @@
  * High level matrix creation functions
  *         @defgroup stencil create stencils
  *         @defgroup interpolation Interpolation, Projection, Transformation
+ *         @{
+ *              @defgroup fast_interpolation Fast interpolation
+ *         @}
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
- *         @defgroup utilities Averaging
+ *         @defgroup average Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and tensor operations
@@ -88,7 +91,7 @@
  *         @defgroup generators Grid Refinement classes
  *     @}
  *     @defgroup fem Finite Element Methods
- *     @defgroup gridtypes Useful Typedefs
+ *     @defgroup gridtypes Grid Typedefs
  * @}
  * @defgroup lvel4 Level 4: Advanced numerical schemes
  *

@@ -7,9 +7,9 @@
   @brief Creation of projection matrices for X point topology
  */
 namespace dg{
+namespace create{
 ///@addtogroup interpolation
 ///@{
-namespace create{
 
 // TODO document
 template<class real_type>
