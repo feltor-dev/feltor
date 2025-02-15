@@ -14,7 +14,7 @@ namespace dg{
 ///@cond
 /*! @brief Check if communication map involves actual mpi communication
 
- * @param messages (in) messages[PID] is the message the calling rank sends to PID
+ * @param messages (in) messages[rank] is the message the calling rank sends to rank
  * @return false if no process in comm sends or receives any
  * message to another process, true else
  * @tparam M message type (\c M.size() must be callable)
@@ -52,6 +52,12 @@ bool is_communicating(
 /**
  * @brief Exchange messages between processes in a communicator
  *
+ * This happens in two communication phases (find more details in 
+ * \ref mpi_dist_gather)
+ *  -# Call \c MPI_Allgather with given communicator to setup the
+ *  communication pattern among processes
+ *  -# Call \c MPI_Alltoallv to send the actual messages.
+ *
  * For example
  * @snippet{trimleft} mpi_permutation_mpit.cpp permute
  *
@@ -62,26 +68,25 @@ bool is_communicating(
  *  -# A (host) vector of std::array of primitive types like \c
  *  thrust::host_vector<std::array<double,3>>
  *  .
- * @param messages (in) <tt>messages[PID]</tt> contains the message that the
- * calling rank sends to PID
- * @param comm Communicator
- * @return <tt>received elements[PID]</tt> contains the message that the
- * calling rank receveived from PID
+ * @param messages (in) <tt>messages[rank]</tt> contains the message that the
+ * calling process sends to the process rank within comm
+ * @param comm The MPI communicator within which to exchange messages. All
+ * processes in comm need to call this function.
+ * @return <tt>received_messages[rank]</tt> contains the message that the
+ * calling process receveived from the process with rank in comm
  *
- * @note Calls \c MPI_Allgather with given communicator to send the sizes
- * followed by \c MPI_Alltoall to send the actual data. This means all
- * processes in comm need to call this function
  * @note This can be used to bootstrap mpi gather operations if elements is an
- * index map "recvIdx" of local indices of messages to receive from PID,
+ * index map "recvIdx" of local indices of messages to receive from rank,
  * because it "tells" every process which messages to send
- * @note Also can be used to invert a bijective mpi gather map
  *
  * @note This function is a permutation i.e.
  * @code{.cpp}
  * recvIdx == dg::mpi_permute( dg::mpi_permute(recvIdx, comm), comm);
  * @endcode
  * @tparam ContainerType Shared ContainerType.
- * @sa \ref mpigather
+ * @sa \ref mpigather 
+ * @sa Also can be used to invert a bijective mpi gather map in \c
+ * dg::mpi_invert_permutation
  */
 template<class MessageType>
 std::map<int,MessageType> mpi_permute(
@@ -131,9 +136,9 @@ std::map<int,MessageType> mpi_permute(
  * @brief Un-optimized distributed gather operation
  *
  * @tparam ContainerType A (host) vector
- * @param gather_map Each element consists of <tt>{rank, local index on that
- * rank}</tt> pairs, which is equivalent to the global address of a vector
- * element in \c gatherFrom
+ * @param gather_map Each element consists of <tt>{rank within comm, local
+ * index on that rank}</tt> pairs, which is equivalent to the global address of
+ * a vector element in \c gatherFrom
  * @param gatherFrom Local part of the vector from which the calling and other
  * ranks can gather indices
  * @param result (Same size as gather_map on output) On output contains the
@@ -163,17 +168,18 @@ void mpi_gather( const thrust::host_vector<std::array<int,2>>& gather_map,
  *
  * @tparam ContainerType A (host) vector
  * @param scatter_map Each element consists of <tt>{rank, local index on that
- * rank}</tt> pairs, which is equivalent to the global address of an element
- * in \c result
+ * rank}</tt> pairs, which is equivalent to the global address of an element in
+ * \c result
  *
- * @attention Must be injective i.e. globally distinct elements in \c toScatter must
- * map to distince elements in \c result
+ * @attention Must be injective i.e. globally distinct elements in \c toScatter
+ * must map to distince elements in \c result
  * @param toScatter Same size as \c scatter_map. The \c scatter_map tells where
  * each element in this vector is sent to
  * @param result In principle we must know the size of \c result beforehand
  * (because how else did you come up with a \c scatter_map)
  * @param comm The MPI communicator within which to exchange elements
- * @resize_result If true we resize the result to the correct size (mainly needed for \c mpi_invert_permutation)
+ * @resize_result If true we resize the result to the correct size (mainly
+ * needed for \c dg::mpi_invert_permutation)
  * @sa \ref mpigather
  */
 template<class ContainerType>

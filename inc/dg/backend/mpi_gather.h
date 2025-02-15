@@ -121,7 +121,7 @@ Imagine now that we want to perform a globally distributed gather operation.
 Notice that there a **Bootstrap** problem involved. The given index map tells
 each rank from where to receive data but each rank also needs to know where to
 send its own data to. This means in order to setup the communication we need to
-communicate to start with:
+communicate to start with (the \c dg::mpi_permute function does that):
  - From the given index map a MPI communication matrix (of size
  \f$ s \times s\f$ where \f$ s\f$ is the number of processes in the MPI
  communicator) can be inferred. Each row shows how many elements a

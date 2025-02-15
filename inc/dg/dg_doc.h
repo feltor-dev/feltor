@@ -23,17 +23,17 @@
  *    @{
  *       @defgroup traits All TensorTraits specialisations
  *    @}
+ *    @defgroup mpi_structures MPI backend
+ *    @{
+ *        @defgroup mpi_matvec Distributed Matrix and Vector
+ *        @defgroup mpi_comm MPI Distributed Gather and Scatter
+ *    @}
  *    @defgroup utility Utility
  *    @{
  *        @defgroup sparsematrix Sparse matrix formats
  *        @defgroup densematrix Dense matrix formats
  *        @defgroup view Vector view
  *        @defgroup typedefs Typedefs for Vectors and Matrices
- *    @}
- *    @defgroup mpi_structures MPI backend
- *    @{
- *        @defgroup mpi_matvec Distributed Matrix and Vector
- *        @defgroup mpi_comm MPI Distributed Gather and Scatter
  *    @}
  *    @brief \#include <mpi.h> before any other dg header file
  * @}

@@ -55,7 +55,7 @@ static auto pi_control = []( auto dt, auto eps, unsigned embedded_order, unsigne
  *
  * PID stands for "Proportional" (the present error), "Integral" (the past error), "Derivative" (the future error). See a good tutorial here https://www.youtube.com/watch?v=UR0hOmjaHp0
  * and further information in
- * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> in the ARKode library.
+ * <a href="https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#">the mathematical primer</a> in the ARKode library.
  * The PID controller is a good controller to start with, it does not overshoot
  * too much, is smooth, has no systematic over- or under-estimation and
  * converges very quickly to the desired timestep. In fact Kennedy and Carpenter, Appl. num. Math., (2003) report
@@ -183,7 +183,7 @@ struct Tolerance
  * rejected and the step will be recomputed and the controller restarted.
  * For more
  * information on these concepts we recommend
- * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> of the ARKode library.
+ * <a href="https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#">the mathematical primer</a> in the ARKode library.
  *
  * For an example on how to use this class in a practical example consider the
  * following code snippet:
