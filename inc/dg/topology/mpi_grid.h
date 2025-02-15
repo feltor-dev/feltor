@@ -39,46 +39,73 @@ struct RealMPIGrid;
 ///@endcond
 
 /**
- * @brief MPI abstract grid class
+ * @brief An abstract base class for MPI distributed Nd-dimensional dG grids
  *
- * Represents the global grid coordinates and the process topology.
- * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
- * @note a single cell is never divided across processes.
- * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @subsection shared_mpi_grid Shared memory considerations
+ * @copydoc hide_class_grid_description
  * @ingroup basictopology
+ * @subsection mpi_mpi_grid Distributed memory considerations
+ * In MPI we want to distribute the above hypercube among processes in a
+ * Cartesian communicator of same dimensionality \f$ N_d\f$. This is done by
+ * evenly distributing the **global** number of cells \f$ N_u\f$ in each
+ * dimension among the processes in the corresponding dimension in the
+ * Cartesian communicator. Each process gets a **local** number of cells \f$
+ * N_{ur} \approx N_u / s_u\f$, where  \f$ s_u \f$ is the size of the Cartesian
+ * communicator in direction \f$ u\f$. The approximation becomes an equality if
+ * \f$ s_u\f$ evenly divides \f$ N_u\f$ otherwise the remainder is distributed
+ * among the participating processes (such that some have one cell more or less
+ * than others).  We have \f[ N_u = \sum_{r=0}^{s-1} N_{ur}\f] The number of
+ * polynomial coefficients and the boundary condition is the same for all
+ * processes of an axis.  Each axis among processes is thus
+ * \f[
+ * [p_u,q_u] = [p_{u0}, q_{u0}],[p_{u1}, q_{u1}],...,[p_{us-1}, q_{us-1}]
+ * \f]
+ * The **local boundaries** are determined such that the local \f$ h_{ur} =
+ * \frac{q_{ur}-p_{ur}}{N_{ur}} = \frac{q_u-p_u}{N_u}\f$
+ *
+ * @subsection mpi_overview Overview
+ * This class in essence provides a collection of getters and setters for the
+ * aforementioned parameters together with the \c abscissas and \c weights
+ * members that are necessary for \c dg::evaluate and \c dg::create::weights.
+ * @note Unless otherwise indicate the getters and setters refer to the
+ * **global** grid quantities
+ *
+ * Lastly, we provide \c start and \c count members such that the grid can be
+ * used as a \c dg::file::MPINcHyperslab in NetCDF output in dg::file
+ * @tparam real_type Determines value type of abscissas and weights
+ * @tparam Nd The number of dimensions \f$ N_d\f$
  */
 template<class real_type, size_t Nd>
 struct aRealMPITopology
 {
-    /////////////////// TYPE TRAITS ////////////////////////////
+    // ///////////////// TYPE TRAITS ////////////////////////////
+
     /// value type of abscissas and weights
     using value_type = real_type;
     /// vector type of abscissas and weights; Can be used to recognize MPI grid
     ///via:
-    /// <tt> dg::is_vector_v< typename Topology::host_vector, MPIVectorTag> </tt>
+    /// <tt>dg::is_vector_v< typename Topology::host_vector, MPIVectorTag></tt>
     using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
     using host_grid = RealMPIGrid<real_type, Nd>;
     /// Dimensionality == Nd
     constexpr static unsigned ndim() { return Nd;}
 
-    /////////////////// TOPOLOGY CONCEPT ////////////////////////////
+    // ///////////////// TOPOLOGY CONCEPT ////////////////////////////
 
+    ///@copydoc aRealTopology::shape(unsigned)
     unsigned shape(unsigned u=0) const
     {
         return m_g.shape(u);
     }
-    host_vector weights(unsigned u=0) const
-    {
-        if( u >= Nd)
-            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
-        thrust::host_vector<real_type> v( m_l.shape(u));
-        auto ww = dg::DLT<real_type>::weights(m_l.n(u));
-        real_type hu = m_g.h(u); // We need global h here to be binary exact
-        for( unsigned i=0; i<m_l.N(u); i++)
-            for( unsigned j=0; j<m_l.n(u); j++)
-                v[i*m_l.n(u) + j] = hu/2.*ww[j];
-        return host_vector{v, m_comms[u]};
-    }
+    /*! @brief Get the grid abscissas of the \c u axis
+     *
+     * @note In MPI there is a strong guarantee that the returned abscissas
+     * correspond binary exactly to the shared memory abscissas returned
+     * by \c global() grid.
+     * @param u Axis number \c u<Nd
+     * @return Vector containing abscissas
+     * @sa dg::evaluate
+     */
     host_vector abscissas(unsigned u=0) const
     {
         // We want to be binary exact
@@ -103,57 +130,92 @@ struct aRealMPITopology
         }
         return host_vector{abs, m_comms[u]};
     }
-    /////////////////// GETTERS ////////////////////////////
-    /// Global shape of grid
+    /*! @brief Get the weights of the \c u axis
+     *
+     * @note In MPI there is a strong guarantee that the returned weights
+     * correspond binary exactly to the shared memory weights returned
+     * by \c global() grid.
+     * @param u Axis number \c u<Nd
+     * @return Vector containing weights
+     * @sa dg::create::weights dg::DLT
+     */
+    host_vector weights(unsigned u=0) const
+    {
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+        thrust::host_vector<real_type> v( m_l.shape(u));
+        auto ww = dg::DLT<real_type>::weights(m_l.n(u));
+        real_type hu = m_g.h(u); // We need global h here to be binary exact
+        for( unsigned i=0; i<m_l.N(u); i++)
+            for( unsigned j=0; j<m_l.n(u); j++)
+                v[i*m_l.n(u) + j] = hu/2.*ww[j];
+        return host_vector{v, m_comms[u]};
+    }
+    // ///////////////// GETTERS ////////////////////////////
+    /// @copydoc aRealTopology::get_shape
     std::array<unsigned,Nd> get_shape() const{
         m_g.get_shape();
     }
+    /// @copydoc aRealTopology::get_abscissas
     std::array<host_vector,Nd> get_abscissas() const{
         std::array<host_vector,Nd> abs;
         for( unsigned u=0; u<Nd; u++)
             abs[u] = abscissas(u);
         return abs;
     }
+    /// @copydoc aRealTopology::get_weights
     std::array<host_vector,Nd> get_weights() const{
         std::array<host_vector,Nd> w;
         for( unsigned u=0; u<Nd; u++)
             w[u] = weights(u);
         return w;
     }
+    /// @copydoc aRealTopology::get_p
     std::array<real_type,Nd> get_p() const{
         return m_g.get_p();
     }
+    /// @copydoc aRealTopology::get_q
     std::array<real_type,Nd> get_q() const{
         return m_g.get_q();
     }
+    /// @copydoc aRealTopology::get_l
     std::array<real_type,Nd> get_l() const{
         return m_g.get_l();
     }
+    /// @copydoc aRealTopology::get_h
     std::array<real_type,Nd> get_h() const{
         return m_g.get_h();
     }
+    /// @copydoc aRealTopology::get_N
     std::array<unsigned, Nd> get_N() const
     {
         return m_g.get_N();
     }
-    /// Unambiguous <tt> local.get_n() == global.get_n() </tt>
+    /// @copydoc aRealTopology::get_n
     std::array<unsigned, Nd> get_n() const
     {
         return m_g.get_n();
     }
-    /// Unambiguous <tt> local.get_bc() == global.get_bc() </tt>
+    /// @copydoc aRealTopology::get_bc
     std::array<dg::bc, Nd> get_bc() const
     {
         return m_g.get_bc();
     }
     std::array<MPI_Comm, Nd> get_comms() const { return m_comms;}
 
+    /// @copydoc aRealTopology::p
     real_type p( unsigned u=0) const { return m_g.p(u);}
+    /// @copydoc aRealTopology::q
     real_type q( unsigned u=0) const { return m_g.q(u);}
+    /// @copydoc aRealTopology::h
     real_type h( unsigned u=0) const { return m_g.h(u);}
+    /// @copydoc aRealTopology::l
     real_type l( unsigned u=0) const { return m_g.l(u);}
+    /// @copydoc aRealTopology::n
     unsigned n( unsigned u=0) const  { return m_g.n(u);}
+    /// @copydoc aRealTopology::N
     unsigned N( unsigned u=0) const  { return m_g.N(u);}
+    /// @copydoc aRealTopology::bc
     dg::bc bc( unsigned u=0) const   { return m_g.bc(u);}
     template<size_t Md = Nd>
     std::enable_if_t<Md==1,MPI_Comm> comm() const { return m_comms.at(0);}
@@ -273,7 +335,7 @@ struct aRealMPITopology
         return grid(2);
     }
 
-    ////////////////////SETTERS/////////////////////////////
+    // //////////////////SETTERS/////////////////////////////
     /**
     * @brief Multiply the number of cells in the first two dimensions with a given factor
     *
@@ -355,7 +417,7 @@ struct aRealMPITopology
         do_set( bcs);
     }
 
-    ////////////////////UTILITY/////////////////////////////
+    // //////////////////UTILITY/////////////////////////////
     /**
      * @brief The total global number of points
      * @return global size
