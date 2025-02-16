@@ -93,7 +93,7 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
 	$(CC) -o $@ $^ -lCatch2 $(LIBS) $(JSONLIB)
 
-tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
+mpi-tests: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
 	$(MPICC) -o $@ $^ -lCatch2 $(LIBS) $(JSONLIB)
 
 
@@ -103,4 +103,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f $(TARGETS) $(TARGETSMPI) *.o tests tests-mpi
+	rm -f $(TARGETS) $(TARGETSMPI) *.o tests mpi-tests

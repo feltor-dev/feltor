@@ -75,7 +75,7 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
 	$(CC) -o $@ $^ -lCatch2
 
-tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
+mpi-tests: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
 	$(MPICC) -o $@ $^ -lCatch2
 
 .PHONY: clean doc
@@ -84,4 +84,4 @@ doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f *.o *_t *_b *_mpit *_mpib tests tests-mpi
+	rm -f *.o *_t *_b *_mpit *_mpib tests mpi-tests
