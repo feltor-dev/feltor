@@ -487,10 +487,10 @@ struct aRealTopology
     void set_pq( std::array<real_type,Nd> new_p, std::array<real_type,Nd>
             new_q)
     {
-        do_set_pq( p, q);
+        do_set_pq( new_p, new_q);
     }
     /**
-     * @brief reset the boundary conditions of the grid
+     * @brief Reset the boundary conditions of the grid
      *
      * @param new_bcs new boundary condition
      */
@@ -500,21 +500,21 @@ struct aRealTopology
     }
 
     /**
-     * @brief reset the entire grid
+     * @brief Reset the entire grid
      *
-     * @param p new left boundary
-     * @param q new right boundary ( > x0)
+     * @param new_p new left boundary
+     * @param new_q new right boundary ( > x0)
      * @param new_n new number of %Gaussian nodes in each dimension
      * @param new_N new number of cells in each dimension
-     * @param bcs new boundary condition
+     * @param new_bcs new boundary condition
      */
-    void set( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
+    void set( std::array<real_type,Nd> new_p, std::array<real_type,Nd> new_q,
         std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N,
-        std::array<dg::bc,Nd> bcs)
+        std::array<dg::bc,Nd> new_bcs)
     {
-        set_pq( p,q);
+        set_pq( new_p,new_q);
         set( new_n, new_N);
-        set_bcs( bcs);
+        set_bcs( new_bcs);
     }
     // //////////////////UTILITY/////////////////////////////
     /**

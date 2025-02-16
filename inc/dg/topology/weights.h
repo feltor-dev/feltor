@@ -33,7 +33,7 @@ auto do_weights( const Topology& g, std::index_sequence<I...>)
 
 ///@endcond
 
-///@addtogroup evaluate
+///@addtogroup evaluation
 ///@{
 
 

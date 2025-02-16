@@ -20,7 +20,7 @@ namespace dg{
  * @param b Second number
  *
  * @return greatest common divisor
- * @ingroup misc
+ * @ingroup basics
  */
 template<class T>
 T gcd( T a, T b)
@@ -42,7 +42,7 @@ T gcd( T a, T b)
  * @param b Second number
  *
  * @return Least common multiple
- * @ingroup misc
+ * @ingroup basics
  */
 template<class T>
 T lcm( T a, T b)

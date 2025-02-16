@@ -206,10 +206,6 @@ struct aRealProductGeometry3d : public aRealGeometry3d<real_type>
     private:
     virtual aRealGeometry2d<real_type>* do_perp_grid()const=0;
 };
-///@}
-
-///@addtogroup geometry
-///@{
 
 /**
  * @brief two-dimensional Grid with Cartesian metric

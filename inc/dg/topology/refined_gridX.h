@@ -235,7 +235,7 @@ using ExponentialXRefinement    = dg::RealExponentialXRefinement<double>;
 
 /**
  * @brief Refined X-point grid
- * @ingroup geometry
+ * @ingroup basicXgeometry
  */
 template<class real_type>
 struct RealCartesianRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
@@ -277,7 +277,7 @@ struct RealCartesianRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
 
 /**
  * @brief Refined X-point grid
- * @ingroup geometry
+ * @ingroup basicXgeometry
  */
 template<class real_type>
 struct RealCartesianRefinedGridX3d : public dg::aRealGeometryX3d<real_type>

@@ -412,7 +412,7 @@ using ExponentialRefinement = dg::RealExponentialRefinement<double>;
 
 /**
  * @brief Refined RealCartesian grid
- * @ingroup geometry
+ * @ingroup basicgeometry
  */
 template<class real_type>
 struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
@@ -485,7 +485,7 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
 
 /**
  * @brief Refined RealCartesian grid
- * @ingroup geometry
+ * @ingroup basicgeometry
  */
 template< class real_type>
 struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>

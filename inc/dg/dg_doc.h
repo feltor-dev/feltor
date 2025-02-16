@@ -60,19 +60,19 @@
  *     @{
  *         @defgroup basictopology Discontinuous Galerkin Nd grid
  *         @defgroup basicXtopology Discontinuous Galerkin grids with X-point
- *         @defgroup evaluation evaluate, integrate, weights
+ *         @defgroup evaluation Evaluate, integrate, weights
  *         @brief \f$ f_i = f(\vec x_i) \f$
- *         @defgroup creation create derivatives
+ *         @defgroup creation Create derivatives
  *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  * High level matrix creation functions
- *         @defgroup stencil create stencils
+ *         @defgroup stencil Create stencils
  *         @defgroup interpolation Interpolation, Projection, Transformation
  *         @{
  *              @defgroup fast_interpolation Fast interpolation
  *         @}
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
- *         @defgroup average Averaging
+ *         @defgroup average Averaging and partial reductions
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and tensor operations
@@ -80,15 +80,16 @@
  * These routines form the heart of our geometry free numerical algorithms.
  * They are called by our geometric operators like the Poisson bracket.
  *     @{
+ *         @defgroup basicgeometry Geometry classes
+ *         @defgroup basicXgeometry Geometry classes with X-point
+ *         @defgroup generators Grid refinement
+ *
  *         @defgroup tensor Tensor-Vector operations
  *         @brief \f$ v^i = T^{ij} w_j\f$
  *
- *         @defgroup basicgeometry Geometry base classes
- *         @defgroup pullback pullback and pushforward
- *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
- *         @defgroup metric create volume
- *         @brief \f$ \sqrt{g} \f$
- *         @defgroup generators Grid Refinement classes
+ *         @defgroup pullback Pullback, pushforward, volume
+ *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$, \f$
+ *         \sqrt{g} \f$
  *     @}
  *     @defgroup fem Finite Element Methods
  *     @defgroup gridtypes Grid Typedefs
@@ -131,11 +132,11 @@
  *          @defgroup filters dg::blas2::stencil subroutines
  *          @brief Functors to use in dg::blas2::stencil function
  *     @}
- *     @defgroup lowlevel Lowlevel helper functions and classes
  *     @defgroup mpi_utility MPI utility functions
  *     @{
  *          @defgroup mpi_legacy Legacy MPI functions
  *     @}
+ *     @defgroup lowlevel Lowlevel helper functions and classes
  *
  * @}
  *

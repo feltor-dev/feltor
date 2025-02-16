@@ -184,15 +184,15 @@ struct TensorDeterminant3d
 };
 ///@}
 
-///@addtogroup tensor
-///@{
 /**
  * @namespace dg::tensor
  * @brief Utility functions used in connection with the SparseTensor class
+ * @ingroup tensor
  */
-
 namespace tensor
 {
+///@addtogroup tensor
+///@{
 
 
 /**
@@ -575,6 +575,6 @@ void scalar_product3d(
             w0, w1, w2);
 }
 
-}//namespace tensor
 ///@}
+}//namespace tensor
 }//namespace dg

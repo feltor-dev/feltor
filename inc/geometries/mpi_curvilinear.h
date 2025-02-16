@@ -38,7 +38,7 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
         dg::aRealMPIGeometry2d<real_type>( {0.,0.},
                 {generator.width(), generator.height()},
                 {tx.n,ty.n},{tx.N,ty.N}, { tx.b, ty.b},
-                dg::mpi_cart_split<2>(comm)), m_handle(generator)
+                dg::mpi_cart_split_as<2>(comm)), m_handle(generator)
     {
         //generate global 2d grid and then reduce to local
         RealCurvilinearGrid2d<real_type> g(generator, tx, ty);
@@ -135,7 +135,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
                 {0.,0., gz.x0()},{ generator.width(),
                 generator.height(),gz.x1()}, {tx.n,ty.n, gz.n()},
                 {tx.N, ty.N, gz.N()},{ tx.b, ty.b, gz.bcx()},
-                dg::mpi_cart_split<3>(comm)), m_handle(generator)
+                dg::mpi_cart_split_as<3>(comm)), m_handle(generator)
     {
         m_map.resize(3);
         RealCurvilinearMPIGrid2d<real_type> g(generator,tx,ty,this->get_perp_comm());

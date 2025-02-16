@@ -944,20 +944,20 @@ using ImplicitRungeKutta = DIRKStep<ContainerType>;
 
 
 /// Checks if two number are equal within accuracy
-/// @ingroup misc
+/// @ingroup basics
 inline bool is_same( double x, double y, double eps = 1e-15)
 {
     return fabs(x - y) < eps * std::max(1.0, std::max( fabs(x), fabs(y)));
 }
 /// Checks if two number are equal within accuracy
-/// @ingroup misc
+/// @ingroup basics
 inline bool is_same( float x, float y, float eps = 1e-6)
 {
     return fabsf(x - y) < eps * std::max(1.0f, std::max( fabsf(x), fabsf(y)));
 }
 
 /// Alias for <tt> x == y </tt>
-/// @ingroup misc
+/// @ingroup basics
 template<class T>
 inline bool is_same( T x, T y)
 {
@@ -966,14 +966,14 @@ inline bool is_same( T x, T y)
 
 /// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
-/// @ingroup misc
+/// @ingroup basics
 inline bool is_divisable( double a, double b, double eps = 1e-15)
 {
     return is_same( round(a/b)*b, a);
 }
 /// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
-/// @ingroup misc
+/// @ingroup basics
 inline bool is_divisable( float a, float b, float eps = 1e-6)
 {
     return is_same( (float)round(a/b)*b, (float)a);

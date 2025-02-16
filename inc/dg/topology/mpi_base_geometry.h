@@ -132,11 +132,6 @@ struct aRealProductMPIGeometry3d : public aRealMPIGeometry3d<real_type>
     virtual aRealMPIGeometry2d<real_type>* do_perp_grid()const=0;
 };
 
-///@}
-
-///@addtogroup geometry
-///@{
-
 /**
  * @brief The mpi version of RealCartesianGrid2d
  */
