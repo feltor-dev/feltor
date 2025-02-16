@@ -21,7 +21,7 @@ namespace create
  * @note basically the result is that it is usually not advantageous to use a modal filter
  * @tparam UnaryOp Model of Unary Function \c real_type \c sigma(unsigned) The input will be the modal number \c i where \f$ i=0,...,n-1\f$ and \c n is the number of polynomial coefficients in use. The output is the filter strength for the given mode number
  * @param op the unary function
- * @param dlt provide the forward, backward transformation and number of coefficients \c n
+ * @param n number of polynomial coefficients for forward and backward transformation
  * @return The product \f$ V D V^{-1}\f$
 
  * @note The idea is to use the result in connection with \c dg::create::fast_transform() to create a matrix that applies the filter to vectors. For example

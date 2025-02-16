@@ -495,9 +495,9 @@ struct aRealTopologyX2d
         assert( Nx_ > 0  && Ny > 0 );
         assert( bcy != PER);
     }
-    ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealTopologyX2d(const aRealTopologyX2d& src) = default;
-    ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
+    ///@copydoc aRealTopology::operator=
     aRealTopologyX2d& operator=(const aRealTopologyX2d& src) = default;
   private:
     real_type x0_, x1_, y0_, y1_;
@@ -786,9 +786,9 @@ struct aRealTopologyX3d
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
     }
-    ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealTopologyX3d(const aRealTopologyX3d& src) = default;
-    ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
+    ///@copydoc aRealTopology::operator=
     aRealTopologyX3d& operator=(const aRealTopologyX3d& src) = default;
   private:
     real_type x0_, x1_, y0_, y1_, z0_, z1_;

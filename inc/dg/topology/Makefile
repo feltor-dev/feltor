@@ -46,7 +46,7 @@ interpolation_mpit\
 mpi_projection_t\
 
 #all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
-all: $(TARGETS) $(TARGETSMPI)
+all: tests mpi-tests
 
 backscatter_t: backscatter_t.cpp xspacelib.h
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
@@ -85,10 +85,10 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
 	$(CC) -o $@ $^ -lCatch2
 
-tests-mpi: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
+mpi-tests: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
 	$(MPICC) -o $@ $^ -lCatch2
 
 .PHONY: clean
 
 clean:
-	rm -f *.o *_t *_mpit tests tests-mpi
+	rm -f *.o *_t *_mpit tests mpi-tests

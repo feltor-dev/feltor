@@ -178,7 +178,7 @@ void mpi_gather( const thrust::host_vector<std::array<int,2>>& gather_map,
  * @param result In principle we must know the size of \c result beforehand
  * (because how else did you come up with a \c scatter_map)
  * @param comm The MPI communicator within which to exchange elements
- * @resize_result If true we resize the result to the correct size (mainly
+ * @param resize_result If true we resize the result to the correct size (mainly
  * needed for \c dg::mpi_invert_permutation)
  * @sa \ref mpigather
  */

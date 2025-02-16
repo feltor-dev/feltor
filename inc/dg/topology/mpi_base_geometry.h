@@ -36,9 +36,9 @@ struct aRealMPIGeometry2d : public aRealMPITopology2d<real_type>
     virtual ~aRealMPIGeometry2d() = default;
     protected:
     using aRealMPITopology2d<real_type>::aRealMPITopology2d;
-    ///@copydoc aRealMPITopology2d::aRealMPITopology2d(const aRealMPITopology2d&)
+    ///@copydoc aRealMPITopology::aRealMPITopology(const aRealMPITopology&)
     aRealMPIGeometry2d( const aRealMPIGeometry2d& src) = default;
-    ///@copydoc aRealMPITopology2d::operator=(const aRealMPITopology2d&)
+    ///@copydoc aRealMPITopology::operator=
     aRealMPIGeometry2d& operator=( const aRealMPIGeometry2d& src) = default;
     private:
     virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > do_compute_metric()const {
@@ -81,9 +81,9 @@ struct aRealMPIGeometry3d : public aRealMPITopology3d<real_type>
     virtual ~aRealMPIGeometry3d() = default;
     protected:
     using aRealMPITopology3d<real_type>::aRealMPITopology3d;
-    ///@copydoc aRealMPITopology3d::aRealMPITopology3d(const aRealMPITopology3d&)
+    ///@copydoc aRealMPITopology::aRealMPITopology(const aRealMPITopology&)
     aRealMPIGeometry3d( const aRealMPIGeometry3d& src) = default;
-    ///@copydoc aRealMPITopology3d::operator=(const aRealMPITopology3d&)
+    ///@copydoc aRealMPITopology::operator=
     aRealMPIGeometry3d& operator=( const aRealMPIGeometry3d& src) = default;
     private:
     virtual SparseTensor<MPI_Vector<thrust::host_vector<real_type>> > do_compute_metric()const {
@@ -124,9 +124,9 @@ struct aRealProductMPIGeometry3d : public aRealMPIGeometry3d<real_type>
     virtual aRealProductMPIGeometry3d* clone()const=0;
     protected:
     using aRealMPIGeometry3d<real_type>::aRealMPIGeometry3d;
-    ///@copydoc aRealMPITopology3d::aRealMPITopology3d(const aRealMPITopology3d&)
+    ///@copydoc aRealMPITopology::aRealMPITopology(const aRealMPITopology&)
     aRealProductMPIGeometry3d( const aRealProductMPIGeometry3d& src) = default;
-    ///@copydoc aRealMPITopology3d::operator=(const aRealMPITopology3d&)
+    ///@copydoc aRealMPITopology::operator=
     aRealProductMPIGeometry3d& operator=( const aRealProductMPIGeometry3d& src) = default;
     private:
     virtual aRealMPIGeometry2d<real_type>* do_perp_grid()const=0;
@@ -155,8 +155,7 @@ struct RealCartesianMPIGrid2d : public aRealMPIGeometry2d<real_type>
         aRealMPIGeometry2d<real_type>( {x0,y0},{x1,y1}, {n,n}, {Nx,Ny}, {bcx, bcy},
             dg::mpi_cart_split_as<2>(comm))
             {}
-    ///@copydoc aRealTopology2d::aRealTopology2d(RealGrid1d,RealGrid1d)
-    ///@copydoc hide_comm_parameters2d
+    ///@copydoc RealCartesianGrid2d::RealCartesianGrid2d(RealGrid1d<real_type>,RealGrid1d<real_type>)
     RealCartesianMPIGrid2d( RealMPIGrid1d<real_type> gx, RealMPIGrid1d<real_type> gy):
         aRealMPIGeometry2d<real_type>(std::array{gx,gy})
         {}
@@ -215,8 +214,7 @@ struct RealCartesianMPIGrid3d : public aRealProductMPIGeometry3d<real_type>
     virtual RealCartesianMPIGrid3d* clone()const override final{
         return new RealCartesianMPIGrid3d(*this);
     }
-    ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
-    ///@copydoc hide_comm_parameters3d
+    ///@copydoc RealCartesianGrid3d::RealCartesianGrid3d(RealGrid1d<real_type>,RealGrid1d<real_type>,RealGrid1d<real_type>)
     RealCartesianMPIGrid3d( RealMPIGrid1d<real_type> gx, RealMPIGrid1d<real_type> gy,
         RealMPIGrid1d<real_type> gz):
         dg::aRealProductMPIGeometry3d<real_type>(std::array{gx,gy,gz})
@@ -263,8 +261,7 @@ struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
     RealCylindricalMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, MPI_Comm comm):
         aRealProductMPIGeometry3d<real_type>( {x0,y0,z0},{x1,y1,z1}, {n,n,1},{Nx,Ny,Nz},{bcx,bcy,dg::PER}, dg::mpi_cart_split_as<3>(comm)){}
 
-    ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
-    ///@copydoc hide_comm_parameters3d
+    ///@copydoc RealCylindricalGrid3d::RealCylindricalGrid3d(RealGrid1d<real_type>,RealGrid1d<real_type>,RealGrid1d<real_type>)
     RealCylindricalMPIGrid3d( RealMPIGrid1d<real_type> gx, RealMPIGrid1d<real_type> gy, RealMPIGrid1d<real_type> gz): dg::aRealProductMPIGeometry3d<real_type>(std::array{gx,gy,gz}){}
 
     virtual RealCylindricalMPIGrid3d<real_type>* clone()const override final{

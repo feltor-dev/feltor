@@ -49,7 +49,7 @@ distribution of the matrix.
 that the associated matrix-vector product can be made binary reproducible.
 Support for column distributed matrices was dropped.
 
-\subsubsection mpi_row Row distributed matrices
+\subsection mpi_row Row distributed matrices
 
 In a row-distributed matrix each process holds the rows of the matrix that
 correspond to the portion of the \c MPI_Vector it holds.  When we implement a
@@ -69,7 +69,7 @@ place.  In this way we achieve a simple split between communication \f$ w=Gv\f$
 and computation \f$ Rw\f$. Since the computation of \f$ R w\f$ is entirely
 local we can reuse the existing implementation for shared memory systems.
 
-\subsubsection mpi_row_col Separation of communication and computation
+\subsection mpi_row_col Separation of communication and computation
 We can go one step further on a row distributed matrix and
 separates the matrix \f$ M = M_{inner} + M_{outer}\f$ and
 \f[
@@ -79,7 +79,7 @@ into a part that can be
 computed entirely on the local process and a part that needs communication.
 This enables the implementation of overlapping communication and computation
 which is done in the \c dg::MPIDistMat class
-\subsubsection mpi_create Creation
+\subsection mpi_create Creation
 You can create a row-distributed MPI matrix given its local parts on each
 process with local row and global column indices by our \c dg::make_mpi_matrix
 function.  If you have a column distributed matrix with its local parts on each
@@ -87,7 +87,7 @@ process with global row and local columns indices, you can use a combination of
 \c dg::convertLocal2GlobalCols and \c dg::convertGlobal2LocalRows to bring it
 to a row-distributed form. The latter can then be used in \c dg::make_mpi_matrix again.
 
-\subsubsection mpi_column Column distributed matrices
+\subsection mpi_column Column distributed matrices
 
 In a column-distributed matrix each process holds the columns of the matrix
 that correspond to the portion of the \c MPI_Vector it holds.  In a column
@@ -104,7 +104,7 @@ where \f$S\f$ is the scatter matrix and \f$C\f$ is the column distributed
 matrix with modified indices.  Again, we can reuse our shared memory algorithms
 to implement the local matrix-vector operation \f$ w=Cv\f$ before the
 communication step \f$ S w\f$.
-\subsubsection mpi_transpose Transposition
+\subsection mpi_transpose Transposition
 It turns out that a row-distributed matrix can be transposed by transposition
 of both the local matrix and the gather matrix: \f[
 M^\mathrm{T} = G^\mathrm{T} R^\mathrm{T} = S C\f] The result is then a column

@@ -76,6 +76,7 @@ namespace create{
 /**
  * @brief Create 2d derivative in x-direction
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative)
  * @param g The grid on which to create dx
  * @param bc The boundary condition
  * @param dir The direction of the first derivative
@@ -111,6 +112,7 @@ Composite<EllSparseBlockMat<real_type> > derivative( unsigned coord, const aReal
 /**
  * @brief Matrix that contains 2d jump terms in X direction
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative)
  * @param g grid
  * @param bc boundary condition in x
  *
@@ -146,6 +148,7 @@ Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopolo
 /**
  * @brief Matrix that contains jump terms in X direction in 3D
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative) or 2 (for z derivative)
  * @param g The 3D grid
  * @param bc boundary condition
  *
@@ -190,6 +193,7 @@ Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopolo
 /**
  * @brief Create 3d derivative in x-direction
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative) or 2 (for z derivative)
  * @param g The grid on which to create dx
  * @param bc The boundary condition
  * @param dir The direction of the first derivative

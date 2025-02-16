@@ -445,7 +445,7 @@ template<class RecursiveHostVector, class real_type, size_t Nd>
 cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
         const RecursiveHostVector& x,
         const aRealTopology<real_type, Nd>& g,
-        std::array<dg::bc, Nd> bcs,
+        std::array<dg::bc, Nd> bcx,
         std::string method = "dg")
 {
 
@@ -456,11 +456,11 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
             throw dg::Error( dg::Message(_ping_)<<"All coordinate lists must have same size "<<x[0].size());
         if( method == "dg")
         {
-            axes[u] = detail::interpolation1d( dg::xspace, x[u], g.grid(u), bcs[u]);
+            axes[u] = detail::interpolation1d( dg::xspace, x[u], g.grid(u), bcx[u]);
         }
         else
         {
-            axes[u] = detail::interpolation1d( x[u], g.abscissas(u), bcs[u], g.p(u), g.q(u), method);
+            axes[u] = detail::interpolation1d( x[u], g.abscissas(u), bcx[u], g.p(u), g.q(u), method);
         }
     }
     for( unsigned u=1; u<Nd; u++)
@@ -510,7 +510,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * When applied to a vector the result contains the interpolated values at the
  * given interpolation points.  The given boundary conditions determine how
  * interpolation points outside the grid domain are treated.
- * @snippet topology/interpolation_t.cu doxygen
+ * @snippet interpolation_t.cpp doxygen
  * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())
@@ -545,7 +545,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * interpolation has order \c g.n() .
  * When applied to a vector the result contains the interpolated values at the
  * given interpolation points.
- * @snippet topology/interpolation_t.cu doxygen3d
+ * @snippet interpolation_t.cpp doxygen3d
  * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points (\c y.size() must equal \c x.size())

@@ -477,8 +477,8 @@ struct MPIGather
     * chunk and use \c chunk_size to specify how many indices should be sent
     * @param comm The MPI communicator participating in the gather
     * operations
-     * @note Messages will be received in \c buffer in the order that <tt>for(
-     * auto& msg : recvIdx)</tt> is unrolled
+    * @note Messages will be received in \c buffer in the order that <tt>for(
+    * auto& msg : recvIdx)</tt> is unrolled
     */
     MPIGather(
         const std::map<int, thrust::host_vector<int>>& recvIdx, // in units of chunk size
@@ -559,7 +559,9 @@ struct MPIGather
      * If \c gather_map stems from the column indices of a row
      * distributed matrix then \c bufferIdx becomes the new column index of
      * that matrix acting on the local \c buffer
-    */
+     * @param comm The MPI communicator participating in the gather
+     * operations
+     */
     template<class ArrayVec = thrust::host_vector<std::array<int,2>>,
         class IntVec = thrust::host_vector<int>>
     MPIGather(

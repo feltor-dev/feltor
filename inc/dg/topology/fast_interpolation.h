@@ -312,10 +312,10 @@ EllSparseBlockMat<real_type> fast_interpolation( unsigned coord,
 ///@copydoc hide_coord_param
 template<class real_type, size_t Nd>
 EllSparseBlockMat<real_type> fast_projection( unsigned coord,
-    const aRealTopology<real_type, Nd>& t, unsigned divideyn, unsigned divideyNx)
+    const aRealTopology<real_type, Nd>& t, unsigned dividen, unsigned divideNx)
 {
     auto trafo = dg::create::fast_projection1d( t.axis(coord),
-        divideyn, divideyNx);
+        dividen, divideNx);
     detail::update_left_right( coord, trafo, t);
     return trafo;
 }

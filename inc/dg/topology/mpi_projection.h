@@ -35,10 +35,10 @@ namespace dg
  *  in the gather/scatter
  *  - <tt>unsigned local_size() const;</tt> return the local vector size
  *  .
- * @param global the local part of the matrix (different on each process) with
+ * @param global_cols the local part of the matrix (different on each process) with
  * **global column indices** and num_cols but **local row indices** and
  * num_rows
- * @param policy the conversion object
+ * @param col_policy the conversion object
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed the
  * collective communicator will have zero size.
@@ -154,7 +154,7 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
  *  use in the gather/scatter
  *  - <tt> local_size(); </tt> return the local vector size
  * @param global the row indices and num_rows need to be global
- * @param policy the conversion object
+ * @param row_policy the conversion object
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed it
  * simply has row-indices converted from global to local indices. \c num_cols
@@ -286,11 +286,11 @@ template<class RecursiveHostVector, class real_type, size_t Nd>
 dg::MIHMatrix_t<real_type> interpolation(
         const RecursiveHostVector& x,
         const aRealMPITopology<real_type, Nd>& g,
-        std::array<dg::bc, Nd> bcs,
+        std::array<dg::bc, Nd> bcx,
         std::string method = "dg")
 {
     dg::IHMatrix_t<real_type> mat = dg::create::interpolation( x, g.global(),
-            bcs, method);
+            bcx, method);
     return make_mpi_matrix(  mat, g);
 }
 

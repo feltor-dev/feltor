@@ -63,9 +63,9 @@ struct aRealGeometry2d : public aRealTopology<real_type,2>
     protected:
     /// Inherit all parent constructors
     using aRealTopology<real_type,2>::aRealTopology;
-    ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealGeometry2d( const aRealGeometry2d& src) = default;
-    ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
+    ///@copydoc aRealTopology::operator=(const aRealTopology&)
     aRealGeometry2d& operator=( const aRealGeometry2d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
@@ -143,9 +143,9 @@ struct aRealGeometry3d : public aRealTopology<real_type,3>
     protected:
     /// Inherit all parent constructors
     using aRealTopology<real_type,3>::aRealTopology;
-    ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealGeometry3d( const aRealGeometry3d& src) = default;
-    ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
+    ///@copydoc aRealTopology::operator=(const aRealTopology&)
     aRealGeometry3d& operator=( const aRealGeometry3d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
@@ -199,35 +199,42 @@ struct aRealProductGeometry3d : public aRealGeometry3d<real_type>
     virtual aRealProductGeometry3d* clone()const=0;
     protected:
     using aRealGeometry3d<real_type>::aRealGeometry3d;
-    ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealProductGeometry3d( const aRealProductGeometry3d& src) = default;
-    ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
+    ///@copydoc aRealTopology::operator=(const aRealTopology&)
     aRealProductGeometry3d& operator=( const aRealProductGeometry3d& src) = default;
     private:
     virtual aRealGeometry2d<real_type>* do_perp_grid()const=0;
 };
 
 /**
- * @brief two-dimensional Grid with Cartesian metric
+ * @brief Two-dimensional Grid with Cartesian metric
 
- * @snippet arakawa_t.cu doxygen
+ * @snippet arakawa_t.cpp doxygen
  */
 template<class real_type>
 struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
 {
+    ///@copydoc RealGrid::RealGrid()
     RealCartesianGrid2d() = default;
-    ///@copydoc RealGrid2d::RealGrid2d()
+    ///@copydoc hide_grid_parameters2d
+    ///@copydoc hide_bc_parameters2d
     RealCartesianGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometry2d<real_type>({x0,y0},{x1,y1},{n,n},{Nx,Ny},{bcx,bcy}){}
 
-    ///@copydoc aRealTopology2d<real_type>::aRealTopology2d(RealGrid1d<real_type>,RealGrid1d<real_type>)
+    /**
+     * @brief Construct from given 1d grids
+     * @param gx Axis 0 grid
+     * @param gy Axis 1 grid
+     */
     RealCartesianGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy):
         dg::aRealGeometry2d<real_type>(std::array{gx,gy}){}
     /**
-     * @brief Construct from existing topology
+     * @brief Construct from existing 2d topology
      * @param g existing grid class
      */
     RealCartesianGrid2d( const dg::RealGrid2d<real_type>& g):
         dg::aRealGeometry2d<real_type>(std::array{g.gx(), g.gy()}){}
+    /// Enable ClonePtr
     virtual RealCartesianGrid2d<real_type>* clone()const override final{
         return new RealCartesianGrid2d<real_type>(*this);
     }
@@ -244,7 +251,7 @@ struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
 };
 
 /**
- * @brief three-dimensional Grid with Cartesian metric
+ * @brief Three-dimensional Grid with Cartesian metric
  */
 template<class real_type>
 struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
@@ -259,7 +266,12 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
         dg::aRealProductGeometry3d<real_type>({x0,y0,z0},{x1,y1,z1},{n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz})
         {}
 
-    ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
+    /**
+     * @brief Construct from given 1d grids
+     * @param gx Axis 0 grid
+     * @param gy Axis 1 grid
+     * @param gz Axis 2 grid
+     */
     RealCartesianGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
         dg::aRealProductGeometry3d<real_type>(std::array{gx,gy,gz}){}
     /**
@@ -268,6 +280,7 @@ struct RealCartesianGrid3d: public dg::aRealProductGeometry3d<real_type>
      */
     RealCartesianGrid3d( const dg::RealGrid3d<real_type>& g):
         dg::aRealProductGeometry3d<real_type>(std::array{g.gx(), g.gy(), g.gz()}){}
+    /// Enable ClonePtr
     virtual RealCartesianGrid3d* clone()const override final{
         return new RealCartesianGrid3d(*this);
     }
@@ -304,9 +317,15 @@ struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
         bc bcx = PER, bc bcy = PER, bc bcz = PER):
     dg::aRealProductGeometry3d<real_type>({x0,y0,z0},{x1,y1,z1},{n,n,1},{Nx,Ny,Nz},{bcx,bcy,bcz})
     {}
-    ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
+    /**
+     * @brief Construct from given 1d grids
+     * @param gx Axis 0 grid ->R
+     * @param gy Axis 1 grid ->Z
+     * @param gz Axis 2 grid ->P
+     */
     RealCylindricalGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
         dg::aRealProductGeometry3d<real_type>(std::array{gx,gy,gz}){}
+    ///Enable ClonePtr
     virtual RealCylindricalGrid3d* clone()const override final{
         return new RealCylindricalGrid3d(*this);
     }

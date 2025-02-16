@@ -108,13 +108,11 @@ struct MPIContiguousKroneckerGather
 /**
 * @brief Communicator for asynchronous communication of \c MPISparseBlockMat
 *
-* @subsubsection rrr Rationale
 * This is a version of \c MPIGather that is optimised for the Kronecker
 * type communication pattern ("Hyperblocks") present in our \c EllSparseBlockMat
 * It avoids data movement to the greatest possible extent and exposes send
 * and receive buffers via pointers.
 *
-* @subsubsection ccc Design
 * Imagine a communicator with Cartesian topology and further imagine that the
 * grid topology is also Cartesian (vectors form a box) in Nd dimensions.  A
 * Sparseblockmat typically requires to gather slices of given index from other
@@ -146,7 +144,7 @@ struct MPIContiguousKroneckerGather
 template<template< typename> typename Vector>
 struct MPIKroneckerGather
 {
-    ///@copydoc MPIGather<Vector>::MPIGather(comm)
+    ///@copydoc MPIGather<Vector>::MPIGather(MPI_Comm)
     MPIKroneckerGather( MPI_Comm comm = MPI_COMM_NULL) : m_mpi_gather(comm){ }
     /**
     * @brief Construct from communication pattern
@@ -161,7 +159,6 @@ struct MPIKroneckerGather
     * @param num_cols local number of blocks columns in \c EllSparseBlockMat
     * @param right_size (local) right size of \c EllSparseBlockMat (determines chunk size)
     * @param comm_1d the one dimensional Cartesian communicator along which to exchange the hyperblocks
-    * @param direction coordinate along which to exchange halo e.g. 0 is x, 1 is y, 2 is z
     * @note not all participating pids need to have the same number of hyperblocks or have the same shape
     * even though left_size, n, num_cols, and right_size must be equal between any two communicating pids
     * @sa \c dg::make_mpi_sparseblockmat

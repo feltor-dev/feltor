@@ -55,7 +55,7 @@ struct RealGrid;
 ///@endcond
 ///
 /**
- * @class hide_class_grid_description
+ * @class hide_grid_description
  * This grid defines a discretization of the \f$N_d\f$ dimensional hypercube
  * given by
  * \f[ [\vec p, \vec q] = [p_0, p_1] \times [p_1,q_1] \times ... \times
@@ -67,18 +67,25 @@ struct RealGrid;
  * boundary condition \f$ b_i \f$ that is given by \c dg::bc
  * For more information dG methods see
  * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+ *
+ * @class hide_grid_xyz_description
+ * For code readability in many physical contexts the first 3 dimensions get
+ * special names \f$ x,\ y,\ z\f$ i.e. \f$ \vec p = (x_0, y_0, z_0)\f$ and \f$
+ * \vec q = (x_1, y_1, z_1)\f$. The class provides coresponding getters and
+ * setters like e.g. \c x0() or \c Nx() for \c p(0) and \c N(0)
  */
 
 /**
  * @brief An abstract base class for Nd-dimensional dG grids
  *
- * @copydoc hide_class_grid_description
+ * @copydoc hide_grid_description
  *
  * This class in essence provides a collection of getters and setters for the
  * aforementioned parameters together with the \c abscissas and \c weights
  * members that are necessary for \c dg::evaluate and \c dg::create::weights.
  * Lastly, we provide \c start and \c count members such that the grid can be
  * used as a \c dg::file::NcHyperslab in NetCDF output in dg::file
+ * @copydoc hide_grid_xyz_description
  * @ingroup basictopology
  * @tparam real_type Determines value type of abscissas and weights
  * @tparam Nd The number of dimensions \f$ N_d\f$
@@ -238,26 +245,26 @@ struct aRealTopology
     /*! 
      * @brief Get left boundary point \f$ p_u\f$ for axis \c u
      * @param u Axis number \c u<Nd
-     * @return Value
+     * @return Value for axis \c u
      */
     real_type p( unsigned u=0) const { return m_x0.at(u);}
     ///@brief Get right boundary point \f$ q_u\f$ for axis \c u
-    ///@copydetails p(unsigned)
+    ///@copydetails p(unsigned)const
     real_type q( unsigned u=0) const { return m_x1.at(u);}
     ///@brief Get grid constant \f$ h_u = \frac{q_u - p_u}{N_u}\f$ for axis \c u
-    ///@copydetails p(unsigned)
+    ///@copydetails p(unsigned)const
     real_type h( unsigned u=0) const { return (m_x1.at(u) - m_x0.at(u))/(real_type)m_N.at(u);}
     ///@brief Get grid length \f$ l_u = q_u - p_u\f$ for axis \c u
-    ///@copydetails p(unsigned)
+    ///@copydetails p(unsigned)const
     real_type l( unsigned u=0) const { return m_x1.at(u) - m_x0.at(u);}
     ///@brief Get number of polynomial coefficients \f$ n_u\f$ for axis \c u
-    ///@copydetails p(unsigned)
+    ///@copydetails p(unsigned)const
     unsigned n( unsigned u=0) const { return m_n.at(u);}
     ///@brief Get number of cells \f$ N_u\f$ for axis \c u
-    ///@copydetails p(unsigned)
+    ///@copydetails p(unsigned)const
     unsigned N( unsigned u=0) const { return m_N.at(u);}
     ///@brief Get boundary condition \f$ b_u\f$ for axis \c u
-    ///@copydetails p(unsigned)
+    ///@copydetails p(unsigned)const
     dg::bc bc( unsigned u=0) const { return m_bcs.at(u);}
     /*!
      * @brief Get axis \c u as a 1d grid
@@ -271,7 +278,7 @@ struct aRealTopology
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
     }
     /// @brief An alias for "grid"
-    /// @copydetails grid(unsigned)
+    /// @copydetails grid(unsigned)const
     RealGrid<real_type,1> axis(unsigned u ) const{ return grid(u);}
     /// Equivalent to <tt>p(0)</tt>
     template<size_t Md = Nd>
@@ -617,6 +624,21 @@ struct aRealTopology
             m_bcs[u] = axes[u].bc();
         }
     }
+
+    ///explicit copy constructor (default)
+    ///@param src source
+    aRealTopology(const aRealTopology& src) = default;
+    ///explicit assignment operator (default)
+    ///@param src source
+    aRealTopology& operator=(const aRealTopology& src) = default;
+
+    ///@copydoc set(std::array<unsigned,Nd>,std::array<unsigned,Nd>)
+    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) = 0;
+    ///@copydoc set_pq
+    virtual void do_set_pq( std::array<real_type, Nd> new_p, std::array<real_type,Nd> new_q) = 0;
+    ///@copydoc set_bcs(std::array<dg::bc,Nd>)
+    virtual void do_set( std::array<dg::bc, Nd> new_bcs) = 0;
+
     // MW: This constructor causes nvcc-12.4 to segfault when constructing a Geometry
     // Funnily the mpi version works (but let's kill it for now
     // Maybe in the future a free function "make_grid" ...
@@ -648,20 +670,6 @@ struct aRealTopology
     //        m_bcs[M0+u] = g1.bc(u);
     //    }
     //}
-
-    ///explicit copy constructor (default)
-    ///@param src source
-    aRealTopology(const aRealTopology& src) = default;
-    ///explicit assignment operator (default)
-    ///@param src source
-    aRealTopology& operator=(const aRealTopology& src) = default;
-
-    ///@copydoc set(std::array<unsigned,Nd>,std::array<unsigned,Nd>)
-    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) = 0;
-    ///@copydoc set_pq(std::array<unsigned,Nd>,std::array<unsigned,Nd>)
-    virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1) = 0;
-    ///@copydoc set(std::array<dg::bc,Nd>)
-    virtual void do_set( std::array<dg::bc, Nd> bcs) = 0;
   private:
     std::array<real_type,Nd> m_x0;
     std::array<real_type,Nd> m_x1;
@@ -712,12 +720,12 @@ struct RealGrid : public aRealTopology<real_type, Nd>
      * @param x1 right boundary
      * @param n # of polynomial coefficients
      *  (1<=n<=20)
-     * @param N # of cells
+     * @param Nx # of cells
      * @param bcx boundary conditions
      */
     template<size_t Md = Nd>
-    RealGrid( real_type p, real_type q, unsigned n, unsigned Nx, dg::bc bcx = dg::PER ):
-        aRealTopology<real_type,1>{{p}, {q}, {n}, {Nx}, {bcx}}
+    RealGrid( real_type x0, real_type x1, unsigned n, unsigned Nx, dg::bc bcx = dg::PER ):
+        aRealTopology<real_type,1>{{x0}, {x1}, {n}, {Nx}, {bcx}}
     {
     }
     ///@copydoc hide_grid_parameters2d
@@ -735,8 +743,8 @@ struct RealGrid : public aRealTopology<real_type, Nd>
         {}
 
     ///@copydoc aRealTopology::aRealTopology(const std::array<RealGrid<real_type,1>,Nd>&)
-    RealGrid( const std::array<RealGrid<real_type,1>,Nd>& grids) :
-        aRealTopology<real_type,Nd>( grids){}
+    RealGrid( const std::array<RealGrid<real_type,1>,Nd>& axes) :
+        aRealTopology<real_type,Nd>( axes){}
 
     /**
      * @brief Construct from given 1d grids

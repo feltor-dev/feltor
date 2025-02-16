@@ -41,8 +41,14 @@ struct RealMPIGrid;
 /**
  * @brief An abstract base class for MPI distributed Nd-dimensional dG grids
  *
+ * @section Shared grids vs MPI grids
+ * In the dg library we have MPI grids as a separate type from shared memory
+ * grids. The design goal is that MPI grids generally can be used the same
+ * way as just a single global shared memory grid. A notable exception is
+ * the constructor, when MPI grids depend on a Cartesian MPI communicator
+ * (that has to be constructed beforehand with e.g. \c dg::mpi_cart_create)
  * @subsection shared_mpi_grid Shared memory considerations
- * @copydoc hide_class_grid_description
+ * @copydoc hide_grid_description
  * @ingroup basictopology
  * @subsection mpi_mpi_grid Distributed memory considerations
  * In MPI we want to distribute the above hypercube among processes in a
@@ -67,8 +73,12 @@ struct RealMPIGrid;
  * This class in essence provides a collection of getters and setters for the
  * aforementioned parameters together with the \c abscissas and \c weights
  * members that are necessary for \c dg::evaluate and \c dg::create::weights.
+ *
+ * @copydoc hide_grid_xyz_description
  * @note Unless otherwise indicate the getters and setters refer to the
- * **global** grid quantities
+ * **global** grid quantities. If access to local quantities is needed
+ * we have the \c local() function, which provides a grid with all local
+ * quantities
  *
  * Lastly, we provide \c start and \c count members such that the grid can be
  * used as a \c dg::file::MPINcHyperslab in NetCDF output in dg::file
@@ -92,7 +102,7 @@ struct aRealMPITopology
 
     // ///////////////// TOPOLOGY CONCEPT ////////////////////////////
 
-    ///@copydoc aRealTopology::shape(unsigned)
+    ///@copydoc aRealTopology::shape
     unsigned shape(unsigned u=0) const
     {
         return m_g.shape(u);
@@ -201,6 +211,8 @@ struct aRealMPITopology
     {
         return m_g.get_bc();
     }
+    ///@brief Get 1d Cartesian communicator \f$ c_u\f$ for all axes
+    ///@return 1d Cartesian communicator \f$ c_u\f$ for all \c u
     std::array<MPI_Comm, Nd> get_comms() const { return m_comms;}
 
     /// @copydoc aRealTopology::p
@@ -217,14 +229,23 @@ struct aRealMPITopology
     unsigned N( unsigned u=0) const  { return m_g.N(u);}
     /// @copydoc aRealTopology::bc
     dg::bc bc( unsigned u=0) const   { return m_g.bc(u);}
+
+    /**
+     * @brief Get 1d Cartesian communicator \f$ c_u\f$ for axis \c u
+     * @param u Axis number \c u<Nd
+     * @return MPI Cartesian communicator
+     */
+    MPI_Comm comm(unsigned u) const { return m_comms.at(u);}
+    /// Equivalent to <tt>comm(0)</tt>
     template<size_t Md = Nd>
     std::enable_if_t<Md==1,MPI_Comm> comm() const { return m_comms.at(0);}
-    MPI_Comm comm(unsigned u) const { return m_comms.at(u);}
     /**
-     * @brief Return Nd dimensional MPI cartesian communicator that is used in this grid
+     * @brief Return Nd dimensional MPI cartesian communicator that is used in
+     * this grid
      * @return Communicator
      */
     MPI_Comm communicator() const{return m_comm;}
+
     /**
      * @brief MPI Cartesian communicator in the first two dimensions (x and y)
      * @return 2d Cartesian Communicator
@@ -236,99 +257,108 @@ struct aRealMPITopology
     }
 
 
-    /// Get the u-th axis as a 1d Grid
+    /// @copydoc aRealTopology::grid
     RealMPIGrid<real_type,1> grid(unsigned u ) const{
         if( u < Nd)
             return RealMPIGrid<real_type,1>{ m_g.p(u), m_g.q(u), m_g.n(u), m_g.N(u), m_g.bc(u), m_comms[u]};
         else
             throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
     }
-    /// An alias for "grid"
+    /// @copydoc aRealTopology::axis
     RealMPIGrid<real_type,1> axis(unsigned u ) const{ return grid(u);} // because we can't decide how to name it ...
-    ///@copydoc aRealMPITopology2d::local()const
+    /*!
+     * @brief The local grid as a shared memory grid
+     * @return Local grid
+     */
     const RealGrid<real_type,Nd>& local() const {return m_l;}
-     ///@copydoc aRealMPITopology2d::global()const
+    /*!
+     * @brief The global grid as a shared memory grid
+     * @return Global grid
+     */
     const RealGrid<real_type, Nd>& global() const {return m_g;}
 
-    /// Equivalent to <tt> p(0) </tt>
+    /// Equivalent to <tt>p(0)</tt>
     template<size_t Md = Nd>
     real_type x0() const {return m_g.x0();}
-    /// Equivalent to <tt> p(1) </tt>
+    /// Equivalent to <tt>p(1)</tt>
     template<size_t Md = Nd>
     real_type x1() const {return m_g.x1();}
-    /// Equivalent to <tt> p(2) </tt>
+    /// Equivalent to <tt>p(2)</tt>
     template<size_t Md = Nd>
     real_type y0() const {return m_g.y0();}
-    /// Equivalent to <tt> q(0) </tt>
+    /// Equivalent to <tt>q(0)</tt>
     template<size_t Md = Nd>
     real_type y1() const {return m_g.y1();}
-    /// Equivalent to <tt> q(1) </tt>
+    /// Equivalent to <tt>q(1)</tt>
     template<size_t Md = Nd>
     real_type z0() const {return m_g.z0();}
-    /// Equivalent to <tt> q(2) </tt>
+    /// Equivalent to <tt>q(2)</tt>
     template<size_t Md = Nd>
     real_type z1() const {return m_g.z1();}
 
-    /// Equivalent to <tt> l(0) </tt>
+    /// Equivalent to <tt>l(0)</tt>
     template<size_t Md = Nd>
     real_type lx() const {return m_g.lx();}
-    /// Equivalent to <tt> l(1) </tt>
+    /// Equivalent to <tt>l(1)</tt>
     template<size_t Md = Nd>
     real_type ly() const {return m_g.ly();}
-    /// Equivalent to <tt> l(2) </tt>
+    /// Equivalent to <tt>l(2)</tt>
     template<size_t Md = Nd>
     real_type lz() const {return m_g.lz();}
 
-    /// Equivalent to <tt> h(0) </tt>
+    /// Equivalent to <tt>h(0)</tt>
     template<size_t Md = Nd>
     real_type hx() const {return m_g.hx();}
-    /// Equivalent to <tt> h(1) </tt>
+    /// Equivalent to <tt>h(1)</tt>
     template<size_t Md = Nd>
     real_type hy() const {return m_g.hy();}
-    /// Equivalent to <tt> h(2) </tt>
+    /// Equivalent to <tt>h(2)</tt>
     template<size_t Md = Nd>
     real_type hz() const {return m_g.hz();}
 
-    /// Equivalent to <tt> n(0) </tt>
+    /// Equivalent to <tt>n(0)</tt>
     template<size_t Md = Nd>
     unsigned nx() const {return m_g.nx();}
-    /// Equivalent to <tt> n(1) </tt>
+    /// Equivalent to <tt>n(1)</tt>
     template<size_t Md = Nd>
     unsigned ny() const {return m_g.ny();}
-    /// Equivalent to <tt> n(2) </tt>
+    /// Equivalent to <tt>n(2)</tt>
     template<size_t Md = Nd>
     unsigned nz() const {return m_g.nz();}
 
-    /// Equivalent to <tt> N(0) </tt>
+    /// Equivalent to <tt>N(0)</tt>
     template<size_t Md = Nd>
     unsigned Nx() const {return m_g.Nx();}
-    /// Equivalent to <tt> N(1) </tt>
+    /// Equivalent to <tt>N(1)</tt>
     template<size_t Md = Nd>
     unsigned Ny() const {return m_g.Ny();}
-    /// Equivalent to <tt> N(2) </tt>
+    /// Equivalent to <tt>N(2)</tt>
     template<size_t Md = Nd>
     unsigned Nz() const {return m_g.Nz();}
 
-    /// Equivalent to <tt> bc(0) </tt>
+    /// Equivalent to <tt>bc(0)</tt>
     template<size_t Md = Nd>
     dg::bc bcx() const {return m_g.bcx();}
-    /// Equivalent to <tt> bc(1) </tt>
+    /// Equivalent to <tt>bc(1)</tt>
     template<size_t Md = Nd>
     dg::bc bcy() const {return m_g.bcy();}
-    /// Equivalent to <tt> bc(2) </tt>
+    /// Equivalent to <tt>bc(2)</tt>
     template<size_t Md = Nd>
     dg::bc bcz() const {return m_g.bcz();}
 
+    /// Equivalent to <tt>grid(0)</tt>
     template<size_t Md = Nd>
     RealMPIGrid<real_type,1> gx() const {
         static_assert( Nd > 0);
         return grid(0);
     }
+    /// Equivalent to <tt>grid(1)</tt>
     template<size_t Md = Nd>
     RealMPIGrid<real_type,1> gy() const {
         static_assert( Nd > 1);
         return grid(1);
     }
+    /// Equivalent to <tt>grid(2)</tt>
     template<size_t Md = Nd>
     RealMPIGrid<real_type,1> gz() const {
         static_assert( Nd > 2);
@@ -336,40 +366,37 @@ struct aRealMPITopology
     }
 
     // //////////////////SETTERS/////////////////////////////
-    /**
-    * @brief Multiply the number of cells in the first two dimensions with a given factor
-    *
-    * With this function you can resize the grid ignorantly of its current size
-    * @param fx new global number of cells is fx*Nx()
-    * @param fy new global number of cells is fy*Ny()
-    * The remaining dimensions are left unchanged
-    */
-    void multiplyCellNumbers( real_type fx, real_type fy){
+    ///@copydoc aRealTopology::multiplyCellNumbers
+    template<size_t Md = Nd>
+    std::enable_if_t< (Md>=2),void> multiplyCellNumbers( real_type fx, real_type fy)
+    {
         auto Ns = m_g.get_N();
         Ns[0] = round(fx*(real_type)m_g.N(0));
         Ns[1] = round(fy*(real_type)m_g.N(1));
         if( fx != 1 or fy != 1)
             set( m_g.get_n(), Ns);
     }
+    ///@copydoc aRealTopology::set(unsigned,unsigned)
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 1), void> set( unsigned new_n, unsigned new_Nx)
     {
         set(std::array{new_n}, std::array{new_Nx});
     }
-
+    ///@copydoc aRealTopology::set(unsigned,unsigned,unsigned)
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 2), void> set( unsigned new_n, unsigned new_Nx,
         unsigned new_Ny)
     {
         set(std::array{new_n,new_n}, std::array{new_Nx,new_Ny});
     }
+    ///@copydoc aRealTopology::set(unsigned,unsigned,unsigned,unsigned)
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 3), void> set( unsigned new_n, unsigned new_Nx,
         unsigned new_Ny, unsigned new_Nz)
     {
         set(std::array{new_n,new_n,1u}, std::array{new_Nx,new_Ny,new_Nz});
     }
-    /// Same as <tt> set( {new_n, new_n,...}, new_N);</tt>
+    ///@copydoc aRealTopology::set(unsigned,std::array<unsigned,Nd>)
     void set( unsigned new_n, std::array<unsigned,Nd> new_N)
     {
         std::array<unsigned , Nd> tmp;
@@ -377,7 +404,7 @@ struct aRealMPITopology
             tmp[u] = new_n;
         set( tmp, new_N);
     }
-    // TODO Documentation everywhere
+    ///@copydoc aRealTopology::set_axis
     void set_axis( unsigned coord, unsigned new_n , unsigned new_N)
     {
         auto n = m_g.get_n(), N = m_g.get_N();
@@ -385,42 +412,28 @@ struct aRealMPITopology
         N[coord] = new_N;
         set( n, N);
     }
-    /**
-    * @brief Set the number of polynomials and cells
-    *
-    * @param new_n new number of %Gaussian nodes in each dimension
-    * @param new_N new number of cells in each dimension
-    */
+    ///@copydoc aRealTopology::set(std::array<unsigned,Nd>,std::array<unsigned,Nd>)
     void set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
     {
         if( new_n==m_g.get_n() && new_N == m_g.get_N())
             return;
         do_set(new_n, new_N);
     }
-    /**
-     * @brief reset the boundaries of the grid
-     *
-     * @param p new left boundary
-     * @param q new right boundary ( > x0)
-     */
-    void set_pq( std::array<real_type,Nd> p, std::array<real_type,Nd> q)
+    ///@copydoc aRealTopology::set_pq
+    void set_pq( std::array<real_type,Nd> new_p, std::array<real_type,Nd> new_q)
     {
-        do_set_pq( p, q);
+        do_set_pq( new_p, new_q);
     }
-    /**
-     * @brief reset the boundary conditions of the grid
-     *
-     * @param bcs new boundary condition
-     */
-    void set_bcs( std::array<dg::bc,Nd> bcs)
+    ///@copydoc aRealTopology::set_bcs
+    void set_bcs( std::array<dg::bc,Nd> new_bcs)
     {
-        do_set( bcs);
+        do_set( new_bcs);
     }
 
     // //////////////////UTILITY/////////////////////////////
     /**
      * @brief The total global number of points
-     * @return global size
+     * @return \f$ \prod_{i=0}^{N-1} n_i N_i\f$
      */
     unsigned size() const { return m_g.size();}
     /**
@@ -443,16 +456,28 @@ struct aRealMPITopology
         m_l.display();
     }
 
+    ///@copydoc aRealTopology::contains(const Vector&)const
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 1), bool> contains( real_type x) const
     {
         return m_g.contains( x);
     }
 
+    ///@copydoc aRealTopology::contains(const Vector&)const
     template<class Vector>
     bool contains( const Vector& x)const { return m_g.contains(x);}
 
-    bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
+    /*!
+     * @brief Convert the index of a local vector and the rank of the
+     * containing process to a global index
+     * 
+     * @note All calling processes will get the same result
+     * @param localIdx Index in a local chunk of a vector
+     * @param rank Rank of the process that contains the localIdx
+     * @param globalIdx (write only) Global index of the element
+     * @sa The main usage of this function is dg::make_mpi_matrix and dg::global2local
+     */
+    bool local2globalIdx( int localIdx, int rank, int& globalIdx)const
     {
         // TODO shouldn't this test for m_l.size() ? How is this used?
         // ATTENTION This function cannot depend on who is calling it
@@ -462,8 +487,8 @@ struct aRealMPITopology
         int dims[Nd], periods[Nd], coords[Nd]; // we need the dims
         if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
             return false;
-        // and the coords associated to PID
-        if( MPI_Cart_coords( m_comm, PID, Nd, coords) != MPI_SUCCESS)
+        // and the coords associated to rank
+        if( MPI_Cart_coords( m_comm, rank, Nd, coords) != MPI_SUCCESS)
             return false;
         int gIdx[Nd];
         int current = localIdx;
@@ -481,7 +506,17 @@ struct aRealMPITopology
         return true;
     }
 
-    bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
+    /*!
+     * @brief Convert the global index of a vector to a local index and the
+     * rank of the containing process
+     * 
+     * @note All calling processes will get the same result
+     * @param globalIdx Global index of the element
+     * @param localIdx (write only) Index in a local chunk of a vector
+     * @param rank (write only) Rank of the process that contains the globalIdx
+     * @sa The main usage of this function is dg::make_mpi_matrix and dg::global2local
+     */
+    bool global2localIdx( int globalIdx, int& localIdx, int& rank)const
     {
         // an exercise in flattening and unflattening indices
         if( globalIdx < 0 || globalIdx >= (int)m_g.size()) return false;
@@ -513,7 +548,7 @@ struct aRealMPITopology
         for( int u=int(Nd)-2; u>=0; u--)
             localIdx = localIdx*local_shape[u] + lIdx[u];
 
-        if( MPI_Cart_rank( m_comm, coords, &PID) == MPI_SUCCESS )
+        if( MPI_Cart_rank( m_comm, coords, &rank) == MPI_SUCCESS )
             return true;
         else
             return false;
@@ -550,15 +585,28 @@ struct aRealMPITopology
      */
     std::array<unsigned, Nd> count() const { return m_l.count(); }
     protected:
-    ///disallow deletion through base class pointer
+    ///@copydoc aRealTopology::~aRealTopology
     ~aRealMPITopology() = default;
 
+    ///@copydoc aRealTopology::aRealTopology()
     aRealMPITopology() = default;
 
+    /**
+     * @brief Construct a topology directly from points and dimensions
+     *
+     * @param p left boundary point
+     * @param q right boundary point
+     * @param n number of polynomial coefficients for each axis
+     * @param N number of cells for each axis
+     * @param bcs boundary condition for each axis
+     * @param comms The 1d MPI Cartesian communicators for each axis that make
+     * up an Nd dimensional Cartesian communicator (see \c dg::mpi_cart_split,
+     * \c dg::mpi_cart_kron)
+     */
     aRealMPITopology( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
         std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
-        std::array<dg::bc,Nd> bc, std::array<MPI_Comm, Nd> comms) :
-        m_g(p,q,n,N,bc), m_comms(comms)
+        std::array<dg::bc,Nd> bcs, std::array<MPI_Comm, Nd> comms) :
+        m_g(p,q,n,N,bcs), m_comms(comms)
     {
         // assert dimensionality of Cartesian communicators
         int ndims;
@@ -572,7 +620,6 @@ struct aRealMPITopology
         assert( (unsigned)ndims == Nd);
         // The idea is that every grid gets the same amount and the
         // rest is distributed to the lowest rank grids
-        // TODO document:
         int dims[Nd], periods[Nd], coords[Nd];
         MPI_Cart_get( m_comm, Nd, dims, periods, coords);
         for( unsigned u=0;u<Nd; u++)
@@ -585,19 +632,31 @@ struct aRealMPITopology
         }
         m_l = { p, q, m_g.get_n(), N, m_g.get_bc()};
     }
-    aRealMPITopology( const std::array< RealMPIGrid<real_type, 1>, Nd>& grids)
+    ///@copydoc aRealTopology::aRealTopology(const std::array<RealGrid<real_type,1>,Nd>&)
+    aRealMPITopology( const std::array< RealMPIGrid<real_type, 1>, Nd>& axes)
     {
         std::array<RealGrid<real_type,1>,Nd> globals, locals;
         for( unsigned u=0; u<Nd; u++)
         {
-            globals[u] = grids[u].global();
-            locals[u] = grids[u].local();
-            m_comms[u] = grids[u].communicator();
+            globals[u] = axes[u].global();
+            locals[u] = axes[u].local();
+            m_comms[u] = axes[u].communicator();
         }
         m_g = RealGrid<real_type,Nd>( globals);
         m_l = RealGrid<real_type,Nd>( locals);
         m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
     }
+ 
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
+    aRealMPITopology(const aRealMPITopology& src) = default;
+    ///@copydoc aRealTopology::operator=
+    aRealMPITopology& operator=(const aRealMPITopology& src) = default;
+    ///@copydoc aRealTopology::set(std::array<unsigned,Nd>,std::array<unsigned,Nd>)
+    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) =0;
+    ///@copydoc aRealTopology::set_pq
+    virtual void do_set_pq( std::array<real_type, Nd> new_p, std::array<real_type,Nd> new_q) =0;
+    ///@copydoc aRealTopology::set_bcs(std::array<dg::bc,Nd>)
+    virtual void do_set( std::array<dg::bc, Nd> new_bcs) =0;
 
     // MW: The shared version of this constructor causes nvcc-12.4 to segfault when constructing a Geometry
     // Funnily the mpi version works (but let's kill it for now
@@ -628,15 +687,6 @@ struct aRealMPITopology
 
     //We do not want that because we cannot distinguish if g is meant to be the local or the global grid...
     //aRealMPITopology( const RealGrid<real_type,Nd> & g, MPI_Comm comm);
-    ///explicit copy constructor (default)
-    ///@param src source
-    aRealMPITopology(const aRealMPITopology& src) = default;
-    ///explicit assignment operator (default)
-    ///@param src source
-    aRealMPITopology& operator=(const aRealMPITopology& src) = default;
-    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) =0;
-    virtual void do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1) =0;
-    virtual void do_set( std::array<dg::bc, Nd> bcs) =0;
     private:
     void check_periods( std::array<dg::bc, Nd> bc) const
     {
@@ -727,23 +777,22 @@ void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
 template<class real_type, size_t Nd>
 struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
 {
+    ///@copydoc RealGrid::RealGrid()
     RealMPIGrid() = default;
     template<size_t Md = Nd>
     RealMPIGrid( real_type x0, real_type x1, unsigned n, unsigned N, MPI_Comm
             comm): aRealMPITopology<real_type,1>( {x0}, {x1},
                 {n}, {N}, {dg::PER}, {comm})
     { }
-    ///@copydoc RealGrid1d::RealGrid1d(real_type,real_type,unsigned,unsigned,bc)
+    ///@copydoc RealGrid::RealGrid(real_type,real_type,unsigned,unsigned,bc)
     ///@copydoc hide_comm_parameters1d
     template<size_t Md = Nd>
-    RealMPIGrid( real_type x0, real_type x1, unsigned n, unsigned N, dg::bc bcx, MPI_Comm
+    RealMPIGrid( real_type x0, real_type x1, unsigned n, unsigned Nx, dg::bc bcx, MPI_Comm
             comm): aRealMPITopology<real_type,1>( {x0}, {x1},
-                {n}, {N}, {bcx}, {comm})
+                {n}, {Nx}, {bcx}, {comm})
     {}
-    /**
-     * @copydoc hide_grid_parameters2d
-     * @copydoc hide_comm_parameters2d
-     */
+    ///@copydoc hide_grid_parameters2d
+    ///@copydoc hide_comm_parameters2d
     template<size_t Md = Nd>
     RealMPIGrid( real_type x0, real_type x1, real_type y0, real_type y1,
             unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
@@ -752,11 +801,9 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
                 dg::mpi_cart_split_as<2>(comm))
     { }
 
-    /**
-     * @copydoc hide_grid_parameters2d
-     * @copydoc hide_bc_parameters2d
-     * @copydoc hide_comm_parameters2d
-     */
+    ///@copydoc hide_grid_parameters2d
+    ///@copydoc hide_bc_parameters2d
+    ///@copydoc hide_comm_parameters2d
     template<size_t Md = Nd>
     RealMPIGrid( real_type x0, real_type x1, real_type y0, real_type y1,
             unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm
@@ -788,13 +835,21 @@ struct RealMPIGrid : public aRealMPITopology<real_type,Nd>
                 dg::mpi_cart_split_as<3>(comm))
     { }
 
-    RealMPIGrid( const std::array<RealMPIGrid<real_type,1>,Nd>& grids) :
-        aRealMPITopology<real_type,Nd>( grids){}
+    ///@copydoc aRealTopology::aRealTopology(const std::array<RealGrid<real_type,1>,Nd>&)
+    RealMPIGrid( const std::array<RealMPIGrid<real_type,1>,Nd>& axes) :
+        aRealMPITopology<real_type,Nd>( axes){}
 
+    /**
+     * @brief Construct from given 1d grids
+     * Equivalent to <tt>RealMPIGrid( std::array{g0,gs...})</tt>
+     * @param g0 Axis 0 grid
+     * @param gs more axes
+     */
     template<class ...Grid1ds>
     RealMPIGrid( const RealMPIGrid<real_type,1>& g0, const Grid1ds& ...gs) :
         aRealMPITopology<real_type,Nd>( std::array<RealMPIGrid<real_type,1>,Nd>{g0, gs...}){}
 
+    ///@copydoc aRealMPITopology::aRealMPITopology(std::array<real_type,Nd>,std::array<real_type,Nd>,std::array<unsigned,Nd>,std::array<unsigned,Nd>,std::array<dg::bc,Nd>,std::array<MPI_Comm,Nd>)
     RealMPIGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
         std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
         std::array<dg::bc,Nd> bcs, std::array<MPI_Comm,Nd> comms) :
