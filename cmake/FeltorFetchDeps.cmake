@@ -23,6 +23,7 @@ function(fetch_thrust)
   # sure dg and all dependents are built after thrust is downloaded.
   add_dependencies(dg thrust)
   message(STATUS "Fetched Thrust 1.9.3")
+  set(THRUST_FOUND TRUE PARENT_SCOPE)
 endfunction()
 
 function(fetch_cusp)
@@ -42,6 +43,7 @@ function(fetch_cusp)
   target_include_directories(cusp::cusp INTERFACE ${cusp_SOURCE_DIR})
   add_dependencies(dg cusp)
   message(STATUS "Fetched CUSP")
+  set(CUSP_FOUND TRUE PARENT_SCOPE)
 endfunction()
 
 function(fetch_vcl)
@@ -63,4 +65,27 @@ function(fetch_vcl)
   target_include_directories(vcl::vcl INTERFACE ${vcl_SOURCE_DIR})
   add_dependencies(dg vcl)
   message(STATUS "Fetched Vector class library")
+  set(VCL_FOUND TRUE PARENT_SCOPE)
+endfunction()
+
+function(fetch_draw)
+  # Draw is not a CMake project.
+  include(ExternalProject)
+  ExternalProject_Add(
+    draw
+    GIT_REPOSITORY https://github.com/feltor-dev/draw.git
+    GIT_SHALLOW TRUE
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+  )
+  # All header files are all in the root directory, need to use
+  # download directory as the source directory.
+  ExternalProject_Get_Property(draw DOWNLOAD_DIR)
+  set(draw_SOURCE_DIR ${DOWNLOAD_DIR})
+  add_library(draw::draw INTERFACE IMPORTED)
+  target_include_directories(draw::draw INTERFACE ${draw_SOURCE_DIR})
+  add_dependencies(dg draw)
+  message(STATUS "Fetched DRAW")
+  set(DRAW_FOUND TRUE PARENT_SCOPE)
 endfunction()

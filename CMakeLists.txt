@@ -15,9 +15,9 @@ project(feltor VERSION 1.0 LANGUAGES CXX)
 ## Note that OpenMP and GPU support are mutually exclusive.
 ##
 ## The location of dependencies can be specified with -DCMAKE_PREFIX_PATH. To
-## automatically fetch dependencies from GitHub, set -DFELTOR_FETCH_DEPS=ON,
-## or -DFELTOR_FETCH_THRUST=ON, -DFELTOR_FETCH_CUSP=ON, -DFELTOR_FETCH_VCL=ON
-## may be set individually.
+## automatically fetch dependencies from GitHub, set -DFELTOR_FETCH_DEPS=ON.
+## -DFELTOR_FETCH_THRUST=ON, -DFELTOR_FETCH_CUSP=ON, -DFELTOR_FETCH_VCL=ON,
+## and -DFELTOR_FETCH_DRAW=ON may also be set individually.
 ##
 ## After configuring the project, build it using:
 ##
@@ -58,11 +58,15 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 option(FELTOR_USE_MPI "Switch on multiprocessing with MPI.")
 option(FELTOR_USE_OMP "Switch on OpenMP multithreading.")
 option(FELTOR_USE_GPU "Switch on GPU acceleration.")
+
 option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_DRAW_TESTS "Build tests that require visual inspection.")
+
 option(FELTOR_FETCH_THRUST "Fetch Thrust library from GitHub.")
 option(FELTOR_FETCH_CUSP "Fetch CUSP library from GitHub.")
 option(FELTOR_FETCH_VCL "Fetch Vector Class (version 1) library from GitHub.")
+option(FELTOR_FETCH_DRAW "Fetch DRAW from GitHub.")
 option(FELTOR_FETCH_DEPS "Fetch dependencies from GitHub.")
 
 if(FELTOR_USE_OMP AND FELTOR_USE_GPU)
@@ -75,6 +79,7 @@ if(FELTOR_FETCH_DEPS)
   set(FELTOR_FETCH_THRUST ON CACHE BOOL "Fetch Thrust library from GitHub." FORCE)
   set(FELTOR_FETCH_CUSP ON CACHE BOOL "Fetch CUSP library from GitHub." FORCE)
   set(FELTOR_FETCH_VCL ON CACHE BOOL "Fetch Vector Class (version 1) library from GitHub." FORCE)
+  set(FELTOR_FETCH_DRAW ON CACHE BOOL "Fetch DRAW from GitHub." FORCE)
 endif()
 
 if(FELTOR_USE_GPU)
@@ -175,6 +180,32 @@ if(FELTOR_USE_OMP)
 endif()
 
 # ============================================
+# Set up optional DRAW dependency
+
+if(FELTOR_FETCH_DRAW)
+  fetch_draw()
+else()
+  find_package(DRAW)
+endif()
+
+if(DRAW_FOUND)
+  # Link to GLFW and OpenGL
+  # Must be installed separately, e.g. via `sudo apt install libglfw3-dev`
+  find_package(glfw3)
+  if(glfw3_FOUND)
+    target_link_libraries(draw::draw INTERFACE glfw)
+  else()
+    message(WARNING "Could not find GLFW3, which is needed for DRAW.")
+  endif()
+  find_package(OpenGL)
+  if(OpenGL_FOUND)
+    target_link_libraries(draw::draw INTERFACE OpenGL::GL)
+  else()
+    message(WARNING "Could not find OpenGL, which is needed for DRAW.")
+  endif()
+endif()
+
+# ============================================
 # Add dg benchmarks
 
 if(FELTOR_BUILD_BENCHMARKS)
@@ -199,9 +230,6 @@ endif()
 # a framework like GoogleTest. When running with CTest, some of these
 # tests hang as they require user input.
 
-# TODO Add DG_DRAW_TESTS. These shouldn't be run via CTest, as they need
-# to be visually inspected.
-
 if(FELTOR_BUILD_TESTS)
   include(CTest)
   include(FeltorTests)
@@ -217,4 +245,16 @@ if(FELTOR_BUILD_TESTS)
       add_dg_test("${test_path}")
     endforeach()
   endif()
+endif()
+
+# Draw tests require visual inspection, so they are built separately
+# and not added to the dg_tests target, nor are they run by CTest.
+if(FELTOR_BUILD_DRAW_TESTS)
+  if(NOT DRAW_FOUND)
+    message(FATAL_ERROR "DRAW not found. Cannot build DRAW tests.")
+  endif()
+  add_custom_target(draw_tests)
+  foreach(test_path IN LISTS DG_DRAW_TESTS)
+    add_draw_test("${test_path}")
+  endforeach()
 endif()
