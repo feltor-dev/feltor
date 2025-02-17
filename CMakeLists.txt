@@ -14,6 +14,11 @@ project(feltor VERSION 1.0 LANGUAGES CXX)
 ## options -DFELTOR_USE_MPI=ON, -DFELTOR_USE_OMP=ON, or -DFELTOR_USE_GPU=ON.
 ## Note that OpenMP and GPU support are mutually exclusive.
 ##
+## The location of dependencies can be specified with -DCMAKE_PREFIX_PATH. To
+## automatically fetch dependencies from GitHub, set -DFELTOR_FETCH_DEPS=ON,
+## or -DFELTOR_FETCH_THRUST=ON, -DFELTOR_FETCH_CUSP=ON, -DFELTOR_FETCH_VCL=ON
+## may be set individually.
+##
 ## After configuring the project, build it using:
 ##
 ##   cmake --build build
@@ -55,9 +60,21 @@ option(FELTOR_USE_OMP "Switch on OpenMP multithreading.")
 option(FELTOR_USE_GPU "Switch on GPU acceleration.")
 option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_FETCH_THRUST "Fetch Thrust library from GitHub.")
+option(FELTOR_FETCH_CUSP "Fetch CUSP library from GitHub.")
+option(FELTOR_FETCH_VCL "Fetch Vector Class (version 1) library from GitHub.")
+option(FELTOR_FETCH_DEPS "Fetch dependencies from GitHub.")
 
 if(FELTOR_USE_OMP AND FELTOR_USE_GPU)
   message(FATAL_ERROR "Cannot set both FELTOR_USE_OMP and FELTOR_USE_GPU")
+endif()
+
+if(FELTOR_FETCH_DEPS)
+  # Toggle all FELTOR_FETCH_* options ON
+  # Note: Overrides -DFELTOR_FETCH_THRUST=OFF, etc.
+  set(FELTOR_FETCH_THRUST ON CACHE BOOL "Fetch Thrust library from GitHub." FORCE)
+  set(FELTOR_FETCH_CUSP ON CACHE BOOL "Fetch CUSP library from GitHub." FORCE)
+  set(FELTOR_FETCH_VCL ON CACHE BOOL "Fetch Vector Class (version 1) library from GitHub." FORCE)
 endif()
 
 if(FELTOR_USE_GPU)
@@ -114,11 +131,16 @@ add_library(feltor::dg ALIAS dg)
 
 # ============================================
 # Add dg dependencies
+include(FeltorFetchDeps)
 
 # We're pinned to a specific version of Thrust for CUSP compatibility.
 # This doesn't include Thrust's modern CMakes support, so we're making
 # use of the FindThrust.cmake module.
-find_package(Thrust REQUIRED 1.9.3)
+if(FELTOR_FETCH_THRUST)
+  fetch_thrust()
+else()
+  find_package(Thrust REQUIRED 1.9.3)
+endif()
 target_link_libraries(dg INTERFACE thrust::thrust)
 if(FELTOR_USE_OMP)
   target_compile_definitions(dg INTERFACE THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP)
@@ -128,10 +150,18 @@ else()
   target_compile_definitions(dg INTERFACE THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP)
 endif()
 
-find_package(VCL REQUIRED)
+if(FELTOR_FETCH_VCL)
+  fetch_vcl()
+else()
+  find_package(VCL REQUIRED)
+endif()
 target_link_libraries(dg INTERFACE vcl::vcl)
 
-find_package(CUSP REQUIRED)
+if(FELTOR_FETCH_CUSP)
+  fetch_cusp()
+else()
+  find_package(CUSP REQUIRED)
+endif()
 target_link_libraries(dg INTERFACE cusp::cusp)
 
 if(FELTOR_USE_MPI)
