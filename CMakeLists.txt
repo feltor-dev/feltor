@@ -19,6 +19,10 @@ project(feltor VERSION 1.0 LANGUAGES CXX)
 ## -DFELTOR_FETCH_THRUST=ON, -DFELTOR_FETCH_CUSP=ON, -DFELTOR_FETCH_VCL=ON,
 ## and -DFELTOR_FETCH_DRAW=ON may also be set individually.
 ##
+## When building the FELTOR executable, the user may set -DFELTOR_WITH_GLFW=ON
+## to enable plotting support, and -DFELTOR_WITH_NAVIER_STOKES=ON to build with
+## the Navier-Stokes extension.
+##
 ## After configuring the project, build it using:
 ##
 ##   cmake --build build
@@ -26,6 +30,7 @@ project(feltor VERSION 1.0 LANGUAGES CXX)
 ## This will compile all targets in the project, including all benchmarks and
 ## tests. A smaller subset of targets can be built using the `--target` flag:
 ##
+##   cmake --build build --target feltor         # Build the feltor executable
 ##   cmake --build build --target dg_benchmarks  # Build all dg benchmarks
 ##   cmake --build build --target dg_tests       # Build all dg tests
 ##   cmake --build build --target dg_blas_b      # Build only inc/dg/blas_b.cu
@@ -59,9 +64,12 @@ option(FELTOR_USE_MPI "Switch on multiprocessing with MPI.")
 option(FELTOR_USE_OMP "Switch on OpenMP multithreading.")
 option(FELTOR_USE_GPU "Switch on GPU acceleration.")
 
+option(FELTOR_BUILD_EXE "Build Feltor executable." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_DRAW_TESTS "Build tests that require visual inspection.")
+
+option(FELTOR_WITH_GLFW "Build with plotting support")
+option(FELTOR_WITH_NAVIER_STOKES "Build with Navier-Stokes library.")
 
 option(FELTOR_FETCH_THRUST "Fetch Thrust library from GitHub.")
 option(FELTOR_FETCH_CUSP "Fetch CUSP library from GitHub.")
@@ -90,10 +98,10 @@ endif()
 # Set up compiler-specific flags
 
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # TODO: Should also set -Wextra and -Wpedantic.
+  # Currently raises too many warnings!
   set(FELTOR_FLAGS_CXX 
     "-Wall"
-    "-Wextra"
-    "-Wpedantic"
     "-mfma"
     "-mavx"
     "-march=native"
@@ -172,6 +180,7 @@ target_link_libraries(dg INTERFACE cusp::cusp)
 if(FELTOR_USE_MPI)
   find_package(MPI REQUIRED)
   target_link_libraries(dg INTERFACE MPI::MPI_CXX)
+  target_compile_definitions(dg INTERFACE WITH_MPI)
 endif()
 
 if(FELTOR_USE_OMP)
@@ -182,27 +191,27 @@ endif()
 # ============================================
 # Set up optional DRAW dependency
 
-if(FELTOR_FETCH_DRAW)
-  fetch_draw()
-else()
-  find_package(DRAW)
-endif()
+if(FELTOR_WITH_GLFW)
+  if(FELTOR_FETCH_DRAW)
+    fetch_draw()
+  else()
+    find_package(DRAW REQUIRED)
+  endif()
 
-if(DRAW_FOUND)
   # Link to GLFW and OpenGL
   # Must be installed separately, e.g. via `sudo apt install libglfw3-dev`
-  find_package(glfw3)
-  if(glfw3_FOUND)
-    target_link_libraries(draw::draw INTERFACE glfw)
-  else()
-    message(WARNING "Could not find GLFW3, which is needed for DRAW.")
-  endif()
-  find_package(OpenGL)
-  if(OpenGL_FOUND)
-    target_link_libraries(draw::draw INTERFACE OpenGL::GL)
-  else()
-    message(WARNING "Could not find OpenGL, which is needed for DRAW.")
-  endif()
+  find_package(glfw3 REQUIRED)
+  target_link_libraries(draw::draw INTERFACE glfw)
+  
+  find_package(OpenGL REQUIRED)
+  target_link_libraries(draw::draw INTERFACE OpenGL::GL)
+endif()
+
+# ============================================
+# Add FELTOR executable
+
+if(FELTOR_BUILD_EXE)
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src")
 endif()
 
 # ============================================
@@ -245,16 +254,13 @@ if(FELTOR_BUILD_TESTS)
       add_dg_test("${test_path}")
     endforeach()
   endif()
-endif()
 
-# Draw tests require visual inspection, so they are built separately
-# and not added to the dg_tests target, nor are they run by CTest.
-if(FELTOR_BUILD_DRAW_TESTS)
-  if(NOT DRAW_FOUND)
-    message(FATAL_ERROR "DRAW not found. Cannot build DRAW tests.")
+  if(FELTOR_WITH_GLFW)
+    # Draw tests require visual inspection, so they are built separately
+    # and not added to the dg_tests target, nor are they run by CTest.
+    add_custom_target(draw_tests)
+    foreach(test_path IN LISTS DG_DRAW_TESTS)
+      add_draw_test("${test_path}")
+    endforeach()
   endif()
-  add_custom_target(draw_tests)
-  foreach(test_path IN LISTS DG_DRAW_TESTS)
-    add_draw_test("${test_path}")
-  endforeach()
 endif()

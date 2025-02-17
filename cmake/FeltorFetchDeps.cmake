@@ -1,4 +1,5 @@
 function(fetch_thrust)
+  message(STATUS "Fetching Thrust 1.9.3")
   # Using old version of Thrust for compatibility with CUSP.
   # The CMake support in this version is lacking, and can't be used
   # to create an imported target via FetchContent_MakeAvailable.
@@ -22,12 +23,11 @@ function(fetch_thrust)
   # ExternalProject_Add will download during the build step, so we need to make
   # sure dg and all dependents are built after thrust is downloaded.
   add_dependencies(dg thrust)
-  message(STATUS "Fetched Thrust 1.9.3")
-  set(THRUST_FOUND TRUE PARENT_SCOPE)
 endfunction()
 
 function(fetch_cusp)
-  # CUSP is not a CMake project.
+  message(STATUS "Fetching CUSP")
+  # CUSP is not a CMake project, can't use FetchContent.
   include(ExternalProject)
   ExternalProject_Add(
     cusp
@@ -42,12 +42,11 @@ function(fetch_cusp)
   add_library(cusp::cusp INTERFACE IMPORTED)
   target_include_directories(cusp::cusp INTERFACE ${cusp_SOURCE_DIR})
   add_dependencies(dg cusp)
-  message(STATUS "Fetched CUSP")
-  set(CUSP_FOUND TRUE PARENT_SCOPE)
 endfunction()
 
 function(fetch_vcl)
-  # Vector class library is not a CMake project.
+  message(STATUS "Fetching Vector class library")
+  # Vector class library is not a CMake project, can't use FetchContent.
   include(ExternalProject)
   ExternalProject_Add(
     vcl
@@ -64,12 +63,11 @@ function(fetch_vcl)
   add_library(vcl::vcl INTERFACE IMPORTED)
   target_include_directories(vcl::vcl INTERFACE ${vcl_SOURCE_DIR})
   add_dependencies(dg vcl)
-  message(STATUS "Fetched Vector class library")
-  set(VCL_FOUND TRUE PARENT_SCOPE)
 endfunction()
 
 function(fetch_draw)
-  # Draw is not a CMake project.
+  message(STATUS "Fetching DRAW")
+  # Draw is not a CMake project, can't use FetchContent.
   include(ExternalProject)
   ExternalProject_Add(
     draw
@@ -86,6 +84,4 @@ function(fetch_draw)
   add_library(draw::draw INTERFACE IMPORTED)
   target_include_directories(draw::draw INTERFACE ${draw_SOURCE_DIR})
   add_dependencies(dg draw)
-  message(STATUS "Fetched DRAW")
-  set(DRAW_FOUND TRUE PARENT_SCOPE)
 endfunction()
