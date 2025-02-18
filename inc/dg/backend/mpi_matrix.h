@@ -71,14 +71,15 @@ local we can reuse the existing implementation for shared memory systems.
 
 \subsection mpi_row_col Separation of communication and computation
 We can go one step further on a row distributed matrix and
-separates the matrix \f$ M = M_{inner} + M_{outer}\f$ and
+separate the matrix \f$ M \f$ into
 \f[
-M v = (M_{inner} + R\cdot G) v
+M v = (M_i + M_o) v = (M_{i} + R_o\cdot G_o) v
 \f]
-into a part that can be
-computed entirely on the local process and a part that needs communication.
+ where \f$ M_i\f$ is the inner matrix which requires no communication, while
+ \f$ M_o\f$ is the outer matrix containing all elements which require MPI
+ communication.
 This enables the implementation of overlapping communication and computation
-which is done in the \c dg::MPIDistMat class
+which is done in the \c dg::MPIDistMat and \c dg::MPISparseBlockMat classes.
 \subsection mpi_create Creation
 You can create a row-distributed MPI matrix given its local parts on each
 process with local row and global column indices by our \c dg::make_mpi_matrix
@@ -131,6 +132,13 @@ mpi matrix to a row distributed mpi matrix. In code
 ///@addtogroup mpi_matvec
 ///@{
 
+/**
+* @brief Distributed memory Sparse block matrix class, asynchronous communication
+*
+* This is a specialisation of \c MPIDiatMat for our \c dg::EllSparseBlockMat
+*
+* @copydetails MPIDistMat
+*/
 template<template<class > class Vector, class LocalMatrixInner, class LocalMatrixOuter = LocalMatrixInner>
 struct MPISparseBlockMat
 {
@@ -164,11 +172,9 @@ struct MPISparseBlockMat
     /**
     * @brief Matrix Vector product
     *
-    * @attention This version of symv only works for \c row_dist matrices
-    *
-    * First the inner elements are computed with a call to doSymv then
+    * First the inner elements are computed with a call to symv then
     * the global_gather function of the communication object is called.
-    * Finally the outer elements are added with a call to doSymv for the outer matrix
+    * Finally the outer elements are added with a call to symv for the outer matrix
     * @tparam ContainerType container class of the vector elements
     * @param alpha scalar
     * @param x input
@@ -200,11 +206,15 @@ struct MPISparseBlockMat
         dg::blas2::symv( alpha, m_i, x.data(), beta, y.data());
         // 3 wait for communication to finish
         m_g.global_gather_wait( x.data(), buffer_ptrs);
-        // 4 compute and add outer points
-        const value_type** b_ptrs = thrust::raw_pointer_cast( buffer_ptrs.data());
-              value_type*  y_ptr  = thrust::raw_pointer_cast( y.data().data());
-        m_o.symv( SharedVectorTag(), dg::get_execution_policy<ContainerType1>(),
-            alpha, b_ptrs, 1., y_ptr);
+        // Local computation may be unnecessary
+        if( buffer_ptrs.size() > 0)
+        {
+            // 4 compute and add outer points
+            const value_type** b_ptrs = thrust::raw_pointer_cast( buffer_ptrs.data());
+                  value_type*  y_ptr  = thrust::raw_pointer_cast( y.data().data());
+            m_o.symv( SharedVectorTag(), dg::get_execution_policy<ContainerType1>(),
+                alpha, b_ptrs, 1., y_ptr);
+        }
     }
     template<class ContainerType1, class ContainerType2>
     void symv(const ContainerType1& x, ContainerType2& y) const
@@ -368,20 +378,7 @@ enum dist_type
 /**
 * @brief Distributed memory matrix class, asynchronous communication
 *
-* The idea of this mpi matrix is to separate communication and computation in
-* order to reuse existing optimized matrix formats for the computation. It can
-* be expected that this works particularly well for cases in which the
-* communication to computation ratio is low. This class assumes that the matrix
-* and vector elements are distributed rowwise among mpi processes.  The matrix
-* elements are then further separated into rows that do not require
-* communication and the ones that do, i.e.
-* \f[
- M=M_i+M_o
- \f]
- where \f$ M_i\f$ is the inner matrix which requires no communication, while
- \f$ M_o\f$ is the outer matrix containing all elements which require MPI
- communication.
-
+* See \ref mpi_row_col
 * @tparam LocalMatrixInner The class of the matrix for local computations of
 * the inner points.  symv(m,x,y) needs to be callable on the container class of
 * the MPI_Vector
@@ -418,12 +415,18 @@ struct MPIDistMat
     * buffer_size() and \c isCommunicating() member functions are called If \c
     * !isCommunicating() the gather functions won't be called and only the
     * inner matrix is applied.
-    * @param scatter 
+    * @param scatter Scattering of the rows from row buffer back to result vector
+    * @note This is needed is because <tt>blas2::symv( m_o, buffer, y);</tt>
+    * currently initializes all elements in \c y with zero and therefore would
+    * overwrite the result from <tt>blas2::symv( m_i, x, y)</tt>. We therefore
+    * need to allocate a small computational buffer and compute
+    * <tt>blas2::symv( m_o, buffer, result_buffer)</tt> followed by a
+    * scattering of values inside \c result_buffer into \c y
     */
     MPIDistMat( const LocalMatrixInner& inside,
                 const LocalMatrixOuter& outside,
                 const MPIGather<Vector>& mpi_gather,
-                Vector<int>& scatter // TODO scatter comp -> y from symv(outside, recv, comp);
+                const Vector<int>& scatter // TODO scatter comp -> y from symv(outside, recv, comp);
                 )
     : m_i(inside), m_o(outside), m_g(mpi_gather), m_scatter(scatter),
       m_dist( row_dist), m_reduce(mpi_gather.communicator()) { }
@@ -470,9 +473,9 @@ struct MPIDistMat
     /**
     * @brief Matrix Vector product
     *
-    * First the inner elements are computed with a call to doSymv then
-    * the collect function of the communication object is called.
-    * Finally the outer elements are added with a call to doSymv for the outer matrix
+    * First the inner elements are computed with a call to symv then
+    * the \c global_gather_init function of the communication object is called.
+    * Finally the outer elements are added with a call to symv for the outer matrix
     * @tparam ContainerType container class of the vector elements
     * @param x input
     * @param y output
@@ -508,22 +511,24 @@ struct MPIDistMat
         dg::blas2::symv( m_i, x.data(), y.data());
         // 3 wait for communication to finish
         m_g.global_gather_wait( recv_buffer);
-        // 4 compute and add outer points
-        dg::blas2::symv( m_o, recv_buffer, comp_buffer);
-        unsigned size = comp_buffer.size();
-        dg::blas2::detail::doParallelFor( SharedVectorTag(),
-            []DG_DEVICE( unsigned i, const value_type* x,
-                const int* idx, value_type* y) {
-                y[idx[i]] += x[i];
-            }, size, comp_buffer, m_scatter, y.data());
-        // What we need is a fused symv + scatter:
-        //dg::blas2::parallel_for( detail::CSRSymvScatterFilter(),
-        //        m_o.num_rows, m_scatter, m_o.row_offsets,
-        //        m_o.column_indices, m_o.values, recv_buffer, y.data());
-        // // TODO Benchmark GPU speed for this CSR implementation
-        // // it is very likely quite bad for ds_mpit because 50 entries per row
-        //static_assert( std::is_same_v<typename std::decay_t<LocalMatrixOuter>::format
-        //        , cusp::csr_format>);
+        if( comp_buffer.size() > 0)
+        {
+            // 4 compute and add outer points
+            dg::blas2::symv( m_o, recv_buffer, comp_buffer);
+            unsigned size = comp_buffer.size();
+            dg::blas2::detail::doParallelFor( SharedVectorTag(),
+                []DG_DEVICE( unsigned i, const value_type* x,
+                    const int* idx, value_type* y) {
+                    y[idx[i]] += x[i];
+                }, size, comp_buffer, m_scatter, y.data());
+            // What we need is a fused symv + scatter:
+            // Something like
+            // dg::blas2::parallel_for( detail::CSRSymvScatterFilter(),
+            //        m_o.num_rows, m_scatter, m_o.row_offsets,
+            //        m_o.column_indices, m_o.values, recv_buffer, y.data());
+            // parallel_for is quite slow for ds_mpit because 50 entries per row
+            // TODO Find out if cuSparse can do that and how fast
+        }
     }
 
     /// Stencil computations
