@@ -606,17 +606,13 @@ struct MPIGather
     /**
     * @brief The local size of the buffer vector w = local map size
     *
-    * Consider that both the source vector v and the buffer w are distributed
-    * across processes.  In Feltor the vector v is (usually) distributed
-    * equally among processes and the local size of v is the same for all
-    * processes. However, the buffer size might be different for each process.
     * @return buffer size (may be different for each process)
-    * @note may return 0
-    * @attention it is NOT a good idea to check for zero buffer size if you
-    * want to find out whether a given process needs to send MPI messages or
-    * not. The first reason is that even if no communication is happening the
-    * buffer_size is not zero as there may still be local gather/scatter
-    * operations. The right way to do it is to call <tt> isCommunicating() </tt>
+    * @note may return 0, which just means that the calling rank does not
+    * receive any data from any other rank including itself. The calling
+    * rank may still need to **send** data in \c global_gather_init
+    * @attention It is therfore not valid to check for zero buffer size if you
+    * want to find out whether a given rank needs to send MPI messages or
+    * not. The right way to do it is to call <tt>isCommunicating()</tt>
     * @sa isCommunicating()
     */
     unsigned buffer_size() const { return m_mpi_gather.buffer_size();}
@@ -629,11 +625,11 @@ struct MPIGather
      * even if a process has zero message size indicating that it technically
      * does not need to send any data at all it might still need to participate
      * in an MPI communication (sending an empty message to indicate that a
-     * certain point in execution has been reached). Only if NONE of the
+     * certain point in execution has been reached). Only if **none** of the
      * processes in the process group has anything to send will this function
      * return false.  This test can be used to avoid the gather operation
      * alltogether in e.g. the construction of a MPI distributed matrix.
-     * @note this check may involve MPI communication itself, because a process
+     * @note this check involves MPI communication itself, because a process
      * needs to check if itself or any other process in its group is
      * communicating.
      *

@@ -162,6 +162,12 @@
 * @return A copyable object; what it contains is undefined, its size is important
 */
 
+ /**
+  * @class hide_value_type>
+  * @tparam value_type
+  * Any type that can be used in an arithmetic operation with
+  * <tt>dg::get_value_type<ContainerType></tt>
+  */
  /** @class hide_ContainerType
   * @tparam ContainerType
   * Any class for which a specialization of \c TensorTraits exists and which

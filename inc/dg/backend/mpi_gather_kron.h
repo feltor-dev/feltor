@@ -103,8 +103,6 @@ struct MPIContiguousKroneckerGather
 ///@endcond
 
 /////////////////////////////communicator//////////////////////////
-//TODO update this docu
-//TODO should this be in detail? Seeing that onyl MPISparseBlockMat is supposed to use it
 /**
 * @brief Communicator for asynchronous communication of \c MPISparseBlockMat
 *
@@ -219,7 +217,8 @@ struct MPIKroneckerGather
 
     ///@copydoc MPIGather::communicator()
     MPI_Comm communicator() const{return m_mpi_gather.communicator();}
-    /// Number of pointers in receive buffer is number of indices in recvIdx
+    /// @brief Number of pointers in receive buffer equals number of indices in \c recvIdx
+    /// @copydetails MPIGather::buffer_size
     unsigned buffer_size() const { return m_mpi_gather.buffer_size(); }
     /// \c n*left_size*right_size
     unsigned chunk_size() const { return m_mpi_gather.chunk_size(); }

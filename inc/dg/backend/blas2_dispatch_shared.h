@@ -16,8 +16,8 @@ template<class from_ContainerType, class ContainerType, class ...Params>
 inline void assign( const from_ContainerType& from, ContainerType& to, Params&& ... ps);
 
 namespace blas1{
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y);
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1>
+inline void pointwiseDot( value_type alpha, const ContainerType1& x1, const ContainerType2& x2, value_type1 beta, ContainerType& y);
 template< class ContainerType, class ContainerType1, class ContainerType2>
 inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, ContainerType& y);
 }//namespace blas1

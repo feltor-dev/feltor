@@ -234,8 +234,9 @@ template<class T>
 struct Scal
 {
     Scal( T a): m_a(a){}
+    template<class T1>
 DG_DEVICE
-    void operator()( T& y)const{
+    void operator()( T1& y)const{
         y *= m_a;
     }
     private:
@@ -247,8 +248,9 @@ template<class T>
 struct Plus
 {
     Plus( T a): m_a(a){}
+    template<class T1>
 DG_DEVICE
-    void operator()( T& y) const{
+    void operator()( T1& y) const{
         y += m_a;
     }
     private:
@@ -257,95 +259,117 @@ DG_DEVICE
 
 ///@brief \f$ y\leftarrow ax+by \f$
 ///@ingroup binary_operators
-template<class T>
+template<class T0, class T1>
 struct Axpby
 {
-    Axpby( T a, T b): m_a(a), m_b(b){}
+    Axpby( T0 a, T1 b): m_a(a), m_b(b){}
+    template<class T2, class T3>
 DG_DEVICE
-    void operator()( T x, T& y)const {
-        T temp = y*m_b;
-        y = DG_FMA( m_a, x, temp);
+    void operator()( T2 x, T3& y)const {
+        y *= m_b;
+        y = DG_FMA( m_a, x, y);
     }
     private:
-    T m_a, m_b;
+    T0 m_a;
+    T1 m_b;
 };
 ///@brief \f$ y\leftarrow axy+by \f$
 ///@ingroup binary_operators
-template<class T>
+template<class T0, class T1>
 struct AxyPby
 {
-    AxyPby( T a, T b): m_a(a), m_b(b){}
+    AxyPby( T0 a, T1 b): m_a(a), m_b(b){}
+    template<class T2, class T3>
 DG_DEVICE
-    void operator()( T x, T& y)const {
-        T temp = y*m_b;
-        y = DG_FMA( m_a*x, y, temp);
+    void operator()( T2 x, T3& y)const {
+        y *= m_b;
+        y = DG_FMA( m_a*x, y, y);
     }
     private:
-    T m_a, m_b;
+    T0 m_a;
+    T1 m_b;
 };
 
 /// \f$ z\leftarrow ax+by+gz \f$
-template<class T>
+template<class T0, class T1, class T2>
 struct Axpbypgz
 {
-    Axpbypgz( T a, T b, T g): m_a(a), m_b(b), m_g(g){}
+    Axpbypgz( T0 a, T1 b, T2 g): m_a(a), m_b(b), m_g(g){}
+    template<class T3, class T4, class T5>
 DG_DEVICE
-    void operator()( T x, T y, T& z)const{
-        T temp = z*m_g;
-        temp = DG_FMA( m_a, x, temp);
-        temp = DG_FMA( m_b, y, temp);
-        z = temp;
+    void operator()( T3 x, T4 y, T5& z)const{
+        z *= m_g;
+        z = DG_FMA( m_a, x, z);
+        z = DG_FMA( m_b, y, z);
     }
     private:
-    T m_a, m_b, m_g;
+    T0 m_a;
+    T1 m_b;
+    T2 m_g;
 };
 
-/// \f$ z\leftarrow ax_1y_1+bx_2y_2+gz \f$
-template<class T>
+/// \f$ z\leftarrow ax_1y_1+bz \f$
+template<class T0, class T1>
 struct PointwiseDot
 {
-    PointwiseDot( T a, T b, T g = (T)0): m_a(a), m_b(b), m_g(g) {}
+    PointwiseDot( T0 a, T1 b): m_a(a), m_b(b) {}
+    template<class T3, class T4, class T5>
     ///\f$ z = axy+bz \f$
-DG_DEVICE void operator()( T x, T y, T& z)const{
-        T temp = z*m_b;
-        z = DG_FMA( m_a*x, y, temp);
+DG_DEVICE void operator()( T3 x, T4 y, T5& z)const{
+        z *= m_b;
+        z = DG_FMA( m_a*x, y, z);
     }
     ///\f$ y = ax_1x_2x_3 +by \f$
+    template<class T3, class T4, class T5, class T6>
 DG_DEVICE
-    void operator()( T x1, T x2, T x3, T& y)const{
-        T temp = y*m_b;
-        y = DG_FMA( m_a*x1, x2*x3, temp);
-    }
-    /// \f$ z = ax_1y_1+bx_2y_2+gz \f$
-DG_DEVICE
-    void operator()( T x1, T y1, T x2, T y2, T& z)const{
-        T temp = z*m_g;
-        temp = DG_FMA( m_a*x1, y1, temp);
-        temp = DG_FMA( m_b*x2, y2, temp);
-        z = temp;
+    void operator()( T3 x1, T4 x2, T5 x3, T6& y)const{
+        y *= m_b;
+        y = DG_FMA( m_a*x1, x2*x3, y);
     }
     private:
-    T m_a, m_b, m_g;
+    T0 m_a;
+    T1 m_b;
+};
+/// \f$ z\leftarrow ax_1y_1+bx_2y_2+gz \f$
+template<class T0, class T1, class T2>
+struct PointwiseDot2
+{
+    PointwiseDot2( T0 a, T1 b, T2 g): m_a(a), m_b(b), m_g(g) {}
+    /// \f$ z = ax_1y_1+bx_2y_2+gz \f$
+    template<class T3, class T4, class T5, class T6, class T7>
+DG_DEVICE
+    void operator()( T3 x1, T4 y1, T5 x2, T6 y2, T7& z)const{
+        z *= m_g;
+        z = DG_FMA( m_a*x1, y1, z);
+        z = DG_FMA( m_b*x2, y2, z);
+    }
+    private:
+    T0 m_a;
+    T1 m_b;
+    T2 m_g;
 };
 
 /// \f$ z\leftarrow ax/y + bz \f$
-template<class T>
+template<class T0, class T1>
 struct PointwiseDivide
 {
-    PointwiseDivide( T a, T b): m_a(a), m_b(b){}
+    PointwiseDivide( T0 a, T1 b): m_a(a), m_b(b){}
     ///\f$ z = az/y +bz \f$
+    template<class T3, class T4>
 DG_DEVICE
-    void operator()( T y, T& z)const{
-        T temp = z*m_b;
-        z = DG_FMA( m_a, z/y, temp);
+    void operator()( T3 y, T4& z)const{
+        z *= m_b;
+        z = DG_FMA( m_a, z/y, z);
     }
+    template<class T3, class T4, class T5>
 DG_DEVICE
-    void operator()( T x, T y, T& z)const{
-        T temp = z*m_b;
-        z = DG_FMA( m_a, x/y, temp);
+    void operator()( T3 x, T4 y, T5& z)const{
+        z *= m_b;
+        z = DG_FMA( m_a, x/y, z);
     }
     private:
-    T m_a, m_b;
+    T0 m_a;
+    T1 m_b;
 };
 ///@}
 

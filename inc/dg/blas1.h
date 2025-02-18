@@ -243,7 +243,7 @@ inline OutputType reduce( const ContainerType& x, OutputType zero, BinaryOp
  */
 template<class ContainerTypeIn, class ContainerTypeOut>
 inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
-    if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==(const ContainerTypeIn*)&target)
+    if( std::is_same_v<ContainerTypeIn, ContainerTypeOut> && &source==(const ContainerTypeIn*)&target)
         return;
     dg::blas1::subroutine( dg::equals(), source, target);
 }
@@ -259,13 +259,14 @@ inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
  * @param x (read/write) x
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType>
-inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
+template< class ContainerType, class value_type>
+inline void scal( ContainerType& x, value_type alpha)
 {
-    if( alpha == get_value_type<ContainerType>(1))
+    if( alpha == value_type(1))
         return;
-    dg::blas1::subroutine( dg::Scal<get_value_type<ContainerType>>(alpha), x );
+    dg::blas1::subroutine( dg::Scal<value_type>(alpha), x );
 }
 
 /*! @brief \f$ x = x + \alpha \f$
@@ -279,13 +280,14 @@ inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
  * @param x (read/write) x
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType>
-inline void plus( ContainerType& x, get_value_type<ContainerType> alpha)
+template< class ContainerType, class value_type>
+inline void plus( ContainerType& x, value_type alpha)
 {
-    if( alpha == get_value_type<ContainerType>(0))
+    if( alpha == value_type(0))
         return;
-    dg::blas1::subroutine( dg::Plus<get_value_type<ContainerType>>(alpha), x );
+    dg::blas1::subroutine( dg::Plus(alpha), x );
 }
 
 /*! @brief \f$ y = \alpha x + \beta y\f$
@@ -302,19 +304,18 @@ inline void plus( ContainerType& x, get_value_type<ContainerType> alpha)
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
-template< class ContainerType, class ContainerType1>
-inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class value_type, class value_type1>
+inline void axpby( value_type alpha, const ContainerType1& x, value_type1 beta, ContainerType& y)
 {
-    using value_type = get_value_type<ContainerType>;
     if( alpha == value_type(0) ) {
         scal( y, beta);
         return;
     }
-    if( std::is_same<ContainerType, ContainerType1>::value && &x==(const ContainerType1*)&y){
+    if( std::is_same_v<ContainerType, ContainerType1> && &x==(const ContainerType1*)&y){
         dg::blas1::scal( y, (alpha+beta));
         return;
     }
-    dg::blas1::subroutine( dg::Axpby<get_value_type<ContainerType>>(alpha, beta),  x, y);
+    dg::blas1::subroutine( dg::Axpby(alpha, beta),  x, y);
 }
 
 /*! @brief \f$ z = \alpha x + \beta y + \gamma z\f$
@@ -332,34 +333,34 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  * @param z (read/write) ContainerType contains solution on output
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1& x, get_value_type<ContainerType> beta, const ContainerType2& y, get_value_type<ContainerType> gamma, ContainerType& z)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1, class value_type2>
+inline void axpbypgz( value_type alpha, const ContainerType1& x, value_type1 beta, const ContainerType2& y, value_type2 gamma, ContainerType& z)
 {
-    using value_type = get_value_type<ContainerType>;
     if( alpha == value_type(0) )
     {
         axpby( beta, y, gamma, z);
         return;
     }
-    else if( beta == value_type(0) )
+    else if( beta == value_type1(0) )
     {
         axpby( alpha, x, gamma, z);
         return;
     }
-    if( std::is_same<ContainerType1, ContainerType2>::value && &x==(const ContainerType1*)&y){
+    if( std::is_same_v<ContainerType1, ContainerType2> && &x==(const ContainerType1*)&y){
         dg::blas1::axpby( alpha+beta, x, gamma, z);
         return;
     }
-    else if( std::is_same<ContainerType1, ContainerType>::value && &x==(const ContainerType1*)&z){
+    else if( std::is_same_v<ContainerType1, ContainerType> && &x==(const ContainerType1*)&z){
         dg::blas1::axpby( beta, y, alpha+gamma, z);
         return;
     }
-    else if( std::is_same<ContainerType2, ContainerType>::value && &y==(const ContainerType2*)&z){
+    else if( std::is_same_v<ContainerType2, ContainerType> && &y==(const ContainerType2*)&z){
         dg::blas1::axpby( alpha, x, beta+gamma, z);
         return;
     }
-    dg::blas1::subroutine( dg::Axpbypgz<get_value_type<ContainerType>>(alpha, beta, gamma),  x, y, z);
+    dg::blas1::subroutine( dg::Axpbypgz(alpha, beta, gamma),  x, y, z);
 }
 
 /*! @brief \f$ z = \alpha x + \beta y\f$
@@ -377,9 +378,10 @@ inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1&
  * @param z (write-only) ContainerType z contains solution on output
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x, get_value_type<ContainerType> beta, const ContainerType2& y, ContainerType& z)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1>
+inline void axpby( value_type alpha, const ContainerType1& x, value_type1 beta, const ContainerType2& y, ContainerType& z)
 {
     dg::blas1::evaluate( z , dg::equals(), dg::PairSum(), alpha, x, beta, y);
 }
@@ -400,26 +402,27 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  * @param y (read/write)  ContainerType y contains result on output ( may alias x1 or x2)
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1>
+inline void pointwiseDot( value_type alpha, const ContainerType1& x1, const ContainerType2& x2, value_type1 beta, ContainerType& y)
 {
-    if( alpha == get_value_type<ContainerType>(0) ) {
+    if( alpha == value_type(0) ) {
         dg::blas1::scal(y, beta);
         return;
     }
     //not sure this is necessary performance-wise, subroutine does allow aliases
-    if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x2, y );
+    if( std::is_same_v<ContainerType, ContainerType1> && &x1==(const ContainerType1*)&y){
+        dg::blas1::subroutine( dg::AxyPby(alpha,beta), x2, y );
 
         return;
     }
-    if( std::is_same<ContainerType, ContainerType2>::value && &x2==(const ContainerType2*)&y){
-        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x1, y );
+    if( std::is_same_v<ContainerType, ContainerType2> && &x2==(const ContainerType2*)&y){
+        dg::blas1::subroutine( dg::AxyPby(alpha,beta), x1, y );
 
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDot(alpha,beta), x1, x2, y );
 }
 
 /*! @brief \f$ y = x_1 x_2 \f$
@@ -459,15 +462,16 @@ inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, Co
 * @param y  (read/write) ContainerType y contains result on output ( may alias x1,x2 or x3)
 * @copydoc hide_naninf
 * @copydoc hide_ContainerType
+* @copydoc hide_value_type
 */
-template< class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3>
-inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, const ContainerType3& x3, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class value_type, class value_type1>
+inline void pointwiseDot( value_type alpha, const ContainerType1& x1, const ContainerType2& x2, const ContainerType3& x3, value_type1 beta, ContainerType& y)
 {
-    if( alpha == get_value_type<ContainerType>(0) ) {
+    if( alpha == value_type(0) ) {
         dg::blas1::scal(y, beta);
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, x3, y );
+    dg::blas1::subroutine( dg::PointwiseDot(alpha,beta), x1, x2, x3, y );
 }
 
 /**
@@ -487,20 +491,21 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 * @param y  (read/write) ContainerType y contains result on output ( may alias x1 and/or x2)
 * @copydoc hide_naninf
 * @copydoc hide_ContainerType
+* @copydoc hide_value_type
 */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void pointwiseDivide( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1>
+inline void pointwiseDivide( value_type alpha, const ContainerType1& x1, const ContainerType2& x2, value_type1 beta, ContainerType& y)
 {
-    if( alpha == get_value_type<ContainerType>(0) ) {
+    if( alpha == value_type(0) ) {
         dg::blas1::scal(y, beta);
         return;
     }
-    if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha,beta), x2, y );
+    if( std::is_same_v<ContainerType, ContainerType1> && &x1==(const ContainerType1*)&y){
+        dg::blas1::subroutine( dg::PointwiseDivide(alpha,beta), x2, y );
 
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha, beta), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDivide(alpha, beta), x1, x2, y );
 }
 
 /**
@@ -544,22 +549,22 @@ inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2,
 * @note all aliases are allowed
 * @copydoc hide_naninf
 * @copydoc hide_ContainerType
+* @copydoc hide_value_type
 */
-template<class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
-void pointwiseDot(  get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& y1,
-                    get_value_type<ContainerType> beta,  const ContainerType3& x2, const ContainerType4& y2,
-                    get_value_type<ContainerType> gamma, ContainerType & z)
+template<class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class value_type, class value_type1, class value_type2>
+void pointwiseDot(  value_type alpha, const ContainerType1& x1, const ContainerType2& y1,
+                    value_type1 beta,  const ContainerType3& x2, const ContainerType4& y2,
+                    value_type2 gamma, ContainerType & z)
 {
-    using value_type = get_value_type<ContainerType>;
     if( alpha==value_type(0)){
         pointwiseDot( beta, x2,y2, gamma, z);
         return;
     }
-    else if( beta==value_type(0)){
+    else if( beta==value_type1(0)){
         pointwiseDot( alpha, x1,y1, gamma, z);
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha, beta, gamma), x1, y1, x2, y2, z );
+    dg::blas1::subroutine( dg::PointwiseDot2(alpha, beta, gamma), x1, y1, x2, y2, z );
 }
 
 /*! @brief \f$ y = op(x)\f$

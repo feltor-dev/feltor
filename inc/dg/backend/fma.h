@@ -16,14 +16,14 @@ template<class T0, class T1, class T2, class = std::enable_if_t<std::is_floating
 DG_DEVICE
 auto dg_fma( T0 x, T1 y, T2 z)
 {
-    return fma( x, y, z);
+    return fma( (T2)x, (T2)y, z);
 }
 template<class T0, class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
 std::complex<T> dg_fma( T0 x, std::complex<T> y, std::complex<T> z)
 {
     return {
-        std::fma( x, y.real(), z.real()),
-        std::fma( x, y.imag(), z.imag())
+        std::fma( (T)x, y.real(), z.real()),
+        std::fma( (T)x, y.imag(), z.imag())
     };
 }
 template<class T, class = std::enable_if_t<std::is_floating_point_v<T> >>
@@ -43,8 +43,8 @@ DG_DEVICE
 thrust::complex<T> dg_fma( T0 x, thrust::complex<T> y, thrust::complex<T> z)
 {
     return {
-        fma( x, y.real(), z.real()),
-        fma( x, y.imag(), z.imag())
+        fma( (T)x, y.real(), z.real()),
+        fma( (T)x, y.imag(), z.imag())
     };
 }
 template<class T, class = std::enable_if_t<std::is_floating_point_v<T> >>

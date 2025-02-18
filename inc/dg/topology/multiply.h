@@ -520,7 +520,7 @@ void scalar_product2d(
         ContainerType5& y)
 {
     dg::blas1::evaluate( y,
-             dg::Axpby<get_value_type<ContainerType0>>( alpha, beta),
+             dg::Axpby( alpha, beta),
              dg::TensorDot2d<get_value_type<ContainerType0>>(),
              lambda,
              v0, v1,
@@ -564,7 +564,7 @@ void scalar_product3d(
         ContainerType7& y)
 {
     dg::blas1::evaluate( y,
-            dg::Axpby<get_value_type<ContainerType0>>( alpha, beta),
+            dg::Axpby( alpha, beta),
             dg::TensorDot3d<get_value_type<ContainerType0>>(),
             lambda,
             v0, v1, v2,

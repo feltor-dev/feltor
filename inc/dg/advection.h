@@ -113,10 +113,10 @@ void Advection<Geometry, Matrix, Container>::upwind( value_type alpha, const Con
 {
     blas2::symv( m_dxb, f, m_temp0);
     blas2::symv( m_dxf, f, m_temp1);
-    blas1::evaluate( result, dg::Axpby<value_type>( alpha, beta), dg::UpwindProduct(), vx, m_temp0, m_temp1);
+    blas1::evaluate( result, dg::Axpby( alpha, beta), dg::UpwindProduct(), vx, m_temp0, m_temp1);
     blas2::symv( m_dyb, f, m_temp0);
     blas2::symv( m_dyf, f, m_temp1);
-    blas1::evaluate( result, dg::Axpby<value_type>( alpha, 1.), dg::UpwindProduct(), vy, m_temp0, m_temp1);
+    blas1::evaluate( result, dg::Axpby( alpha, value_type(1)), dg::UpwindProduct(), vy, m_temp0, m_temp1);
 }
 ///@endcond
 

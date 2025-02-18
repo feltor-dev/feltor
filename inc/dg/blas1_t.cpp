@@ -335,12 +335,14 @@ TEST_CASE( "Blas1 documentation")
         //! [vdot]
 
         //! [vcdot]
-        // Compute the norm of a complex vector
+        // Compute the weighted norm of a complex vector
+        std::vector<double> ww( 100, 42.);
         std::vector<std::complex<double>> cc( 100, {1,1});
         // Use auto to allow changing std::complex to thrust::complex
-        // Use norm instead of std::norm to make ADL work
-        double nrm = dg::blas1::vdot([](auto z){ return norm(z);}, cc);
-        CHECK( nrm == 200.0);
+        // Use norm instead of std::norm and let ADL work
+        double nrm = dg::blas1::vdot([](double w, auto z){ return w*norm(z);},
+            ww, cc);
+        CHECK( nrm == 100*42*2.0);
         //! [vcdot]
     }
     SECTION( "dot")
