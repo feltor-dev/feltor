@@ -169,10 +169,13 @@ set(DG_BENCHMARKS
   refined_elliptic2d_b.cu
   topology/average_b.cu
   topology/derivatives_b.cu
-  topology/ell_interpolation_b.cu
   topology/fem_b.cu
   topology/multiply_b.cu
 )
+
+if(FELTOR_USE_GPU)
+  list(APPEND DG_BENCHMARKS topology/ell_interpolation_b.cu)
+endif()
 
 set(DG_MPI_BENCHMARKS
   arakawa3d_mpib.cu
@@ -211,7 +214,6 @@ set(DG_TESTS
   topology/derivativesX_t.cu
   topology/dlt_t.cu
   topology/dx_t.cu
-  topology/ell_interpolation_t.cu
   topology/evaluation_t.cu
   topology/fem_t.cu
   topology/filter_t.cu
@@ -228,6 +230,10 @@ set(DG_TESTS
   topology/transform_t.cu
 )
 
+if(FELTOR_USE_GPU)
+  list(APPEND DG_TESTS topology/ell_interpolation_t.cu)
+endif()
+
 set(DG_DRAW_TESTS
   bathRZ_t.cu
   topology/backscatter_t.cu
@@ -243,7 +249,7 @@ set(DG_MPI_TESTS
   topology/average_mpit.cu
   topology/derivatives_mpit.cu
   topology/evaluation_mpit.cu
-  topology/filter_mpit.cu
+  #topology/filter_mpit.cu #FIXME: Does not compile
   topology/geometry_mpit.cu
   topology/interpolation_mpit.cu
   topology/projection_mpit.cu

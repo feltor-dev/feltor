@@ -114,7 +114,6 @@ endif()
 
 set(FELTOR_FLAGS_CUDA 
   "-arch=sm_61"
-  "-Xcompiler=\"${FELTOR_FLAGS_CXX}\""
   "--extended-lambda"
 )
 
@@ -133,9 +132,11 @@ add_library(dg INTERFACE ${DG_HEADERS})
 target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
 # Set the minimum C++ standard
 target_compile_features(dg INTERFACE cxx_std_14)
-# Set flags, whether using C++ or CUDA
+# Set flags
+# CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
+# may be set even when compiling for CUDA.
 target_compile_options(dg INTERFACE 
-  $<$<COMPILE_LANGUAGE:CXX>:${FELTOR_FLAGS_CXX}>
+  "${FELTOR_FLAGS_CXX}"
   $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
 )
 

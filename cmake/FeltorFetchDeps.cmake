@@ -24,8 +24,8 @@ function(fetch_cusp)
   FetchContent_Populate(
     cusp
     GIT_REPOSITORY https://github.com/cusplibrary/cusplibrary.git
+    GIT_TAG v0.5.1
     GIT_SHALLOW TRUE
-    SOURCE_DIR "${CMAKE_BINARY_DIR}/cusp"
   )
   FetchContent_GetProperties(cusp)
   add_library(cusp::cusp INTERFACE IMPORTED)
