@@ -207,8 +207,8 @@ int main( int argc, char* argv[])
         // Here we put the inputfile as a string without comments so that it
         // can be read later by another parser
         att["inputfile"] = js.toStyledString();
-        file.put_atts( ".", att);
-        file.put_atts( ".", dg::file::version_flags);
+        file.put_atts( att);
+        file.put_atts( dg::file::version_flags);
 
         unsigned n_out     = js[ "output"]["n"].asUInt( 3);
         unsigned Nx_out    = js[ "output"]["Nx"].asUInt( 48);
@@ -224,7 +224,7 @@ int main( int argc, char* argv[])
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
         dg::x::DVec resultD( resultH);
         dg::x::HVec resultP = dg::evaluate( dg::zero, grid_out);
-        file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
         file.defput_dim( "x", {{"axis", "X"},
             {"long_name", "x-coordinate in Cartesian system"}},
             grid_out.abscissas(0));
