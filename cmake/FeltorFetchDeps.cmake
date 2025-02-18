@@ -3,85 +3,65 @@ function(fetch_thrust)
   # Using old version of Thrust for compatibility with CUSP.
   # The CMake support in this version is lacking, and can't be used
   # to create an imported target via FetchContent_MakeAvailable.
-  # Instead, we'll have to use ExternalProject and set up the
-  # target manually.
-  include(ExternalProject)
-  ExternalProject_Add(
+  include(FetchContent)
+  FetchContent_Declare(thrust)
+  FetchContent_Populate(
     thrust
     GIT_REPOSITORY https://github.com/NVIDIA/thrust.git
     GIT_TAG 1.9.3
     GIT_SHALLOW TRUE
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
   )
-  ExternalProject_Get_Property(thrust SOURCE_DIR)
-  set(thrust_SOURCE_DIR ${SOURCE_DIR})
+  FetchContent_GetProperties(thrust)
   add_library(thrust::thrust INTERFACE IMPORTED)
-  target_include_directories(thrust::thrust INTERFACE ${thrust_SOURCE_DIR})
-  # Add dependency to the external project. 
-  # ExternalProject_Add will download during the build step, so we need to make
-  # sure dg and all dependents are built after thrust is downloaded.
-  add_dependencies(dg thrust)
+  target_include_directories(thrust::thrust INTERFACE "${thrust_SOURCE_DIR}")
 endfunction()
 
 function(fetch_cusp)
   message(STATUS "Fetching CUSP")
-  # CUSP is not a CMake project, can't use FetchContent.
-  include(ExternalProject)
-  ExternalProject_Add(
+  # CUSP is not a CMake project, can't use FetchContent_MakeAvailable.
+  include(FetchContent)
+  FetchContent_Declare(cusp)
+  FetchContent_Populate(
     cusp
     GIT_REPOSITORY https://github.com/cusplibrary/cusplibrary.git
     GIT_SHALLOW TRUE
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
+    SOURCE_DIR "${CMAKE_BINARY_DIR}/cusp"
   )
-  ExternalProject_Get_Property(cusp SOURCE_DIR)
-  set(cusp_SOURCE_DIR ${SOURCE_DIR})
+  FetchContent_GetProperties(cusp)
   add_library(cusp::cusp INTERFACE IMPORTED)
-  target_include_directories(cusp::cusp INTERFACE ${cusp_SOURCE_DIR})
-  add_dependencies(dg cusp)
+  target_include_directories(cusp::cusp INTERFACE "${cusp_SOURCE_DIR}")
 endfunction()
 
 function(fetch_vcl)
   message(STATUS "Fetching Vector class library")
-  # Vector class library is not a CMake project, can't use FetchContent.
-  include(ExternalProject)
-  ExternalProject_Add(
+  # Vector class library is not a CMake project, can't use FetchContent_MakeAvailable.
+  # All header files are all in the root directory, need to use download directory as
+  # the source directory.
+  include(FetchContent)
+  FetchContent_Declare(vcl)
+  FetchContent_Populate(
     vcl
     GIT_REPOSITORY https://github.com/vectorclass/version1.git
     GIT_SHALLOW TRUE
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
+    SOURCE_DIR "${CMAKE_BINARY_DIR}/vcl"
   )
-  # All header files are all in the root directory, need to use
-  # download directory as the source directory.
-  ExternalProject_Get_Property(vcl DOWNLOAD_DIR)
-  set(vcl_SOURCE_DIR ${DOWNLOAD_DIR})
   add_library(vcl::vcl INTERFACE IMPORTED)
-  target_include_directories(vcl::vcl INTERFACE ${vcl_SOURCE_DIR})
-  add_dependencies(dg vcl)
+  target_include_directories(vcl::vcl INTERFACE "${CMAKE_BINARY_DIR}")
 endfunction()
 
 function(fetch_draw)
   message(STATUS "Fetching DRAW")
-  # Draw is not a CMake project, can't use FetchContent.
-  include(ExternalProject)
-  ExternalProject_Add(
+  # Draw is not a CMake project, can't use FetchContent_MakeAvailable.
+  # All header files are all in the root directory, need to use download directory as
+  # the source directory.
+  include(FetchContent)
+  FetchContent_Declare(draw)
+  FetchContent_Populate(
     draw
     GIT_REPOSITORY https://github.com/feltor-dev/draw.git
     GIT_SHALLOW TRUE
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
+    SOURCE_DIR "${CMAKE_BINARY_DIR}/draw"
   )
-  # All header files are all in the root directory, need to use
-  # download directory as the source directory.
-  ExternalProject_Get_Property(draw DOWNLOAD_DIR)
-  set(draw_SOURCE_DIR ${DOWNLOAD_DIR})
   add_library(draw::draw INTERFACE IMPORTED)
-  target_include_directories(draw::draw INTERFACE ${draw_SOURCE_DIR})
-  add_dependencies(dg draw)
+  target_include_directories(draw::draw INTERFACE "${CMAKE_BINARY_DIR}")
 endfunction()
