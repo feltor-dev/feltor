@@ -327,19 +327,37 @@ TEST_CASE( "Blas1 documentation")
     SECTION( "vdot")
     {
         //! [vdot]
-        dg::DVec two( 100,2), three(100,3);
-        int result = dg::blas1::vdot([] DG_DEVICE( double x, double y){
-            return int(x*x*y);}, two, three);
-        CHECK( result == 1200); //100*(2*2*3)
+        // A fun way to compute the size of a vector
+        dg::DVec v( 100,2);
+        unsigned size = dg::blas1::vdot( []DG_DEVICE(double x){ return 1u;},
+                v);
+        CHECK( size == 100u); //100*1
         //! [vdot]
+
+        //! [vcdot]
+        // Compute the norm of a complex vector
+        std::vector<std::complex<double>> cc( 100, {1,1});
+        // Use auto to allow changing std::complex to thrust::complex
+        // Use norm instead of std::norm to make ADL work
+        double nrm = dg::blas1::vdot([](auto z){ return norm(z);}, cc);
+        CHECK( nrm == 200.0);
+        //! [vcdot]
     }
     SECTION( "dot")
     {
         //! [dot]
-        dg::DVec two( 100,2), three(100,3);
-        int result = dg::blas1::dot(two, three);
-        CHECK( result == 600); //100*(2*3)
+        dg::DVec two( 100,2.0), three(100,3.0);
+        double result = dg::blas1::dot(two, three);
+        CHECK( result == 600.0); //100*(2*3)
         //! [dot]
+
+        //! [cdot]
+        std::vector<thrust::complex<double>> c0( 100, {1,1}), c1(100, {1,-1});
+        auto cresult = dg::blas1::dot(c0, c1);
+        // Result is of complex type
+        CHECK( cresult == thrust::complex<double>{200,0});
+        //! [cdot]
+
 
     }
     SECTION( "reduce")

@@ -63,6 +63,8 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
  *
  * For example
  * @snippet{trimleft} blas1_t.cpp vdot
+ * or
+ * @snippet{trimleft} blas1_t.cpp vcdot
  * @note The main motivator for this version of \c dot is that it works for complex numbers.
  * @attention if one of the input vectors contains \c Inf or \c NaN or the
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
@@ -128,6 +130,8 @@ auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
  *
  * For example
  * @snippet{trimleft} blas1_t.cpp dot
+ * or
+ * @snippet{trimleft} blas1_t.cpp cdot
  * @attention if one of the input vectors contains \c Inf or \c NaN or the
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
  * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
