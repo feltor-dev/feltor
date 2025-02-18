@@ -53,7 +53,7 @@ target_compile_definitions(feltor PRIVATE
 )
 
 # ============================================
-# Add internal dependencies
+# Add dependencies
 
 target_link_libraries(feltor PRIVATE feltor::dg)
 
@@ -72,14 +72,3 @@ if(FELTOR_WITH_GLFW)
 else()
     target_compile_definitions(feltor PRIVATE WITHOUT_GLFW)
 endif()
-
-# ============================================
-# Add external dependencies
-
-# Must install separately, e.g. via `sudo apt install libjsoncpp-dev`
-find_package(jsoncpp REQUIRED)
-target_link_libraries(feltor PRIVATE jsoncpp_lib)
-
-# Must install separately, e.g. via `sudo apt install libnetcdf-dev`
-find_package(netCDF REQUIRED)
-target_link_libraries(feltor PRIVATE netcdf)

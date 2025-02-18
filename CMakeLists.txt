@@ -188,6 +188,14 @@ if(FELTOR_USE_OMP)
   target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
 endif()
 
+# Must install separately, e.g. via `sudo apt install libjsoncpp-dev`
+find_package(jsoncpp REQUIRED)
+target_link_libraries(dg INTERFACE jsoncpp_lib)
+
+# Must install separately, e.g. via `sudo apt install libnetcdf-dev`
+find_package(netCDF REQUIRED)
+target_link_libraries(dg INTERFACE netCDF::netcdf)
+
 # ============================================
 # Set up optional DRAW dependency
 
