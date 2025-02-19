@@ -12,6 +12,7 @@ TEST_CASE( "SquareMatrix")
         dg::SquareMatrix<double> rilj = dg::create::rilj<double>(3);
 
         dg::SquareMatrix<double> op = lilj + pidxpj;
+        REQUIRE(op.size() == 3);
         //dg::SquareMatrix<double> op = pidxpj - pidxpj.transpose();
         //op(0,0) = 1, op(0,1) = 2, op(0,2) = 0;
         //op(1,0) = 2, op(1,1) = 4, op(1,2) = 1;
@@ -97,4 +98,55 @@ TEST_CASE( "SquareMatrix")
         CHECK( res == std::vector<double>{2004, 2013, 2022});
         //! [symv 2]
     }
+}
+
+TEST_CASE( "Inversion")
+{
+    // Example taken from
+    // https://dl.acm.org/doi/pdf/10.1145/368959.368975
+    SECTION( "Determinant")
+    {
+        //! [det]
+        // Use lu_pivot to compute determinant
+        unsigned n = 10;
+        dg::SquareMatrix<double> t( n, 1.);
+        double eps = 1e-3;
+        for( unsigned u=0; u<n; u++)
+            t(u,u) = (1. + eps);
+
+        // Works for almost singular matrices
+        std::vector<unsigned> p;
+        double num = dg::create::lu_pivot( t, p);
+        double det = pow( eps, n)*(1+n/eps); // ~ 1e-26
+
+        INFO( "Det "<<num<<" Ana "<<det<<" diff "<<(num-det)/det);
+        CHECK( fabs( num-det )/det < 1e-10);
+        //! [det]
+    }
+    SECTION( "Invert")
+    {
+        //! [invert]
+        // We can handle almost singular matrices:
+        unsigned n = 10;
+        dg::SquareMatrix<double> t( n, 1.);
+        double d = 1.00 + 1e-3;
+        for( unsigned u=0; u<n; u++)
+            t(u,u) = d;
+
+        // Determinant is ~ 1e-26
+        auto t_inv = dg::invert( t);
+
+        for( unsigned i=0; i<n; i++)
+        for( unsigned j=0; j<n; j++)
+        {
+            double inv = i == j ? (d+n-2.0)/(d*(d+n-2.0) - (n-1.0))
+                                : -1.0/(d*(d+n-2.0)-(n-1.0));
+            INFO( "Item ("<<i<<" "<<j<<") Inv "<<t_inv(i,j)<<" Ana "
+                          <<inv<<" diff "<<t_inv(i,j)-inv);
+            CHECK( fabs((t_inv(i,j) - inv)/inv) < 1e-10);
+        }
+        //! [invert]
+    }
+
+
 }

@@ -419,14 +419,16 @@ namespace create
 
 /*! @brief LU Decomposition with partial pivoting
  *
+ * For example
+ * @snippet{trimleft} operator_t.cpp det
  * @tparam T value type
  * @throw std::runtime_error if the matrix is singular
  * @param m  contains lu decomposition of input on output (inplace transformation)
- * @param p contains the pivot elements on output
+ * @param p contains the pivot elements on output (will be resized)
  * @return determinant of \c m
  * @note uses extended accuracy of \c dg::exblas which makes it quite robust
  * against almost singular matrices
- * @sa \c dg::create::lu_solve
+ * @sa \c dg::lu_solve
  */
 template< class T>
 T lu_pivot( dg::SquareMatrix<T>& m, std::vector<unsigned>& p)
@@ -486,11 +488,13 @@ T lu_pivot( dg::SquareMatrix<T>& m, std::vector<unsigned>& p)
 
 }
 
-//
 /**
  * @brief Invert a square matrix
  *
  * using lu decomposition in combination with our accurate scalar products
+ *
+ * For example
+ * @snippet{trimleft} operator_t.cpp invert
  * @tparam T value type
  * @param in input matrix
  *
@@ -507,7 +511,7 @@ dg::SquareMatrix<T> inverse( const dg::SquareMatrix<T>& in)
     std::vector<unsigned> pivot( n);
     dg::SquareMatrix<T> lu(in);
     T determinant = lu_pivot( lu, pivot);
-    if( fabs(determinant ) < 1e-14)
+    if( fabs(determinant ) == 0)
         throw std::runtime_error( "Determinant zero!");
     for( unsigned i=0; i<n; i++)
     {
@@ -673,7 +677,7 @@ void lu_solve( const dg::SquareMatrix<T>& lu, const std::vector<unsigned>& p, st
     dg::create::lu_solve( lu, p, b);
 }
 
-///@brief Alias for \c dg::create::inverse. Compute inverse of square matrix
+///@brief Compute inverse of square matrix (alias for \c dg::create::inverse)
 ///@copydetails dg::create::inverse(const dg::SquareMatrix<T>&)
 ///@ingroup invert
 template<class T>
