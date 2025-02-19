@@ -16,21 +16,24 @@
 
 namespace dg{
 
-//// TODO: check for better stopping criteria using condition number estimates?
+// TODO check for better stopping criteria using condition number estimates?
 /**
  * @brief Determine algorithm for complex matrices
  *
- * For a complex matrix it makes a difference if it is symmetric
- * or Hermitian. Dependent on this our CG algorithm can either
- * be the COCG algorithm or the regular Hermitian algorithm.
+ * For a complex matrix it makes a difference if it is symmetric or Hermitian.
+ * The difference is that for a complex symmetric matrix we use a product
+ * \c dg::blas2::dot (that retuns a complex value) while for a Hermitian matrix we
+ * can use the actual complex scalar product \c dg::blas1::vdot (that returns a
+ * real value). In the literature the former is equivalent to the COCG method,
+ * while the latter is the normal complex CG method.
  * @ingroup invert
  */
 enum ComplexMode{
     complex_symmetric, //!< choose COCG algorithm
-    hermitian //!< choose Hermitian algorithm
+    complex_hermitian //!< choose Hermitian algorithm
 };
 
-// TODO test and document complex behaviour
+// TODO test complex behaviour
 
 /**
 * @brief Preconditioned conjugate gradient method to solve \f$ Ax=b\f$
@@ -43,6 +46,12 @@ enum ComplexMode{
 * definite, self-adjoint preconditioner \f$ P \approx A^{-1}\f$ that
 * approximates the inverse of \f$ A\f$ and is fast to apply, is used to solve
 * the left preconditioned system \f[ PAx=Pb\f]
+*
+* @note For complex matrices the PCG algorithm works and is well-defined by
+* replacing the transpose with the Hermitian transpose in the above
+* definitions. If you have a complex matrix that is only symmetric and not
+* Hermitian then the \c dg::complex_symmetric \c dg::ComplexMode may converge.
+* This is equivalent to the COCG algorithm and we have an abbreviation \c dg::COCG
 *
 * @note Our implementation uses a stopping criterion based on the residual at
 * iteration i \f$ || r_i ||_W = ||Ax_i-b||_W < \epsilon( ||b||_W + C) \f$.
@@ -66,10 +75,11 @@ enum ComplexMode{
 * @snippet cg2d_t.cpp doxygen
 * @copydoc hide_ContainerType
 * @tparam ComplexMode For complex value type you can choose between \c
-* dg::complex_symmetric or \c dg::hermitian matrices. In the former case the
-* algorithm is the COCG algorithm in the latter the normal CG algorithm.
+* dg::complex_symmetric or \c dg::complex_hermitian matrices. In the former
+* case the algorithm is the COCG algorithm in the latter the normal CG
+* algorithm.
 */
-template<class ContainerType, ComplexMode complex_mode = dg::hermitian>
+template<class ContainerType, ComplexMode complex_mode = dg::complex_hermitian>
 class PCG
 {
   public:
@@ -95,24 +105,6 @@ class PCG
     ///@brief Return an object of same size as the object used for construction
     ///@return A copyable object; what it contains is undefined, its size is important
     const ContainerType& copyable()const{ return m_r;}
-
-    /*!
-     * @brief Set the CG iteration to a complex symmetric mode (instead of
-     * complex Hermitian)
-     *
-     * The difference is that for a complex symmetric matrix we use a product
-     * complex dot (that retuns a complex value) while for a
-     * Hermitian matrix we can use the actual complex scalar product (that
-     * returns a real value). In the literature the former is equivalent to the
-     * COCG method, while the latter is the normal complex CG method.
-     *
-     * @param cocg if true the next solve method call uses a COCG method. By
-     * default <tt>cocg=false</tt>
-     */
-    template<class T = value_type>
-    std::enable_if_t< is_scalar_v<T,dg::ComplexTag>,void> set_cocg( bool cocg ){
-        m_cocg = cocg;
-    }
 
     ///@brief Set or unset debugging output during iterations
     ///@param verbose If true, additional output will be written to \c std::cout during solution
@@ -189,8 +181,6 @@ class PCG
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     auto dot( const ContainerType0& x0, const ContainerType1& w, const ContainerType2& x1)
     {
-        using value_type_x0 = dg::get_value_type<ContainerType0>;
-        using value_type_w  = dg::get_value_type<ContainerType1>;
         using value_type_x1 = dg::get_value_type<ContainerType2>;
         constexpr bool is_complex = dg::is_scalar_v<value_type_x1, dg::ComplexTag>;
         if constexpr (not is_complex or complex_mode == dg::complex_symmetric)
@@ -202,6 +192,13 @@ class PCG
     unsigned m_max_iter;
     bool m_verbose = false, m_throw_on_fail = true, m_cocg = false;
 };
+
+/*!
+ * @brief The Conjugate orthogonal conjugate gradient (COCG) algorithm
+ * @ingroup invert
+ */
+template<class ContainerType>
+using COCG = dg::PCG<ContainerType, dg::complex_symmetric>;
 
 ///@cond
 template< class ContainerType, ComplexMode mode>

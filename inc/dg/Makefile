@@ -16,6 +16,7 @@ CUFILES=$(wildcard *.cu)
 
 TARGETS=blas_t\
 blas1_t\
+pcg_t\
 simpsons_t\
 extrapolation_t\
 nullstelle_t\
