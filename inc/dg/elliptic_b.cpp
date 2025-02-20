@@ -25,6 +25,10 @@ double fct(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
 double fctX( double x, double y, double z){return cos(x-R_0)*sin(y)*sin(z);}
 double fctY(double x, double y, double z){ return sin(x-R_0)*cos(y)*sin(z);}
 double fctZ(double x, double y, double z){ return sin(x-R_0)*sin(y)*cos(z);}
+// Cartesian Laplace
+double fctC(double x, double y, double z){ return sin(x)*sin(y)*sin(z);}
+double laplace_fctC( double x, double y, double z) { return 2*sin(y)*sin(x)*sin(z);}
+// Cylindrical Laplace
 double laplace2d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z);}
 double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct(x,y,z) + 1./x/x*fct(x,y,z);}
 dg::bc bcx = dg::DIR;
@@ -63,9 +67,36 @@ int main( int argc, char* argv[])
 #endif
 
     dg::Timer t;
-    {
-    DG_RANK0 std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
-    //std::cout << "Create Laplacian\n";
+    { // Cartesian3d
+    DG_RANK0 std::cout << "Test Cartesian Laplacian\n";
+    dg::x::CartesianGrid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, bcy, bcz
+#ifdef WITH_MPI
+    , comm
+#endif
+    );
+    const dg::x::DVec w3d = dg::create::weights( g3d);
+    dg::x::DVec x3 = dg::evaluate( initial, g3d);
+    dg::x::DVec b3 = dg::evaluate ( laplace_fctC, g3d);
+    dg::Elliptic<dg::x::CartesianGrid3d, dg::x::DMatrix, dg::x::DVec> lap(g3d, dg::forward );
+    dg::PCG pcg( x3, g3d.size());
+    t.tic();
+    unsigned num = pcg.solve( lap, x3, b3, 1., w3d, eps, sqrt(lz));
+    t.toc();
+    DG_RANK0 std::cout << "Number of pcg iterations "<< num<<std::endl;
+    DG_RANK0 std::cout << "... for a precision of   "<< eps<<std::endl;
+    DG_RANK0 std::cout << "... on the device took   "<< t.diff()<<"s\n";
+    t.tic();
+    //compute error
+    const dg::x::DVec solution3 = dg::evaluate ( fctC, g3d);
+    dg::x::DVec error3( solution3);
+    dg::blas1::axpby( 1.,x3,-1.,error3);
+
+    double eps3 = dg::blas2::dot(w3d , error3);
+    double norm3 = dg::blas2::dot(w3d , solution3);
+    DG_RANK0 std::cout << "L2 Norm of relative error is:  " <<sqrt( eps3/norm3)<<std::endl;
+    }
+    { // Cylindrical3d
+    DG_RANK0 std::cout << "Test Cylindrical Laplacian\n";
     //! [invert]
     dg::x::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, bcz
 #ifdef WITH_MPI
@@ -114,9 +145,8 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout <<sqrt( normerr/norm) << "\n";
     }
 
-
     { // Split solution
-    DG_RANK0 std::cout << "TEST SPLIT SOLUTION\n";
+    DG_RANK0 std::cout << "Test split solution\n";
     dg::x::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, bcz
 #ifdef WITH_MPI
     , comm
