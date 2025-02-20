@@ -27,10 +27,12 @@ bool equal( const Vector& vec, T result)
 {
     for( unsigned i=0; i<vec.size(); i++)
     {
-        if( fabs( vec[i] - result) > 1.2e-16)
+        // norm works for complex values
+        using namespace std; // make ADL work
+        if( sqrt(norm( T(vec[i]) - result)) > 1.2e-16)
         {
-            UNSCOPED_INFO( "Element "<<i<<" "<< vec[i] << " "<<result);
-            UNSCOPED_INFO( "Difference "<<vec[i]-result);
+            UNSCOPED_INFO( "Element "<<i<<" "<< T(vec[i]) << " "<<result);
+            UNSCOPED_INFO( "Difference "<<T(vec[i])-result);
             return false;
         }
     }
@@ -319,8 +321,39 @@ TEST_CASE("blas1")
         CHECK( equal_rec( w22[0], value_type(13)));
         CHECK( equal_rec( w22[1], value_type(13)));
     }
-
 }
+
+TEST_CASE( "Complex algebra")
+{
+    dg::cDVec v1p( 500, {2.,2.}), v2p( 500, {3.,3});
+    dg::DVec v3p(500, 3.), v4p(500, 4.);
+#ifdef WITH_MPI
+    dg::x::cDVec c1(v1p, comm), c2(v2p, comm);
+    dg::x::DVec v3(v3p, comm), v4(v4p, comm);
+#else
+    dg::x::cDVec c1(v1p), c2(v2p);
+    dg::x::DVec v3(v3p), v4(v4p);
+#endif
+    SECTION( "Axpby")
+    {
+        dg::blas1::axpby( 2, c1, 3., c2);
+        INFO( "2*{2,2}+ 3*{3,3} = " << result(c2) <<" (13,13)");
+        CHECK( equal<dg::x::cDVec,thrust::complex<double>>( c2, {13,13}));
+
+        thrust::complex<double> a1 = {2,0}, a2 = {3.,0};
+        dg::blas1::axpby( a1, c1, a2, c2);
+        INFO( "{2,0}*{2,2}+ {3,0}*{13,13} = " << result(c2) <<" (43,43)");
+        CHECK( equal<dg::x::cDVec,thrust::complex<double>>( c2, {43,43}));
+    }
+    SECTION( "pointwiseDot")
+    {
+        // Multiply double vector with complex vector
+        dg::blas1::pointwiseDot( v3, c1, c2);
+        INFO( "3*{2,2} = " << result(c2) <<" (6,6)");
+        CHECK( equal<dg::x::cDVec,thrust::complex<double>>( c2, {6,6}));
+    }
+}
+
 #ifndef WITH_MPI
 TEST_CASE( "Blas1 documentation")
 {

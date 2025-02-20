@@ -19,16 +19,6 @@ struct Expression{
    }
 };
 
-struct Functor{
-    template<class T>
-    void operator()( const T& in, T&  out){
-        dg::blas1::axpby( 1., in, 0., out);
-    }
-};
-
-struct NoFunctor{
-
-};
 
 template<class Vector>
 auto result( const Vector& vec) { return vec[0];}
@@ -156,12 +146,20 @@ TEST_CASE( "blas")
                 std::array<double,3>({0.1, 10, 1000}), 0.001, dvec1);
         INFO( "symv as DenseMatrix               ");
         CHECK( result(dvec1) == 66462.974);
+        struct Functor{
+            void operator()( const dg::DVec& in, dg::DVec&  out){
+                dg::blas1::axpby( 1., in, 0., out);
+            }
+        };
         Functor f;
         dg::blas2::symv( f, arrdvec1[0], dvec1);
         INFO( "symv with functor ");
         CHECK( result(dvec1) == 52);
     }
     //Check compiler error:
+    //struct NoFunctor{
+    //
+    //};
     //NoFunctor nof;
     //dg::blas2::symv( nof, arrdvec1[0], dvec1);
     SECTION( "std::map")

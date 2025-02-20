@@ -67,15 +67,6 @@ DG_DEVICE void operator()( T1 x, T2& y) const
 ///@addtogroup variadic_evaluates
 ///@{
 
-///\f$ y = x_1/x_2 \f$
-struct divides
-{
-    template< class T1, class T2>
-DG_DEVICE auto operator()( T1 x1, T2 x2) const
-    {
-        return x1/x2;
-    }
-};
 
 ///@brief \f$ y = \sum_i x_i \f$
 struct Sum
@@ -206,6 +197,12 @@ DG_DEVICE void sum( T1& y_1, T1& yt_1, T1 b, T1 bt, T1 k) const
     }
 };
 
+///@}
+
+//The only reason the following classes exist is that nvcc does not allow
+//device lambdas or local classes inside host functions
+///@cond
+
 /// \f$ f( y, g(x_0, ..., x_s)) \f$
 template<class BinarySub, class Functor>
 struct Evaluate
@@ -228,6 +225,7 @@ DG_DEVICE void operator() ( T& y, Ts... xs){
     BinarySub m_f;
     Functor m_g;
 };
+
 
 /// \f$ y\leftarrow ay \f$
 template<class T>
@@ -349,6 +347,16 @@ DG_DEVICE
     T2 m_g;
 };
 
+///\f$ y = x_1/x_2 \f$
+struct divides
+{
+    template< class T1, class T2>
+DG_DEVICE auto operator()( T1 x1, T2 x2) const
+    {
+        return x1/x2;
+    }
+};
+
 /// \f$ z\leftarrow ax/y + bz \f$
 template<class T0, class T1>
 struct PointwiseDivide
@@ -371,9 +379,6 @@ DG_DEVICE
     T0 m_a;
     T1 m_b;
 };
-///@}
-
-///@cond
 namespace detail
 {
 template<class F, class G>
