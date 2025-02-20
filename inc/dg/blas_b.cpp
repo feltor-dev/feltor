@@ -339,13 +339,13 @@ int main( int argc, char* argv[])
         thrust::complex{x, x};});
     dg::x::cDVec cc(cc3d);
     thrust::complex<double> cintegral = dg::blas1::dot( cc3d, cc);
-    cintegral += dg::blas1::dot( cc3d,cc3d);//warm up
+    cintegral += dg::blas1::dot( cc3d,cc);//warm up
     t.tic();
     for( int i=0; i<multi*(int)x.size(); i++)
         cintegral += dg::blas1::dot( cc3d,cc);
     t.toc();
     DG_RANK0 std::cout<<"vDOT1(x,y) (complex) took        " <<t.diff()/multi<<"s\t"<<4*gbytes*multi/t.diff()<<"GB/s\n";
-    cintegral += dg::blas2::dot( cc3d,w2d,cc3d);//warm up
+    cintegral += dg::blas2::dot( cc3d,w2d,cc);//warm up
     t.tic();
     for( int i=0; i<multi*(int)x.size(); i++)
         cintegral += dg::blas2::dot( cc3d,w2d,cc);

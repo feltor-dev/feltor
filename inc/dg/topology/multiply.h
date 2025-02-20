@@ -12,45 +12,41 @@
 
 namespace dg
 {
-///@addtogroup variadic_subroutines
-///@{
-
-/// \f$ y_i \leftarrow \lambda T_{ij} x_i + \mu y_i\f$
-template<class value_type>
-struct TensorMultiply2d{
+///@cond
+// nvcc does not like local classes so we need to define these globally:
+// \f$ y_i \leftarrow \lambda T_{ij} x_i + \mu y_i\f$
+struct TensorMultiply2d
+{
+    template<class VL, class V0, class V1, class V2, class VM, class V3, class V4>
     DG_DEVICE
-    void operator() (
-              value_type lambda,
-              value_type t00, value_type t01,
-              value_type t10, value_type t11,
-              value_type in0, value_type in1,
-              value_type mu,
-              value_type& out0, value_type& out1) const
+    void operator() ( VL lambda, V0 t00, V0 t01, V0 t10, V0 t11,
+                      V1 in0, V2 in1, VM mu, V3& out0, V4& out1) const
     {
-        value_type tmp0 = DG_FMA(t00,in0 , t01*in1);
-        value_type tmp1 = DG_FMA(t10,in0 , t11*in1);
-        value_type temp = out1*mu;
+        auto tmp0 = DG_FMA(t00,in0 , t01*in1);
+        auto tmp1 = DG_FMA(t10,in0 , t11*in1);
+        auto temp = out1*mu;
         out1 = DG_FMA( lambda, tmp1, temp);
         temp = out0*mu;
         out0 = DG_FMA( lambda, tmp0, temp);
     }
 };
-/// \f$ y_i \leftarrow \lambda T_{ij} x_i + \mu y_i\f$
-template<class value_type>
-struct TensorMultiply3d{
+// \f$ y_i \leftarrow \lambda T_{ij} x_i + \mu y_i\f$
+struct TensorMultiply3d
+{
+    template<class VL, class V0, class V1, class V2, class V3, class VM, class V4, class V5, class V6>
     DG_DEVICE
-    void operator() ( value_type lambda,
-                      value_type t00, value_type t01, value_type t02,
-                      value_type t10, value_type t11, value_type t12,
-                      value_type t20, value_type t21, value_type t22,
-                      value_type in0, value_type in1, value_type in2,
-                      value_type mu,
-                      value_type& out0, value_type& out1, value_type& out2) const
+    void operator() ( VL lambda,
+                      V0 t00, V0 t01, V0 t02,
+                      V0 t10, V0 t11, V0 t12,
+                      V0 t20, V0 t21, V0 t22,
+                      V1 in0, V2 in1, V3 in2,
+                      VM mu,
+                      V4& out0, V5& out1, V6& out2) const
     {
-        value_type tmp0 = DG_FMA( t00,in0 , (DG_FMA( t01,in1 , t02*in2)));
-        value_type tmp1 = DG_FMA( t10,in0 , (DG_FMA( t11,in1 , t12*in2)));
-        value_type tmp2 = DG_FMA( t20,in0 , (DG_FMA( t21,in1 , t22*in2)));
-        value_type temp = out2*mu;
+        auto tmp0 = DG_FMA( t00,in0 , (DG_FMA( t01,in1 , t02*in2)));
+        auto tmp1 = DG_FMA( t10,in0 , (DG_FMA( t11,in1 , t12*in2)));
+        auto tmp2 = DG_FMA( t20,in0 , (DG_FMA( t21,in1 , t22*in2)));
+        auto temp = out2*mu;
         out2 = DG_FMA( lambda, tmp2, temp);
         temp = out1*mu;
         out1 = DG_FMA( lambda, tmp1, temp);
@@ -58,107 +54,61 @@ struct TensorMultiply3d{
         out0 = DG_FMA( lambda, tmp0, temp);
     }
 };
-/// \f$ y_i \leftarrow \lambda T^{-1}_{ij} x_i + \mu y_i\f$
-template<class value_type>
-struct InverseTensorMultiply2d{
+// \f$ y_i \leftarrow \lambda T^{-1}_{ij} x_i + \mu y_i\f$
+struct InverseTensorMultiply2d
+{
+    template<class VL, class V0, class V1, class V2, class VM, class V3, class V4>
     DG_DEVICE
-    void operator() (  value_type lambda,
-                       value_type t00, value_type t01,
-                       value_type t10, value_type t11,
-                       value_type in0, value_type in1,
-        value_type mu, value_type& out0, value_type& out1) const
+    void operator() ( VL lambda, V0 t00, V0 t01, V0 t10, V0 t11,
+                      V1 in0, V2 in1, VM mu, V3& out0, V4& out1) const
     {
-        value_type dett = DG_FMA( t00,t11 , (-t10*t01));
-        value_type tmp0 = DG_FMA( in0,t11 , (-in1*t01));
-        value_type tmp1 = DG_FMA( t00,in1 , (-t10*in0));
-        value_type temp = out1*mu;
+        auto dett = DG_FMA( t00,t11 , (-t10*t01));
+        auto tmp0 = DG_FMA( in0,t11 , (-in1*t01));
+        auto tmp1 = DG_FMA( t00,in1 , (-t10*in0));
+        auto temp = out1*mu;
         out1 = DG_FMA( lambda, tmp1/dett, temp);
         temp = out0*mu;
         out0 = DG_FMA( lambda, tmp0/dett, temp);
     }
 };
-/// \f$ y_i \leftarrow \lambda T^{-1}_{ij} x_i + \mu y_i\f$
-template<class value_type>
-struct InverseTensorMultiply3d{
+// \f$ y_i \leftarrow \lambda T^{-1}_{ij} x_i + \mu y_i\f$
+struct InverseTensorMultiply3d
+{
+    template<class VL, class V0, class V1, class V2, class V3, class VM, class V4, class V5, class V6>
     DG_DEVICE
-    void operator() ( value_type lambda,
-                      value_type t00, value_type t01, value_type t02,
-                      value_type t10, value_type t11, value_type t12,
-                      value_type t20, value_type t21, value_type t22,
-                      value_type in0, value_type in1, value_type in2,
-                      value_type mu,
-                      value_type& out0, value_type& out1, value_type& out2) const
+    void operator() ( VL lambda,
+                  V0 t00, V0 t01, V0 t02,
+                  V0 t10, V0 t11, V0 t12,
+                  V0 t20, V0 t21, V0 t22,
+                  V1 in0, V2 in1, V3 in2,
+                  VM mu,
+                  V4& out0, V5& out1, V6& out2) const
     {
-        value_type dett = det( t00,t01,t02, t10,t11,t12, t20,t21,t22);
+        auto dett = t00*DG_FMA(t11, t22, (-t12*t21))
+                   -t01*DG_FMA(t10, t22, (-t20*t12))
+                   +t02*DG_FMA(t10, t21, (-t20*t11));
 
-        value_type tmp0 = det( in0,t01,t02, in1,t11,t12, in2,t21,t22);
-        value_type tmp1 = det( t00,in0,t02, t10,in1,t12, t20,in2,t22);
-        value_type tmp2 = det( t00,t01,in0, t10,t11,in1, t20,t21,in2);
-        value_type temp = out2*mu;
+        auto tmp0 = in0*DG_FMA(t11, t22, (-t12*t21))
+                   -t01*DG_FMA(in1, t22, (-in2*t12))
+                   +t02*DG_FMA(in1, t21, (-in2*t11));
+        auto tmp1 = t00*DG_FMA(in1, t22, (-t12*in2))
+                   -in0*DG_FMA(t10, t22, (-t20*t12))
+                   +t02*DG_FMA(t10, in2, (-t20*in1));
+        auto tmp2 = t00*DG_FMA(t11, in2, (-in1*t21))
+                   -t01*DG_FMA(t10, in2, (-t20*in1))
+                   +in0*DG_FMA(t10, t21, (-t20*t11));
+        auto temp = out2*mu;
         out2 = DG_FMA( lambda, tmp2/dett, temp);
         temp = out1*mu;
         out1 = DG_FMA( lambda, tmp1/dett, temp);
         temp = out0*mu;
         out0 = DG_FMA( lambda, tmp0/dett, temp);
     }
-    private:
-    DG_DEVICE
-    value_type det( value_type t00, value_type t01, value_type t02,
-                    value_type t10, value_type t11, value_type t12,
-                    value_type t20, value_type t21, value_type t22)const
-    {
-        return t00*DG_FMA(t11, t22, (-t12*t21))
-              -t01*DG_FMA(t10, t22, (-t20*t12))
-              +t02*DG_FMA(t10, t21, (-t20*t11));
-    }
 };
-///@}
-
-///@addtogroup variadic_evaluates
-///@{
-
-/// \f$ y = \lambda\mu v_i T_{ij} w_j \f$
-template<class value_type>
-struct TensorDot2d{
-    DG_DEVICE
-    value_type operator() (
-              value_type lambda,
-              value_type v0,  value_type v1,
-              value_type t00, value_type t01,
-              value_type t10, value_type t11,
-              value_type mu,
-              value_type w0, value_type w1
-              ) const
-    {
-        value_type tmp0 = DG_FMA(t00,w0 , t01*w1);
-        value_type tmp1 = DG_FMA(t10,w0 , t11*w1);
-        return lambda*mu*DG_FMA(v0,tmp0  , v1*tmp1);
-    }
-};
-/// \f$ y = \lambda \mu v_i T_{ij} w_j \f$
-template<class value_type>
-struct TensorDot3d{
-    DG_DEVICE
-    value_type operator() (
-              value_type lambda,
-              value_type v0,  value_type v1,  value_type v2,
-              value_type t00, value_type t01, value_type t02,
-              value_type t10, value_type t11, value_type t12,
-              value_type t20, value_type t21, value_type t22,
-              value_type mu,
-              value_type w0, value_type w1, value_type w2) const
-    {
-        value_type tmp0 = DG_FMA( t00,w0 , (DG_FMA( t01,w1 , t02*w2)));
-        value_type tmp1 = DG_FMA( t10,w0 , (DG_FMA( t11,w1 , t12*w2)));
-        value_type tmp2 = DG_FMA( t20,w0 , (DG_FMA( t21,w1 , t22*w2)));
-        return lambda*mu*DG_FMA(v0,tmp0 , DG_FMA(v1,tmp1 , v2*tmp2));
-    }
-};
-
-///\f$ y = t_{00} t_{11} - t_{10}t_{01} \f$
-template<class value_type>
+//\f$ y = t_{00} t_{11} - t_{10}t_{01} \f$
 struct TensorDeterminant2d
 {
+    template<class value_type>
     DG_DEVICE
     value_type operator() ( value_type t00, value_type t01,
                             value_type t10, value_type t11) const
@@ -166,23 +116,59 @@ struct TensorDeterminant2d
         return DG_FMA( t00,t11 , (-t10*t01));
     }
 };
-///\f$ y = t_{00} t_{11}t_{22} + t_{01}t_{12}t_{20} + t_{02}t_{10}t_{21} - t_{02}t_{11}t_{20} - t_{01}t_{10}t_{22} - t_{00}t_{12}t_{21} \f$
-template<class value_type>
+//\f$ y = t_{00} t_{11}t_{22} + t_{01}t_{12}t_{20} + t_{02}t_{10}t_{21} - t_{02}t_{11}t_{20} - t_{01}t_{10}t_{22} - t_{00}t_{12}t_{21} \f$
 struct TensorDeterminant3d
 {
+    template<class value_type>
     DG_DEVICE
     value_type operator() ( value_type t00, value_type t01, value_type t02,
                             value_type t10, value_type t11, value_type t12,
                             value_type t20, value_type t21, value_type t22) const
     {
-        return t00*m_t(t11, t12, t21, t22)
-              -t01*m_t(t10, t12, t20, t22)
-              +t02*m_t(t10, t11, t20, t21);
+        return t00* DG_FMA( t11,t22 , (-t21*t12))
+              -t01* DG_FMA( t10,t22 , (-t20*t12))
+              +t02* DG_FMA( t10,t21 , (-t20*t11));
     }
-    private:
-    TensorDeterminant2d<value_type> m_t;
 };
-///@}
+
+// \f$ y = \lambda\mu v_i T_{ij} w_j \f$
+struct TensorDot2d
+{
+    template<class VL, class V0, class V1, class V2, class VM, class V3, class V4>
+    DG_DEVICE
+    auto operator() (
+              VL lambda, V0 v0, V1 v1,
+              V2 t00, V2 t01,
+              V2 t10, V2 t11,
+              VM mu,     V3 w0, V4 w1
+              ) const
+    {
+        auto tmp0 = DG_FMA(t00,w0 , t01*w1);
+        auto tmp1 = DG_FMA(t10,w0 , t11*w1);
+        return lambda*mu*DG_FMA(v0,tmp0  , v1*tmp1);
+    }
+};
+// \f$ y = \lambda \mu v_i T_{ij} w_j \f$
+struct TensorDot3d
+{
+    template<class VL, class V0, class V1, class V2, class V3, class VM, class V4, class V5, class V6>
+    DG_DEVICE
+    auto operator() (
+              VL lambda,
+              V0 v0,  V1 v1,  V2 v2,
+              V3 t00, V3 t01, V3 t02,
+              V3 t10, V3 t11, V3 t12,
+              V3 t20, V3 t21, V3 t22,
+              VM mu,
+              V4 w0, V5 w1, V6 w2) const
+    {
+        auto tmp0 = DG_FMA( t00,w0 , (DG_FMA( t01,w1 , t02*w2)));
+        auto tmp1 = DG_FMA( t10,w0 , (DG_FMA( t11,w1 , t12*w2)));
+        auto tmp2 = DG_FMA( t20,w0 , (DG_FMA( t21,w1 , t22*w2)));
+        return lambda*mu*DG_FMA(v0,tmp0 , DG_FMA(v1,tmp1 , v2*tmp2));
+    }
+};
+///@endcond
 
 /**
  * @namespace dg::tensor
@@ -193,7 +179,6 @@ namespace tensor
 {
 ///@addtogroup tensor
 ///@{
-
 
 /**
  * @brief \f$ t^{ij} = \mu t^{ij} \ \forall i,j \f$
@@ -223,17 +208,16 @@ void scal( SparseTensor<ContainerType0>& t, const ContainerType1& mu)
  * @param mu (input)
  * @param out0 (output) first component  of \c w (may alias in0)
  * @param out1 (output) second component of \c w (may alias in1)
- * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with \c dg::TensorMultiply2d
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine
  * @copydoc hide_ContainerType
  */
 template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerTypeM, class ContainerType3, class ContainerType4>
 void multiply2d( const ContainerTypeL& lambda, const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, const ContainerTypeM& mu, ContainerType3& out0, ContainerType4& out1)
 {
-    dg::blas1::subroutine( dg::TensorMultiply2d<get_value_type<ContainerType0>>(),
-            lambda,      t.value(0,0), t.value(0,1),
-                         t.value(1,0), t.value(1,1),
-                         in0,  in1,
-            mu,          out0, out1);
+    dg::blas1::subroutine( dg::TensorMultiply2d(), lambda,
+                           t.value(0,0), t.value(0,1),
+                           t.value(1,0), t.value(1,1),
+                           in0, in1, mu, out0, out1);
 }
 
 /**
@@ -249,13 +233,13 @@ void multiply2d( const ContainerTypeL& lambda, const SparseTensor<ContainerType0
  * @param out0 (output)  first component of \c w  (may alias in0)
  * @param out1 (output)  second component of \c w (may alias in1)
  * @param out2 (output)  third component of \c w  (may alias in2)
- * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with \c dg::TensorMultiply3d
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine
  * @copydoc hide_ContainerType
  */
 template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5, class ContainerType6>
 void multiply3d( const ContainerTypeL& lambda, const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, const ContainerType3& in2, const ContainerTypeM& mu, ContainerType4& out0, ContainerType5& out1, ContainerType6& out2)
 {
-    dg::blas1::subroutine( dg::TensorMultiply3d<get_value_type<ContainerType0>>(),
+    dg::blas1::subroutine(dg::TensorMultiply3d(),
             lambda,      t.value(0,0), t.value(0,1), t.value(0,2),
                          t.value(1,0), t.value(1,1), t.value(1,2),
                          t.value(2,0), t.value(2,1), t.value(2,2),
@@ -275,17 +259,16 @@ void multiply3d( const ContainerTypeL& lambda, const SparseTensor<ContainerType0
  * @param mu  (input) (may be a vector or an actual number like 0 or 1)
  * @param out0 (output) first component of \c v  (may alias in0)
  * @param out1 (output) second component of \c v (may alias in1)
- * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with \c dg::InverseTensorMultiply2d
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine
  * @copydoc hide_ContainerType
  */
 template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerTypeM, class ContainerType3, class ContainerType4>
 void inv_multiply2d( const ContainerTypeL& lambda, const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, const ContainerTypeM& mu, ContainerType3& out0, ContainerType4& out1)
 {
-    dg::blas1::subroutine( dg::InverseTensorMultiply2d<get_value_type<ContainerType0>>(),
-              lambda,    t.value(0,0), t.value(0,1),
-                         t.value(1,0), t.value(1,1),
-                         in0,  in1,
-              mu,        out0, out1);
+    dg::blas1::subroutine( dg::InverseTensorMultiply2d(), lambda,
+                           t.value(0,0), t.value(0,1),
+                           t.value(1,0), t.value(1,1),
+                           in0,  in1, mu, out0, out1);
 }
 
 /**
@@ -302,13 +285,13 @@ void inv_multiply2d( const ContainerTypeL& lambda, const SparseTensor<ContainerT
  * @param out0 (output)  first component  of \c v (may alias in0)
  * @param out1 (output)  second component of \c v (may alias in1)
  * @param out2 (output)  third component  of \c v (may alias in2)
- * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with \c dg::InverseTensorMultiply3d
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine
  * @copydoc hide_ContainerType
  */
 template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5, class ContainerType6>
 void inv_multiply3d( const ContainerTypeL& lambda, const SparseTensor<ContainerType0>& t, const ContainerType1& in0, const ContainerType2& in1, const ContainerType3& in2, const ContainerTypeM& mu, ContainerType4& out0, ContainerType5& out1, ContainerType6& out2)
 {
-    dg::blas1::subroutine( dg::InverseTensorMultiply3d<get_value_type<ContainerType0>>(),
+    dg::blas1::subroutine( dg::InverseTensorMultiply3d(),
            lambda,       t.value(0,0), t.value(0,1), t.value(0,2),
                          t.value(1,0), t.value(1,1), t.value(1,2),
                          t.value(2,0), t.value(2,1), t.value(2,2),
@@ -322,14 +305,14 @@ void inv_multiply3d( const ContainerTypeL& lambda, const SparseTensor<ContainerT
 * Compute the minor determinant of a tensor \f$ \det_{2d}(t) := t_{00}t_{01}-t_{10}t_{11}\f$.
 * @param t the input tensor
 * @return the upper left minor determinant of \c t
- * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with \c dg::TensorDeterminant2d
+ * @note This function is just a shortcut for a call to \c dg::blas1::evaluate
 * @copydoc hide_ContainerType
 */
 template<class ContainerType>
 ContainerType determinant2d( const SparseTensor<ContainerType>& t)
 {
     ContainerType det = t.value(0,0);
-    dg::blas1::evaluate( det, dg::equals(), dg::TensorDeterminant2d<get_value_type<ContainerType>>(),
+    dg::blas1::evaluate( det, dg::equals(), dg::TensorDeterminant2d(),
                            t.value(0,0), t.value(0,1),
                            t.value(1,0), t.value(1,1));
     return det;
@@ -342,14 +325,14 @@ ContainerType determinant2d( const SparseTensor<ContainerType>& t)
 * \f$ \det(t) := t_{00}t_{11}t_{22} + t_{01}t_{12}t_{20} + \ldots - t_{22}t_{10}t_{01}\f$.
 * @param t the input tensor
 * @return the determinant of t
- * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with \c dg::TensorDeterminant3d
+ * @note This function is just a shortcut for a call to \c dg::blas1::evaluate
 * @copydoc hide_ContainerType
 */
 template<class ContainerType>
 ContainerType determinant( const SparseTensor<ContainerType>& t)
 {
     ContainerType det = t.value(0,0);
-    dg::blas1::evaluate( det, dg::equals(), dg::TensorDeterminant3d<get_value_type<ContainerType>>(),
+    dg::blas1::evaluate( det, dg::equals(), TensorDeterminant3d(),
                            t.value(0,0), t.value(0,1), t.value(0,2),
                            t.value(1,0), t.value(1,1), t.value(1,2),
                            t.value(2,0), t.value(2,1), t.value(2,2));
@@ -421,7 +404,7 @@ ContainerType volume( const SparseTensor<ContainerType>& t)
  * @param in1 (input) second component of \c v  (may alias out1)
  * @param out0 (output) first component  of \c w (may alias in0)
  * @param out1 (output) second component of \c w (may alias in1)
- * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
@@ -441,7 +424,7 @@ void multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1& in
  * @param out0 (output)  first component of \c w  (may alias in0)
  * @param out1 (output)  second component of \c w (may alias in1)
  * @param out2 (output)  third component of \c w  (may alias in2)
- * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class ContainerType5, class ContainerType6>
@@ -480,7 +463,7 @@ void inv_multiply2d( const SparseTensor<ContainerType0>& t, const ContainerType1
  * @param out0 (output)  first component  of \c v (may alias in0)
  * @param out1 (output)  second component of \c v (may alias in1)
  * @param out2 (output)  third component  of \c v (may alias in2)
- * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine
  * @copydoc hide_ContainerType
  */
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class ContainerType5, class ContainerType6>
@@ -503,12 +486,12 @@ void inv_multiply3d( const SparseTensor<ContainerType0>& t, const ContainerType1
  * @param w1 (input) second component of \c w  (may alias v1)
  * @param beta scalar output prefactor
  * @param y (output)
- * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with \c dg::TensorDot2d
+ * @note This function is just a shortcut for a call to \c dg::blas1::evaluate
  * @copydoc hide_ContainerType
  */
-template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5>
+template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5, class value_type0, class value_type1>
 void scalar_product2d(
-        get_value_type<ContainerType0> alpha,
+        value_type0 alpha,
         const ContainerTypeL& lambda,
         const ContainerType0& v0,
         const ContainerType1& v1,
@@ -516,18 +499,16 @@ void scalar_product2d(
         const ContainerTypeM& mu,
         const ContainerType3& w0,
         const ContainerType4& w1,
-        get_value_type<ContainerType0> beta,
+        value_type1 beta,
         ContainerType5& y)
 {
     dg::blas1::evaluate( y,
              dg::Axpby( alpha, beta),
-             dg::TensorDot2d<get_value_type<ContainerType0>>(),
-             lambda,
-             v0, v1,
+             dg::TensorDot2d(),
+             lambda, v0, v1,
              t.value(0,0), t.value(0,1),
              t.value(1,0), t.value(1,1),
-             mu,
-             w0, w1);
+             mu, w0, w1);
 }
 
 /**
@@ -545,12 +526,12 @@ void scalar_product2d(
  * @param w2 (input) third component of \c w  (may alias v1)
  * @param beta scalar output prefactor
  * @param y (output)
- * @note This function is just a shortcut for a call to \c dg::blas1::evaluate with \c dg::TensorDot3d
+ * @note This function is just a shortcut for a call to \c dg::blas1::evaluate
  * @copydoc hide_ContainerType
  */
-template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5, class ContainerType6, class ContainerType7>
+template<class ContainerTypeL, class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerTypeM, class ContainerType4, class ContainerType5, class ContainerType6, class ContainerType7, class value_type0, class value_type1>
 void scalar_product3d(
-        get_value_type<ContainerType0> alpha,
+        value_type0 alpha,
         const ContainerTypeL& lambda,
         const ContainerType0& v0,
         const ContainerType1& v1,
@@ -560,12 +541,12 @@ void scalar_product3d(
         const ContainerType4& w0,
         const ContainerType5& w1,
         const ContainerType6& w2,
-        get_value_type<ContainerType0> beta,
+        value_type1 beta,
         ContainerType7& y)
 {
     dg::blas1::evaluate( y,
             dg::Axpby( alpha, beta),
-            dg::TensorDot3d<get_value_type<ContainerType0>>(),
+            dg::TensorDot3d(),
             lambda,
             v0, v1, v2,
             t.value(0,0), t.value(0,1), t.value(0,2),
