@@ -1,6 +1,11 @@
 #include <iostream>
 #include <iomanip>
 
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "backend/mpi_init.h"
+#endif
+
 #include "pcg.h"
 #include "elliptic.h"
 
@@ -23,59 +28,82 @@ dg::bc bcx = dg::NEU;
 double initial( double x, double y) {return sin(0);}
 
 
-int main()
+int main( int argc, char* argv[])
 {
     dg::Timer t;
     unsigned n, Nx, Ny;
+    double eps=1e-6;
+#ifdef WITH_MPI
+    MPI_Init( &argc, &argv);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+
+    MPI_Comm comm;
+    dg::mpi_init2d( bcx, dg::PER, n, Nx, Ny, comm);
+    if(rank==0)std::cout << "Type epsilon! \n";
+    if(rank==0)std::cin >> eps;
+    MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
+    dg::x::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER,comm );
+    //dg::x::RealGrid2d<float> gridf( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER, comm);
+#else
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
-    std::cout << "Type in eps\n";
-    double eps = 1e-6; //# of pcg iterations increases very much if
+    std::cout << "Type epsilon! \n";
     std::cin >> eps;
+    dg::x::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    //dg::x::RealGrid2d<float> gridf( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+#endif
+    DG_RANK0 std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
 
-    dg::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    dg::RealGrid2d<float> gridf( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
-    const dg::DVec w2d = dg::create::weights( grid);
-    const dg::DVec v2d = dg::create::inv_weights( grid);
-    std::cout<<"Evaluate initial condition...\n";
-    dg::DVec x = dg::evaluate( initial, grid);
+    const dg::x::DVec w2d = dg::create::weights( grid);
+    const dg::x::DVec v2d = dg::create::inv_weights( grid);
+    DG_RANK0 std::cout<<"Evaluate initial condition...\n";
+    dg::x::DVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create Laplacian...\n";
     t.tic();
-    dg::DMatrix DX = dg::create::dx( grid);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::forward );
-    dg::Elliptic<dg::RealCartesianGrid2d<float>, dg::fDMatrix, dg::fDVec> flap(gridf, dg::forward );
+    dg::x::DMatrix DX = dg::create::dx( grid);
+    dg::Elliptic<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> lap(grid,
+        dg::forward );
+    //dg::Elliptic<dg::x::aRealGeometry2d<float>, dg::x::fDMatrix,
+    //    dg::x::fDVec> flap(gridf, dg::forward ); // never used?
     t.toc();
-    std::cout<< "Creation took "<<t.diff()<<"s\n";
+    DG_RANK0 std::cout<< "Creation took "<<t.diff()<<"s\n";
 
-    dg::PCG< dg::DVec > pcg( x, n*n*Nx*Ny);
+    dg::PCG pcg( x, n*n*Nx*Ny);
 
-    std::cout<<"Expand right hand side\n";
-    const dg::DVec solution = dg::evaluate ( fct, grid);
-    const dg::DVec deriv = dg::evaluate( derivative, grid);
-    dg::DVec b = dg::evaluate ( laplace_fct, grid);
+    DG_RANK0 std::cout<<"Expand right hand side\n";
+    const dg::x::DVec solution = dg::evaluate ( fct, grid);
+    const dg::x::DVec deriv = dg::evaluate( derivative, grid);
+    dg::x::DVec b = dg::evaluate ( laplace_fct, grid);
     //////////////////////////////////////////////////////////////////////
-    std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
 
-    std::cout << "... for a precision of "<< eps<<std::endl;
     x = dg::evaluate( initial, grid);
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg.solve( lap, x, b, 1., w2d, eps)<<std::endl;
+    int number = pcg.solve( lap, x, b, 1., w2d, eps);
     t.toc();
-    std::cout << "... on the device took "<< t.diff()<<"s\n";
+    DG_RANK0
+    {
+        std::cout << "# of pcg itersations   "<<number<<std::endl;
+        std::cout << "... for a precision of "<< eps<<std::endl;
+        std::cout << "...               took "<< t.diff()<<"s\n";
+    }
 
-    dg::DVec error( solution);
+    dg::x::DVec error( solution);
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( w2d, error);
     double norm = dg::blas2::dot( w2d, solution);
-    std::cout << "L2 Norm of relative error is: " <<sqrt( normerr/norm)<<std::endl;
+    DG_RANK0 std::cout << "L2 Norm of relative error is: " <<sqrt( normerr/norm)<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w2d, error);
     norm = dg::blas2::dot( w2d, deriv);
-    std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
+    DG_RANK0 std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
     //both functiona and derivative converge with order P
 
+#ifdef WITH_MPI
+    MPI_Finalize();
+#endif
     return 0;
 }
