@@ -1,7 +1,13 @@
 #include <iostream>
 #include <iomanip>
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "backend/mpi_init.h"
+#endif
 
 #include "poisson.h"
+
+#include "catch2/catch_test_macros.hpp"
 
 //const double lx = 2.*M_PI;
 //const double ly = 2.*M_PI;
@@ -38,35 +44,46 @@ double jacobian( double x, double y)
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 
-int main()
+TEST_CASE("Poisson")
 {
-    unsigned n, Nx, Ny;
-    std::cout << "Type n, Nx and Ny! \n";
-    std::cin >> n >> Nx >> Ny;
-    std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
+#ifdef WITH_MPI
+    int rank,size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
+    // TODO Does the bcx and bcy in the communicator matter??
+#endif
+    unsigned n = 5, Nx = 32, Ny = 48;
+    INFO("Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny);
     //![doxygen]
-    const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny);
-    const dg::DVec lhs = dg::evaluate( left, grid);
-    const dg::DVec rhs = dg::evaluate( right, grid);
-    dg::DVec jac(lhs);
+    const dg::x::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny
+#ifdef WITH_MPI
+        , comm
+#endif
+    );
+    const dg::x::DVec lhs = dg::evaluate( left, grid);
+    const dg::x::DVec rhs = dg::evaluate( right, grid);
+    dg::x::DVec jac(lhs);
 
-    dg::Poisson<dg::aGeometry2d, dg::DMatrix, dg::DVec> poisson( grid, bcxlhs, bcylhs,bcxrhs, bcyrhs );
+    dg::Poisson<dg::x::aGeometry2d, dg::x::DMatrix, dg::x::DVec> poisson( grid,
+        bcxlhs, bcylhs, bcxrhs, bcyrhs );
     poisson( lhs, rhs, jac);
     //![doxygen]
 
-    const dg::DVec w2d = dg::create::weights( grid);
-    const dg::DVec eins = dg::evaluate( dg::one, grid);
-    const dg::DVec sol = dg::evaluate ( jacobian, grid);
-    dg::exblas::udouble res;
-    std::cout << std::scientific;
-    res.d = dg::blas2::dot( eins, w2d, jac);
-    std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
-    res.d = dg::blas2::dot( rhs, w2d, jac);
-    std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
-    res.d = dg::blas2::dot( lhs, w2d, jac);
-    std::cout << "Mean lhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    const dg::x::DVec w2d  = dg::create::weights( grid);
+    const dg::x::DVec sol  = dg::evaluate ( jacobian, grid);
+
+    double res = dg::blas2::dot( 1., w2d, jac);
+    INFO( "Mean     Jacobian is "<<res);
+    CHECK( res < 1e-15);
+    res = dg::blas2::dot( rhs, w2d, jac);
+    INFO( "Mean rhs*Jacobian is "<<res);
+    CHECK( res < 1e-15);
+    res = dg::blas2::dot( lhs, w2d, jac);
+    INFO( "Mean lhs*Jacobian is "<<res);
+    CHECK( res < 1e-15);
     dg::blas1::axpby( 1., sol, -1., jac);
-    res.d = sqrt(dg::blas2::dot( w2d, jac));
-    std::cout << "Distance to solution "<<res.d<<"\t"<<res.i<<std::endl;
-    return 0;
+    res = sqrt(dg::blas2::dot( w2d, jac)); //don't forget sqrt when computing errors
+    INFO( "Distance to solution "<<res);
+    CHECK( res < 2e-3);
 }
