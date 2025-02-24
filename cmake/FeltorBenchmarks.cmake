@@ -11,7 +11,7 @@ function(add_dg_benchmark benchmark_path)
   target_link_libraries(${benchmark_name} PRIVATE feltor::dg)
   # Add as dependency to the dg_benchmarks target
   add_dependencies(dg_benchmarks ${benchmark_name})
-  # Ensure built benchmarks are built in their own directory
+  # Ensure benchmarks are built in their own directory
   set_target_properties(${benchmark_name} PROPERTIES 
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmarks"
   )

@@ -6,7 +6,7 @@
 # - DG_DRAW_TESTS
 # - DG_MPI_TESTS
 
-set(DG_CXX_HEADERS
+set(DG_HEADERS
   adaptive.h
   advection.h
   algorithm.h
@@ -141,16 +141,20 @@ set(DG_CXX_HEADERS
   topology/weights.h
   topology/weightsX.h
   topology/xspacelib.h
-  # CUDA headers
-  backend/average_gpu.cuh
-  backend/blas1_cuda.cuh
-  backend/exblas/accumulate.cuh
-  backend/exblas/exdot_cuda.cuh
-  backend/exblas/mylibm.cuh
-  backend/sparseblockmat.cuh
-  backend/sparseblockmat_gpu_kernels.cuh
-  topology/ell_interpolation.cuh
 )
+
+if(FELTOR_USE_GPU)
+  list(APPEND DG_HEADERS
+    backend/average_gpu.cuh
+    backend/blas1_cuda.cuh
+    backend/exblas/accumulate.cuh
+    backend/exblas/exdot_cuda.cuh
+    backend/exblas/mylibm.cuh
+    backend/sparseblockmat.cuh
+    backend/sparseblockmat_gpu_kernels.cuh
+    topology/ell_interpolation.cuh
+  )
+endif()
 
 set(DG_BENCHMARKS
   arakawa3d_b.cu
@@ -258,22 +262,22 @@ set(DG_MPI_TESTS
 
 # Modify each to use absolute path
 
-function(absolutize PATH_LIST)
+function(absolutise PATH_LIST)
   # Pass in the variable name. Overwrites the variable.
-  set(ABSOLUTIZED "")
+  set(ABSOLUTISED "")
   foreach(REL_PATH IN LISTS ${PATH_LIST})
     cmake_path(ABSOLUTE_PATH REL_PATH NORMALIZE OUTPUT_VARIABLE ABS_PATH)
-    list(APPEND ABSOLUTIZED "${ABS_PATH}")
+    list(APPEND ABSOLUTISED "${ABS_PATH}")
   endforeach()
-  set(${PATH_LIST} "${ABSOLUTIZED}" PARENT_SCOPE)
+  set(${PATH_LIST} "${ABSOLUTISED}" PARENT_SCOPE)
 endfunction()
 
-absolutize(DG_HEADERS)
-absolutize(DG_BENCHMARKS)
-absolutize(DG_MPI_BENCHMARKS)
-absolutize(DG_TESTS)
-absolutize(DG_DRAW_TESTS)
-absolutize(DG_MPI_TESTS)
+absolutise(DG_HEADERS)
+absolutise(DG_BENCHMARKS)
+absolutise(DG_MPI_BENCHMARKS)
+absolutise(DG_TESTS)
+absolutise(DG_DRAW_TESTS)
+absolutise(DG_MPI_TESTS)
 
 # Expose the variables to the parent scope
 set(DG_HEADERS "${DG_HEADERS}" PARENT_SCOPE)

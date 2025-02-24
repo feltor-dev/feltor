@@ -22,7 +22,7 @@ add_executable(feltor::feltor ALIAS feltor)
 
 target_include_directories(feltor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-# TODO: Replace following commands, bad for portability
+# TODO: Replace following commands with portable alternatives.
 execute_process(
     COMMAND git rev-parse HEAD
     OUTPUT_VARIABLE GIT_HASH

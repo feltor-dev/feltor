@@ -1,9 +1,10 @@
 # FindCUSP
 #
-# Finds cusplibrary
-# See https://github.com/cusplibrary/cusplibrary
+# Finds cusplibrary, available at:
+# https://github.com/cusplibrary/cusplibrary
 # 
-# Sets the variable CUSP_INCLUDE_DIR
+# Sets the variable CUSP_INCLUDE_DIR and creates an interface library target
+# cusp::cusp.
 
 find_path(CUSP_INCLUDE_DIR
   HINTS ./  
