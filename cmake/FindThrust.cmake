@@ -60,13 +60,14 @@
 #
 # FindThrust
 #
-# This module finds the Thrust header files and extrats their version.  It
+# This module finds the Thrust header files and extracts their version.  It
 # sets the following variables.
 #
 # THRUST_INCLUDE_DIR -  Include directory for thrust header files.  (All header
 #                       files will actually be in the thrust subdirectory.)
 # THRUST_VERSION -      Version of thrust in the form "major.minor.patch".
 #
+# It also creates the interface library target `thrust::thrust`.
 
 find_path( THRUST_INCLUDE_DIR
   HINTS ./  

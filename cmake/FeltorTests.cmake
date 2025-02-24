@@ -11,7 +11,7 @@ function(add_dg_test test_path)
   target_link_libraries(${test_name} PRIVATE feltor::dg)
   # Add as dependency to the dg_tests target
   add_dependencies(dg_tests ${test_name})
-  # Ensure built tests are built in their own directory
+  # Ensure tests are built in their own directory
   set_target_properties(${test_name} PROPERTIES 
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
   )
@@ -33,7 +33,7 @@ function(add_draw_test test_path)
   target_link_libraries(${test_name} PRIVATE draw::draw)
   # Add as dependency to the dg_tests target
   add_dependencies(draw_tests ${test_name})
-  # Ensure built tests are built in their own directory
+  # Ensure tests are built in their own directory
   set_target_properties(${test_name} PROPERTIES 
       RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/draw_tests"
   )

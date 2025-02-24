@@ -1,9 +1,10 @@
 # FindDRAW
 #
-# Finds DRAW library
-# See https://github.com/feltor-dev/draw
+# Finds DRAW library available at:
+# https://github.com/feltor-dev/draw
 # 
-# Sets the variable DRAW_INCLUDE_DIR
+# Sets the variable DRAW_INCLUDE_DIR and creates an interface library target
+# draw::draw.
 
 find_path(DRAW_INCLUDE_DIR
   HINTS ./  

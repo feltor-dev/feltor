@@ -34,9 +34,9 @@ endfunction()
 
 function(fetch_vcl)
   message(STATUS "Fetching Vector class library")
-  # Vector class library is not a CMake project, can't use FetchContent_MakeAvailable.
-  # All header files are all in the root directory, need to use download directory as
-  # the source directory.
+  # Vector class library is not a CMake project, can't use
+  # FetchContent_MakeAvailable.  All header files are in the root directory,
+  # so need to use download directory as the source directory.
   include(FetchContent)
   FetchContent_Declare(vcl)
   FetchContent_Populate(
@@ -51,9 +51,9 @@ endfunction()
 
 function(fetch_draw)
   message(STATUS "Fetching DRAW")
-  # Draw is not a CMake project, can't use FetchContent_MakeAvailable.
-  # All header files are all in the root directory, need to use download directory as
-  # the source directory.
+  # Draw is not a CMake project, can't use FetchContent_MakeAvailable.  All
+  # header files are all in the root directory, need to use download directory
+  # as the source directory.
   include(FetchContent)
   FetchContent_Declare(draw)
   FetchContent_Populate(

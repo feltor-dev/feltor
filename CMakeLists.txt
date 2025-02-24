@@ -126,7 +126,8 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
 # Create the dg target library.
 # As a header-only library, this must be an interface library.
 # This means it has no sources, but can link/be linked to other
-# libraries, have dependencies, etc.
+# libraries, have dependencies, etc. These properties are then
+# inherited by any target that links to it.
 add_library(dg INTERFACE ${DG_HEADERS})
 # Ensure that `#include "dg/..."` works
 target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
@@ -147,9 +148,9 @@ add_library(feltor::dg ALIAS dg)
 # Add dg dependencies
 include(FeltorFetchDeps)
 
-# We're pinned to a specific version of Thrust for CUSP compatibility.
-# This doesn't include Thrust's modern CMakes support, so we're making
-# use of the FindThrust.cmake module.
+# Pinned to a specific version of Thrust for CUSP compatibility.
+# This doesn't include Thrust's modern CMake support, so a custom
+# FindThrust.cmake module is used instead.
 if(FELTOR_FETCH_THRUST)
   fetch_thrust()
 else()
@@ -189,11 +190,11 @@ if(FELTOR_USE_OMP)
   target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
 endif()
 
-# Must install separately, e.g. via `sudo apt install libjsoncpp-dev`
+# Must install separately, e.g. `sudo apt install libjsoncpp-dev`
 find_package(jsoncpp REQUIRED)
 target_link_libraries(dg INTERFACE jsoncpp_lib)
 
-# Must install separately, e.g. via `sudo apt install libnetcdf-dev`
+# Must install separately, e.g. `sudo apt install libnetcdf-dev`
 find_package(netCDF REQUIRED)
 target_link_libraries(dg INTERFACE netCDF::netcdf)
 
@@ -208,7 +209,7 @@ if(FELTOR_WITH_GLFW)
   endif()
 
   # Link to GLFW and OpenGL
-  # Must be installed separately, e.g. via `sudo apt install libglfw3-dev`
+  # Must be installed separately, e.g. `sudo apt install libglfw3-dev`
   find_package(glfw3 REQUIRED)
   target_link_libraries(draw::draw INTERFACE glfw)
   
