@@ -38,9 +38,6 @@ mpi_blas1_t\
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-cluster_mpib: cluster_mpib.cu
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -g
-
 %_mpib: %_b.cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -DWITH_MPI
 
