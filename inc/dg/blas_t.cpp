@@ -147,7 +147,7 @@ TEST_CASE( "blas")
         INFO( "symv as DenseMatrix               ");
         CHECK( result(dvec1) == 66462.974);
         struct Functor{
-            void operator()( const dg::DVec& in, dg::DVec&  out){
+            void operator()( const dg::x::DVec& in, dg::x::DVec&  out){
                 dg::blas1::axpby( 1., in, 0., out);
             }
         };

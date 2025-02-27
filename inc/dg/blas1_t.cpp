@@ -328,8 +328,8 @@ TEST_CASE( "Complex algebra")
     dg::cDVec v1p( 500, {2.,2.}), v2p( 500, {3.,3});
     dg::DVec v3p(500, 3.), v4p(500, 4.);
 #ifdef WITH_MPI
-    dg::x::cDVec c1(v1p, comm), c2(v2p, comm);
-    dg::x::DVec v3(v3p, comm), v4(v4p, comm);
+    dg::x::cDVec c1(v1p, MPI_COMM_WORLD), c2(v2p, MPI_COMM_WORLD);
+    dg::x::DVec v3(v3p, MPI_COMM_WORLD), v4(v4p, MPI_COMM_WORLD);
 #else
     dg::x::cDVec c1(v1p), c2(v2p);
     dg::x::DVec v3(v3p), v4(v4p);
@@ -338,19 +338,19 @@ TEST_CASE( "Complex algebra")
     {
         dg::blas1::axpby( 2, c1, 3., c2);
         INFO( "2*{2,2}+ 3*{3,3} = " << result(c2) <<" (13,13)");
-        CHECK( equal<dg::x::cDVec,thrust::complex<double>>( c2, {13,13}));
+        CHECK( equal<dg::cDVec,thrust::complex<double>>( c2, {13,13}));
 
         thrust::complex<double> a1 = {2,0}, a2 = {3.,0};
         dg::blas1::axpby( a1, c1, a2, c2);
         INFO( "{2,0}*{2,2}+ {3,0}*{13,13} = " << result(c2) <<" (43,43)");
-        CHECK( equal<dg::x::cDVec,thrust::complex<double>>( c2, {43,43}));
+        CHECK( equal<dg::cDVec,thrust::complex<double>>( c2, {43,43}));
     }
     SECTION( "pointwiseDot")
     {
         // Multiply double vector with complex vector
         dg::blas1::pointwiseDot( v3, c1, c2);
         INFO( "3*{2,2} = " << result(c2) <<" (6,6)");
-        CHECK( equal<dg::x::cDVec,thrust::complex<double>>( c2, {6,6}));
+        CHECK( equal<dg::cDVec,thrust::complex<double>>( c2, {6,6}));
     }
 }
 

@@ -19,17 +19,18 @@ blas1_t\
 pcg_t\
 eve_t\
 bicgstabl_t\
+helmholtz_t\
 simpsons_t\
 poisson_t\
 extrapolation_t\
 nullstelle_t\
 runge_kutta_t\
 adaptive_t\
+implicit_t\
 multistep_t\
 arakawa_t\
 
-TARGETSMPI=mpi_average_t\
-mpi_arakawa_t\
+TARGETSMPI= mpi_arakawa_t\
 mpi_poisson_t\
 mpi_bicgstabl_t\
 mpi_blas_t\
@@ -39,7 +40,6 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
 cluster_mpib: cluster_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -g
-
 
 %_mpib: %_b.cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -DWITH_MPI
