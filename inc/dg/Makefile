@@ -50,17 +50,10 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 mpi_%_t.$(device).o: %_t.cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
-
-%_mpit.$(device).o: %_mpit.cpp %.h
-	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
-
 %_t: $(CATCH).$(device).o %_t.$(device).o
 	$(CC) $(OPT) -o $@ $^ -lCatch2
 
 mpi_%_t: $(CATCHMPI).$(device).o mpi_%_t.$(device).o
-	$(MPICC) $(OPT) -o $@ $^ -lCatch2
-
-%_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
 	$(MPICC) $(OPT) -o $@ $^ -lCatch2
 
 $(CATCH).$(device).o: $(CATCH).cpp
