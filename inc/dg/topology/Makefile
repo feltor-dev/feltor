@@ -48,9 +48,6 @@ mpi_projection_t\
 #all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 all: tests mpi-tests
 
-backscatter_t: backscatter_t.cpp xspacelib.h
-	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
-
 %_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
 

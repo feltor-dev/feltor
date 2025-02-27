@@ -35,12 +35,6 @@ mpi_blas1_t\
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-bathRZ_t: bathRZ_t.cu
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)  -g
-
-backscatter_t: backscatter_t.cpp xspacelib.h
-	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
-
 cluster_mpib: cluster_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) -g
 
