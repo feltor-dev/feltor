@@ -8,6 +8,7 @@
 
 #include "pcg.h"
 #include "bicgstabl.h"
+#include "andersonacc.h"
 #include "lgmres.h"
 #include "elliptic.h"
 #include "chebyshev.h"
@@ -113,6 +114,21 @@ TEST_CASE( "Solvers")
         dg::LGMRES lgmres( x, 30, 4, 10000);
         unsigned num_iter = lgmres.solve( A, x, b, A.precond(), A.weights(), 1e-6);
         INFO( "After "<<num_iter<<" LGMRES iterations we have");
+        dg::blas1::axpby( 1.,x,-1.,error);
+        res = sqrt(dg::blas2::dot(w2d , error));
+        INFO( "L2 Norm of Error is           " << res);
+        CHECK( res < 1e-6);
+    }
+    SECTION( "Andersonacc" )
+    {
+        INFO("ANDERSONACC");
+        dg::AndersonAcceleration acc( copyable_vector, 10);
+        const double eps = 1e-6;
+        double damping = 1e-3;
+        unsigned restart = 10;
+        unsigned num_iter = acc.solve( A, x, b, w2d, eps, eps, max_iter,
+                damping, restart, false);
+        INFO( "Number of iterations "<< num_iter);
         dg::blas1::axpby( 1.,x,-1.,error);
         res = sqrt(dg::blas2::dot(w2d , error));
         INFO( "L2 Norm of Error is           " << res);
