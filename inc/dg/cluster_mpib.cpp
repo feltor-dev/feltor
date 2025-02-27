@@ -1,10 +1,12 @@
 #include <iostream>
 #include <iomanip>
 
+#ifdef WITH_MPI
 #include <mpi.h>
 #ifdef _OPENMP
 #include <omp.h>
 #endif//_OPENMP
+#endif
 #include "algorithm.h"
 #include "geometries/geometries.h"
 
@@ -32,9 +34,9 @@ double initial( double x, double y, double z) {return sin(0);}
 double fct3d(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
 double laplace_fct3d( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct3d(x,y,z) + 1./x/x*fct3d(x,y,z);}
 
-typedef dg::MDMatrix Matrix;
-typedef dg::MIDMatrix IMatrix;
-typedef dg::MDVec Vector;
+typedef dg::x::DMatrix Matrix;
+typedef dg::x::IDMatrix IMatrix;
+typedef dg::x::DVec Vector;
 
 
 /*******************************************************************************
@@ -50,20 +52,25 @@ Run with:
 
 int main(int argc, char* argv[])
 {
-#ifdef _OPENMP
-    int provided;
-    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-    assert( provided >= MPI_THREAD_FUNNELED && "Threaded MPI lib required!\n");
-#else
-    MPI_Init(&argc, &argv);
-#endif
     unsigned n, Nx, Ny, Nz;
+    int dims[3] = {1,1,1};
+    int rank = 0;
+#ifdef WITH_MPI
+    dg::mpi_init( argc, argv);
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm comm;
-    mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm, std::cin, false);
-    int rank;
-    MPI_Comm_rank( comm, &rank);
-    int dims[3], periods[3], coords[3];
+    bool verbose = false;
+    comm = dg::mpi_cart_create( {bcx, bcy, bcz}, std::cin, MPI_COMM_WORLD,
+            true, verbose, std::cout);
+    dg::mpi_read_grid( n, {&Nx, &Ny, &Nz}, comm, std::cin, verbose, std::cout);
+    int periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
+    periods[0] = false, periods[1] = false;
+    MPI_Comm commEll;
+    MPI_Cart_create( MPI_COMM_WORLD, 3, dims, periods, true, &commEll);
+#else
+    std::cin >> n >> Nx >> Ny >> Nz;
+#endif
     if(rank==0)
     {
         std::cout<< dims[0] <<" "<<dims[1]<<" "<<dims[2]<<" "<<dims[0]*dims[1]*dims[2];
@@ -76,12 +83,19 @@ int main(int argc, char* argv[])
     }
 
 
-    dg::CartesianMPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
-    periods[0] = false, periods[1] = false;
-    MPI_Comm commEll;
-    MPI_Cart_create( MPI_COMM_WORLD, 3, dims, periods, true, &commEll);
+    dg::x::CartesianGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy,
+            dg::PER
+#ifdef WITH_MPI
+            , comm
+#endif
+            );
     if( Nz > 2) lz = 2.*M_PI;
-    dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
+    dg::x::CylindricalGrid3d gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz,
+            dg::DIR, dg::DIR, dg::PER
+#ifdef WITH_MPI
+            , commEll
+#endif
+            );
     dg::Timer t;
     Vector w3d, lhs, rhs, jac, x, y, z;
     try{
@@ -95,7 +109,9 @@ int main(int argc, char* argv[])
     {
         if(rank==0)std::cout << std::endl;
         if(rank==0)std::cerr << "Caught std::exception: "<<e.what()<<std::endl;
+#ifdef WITH_MPI
         MPI_Finalize();
+#endif
         return 0;
     }
     std::cout<< std::setprecision(6);
@@ -165,7 +181,7 @@ int main(int argc, char* argv[])
     try{
 
     //The Arakawa scheme
-    dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
+    dg::ArakawaX<dg::x::CartesianGrid3d, Matrix, Vector> arakawa( grid);
     arakawa( lhs, rhs, jac);//warm up
     t.tic();
     for( unsigned i=0; i<multi; i++)
@@ -177,11 +193,12 @@ int main(int argc, char* argv[])
     if( !(Nz > 2))
     {
         const Vector ellw3d = dg::create::volume(gridEll);
-        dg::Elliptic<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::centered);
+        dg::Elliptic<dg::x::CylindricalGrid3d, Matrix, Vector> laplace(gridEll,
+                dg::centered);
         const Vector solution = dg::evaluate ( fct, gridEll);
         x = dg::evaluate( initial, gridEll);
         const Vector b = dg::evaluate ( laplace_fct, gridEll);
-        dg::PCG< Vector > pcg( x, 1000);
+        dg::PCG pcg( x, 1000);
         t.tic();
         unsigned number = pcg.solve(laplace, x, b, 1., ellw3d, 1e-6);
         t.toc();
@@ -195,11 +212,12 @@ int main(int argc, char* argv[])
     {
         //Elliptic3d
         const Vector ellw3d = dg::create::volume(gridEll);
-        dg::Elliptic3d<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::centered);
+        dg::Elliptic3d<dg::x::CylindricalGrid3d, Matrix, Vector>
+            laplace(gridEll, dg::centered);
         const Vector solution = dg::evaluate ( fct3d, gridEll);
         x = dg::evaluate( initial, gridEll);
         const Vector b = dg::evaluate ( laplace_fct3d, gridEll);
-        dg::PCG< Vector > pcg( x, multi);
+        dg::PCG pcg( x, multi);
         t.tic();
         unsigned number = pcg.solve(laplace, x, b, 1., ellw3d, 1e-6);
         t.toc();
@@ -209,14 +227,22 @@ int main(int argc, char* argv[])
         //Application of ds
         double R0 = 10, I0=20;
         double a = 1.;
-        dg::CylindricalMPIGrid3d g3d( R0-a, R0+a, -a, +a, 0, 2.*M_PI, n, Nx
-            ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
+        dg::x::CylindricalGrid3d g3d( R0-a, R0+a, -a, +a, 0, 2.*M_PI, n, Nx
+                ,Ny, Nz,dg::DIR, dg::DIR, dg::PER
+#ifdef WITH_MPI
+                ,commEll
+#endif
+                );
+        // Catch unnecessary output from Fieldaligned constructor
+        std::stringstream ss;
+        auto cout_buf = std::cout.rdbuf( ss.rdbuf() );
         dg::geo::TokamakMagneticField mag =
             dg::geo::createGuenterField(R0, I0);
-        dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector>
-            dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 5, 5);
-        dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Vector>
+        dg::geo::Fieldaligned<dg::x::aProductGeometry3d, IMatrix, Vector>
+            dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 6, 6);
+        dg::geo::DS<dg::x::aProductGeometry3d, IMatrix, Vector>
             ds ( dsFA);
+        std::cout.rdbuf( cout_buf );
 
         ds.centered(x,y);//warm up
         t.tic();
@@ -230,11 +256,15 @@ int main(int argc, char* argv[])
     } catch( std::exception& e) {
         if(rank==0)std::cout << std::endl;
         if(rank==0)std::cerr << "Caught std::exception: "<<e.what()<<std::endl;
+#ifdef WITH_MPI
         MPI_Finalize();
+#endif
         return 0;
     }
 
     if(rank==0)std::cout <<std::endl;
+#ifdef WITH_MPI
     MPI_Finalize();
+#endif
     return 0;
 }
