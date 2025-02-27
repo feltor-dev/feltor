@@ -18,6 +18,7 @@ TARGETS=blas_t\
 blas1_t\
 pcg_t\
 eve_t\
+bicgstabl_t\
 simpsons_t\
 poisson_t\
 extrapolation_t\
@@ -30,6 +31,7 @@ arakawa_t\
 TARGETSMPI=mpi_average_t\
 mpi_arakawa_t\
 mpi_poisson_t\
+mpi_bicgstabl_t\
 mpi_blas_t\
 mpi_blas1_t\
 

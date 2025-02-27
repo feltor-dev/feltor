@@ -1,6 +1,11 @@
 #include <iostream>
 #include <iomanip>
 
+#ifdef WITH_MPI
+#include <mpi.h>
+#include "backend/mpi_init.h"
+#endif
+
 #include "pcg.h"
 #include "bicgstabl.h"
 #include "lgmres.h"
@@ -18,24 +23,34 @@ double initial( double x, double y) {return sin(0);}
 
 TEST_CASE( "Solvers")
 {
+#ifdef WITH_MPI
+    int rank,size;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
+#endif
     const unsigned n=4, Nx=36, Ny = 48;
     //global relative error in L2 norm is O(h^P)
     //more N means less iterations for same error
     INFO( "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny);
-    dg::x::Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::DIR, dg::PER);
+    dg::x::Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::DIR, dg::PER
+#ifdef WITH_MPI
+        , comm
+#endif
+    );
     unsigned max_iter = n*n*Nx*Ny;
-    const dg::HVec solution = dg::evaluate ( fct, grid);
+    const dg::x::HVec solution = dg::evaluate ( fct, grid);
     // create volume and inverse volume on previously defined grid
-    const dg::HVec w2d = dg::create::weights( grid);
+    const dg::x::HVec w2d = dg::create::weights( grid);
     // Evaluate right hand side and solution on the grid
-    const dg::HVec b = dg::evaluate ( laplace_fct, grid);
+    const dg::x::HVec b = dg::evaluate ( laplace_fct, grid);
     double lmin = 2.0, lmax = 2*grid.size(); //Eigenvalues of Laplace
 
-    dg::HVec x = dg::evaluate( initial, grid);
-    const dg::HVec& copyable_vector = x;
-    dg::HVec error( solution);
+    dg::x::HVec x = dg::evaluate( initial, grid);
+    const dg::x::HVec& copyable_vector = x;
+    dg::x::HVec error( solution);
     // Create unnormalized Laplacian
-    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid, dg::forward);
+    dg::Elliptic<dg::x::CartesianGrid2d, dg::x::HMatrix, dg::x::HVec> A( grid, dg::forward);
 
     double res;
     res = sqrt(dg::blas2::dot(w2d , solution));

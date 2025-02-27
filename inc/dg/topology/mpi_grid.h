@@ -17,6 +17,7 @@
 //     * device independent code
 //     * @param u axis number
 //     */
+//     TODO I think it does not matter which boundary condition the communicator has!?
 namespace dg
 {
 
