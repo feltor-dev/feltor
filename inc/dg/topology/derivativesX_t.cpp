@@ -42,7 +42,7 @@ static double cosz( double x, double y, double z) { return sin(x,y)*cos(z);}
 
 
 using Vector = dg::DVec;
-using Matrix = dg::Composite<dg::EllSparseBlockMatDevice<double> >;
+using Matrix = dg::Composite<dg::EllSparseBlockMat<double, thrust::device_vector> >;
 
 TEST_CASE( "Derivatives X")
 {

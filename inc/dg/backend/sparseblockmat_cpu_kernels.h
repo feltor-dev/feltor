@@ -1,4 +1,10 @@
-#include <omp.h>
+// DO NOT MANUALLY EDIT THIS FILE
+// Instead:
+// 0. Keep this notice
+// 1. copy sparseblockmat_omp_kernels.h (without include <omp.h>)
+// 2. Remove all lines with #pragma
+// 3. Replace OmpTag with SerialTag
+// 4. Replace omp_ with cpu_
 #include "config.h"
 #include "fma.h"
 
@@ -8,7 +14,7 @@ namespace dg{
 
 // general multiply kernel
 template<class real_type, class value_type>
-void ell_omp_multiply_kernel( value_type alpha, value_type beta,
+void ell_cpu_multiply_kernel( value_type alpha, value_type beta,
          const real_type * RESTRICT data, const int * RESTRICT cols_idx,
          const int * RESTRICT data_idx,
          const int num_rows, const int num_cols, const int blocks_per_line,
@@ -18,7 +24,6 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
-#pragma omp for nowait //manual collapse(2)
 	for( int si = 0; si<left_size*num_rows; si++)
 	{
 		int s = si / num_rows;
@@ -64,7 +69,7 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
 }
 //specialized multiply kernel
 template<class real_type, class value_type, int n, int blocks_per_line>
-void ell_omp_multiply_kernel( value_type alpha, value_type beta,
+void ell_cpu_multiply_kernel( value_type alpha, value_type beta,
          const real_type * RESTRICT data, const int * RESTRICT cols_idx,
          const int * RESTRICT data_idx,
          const int num_rows, const int num_cols,
@@ -98,7 +103,6 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
         int B = data_idx[blocks_per_line+d];
         dprivate[(k*blocks_per_line+d)*n+q] = data[(B*n+k)*n+q];
     }
-    #pragma omp for nowait
     for( int s=0; s<left_size; s++)
     {
         for( int i=0; i<1; i++)
@@ -126,9 +130,6 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
                     y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
-        #ifndef _MSC_VER
-        #pragma omp SIMD //very important for KNL
-        #endif
         for( int i=1; i<num_rows-1; i++)
         {
             for( int k=0; k<n; k++)
@@ -182,7 +183,6 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
     else // not trivial
     {
     value_type xprivate[blocks_per_line*n];
-    #pragma omp for nowait
     for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
     {
@@ -217,7 +217,6 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
     int J[blocks_per_line];
     if( !( (right_range[1]-right_range[0]) > 100*left_size*num_rows*n )) //typically a derivative in y ( Ny*Nz >~ Nx)
     {
-        #pragma omp for nowait
         for (int sik = 0; sik < left_size*num_rows*n; sik++)
         {
             int s = sik / (num_rows*n);
@@ -232,9 +231,6 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
                 for(int q=0; q<n; q++)
                     dprivate[d*n+q] = data[B+q];
             }
-            #ifndef _MSC_VER
-            #pragma omp SIMD //very important for KNL
-            #endif
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
@@ -272,7 +268,6 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
                 for(int q=0; q<n; q++)
                     dprivate[d*n+q] = data[B+q];
             }
-            #pragma omp for SIMD nowait
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
@@ -297,7 +292,7 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
 }
 
 template<class real_type, class value_type, int n>
-void call_ell_omp_multiply_kernel( value_type alpha, value_type beta,
+void call_ell_cpu_multiply_kernel( value_type alpha, value_type beta,
          const real_type * RESTRICT data_ptr, const int * RESTRICT cols_ptr,
          const int * RESTRICT block_ptr,
          const int num_rows, const int num_cols, const int blocks_per_line,
@@ -306,23 +301,23 @@ void call_ell_omp_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT x_ptr, value_type * RESTRICT y_ptr)
 {
     if( blocks_per_line == 1)
-        ell_omp_multiply_kernel<real_type, value_type, n, 1>  (alpha, beta, data_ptr,
+        ell_cpu_multiply_kernel<real_type, value_type, n, 1>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 2)
-        ell_omp_multiply_kernel<real_type, value_type, n, 2>  (alpha, beta, data_ptr,
+        ell_cpu_multiply_kernel<real_type, value_type, n, 2>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 3)
-        ell_omp_multiply_kernel<real_type, value_type, n, 3>  (alpha, beta, data_ptr,
+        ell_cpu_multiply_kernel<real_type, value_type, n, 3>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else if (blocks_per_line == 4)
-        ell_omp_multiply_kernel<real_type, value_type, n, 4>  (alpha, beta, data_ptr,
+        ell_cpu_multiply_kernel<real_type, value_type, n, 4>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, left_size, right_size,
         right_range_ptr,  x_ptr,y_ptr);
     else
-        ell_omp_multiply_kernel<real_type, value_type>  (alpha, beta, data_ptr, cols_ptr,
+        ell_cpu_multiply_kernel<real_type, value_type>  (alpha, beta, data_ptr, cols_ptr,
         block_ptr, num_rows, num_cols, blocks_per_line, n, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
 }
@@ -330,43 +325,42 @@ void call_ell_omp_multiply_kernel( value_type alpha, value_type beta,
 
 template<class real_type, template<class> class Vector>
 template<class value_type>
-void EllSparseBlockMat<real_type, Vector>::symv( SharedVectorTag, OmpTag, value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
+void EllSparseBlockMat<real_type, Vector>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
 {
     const real_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 1)
-        call_ell_omp_multiply_kernel<real_type, value_type, 1>  (alpha, beta, data_ptr,
+        call_ell_cpu_multiply_kernel<real_type, value_type, 1>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
 
     else if( n == 2)
-        call_ell_omp_multiply_kernel<real_type, value_type, 2>  (alpha, beta, data_ptr,
+        call_ell_cpu_multiply_kernel<real_type, value_type, 2>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 3)
-        call_ell_omp_multiply_kernel<real_type, value_type, 3>  (alpha, beta, data_ptr,
+        call_ell_cpu_multiply_kernel<real_type, value_type, 3>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 4)
-        call_ell_omp_multiply_kernel<real_type, value_type, 4>  (alpha, beta, data_ptr,
+        call_ell_cpu_multiply_kernel<real_type, value_type, 4>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else if( n == 5)
-        call_ell_omp_multiply_kernel<real_type, value_type, 5>  (alpha, beta, data_ptr,
+        call_ell_cpu_multiply_kernel<real_type, value_type, 5>  (alpha, beta, data_ptr,
         cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
     else
-        ell_omp_multiply_kernel<real_type, value_type> ( alpha, beta, data_ptr, cols_ptr,
+        ell_cpu_multiply_kernel<real_type, value_type> ( alpha, beta, data_ptr, cols_ptr,
         block_ptr, num_rows, num_cols, blocks_per_line, n, left_size,
         right_size, right_range_ptr,  x_ptr,y_ptr);
 }
 
 template<class real_type, class value_type, template<class> class Vector>
-void coo_omp_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
+void coo_cpu_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
 {
-    #pragma omp for nowait
 	for (int skj = 0; skj < m.left_size*m.n*m.right_size; skj++)
 	{
 		int s = skj / (m.n*m.right_size);
@@ -386,7 +380,7 @@ void coo_omp_multiply_kernel( value_type alpha, const value_type** x, value_type
 	}
 }
 template<class real_type, class value_type, int n, template<class > class Vector>
-void coo_omp_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
+void coo_cpu_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
 {
     bool trivial = true;
     int CC = m.cols_idx[0], DD = m.data_idx[0];
@@ -395,7 +389,6 @@ void coo_omp_multiply_kernel( value_type alpha, const value_type** x, value_type
             trivial=false;
     if( trivial)
     {
-        #pragma omp for SIMD nowait
         for (int sj = 0; sj < m.left_size*m.right_size; sj++)
         {
             int s = sj / m.right_size;
@@ -419,7 +412,6 @@ void coo_omp_multiply_kernel( value_type alpha, const value_type** x, value_type
     }
     else
     {
-        #pragma omp for SIMD nowait
         for (int sj = 0; sj < m.left_size*m.right_size; sj++)
         {
             int s = sj / m.right_size;
@@ -443,21 +435,21 @@ void coo_omp_multiply_kernel( value_type alpha, const value_type** x, value_type
 }
 template<class real_type, template<class> class Vector>
 template<class value_type>
-void CooSparseBlockMat<real_type, Vector>::symv( SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMat<real_type, Vector>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
 {
     if( num_entries==0)
         return;
     assert( beta == 1 && "Beta != 1 yields wrong results in CooSparseBlockMat!!");
     if( n == 1)
-        coo_omp_multiply_kernel<real_type, value_type, 1>( alpha, x, beta, y, *this);
+        coo_cpu_multiply_kernel<real_type, value_type, 1>( alpha, x, beta, y, *this);
     else if( n == 2)
-        coo_omp_multiply_kernel<real_type, value_type, 2>( alpha, x, beta, y, *this);
+        coo_cpu_multiply_kernel<real_type, value_type, 2>( alpha, x, beta, y, *this);
     else if( n == 3)
-        coo_omp_multiply_kernel<real_type, value_type, 3>( alpha, x, beta, y, *this);
+        coo_cpu_multiply_kernel<real_type, value_type, 3>( alpha, x, beta, y, *this);
     else if( n == 4)
-        coo_omp_multiply_kernel<real_type, value_type, 4>( alpha, x, beta, y, *this);
+        coo_cpu_multiply_kernel<real_type, value_type, 4>( alpha, x, beta, y, *this);
     else
-        coo_omp_multiply_kernel<real_type, value_type>( alpha, x, beta, y, *this);
+        coo_cpu_multiply_kernel<real_type, value_type>( alpha, x, beta, y, *this);
 }
 
 }//namespace dg

@@ -27,11 +27,11 @@ namespace create
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<real_type, thrust::host_vector> dx( const RealGridX1d<real_type>& g, bc bcx, direction dir = centered)
 {
     auto grid = g.grid();
     if( g.outer_N() == 0) return dx_normed( grid.n(), grid.N(), grid.h(), dg::PER, dir);
-    EllSparseBlockMat<real_type> DX = dx_normed( grid.n(), grid.N(), grid.h(), bcx, dir);
+    EllSparseBlockMat<real_type, thrust::host_vector> DX = dx_normed( grid.n(), grid.N(), grid.h(), bcx, dir);
     for( int i=0; i<DX.blocks_per_line; i++)
     {
         if( DX.cols_idx[DX.blocks_per_line*(g.outer_N()-1)+i] == (int)g.outer_N())
@@ -57,7 +57,7 @@ EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, bc bcx, direct
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, direction dir = centered)
+EllSparseBlockMat<real_type, thrust::host_vector> dx( const RealGridX1d<real_type>& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -71,10 +71,10 @@ EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, direction dir 
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> jump( const RealGridX1d<real_type>& g, bc bcx)
+EllSparseBlockMat<real_type, thrust::host_vector> jump( const RealGridX1d<real_type>& g, bc bcx)
 {
     if( g.outer_N() == 0) return jump( g.n(), g.N(), g.h(), dg::PER);
-    EllSparseBlockMat<real_type> J = jump( g.n(),g.N(),g.h(), bcx);
+    EllSparseBlockMat<real_type, thrust::host_vector> J = jump( g.n(),g.N(),g.h(), bcx);
     for( int i=0; i<J.blocks_per_line; i++)
     {
         if( J.cols_idx[J.blocks_per_line*(g.outer_N()-1)+i] == (int)g.outer_N())
@@ -98,7 +98,7 @@ EllSparseBlockMat<real_type> jump( const RealGridX1d<real_type>& g, bc bcx)
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> jump( const RealGridX1d<real_type>& g)
+EllSparseBlockMat<real_type, thrust::host_vector> jump( const RealGridX1d<real_type>& g)
 {
     return jump( g, g.bcx());
 }

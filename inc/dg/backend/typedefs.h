@@ -3,7 +3,6 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include "sparseblockmat.h"
-#include "sparseblockmat.cuh"
 
 /*! @file
   @brief Useful typedefs of commonly used types.
@@ -28,11 +27,11 @@ using fDVec = thrust::device_vector<float>; //!< Device Vector. The device can b
 
 //derivative matrices
 template<class T>
-using HMatrix_t = EllSparseBlockMat<T>;
-using HMatrix = EllSparseBlockMat<double>; //!< Host Matrix for derivatives
-using fHMatrix = EllSparseBlockMat<float>; //!< Host Matrix for derivatives
-using DMatrix = EllSparseBlockMatDevice<double>; //!< Device Matrix for derivatives
-using fDMatrix = EllSparseBlockMatDevice<float>; //!< Device Matrix for derivatives
+using HMatrix_t = EllSparseBlockMat<T, thrust::host_vector>;
+using HMatrix = EllSparseBlockMat<double, thrust::host_vector>; //!< Host Matrix for derivatives
+using fHMatrix = EllSparseBlockMat<float, thrust::host_vector>; //!< Host Matrix for derivatives
+using DMatrix = EllSparseBlockMat<double, thrust::device_vector>; //!< Device Matrix for derivatives
+using fDMatrix = EllSparseBlockMat<float, thrust::device_vector>; //!< Device Matrix for derivatives
 
 // Interpolation matrices
 template<class real_type>
@@ -71,11 +70,11 @@ using fMDVec    = dg::MPI_Vector<dg::fDVec >; //!< MPI Device Vector s.a. dg::fD
 
 // TODO These may be private
 template< class T>
-using CooMat_t  = dg::CooSparseBlockMat<T>;
-using CooMat    = dg::CooSparseBlockMat<double>;
-using fCooMat   = dg::CooSparseBlockMat<float>;
-using DCooMat   = dg::CooSparseBlockMatDevice<double>;
-using fDCooMat  = dg::CooSparseBlockMatDevice<float>;
+using CooMat_t  = dg::CooSparseBlockMat<T, thrust::host_vector>;
+using CooMat    = dg::CooSparseBlockMat<double, thrust::host_vector>;
+using fCooMat   = dg::CooSparseBlockMat<float, thrust::host_vector>;
+using DCooMat   = dg::CooSparseBlockMat<double, thrust::device_vector>;
+using fDCooMat  = dg::CooSparseBlockMat<float, thrust::device_vector>;
 
 template<class T>
 using MHMatrix_t  = dg::MPISparseBlockMat<thrust::host_vector, dg::HMatrix_t<T>, dg::CooMat_t<T>>; //!< MPI Host Matrix for derivatives

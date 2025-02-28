@@ -84,16 +84,16 @@ namespace create{
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > derivative( unsigned coord, const aRealTopologyX2d<real_type>& g, dg::bc bc, direction dir = centered)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > derivative( unsigned coord, const aRealTopologyX2d<real_type>& g, dg::bc bc, direction dir = centered)
 {
     if( coord == 0)
     {
-        EllSparseBlockMat<real_type>  dx;
+        EllSparseBlockMat<real_type, thrust::host_vector>  dx;
         dx = dx_normed( g.n(), g.Nx(), g.hx(), bc, dir);
         dx.set_left_size( g.n()*g.Ny());
         return dx;
     }
-    EllSparseBlockMat<real_type>  dy_inner, dy_outer;
+    EllSparseBlockMat<real_type, thrust::host_vector>  dy_inner, dy_outer;
     RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
     dy_inner = dx( g1d_inner, bc, dir);
     dy_outer = dx_normed( g.n(), g.Ny(), g.hy(), bc, dir );
@@ -104,7 +104,7 @@ Composite<EllSparseBlockMat<real_type> > derivative( unsigned coord, const aReal
     dy_outer.right_range[1] = g.n()*g.Nx();
     dy_outer.right_size = g.n()*g.Nx();
 
-    Composite<EllSparseBlockMat<real_type> > c( dy_inner, dy_outer);
+    Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( dy_inner, dy_outer);
     return c;
     // TODO throw on coord > 1 ?
 }
@@ -119,16 +119,16 @@ Composite<EllSparseBlockMat<real_type> > derivative( unsigned coord, const aReal
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopologyX2d<real_type>& g, bc bc)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > jump( unsigned coord, const aRealTopologyX2d<real_type>& g, bc bc)
 {
     if( coord == 0)
     {
-        EllSparseBlockMat<real_type>  jx;
+        EllSparseBlockMat<real_type, thrust::host_vector>  jx;
         jx = jump( g.n(), g.Nx(), g.hx(), bc);
         jx.set_left_size( g.n()*g.Ny());
         return jx;
     }
-    EllSparseBlockMat<real_type>  jy_inner, jy_outer;
+    EllSparseBlockMat<real_type, thrust::host_vector>  jy_inner, jy_outer;
     RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
     jy_inner = jump( g1d_inner, bc);
     jy_outer = jump( g.n(), g.Ny(), g.hy(), bc);
@@ -139,7 +139,7 @@ Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopolo
     jy_outer.right_range[1] = g.n()*g.Nx();
     jy_outer.right_size = g.n()*g.Nx();
 
-    Composite<EllSparseBlockMat<real_type> > c( jy_inner, jy_outer);
+    Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( jy_inner, jy_outer);
     return c;
     // TODO throw on coord > 1 ?
 }
@@ -155,18 +155,18 @@ Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopolo
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopologyX3d<real_type>& g, bc bc)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > jump( unsigned coord, const aRealTopologyX3d<real_type>& g, bc bc)
 {
     if( coord == 0)
     {
-        EllSparseBlockMat<real_type>  jx;
+        EllSparseBlockMat<real_type, thrust::host_vector>  jx;
         jx = jump( g.n(), g.Nx(), g.hx(), bc);
         jx.set_left_size( g.n()*g.Ny()*g.Nz());
         return jx;
     }
     else if ( coord == 1)
     {
-        EllSparseBlockMat<real_type>  jy_inner, jy_outer;
+        EllSparseBlockMat<real_type, thrust::host_vector>  jy_inner, jy_outer;
         RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
         jy_inner = jump( g1d_inner, bc);
         jy_outer = jump( g.n(), g.Ny(), g.hy(), bc);
@@ -179,10 +179,10 @@ Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopolo
         jy_inner.left_size = g.Nz();
         jy_outer.left_size = g.Nz();
 
-        Composite<EllSparseBlockMat<real_type> > c( jy_inner, jy_outer);
+        Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( jy_inner, jy_outer);
         return c;
     }
-    EllSparseBlockMat<real_type>  jz;
+    EllSparseBlockMat<real_type, thrust::host_vector>  jz;
     jz = jump( 1, g.Nz(), g.hz(), bc);
     jz.set_right_size( g.n()*g.Nx()*g.n()*g.Ny());
     return jz;
@@ -201,18 +201,18 @@ Composite<EllSparseBlockMat<real_type> > jump( unsigned coord, const aRealTopolo
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > derivative( unsigned coord, const aRealTopologyX3d<real_type>& g, bc bc, direction dir = centered)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > derivative( unsigned coord, const aRealTopologyX3d<real_type>& g, bc bc, direction dir = centered)
 {
     if( coord == 0)
     {
-        EllSparseBlockMat<real_type>  dx;
+        EllSparseBlockMat<real_type, thrust::host_vector>  dx;
         dx = dx_normed( g.n(), g.Nx(), g.hx(), bc, dir);
         dx.set_left_size( g.n()*g.Ny()*g.Nz());
         return dx;
     }
     else if( coord == 1)
     {
-        EllSparseBlockMat<real_type>  dy_inner, dy_outer;
+        EllSparseBlockMat<real_type, thrust::host_vector>  dy_inner, dy_outer;
         RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
         dy_inner = dx( g1d_inner, bc, dir);
         dy_outer = dx_normed( g.n(), g.Ny(), g.hy(), bc, dir );
@@ -225,10 +225,10 @@ Composite<EllSparseBlockMat<real_type> > derivative( unsigned coord, const aReal
         dy_inner.left_size = g.Nz();
         dy_outer.left_size = g.Nz();
 
-        Composite<EllSparseBlockMat<real_type> > c( dy_inner, dy_outer);
+        Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( dy_inner, dy_outer);
         return c;
     }
-    EllSparseBlockMat<real_type>  dz;
+    EllSparseBlockMat<real_type, thrust::host_vector>  dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bc, dir);
     dz.set_right_size( g.n()*g.n()*g.Nx()*g.Ny());
     return dz;

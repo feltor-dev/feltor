@@ -53,7 +53,7 @@ double pol( double x, double y) {return 1.; }
 double rhs( double x, double y) { return -lap(x,y);}
 
 typedef dg::DVec Vector;
-typedef dg::Composite<dg::EllSparseBlockMatDevice<double> > Matrix;
+typedef dg::Composite<dg::EllSparseBlockMat<double, thrust::device_vector> > Matrix;
 
 
 int main()

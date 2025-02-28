@@ -19,7 +19,7 @@ namespace create{
 namespace detail
 {
 template<class real_type, size_t Nd>
-void update_left_right( unsigned coord, EllSparseBlockMat<real_type>& mat, const aRealTopology<real_type,Nd>& g)
+void update_left_right( unsigned coord, EllSparseBlockMat<real_type, thrust::host_vector>& mat, const aRealTopology<real_type,Nd>& g)
 {
     // Also used by fast_interpolation ...
     unsigned right_size = 1, left_size = 1;
@@ -46,12 +46,12 @@ void update_left_right( unsigned coord, EllSparseBlockMat<real_type>& mat, const
  * @return A host matrix
  */
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> derivative( unsigned coord,
+EllSparseBlockMat<real_type, thrust::host_vector> derivative( unsigned coord,
     const aRealTopology<real_type, Nd>& g, dg::bc bc, direction dir = centered)
 {
     if( coord >= Nd)
         throw Error( Message(_ping_)<<"coord>=Nd not allowed! You typed: "<<coord<<" while Nd is "<<Nd);
-    EllSparseBlockMat<real_type> dd = dx_normed(
+    EllSparseBlockMat<real_type, thrust::host_vector> dd = dx_normed(
             g.n(coord), g.N(coord), g.h(coord), bc, dir);
     detail::update_left_right( coord, dd, g);
     return dd;
@@ -67,12 +67,12 @@ EllSparseBlockMat<real_type> derivative( unsigned coord,
  * @return A host matrix
  */
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> jump( unsigned coord,
+EllSparseBlockMat<real_type, thrust::host_vector> jump( unsigned coord,
     const aRealTopology<real_type, Nd>& g, dg::bc bc)
 {
     if( coord >= Nd)
         throw Error( Message(_ping_)<<"coord>=Nd not allowed! You typed: "<<coord<<" while Nd is "<<Nd);
-    EllSparseBlockMat<real_type> dd = jump(
+    EllSparseBlockMat<real_type, thrust::host_vector> dd = jump(
             g.n(coord), g.N(coord), g.h(coord), bc);
     detail::update_left_right( coord, dd, g);
     return dd;

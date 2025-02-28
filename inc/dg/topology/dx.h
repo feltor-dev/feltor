@@ -30,9 +30,9 @@ namespace create
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
+EllSparseBlockMat<real_type, thrust::host_vector> dx_symm(int n, int N, real_type h, bc bcx)
 {
-    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
+    constexpr int invalid_idx = EllSparseBlockMat<real_type, thrust::host_vector>::invalid_index;
 
     SquareMatrix<real_type> l = create::lilj<real_type>(n);
     SquareMatrix<real_type> r = create::rirj<real_type>(n);
@@ -68,7 +68,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
     //assemble the matrix
     if( bcx != PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 3, 5, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 3, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -101,7 +101,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
     }
     else //periodic
     {
-        EllSparseBlockMat<real_type> A(N, N, 3, 3, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 3, 3, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -130,9 +130,9 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
+EllSparseBlockMat<real_type, thrust::host_vector> dx_plus( int n, int N, real_type h, bc bcx )
 {
-    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
+    constexpr int invalid_idx = EllSparseBlockMat<real_type, thrust::host_vector>::invalid_index;
 
     SquareMatrix<real_type> l = create::lilj<real_type>(n);
     SquareMatrix<real_type> r = create::rirj<real_type>(n);
@@ -158,7 +158,7 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
     //assemble the matrix
     if( bcx != PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 2, 4, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 2, 4, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -186,7 +186,7 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
     }
     else //periodic
     {
-        EllSparseBlockMat<real_type> A(N, N, 2, 2, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 2, 2, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -214,9 +214,9 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
+EllSparseBlockMat<real_type, thrust::host_vector> dx_minus( int n, int N, real_type h, bc bcx )
 {
-    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
+    constexpr int invalid_idx = EllSparseBlockMat<real_type, thrust::host_vector>::invalid_index;
     SquareMatrix<real_type> l = create::lilj<real_type>(n);
     SquareMatrix<real_type> r = create::rirj<real_type>(n);
     SquareMatrix<real_type> lr = create::lirj<real_type>(n);
@@ -242,7 +242,7 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 2, 4, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 2, 4, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -270,7 +270,7 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
     }
     else //periodic
     {
-        EllSparseBlockMat<real_type> A(N, N, 2, 2, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 2, 2, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -298,9 +298,9 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
+EllSparseBlockMat<real_type, thrust::host_vector> jump( int n, int N, real_type h, bc bcx)
 {
-    constexpr int invalid_idx = EllSparseBlockMat<real_type>::invalid_index;
+    constexpr int invalid_idx = EllSparseBlockMat<real_type, thrust::host_vector>::invalid_index;
     SquareMatrix<real_type> l = create::lilj<real_type>(n);
     SquareMatrix<real_type> r = create::rirj<real_type>(n);
     SquareMatrix<real_type> lr = create::lirj<real_type>(n);
@@ -325,7 +325,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
     //assemble the matrix
     if(bcx != dg::PER)
     {
-        EllSparseBlockMat<real_type> A(N, N, 3, 5, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 3, 5, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -358,7 +358,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
     }
     else //periodic
     {
-        EllSparseBlockMat<real_type> A(N, N, 3, 3, n);
+        EllSparseBlockMat<real_type, thrust::host_vector> A(N, N, 3, 3, n);
         for( int i=0; i<n; i++)
         for( int j=0; j<n; j++)
         {
@@ -388,7 +388,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx_normed( int n, int N, real_type h, bc bcx, direction dir )
+EllSparseBlockMat<real_type, thrust::host_vector> dx_normed( int n, int N, real_type h, bc bcx, direction dir )
 {
     if( dir == centered)
         return create::dx_symm(n, N, h, bcx);
@@ -396,7 +396,7 @@ EllSparseBlockMat<real_type> dx_normed( int n, int N, real_type h, bc bcx, direc
         return create::dx_plus(n, N, h, bcx);
     else if (dir == backward)
         return create::dx_minus(n, N, h, bcx);
-    return EllSparseBlockMat<real_type>();
+    return EllSparseBlockMat<real_type, thrust::host_vector>();
 }
 ///@endcond
 

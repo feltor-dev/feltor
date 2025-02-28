@@ -4,7 +4,6 @@
 #include "tensor_traits.h"
 #include "tensor_traits.h"
 #include "sparseblockmat.h"
-#include "sparseblockmat.cuh"
 //
 ///@cond
 namespace dg{

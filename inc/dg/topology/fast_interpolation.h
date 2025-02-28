@@ -188,7 +188,7 @@ dg::HMatrix_t<real_type> fast_interpolation1d( const RealGrid1d<real_type>& t, u
     cusp::coo_matrix<int, real_type, cusp::host_memory> interpolX =
         dg::create::interpolation( g_new, g_old);
     unsigned size = multiplyn*multiplyNx;
-    EllSparseBlockMat<real_type> iX( size*t.N(), t.N(), 1, size, t.n());
+    EllSparseBlockMat<real_type, thrust::host_vector> iX( size*t.N(), t.N(), 1, size, t.n());
     dg::blas1::copy( 0., iX.data);
     for( unsigned l=0; l<interpolX.num_entries; l++)
     {
@@ -239,7 +239,7 @@ dg::HMatrix_t<real_type> fast_projection1d( const RealGrid1d<real_type>& t, unsi
     // Does not generate explicit zeros ...
     cusp::coo_matrix<int, real_type, cusp::host_memory> projectX = dg::create::projection( g_new, g_old);
     unsigned size = dividen*divideNx;
-    EllSparseBlockMat<real_type> pX( t.N()/divideNx, t.N()*dividen, size, size, n);
+    EllSparseBlockMat<real_type, thrust::host_vector> pX( t.N()/divideNx, t.N()*dividen, size, size, n);
     dg::blas1::copy( 0., pX.data);
     for( unsigned ll=0; ll<projectX.num_entries; ll++)
     {
@@ -284,7 +284,7 @@ B &   &   &   &   & \\
 template<class real_type>
 dg::HMatrix_t<real_type> fast_transform1d( const dg::SquareMatrix<real_type>& opx, const RealGrid1d<real_type>& t)
 {
-    EllSparseBlockMat<real_type> A( t.N(), t.N(), 1, 1, t.n());
+    EllSparseBlockMat<real_type, thrust::host_vector> A( t.N(), t.N(), 1, 1, t.n());
     if( opx.size() != t.n())
         throw Error( Message(_ping_)<< "SquareMatrix must have same n as grid!");
     dg::assign( opx.data(), A.data);
@@ -299,7 +299,7 @@ dg::HMatrix_t<real_type> fast_transform1d( const dg::SquareMatrix<real_type>& op
 ///@copydoc fast_interpolation1d(const RealGrid1d<real_type>&,unsigned,unsigned)
 ///@copydoc hide_coord_param
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> fast_interpolation( unsigned coord,
+EllSparseBlockMat<real_type, thrust::host_vector> fast_interpolation( unsigned coord,
     const aRealTopology<real_type, Nd>& t, unsigned multiplyn, unsigned multiplyNx)
 {
     auto trafo = dg::create::fast_interpolation1d( t.axis(coord),
@@ -311,7 +311,7 @@ EllSparseBlockMat<real_type> fast_interpolation( unsigned coord,
 ///@copydoc fast_projection1d(const RealGrid1d<real_type>&,unsigned,unsigned)
 ///@copydoc hide_coord_param
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> fast_projection( unsigned coord,
+EllSparseBlockMat<real_type, thrust::host_vector> fast_projection( unsigned coord,
     const aRealTopology<real_type, Nd>& t, unsigned dividen, unsigned divideNx)
 {
     auto trafo = dg::create::fast_projection1d( t.axis(coord),
@@ -323,7 +323,7 @@ EllSparseBlockMat<real_type> fast_projection( unsigned coord,
 ///@copydoc fast_transform1d(const dg::SquareMatrix<real_type>&,const RealGrid1d<real_type>&)
 ///@copydoc hide_coord_param
 template<class real_type, size_t Nd>
-EllSparseBlockMat<real_type> fast_transform( unsigned coord, const dg::SquareMatrix<real_type>& opx,
+EllSparseBlockMat<real_type, thrust::host_vector> fast_transform( unsigned coord, const dg::SquareMatrix<real_type>& opx,
     const aRealTopology<real_type, Nd>& t)
 {
     auto trafo = dg::create::fast_transform1d( opx, t.axis(coord));
