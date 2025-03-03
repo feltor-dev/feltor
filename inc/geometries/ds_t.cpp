@@ -68,7 +68,7 @@ int main(int argc, char * argv[])
     std::cin >> method;
     method.erase( std::remove( method.begin(), method.end(), '"'), method.end());
 #endif
-    std::cout << "# You typed\n"
+    DG_RANK0 std::cout << "# You typed\n"
               <<"method: "<< method<<std::endl;
     DG_RANK0 std::cout << "# Create parallel Derivative!\n";
 
