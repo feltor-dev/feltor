@@ -124,7 +124,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters
     RealCurvilinearProductMPIGrid3d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        RealCurvilinearProductMPIGrid3d( generator, {n,Nx,bcx}, {n,Ny,bcy}, {0.,2.*M_PI,1,Nz,bcz}, comm){}
+        RealCurvilinearProductMPIGrid3d( generator, {n,Nx,bcx}, {n,Ny,bcy}, RealMPIGrid1d<real_type>{0.,2.*M_PI,1,Nz,bcz, dg::mpi_cart_split_as<3>(comm)[2]}, comm){}
 
 
     /// @copydoc hide_grid_product3d
