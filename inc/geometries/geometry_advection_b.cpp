@@ -1,10 +1,17 @@
 #include <iostream>
 #include <iomanip>
 
+#ifdef WITH_MPI
+#include <mpi.h>
+#endif
+
 #include "dg/algorithm.h"
 #include "dg/file/json_utilities.h"
 
 #include "curvilinear.h"
+#ifdef WITH_MPI
+#include "mpi_curvilinear.h"
+#endif
 
 #include "flux.h"
 #include "simple_orthogonal.h"
@@ -90,88 +97,99 @@ struct CurvatureDirPer
 
 int main(int argc, char** argv)
 {
-    std::cout << "Type n (5), Nx (8), Ny (80)\n";
+#ifdef WITH_MPI
+    MPI_Init( &argc, &argv);
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
     unsigned n, Nx, Ny;
+    double psi_0, psi_1;
+#ifdef WITH_MPI
+    MPI_Comm comm;
+    dg::mpi_init2d( dg::DIR, dg::PER, n, Nx, Ny, comm);
+    if(rank==0)std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
+    if(rank==0)std::cin >> psi_0>> psi_1;
+    MPI_Bcast( &psi_0, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast( &psi_1, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#else
+    std::cout << "Type n (5), Nx (8), Ny (80)\n";
     std::cin >> n>> Nx>>Ny;
+    std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
+    std::cin >> psi_0>> psi_1;
+#endif
     auto js = dg::file::file2Json( argc == 1 ? "geometry_params_Xpoint.json" : argv[1]);
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
 
-    std::cout << "Psi min "<<mag.psip()(gp.R_0, 0)<<"\n";
-    std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
-    double psi_0, psi_1;
-    std::cin >> psi_0>> psi_1;
-    std::cout << "Psi_0 = "<<psi_0<<" psi_1 = "<<psi_1<<std::endl;
+    DG_RANK0 std::cout << "Psi min "<<mag.psip()(gp.R_0, 0)<<"\n";
+    DG_RANK0 std::cout << "Psi_0 = "<<psi_0<<" psi_1 = "<<psi_1<<std::endl;
     //gp.display( std::cout);
     dg::Timer t;
-    std::cout << "Constructing grid ... \n";
+    DG_RANK0 std::cout << "Constructing grid ... \n";
     t.tic();
     //dg::geo::RibeiroFluxGenerator generator( mag.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::FluxGenerator generator( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     //dg::geo::SimpleOrthogonal generator( mag.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::geo::CurvilinearGrid2d grid(generator, n, Nx, Ny, dg::DIR); //2d
+    dg::geo::x::CurvilinearGrid2d grid(generator, n, Nx, Ny, dg::DIR, dg::PER
+#ifdef WITH_MPI
+    , comm
+#endif
+    ); //2d
     t.toc();
-    std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    grid.display();
+    DG_RANK0 std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
+    DG_RANK0 grid.display();
 
-    const dg::DVec vol = dg::create::volume( grid);
-    std::cout <<std::fixed<< std::setprecision(6)<<std::endl;
+    const dg::x::DVec vol = dg::create::volume( grid);
+    DG_RANK0 std::cout <<std::fixed<< std::setprecision(6)<<std::endl;
 
 
-
-    const dg::DVec lhs = dg::pullback( dg::geo::FuncDirPer(mag, psi_0, psi_1, 4), grid);
-    dg::DVec jac(lhs);
-    const dg::DVec rhs = dg::pullback( FuncDirPer2( mag, psi_0, psi_1), grid);
-    const dg::DVec sol = dg::pullback ( ArakawaDirPer( mag, psi_0, psi_1), grid);
-    dg::DVec eins = dg::evaluate( dg::one, grid);
+    const dg::x::DVec lhs = dg::pullback( dg::geo::FuncDirPer(mag, psi_0, psi_1, 4), grid);
+    dg::x::DVec jac(lhs);
+    const dg::x::DVec rhs = dg::pullback( FuncDirPer2( mag, psi_0, psi_1), grid);
+    const dg::x::DVec sol = dg::pullback ( ArakawaDirPer( mag, psi_0, psi_1), grid);
+    dg::x::DVec eins = dg::evaluate( dg::one, grid);
 
     ///////////////////////////////////////////////////////////////////////
-    std::cout << "TESTING ARAKAWA\n";
-    dg::ArakawaX<dg::aGeometry2d, dg::DMatrix, dg::DVec> arakawa( grid);
+    DG_RANK0 std::cout << "TESTING ARAKAWA\n";
+    dg::ArakawaX<dg::x::aGeometry2d, dg::x::DMatrix, dg::x::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
     const double norm = dg::blas2::dot( sol, vol, sol);
-    std::cout << std::scientific;
+    DG_RANK0 std::cout << std::scientific;
     double result = dg::blas2::dot( eins, vol, jac);
-    std::cout << "Mean     Jacobian is "<<result<<"\n";
+    DG_RANK0 std::cout << "Mean     Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( rhs, vol, jac);
-    std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
+    DG_RANK0 std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( lhs, vol, jac);
-    std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
-    //std::cout << "norm of solution "<<norm<<"\n";
-    //std::cout << "norm of Jacobian "<<dg::blas2::dot( jac, vol, jac)<<"\n";
-    //std::cout << "norm of lhs      "<<dg::blas2::dot( lhs, vol, lhs)<<"\n";
-    //std::cout << "norm of rhs      "<<dg::blas2::dot( rhs, vol, rhs)<<"\n";
+    DG_RANK0 std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
+    DG_RANK0 std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
     ///////////////////////////////////////////////////////////////////////
-    std::cout << "TESTING POISSON\n";
-    dg::Poisson<dg::aGeometry2d, dg::DMatrix, dg::DVec> poisson( grid);
+    DG_RANK0 std::cout << "TESTING POISSON\n";
+    dg::Poisson<dg::x::aGeometry2d, dg::x::DMatrix, dg::x::DVec> poisson( grid);
     poisson( lhs, rhs, jac);
     result = dg::blas2::dot( eins, vol, jac);
-    std::cout << "Mean     Jacobian is "<<result<<"\n";
+    DG_RANK0 std::cout << "Mean     Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( rhs, vol, jac);
-    std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
+    DG_RANK0 std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( lhs, vol, jac);
-    std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
+    DG_RANK0 std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( jac, vol, jac);
-    //std::cout << "norm of solution "<<norm<<"\n";
-    //std::cout << "norm of Jacobian "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
+    DG_RANK0 std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
 
     ////////////////////////////transform curvature components////////
-    std::cout << "TESTING CURVATURE 3D\n";
-    dg::DVec curvX, curvY;
-    dg::HVec tempX, tempY;
+    DG_RANK0 std::cout << "TESTING CURVATURE 3D\n";
+    dg::x::DVec curvX, curvY;
+    dg::x::HVec tempX, tempY;
     dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mag,+1), dg::geo::CurvatureNablaBZ(mag,+1), tempX, tempY, grid);
     dg::assign(  tempX, curvX);
     dg::assign(  tempY, curvY);
-    dg::DMatrix dx, dy;
+    dg::x::DMatrix dx, dy;
     dg::blas2::transfer( dg::create::dx(grid), dx);
     dg::blas2::transfer( dg::create::dy(grid), dy);
-    dg::DVec tempx(curvX), tempy(curvX);
+    dg::x::DVec tempx(curvX), tempy(curvX);
     dg::blas2::symv( dx, lhs, tempx);
     dg::blas2::symv( dy, lhs, tempy);
     dg::blas1::pointwiseDot( tempx, curvX, tempx);
@@ -179,14 +197,15 @@ int main(int argc, char** argv)
     const double normCurv = dg::blas2::dot( tempx, vol, tempx);
 
     CurvatureDirPer curv(mag, psi_0, psi_1);
-    dg::DVec curvature;
+    dg::x::DVec curvature;
     dg::assign( dg::pullback(curv, grid), curvature);
 
     dg::blas1::axpby( 1., tempx, -1., curvature, tempx);
     result = dg::blas2::dot( vol, tempx);
-    std::cout << "Curvature rel. distance to solution "<<sqrt( result/normCurv)<<std::endl; //don't forget sqrt when comuting errors
+    DG_RANK0 std::cout << "Curvature rel. distance to solution "<<sqrt( result/normCurv)<<std::endl; //don't forget sqrt when comuting errors
 
-
-
+#ifdef WITH_MPI
+    MPI_Finalize();
+#endif
     return 0;
 }

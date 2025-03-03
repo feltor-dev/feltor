@@ -131,7 +131,7 @@ inline void mpi_read_grid( unsigned& n, std::vector<unsigned>& N, MPI_Comm comm,
     if(rank == 0 and verbose)
     {
         os << "# On the grid "<<n;
-        for( unsigned u=1; u<ndims; u++)
+        for( unsigned u=0; u<ndims; u++)
             os << " x "<< N[u];
         os << std::endl;
     }
@@ -271,7 +271,7 @@ inline MPI_Comm mpi_cart_create(
 #endif //omp
             os << "# Computing with "<<np[0];
             for( unsigned u=1; u<ndims; u++)
-                os << " x" <<np[u];
+                os << " x " <<np[u];
              os << " processes x " << num_threads<<" threads = "
                 << size*num_threads<<" total"<<std::endl;
         }
