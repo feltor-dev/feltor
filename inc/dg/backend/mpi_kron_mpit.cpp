@@ -72,17 +72,19 @@ TEST_CASE("MPI Kron test")
         CHECK(mm.at(kron).root == comm);
         CHECK(mm.at(kron).remain_dims == std::vector<int>{1,0,1});
         MPI_Comm comm_sub010 = dg::mpi_cart_sub( comm, {0,1,0});
-        MPI_Comm comm111;
+        MPI_Comm comm111 = MPI_COMM_NULL;
         CHECK_THROWS_AS(
             // Cannot create kronecker in reverse order
             comm111 = dg::mpi_cart_kron( {kron, comm_sub010}), // 101 + 010
             dg::Error
         );
-        MPI_Comm doesNotWork;
+        CHECK( comm111 == MPI_COMM_NULL);
+        MPI_Comm doesNotWork = comm111;
         CHECK_THROWS_AS(
             doesNotWork =dg::mpi_cart_kron( {comm_sub010, comm_sub010}),
             dg::Error
         );
+        CHECK( doesNotWork == MPI_COMM_NULL);
         std::array<MPI_Comm,3> axes = dg::mpi_cart_split_as<3>( comm);
         CHECK( axes[0] == comm_sub100);
         CHECK( axes[1] == comm_sub010);

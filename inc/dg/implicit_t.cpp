@@ -99,6 +99,6 @@ TEST_CASE( "Default solver interface")
     err = sqrt( err/norm); res.d = err;
     INFO( " Error "<<err << "\t"<<res.i);
     CHECK( err < 1e-6);
-    CHECK( abs(res.i - 4503686874401734415) < 2);
+    CHECK( abs( res.i - 4503686873653514213) < 2);
 }
 

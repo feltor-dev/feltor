@@ -11,7 +11,8 @@ namespace dg
 {
 namespace create
 {
-// TODO document
+///@copydoc dg::create::prolongation(const aRealTopology<real_type,Nd>&,std::array<unsigned,Md>)
+///@note In MPI there is no communication involved
 template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
@@ -23,7 +24,8 @@ dg::MIHMatrix_t<typename MPITopology::value_type> prolongation(
     return dg::MIHMatrix_t<real_type>( mat);
 }
 
-// TODO document
+///@copydoc dg::create::reduction(std::array<unsigned,Md>,const aRealTopology<real_type,Nd>&)
+///@note In MPI this represents an "Allreduce" i.e. all ranks along the reduction direction get the result
 template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> reduction(
@@ -39,7 +41,8 @@ dg::MIHMatrix_t<typename MPITopology::value_type> reduction(
     return {  mat, dg::mpi_cart_kron( comms) };
 }
 
-// TODO document
+///@copydoc dg::create::projection(std::array<unsigned,Md>,const aRealTopology<real_type,Nd>&)
+///@note In MPI this represents an "Allreduce" i.e. all ranks along the reduction direction get the result
 template<class MPITopology, size_t Md, typename = std::enable_if_t< dg::is_vector_v<
     typename MPITopology::host_vector, MPIVectorTag>>>
 dg::MIHMatrix_t<typename MPITopology::value_type> projection(

@@ -7,9 +7,9 @@ include ../../config/devices/devices.mk
 
 INCLUDE+= -I../../inc   # other project libraries
 
-CUFILES=$(wildcard *.cu)
+CPPFILES=$(wildcard *.cpp)
 
-all: $(CUFILES:%.cu=%)
+all: $(CPPFILES:%.cpp=%)
 
 %_t: %_t.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g

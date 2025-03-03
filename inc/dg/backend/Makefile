@@ -9,7 +9,6 @@ INCLUDE+= -I../../ # other project libraries
 INCLUDE+= -I../    # other project libraries
 
 TARGETS=fma_t\
-gather_t\
 index_t\
 memory_t\
 traits_t\
