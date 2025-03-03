@@ -24,7 +24,7 @@ struct Fieldaligned< ProductMPIGeometry, MIMatrix, MPI_Vector<LocalContainer> >
         double deltaPhi = -1, std::string interpolation_method = "linear-nearest",
         bool benchmark = true):
             Fieldaligned( dg::geo::createBHat(vec), grid, bcx, bcy, limit, eps,
-                    mx, my, deltaPhi, interpolation_method)
+                    mx, my, deltaPhi, interpolation_method, benchmark)
     {
     }
     template <class Limiter>
@@ -305,7 +305,6 @@ struct Fieldaligned< ProductMPIGeometry, MIMatrix, MPI_Vector<LocalContainer> >
         t.toc();
         if(rank==0) std::cout << "# DS: Multiplication PI     took: "<<t.diff()<<"\n";
     }
-        m_have_adjoint = true;
     }
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////

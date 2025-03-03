@@ -32,16 +32,8 @@ int main(int argc, char * argv[])
     unsigned letters = 0;
     if( rank == 0)
     {
-        std::cout <<"# You typed\n"
-                  <<"n:  "<<n<<"\n"
-                  <<"Nx: "<<Nx<<"\n"
-                  <<"Ny: "<<Ny<<"\n"
-                  <<"Nz: "<<Nz<<std::endl;
         std::cout <<"# Type mx (10) and my (10)\n";
         std::cin >> mx[0] >> mx[1];
-        std::cout << "# You typed\n"
-                  <<"mx: "<<mx[0]<<"\n"
-                  <<"my: "<<mx[1]<<std::endl;
         std::cout << "# Type method (dg, nearest, linear, cubic) \n";
         std::cin >> method;
         method.erase( std::remove( method.begin(), method.end(), '"'), method.end());
@@ -54,21 +46,19 @@ int main(int argc, char * argv[])
 #else
     std::cout << "# Type n (3), Nx(20), Ny(20), Nz(20)\n";
     std::cin >> n>> Nx>>Ny>>Nz;
-    std::cout <<"# You typed\n"
-              <<"n:  "<<n<<"\n"
-              <<"Nx: "<<Nx<<"\n"
-              <<"Ny: "<<Ny<<"\n"
-              <<"Nz: "<<Nz<<std::endl;
     std::cout << "# Type mx (10) and my (10)\n";
     std::cin >> mx[0]>> mx[1];
-    std::cout << "# You typed\n"
-              <<"mx: "<<mx[0]<<"\n"
-              <<"my: "<<mx[1]<<std::endl;
     std::cout << "# Type method (dg, nearest, linear, cubic) \n";
     std::cin >> method;
     method.erase( std::remove( method.begin(), method.end(), '"'), method.end());
 #endif
-    DG_RANK0 std::cout << "# You typed\n"
+    DG_RANK0 std::cout <<"# You typed\n"
+              <<"n:  "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<"\n"
+              <<"Nz: "<<Nz<<"\n"
+              <<"mx: "<<mx[0]<<"\n"
+              <<"my: "<<mx[1]<<"\n"
               <<"method: "<< method<<std::endl;
     DG_RANK0 std::cout << "# Create parallel Derivative!\n";
 

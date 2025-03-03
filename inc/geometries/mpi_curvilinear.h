@@ -130,7 +130,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
     /// @copydoc hide_grid_product3d
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters
-    RealCurvilinearProductMPIGrid3d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, RealGrid1d<real_type> gz, MPI_Comm comm):
+    RealCurvilinearProductMPIGrid3d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, RealMPIGrid1d<real_type> gz, MPI_Comm comm):
         dg::aRealProductMPIGeometry3d<real_type>(
                 {0.,0., gz.x0()},{ generator.width(),
                 generator.height(),gz.x1()}, {tx.n,ty.n, gz.n()},

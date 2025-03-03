@@ -233,16 +233,13 @@ int main(int argc, char* argv[])
                 ,commEll
 #endif
                 );
-        // Catch unnecessary output from Fieldaligned constructor
-        std::stringstream ss;
-        auto cout_buf = std::cout.rdbuf( ss.rdbuf() );
         dg::geo::TokamakMagneticField mag =
             dg::geo::createGuenterField(R0, I0);
         dg::geo::Fieldaligned<dg::x::aProductGeometry3d, IMatrix, Vector>
-            dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 6, 6);
+            dsFA( mag, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-5, 6, 6,
+                -1, "linear-nearest", false);
         dg::geo::DS<dg::x::aProductGeometry3d, IMatrix, Vector>
             ds ( dsFA);
-        std::cout.rdbuf( cout_buf );
 
         ds.centered(x,y);//warm up
         t.tic();

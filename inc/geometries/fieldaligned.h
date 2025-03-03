@@ -290,7 +290,7 @@ struct Fieldaligned
         bool benchmark=true
         ):
             Fieldaligned( dg::geo::createBHat(vec),
-                grid, bcx, bcy, limit, eps, mx, my, deltaPhi, interpolation_method)
+                grid, bcx, bcy, limit, eps, mx, my, deltaPhi, interpolation_method, benchmark)
     {
     }
 
