@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-
 for dir in ../inc/dg/backend ../inc/dg/topology ../inc/dg ../inc/file
 do
     current=$(pwd)
@@ -30,3 +28,5 @@ do
     echo "##############################################################"
     echo
 done
+# Clean this directory
+rm *.o
