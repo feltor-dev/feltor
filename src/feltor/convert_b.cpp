@@ -29,12 +29,10 @@ int main( int argc, char* argv[])
     std::cout << argv[0] <<" "<<argv[1]<<" -> "<<argv[2]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    dg::file::NC_Error_Handle err;
-    int ncid_in;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
-    dg::file::WrappedJsonValue jsin = dg::file::nc_attrs2json( ncid_in, NC_GLOBAL);
+    dg::file::NcFile file_in( argv[1], dg::file::nc_nowrite);
+    std::string inputfile = file_in.get_att_as<std::string>( "inputfile");
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json(jsin["inputfile"].asString(),
+    js.asJson() = dg::file::string2Json(inputfile,
         dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
@@ -58,15 +56,12 @@ int main( int argc, char* argv[])
 
     std::cout << "Reading file "<<argv[1]<<"\n";
     std::string names[4] = {"chi", "sol", "rhs", "phi0"};
-    dg::x::HVec transferH = dg::evaluate( dg::zero, g3d_fine);
     std::map<std::string, dg::x::HVec> vecs;
-    dg::file::Reader<dg::x::CylindricalGrid3d> read3d( ncid_in, g3d_fine, {"z","y","x"});
     for( int i =0; i<4; i++)
     {
-        read3d.get( names[i], transferH);
-        dg::assign( transferH, vecs[names[i]]);
+        file_in.get_var( names[i], {g3d_fine}, vecs[names[i]]);
     }
-    nc_close(ncid_in);
+    file_in.close();
     dg::MultigridCG2d<Geometry, Matrix, Container> multigrid( g3d_fine, p.stages);
     std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > multi_pol(p.stages);
     std::vector<Container> multi_chi = multigrid.project( vecs["chi"]);
@@ -133,24 +128,21 @@ int main( int argc, char* argv[])
     //result.sort_by_row();
     std::cout << "Done\n";
 
-    int ncid_out;//, vecID;
     //int dim_ids[3];
-    err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
-    dg::file::Writer<dg::x::CylindricalGrid3d> writer( ncid_out, g3d,
-                {"z", "y", "x"});
-    std::string out_names [3] = { "sol", "rhs", "guess"};
+    dg::file::NcFile file( argv[2], dg::file::nc_clobber);
+    file.defput_dim( "R", {{"axis", "X"},
+        {"long_name", "R-coordinate in Cylindrical system"}},
+        g3d.abscissas(0));
+    file.defput_dim( "Z", {{"axis", "Y"},
+        {"long_name", "Z-coordinate in Cylindrical system"}},
+        g3d.abscissas(1));
+    file.defput_dim( "P", {{"axis", "Z"},
+        {"long_name", "Phi-coordinate in Cylindrical system"}},
+        g3d.abscissas(2));
     std::cout << "Write output "<<argv[2]<<"\n";
-    for ( unsigned i=0; i<3; i++)
-    {
-        writer.def( out_names[i], {});
-        if( out_names[i] == "guess")
-            //writer.put( out_names[i], vecs["phi0"]);
-            writer.put( out_names[i], multi_phi[STAGE]);
-        else if( out_names[i] == "sol")
-            writer.put( out_names[i], multi_sol[STAGE]);
-        else if( out_names[i] == "rhs")
-            writer.put( out_names[i], multi_rhs[STAGE]);
-    }
+    file.defput_var( "sol", {"P","Z","R"}, {}, g3d, multi_sol[STAGE]);
+    file.defput_var( "rhs", {"P","Z","R"}, {}, g3d, multi_rhs[STAGE]);
+    file.defput_var( "guess", {"P","Z","R"}, {}, g3d, multi_phi[STAGE]);
     std::cout << "Done!\n";
     std::cout << "Compare matrices!\n";
     // Test the matrix if it converges
@@ -173,24 +165,13 @@ int main( int argc, char* argv[])
     unsigned number = cg.solve( result, phi0, rhs0, multi_pol[STAGE].precond(), w3d, p.eps_pol[STAGE], 1, 10);
     std::cout << "CG solver takes "<<number<<" iterations\n";
     // Write out matrix
-    dg::RealGrid1d<int> g1d_nnz( 0,result.num_entries , 1, result.num_entries);
-    dg::file::Writer<dg::RealGrid1d<int>>( ncid_out, g1d_nnz,
-        {"nnz"}).def_and_put( "j", {}, result.column_indices);
+    file.put_att( {"ndim", unsigned(result.num_rows)});
+    file.put_att( {"ncol", unsigned(result.num_cols)});
+    file.defput_dim( "i", {}, result.row_offsets);
+    file.defput_dim( "j", {}, result.column_indices);
+    file.defput_var( "vals", {"j"}, {}, {result.values}, result.values);
 
-    dg::RealGrid1d<int> g1d_dimi( 0,result.num_rows+1 , 1, result.num_rows+1);
-    dg::file::Writer<dg::RealGrid1d<int>>( ncid_out, g1d_dimi,
-        {"dimi"}).def_and_put( "i", {}, result.row_offsets);
-
-    dg::RealGrid1d<double> g1d_val( 0,result.num_entries , 1, result.num_entries);
-    dg::file::Writer<dg::RealGrid1d<double>>( ncid_out, g1d_val,
-        {"dimv"}).def_and_put( "val", {}, result.values);
-
-    dg::file::JsonType att;
-    att["ndim"] = result.num_rows;
-    att["ncol"] = result.num_cols;
-    dg::file::json2nc_attrs( att, ncid_out, NC_GLOBAL);
-
-    err = nc_close(ncid_out);
+    file.close();
 
     return 0;
 }

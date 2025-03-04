@@ -1853,9 +1853,9 @@ void write_global_attributes( NcFile& file, int argc, char* argv[],
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
-    file.put_atts( ".", att);
+    file.put_atts( att);
 
-    file.put_atts( ".", dg::file::version_flags);
+    file.put_atts( dg::file::version_flags);
 
 }
 
@@ -1956,7 +1956,7 @@ struct WriteIntegrateDiagnostics2dList
         }
         m_slab = {*g2d_out_ptr};
         #ifdef WITH_MPI // only root group needs to track
-        if( dg::mpi_comm_global2local_rank( g2d_out_ptr->communicator()) == MPI_UNDEFINED)
+        if( dg::file::detail::mpi_comm_global2local_rank( g2d_out_ptr->communicator()) == MPI_UNDEFINED)
             m_track  = false;
         #endif
         m_resultD = dg::evaluate( dg::zero, grid);

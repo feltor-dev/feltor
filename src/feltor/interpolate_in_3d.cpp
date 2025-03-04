@@ -37,7 +37,7 @@ int main( int argc, char* argv[])
 
     //------------------------open input nc file--------------------------------//
     dg::file::NcFile file_in( argv[2], dg::file::nc_nowrite);
-    std::string inputfile = file_in.get_att_as<std::string>( ".", "inputfile");
+    std::string inputfile = file_in.get_att_as<std::string>( "inputfile");
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
     js.asJson() =
         dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
-    file_out.put_atts( ".", att);
+    file_out.put_atts( att);
 
     //-------------------Construct grids-------------------------------------//
 
@@ -244,8 +244,8 @@ int main( int argc, char* argv[])
     }
 
     // define 4d dimension
-    file_out.defput_dim_as<float>( "time", NC_UNLIMITED, {{"axis", "T"}});
-    file_out.defput_dim_as<double>( "timef", NC_UNLIMITED, {{"axis", "T"}});
+    file_out.def_dimvar_as<float>( "time", NC_UNLIMITED, {{"axis", "T"}});
+    file_out.def_dimvar_as<double>( "timef", NC_UNLIMITED, {{"axis", "T"}});
 
     for( auto& record : feltor::diagnostics3d_list)
     {

@@ -23,7 +23,7 @@ void dot( double alpha, const std::array<Container, 3>& v,
           const std::array<Container, 3>& w, double beta,
           Container& result)
 {
-    dg::blas1::evaluate( result, dg::Axpby<double>(alpha,beta), dg::PairSum(),
+    dg::blas1::evaluate( result, dg::Axpby(alpha,beta), dg::PairSum(),
         v[0], w[0], v[1], w[1], v[2], w[2]);
 }
 
@@ -105,7 +105,7 @@ void jacobian(
           double beta,
           Container& result)
 {
-    dg::blas1::evaluate( result, dg::Axpby<double>(alpha,beta), Jacobian(),
+    dg::blas1::evaluate( result, dg::Axpby(alpha,beta), Jacobian(),
         a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
 }
 }//namespace routines

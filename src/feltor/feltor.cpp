@@ -229,7 +229,7 @@ int main( int argc, char* argv[])
             return 0;
         }
         // DYNAMIC OUTPUT
-        file.defput_dim_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}, {"units", "Omega_ci^-1"}});
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}, {"units", "Omega_ci^-1"}});
 
         feltor::WriteIntegrateDiagnostics2dList diag2d( file, grid, g3d_out,
             feltor::generate_equation_list( js));

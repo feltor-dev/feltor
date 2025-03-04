@@ -44,4 +44,4 @@ doc:
 	pdflatex -shell-escape feltor.tex
 
 clean:
-	rm -f feltor feltor_hpc feltor_mpi feltordiag interpolate_in_3d feltor.bbl feltor.blg feltor.aux feltor.log feltor.out feltor.toc
+	rm -f feltor feltor_hpc feltor_mpi feltordiag interpolate_in_3d feltor.bbl feltor.blg feltor.aux feltor.log feltor.out feltor.toc convert_b multigrid_b feltor_pol
