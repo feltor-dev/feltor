@@ -26,8 +26,8 @@ struct Filter
             double eta_c = js[ "regularization"].get( "eta_c", 0.5).asDouble();
             auto op = dg::ExponentialFilter(alpha, eta_c, order, grid.n());
             m_filter = dg::create::fast_transform(
-                    dg::create::modal_filter(op, grid.dltx()),
-                    dg::create::modal_filter(op, grid.dlty()),
+                    dg::create::modal_filter(op, grid.nx()),
+                    dg::create::modal_filter(op, grid.ny()),
                     grid);
         }
         else if( m_type == "swm")

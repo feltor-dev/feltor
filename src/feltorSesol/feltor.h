@@ -52,7 +52,7 @@ struct Implicit
 
 };
 
-template< class Geometry, class Matrix, class container>
+template< class Geometry, class IMatrix, class Matrix, class container>
 struct Explicit
 {
     using value_type = dg::get_value_type<container>;
@@ -104,7 +104,7 @@ struct Explicit
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
     
-    dg::Average<container > polavg; //device int vectors would be better for cuda
+    dg::Average<IMatrix, container > polavg; //device int vectors would be better for cuda
 
     const eule::Parameters p;
 
@@ -114,8 +114,8 @@ struct Explicit
 
 };
 
-template<class Grid, class Matrix, class container>
-Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p): 
+template<class Grid, class IMatrix, class Matrix, class container>
+Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, eule::Parameters p): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
@@ -153,8 +153,8 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
 }
 
-template<class G, class Matrix, class container>
-container& Explicit<G, Matrix, container>::polarisation( const std::vector<container>& y)
+template<class G, class IM, class Matrix, class container>
+container& Explicit<G, IM, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-(bgamp+profamp)) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i n_i
@@ -186,8 +186,8 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     return phi[0];
 }
 
-template< class G, class Matrix, class container>
-container& Explicit<G, Matrix,container>::compute_psi( container& potential)
+template< class G, class IM, class Matrix, class container>
+container& Explicit<G, IM, Matrix,container>::compute_psi( container& potential)
 {
     if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1., potential, 0., phi[1]); 
@@ -204,8 +204,8 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
     return phi[1];    
 }
 
-template<class G, class Matrix, class container>
-void Explicit<G, Matrix, container>::initializene( const container& src, container& target)
+template<class G, class IM, class Matrix, class container>
+void Explicit<G, IM, Matrix, container>::initializene( const container& src, container& target)
 { 
     //gamma N_i
     if (p.tau[1] == 0.) {
@@ -218,8 +218,8 @@ void Explicit<G, Matrix, container>::initializene( const container& src, contain
     }
 }
 
-template<class G, class Matrix, class container>
-void Explicit<G, Matrix, container>::operator()( double ttt, const std::vector<container>& y, std::vector<container>& yp)
+template<class G, class IM, class Matrix, class container>
+void Explicit<G, IM, Matrix, container>::operator()( double ttt, const std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
        y[1] := N_i - (p.bgprofamp + p.nprofileamp)

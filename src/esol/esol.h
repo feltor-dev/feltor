@@ -6,7 +6,7 @@
 namespace esol
 {
 
-template< class Geometry, class Matrix, class container >
+template< class Geometry, class IMatrix, class Matrix, class container >
 struct Esol
 {
     /**
@@ -155,7 +155,7 @@ struct Esol
     
     dg::Advection<Geometry, Matrix, container> m_adv;
     
-    dg::Average<container > m_polavg; //device int vectors would be better for cuda
+    dg::Average<IMatrix, container > m_polavg; //device int vectors would be better for cuda
     
     dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
     dg::Extrapolation<container> m_phi_ex, m_psi1_ex, m_gamma_n_ex, m_gamma0sqrt_phi_ex, m_rho_ex, m_gamma0sqrtinv_rho_ex, m_gamma_SNi_ex;
@@ -168,8 +168,8 @@ struct Esol
     const esol::Parameters m_p;
 };
 
-template< class Geometry, class M, class container>
-Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p ):
+template< class Geometry, class IM, class M, class container>
+Esol< Geometry, IM, M,  container>::Esol( const Geometry& grid, const Parameters& p ):
     m_chi( evaluate( dg::zero, grid)), m_omega(m_chi), m_iota(m_chi), m_gamma_n(m_chi), m_psi1(m_chi), m_psi2(m_chi), m_rho_m1(m_chi), m_phi_m1(m_chi), m_gamma0sqrtinv_rho_m1(m_chi), m_gamma0sqrt_phi_m1(m_chi), m_logn(m_chi),
     m_hp( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, 1), grid)),
     m_hm( dg::evaluate(dg::PolynomialHeaviside(p.lx*p.xfac_sep, p.sigma_sep, -1), grid)),
@@ -179,7 +179,7 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     m_multigrid( grid, 3),
     m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi), m_gamma0sqrt_phi_ex( 2, m_chi), m_rho_ex(2, m_chi), m_gamma0sqrtinv_rho_ex(2, m_chi), m_gamma_SNi_ex(2, m_chi),
     m_volume( dg::create::volume(grid)),
-    m_polavg(grid, dg::coo2d::y,"simple"),
+    m_polavg(grid, dg::coo2d::y),
     m_p(p)
 {
     if(p.source_type == "flux") {
@@ -221,8 +221,8 @@ Esol< Geometry, M,  container>::Esol( const Geometry& grid, const Parameters& p 
     }
 }
 
-template< class G,  class M, class container>
-const container& Esol<G,  M,  container>::compute_psi( double t, const container& potential)
+template< class G, class IM, class M, class container>
+const container& Esol<G,  IM, M,  container>::compute_psi( double t, const container& potential)
 {
 
     if (m_p.tau[1] == 0.0) {
@@ -256,8 +256,8 @@ const container& Esol<G,  M,  container>::compute_psi( double t, const container
     return m_psi[1];
 }
 
-template<class G,  class M,  class container>
-const container& Esol<G,  M, container>::polarisation( double t, const std::array<container,2>& y)
+template<class G, class IM, class M,  class container>
+const container& Esol<G, IM, M, container>::polarisation( double t, const std::array<container,2>& y)
 {
     //Compute chi and m_iota for ff models
     if( m_p.equations == "ff-lwl" || m_p.equations == "ff-O2") {
@@ -325,8 +325,8 @@ const container& Esol<G,  M, container>::polarisation( double t, const std::arra
 }
 
 
-template< class G,  class M,  class container>
-void Esol<G,  M,  container>::operator()( double t, const std::array<container,2>& y, std::array<container,2>& yp)
+template< class G, class IM, class M,  class container>
+void Esol<G, IM,  M,  container>::operator()( double t, const std::array<container,2>& y, std::array<container,2>& yp)
 {
     if (m_p.formulation == "conservative")
     {

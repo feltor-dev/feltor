@@ -48,7 +48,7 @@ int main( int argc, char* argv[])
     );
     ///////MAKE MODEL///////////////////////////////////////////////
     DG_RANK0 std::cout << "Constructing Esol...\n";
-    esol::Esol<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec> esol( grid, p);
+    esol::Esol<dg::x::CartesianGrid2d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec> esol( grid, p);
     DG_RANK0 std::cout << "Done!\n";
 
     //////////////////create initial fields///////////////////////////////////////
@@ -227,15 +227,7 @@ int main( int argc, char* argv[])
         std::map<std::string, std::string> att;
         att["title"] = "Output file of feltor/src/esol/esol.cu";
         att["Conventions"] = "CF-1.7";
-        ///Get local time and begin file history
-        auto ttt = std::time(nullptr);
-        auto tm = *std::localtime(&ttt);
-
-        std::ostringstream oss;
-        ///time string  + program-name + args
-        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-        for( int i=0; i<argc; i++) oss << " "<<argv[i];
-        att["history"] = oss.str();
+        att["history"] = dg::file::timestamp( argc, argv);
         att["comment"] = "Find more info in feltor/src/esol/esol.tex";
         att["source"] = "FELTOR";
         att["references"] = "https://github.com/feltor-dev/feltor";

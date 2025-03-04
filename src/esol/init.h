@@ -7,7 +7,7 @@ namespace esol{
 ///below.
     
 std::array<dg::x::DVec,2> initial_conditions(
-    Esol<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f,
+    Esol<dg::x::CartesianGrid2d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& f,
     const dg::x::CartesianGrid2d& grid, const esol::Parameters& p,
     dg::file::WrappedJsonValue js)
 {

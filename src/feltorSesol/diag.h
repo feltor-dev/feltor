@@ -8,7 +8,7 @@ namespace eule
 
 struct Variables
 {
-    eule::Explicit<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& feltor;
+    eule::Explicit<dg::x::CartesianGrid2d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& feltor;
     eule::Implicit<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& rolkar;
     const std::vector<dg::x::DVec>& y0;
     dg::x::DMatrix dy;
@@ -17,91 +17,91 @@ struct Variables
     double dEdt;
 };
 std::vector<dg::file::Record<void( dg::x::DVec& result, Variables&)>> records = {
-    {"electrons", "",
+    {"electrons", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.y0[0], result);
         }
     },
-    {"ions", "",
+    {"ions", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.y0[1], result);
         }
     },
-    {"potential", "",
+    {"potential", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.feltor.potential()[0], result);
         }
     },
-    {"vor", "",
+    {"vor", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas2::gemv(v.rolkar.laplacianM(), v.feltor.potential()[0], result);
         }
     }
 };
 std::vector<dg::file::Record<double(Variables&)>> records0d = {
-    {"energy_time", "",
+    {"energy_time", {},
         []( Variables& v) {
             return v.time;
         }
     },
-    {"energy", "",
+    {"energy", {},
         []( Variables& v) {
             return v.feltor.energy();
         }
     },
-    {"mass", "",
+    {"mass", {},
         []( Variables& v) {
             return v.feltor.mass();
         }
     },
-    {"diffusion", "",
+    {"diffusion", {},
         []( Variables& v) {
             return v.feltor.mass_diffusion();
         }
     },
-    {"Se", "",
+    {"Se", {},
         []( Variables& v) {
             return v.feltor.energy_vector()[0];
         }
     },
-    {"Si", "",
+    {"Si", {},
         []( Variables& v) {
             return v.feltor.energy_vector()[1];
         }
     },
-    {"Uperp", "",
+    {"Uperp", {},
         []( Variables& v) {
             return v.feltor.energy_vector()[2];
         }
     },
-    {"dissipation", "",
+    {"dissipation", {},
         []( Variables& v) {
             return v.feltor.energy_diffusion();
         }
     },
-    {"G_nex", "",
+    {"G_nex", {},
         []( Variables& v) {
             return v.feltor.radial_transport();
         }
     },
-    {"Coupling", "",
+    {"Coupling", {},
         []( Variables& v) {
             return v.feltor.coupling();
         }
     },
-    {"dEdt", "",
+    {"dEdt", {},
         [](Variables& var){
             return var.dEdt;
         }
     },
-    {"accuracy", "",
+    {"accuracy", {},
         [](Variables& var){
             return var.accuracy;
         }
     }
 };
 
-std::vector<dg::file::Record<void( dg::x::DVec&, Variables&)>> probe_list =
+std::vector<dg::file::Record<void( dg::x::DVec&, Variables&), dg::file::LongNameAttribute>> probe_list =
 {
     {"electrons", "",
         [](dg::x::DVec& result, Variables& var){

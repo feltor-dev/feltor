@@ -16,7 +16,7 @@ struct Variables{
     dg::file::WrappedJsonValue& js;
 };
 
-std::vector<dg::file::Record<void(dg::DVec&, Variables&)>> diagnostics2d_list = {
+std::vector<dg::file::Record<void(dg::DVec&, Variables&), dg::file::LongNameAttribute>> diagnostics2d_list = {
     {"vorticity", "Vorticity in 2d",
         []( dg::DVec& result, Variables& v ) {
              dg::blas1::copy(v.y0, result);
@@ -29,7 +29,7 @@ std::vector<dg::file::Record<void(dg::DVec&, Variables&)>> diagnostics2d_list = 
     },
 };
 
-std::vector<dg::file::Record<void(dg::HVec&, Variables&)>> diagnostics2d_static_list = {
+std::vector<dg::file::Record<void(dg::HVec&, Variables&), dg::file::LongNameAttribute>> diagnostics2d_static_list = {
     { "weights", "integration weights in Cartesian coordinate system",
         []( dg::HVec& result, Variables& v ) {
             result = dg::create::weights( v.grid);
@@ -47,7 +47,7 @@ std::vector<dg::file::Record<void(dg::HVec&, Variables&)>> diagnostics2d_static_
     }
 };
 
-std::vector<dg::file::Record<double(Variables&)>> diagnostics1d_list = {
+std::vector<dg::file::Record<double(Variables&), dg::file::LongNameAttribute>> diagnostics1d_list = {
     {"vorticity_1d", "Integrated Vorticity",
         []( Variables& v ) {
             return dg::blas1::dot(v.y0, v.weights);

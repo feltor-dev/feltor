@@ -16,84 +16,84 @@ struct Variables
     double dEdt;
 };
 std::vector<dg::file::Record<void( dg::x::DVec& result, Variables&)>> records = {
-    {"electrons", "",
+    {"electrons", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.y0[0], result);
         }
     },
-    {"ions", "",
+    {"ions", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.y0[1], result);
         }
     },
-    {"Telectrons", "",
+    {"Telectrons", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.feltor.temptilde()[0], result);
         }
     },
-    {"Tions", "",
+    {"Tions", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.feltor.temptilde()[1], result);
         }
     },
-    {"potential", "",
+    {"potential", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas1::copy( v.feltor.potential()[0], result);
         }
     },
-    {"vor", "",
+    {"vor", {},
         []( dg::x::DVec& result, Variables& v) {
             dg::blas2::gemv(v.rolkar.laplacianM(), v.feltor.potential()[0], result);
         }
     }
 };
 std::vector<dg::file::Record<double(Variables&)>> records0d = {
-    {"energy_time", "",
+    {"energy_time", {},
         []( Variables& v) {
             return v.time;
         }
     },
-    {"energy", "",
+    {"energy", {},
         []( Variables& v) {
             return v.feltor.energy();
         }
     },
-    {"mass", "",
+    {"mass", {},
         []( Variables& v) {
             return v.feltor.mass();
         }
     },
-    {"diffusion", "",
+    {"diffusion", {},
         []( Variables& v) {
             return v.feltor.mass_diffusion();
         }
     },
-    {"Se", "",
+    {"Se", {},
         []( Variables& v) {
             return v.feltor.energy_vector()[0];
         }
     },
-    {"Si", "",
+    {"Si", {},
         []( Variables& v) {
             return v.feltor.energy_vector()[1];
         }
     },
-    {"Uperp", "",
+    {"Uperp", {},
         []( Variables& v) {
             return v.feltor.energy_vector()[2];
         }
     },
-    {"dissipation", "",
+    {"dissipation", {},
         []( Variables& v) {
             return v.feltor.energy_diffusion();
         }
     },
-    {"dEdt", "",
+    {"dEdt", {},
         [](Variables& var){
             return var.dEdt;
         }
     },
-    {"accuracy", "",
+    {"accuracy", {},
         [](Variables& var){
             return var.accuracy;
         }

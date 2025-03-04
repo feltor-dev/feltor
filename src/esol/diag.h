@@ -35,7 +35,7 @@ struct RadialEnergyDiffDeltaF //TODO recalculate for Boussi
 
 
 struct Variables{
-    esol::Esol<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f;
+    esol::Esol<dg::x::CartesianGrid2d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& f;
     esol::Parameters p;
     std::array<dg::x::DVec,2> tmp;
     double duration;

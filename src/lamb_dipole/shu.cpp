@@ -216,10 +216,9 @@ int main( int argc, char* argv[])
         else
             outputfile = argv[2];
         /// //////////////////////set up netcdf/////////////////////////////////////
-        dg::file::NC_Error_Handle err;
-        int ncid=-1;
+        dg::file::NcFile file;
         try{
-            err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+            file.open(outputfile, dg::file::nc_clobber);
         }catch( std::exception& e)
         {
             std::cerr << "ERROR creating file "<<outputfile<<std::endl;
@@ -227,31 +226,44 @@ int main( int argc, char* argv[])
            return -1;
         }
         /// Set global attributes
-        dg::file::JsonType att;
+        std::map<std::string, dg::file::nc_att_t> att;
         att["title"] = "Output file of feltor/src/lamb_dipole/shu_b.cu";
         att["Conventions"] = "CF-1.7";
-        ///Get local time and begin file history
-        auto ttt = std::time(nullptr);
-        auto tm = *std::localtime(&ttt);
-
-        std::ostringstream oss;
-        ///time string  + program-name + args
-        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-        for( int i=0; i<argc; i++) oss << " "<<argv[i];
-        att["history"] = oss.str();
+        att["history"] = dg::file::timestamp( argc, argv);
         att["comment"] = "Find more info in feltor/src/lamb_dipole/shu.tex";
         att["source"] = "FELTOR";
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = inputfile;
-        dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
-        dg::file::WriteRecordsList<dg::CartesianGrid2d>(ncid, grid, {"y", "x"}).
-            write( shu::diagnostics2d_static_list, var);
+        file.put_atts( att);
 
-        dg::file::WriteRecordsList<dg::CartesianGrid2d> writer(ncid, grid, {"time", "y", "x"});
-        dg::file::WriteRecordsList<dg::Grid0d> writ0d(ncid, {}, {"time"});
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+        file.defput_dim( "x", {{"axis", "X"},
+            {"long_name", "x-coordinate in Cartesian system"}},
+            grid.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"},
+            {"long_name", "y-coordinate in Cartesian system"}},
+            grid.abscissas(1));
+
+        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
+        dg::x::DVec resultD( resultH);
+        for( auto& record : shu::diagnostics2d_static_list)
+        {
+            record.function ( resultH, var);
+            file.defput_var( record.name, {"y","x"}, record.atts, grid, resultH);
+        }
         // First output
-        writer.write( shu::diagnostics2d_list, var);
-        writ0d.write( shu::diagnostics1d_list, var);
+        for( auto& record : shu::diagnostics2d_list)
+        {
+            record.function ( resultD, var);
+            file.def_var_as<double>( record.name, {"time", "y","x"}, record.atts);
+            file.put_var( record.name, {0, grid}, resultD);
+        }
+        for( auto& record : shu::diagnostics1d_list)
+        {
+            double data = record.function ( var);
+            file.def_var_as<double>( record.name, {"time"}, record.atts);
+            file.put_var( record.name, {0}, data);
+        }
         ///////////////////////////////////timeloop/////////////////////////
         try{
         for( unsigned u=1; u<=maxout; u++)
@@ -263,8 +275,16 @@ int main( int argc, char* argv[])
             ti.toc();
             var.duration = ti.diff();
             //output all fields
-            writer.write( shu::diagnostics2d_list, var);
-            writ0d.write( shu::diagnostics1d_list, var);
+            for( auto& record : shu::diagnostics2d_list)
+            {
+                record.function ( resultD, var);
+                file.put_var( record.name, {u, grid}, resultD);
+            }
+            for( auto& record : shu::diagnostics1d_list)
+            {
+                double data = record.function ( var);
+                file.put_var( record.name, {u}, data);
+            }
 
             std::cout << "\n\t Step "<<u <<" of "<<maxout <<" at time "<<time;
             std::cout << "\n\t Average time for one step: "<<var.duration<<"s\n\n"<<std::flush;
@@ -273,10 +293,10 @@ int main( int argc, char* argv[])
         catch( dg::Fail& fail) {
             std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
             std::cerr << "Does Simulation respect CFL condition?\n";
-            err = nc_close(ncid);
+            file.close();
             return -1;
         }
-        err = nc_close(ncid);
+        file.close();
     }
     if( !("netcdf" == output) && !("glfw" == output))
     {

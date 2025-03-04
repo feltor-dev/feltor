@@ -29,8 +29,8 @@ namespace create
  * @code{.cpp}
  * // create filter:
  * auto filter = dg::create::fast_transform(
- *      dg::create::modal_filter( op, grid.dltx()),
- *      dg::create::modal_filter( op, grid.dlty()), grid);
+ *      dg::create::modal_filter( op, grid.nx()),
+ *      dg::create::modal_filter( op, grid.ny()), grid);
  * //apply filter:
  * dg::blas2::symv( filter, x, y);
  * @endcode

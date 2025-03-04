@@ -57,7 +57,7 @@ int main( int argc, char* argv[])
     dg::HVec xcoo(dg::evaluate(dg::cooX1d,g1d));
 //     dg::HVec y0coo(dg::evaluate(1,0.0));
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
-    dg::Average<dg::HVec> polavg(g2d, dg::coo2d::y);
+    dg::Average<dg::IHMatrix, dg::HVec> polavg(g2d, dg::coo2d::y);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);

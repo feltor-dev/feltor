@@ -27,7 +27,7 @@ struct Variables{
     std::array<dg::x::DVec,2> tmp;
 };
 
-std::vector<dg::file::Record<void(dg::x::HVec&, Variables&)>> diagnostics2d_static_list = {
+std::vector<dg::file::Record<void(dg::x::HVec&, Variables&), dg::file::LongNameAttribute>> diagnostics2d_static_list = {
     { "xc", "x-coordinate in Cartesian coordinate system",
         []( dg::x::HVec& result, Variables& v ) {
             result = dg::evaluate( dg::cooX2d, v.f.grid());
@@ -40,7 +40,7 @@ std::vector<dg::file::Record<void(dg::x::HVec&, Variables&)>> diagnostics2d_stat
     }
 };
 
-std::vector<dg::file::Record<void(dg::x::DVec&, Variables&)>> diagnostics2d_list = {
+std::vector<dg::file::Record<void(dg::x::DVec&, Variables&), std::string>> diagnostics2d_list = {
     {"electrons", "Electron density",
         []( dg::x::DVec& result, Variables& v ) {
              dg::blas1::copy(v.f.density(0), result);

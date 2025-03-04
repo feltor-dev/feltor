@@ -238,7 +238,6 @@ int main( int argc, char* argv[])
             file.def_var_as<double>( record.name, {"y","x"}, record.atts);
             file.put_var( record.name, {grid_out}, resultP);
         }
-        dg::x::DVec volume = dg::create::volume( grid);
         for( auto& record : toefl::diagnostics2d_list.at( p.model))
         {
             record.function ( resultD, var);

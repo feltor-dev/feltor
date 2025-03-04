@@ -250,46 +250,60 @@ int main( int argc, char* argv[])
             dg::abort_program();
         }
         /////////////////////////////set up netcdf/////////////////////////////////////
-        dg::file::NC_Error_Handle err;
+        dg::file::NcFile file;
         std::string outputfile = argv[2];
-        int ncid=-1;
         try{
-            DG_RANK0 err = nc_create(outputfile.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
+            file.open(outputfile, dg::file::nc_clobber);
         }catch( std::exception& e)
         {
             DG_RANK0 std::cerr << "ERROR creating file "<<argv[1]<<std::endl;
             DG_RANK0 std::cerr << e.what() << std::endl;
             dg::abort_program();
         }
-        dg::file::JsonType att;
+        std::map<std::string, dg::file::nc_att_t> att;
         att["title"] = "Output file of feltor/src/feltorSHp/feltor.cpp";
         att["Conventions"] = "CF-1.8";
-        ///Get local time and begin file history
-        auto ttt = std::time(nullptr);
-
-        std::ostringstream oss;
-        ///time string  + program-name + args
-        oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
-        for( int i=0; i<argc; i++) oss << " "<<argv[i];
-        att["history"] = oss.str();
+        att["history"] = dg::file::timestamp( argc, argv);
         att["comment"] = "Find more info in feltor/src/feltorSHp/feltorSH.tex";
         att["source"] = "FELTOR";
         att["references"] = "https://github.com/feltor-dev/feltor";
         // Here we put the inputfile as a string without comments so that it can be read later by another parser
         att["inputfile"] = js.toStyledString();
-        DG_RANK0 dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
+        file.put_atts( att);
 
         eule::Variables var = { feltor, rolkar, y0, time, 0, 0};
         dg::x::IHMatrix interpolate = dg::create::interpolation( grid_out, grid);
-        dg::file::WriteRecordsList<dg::x::Grid2d> writer(ncid, grid_out, {"time", "y", "x"});
-        dg::file::Writer<dg::x::Grid0d> writ0d( ncid, {}, {"time"});
-        dg::x::DVec result = dg::evaluate( dg::zero, grid);
-        writ0d.stack("time", time);
-        writer.host_transform_write( interpolate, eule::records, result, var);
+        dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
+        dg::x::DVec resultD( resultH);
+        dg::x::HVec resultP = dg::evaluate( dg::zero, grid_out);
 
-        dg::file::WriteRecordsList<dg::x::Grid0d> writ_records0d(ncid, {}, {"energy_time"});
-        writ_records0d.write( eule::records0d, var);
-        DG_RANK0 err = nc_close(ncid);
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+        file.def_dimvar_as<double>( "energy_time", NC_UNLIMITED, {{"axis", "T"}});
+        file.defput_dim( "x", {{"axis", "X"},
+            {"long_name", "x-coordinate in Cartesian system"}},
+            grid_out.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"},
+            {"long_name", "y-coordinate in Cartesian system"}},
+            grid_out.abscissas(1));
+
+        file.put_var( "time", {0}, time);
+
+        for( auto& record : eule::records)
+        {
+            record.function ( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::blas2::symv( interpolate, resultH, resultP);
+            file.def_var_as<double>( record.name, {"time", "y","x"}, record.atts);
+            file.put_var( record.name, {0, grid_out}, resultP);
+        }
+
+        for( auto& record : eule::records0d)
+        {
+            double data = record.function ( var);
+            file.def_var_as<double>( record.name, {"energy_time"}, {record.atts});
+            file.put_var( record.name, {0}, data);
+        }
+        file.close();
         DG_RANK0 std::cout << "First write successful!\n";
         for( unsigned i=1; i<=p.maxout; i++)
         {
@@ -312,17 +326,27 @@ int main( int argc, char* argv[])
                 DG_RANK0 std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass_blob0<<"\t";
                 DG_RANK0 std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
                 DG_RANK0 std::cout <<" d E/dt = " << var.dEdt <<" Lambda = " << diss << " -> Accuracy: "<< var.accuracy << "\n";
-                DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
-                writ_records0d.write( eule::records0d, var);
-                DG_RANK0 err = nc_close(ncid);
+                file.open( outputfile, dg::file::nc_write);
+                for( auto& record : eule::records0d)
+                {
+                    double data = record.function ( var);
+                    file.put_var( record.name, {step}, data);
+                }
+                file.close();
             }
             ti.toc();
             DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
-            DG_RANK0 err = nc_open(outputfile.data(), NC_WRITE, &ncid);
-            writer.host_transform_write( interpolate, eule::records, result, var);
-            writ0d.stack("time", time);
-            DG_RANK0 err = nc_close(ncid);
+            file.open( outputfile, dg::file::nc_write);
+            for( auto& record : eule::records)
+            {
+                record.function ( resultD, var);
+                dg::assign( resultD, resultH);
+                dg::blas2::symv( interpolate, resultH, resultP);
+                file.put_var( record.name, {i, grid_out}, resultP);
+            }
+            file.put_var("time", {i}, time);
+            file.close();
         }
     }
     ////////////////////////////////////////////////////////////////////

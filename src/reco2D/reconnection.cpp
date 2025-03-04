@@ -194,10 +194,9 @@ int main( int argc, char* argv[])
         else
             outputfile = argv[2];
         /// //////////////////////set up netcdf/////////////////////////////////////
-        dg::file::NC_Error_Handle err;
-        int ncid=-1;
+        dg::file::NcFile file;
         try{
-            DG_RANK0 err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+            file.open(outputfile, dg::file::nc_clobber);
         }catch( std::exception& e)
         {
             std::cerr << "ERROR creating file "<<outputfile<<std::endl;
@@ -205,24 +204,16 @@ int main( int argc, char* argv[])
             dg::abort_program();
         }
         /// Set global attributes
-        dg::file::JsonType att;
+        std::map<std::string, dg::file::nc_att_t> att;
         att["title"] = "Output file of feltor/src/reco2D/reconnection.cu";
         att["Conventions"] = "CF-1.8";
-        ///Get local time and begin file history
-        auto ttt = std::time(nullptr);
-        std::ostringstream oss;
-        ///time string  + program-name + args
-        oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
-        for( int i=0; i<argc; i++) oss << " "<<argv[i];
-        att["history"] = oss.str();
+        att["history"] = dg::file::timestamp( argc, argv);
         att["comment"] = "Find more info in feltor/src/reco2D/reconnection.tex";
         att["source"] = "FELTOR";
-        att["git-hash"] = GIT_HASH;
-        att["git-branch"] = GIT_BRANCH;
-        att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
         att["inputfile"] = ws.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
-        DG_RANK0 dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
+        file.put_atts( att);
+        file.put_atts( dg::file::version_flags);
 
         unsigned n_out     = ws[ "output"]["n"].asUInt( 3);
         unsigned Nx_out    = ws[ "output"]["Nx"].asUInt( 48);
@@ -233,35 +224,42 @@ int main( int argc, char* argv[])
             #endif //WITH_MPI
             );
         dg::x::IHMatrix projection = dg::create::interpolation( grid_out, grid);
-
-        dg::file::WriteRecordsList<dg::x::CartesianGrid2d> ( ncid, grid_out,
-            {"y", "x"}).host_transform_write(
-            projection, asela::diagnostics2d_static_list,
-            dg::evaluate( dg::zero, grid), var) ;
-
-        dg::file::Writer<dg::x::CartesianGrid2d> write2d( ncid, grid_out,
-            {"time","y","x"});
-        dg::file::Writer<dg::x::Grid0d> write0d( ncid, {}, {"time"});
-
-        const dg::x::DVec volume = dg::create::volume( grid);
-        dg::x::DVec resultD = volume;
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
-        dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
-        for( const auto& record : asela::diagnostics2d_list)
+        dg::x::DVec resultD( resultH);
+        dg::x::HVec resultP = dg::evaluate( dg::zero, grid_out);
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+        file.defput_dim( "x", {{"axis", "X"},
+            {"long_name", "x-coordinate in Cartesian system"}},
+            grid_out.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"},
+            {"long_name", "y-coordinate in Cartesian system"}},
+            grid_out.abscissas(1));
+        for( auto& record : asela::diagnostics2d_static_list)
         {
-            record.function( resultD, var);
-            dg::assign( resultD, resultH);
-            dg::apply( projection, resultH, transferH);
-            write2d.def_and_put( record.name, dg::file::long_name( record.long_name),
-                transferH);
-            double result = dg::blas1::dot( volume, resultD);
-            write0d.def_and_put( record.name + "_1d", dg::file::long_name(
-                record.long_name + " (Volume integrated)"), result);
+            record.function ( resultH, var);
+            dg::blas2::symv( projection, resultH, resultP);
+            file.def_var_as<double>( record.name, {"y","x"}, record.atts);
+            file.put_var( record.name, {grid_out}, resultP);
         }
-        write0d.def_and_put( "time", {}, time);
-        write0d.def_and_put( "time_per_step", dg::file::long_name( "Computation time per step"), duration);
+        const dg::x::DVec volume = dg::create::volume( grid);
+        for( auto& record : asela::diagnostics2d_list)
+        {
+            record.function ( resultD, var);
+            dg::assign( resultD, resultH);
+            dg::blas2::symv( projection, resultH, resultP);
+            file.def_var_as<double>( record.name, {"time", "y","x"}, {{"long_name", record.atts}});
+            file.put_var( record.name, {0, grid_out}, resultP);
 
-        DG_RANK0 err = nc_close( ncid);
+            double result = dg::blas1::dot( volume, resultD);
+            file.def_var_as<double>( record.name + "_1d", {"time"}, {{"long_name",
+                record.atts + " (Volume integrated)"}});
+            file.put_var( record.name + "_1d", {0}, result);
+        }
+        file.put_var( "time", {0}, time);
+        file.def_var_as<double>( "time_per_step", {"time"}, {{"long_name",
+            "Computation time per step"}});
+        file.put_var( "time_per_step", {0}, duration);
+        file.close();
         ///////////////////////////////////timeloop/////////////////////////
         for( unsigned i=1; i<=maxout; i++)
         {
@@ -288,20 +286,20 @@ int main( int argc, char* argv[])
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)itstp<<"s\n\n"<<std::flush;
             //output all fields
             ti.tic();
-            DG_RANK0 err = nc_open(outputfile.c_str(), NC_WRITE, &ncid);
+            file.open( outputfile, dg::file::nc_write);
             for( const auto& record : asela::diagnostics2d_list)
             {
                 record.function ( resultD, var);
                 dg::assign( resultD, resultH);
-                dg::apply( projection, resultH, transferH);
-                write2d.stack( record.name, transferH);
+                dg::apply( projection, resultH, resultP);
+                file.put_var( record.name, {i, grid_out}, resultP);
                 double result = dg::blas1::dot( volume, resultD);
-                write0d.stack( record.name + "_1d", result);
+                file.put_var( record.name + "_1d", {i}, result);
             }
-            write0d.stack( "time", time);
-            write0d.stack( "time_per_step", duration);
+            file.put_var( "time", {i}, time);
+            file.put_var( "time_per_step", {i}, duration);
 
-            DG_RANK0 err = nc_close( ncid);
+            file.close();
             ti.toc();
             DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
         }

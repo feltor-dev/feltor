@@ -35,7 +35,7 @@ int main( int argc, char* argv[])
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bcx, p.bcy);
     //create RHS
     bool mhw = (p.model == "modified");
-    hw::HW<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rhs( grid, p.kappa,
+    hw::HW<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec > rhs( grid, p.kappa,
             p.tau, p.nu, p.eps_pol[0], mhw);
     dg::DVec one( grid.size(), 1.);
     //create initial vector
