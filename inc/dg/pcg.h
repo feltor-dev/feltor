@@ -49,7 +49,7 @@ namespace dg{
 * matrices arising e.g. in the discretization of the periodic laplacian
 * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
 *
-* @snippet cg2d_t.cpp doxygen
+* @snippet bicgstabl_t.cpp pcg
 * @copydoc hide_ContainerType
 */
 template< class ContainerType>

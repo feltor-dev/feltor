@@ -329,7 +329,7 @@ void swap_bc_perp( const FieldAligned& fa, const container& fm,
 \f$\nabla_\parallel^\dagger = -\nabla\cdot(\vec v .)\f$ and
 \f$\Delta_\parallel=-\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
-@snippet ds_t.cu doxygen
+@snippet ds_t.cpp doxygen
  * @note The parallel Laplacian cannot be inverted as long as there are
  * closed fieldlines somewhere in the domain (which is virtually always true).
 @note The \c div and \c symv member functions are close to but not exactly volume conserving

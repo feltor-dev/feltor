@@ -260,7 +260,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
 * @brief Create and manage interpolation matrices from fieldline integration
 *
 * @ingroup fieldaligned
-* @snippet ds_t.cu doxygen
+* @snippet ds_t.cpp doxygen
 * @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
 * @tparam IMatrix The type of the interpolation matrix
     - \c dg::IHMatrix, or \c dg::IDMatrix, \c dg::MIHMatrix, or \c dg::MIDMatrix

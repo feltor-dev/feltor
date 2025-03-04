@@ -53,7 +53,7 @@ with implementation details in //https://users.wpi.edu/~walker/Papers/anderson_a
  As recommended by  https://arxiv.org/pdf/1803.06673.pdf we periodically restart the acceleration to
  improve convergence behaviour.
  *  @ingroup invert
- * @snippet andersonacc_t.cpp doxygen
+ * @snippet bicgstabl_t.cpp andersonacc
  * @copydoc hide_ContainerType
  */
 template<class ContainerType>

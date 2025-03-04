@@ -53,9 +53,9 @@ TEST_CASE("Poisson")
     MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
     // TODO Does the bcx and bcy in the communicator matter??
 #endif
+    //![doxygen]
     unsigned n = 5, Nx = 32, Ny = 48;
     INFO("Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny);
-    //![doxygen]
     const dg::x::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny
 #ifdef WITH_MPI
         , comm

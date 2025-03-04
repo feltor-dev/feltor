@@ -215,7 +215,7 @@ struct FieldFinv
  * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial Z} \\
  * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial R} \f},
  * @ingroup generators_geo
- * @snippet flux_t.cu doxygen
+ * @snippet flux_t.cpp doxygen
  */
 struct Ribeiro : public aGenerator2d
 {

@@ -59,7 +59,7 @@ TEST_CASE( "Solvers")
     SECTION("PCG")
     {
         INFO("PCG SOLVER");
-//! [doxygen]
+        //! [pcg]
         // allocate memory in conjugate gradient
         dg::PCG pcg( copyable_vector, max_iter);
 
@@ -71,7 +71,7 @@ TEST_CASE( "Solvers")
         res = sqrt(dg::blas2::dot(w2d , error));
         INFO( "L2 Norm of Error is           " << res);
         CHECK( res < 1e-6);
-//! [doxygen]
+        //! [pcg]
     }
     SECTION( "cheby" )
     {
@@ -100,6 +100,7 @@ TEST_CASE( "Solvers")
     SECTION( "bicgstabl" )
     {
         INFO("BICGSTABl SOLVER");
+        //! [bicgstabl]
         dg::BICGSTABl bicg( x, 100, 2);
         unsigned num_iter = bicg.solve( A, x, b, A.precond(), A.weights(), 1e-6);
         INFO( "After "<<num_iter<<" BICGSTABl iterations we have");
@@ -107,10 +108,12 @@ TEST_CASE( "Solvers")
         res = sqrt(dg::blas2::dot(w2d , error));
         INFO( "L2 Norm of Error is           " << res);
         CHECK( res < 1e-6);
+        //! [bicgstabl]
     }
     SECTION( "lgmres" )
     {
         INFO("LGMRES SOLVER");
+        //! [lgmres]
         dg::LGMRES lgmres( x, 30, 4, 10000);
         unsigned num_iter = lgmres.solve( A, x, b, A.precond(), A.weights(), 1e-6);
         INFO( "After "<<num_iter<<" LGMRES iterations we have");
@@ -118,10 +121,12 @@ TEST_CASE( "Solvers")
         res = sqrt(dg::blas2::dot(w2d , error));
         INFO( "L2 Norm of Error is           " << res);
         CHECK( res < 1e-6);
+        //! [lgmres]
     }
     SECTION( "Andersonacc" )
     {
         INFO("ANDERSONACC");
+        //! [andersonacc]
         dg::AndersonAcceleration acc( copyable_vector, 10);
         const double eps = 1e-6;
         double damping = 1e-3;
@@ -133,6 +138,7 @@ TEST_CASE( "Solvers")
         res = sqrt(dg::blas2::dot(w2d , error));
         INFO( "L2 Norm of Error is           " << res);
         CHECK( res < 1e-6);
+        //! [andersonacc]
     }
 
 

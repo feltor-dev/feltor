@@ -23,6 +23,7 @@ namespace dg{
 * \f$ Ax=b\f$
 *
 * @ingroup invert
+* @snippet bicgstabl_t.cpp bicgstabl
 *
 * @note BICGSTAB(l) is a method for solving non-symmetrical linear systems.
 * BICGSTAB(l) is a modification of BICGSTAB that aims to improve convergence.

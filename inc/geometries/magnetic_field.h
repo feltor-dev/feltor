@@ -159,7 +159,7 @@ struct MagneticFieldParameters
  \f$
  where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the poloidal current
  and \f$ \psi_p\f$ the poloidal flux function.
- @snippet ds_t.cu doxygen
+ @snippet ds_t.cpp doxygen
 */
 struct TokamakMagneticField
 {
