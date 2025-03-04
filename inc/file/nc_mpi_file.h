@@ -413,6 +413,7 @@ struct MPINcFile
     ///@copydoc SerialNcFile::get_var(std::string,const NcHyperslab&,ContainerType&)const
     /// @note The comm in \c MPINcHyperslab must be at least a subgroup of \c communicator()
     /// @note The \c ContainerType in MPI can have either a \c dg::SharedVectorTag or \c dg::MPIVectorTag
+    /// In case it is \c dg::MPIVectorTag its communicator will be set to \c slab.communicator()
     template<class ContainerType, typename = std::enable_if_t<
         dg::is_vector_v<ContainerType, dg::SharedVectorTag> or
         dg::is_vector_v<ContainerType, dg::MPIVectorTag>>>
@@ -435,10 +436,14 @@ struct MPINcFile
         using value_type = dg::get_value_type<ContainerType>;
         auto& receive = m_receive.template get<value_type>( );
         auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
+        set_comm( data, slab.communicator(), dg::get_tensor_category<ContainerType>());
+        unsigned size = 1;
+        for( unsigned u=0; u<slab.ndim(); u++)
+            size *= slab.count()[u];
 
         if constexpr ( dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
-            m_buffer.template set<value_type>( data.size());
+            m_buffer.template set<value_type>( size);
             auto& buffer = m_buffer.template get<value_type>( );
             if( m_readonly)
                 err = detail::get_vara_T( grpid, varid,
@@ -449,6 +454,7 @@ struct MPINcFile
         }
         else
         {
+            data_ref.resize( size);
             if( m_readonly)
                 err = detail::get_vara_T( grpid, varid,
                     slab.startp(), slab.countp(),
@@ -492,6 +498,16 @@ struct MPINcFile
     }
 
     private:
+    template<class ContainerType>
+    void set_comm( MPI_Vector<ContainerType>& x, MPI_Comm comm, dg::MPIVectorTag) const
+    {
+        x.set_communicator(comm);
+    }
+    template<class ContainerType>
+    void set_comm( ContainerType& x, MPI_Comm comm, dg::AnyVectorTag) const
+    {
+        return;
+    }
     template<class ContainerType>
     const ContainerType& get_ref( const MPI_Vector<ContainerType>& x, dg::MPIVectorTag) const
     {

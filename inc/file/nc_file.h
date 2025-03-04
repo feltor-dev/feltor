@@ -83,7 +83,7 @@ namespace file
 @code{.cpp}
 auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
 @endcode
-@ingroup utilities
+@ingroup netcdf
 */
 enum NcFileMode
 {
@@ -601,9 +601,9 @@ struct SerialNcFile
      * @tparam T Any type in \c dg::file::nc_att_t or \c nc_att_t
      * in which case the type specific nc attribute getters are called
      * or \c std::vector<type> in which case the general \c nc_get_att is called
+     * @param att_name Name of the attribute
      * @param id Variable name in the current group or empty string, in which
      * case the attribute refers to the current group
-     * @param att_name Name of the attribute
      * @return Attribute cast to type \c T
      * @snippet{trimleft} nc_file_t.cpp put_att_x
      */
@@ -865,7 +865,7 @@ struct SerialNcFile
      * @snippet{trimleft} nc_utilities_t.cpp get_var
      * @param name of previously defined variable
      * @param slab Hyperslab to read
-     * @param data Result on output
+     * @param data Result on output (**will be resized to fit hyperslab**)
      * @copydoc hide_container_type
      */
     template<class ContainerType, std::enable_if_t< dg::is_vector_v<
@@ -878,18 +878,24 @@ struct SerialNcFile
         int ndims;
         err = nc_inq_varndims( m_grp, varid, &ndims);
         assert( (unsigned)ndims == slab.ndim());
+        unsigned size = 1;
+        for( unsigned u=0; u<slab.ndim(); u++)
+            size *= slab.count()[u];
         if constexpr ( dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
             using value_type = dg::get_value_type<ContainerType>;
-            m_buffer.template set<value_type>( data.size());
+            m_buffer.template set<value_type>( size);
             auto& buffer = m_buffer.template get<value_type>( );
             err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
                 buffer.data());
             dg::assign ( buffer, data);
         }
         else
+        {
+            data.resize( size);
             err = detail::get_vara_T( m_grp, varid, slab.startp(), slab.countp(),
                 thrust::raw_pointer_cast(data.data()));
+        }
     }
 
     /*! @brief Read scalar from position \c start from variable named \c name
@@ -899,7 +905,6 @@ struct SerialNcFile
      * @param start coordinate to take scalar from (can be empty for scalar
      * variable)
      * @param data Result on output
-     * into container \c data
      */
     template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
     void get_var( std::string name, const std::vector<size_t>& start, T& data) const
@@ -971,7 +976,7 @@ struct SerialNcFile
      * @brief Get a list of variable names in the current group
      *
      * We use \c std::list here because of how easy it is
-     * to sort or filter elemenets there
+     * to sort or filter elemenets.
      * For example
      * @snippet{trimleft} nc_file_t.cpp get_var_names
      * @return list of variable names in current group

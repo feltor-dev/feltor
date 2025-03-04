@@ -260,7 +260,7 @@ struct MPINcHyperslab
     std::vector<size_t>& start() { return m_slab.start();}
     ///@copydoc NcHyperslab::count()
     std::vector<size_t>& count() { return m_slab.count();}
-    /// @return MPI Communicator specifying participating ranks
+    /// @return MPI Communicator specifying ranks that participate in reading/writing data
     MPI_Comm communicator() const { return m_comm;}
     ///@copydoc NcHyperslab::startp()
     const size_t* startp() const { return m_slab.startp();}

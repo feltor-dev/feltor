@@ -94,6 +94,7 @@ TEST_CASE( "Input Output test of the NcFile class")
             CHECK( file.var_is_defined( str.first));
             CHECK( file.get_dim_size( str.first) == grid.shape(str.second));
             auto abs = grid.abscissas(str.second) , test(abs);
+            // In MPI when mode == nc_write only the group containing rank 0 in file comm reads
             file.get_var( str.first, {grid.axis(str.second)}, test);
             dg::blas1::axpby( 1.,abs,-1., test);
             double result = sqrt(dg::blas1::dot( test, test));
@@ -211,10 +212,12 @@ TEST_CASE( "Input Output test of the NcFile class")
                 record.function ( result, grid, time);
                 dg::apply( project, result, tmp);
                 // Hyperslab can be constructed from hyperslab...
-                auto test (tmp);
-                file.get_var( record.name, {i, slab}, test);
-                dg::blas1::axpby( 1.,tmp,-1., test);
-                double result = sqrt(dg::blas1::dot( test, test));
+                dg::x::DVec data;
+                // Test if data is appropriately resized
+                file.get_var( record.name, {i, slab}, data);
+                dg::blas1::axpby( 1.,tmp,-1., data);
+                // ... and communicator is set
+                double result = sqrt(dg::blas1::dot( data, data));
                 CHECK( result < 1e-15);
             }
         }
