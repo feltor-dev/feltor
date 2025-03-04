@@ -242,7 +242,7 @@ int main( int argc, char* argv[])
         map1d.emplace_back( "gridX", dg::HVec(npsi*Npsi,0.0), "Time to generated X-grid", t.diff());
         std::cout << "DONE! \n";
         t.tic();
-        dg::Average<dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
+        dg::Average<dg::IHMatrix, dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
         dg::SparseTensor<dg::HVec> metricX = gX2d->metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
@@ -410,30 +410,19 @@ int main( int argc, char* argv[])
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     std::cout << "CREATING/OPENING FILE ... \n";
-    dg::file::NC_Error_Handle err;
-    int ncid;
     std::string newfilename = argc<3 ? "geometry_diag.nc" : argv[2];
-    err = nc_create( newfilename.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
+    dg::file::NcFile file( newfilename, dg::file::nc_clobber);
     /// Set global attributes
-    dg::file::JsonType att;
-    att["title"] = "Output file of feltor/src/geometry_diag/geometry_diag.cpp";
-    att["Conventions"] = "CF-1.7";
-    ///Get local time and begin file history
-    auto tt = std::time(nullptr);
-    auto tm = *std::localtime(&tt);
-
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/geometry_diag/geometry_diag.tex";
-    att["source"] = "FELTOR";
-    att["git-hash"] = GIT_HASH;
-    att["git-branch"] = GIT_BRANCH;
-    att["compile-time"] = COMPILE_TIME;
-    att["references"] = "https://github.com/feltor-dev/feltor";
-    att["inputfile"] = js.toStyledString();
+    std::map<std::string, dg::file::nc_att_t> g_atts;
+    g_atts["title"] = "Output file of feltor/src/geometry_diag/geometry_diag.cpp";
+    g_atts["Conventions"] = "CF-1.7";
+    g_atts["history"] = dg::file::timestamp( argc, argv);
+    g_atts["comment"] = "Find more info in feltor/src/geometry_diag/geometry_diag.tex";
+    g_atts["source"] = "FELTOR";
+    g_atts["references"] = "https://github.com/feltor-dev/feltor";
+    g_atts["inputfile"] = js.toStyledString();
+    file.put_atts( g_atts);
+    file.put_atts( dg::file::version_flags);
 
     if( mag_description == dg::geo::description::standardX ||
         mag_description == dg::geo::description::standardO ||
@@ -441,13 +430,12 @@ int main( int argc, char* argv[])
         mag_description == dg::geo::description::doubleX
         )
     {
-        att["opoint"] = dg::file::vec2json( {RO, ZO});
+        file.put_att( {"opoint", std::vector{RO, ZO}});
         if( mag_description == dg::geo::description::standardX)
-            att["xpoint"] = dg::file::vec2json( {RX, ZX});
+            file.put_att( {"xpoint", std::vector{RX, ZX}});
         if( mag_description == dg::geo::description::doubleX)
-            att["xpoint"] = dg::file::vec2json( {RX, ZX, R2X, Z2X});
+            file.put_att( {"xpoint", std::vector{RX, ZX, R2X, Z2X}});
     }
-    dg::file::json2nc_attrs( att, ncid, NC_GLOBAL);
 
 
     if( compute_fsa &&
@@ -459,23 +447,25 @@ int main( int argc, char* argv[])
         )
         )
     {
-        dg::file::Writer<dg::geo::CurvilinearGrid2d> writer( ncid, *gX2d, {"eta", "zeta"});
-        writer.def_and_put( "xcc", dg::file::long_name("Cartesian x-coordinate"),
-            gX2d->map()[0]);
-        writer.def_and_put( "ycc", dg::file::long_name("Cartesian y-coordinate"),
-            gX2d->map()[1]);
+        file.defput_dim( "zeta", {{"axis", "X"},
+            {"long_name", "radial coordinate in X grid"}},
+            gX2d->abscissas(0));
+        file.defput_dim( "eta", {{"axis", "Y"},
+            {"long_name", "poloidal coordinate in X grid"}},
+            gX2d->abscissas(1));
+        file.defput_var( "xcc", {"eta", "zeta"}, {{"long_name",
+            "Cartesian x-coordinate"}},*gX2d, gX2d->map()[0]);
+        file.defput_var( "ycc", {"eta", "zeta"}, {{"long_name",
+            "Cartesian y-coordinate"}},*gX2d, gX2d->map()[1]);
     }
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
 
     //write 1d vectors
     std::cout << "WRTING 1D FIELDS ... \n";
-    dg::file::Writer<dg::Grid1d> writer1d( ncid, grid1d, {"zeta"});
     for( auto tp : map1d)
     {
-        dg::file::JsonType att;
-        att["long_name"] = std::get<2>(tp);
-        att["time"] = std::get<3>(tp);
-        writer1d.def_and_put( std::get<0>(tp), att, std::get<1>(tp));
+        file.defput_var(std::get<0>(tp), {"zeta"}, {{"long_name",
+            std::get<2>(tp)}, {"time", std::get<3>(tp)}}, grid1d, std::get<1>(tp));
     }
     //write 2d vectors
     //allocate mem for visual
@@ -484,21 +474,25 @@ int main( int argc, char* argv[])
     dg::fHVec fvisual, fvisual3d;
     std::cout << "WRTING 2D/3D CYLINDRICAL FIELDS ... \n";
     dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
-    dg::file::Writer<dg::RealCylindricalGrid3d<float>> fwriter3d( ncid, fgrid3d, {"z", "y", "x"});
+    file.defput_dim( "R", {{"axis", "X"}}, fgrid3d.abscissas(0));
+    file.defput_dim( "Z", {{"axis", "Y"}}, fgrid3d.abscissas(1));
+    file.defput_dim( "P", {{"axis", "Z"}}, fgrid3d.abscissas(2));
     dg::RealGrid2d<float> fgrid2d( Rmin, Rmax, Zmin,Zmax, n, Nx, Ny);
-    dg::file::Writer<dg::RealGrid2d<float>> fwriter2d( ncid, fgrid2d, {"y", "x"});
     for(auto tp : map)
     {
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
-        dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
+        auto prolong = dg::create::prolongation( grid3d, std::array{2u});
+        dg::apply( prolong, hvisual, hvisual3d);
         dg::assign( hvisual, fvisual);
         dg::assign( hvisual3d, fvisual3d);
 
-        dg::file::JsonType att;
-        att["long_name"] = std::get<1>(tp);
-        fwriter2d.def_and_put( std::get<0>(tp), att, fvisual);
-        att["coordinates"] = "zc yc xc";
-        fwriter3d.def_and_put( std::get<0>(tp)+"3d", att, fvisual3d);
+        std::map<std::string, dg::file::nc_att_t> atts;
+        atts["long_name"] = std::get<1>(tp);
+        file.defput_var( std::get<0>(tp), {"Z", "R"}, atts,
+            *fgrid3d.perp_grid(), fvisual);
+        atts["coordinates"] = "zc yc xc";
+        file.defput_var( std::get<0>(tp)+"3d", {"P", "Z", "R"}, atts, fgrid3d,
+            fvisual3d);
     }
     if( compute_sheath)
     {
@@ -511,15 +505,16 @@ int main( int argc, char* argv[])
             if((    std::get<0>(tp).find("Wall") != std::string::npos)
                 ||( std::get<0>(tp).find("Sheath") != std::string::npos))
                 std::cout<< std::get<0>(tp) << " took "<<t.diff()<<"s\n";
-            dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
+            auto prolong = dg::create::prolongation( grid3d, std::array{2u});
+            dg::apply( prolong, hvisual, hvisual3d);
             dg::assign( hvisual, fvisual);
             dg::assign( hvisual3d, fvisual3d);
 
-            dg::file::JsonType att;
-            att["long_name"] = std::get<1>(tp);
-            fwriter2d.def_and_put( std::get<0>(tp), att, fvisual);
-            att["coordinates"] = "zc yc xc";
-            fwriter3d.def_and_put( std::get<0>(tp)+"3d", att, fvisual3d);
+            std::map<std::string, dg::file::nc_att_t> atts;
+            atts["long_name"] = std::get<1>(tp);
+            file.defput_var( std::get<0>(tp), {"Z", "R"}, atts, *fgrid3d.perp_grid(), fvisual);
+            atts["coordinates"] = "zc yc xc";
+            file.defput_var( std::get<0>(tp)+"3d", {"P", "Z", "R"}, atts, fgrid3d, fvisual3d);
         }
     }
     std::cout << "WRTING 3D FIELDS ... \n";
@@ -537,17 +532,17 @@ int main( int argc, char* argv[])
     };
     for( auto tp : map3d)
     {
-        dg::file::JsonType att;
-        att["long_name"] = std::get<1>(tp);
+        std::map<std::string, dg::file::nc_att_t> atts;
+        atts["long_name"] = std::get<1>(tp);
         if( std::get<1>(tp) != "xc" && std::get<1>(tp) != "yc" &&std::get<1>(tp) != "zc")
         {
-            att["coordinates"] = "zc yc xc";
+            atts["coordinates"] = "zc yc xc";
         }
         hvisual3d = dg::evaluate( std::get<2>(tp), grid3d);
         dg::assign( hvisual3d, fvisual3d);
-        fwriter3d.def_and_put( std::get<0>(tp), att, fvisual3d);
+        file.defput_var( std::get<0>(tp), {"P", "Z", "R"}, atts, fgrid3d, fvisual3d);
     }
     //////////////////////////////Finalize////////////////////////////////////
-    err = nc_close(ncid);
+    file.close();
     return 0;
 }

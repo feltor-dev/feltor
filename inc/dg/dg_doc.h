@@ -72,7 +72,7 @@
  *              @defgroup fast_interpolation Fast interpolation
  *         @}
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
- *         @defgroup average Averaging and partial reductions
+ *         @defgroup average Averaging, prolongation and partial reductions
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and tensor operations
