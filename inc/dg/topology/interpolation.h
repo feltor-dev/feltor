@@ -586,8 +586,8 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * the dg::create::fast_interpolation %functions
  *
  * @param g_new The new grid
- * @param g_old The old grid.  The boundaries of the old grid must lie within
- * the boundaries of the new grid
+ * @param g_old The old grid. The boundaries of the new grid must lie within
+ * the boundaries of the old grid.
  * @copydoc hide_method
  *
  * @return Interpolation matrix with \c g_old.size() columns and \c
@@ -602,7 +602,11 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
     //assert both grids are on the same box
     for( unsigned u=0; u<Nd; u++)
     {
+        if( g_new.p(u) < g_old.p(u))
+            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.p(u)<<" lies outside old grid "<<g_old.p(u)<<"\n";
         assert( g_new.p(u) >= g_old.p(u));
+        if( g_new.q(u) > g_old.q(u))
+            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.q(u)<<" lies outside old grid "<<g_old.q(u)<<"\n";
         assert( g_new.q(u) <= g_old.q(u));
     }
     std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
