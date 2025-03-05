@@ -448,16 +448,21 @@ int main( int argc, char* argv[])
         )
     {
         file.defput_dim( "zeta", {{"axis", "X"},
-            {"long_name", "radial coordinate in X grid"}},
+            {"long_name", "Radial coordinate in X grid"}},
             gX2d->abscissas(0));
         file.defput_dim( "eta", {{"axis", "Y"},
-            {"long_name", "poloidal coordinate in X grid"}},
+            {"long_name", "Poloidal coordinate in X grid"}},
             gX2d->abscissas(1));
         file.defput_var( "xcc", {"eta", "zeta"}, {{"long_name",
             "Cartesian x-coordinate"}},*gX2d, gX2d->map()[0]);
         file.defput_var( "ycc", {"eta", "zeta"}, {{"long_name",
             "Cartesian y-coordinate"}},*gX2d, gX2d->map()[1]);
     }
+    else
+        file.defput_dim( "zeta", {{"axis", "X"},
+            {"long_name", "Flux surface label"}},
+            grid1d.abscissas(0));
+
     dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
 
     //write 1d vectors
