@@ -474,9 +474,12 @@ int main( int argc, char* argv[])
     dg::fHVec fvisual, fvisual3d;
     std::cout << "WRTING 2D/3D CYLINDRICAL FIELDS ... \n";
     dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
-    file.defput_dim( "R", {{"axis", "X"}}, fgrid3d.abscissas(0));
-    file.defput_dim( "Z", {{"axis", "Y"}}, fgrid3d.abscissas(1));
-    file.defput_dim( "P", {{"axis", "Z"}}, fgrid3d.abscissas(2));
+    file.defput_dim( "R", {{"axis", "X"}, {"long_name", "R coordinate in Cylindrical system"}},
+        fgrid3d.abscissas(0));
+    file.defput_dim( "Z", {{"axis", "Y"}, {"long_name", "Z coordinate in Cylindrical system"}},
+        fgrid3d.abscissas(1));
+    file.defput_dim( "P", {{"axis", "Z"}, {"long_name", "Phi coordinate in Cylindrical system"}},
+        fgrid3d.abscissas(2));
     dg::RealGrid2d<float> fgrid2d( Rmin, Rmax, Zmin,Zmax, n, Nx, Ny);
     for(auto tp : map)
     {
