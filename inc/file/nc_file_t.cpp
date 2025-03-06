@@ -162,7 +162,7 @@ TEST_CASE( "Open, groups, dims, atts")
 
         file.close();
         // ! [groups]
-        DG_RANK0 std::filesystem::remove( "groups.nc");
+        DG_RANK0 std::filesystem::remove( "grps.nc");
     }
     ////////////////// Dimensions
     SECTION( "Dimensions")

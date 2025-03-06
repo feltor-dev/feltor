@@ -28,7 +28,7 @@ TEST_CASE( "Easy attributes")
         CHECK( not ss.fail());
         std::string program;
         ss >> program;
-        std::cout << program<<"\n";
+        INFO( "Program "<<program);
         CHECK( program == "./netcdf_t");
         std::string arg;
         ss >> arg;
