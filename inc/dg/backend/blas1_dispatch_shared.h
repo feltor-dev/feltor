@@ -140,7 +140,7 @@ size_t get_size( const T& x)
 }
 
 template< class ContainerType, class BinarySubroutine, class Functor, class ...ContainerTypes>
-inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine binary, Functor f, const ContainerTypes&... xs)
+inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine&& binary, Functor&& f, const ContainerTypes&... xs)
 {
     constexpr size_t N = sizeof ...(ContainerTypes);
     std::array<size_t, N> sizes{ get_size(xs)...};
@@ -156,7 +156,7 @@ inline void doKronecker( dg::SharedVectorTag, ContainerType& y, BinarySubroutine
             dg::get_execution_policy<vector_type>(),
             dg::do_get_pointer_or_reference(y,dg::get_tensor_category<ContainerType>()) ,
             size,
-            binary, f,
+            std::forward<BinarySubroutine>(binary), std::forward<Functor>(f),
             sizes,
             dg::do_get_pointer_or_reference(xs,dg::get_tensor_category<ContainerTypes>()) ...
             );
@@ -179,7 +179,7 @@ __host__ __device__
     }
 };
 template<class ContainerType, class Functor, class ...ContainerTypes>
-auto doKronecker( SharedVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto doKronecker( SharedVectorTag, Functor&& f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     constexpr size_t N = sizeof ...(ContainerTypes)+1;
     std::array<size_t, N> sizes{ dg::blas1::detail::get_size(x0), dg::blas1::detail::get_size(xs)...};
@@ -194,13 +194,13 @@ auto doKronecker( SharedVectorTag, Functor f, const ContainerType& x0, const Con
     if constexpr (std::is_same_v<execution_policy, SerialTag>)
     {
         thrust::host_vector<value_type> y( size);
-        dg::blas1::kronecker( y, _equals(), f, x0, xs ...);
+        dg::blas1::kronecker( y, _equals(), std::forward<Functor>(f), x0, xs ...);
         return y;
     }
     else
     {
         thrust::device_vector<value_type> y( size);
-        dg::blas1::kronecker( y, _equals(), f, x0, xs ...);
+        dg::blas1::kronecker( y, _equals(), std::forward<Functor>(f), x0, xs ...);
         return y;
     }
 }

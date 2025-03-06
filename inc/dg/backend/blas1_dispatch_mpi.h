@@ -137,16 +137,16 @@ inline T doReduce( MPIVectorTag, const ContainerType& x, T zero, BinaryOp op,
     return result;
 }
 template< class BinarySubroutine, class Functor, class ContainerType, class ...ContainerTypes>
-inline void doKronecker( MPIVectorTag, ContainerType& y, BinarySubroutine f, Functor g, const ContainerTypes&... xs)
+inline void doKronecker( MPIVectorTag, ContainerType& y, BinarySubroutine&& f, Functor&& g, const ContainerTypes&... xs)
 {
-    dg::blas1::kronecker( do_get_data( y, get_tensor_category<ContainerType>()), f, g,
+    dg::blas1::kronecker( do_get_data( y, get_tensor_category<ContainerType>()), std::forward<BinarySubroutine>(f), std::forward<Functor>(g),
         do_get_data(xs, get_tensor_category<ContainerTypes>())...);
 }
 
 } //namespace detail
 } //namespace blas1
 template<class ContainerType, class Functor, class ...ContainerTypes>
-auto kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs);
+auto kronecker( Functor&& f, const ContainerType& x0, const ContainerTypes& ... xs);
 namespace detail
 {
 
@@ -160,7 +160,7 @@ inline MPI_Comm do_get_comm( const T& v, AnyScalarTag){
     return MPI_COMM_NULL;
 }
 template<class ContainerType, class Functor, class ...ContainerTypes>
-auto doKronecker( MPIVectorTag, Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto doKronecker( MPIVectorTag, Functor&& f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     constexpr size_t N = sizeof ...(ContainerTypes)+1;
     std::vector<MPI_Comm> comms{ do_get_comm(x0, get_tensor_category<ContainerType>()),
@@ -171,7 +171,7 @@ auto doKronecker( MPIVectorTag, Functor f, const ContainerType& x0, const Contai
         if ( comms[u] != MPI_COMM_NULL)
             non_zero_comms.push_back( comms[u]);
 
-    auto ydata = dg::kronecker( f, do_get_data(x0, get_tensor_category<ContainerType>()), do_get_data( xs, get_tensor_category<ContainerTypes>())...);
+    auto ydata = dg::kronecker( std::forward<Functor>(f), do_get_data(x0, get_tensor_category<ContainerType>()), do_get_data( xs, get_tensor_category<ContainerTypes>())...);
 
 
     return MPI_Vector<decltype(ydata)>{ydata, dg::mpi_cart_kron( non_zero_comms)};

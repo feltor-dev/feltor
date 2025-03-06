@@ -486,10 +486,10 @@ int main( int argc, char* argv[])
     file.defput_dim( "P", {{"axis", "Z"}, {"long_name", "Phi coordinate in Cylindrical system"}},
         fgrid3d.abscissas(2));
     dg::RealGrid2d<float> fgrid2d( Rmin, Rmax, Zmin,Zmax, n, Nx, Ny);
+    auto prolong = dg::create::prolongation( grid3d, std::array{2u});
     for(auto tp : map)
     {
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
-        auto prolong = dg::create::prolongation( grid3d, std::array{2u});
         dg::apply( prolong, hvisual, hvisual3d);
         dg::assign( hvisual, fvisual);
         dg::assign( hvisual3d, fvisual3d);

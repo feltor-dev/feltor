@@ -62,13 +62,14 @@ inline T doReduce_dispatch( SerialTag, int size, Pointer x, T init, BinaryOp
         init = op( init, unary_op(x[i]));
     return init;
 }
+// Note: Here the universal reference is really important vs "F f" else we copy f on every call
 template<class B, class F, class Pointer, std::size_t ...I, class ...PointerOrValues>
-void call_host_F( B binary, F f, Pointer y, unsigned u, size_t* a, std::index_sequence<I...>, PointerOrValues ... xs)
+void call_host_F( B&& binary, F&& f, Pointer y, unsigned u, size_t* a, std::index_sequence<I...>, PointerOrValues ... xs)
 {
     binary( f( get_element( xs, a[I])...), y[u]);
 }
 template<class B, class F, size_t N, class Pointer, class ...PointerOrValues>
-void doKronecker_dispatch( dg::SerialTag, Pointer y, size_t size, B binary, F f, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
+void doKronecker_dispatch( dg::SerialTag, Pointer y, size_t size, B&& binary, F&& f, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
 {
     std::array<size_t, N> current = {0};
     for( unsigned u=0; u<size; u++)
@@ -80,7 +81,8 @@ void doKronecker_dispatch( dg::SerialTag, Pointer y, size_t size, B binary, F f,
         //    current[k] = remain%sizes[k];
         //    remain = remain/sizes[k];
         //}
-        call_host_F( binary, f, y, u, &current[0], std::make_index_sequence<N>(), xs ...);
+        call_host_F( std::forward<B>(binary), std::forward<F>(f), y, u,
+            &current[0], std::make_index_sequence<N>(), xs ...);
         // Counting is MUCH faster than modulo operations on CPU
         for( unsigned k=0; k<N; k++)
         {

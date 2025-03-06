@@ -116,22 +116,22 @@ void doKronecker_omp( Pointer y, size_t size, F f, G g, const std::array<size_t,
     }
 }
 template<class F, class G, size_t N, class Pointer, class ...PointerOrValues>
-void doKronecker_dispatch( OmpTag, Pointer y, size_t size, F f, G g, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
+void doKronecker_dispatch( OmpTag, Pointer y, size_t size, F&& f, G&& g, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
 {
     if(omp_in_parallel())
     {
-        doKronecker_omp( y, size, f, g, sizes, xs... );
+        doKronecker_omp( y, size, std::forward<F>(f), std::forward<G>(g), sizes, xs... );
         return;
     }
     if(size>MIN_SIZE)
     {
         #pragma omp parallel
         {
-            doKronecker_omp( y, size, f, g, sizes, xs... );
+            doKronecker_omp( y, size, std::forward<F>(f), std::forward<G>(g), sizes, xs... );
         }
     }
     else
-        doKronecker_dispatch( SerialTag(), y, size, f, g, sizes, xs...);
+        doKronecker_dispatch( SerialTag(), y, size, std::forward<F>(f), std::forward<G>(g), sizes, xs...);
 }
 
 }//namespace detail

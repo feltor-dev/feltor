@@ -15,9 +15,9 @@ namespace dg
 
 ///@cond
 template< class Functor, class Topology, size_t ...I>
-auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
+auto do_evaluate( Functor&& f, const Topology& g, std::index_sequence<I...>)
 {
-    return dg::kronecker( f, g.abscissas(I)...);
+    return dg::kronecker( std::forward<Functor>(f), g.abscissas(I)...);
 }
 
 ///@endcond
@@ -71,7 +71,7 @@ auto do_evaluate( Functor f, const Topology& g, std::index_sequence<I...>)
  * coordinates that it owns i.e. the local part of the given grid
  */
 template< class Functor, class Topology>
-auto evaluate( Functor f, const Topology& g)
+auto evaluate( Functor&& f, const Topology& g)
 {
     // The evaluate function is the reason why our Topology needs to have fixed
     // sized dimensions instead of dynamically sized dimensions
@@ -81,7 +81,7 @@ auto evaluate( Functor f, const Topology& g)
     //
     // If we ever change the order of the fastest dimension we need to rethink
     // NetCDF hyperslab construction
-    return do_evaluate( f, g, std::make_index_sequence<Topology::ndim()>());
+    return do_evaluate( std::forward<Functor>(f), g, std::make_index_sequence<Topology::ndim()>());
 };
 
 ///@cond

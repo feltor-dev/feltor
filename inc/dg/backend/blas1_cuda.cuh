@@ -100,9 +100,11 @@ inline T doReduce_dispatch( CudaTag, int size, Pointer x, T init, BinaryOp op,
     return thrust::transform_reduce(thrust::cuda::par, x, x+size, unary_op,
             init, op);
 }
+
+// Note: Here the universal reference is really important vs "F f" else we copy f on every call
 template<class Binary, class F, class Pointer, std::size_t ...I, class ...PointerOrValues>
 __device__
-inline void call_device_F( Binary binary, F f, Pointer y, int i, size_t* a,
+inline void call_device_F( Binary && binary, F && f, Pointer y, int i, size_t* a,
         std::index_sequence<I...>, PointerOrValues ... xs)
 {
     binary( f( get_device_element( xs, a[I])...), y[i]);
@@ -129,8 +131,8 @@ __global__ void kronecker_kernel( int size, const size_t* sizes, Pointer y,
 }
 
 template<class Binary, class F, size_t N, class Pointer, class ...PointerOrValues>
-inline void doKronecker_dispatch( dg::CudaTag, Pointer y, size_t size, Binary
-        binary, F f, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
+inline void doKronecker_dispatch( dg::CudaTag, Pointer y, size_t size, Binary &&
+        binary, F && f, const std::array<size_t, N>& sizes, PointerOrValues ...xs)
 {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
@@ -138,7 +140,7 @@ inline void doKronecker_dispatch( dg::CudaTag, Pointer y, size_t size, Binary
     kronecker_kernel<Binary,F,N,Pointer,PointerOrValues...> <<<NUM_BLOCKS, BLOCK_SIZE>>>(size,
             thrust::raw_pointer_cast(tmp.data()),
             y,
-            binary, f,
+            std::forward<Binary>(binary), std::forward<F>(f),
             xs...);
 }
 

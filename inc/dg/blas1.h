@@ -856,10 +856,10 @@ inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
  * @ingroup blas1
  */
 template<class ContainerType, class Functor, class ...ContainerTypes>
-auto kronecker( Functor f, const ContainerType& x0, const ContainerTypes& ... xs)
+auto kronecker( Functor&& f, const ContainerType& x0, const ContainerTypes& ... xs)
 {
     using tensor_category  = get_tensor_category<ContainerType>;
-    return dg::detail::doKronecker( tensor_category(), f, x0, xs...);
+    return dg::detail::doKronecker( tensor_category(), std::forward<Functor>(f), x0, xs...);
 }
 
 
