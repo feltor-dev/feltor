@@ -19,6 +19,7 @@ TEST_CASE( "MPI Grid")
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     unsigned nx = 2, ny = 3,  Nx = 8, Ny = 10;
     MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1,1});
+    MPI_Comm comm1d = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {1});
     ///%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%//
     // Assume that evaluate works
     dg::MPIGrid2d g2d( {0.,0.}, {1.,1.}, {nx,ny}, {Nx,Ny}, {dg::PER, dg::PER},
@@ -80,5 +81,22 @@ TEST_CASE( "MPI Grid")
         int sIdx = start[0]*g2d.shape(0) + start[1];
         INFO( "Rank "<<rank<<" sIdx "<<sIdx<<" gIdx "<<gIdx);
         CHECK( sIdx == gIdx);
+    }
+
+    SECTION( "Local and global boundaries")
+    {
+        // This reproduces a bug in a TCV feltor3d run
+        double boxscaleZm = 3.8, boxscaleZp = 1.85;
+        const double scale = 1000.5340440422314;
+        double R0 = 0.9*scale;
+        double inverseaspectratio = 0.2777777777777778;
+        double a = R0*inverseaspectratio;
+        const double Zmin = -boxscaleZm*a;
+        const double Zmax = +boxscaleZp*a;
+        dg::MPIGrid1d g1d( Zmin, Zmax, 3, 80, comm1d );
+        if( rank == 0)
+            CHECK( g1d.local().p() == g1d.p());
+        if( rank == size-1)
+            CHECK( g1d.local().q() == g1d.q());
     }
 }

@@ -630,6 +630,9 @@ struct aRealMPITopology
 
             p[u] = m_g.p(u) + m_g.h(u)*idx[coords[u]];
             q[u] = m_g.p(u) + m_g.h(u)*idx[coords[u] +1];
+            // The local right boundary should be the same as the global right boundary
+            if( coords[u] == dims[u]-1)
+                q[u] = m_g.q(u);
         }
         m_l = { p, q, m_g.get_n(), N, m_g.get_bc()};
     }
@@ -647,7 +650,7 @@ struct aRealMPITopology
         m_l = RealGrid<real_type,Nd>( locals);
         m_comm = dg::mpi_cart_kron( {m_comms.begin(), m_comms.end()});
     }
- 
+
     ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealMPITopology(const aRealMPITopology& src) = default;
     ///@copydoc aRealTopology::operator=

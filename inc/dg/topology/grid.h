@@ -417,7 +417,7 @@ struct aRealTopology
     template<size_t Md = Nd>
     std::enable_if_t<(Md == 1), void> set( unsigned new_n, unsigned new_Nx)
     {
-        set({new_n}, {new_Nx});
+        set(std::array{new_n}, std::array{new_Nx});
     }
 
     /**

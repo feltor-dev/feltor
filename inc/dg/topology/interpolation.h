@@ -603,10 +603,10 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
     for( unsigned u=0; u<Nd; u++)
     {
         if( g_new.p(u) < g_old.p(u))
-            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.p(u)<<" lies outside old grid "<<g_old.p(u)<<"\n";
+            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.p(u)<<" lies outside old grid "<<g_old.p(u)<<" "<<g_old.p(u)-g_new.p(u)<<"\n";
         assert( g_new.p(u) >= g_old.p(u));
         if( g_new.q(u) > g_old.q(u))
-            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.q(u)<<" lies outside old grid "<<g_old.q(u)<<"\n";
+            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.q(u)<<" lies outside old grid "<<g_old.q(u)<<" "<<g_old.q(u)-g_new.q(u)<<"\n";
         assert( g_new.q(u) <= g_old.q(u));
     }
     std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
