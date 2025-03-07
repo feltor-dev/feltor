@@ -19,11 +19,11 @@ using Matrix = dg::x::DMatrix;
 using Vector = dg::x::DVec;
 using value_t = double;
 
-static value_t zero( value_t x, value_t y) { return 0;}
+static value_t sine( value_t x) { return sin(x);}
+static value_t cosx( value_t x) { return cos(x);}
 static value_t sine( value_t x, value_t y) { return sin(x)*sin(y);}
 static value_t cosx( value_t x, value_t y) { return cos(x)*sin(y);}
 static value_t cosy( value_t x, value_t y) { return cos(y)*sin(x);}
-static value_t zero( value_t x, value_t y, value_t z) { return 0;}
 static value_t sine( value_t x, value_t y, value_t z) { return sin(x)*sin(y)*sin(z);}
 static value_t cosx( value_t x, value_t y, value_t z) { return cos(x)*sin(y)*sin(z);}
 static value_t cosy( value_t x, value_t y, value_t z) { return cos(y)*sin(x)*sin(z);}
@@ -71,7 +71,7 @@ TEST_CASE( "Derivatives")
         const Vector f2d = dg::evaluate( sine, g2d);
         const Vector dx2d = dg::evaluate( cosx, g2d);
         const Vector dy2d = dg::evaluate( cosy, g2d);
-        const Vector null2 = dg::evaluate( zero, g2d);
+        const Vector null2 = dg::evaluate( dg::zero, g2d);
         Vector sol2[] = {dx2d, dy2d, null2, null2};
 #if __GNUC__ >= 13
         int64_t binary2[] = {4562611930300282861,4553674328256673277,4567083257206217158,4574111364446550181};
@@ -110,7 +110,7 @@ TEST_CASE( "Derivatives")
         const Vector dx3d = dg::evaluate( cosx, g3d);
         const Vector dy3d = dg::evaluate( cosy, g3d);
         const Vector dz3d = dg::evaluate( cosz, g3d);
-        const Vector null3 = dg::evaluate( zero, g3d);
+        const Vector null3 = dg::evaluate( dg::zero, g3d);
         Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
 #if __GNUC__ >= 13
         int64_t binary3[] = {4561946736820640320,4553062895410783769,4594213495911299616,4566393134538622288,4573262464593641524,4594304523193682043};
@@ -137,7 +137,7 @@ TEST_CASE( "Derivatives")
                 );
         Matrix dx3 = dg::create::dx( g3d, g3d.bcx(), dg::forward);
         const Vector f3d = dg::evaluate( sine, g3d);
-        Vector error = dg::evaluate( zero, g3d);
+        Vector error = dg::evaluate( dg::zero, g3d);
 #ifdef WITH_MPI
         error.data()[0]  = NAN;
         error.data()[1] = NAN;
@@ -152,6 +152,29 @@ TEST_CASE( "Derivatives")
         INFO("Symv contains NaN: "<<std::boolalpha<<hasnan<<" (false)");
         CHECK( not hasnan);
     }
+    SECTION( "Low dimensional construction")
+    {
+        // This reproduces a bug for small dimensional MPI construction
+        const unsigned n = 13, Nx = 3;
+        dg::x::Grid1d g1d( 0,M_PI,n,Nx, dg::DIR
+#ifdef WITH_MPI
+        , comms1d[0]
+#endif
+        );
+        auto dir = GENERATE( dg::forward, dg::backward, dg::centered);
+        dg::bc bc = dg::DIR;
+        //auto bc = GENERATE( dg::DIR, dg::NEU, dg::NEU_DIR, dg::DIR_NEU, dg::PER);
+        Matrix dx = dg::create::dx( g1d, bc, dir);
+        Vector x = dg::evaluate( sine, g1d), y(x);
+        Vector sol = dg::evaluate( cosx, g1d);
+        const Vector w1d = dg::create::weights( g1d);
+        dg::blas2::symv( dx, x, y);
+        dg::blas1::axpby( 1., sol, -1., y);
+        double norm = sqrt(dg::blas2::dot( y,w1d,y));
+        INFO("Distance "<<dg::bc2str(bc)<<" "<<dg::direction2str(dir)<<" to true solution: "<<norm);
+        CHECK( norm < 1e-13);
+    }
+
 }
 
 TEST_CASE( "Documentation dx")
