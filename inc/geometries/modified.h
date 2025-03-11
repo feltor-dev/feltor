@@ -338,14 +338,15 @@ struct ClosedFieldlineRegion
     {
         double RO = mag.R0(), ZO= 0.;
         description desc = mag.params().getDescription();
-        if( desc != description::none and desc != description::centeredX)
+        if( desc == description::none or desc == description::centeredX)
         {
-            dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-            m_opoint = true;
+            // w/o O-point there is no closed Fieldline region
+            m_opoint = false;
         }
         else
         {
-            m_opoint = false;
+            m_opoint = true;
+            dg::geo::findOpoint( mag.get_psip(), RO, ZO);
             double psipO = mag.psip()( RO, ZO);
             m_psipO_pos = psipO > 0;
             double RX1 = 0., ZX1 = 0., RX2 = 0., ZX2 = 0.;
@@ -372,16 +373,16 @@ struct ClosedFieldlineRegion
     }
     bool operator()( double R, double Z) const
     {
-        if( !m_opoint)
-            return m_closed ? false : true;
+        if( not m_opoint)
+            return not m_closed;
         for( unsigned u=0; u<m_above.size(); u++)
-            if( !m_above[u](R,Z))
-                return m_closed ? false : true;
+            if( not m_above[u](R,Z))
+                return not m_closed;
 
         double psip = m_psip(R,Z);
         if( m_psipO_pos == (psip > 0) ) // true if O-point >0 and psip >0 or if O-point <0 and psip <0
-            return m_closed ? true : false;
-        return m_closed ? false : true;
+            return m_closed;
+        return not m_closed;
     }
     private:
     bool m_opoint;
