@@ -1875,12 +1875,12 @@ void write_static_list( NcFile& file, const HostList& records, Variables& var,
     {
         record.function( resultH, var, grid);
         dg::blas2::symv( projectH, resultH, transferH);
-        file.defput_var( record.name, {"Z", "R"}, record.atts, {*g2d_out_ptr},
+        file.defput_var( record.name, {"y", "x"}, record.atts, {*g2d_out_ptr},
                 transferH);
     }
     resultH = dg::pullback( transition, grid);
     dg::blas2::symv( projectH, resultH, transferH);
-    file.defput_var( "MagneticTransition", {"Z", "R"}, {{"long_name",
+    file.defput_var( "MagneticTransition", {"y", "x"}, {{"long_name",
         "The region where the magnetic field is modified"}},
         {*g2d_out_ptr}, transferH);
 }
@@ -1947,11 +1947,11 @@ struct WriteIntegrateDiagnostics2dList
         {
             std::string name = record.name + "_ta2d";
             std::string long_name = record.long_name + " (Toroidal average)";
-            m_file->template def_var_as<double>( name, {"time", "Z", "R"},
+            m_file->template def_var_as<double>( name, {"time", "y", "x"},
                     {{"long_name", long_name}});
             name = record.name + "_2d";
             long_name = record.long_name+ " (Evaluated on phi = 0 plane)";
-            m_file->template def_var_as<double>( name, {"time", "Z", "R"},
+            m_file->template def_var_as<double>( name, {"time", "y", "x"},
                     {{"long_name", long_name}});
         }
         m_slab = {*g2d_out_ptr};

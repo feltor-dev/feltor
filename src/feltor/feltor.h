@@ -984,14 +984,14 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
     if( counter == 10)
     {
         typename dg::file::NcFile::Hyperslab slab( m_multigrid.grid(0));
-        pol_file.defput_var( "chi",  {"P","Z","R"}, {}, slab, m_multi_chi[0]);
-        pol_file.defput_var( "sol",  {"P","Z","R"}, {}, slab, phi);
-        pol_file.defput_var( "rhs",  {"P","Z","R"}, {}, slab, m_temp0);
-        pol_file.defput_var( "ne",   {"P","Z","R"}, {}, slab, density[0]);
-        pol_file.defput_var( "Ni",   {"P","Z","R"}, {}, slab, density[1]);
-        pol_file.defput_var( "phiH", {"P","Z","R"}, {}, slab, m_old_phi.head());
+        pol_file.defput_var( "chi",  {"z","y","x"}, {}, slab, m_multi_chi[0]);
+        pol_file.defput_var( "sol",  {"z","y","x"}, {}, slab, phi);
+        pol_file.defput_var( "rhs",  {"z","y","x"}, {}, slab, m_temp0);
+        pol_file.defput_var( "ne",   {"z","y","x"}, {}, slab, density[0]);
+        pol_file.defput_var( "Ni",   {"z","y","x"}, {}, slab, density[1]);
+        pol_file.defput_var( "phiH", {"z","y","x"}, {}, slab, m_old_phi.head());
         m_old_phi.extrapolate( time, phi);
-        pol_file.defput_var( "phi0",  {"P","Z","R"}, {}, slab, phi);
+        pol_file.defput_var( "phi0",  {"z","y","x"}, {}, slab, phi);
         pol_file.close();
         dg::abort_program();
     }

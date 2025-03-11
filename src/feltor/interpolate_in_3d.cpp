@@ -188,11 +188,11 @@ int main( int argc, char* argv[])
             g3d_out_equidistant, g3d_out);
 
     { // Static write
-    file_out.defput_dim( "R", {{"axis", "X"}},
+    file_out.defput_dim( "x", {{"axis", "X"}},
             g3d_out_periodic_equidistant.abscissas(0));
-    file_out.defput_dim( "Z", {{"axis", "Y"}},
+    file_out.defput_dim( "y", {{"axis", "Y"}},
             g3d_out_periodic_equidistant.abscissas(1));
-    file_out.defput_dim( "P", {{"axis", "Z"}},
+    file_out.defput_dim( "z", {{"axis", "Z"}},
             g3d_out_periodic_equidistant.abscissas(2));
 
     for( auto& record : feltor::diagnostics3d_static_list)
@@ -205,7 +205,7 @@ int main( int argc, char* argv[])
                 g3d_in, transferH_in);
             dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
             dg::assign( transferH, transferH_out_float);
-            file_out.defput_var( record.name, {"P", "Z", "R"}, record.atts,
+            file_out.defput_var( record.name, {"z", "y", "x"}, record.atts,
                     {g3d_out_periodic_equidistant},
                     append( transferH_out_float, g3d_out_equidistant));
         }
@@ -213,7 +213,7 @@ int main( int argc, char* argv[])
         {
             record.function ( transferH_out, mag, g3d_out_equidistant);
             dg::assign( transferH_out, transferH_out_float);
-            file_out.defput_var( record.name, {"P", "Z", "R"}, record.atts,
+            file_out.defput_var( record.name, {"z", "y", "x"}, record.atts,
                     {g3d_out_periodic_equidistant},
                     append( transferH_out_float, g3d_out_equidistant));
         }
@@ -249,7 +249,7 @@ int main( int argc, char* argv[])
 
     for( auto& record : feltor::diagnostics3d_list)
     {
-        file_out.def_var_as<float>( record.name, {"time", "P", "Z", "R"},
+        file_out.def_var_as<float>( record.name, {"time", "z", "y", "x"},
                 record.atts);
         file_out.def_var_as<double>( record.name+"FF", {"timef", "zf", "yf",
                 "xf"}, record.atts);

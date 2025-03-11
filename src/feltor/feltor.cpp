@@ -171,9 +171,9 @@ int main( int argc, char* argv[])
 #ifdef WRITE_POL_FILE
             file_pol.open( "polarisation.nc", dg::file::nc_clobber);
             feltor::write_global_attributes( file_pol, argc, argv, inputfile);
-            file_pol.defput_dim( "R", {{"axis", "X"}}, grid.abscissas(0));
-            file_pol.defput_dim( "Z", {{"axis", "Y"}}, grid.abscissas(1));
-            file_pol.defput_dim( "P", {{"axis", "Z"}}, grid.abscissas(2));
+            file_pol.defput_dim( "x", {{"axis", "X"}}, grid.abscissas(0));
+            file_pol.defput_dim( "y", {{"axis", "Y"}}, grid.abscissas(1));
+            file_pol.defput_dim( "z", {{"axis", "Z"}}, grid.abscissas(2));
 #endif
 
         }catch( std::exception& e)
@@ -207,13 +207,13 @@ int main( int argc, char* argv[])
 
         // STATIC OUTPUT
         //create & output static 3d variables into file
-        file.defput_dim( "R", {{"axis", "X"}, {"long_name", "R coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(0));
-        file.defput_dim( "Z", {{"axis", "Y"}, {"long_name", "Z coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(1));
-        file.defput_dim( "P", {{"axis", "Z"}, {"long_name", "Phi coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(2));
+        file.defput_dim( "x", {{"axis", "X"}, {"long_name", "R coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"}, {"long_name", "Z coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(1));
+        file.defput_dim( "z", {{"axis", "Z"}, {"long_name", "Phi coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(2));
         for( auto& record: feltor::diagnostics3d_static_list)
         {
             record.function( resultH_out, var.mag, g3d_out);
-            file.defput_var( record.name, {"P", "Z", "R"}, record.atts,
+            file.defput_var( record.name, {"z", "y", "x"}, record.atts,
                     {g3d_out}, resultH_out);
         }
         //create & output static 2d variables into file
@@ -279,7 +279,7 @@ int main( int argc, char* argv[])
         {
             record.function ( resultD, var);
             dg::apply( project, resultD, resultD_out);
-            file.defput_var( record.name, {"time", "P", "Z", "R"},
+            file.defput_var( record.name, {"time", "z", "y", "x"},
                     record.atts, {0, g3d_out}, resultD_out);
         }
 

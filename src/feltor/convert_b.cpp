@@ -130,19 +130,19 @@ int main( int argc, char* argv[])
 
     //int dim_ids[3];
     dg::file::NcFile file( argv[2], dg::file::nc_clobber);
-    file.defput_dim( "R", {{"axis", "X"},
+    file.defput_dim( "x", {{"axis", "X"},
         {"long_name", "R-coordinate in Cylindrical system"}},
         g3d.abscissas(0));
-    file.defput_dim( "Z", {{"axis", "Y"},
+    file.defput_dim( "y", {{"axis", "Y"},
         {"long_name", "Z-coordinate in Cylindrical system"}},
         g3d.abscissas(1));
-    file.defput_dim( "P", {{"axis", "Z"},
+    file.defput_dim( "z", {{"axis", "Z"},
         {"long_name", "Phi-coordinate in Cylindrical system"}},
         g3d.abscissas(2));
     std::cout << "Write output "<<argv[2]<<"\n";
-    file.defput_var( "sol", {"P","Z","R"}, {}, g3d, multi_sol[STAGE]);
-    file.defput_var( "rhs", {"P","Z","R"}, {}, g3d, multi_rhs[STAGE]);
-    file.defput_var( "guess", {"P","Z","R"}, {}, g3d, multi_phi[STAGE]);
+    file.defput_var( "sol", {"z","y","x"}, {}, g3d, multi_sol[STAGE]);
+    file.defput_var( "rhs", {"z","y","x"}, {}, g3d, multi_rhs[STAGE]);
+    file.defput_var( "guess", {"z","y","x"}, {}, g3d, multi_phi[STAGE]);
     std::cout << "Done!\n";
     std::cout << "Compare matrices!\n";
     // Test the matrix if it converges

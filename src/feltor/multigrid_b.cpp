@@ -160,16 +160,16 @@ int main( int argc, char* argv[])
     file_in.close();
 
     dg::file::NcFile file( "pol_out.nc", dg::file::nc_clobber);
-    file.defput_dim( "R", {{"axis", "X"},
+    file.defput_dim( "x", {{"axis", "X"},
         {"long_name", "R-coordinate in Cylindrical system"}},
         g2d.abscissas(0));
-    file.defput_dim( "Z", {{"axis", "Y"},
+    file.defput_dim( "y", {{"axis", "Y"},
         {"long_name", "Z-coordinate in Cylindrical system"}},
         g2d.abscissas(1));
-    file.defput_dim( "P", {{"axis", "Z"},
+    file.defput_dim( "z", {{"axis", "Z"},
         {"long_name", "Phi-coordinate in Cylindrical system"}},
         g2d.abscissas(2));
-    file.defput_var( "phi", {"P", "Z", "R"}, {}, {g2d}, transferH2d);
+    file.defput_var( "phi", {"z", "y", "x"}, {}, {g2d}, transferH2d);
     file.close();
 
     return 0;
