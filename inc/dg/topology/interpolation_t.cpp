@@ -22,6 +22,23 @@ TEST_CASE( "Interpolation")
 
     dg::Grid1d g1d( -M_PI, 0, n, Nx);
     dg::Grid2d g( -M_PI, 0, -5*M_PI, -4*M_PI, n, Nx, Ny);
+    SECTION( "Interpolating abscissas makes ones in matrix")
+    {
+        thrust::host_vector<double> xminus = g1d.abscissas();
+        thrust::host_vector<double> xplus = g1d.abscissas();
+        for( unsigned i=0; i<g1d.size(); i++)
+        {
+            // displace point slightly
+            xminus[i]-= 5e-15;
+            xplus[i]+= 5e-15;
+        }
+
+        auto method = GENERATE( "dg", "nearest", "linear", "cubic");
+        Matrix Xm = dg::create::interpolation( xminus, g1d, dg::DIR, method);
+        CHECK( Xm.values.size() == g1d.size());
+        Matrix Xp = dg::create::interpolation( xplus, g1d, dg::DIR, method);
+        CHECK( Xp.values.size() == g1d.size());
+    }
     SECTION( "1D equidist interpolate")
     {
         thrust::host_vector<double> xs = dg::evaluate( dg::cooX1d, g1d);
