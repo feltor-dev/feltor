@@ -37,13 +37,13 @@ far away from strictly following it really.
  - Add `dg::exblas::ufloat`
 ### Changed
  - **std=c++17** Change C++ standard to C++-17
+ - `dg::Average` has **one additional template parameter** (the interpolation matrix).
  - Bump Doxyfile(s) to 1.9.8
  - Most `*.cu` file endings were changed to `*.cpp` (Nicer for C++ automatic syntax highlighting)
  - The main documentation page is changed to `topics.html` from `modules.html`
- - Use doxygen-awesome as external library instead of keeping copies in `feltor/doc`
  - Changed `static inline` function declarations to `inline`
  - MPI grid classes can handle arbitrary parallelization (even those that do not evenly divide cell numbers)
- - `dg::geo::DS` class no longer adds jump terms in its symv method. Thus removed one template parameter from `dg::geo::DS` class
+ - `dg::geo::DS` class no longer adds jump terms in its symv method. Thus **removed one template parameter** from `dg::geo::DS` class
  - `SeparatrixOrthogonal` class only integrates with `1e-11` default accuracy (prior `1e-13`)
  - `dg/geometries/geometries.h` now automatically incurs `json` dependency
  - The `tridiag` method of `dg::mat::UniversalLanczos` now returns the tridagonal matrix T
@@ -53,6 +53,7 @@ far away from strictly following it really.
 ### Deprecated
 ### Removed
  - Last remains of `DG_DEBUG` and `SILENT` macros completely removed
+ - doxygen-awesome css and js files. We now use doxygen-awesome as external library instead of keeping copies in `feltor/doc`
  - `dg::average` and `dg::mpi_average` (now replaced by `dg::create::reduction`)
  - `dg::extend_line` and `dg::extend_column (now replaced by `dg::create::prolongation`)
  - diag/probes.h is now replaced by dg/file/probes.h
