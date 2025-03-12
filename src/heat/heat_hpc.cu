@@ -3,7 +3,6 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
-// #define DG_DEBUG
 
 #include <cusp/coo_matrix.h>
 #include <cusp/print.h>

@@ -1,5 +1,3 @@
-// #define DG_DEBUG
-
 #include <iostream>
 #include <iomanip>
 

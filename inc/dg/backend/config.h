@@ -65,7 +65,7 @@ namespace dg{
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA // cuda is involved
 //{;
 
-#ifdef DG_CUDA_UNAWARE_MPI // TODO document in config README
+#ifdef DG_CUDA_UNAWARE_MPI
 //{;
 #pragma message( "Assume CUDA-unaware MPI support as per user indication!")
 inline constexpr bool cuda_aware_mpi = false;

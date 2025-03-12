@@ -14,7 +14,7 @@ CUFILES=$(wildcard *.cu)
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
 %_t: %_t.cu
-	$(CC) $(OPT)$(INCLUDE)  -DDG_DEBUG $(CFLAGS) $< -o $@   $(LAPACKLIB)  -g
+	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB)  -g
 
 %_b: %_b.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
@@ -23,10 +23,10 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
 
 polarization_init_t: polarization_init_t.cu polarization_init.h
-	$(CC) $(OPT)$(INCLUDE)  -DDG_DEBUG $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
+	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
 
 matrixprodexp_t: matrixprodexp_t.cu 
-	$(CC) $(OPT)$(INCLUDE)  -DDG_DEBUG $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
+	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
 .PHONY: clean doc
 
 doc:

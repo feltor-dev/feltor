@@ -16,27 +16,33 @@ far away from strictly following it really.
 > doxygen documentation, READMEs or tex writeups.
 > As of v7.0 we also stop reporting changes in test and benchmark programs.
 
-## [v7.1] Simple File I/O
+## [v8.0] Improved foundations
 ### Added
- - Add one-dimensional MPI Grid `dg::RealMPIGrid1d` including evaluate, interpolation, projection, weights and derivative generation
- - Add zero-dimensional Grids `dg::RealGrid0d` and `dg::RealMPIGrid0d` (mostly to indicate 0d writes in file output)
- - `mpi_init1d` functions
- - Add ndim method to Grids
- - Add substantially enhanced Json and NetCDF input and output functionality, notable `dg::file::json2nc_attrs`, `dg::file::nc_attrs2json`, `dg::file::Writer`, `dg::file::Reader`. The only "raw" NetCDF calls necessary are file open, close and group creation functions
- - Simplify output design with `dg::file::Record` in combination with `dg::file::WriteRecordsList`
+ - A novel `dg::file::NcFile` class together with its MPI counterpart and supporting infrastructure that greatly simplifies netCDF-4 output
+ - New blas1 function `dg::blas1::kronecker` for Nd dimensional product space evaluations
+ - New blas1 function `dg::blas1::vdot` that can handle general and in particular complex scalar products
+ - Novel N-dimensional Grid class `dg::aRealTopology` and `dg::RealGrid` (and its MPI counterparts) that generalize the previous 1d, 2d and 3d grids
+ - Use catch2 as a unit test framework for `dg`, `dg/file` and `dg/topology`
+ - Improved handling of cuda-aware MPI detection for non-OpenMPI libraries
+ - Simplify output design with `dg::file::Record`
  - Add modular `dg::file::Probes` class with default `dg::file::parse_probes` that can be added to any project
-
  - Add possibility to use `nlohmann::json` instead of `jsoncpp` using the macro `DG_USE_JSONHPP`
  - Add default constructors to most classes notably Grid classes
- - `mpi_comm_global2local_rank` utility function to recognise global master rank
- - Add shape constructor to NearestNeighborComm
  - Add optional weights parameter to `dg::least_squares`
  - Add experimental `extrapolate_least_squares` method to `dg::Extrapolate` (unfortunately not very successful)
  - Template version of `dg::is_same`
  - Add more verbose output to `SeparatrixOrthogonal`
  - Add `dg::mat::BesselJ` and `dg::mat::LaguerreL` and `dg::mat::GyroLagK` functors
+ - Add `dg::exblas::fpedot_cpu`, `dg::exblas::fpedot_gpu` and `dg::exblas::fpedot_omp`
+ - Add `dg::exblas::ufloat`
 ### Changed
- - **std=c++17** Change default C++ standard in Makefiles to C++-17
+ - **std=c++17** Change C++ standard to C++-17
+ - Bump Doxyfile(s) to 1.9.8
+ - Most `*.cu` file endings were changed to `*.cpp` (Nicer for C++ automatic syntax highlighting)
+ - The main documentation page is changed to `topics.html` from `modules.html`
+ - Use doxygen-awesome as external library instead of keeping copies in `feltor/doc`
+ - Changed `static inline` function declarations to `inline`
+ - MPI grid classes can handle arbitrary parallelization (even those that do not evenly divide cell numbers)
  - `dg::geo::DS` class no longer adds jump terms in its symv method. Thus removed one template parameter from `dg::geo::DS` class
  - `SeparatrixOrthogonal` class only integrates with `1e-11` default accuracy (prior `1e-13`)
  - `dg/geometries/geometries.h` now automatically incurs `json` dependency
@@ -46,6 +52,9 @@ far away from strictly following it really.
  - Restructure feltor, feltorSH, feltorSHp, feltorSesol, feltorShw, toefl programs using new I/O design
 ### Deprecated
 ### Removed
+ - Last remains of `DG_DEBUG` and `SILENT` macros completely removed
+ - `dg::average` and `dg::mpi_average` (now replaced by `dg::create::reduction`)
+ - `dg::extend_line` and `dg::extend_column (now replaced by `dg::create::prolongation`)
  - diag/probes.h is now replaced by dg/file/probes.h
 ### Fixed
  - Fix unnecessary copy in Adaptive and SingleStep timeloop

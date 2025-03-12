@@ -8,9 +8,11 @@
 #doxygen-awesome
 
 # Optionally clone https://github.com/jothepro/doxygen-awesome-css (current version 2.3.1)
-# We followed doxygen-awesome documentation in this
-# and use menubar.css for some custom code colors
-# and header.html with some additions to make the menubar and activate doxygen-awesome extensions
+# and use make install
+#
+# We followed doxygen-awesome documentation and use menubar.css for some custom
+# code colors and header.html with some additions to make the menubar and
+# activate doxygen-awesome extensions
 
 # The online documentation is hosted on the https://github.com/mwiesenberger/feltor fork
 # To update the online documentation we use ghp-import with the -o option, such

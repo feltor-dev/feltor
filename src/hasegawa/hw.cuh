@@ -116,7 +116,7 @@ const Container& HW<G, IM, M, Container>::polarisation( const std::vector<Contai
     std::cout<< "took \t"<<t.diff()<<"s\n";
     double meanPhi = dg::blas2::dot( phi, w2d, 1.);
     std::cout << "Mean phi "<<meanPhi<<"\n";
-#endif //DG_DEBUG
+#endif //DG_BENCHMARK
     return phi;
 }
 

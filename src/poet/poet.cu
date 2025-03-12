@@ -1,5 +1,3 @@
-#define SILENT
-// #define DG_DEBUG
 #include <iostream>
 #include <iomanip>
 #include <vector>

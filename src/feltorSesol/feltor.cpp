@@ -3,7 +3,6 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
-// #define DG_DEBUG
 
 #ifdef WITH_GLFW
 #include "draw/host_window.h"
