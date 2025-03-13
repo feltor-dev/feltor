@@ -2013,18 +2013,15 @@ struct WriteIntegrateDiagnostics2dList
         {
             if(record.integral) // we already computed the output...
             {
-                if( m_track)
-                {
                 std::string name = record.name+"_ta2d";
-                m_transferH2d = m_time_integrals.at(name).get_integral();
+                if(m_track) m_transferH2d = m_time_integrals.at(name).get_integral();
                 m_file->put_var( name, {m_start, m_slab}, m_transferH2d);
-                m_time_integrals.at(name).flush();
+                if(m_track) m_time_integrals.at(name).flush();
 
                 name = record.name + "_2d";
-                m_transferH2d = m_time_integrals.at(name).get_integral( );
+                if(m_track) m_transferH2d = m_time_integrals.at(name).get_integral( );
                 m_file->put_var( name, {m_start, m_slab}, m_transferH2d);
-                m_time_integrals.at(name).flush();
-                }
+                if(m_track) m_time_integrals.at(name).flush();
             }
             else // compute from scratch
             {
