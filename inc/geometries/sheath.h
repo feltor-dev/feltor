@@ -77,7 +77,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
                         "Dormand-Prince-7-4-5", coords);
                 dg::AdaptiveTimeloop<std::array<double,3>> odeint( adapt,
                         m_cyl_field, dg::pid_control, dg::fast_l2norm, m_eps,
-                        1e-10); // using 1e-10 instead of eps may cost 10% of performance but is what we originally used in master branch
+                        1e-10); // using 1e-10 instead of eps may cost 10% of performance but is what we also use in Fieldaligned
                 odeint.integrate_in_domain( 0., coords, phi1, coordsP, 0.,
                         m_domain, m_eps);
                 //integration
@@ -154,7 +154,8 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
                 dg::AdaptiveTimeloop<std::array<double,3>> odeint(
                         dg::Adaptive<dg::ERKStep<std::array<double,3>>>(
                             "Dormand-Prince-7-4-5", coords), m_cyl_field,
-                        dg::pid_control, dg::fast_l2norm, m_eps, 1e-10);
+                        dg::pid_control, dg::fast_l2norm, m_eps,
+                        1e-10); // using 1e-10 instead of eps may cost 10% of performance but is what we also use in Fieldaligned
                 odeint.integrate_in_domain( 0., coords, phiP, coordsP, 0.,
                         m_domain, m_eps);
                 odeint.integrate_in_domain( 0., coords, phiM, coordsM, 0.,
