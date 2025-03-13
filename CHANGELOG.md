@@ -39,13 +39,13 @@ far away from strictly following it really.
  - Add `dg::exblas::fpedot_cpu`, `dg::exblas::fpedot_gpu` and `dg::exblas::fpedot_omp`
  - Add `dg::exblas::ufloat`
  - Probes module in feltor 3d code
- - Add experimental `dg::mat::ProductMatrixFunction` class
- - Add experimental shared memory functionality to store Eigen-decomposition of Laplace operator `dg::mat::LaplaceDecomposition` in `dg::mat` (but undocumented and not used much, may be removed again in future)
  - More general interfaces working with new N dimensional grid class to all topology functions like evaluate, interpolate, derivatives etc.
  - `dg::cHVec`, `dg::cDVec`, `dg::cMHVec` and `dg::cMDVec` typedefs for complex vector types
  - Expose `dg::is_scalar_v`, `dg::is_vector_v`, `dg::has_policy_v` and `dg::is_matrix_v` type predicates
  - Extended Tag system on scalar types in particular complex types (`std::complex` and `thrust::complex`)
- - Add predicate to `dg::geo::WallFieldlineDistance` and `dg::geo::WallFieldlineCoordinate`, which may accelerate sheath generation by  a factor 4
+ - Add `dg::geo::SOLRegion` and `dg::geo::ClosedFieldlineRegion` as predicates
+ - Add predicate parameter to `dg::geo::WallFieldlineDistance` and `dg::geo::WallFieldlineCoordinate`, which may accelerate sheath generation by  a factor 4
+ - Add double X-point switch in `dg::geo::createModifiedField` as "sol_pfr_2X"
 ### Changed
  - **std=c++17** Change C++ standard to C++-17
  - `dg::Average` has **one additional template parameter** (the interpolation matrix). Changed in all occurences in src programs.

@@ -22,7 +22,7 @@ namespace geo{
  *     \frac{ d s}{s \varphi} = 1   / b^\varphi
  * \f]
  * for initial conditions \f$ (R,Z,0)\f$ until either a maximum angle is reached or until \f$ (R,Z) \f$ leaves the given domain. In the latter case a bisection algorithm is used to find the exact angle \f$\varphi_l\f$ of leave. Either the angle \f$ \varphi_l\f$ or the corresponding \f$ s_l\f$ is returned by the function.
- * @ingroup fluxfunctions
+ * @ingroup wall
  * @attention The sign of the angle coordinate in this class (unlike in
  * Fieldaligned) is defined with respect to the direction of the magnetic
  * field. Thus, for a positive maxPhi, the distance (both "phi" and "s")
@@ -77,7 +77,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
                         "Dormand-Prince-7-4-5", coords);
                 dg::AdaptiveTimeloop<std::array<double,3>> odeint( adapt,
                         m_cyl_field, dg::pid_control, dg::fast_l2norm, m_eps,
-                        m_eps);
+                        1e-10); // using 1e-10 instead of eps may cost 10% of performance but is what we originally used in master branch
                 odeint.integrate_in_domain( 0., coords, phi1, coordsP, 0.,
                         m_domain, m_eps);
                 //integration
@@ -119,7 +119,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
  *  of the box), +1 at the postive sheath (you have to go with the field to go
  *  out of the box) and anything else is in-between; when the sheath cannot be
  *  reached 0 is returned
- * @ingroup fluxfunctions
+ * @ingroup wall
  * @attention The sign of the coordinate (both angle and distance) is defined
  * with respect to the direction of the magnetic field (not the angle
  * coordinate like in Fieldaligned)
@@ -154,7 +154,7 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
                 dg::AdaptiveTimeloop<std::array<double,3>> odeint(
                         dg::Adaptive<dg::ERKStep<std::array<double,3>>>(
                             "Dormand-Prince-7-4-5", coords), m_cyl_field,
-                        dg::pid_control, dg::fast_l2norm, m_eps, m_eps);
+                        dg::pid_control, dg::fast_l2norm, m_eps, 1e-10);
                 odeint.integrate_in_domain( 0., coords, phiP, coordsP, 0.,
                         m_domain, m_eps);
                 odeint.integrate_in_domain( 0., coords, phiM, coordsM, 0.,

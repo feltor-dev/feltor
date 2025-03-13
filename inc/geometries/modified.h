@@ -327,18 +327,29 @@ struct Above
     std::array<double,2> m_p0, m_vec;
     bool m_above;
 };
-/*! @brief Predicate returning true in closed fieldline region
+
+///@endcond
+
+/*! @brief Predicate identifying closed fieldline region
  *
  * Closed fieldlines are defined as
  *  - without O-point there is no closed fieldline region
  *  - with O-point anything is closed where Psip has same sign as O-point (0 is separatrix) otherwise not closed
  *  - with X-point(s) the private flux regions are not closed
  * .
+ * @ingroup wall
+ * @sa dg::geo::SOLRegion
+ * @note Physically of course there are no "open" magnetic fieldlines that
+ * would contradict the vanishing divergence of the magnetic field. What "open"
+ * refers to is "intersects a material wall"
  */
 struct ClosedFieldlineRegion
 {
-    /// if closed is false then the Functor acts as the OpenFieldLineRegion  = not ClosedFieldlineRegion
-    /// If no O-point exists no closed fieldline region exists
+    /*! @brief Construct from magnetic field
+     * @param mag The magnetic field based on a flux function
+     * If no O-point exists no closed fieldline region exists
+     * @param closed if closed is false then the Functor acts as a OpenFieldLineRegion = not ClosedFieldlineRegion
+     */
     ClosedFieldlineRegion( const TokamakMagneticField& mag, bool closed = true):
         m_psip(mag.psip()), m_closed(closed)
     {
@@ -376,6 +387,12 @@ struct ClosedFieldlineRegion
             }
         }
     }
+
+    /*! @brief Return \c closed in closed fieldline region
+     * @param R Cylindrical R coordinate
+     * @param Z Cylindrical Z coordinate
+     * @return \c closed in closed fieldline region, else not \c closed
+     */
     bool operator()( double R, double Z) const
     {
         if( not m_opoint)
@@ -399,13 +416,25 @@ struct ClosedFieldlineRegion
 
 /*! @brief The default predicate for sheath integration
  *
- * The SOL is everything that is not a wall (wall(R,Z) == 1)
- * and not inside the closed Fieldline region
+ * The SOL is everything that is not a wall (wall(R,Z) != 1)
+ * and not inside ClosedFieldlineRegion
+ * @sa The main predicate dg::geo::createSheathRegion in dg::geo::WallFieldlineDistance
+ * @ingroup wall
  */
 struct SOLRegion
 {
+    /*! @brief Construct from magnetic field and wall functor
+     * @param mag The magnetic field based on a flux function
+     * @param wall Wall functor
+     * @sa dg::geo::createWallRegion
+     */
     SOLRegion( const TokamakMagneticField& mag, CylindricalFunctor wall): m_wall(wall),
         m_closed(mag){}
+    /*! @brief Return true in SOL region
+     * @param R Cylindrical R coordinate
+     * @param Z Cylindrical Z coordinate
+     * @return true in SOL region, else false
+     */
     bool operator()( double R, double Z)
     {
         return m_wall(R,Z) != 1 and not m_closed(R,Z);
@@ -415,8 +444,6 @@ struct SOLRegion
     ClosedFieldlineRegion m_closed;
 };
 
-
-///@endcond
 
 ///@addtogroup profiles
 ///@{

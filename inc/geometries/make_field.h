@@ -450,7 +450,7 @@ inline TokamakMagneticField createModifiedField(
 }
 
 
-/// A convenience function call for \c dg::geo::createModifiedField that
+/// @brief A convenience function call for \c dg::geo::createModifiedField that
 /// ignores the transition parameter and returns the wall functor
 inline CylindricalFunctor createWallRegion( dg::geo::TokamakMagneticField mag,
     dg::file::WrappedJsonValue jsmod)
@@ -461,7 +461,7 @@ inline CylindricalFunctor createWallRegion( dg::geo::TokamakMagneticField mag,
     detail::createModifiedField( mag, jsmod, mod, mod_psip, wall, transition);
     return wall;
 }
-/// DEPRECATED Same as <tt> createWallRegion( createMagneticField(gs), jsmod);</tt>
+///@brief DEPRECATED Same as <tt> createWallRegion( createMagneticField(gs), jsmod);</tt>
 inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs,
     dg::file::WrappedJsonValue jsmod)
 {
@@ -512,6 +512,7 @@ with \f$ \varphi_s = 2\pi b_s\f$.
  *
  * (ii) Measure the angular distance along the fieldline (both in positive and
  * negative direction) to the remaining walls using \c dg::geo::WallFieldlineDistance (in "phi" mode)
+ * using the \c dg::geo::SOLRegion predicate
  *
  * (iii) Modify the angular distances with a \c dg::PolynomialHeaviside functor
  * with parameters given in jsmod:
