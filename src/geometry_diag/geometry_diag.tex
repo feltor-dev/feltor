@@ -222,16 +222,16 @@ since the internal netcdf information does not display equations.
 \toprule
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &     text attribute & - & verbose input file as a string (valid JSON, C-style comments are allowed but discarded) \\
-x                & Coord. Var. & 1 (x) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
-y                & Coord. Var. & 1 (y) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
-z                & Coord. Var. & 1 (z) & $\varphi$-coordinate (computational space, size: $N_z$) \\
+R                & Coord. Var. & 1 (R) & $R$-coordinate (computational space, compressed size: $nN_x/c_x$)\\
+Z                & Coord. Var. & 1 (Z) & $Z$-coordinate (computational space, compressed size: $nN_y/c_y$)\\
+P                & Coord. Var. & 1 (P) & $\varphi$-coordinate (computational space, size: $N_z$) \\
 time             & Coord. Var. & 1 (time)& time at which fields are written (variable size: maxout$+1$, dimension size: unlimited) \\
-xc           & Dataset & 3 (z,y,x) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
-yc           & Dataset & 3 (z,y,x) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
-zc           & Dataset & 3 (z,y,x) & Cartesian z-coordinate $z=Z$ \\
-BR               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^R$ \\
-BZ               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^Z$ \\
-BP               & Dataset & 3 (z,y,x) & Contravariant magnetic field component $B^\varphi$ \\
+xc           & Dataset & 3 (P,Z,R) & Cartesian x-coordinate $x=R\sin(\varphi)$ \\
+yc           & Dataset & 3 (P,Z,R) & Cartesian y-coordinate $y=R\cos(\varphi)$\\
+zc           & Dataset & 3 (P,Z,R) & Cartesian z-coordinate $z=Z$ \\
+BR               & Dataset & 3 (P,Z,R) & Contravariant magnetic field component $B^R$ \\
+BZ               & Dataset & 3 (P,Z,R) & Contravariant magnetic field component $B^Z$ \\
+BP               & Dataset & 3 (P,Z,R) & Contravariant magnetic field component $B^\varphi$ \\
 zeta             & Coord. Var. & 1 (psi) & $\psi_p$-coordinate ( default size: $3\cdot 64$) \\
 eta              & Coord. Var. & 1 (eta) & $\eta$-coordinate ( default size: $3\cdot 640$) \\
 xcc              & Dataset & 2 (eta,zeta) & Cartesian x-coordinate of the FSA grid \\
@@ -249,8 +249,8 @@ rho\_t           & Dataset & 1 (zeta) & Toroidal flux label $\rho_t :=
 \sqrt{\psi_t/\psi_{t,\mathrm{sep}}}$ (is similar to $\rho$ in the edge but
 $\rho_t$ is nicer in the core domain, because equidistant $\rho_t$ make
 more equidistant flux-surfaces, see Section~\ref{sec:alternative} )\\
-X      & Dataset & 2 (y,x) & 2d version of quantity X \\
-X3d    & Dataset & 3 (z,y,x) & 3d version of quantity X \\
+X      & Dataset & 2 (Z,R) & 2d version of quantity X \\
+X3d    & Dataset & 3 (P,Z,R) & 3d version of quantity X \\
 X\_fsa & Dataset & 1 (zeta) & flux surface average of quantity X (if "fsa" diagnostics)\\
 X\_ifs & Dataset & 1 (zeta) & flux surface integral of quantity X (if "fsa" diagnostics)\\
 X\_dfs & Dataset & 1 (zeta) & flux surface derivative of quantity X (if "fsa" diagnostics)\\

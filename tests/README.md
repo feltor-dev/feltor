@@ -3,7 +3,7 @@
 
 We use [catch2](https://github.com/catchorg/Catch2) v3 as a test framework for our unit tests.
 (On linux can be installed through package manager).
-We need catch version > 3.0
+We need catch version > 3.0.
 
 ## General
 
@@ -14,12 +14,13 @@ Tests are supposed to be written such that
 
 We use "Black box testing" i.e. we test only through the use of the public interface.
 
-Tests should be small and follow the "AAA" design "Arange" "Act" "Assert"
+Tests should be small and follow the "AAA" design: "Arange", "Act", "Assert".
 
-The messages logged in INFO are printed only when using the `-s` command line option or when a test fails
+The messages logged in INFO are printed only when using the `-s` command line option or when a test fails.
 
+All functions and global variables in `*t.cpp` programs need to be inline.
 
-All functions and global variables in t.cpp programs need to be static.
+There is a `run-all-tests.sh` script that compiles and runs all catch2 tests for all 6 device combinations (cpu, omp, gpu, mpi+cpu, mpi+omp, mpi+gpu).
 
 ## Convert a program to catch
 
@@ -32,6 +33,5 @@ All functions and global variables in t.cpp programs need to be static.
  -# Link to `-lCatch2` in Makefile
 
 ## Some notable features
-`GENERATE` A "for" loop for tests
-
-`TEST_CASE_TEMPLATE` A static for loop for tests for various types
+ - `GENERATE` A "for" loop for tests
+ - `TEST_CASE_TEMPLATE` A static for loop for tests for various types

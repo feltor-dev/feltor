@@ -39,6 +39,7 @@
 /*! @mainpage
  * This extension adds new features to the FELTOR core dg library.
  *
+ * - This header incurs a dependency on \c jsoncpp (or \c nlohmann::json if \c DG_USE_JSONHPP is defined)
  * - several grid generator classes are added, among them our new Hector class
  *   are added to the \c dg::geo namespace
  * - a bunch of new functors implementing various magnetic field geometries

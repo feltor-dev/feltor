@@ -18,15 +18,18 @@ far away from strictly following it really.
 
 ## [v8.0] Improved foundations
 ### Added
- - A novel `dg::file::NcFile` class together with its MPI counterpart and supporting infrastructure that greatly simplifies netCDF-4 output
+ - A novel C++17 style `dg::file::NcFile` class together with its MPI counterpart and supporting infrastructure that greatly simplifies netCDF-4 output
+ - Add modular `dg::file::Probes` class with default `dg::file::parse_probes` that can be added to any project
+ - Simplify output design with `dg::file::Record`
+ - Add possibility to use `nlohmann::json` instead of `jsoncpp` in our WrappedJsonValue using the macro `DG_USE_JSONHPP`
  - New blas1 function `dg::blas1::kronecker` for Nd dimensional product space evaluations
  - New blas1 function `dg::blas1::vdot` that can handle general and in particular complex scalar products
- - Novel N-dimensional Grid class `dg::aRealTopology` and `dg::RealGrid` (and its MPI counterparts) that generalize the previous 1d, 2d and 3d grids
- - Use catch2 as a unit test framework for `dg`, `dg/file` and `dg/topology`
+ - Novel N-dimensional Grid class `dg::aRealTopology` and `dg::RealGrid` (and its MPI counterparts) that generalize the previous 1d, 2d and 3d grids. Previous grid classes still fully function using typedefs.
+ - Use catch2 as a unit test framework for `dg`, `dg/file` and `dg/topology`. We introduce `tests/run-all-tests` script
+ - A novel MPI communication backend allowing for consistent overlapping communication and computation in all sparse matrices
+ - `dg::mpi_cart_xxx` with `xxx` in `create`, `kron`, `split` for more consistent and easier Cartesian communicator handling in MPI grids
+ - `dg::mpi_read*` functions for more consistent and easier MPI initialisation
  - Improved handling of cuda-aware MPI detection for non-OpenMPI libraries
- - Simplify output design with `dg::file::Record`
- - Add modular `dg::file::Probes` class with default `dg::file::parse_probes` that can be added to any project
- - Add possibility to use `nlohmann::json` instead of `jsoncpp` using the macro `DG_USE_JSONHPP`
  - Add default constructors to most classes notably Grid classes
  - Add optional weights parameter to `dg::least_squares`
  - Add experimental `extrapolate_least_squares` method to `dg::Extrapolate` (unfortunately not very successful)
@@ -35,35 +38,73 @@ far away from strictly following it really.
  - Add `dg::mat::BesselJ` and `dg::mat::LaguerreL` and `dg::mat::GyroLagK` functors
  - Add `dg::exblas::fpedot_cpu`, `dg::exblas::fpedot_gpu` and `dg::exblas::fpedot_omp`
  - Add `dg::exblas::ufloat`
+ - Probes module in feltor 3d code
+ - Add experimental `dg::mat::ProductMatrixFunction` class
+ - Add experimental shared memory functionality to store Eigen-decomposition of Laplace operator `dg::mat::LaplaceDecomposition` in `dg::mat` (but undocumented and not used much, may be removed again in future)
+ - More general interfaces working with new N dimensional grid class to all topology functions like evaluate, interpolate, derivatives etc.
+ - `dg::cHVec`, `dg::cDVec`, `dg::cMHVec` and `dg::cMDVec` typedefs for complex vector types
+ - Expose `dg::is_scalar_v`, `dg::is_vector_v`, `dg::has_policy_v` and `dg::is_matrix_v` type predicates
+ - Extended Tag system on scalar types in particular complex types (`std::complex` and `thrust::complex`)
+ - Add predicate to `dg::geo::WallFieldlineDistance` and `dg::geo::WallFieldlineCoordinate`, which may accelerate sheath generation by  a factor 4
 ### Changed
  - **std=c++17** Change C++ standard to C++-17
- - `dg::Average` has **one additional template parameter** (the interpolation matrix).
+ - `dg::Average` has **one additional template parameter** (the interpolation matrix). Changed in all occurences in src programs.
+ - `dg::EllSparseBlockMat` and `dg::CooSparseBlockMat` got one additional template parameter (but does not matter if used through `dg::HMatrix` typedef)
  - Bump Doxyfile(s) to 1.9.8
- - Most `*.cu` file endings were changed to `*.cpp` (Nicer for C++ automatic syntax highlighting)
+ - `dg::mpi_init` now also sets GPU
+ - `dg/geometries/geometries.h` now **always includes `dg/file/json_utilities.h`**
  - The main documentation page is changed to `topics.html` from `modules.html`
+ - Complete rework of MPI sparse matrix communication backend
+ - Most `*.cu` file endings were changed to `*.cpp` (Nicer for C++ automatic syntax highlighting)
+ - Most `inc/*_mpi*.cpp` programs were merged into its corresponding `inc/*.cpp` program (reduces future maintenance load)
  - Changed `static inline` function declarations to `inline`
  - MPI grid classes can handle arbitrary parallelization (even those that do not evenly divide cell numbers)
- - `dg::geo::DS` class no longer adds jump terms in its symv method. Thus **removed one template parameter** from `dg::geo::DS` class
+ - `dg::geo::DS` class no longer adds jump terms in its symv method. Thus **removed one template parameter** from `dg::geo::DS` class. Adapted in all src prorams.
  - `SeparatrixOrthogonal` class only integrates with `1e-11` default accuracy (prior `1e-13`)
  - `dg/geometries/geometries.h` now automatically incurs `json` dependency
  - The `tridiag` method of `dg::mat::UniversalLanczos` now returns the tridagonal matrix T
- - Add experimental `dg::mat::ProductMatrixFunction` class
- - Add experimental shared memory functionality to store Eigen-decomposition of Laplace operator `dg::mat::LaplaceDecomposition` in `dg::mat`
- - Restructure feltor, feltorSH, feltorSHp, feltorSesol, feltorShw, toefl programs using new I/O design
+ - Restructure feltor, feltorSH, feltorSHp, feltorSesol, feltorShw, toefl, lamb-dipole, geometry-diag programs using new I/O design
+ - Use WrappedJsonValue in poet, esol, hasegawa and heat code
+ - Use macro `WITH_MPI` in most executable programs for easy compiler switch
+ - Move `ping_mpit.cu` program to `src/ping/mpi-ping.cpp`
+ - Changed x,y,z coordinate to R,Z,P in geometry-diag
+ - Add capability for 2nd X-point in geometry-diag
+ - Add ClosedFieldlineRegion and SOL output in geometry-diag
+ - Major code refactoring of 3d feltor code in preparation of thermal code
+ - Member functions of `dg::DLT` are now static
+ - `dg::Operator` is now named `dg::SquareMatrix` and can be used in `dg::blas2::symv` functions together with `std::vector` (`dg::Operator` typedef still exists for backward compatibility)
+ - `dg::lu_solve` is now exposed in main dg namespace
+ - Allow general value types in all blas1 functions
+ - `dg::zero` and `dg::one` have more general template interface
+ - `dg::blas1::dot` and `dg::blas2::dot` allow complex input vectors (in fact they allow any addable type)
+ - `dg::MPI_Vector::set_communicator` member only needs one `MPI_Comm` parameter
 ### Deprecated
+ - All previous netcdf utilitiy functions are now deprecated
+ - `dg::mpi_init1d`, `dg::mpi_init2d` and `dg::mpi_init3d` and all overloads
 ### Removed
+ - `dg::EllSparseBlockMatDevice` and `dg::CooSparseBlockMatDevice` now merged into `dg::EllSparseBlockMat` and `dg::CooSparseBlockMat`
+ - `dg::sainv_precond` as it is not used
+ - `device=cpp` is no longer supported. Use `device=cpu`.
  - Last remains of `DG_DEBUG` and `SILENT` macros completely removed
  - doxygen-awesome css and js files. We now use doxygen-awesome as external library instead of keeping copies in `feltor/doc`
  - `dg::average` and `dg::mpi_average` (now replaced by `dg::create::reduction`)
  - `dg::extend_line` and `dg::extend_column (now replaced by `dg::create::prolongation`)
- - diag/probes.h is now replaced by dg/file/probes.h
+ - `diag/probes.h` is now replaced by dg/file/probes.h
+ - Some low level operator generators for dg derivatives
+ - fehlberg-4-2-3, billington-3-3-2, trbdf2-3-3-2 Butcher tableaus as they performed very badly and should not be used
+ - `dg::transpose`
+ - `communicator_mod` and `communicator_mod_reduce` members of `dg::MPI_Vector`
+ - All previous MPI communication objects
+ - `dg::Buffer` memory class
 ### Fixed
  - Fix unnecessary copy in Adaptive and SingleStep timeloop
  - Fix Broadcase in `mpi_init3d` goes to comm not to world
- - Fix value init in default constructor of `MPI_Vector`
+ - Fix value init in default constructor of `dg::MPI_Vector`
  - Fix bug in double version of `dg::is_same`
  - Fix sign in `SafetyFactor`
  - Fix grid generation close to O-point
+ - Fix verbose output in SeparatrixOrthogonal
+ - Performance of serial sparseblock matrix now equals that of OpenMP with 1 thread
 
 ## [v7.0] Three-dimensional
 ### Added
