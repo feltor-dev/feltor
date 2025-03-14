@@ -101,6 +101,15 @@ inline void doSymv(
               Vector2& y,
               SparseBlockMatrixTag)
 {
+    static_assert( std::is_same_v<get_execution_policy<Vector1>,
+                                  get_execution_policy<Vector2>>,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same_v<get_tensor_category<Vector1>,
+                                  get_tensor_category<Vector2>>,
+                                "Vector types must have same data layout");
+    static_assert( std::is_same_v<get_execution_policy<Vector1>,
+                                  get_execution_policy<Matrix>>,
+                                "Vector types must have same execution policy");
     doSymv_dispatch(alpha, std::forward<Matrix>(m), x, beta, y,
             SparseBlockMatrixTag(),
             get_tensor_category<Vector1>(),

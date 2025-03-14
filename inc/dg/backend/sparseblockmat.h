@@ -120,12 +120,29 @@ struct EllSparseBlockMat
     * @tparam value_type value_type = real_type*value_type must be possible
     */
     template<class value_type>
-    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
+    {
+        launch_multiply_kernel( SerialTag(), alpha, x, beta, y);
+    }
     template<class value_type>
-    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
+    {
+        launch_multiply_kernel( CudaTag(), alpha, x, beta, y);
+    }
 #ifdef _OPENMP
     template<class value_type>
-    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
+    {
+        if( !omp_in_parallel())
+        {
+            #pragma omp parallel
+            {
+                launch_multiply_kernel( OmpTag(), alpha, x, beta, y);
+            }
+            return;
+        }
+        launch_multiply_kernel( OmpTag(), alpha, x, beta, y);
+    }
 #endif //_OPENMP
 
     ///@brief Set <tt> right_range[0] = 0, right_range[1] = right_size</tt>
@@ -160,6 +177,15 @@ struct EllSparseBlockMat
     int n;  //!< each block has size n*n
     int left_size; //!< size of the left Kronecker delta
     int right_size; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
+    private:
+    template<class value_type>
+    void launch_multiply_kernel(SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const;
+    template<class value_type>
+    void launch_multiply_kernel(CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+#ifdef _OPENMP
+    template<class value_type>
+    void launch_multiply_kernel(OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+#endif //_OPENMP
 
 };
 
@@ -279,12 +305,29 @@ struct CooSparseBlockMat
     * @attention beta == 1 (anything else is ignored)
     */
     template<class value_type>
-    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const
+    {
+        launch_multiply_kernel( SerialTag(), alpha, x, beta, y);
+    }
     template<class value_type>
-    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const
+    {
+        launch_multiply_kernel( CudaTag(), alpha, x, beta, y);
+    }
 #ifdef _OPENMP
     template<class value_type>
-    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const
+    {
+        if( !omp_in_parallel())
+        {
+            #pragma omp parallel
+            {
+                launch_multiply_kernel( OmpTag(), alpha, x, beta, y);
+            }
+            return;
+        }
+        launch_multiply_kernel( OmpTag(), alpha, x, beta, y);
+    }
 #endif //_OPENMP
 
     /**
@@ -305,6 +348,15 @@ struct CooSparseBlockMat
     int n;  //!< each block has size n*n
     int left_size; //!< size of the left Kronecker delta
     int right_size; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
+    private:
+    template<class value_type>
+    void launch_multiply_kernel(SerialTag, value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y) const;
+    template<class value_type>
+    void launch_multiply_kernel(CudaTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
+#ifdef _OPENMP
+    template<class value_type>
+    void launch_multiply_kernel(OmpTag, value_type alpha, const value_type** x, value_type beta, value_type* y) const;
+#endif //_OPENMP
 };
 ///@cond
 
@@ -474,12 +526,14 @@ struct TensorTraits<EllSparseBlockMat<T, V> >
 {
     using value_type  = T;
     using tensor_category = SparseBlockMatrixTag;
+    using execution_policy = dg::get_execution_policy<V<T>>;
 };
 template <class T, template<class> class V>
 struct TensorTraits<CooSparseBlockMat<T, V> >
 {
     using value_type  = T;
     using tensor_category = SparseBlockMatrixTag;
+    using execution_policy = dg::get_execution_policy<V<T>>;
 };
 ///@}
 

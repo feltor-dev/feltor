@@ -200,7 +200,7 @@ void call_ell_multiply_kernel( value_type alpha, value_type beta,
 
 template<class real_type, template<class> class Vector>
 template<class value_type>
-void EllSparseBlockMat<real_type, Vector>::symv( SharedVectorTag, CudaTag, value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
+void EllSparseBlockMat<real_type, Vector>::launch_multiply_kernel( CudaTag, value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
 {
     const real_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
@@ -317,10 +317,11 @@ template<class real_type, class value_type, int n>
 
 template<class real_type, template<class> class Vector>
 template<class value_type>
-void CooSparseBlockMat<real_type, Vector>::symv( SharedVectorTag, CudaTag, value_type alpha, const value_type** x_ptr, value_type beta, value_type* y_ptr) const
+void CooSparseBlockMat<real_type, Vector>::launch_multiply_kernel( CudaTag, value_type alpha, const value_type** x_ptr, value_type beta, value_type* y_ptr) const
 {
     if( num_entries == 0)
         return;
+    assert( beta == 1 && "Beta != 1 yields wrong results in CooSparseBlockMat!!");
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256;
     const size_t size = left_size*right_size*n;
