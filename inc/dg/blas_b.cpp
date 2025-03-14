@@ -74,6 +74,7 @@ int main( int argc, char* argv[])
     unsigned n, Nx, Ny, Nz;
     DG_RANK0 std::cout << "This program benchmarks basic vector and matrix-vector operations on the machine. These operations should be memory bandwidth bound. ";
     DG_RANK0 std::cout << "We therefore convert the measured time into a bandwidth using the given vector size and the STREAM convention for counting memory operations (each read and each write count as one memop. ";
+    DG_RANK0 std::cout << "Notice that when you run with the MPI + OpenMP backend you may need to pay attention to which cores MPI assigns OpenMP threads (use the program src/ping/mpi-ping to find out)\n"; // e.g. mpirun --bind-to none -n 1 ./blas_mpib
     DG_RANK0 std::cout << "In an ideal case all operations perform with the same speed (that of the AXPBY operation, which is certainly memory bandwidth bound). With fast memory (GPU, XeonPhi...) the matrix-vector multiplications can be slower however\n";
     DG_RANK0 std::cout << "Input parameters are: \n";
 #ifdef WITH_MPI
@@ -130,9 +131,9 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout<<"AXPBYPGZ (1*x-1*1+2*z=z)         "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
+        dg::blas1::axpbypgz( 1., x[0], -1., y[0], 3., x[0]); // test performance of normal vec (over array vec)
     t.toc();
-    DG_RANK0 std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x) (A)    "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    DG_RANK0 std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x) (A)    "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/(double)x.size()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::pointwiseDot(  y, x, x);
@@ -229,12 +230,13 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
-    dg::blas2::symv( M, x, y);//warm up
+    // Here we test if OpenMP region is parallelized for normal vector
+    dg::blas2::symv( M, x[0], y[0]);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas2::symv( M, x, y);
+        dg::blas2::symv( M, x[0], y[0]);
     t.toc();
-    DG_RANK0 std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    DG_RANK0 std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()/(double)x.size()<<"GB/s\n";
 
     if( grid.Nz() > 1)
     {
