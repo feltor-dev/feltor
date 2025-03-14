@@ -17,6 +17,7 @@
 
 using Matrix = dg::x::DMatrix;
 using Vector = dg::x::DVec;
+using cVector = dg::x::cDVec;
 using value_t = double;
 
 static value_t sine( value_t x) { return sin(x);}
@@ -173,6 +174,52 @@ TEST_CASE( "Derivatives")
         double norm = sqrt(dg::blas2::dot( y,w1d,y));
         INFO("Distance "<<dg::bc2str(bc)<<" "<<dg::direction2str(dir)<<" to true solution: "<<norm);
         CHECK( norm < 1e-13);
+    }
+    SECTION( "Complex derivatives")
+    {
+        INFO("On Grid "<<n<<" x "<<Nx<<" x "<<Ny);
+        dg::x::RealGrid2d<value_t> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny,
+                bcx, bcy
+#ifdef WITH_MPI
+                , comm2d
+#endif
+                );
+        const Vector w2d = dg::create::weights( g2d);
+
+        Matrix dx2 = dg::create::dx( g2d, g2d.bcx(), dg::forward);
+
+        // It must be possible to apply real valued dx on complex valued vectors
+        cVector cf2d = dg::construct<cVector>( dg::evaluate( sine, g2d));
+        cVector csol2 = dg::construct<cVector>( dg::evaluate( cosx, g2d));
+        dg::blas1::transform( cf2d,cf2d, []DG_DEVICE( thrust::complex<double>
+            x){ return thrust::complex{x.real(), x.real()};});
+        dg::blas1::transform( csol2,csol2, []DG_DEVICE( thrust::complex<double>
+            x){ return thrust::complex{x.real(), x.real()};});
+        cVector cerror = csol2;
+#if __GNUC__ >= 13
+        int64_t binary2 = {4562611930300282861};
+#else
+        int64_t binary2 = {4562611930300281864};
+#endif
+        dg::exblas::udouble res;
+        INFO("TEST 2D: DX");
+        dg::blas2::symv( -1., dx2, cf2d, 1., cerror);
+        Vector error(w2d);
+        // Real part
+        dg::blas1::transform( cerror,error, []DG_DEVICE( thrust::complex<double>
+            x){ return x.real(); });
+        dg::blas1::pointwiseDot( error, error, error);
+        value_t norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
+        INFO("Distance to true solution: "<<norm<<"\t"<<res.i<<"\t"<<binary2);
+        CHECK( std::abs(res.i - binary2) < 2);
+
+        // Imag part
+        dg::blas1::transform( cerror,error, []DG_DEVICE( thrust::complex<double>
+            x){ return x.imag(); });
+        dg::blas1::pointwiseDot( error, error, error);
+        norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
+        INFO("Distance to true solution: "<<norm<<"\t"<<res.i<<"\t"<<binary2);
+        CHECK( std::abs(res.i - binary2) < 2);
     }
 
 }
