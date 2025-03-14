@@ -327,7 +327,7 @@ void CooSparseBlockMat<real_type, Vector>::launch_multiply_kernel( CudaTag, valu
     const size_t size = left_size*right_size*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
-    const value_type* data_ptr = thrust::raw_pointer_cast( data.data());
+    const real_type* data_ptr = thrust::raw_pointer_cast( data.data());
     const int* rows_ptr = thrust::raw_pointer_cast( rows_idx.data());
     const int* cols_ptr = thrust::raw_pointer_cast( cols_idx.data());
     const int* block_ptr = thrust::raw_pointer_cast( data_idx.data());

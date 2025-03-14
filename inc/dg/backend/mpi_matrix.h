@@ -213,7 +213,7 @@ struct MPISparseBlockMat
             const value_type** b_ptrs = thrust::raw_pointer_cast( buffer_ptrs.data());
                   value_type*  y_ptr  = thrust::raw_pointer_cast( y.data().data());
             m_o.symv( SharedVectorTag(), dg::get_execution_policy<ContainerType1>(),
-                alpha, b_ptrs, 1., y_ptr);
+                alpha, b_ptrs, value_type(1.), y_ptr);
         }
     }
     template<class ContainerType1, class ContainerType2>
