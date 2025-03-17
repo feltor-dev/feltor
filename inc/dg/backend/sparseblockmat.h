@@ -8,9 +8,6 @@
 #include "exceptions.h"
 #include "tensor_traits.h"
 
-//TODO To make it complex ready we possibly need to change value types in blas1 and blas2 functions
-//TODO Make ready for complex via value_type from dg::blas2::symv
-
 namespace dg
 {
 
