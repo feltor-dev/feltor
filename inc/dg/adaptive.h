@@ -55,7 +55,7 @@ static auto pi_control = []( auto dt, auto eps, unsigned embedded_order, unsigne
  *
  * PID stands for "Proportional" (the present error), "Integral" (the past error), "Derivative" (the future error). See a good tutorial here https://www.youtube.com/watch?v=UR0hOmjaHp0
  * and further information in
- * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> in the ARKode library.
+ * <a href="https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#">the mathematical primer</a> in the ARKode library.
  * The PID controller is a good controller to start with, it does not overshoot
  * too much, is smooth, has no systematic over- or under-estimation and
  * converges very quickly to the desired timestep. In fact Kennedy and Carpenter, Appl. num. Math., (2003) report
@@ -157,9 +157,9 @@ struct Tolerance
  */
 
 //%%%%%%%%%%%%%%%%%%%Adaptive%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-/*!@brief Driver class for adaptive timestep integration
+/*!@brief Driver class for adaptive timestep ODE integration
  *
- * In order to build an adaptive Time integrator you basically need three
+ * In order to build an adaptive ODE integrator you basically need three
  * ingredients: a \c Stepper, a \c ControlFunction and an \c ErrorNorm.
  * The \c Stepper does the actual computation and advances the solution one
  * step further with a given timestep \c dt. Furthermore, it has to come up
@@ -183,11 +183,11 @@ struct Tolerance
  * rejected and the step will be recomputed and the controller restarted.
  * For more
  * information on these concepts we recommend
- * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#">the mathematical primer</a> of the ARKode library.
+ * <a href="https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#">the mathematical primer</a> in the ARKode library.
  *
  * For an example on how to use this class in a practical example consider the
  * following code snippet:
- * @snippet multistep_t.cu adaptive
+ * @snippet multistep_t.cpp adaptive
  * @copydoc hide_stepper
  * @note On step rejection, choosing timesteps and introducing restrictions on
  * the controller: here is a quote from professor G. Söderlind (the master of
@@ -508,11 +508,25 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
      * @brief Construct using a \c std::function
      *
      * @param step Called in the timeloop as <tt> step( t0, u1, t0, u1, dt) </tt>. Has to advance the ode in-place by \c dt and suggest a new \c dt for the next step.
+     * @note Useful if you want to do special things in every step
+     * @code
+    auto step = [=, &ode, &nfailed, adapt = dg::Adaptive<dg::ERKStep<Vec>(tableau, y0) ](
+        auto t0, auto y0, auto& t, auto& y, auto& dt) mutable
+    {
+        adapt.step( ode, t0, y0, t, y, dt, control, norm,
+                rtol, atol, reject_limit);
+        // do more things here ... for example:
+        if ( adapt.failed() )
+            nfailed ++;
+            // ...
+    };
+    dg::AdaptiveTimeloop<Vec>  timeloop(step);
+       @endcode
      */
     AdaptiveTimeloop( std::function<void (value_type, const ContainerType&,
                 value_type&, ContainerType&, value_type&)> step)  :
         m_step(step){
-            m_dt_current = dg::Buffer<value_type>( 0.);
+            m_dt_current = 0.;
     }
     /*!
      * @brief Bind the step function of a \c dg::Adaptive object
@@ -545,13 +559,13 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
         //https://vittorioromeo.info/index/blog/capturing_perfectly_forwarded_objects_in_lambdas.html
 
         m_step = [=, cap = std::tuple<Adaptive, ODE>(std::forward<Adaptive>(adapt),
-                std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t,
+                std::forward<ODE>(ode))  ]( auto t0, const auto& y0, auto& t,
                 auto& y, auto& dt) mutable
         {
             std::get<0>(cap).step( std::get<1>(cap), t0, y0, t, y, dt, control, norm,
                     rtol, atol, reject_limit);
         };
-        m_dt_current = dg::Buffer<value_type>( 0.);
+        m_dt_current = 0.;
     }
 
     ///@copydoc hide_construct
@@ -573,7 +587,7 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
      * two steps (even if it's several orders of magnitude off in the beginning).
      */
     void set_dt( value_type dt){
-        m_dt_current = dg::Buffer<value_type>(dt);
+        m_dt_current = dt;
     }
 
     /**
@@ -618,8 +632,8 @@ struct AdaptiveTimeloop : public aTimeloop<ContainerType>
             value_type t1, container_type& u1, enum to mode) const;
     std::function<void( value_type, const ContainerType&, value_type&,
             ContainerType&, value_type&)> m_step;
-    virtual value_type do_dt( ) const { return m_dt_current.data();}
-    dg::Buffer<value_type> m_dt_current ;
+    virtual value_type do_dt( ) const { return m_dt_current;}
+    mutable value_type m_dt_current ; // omg mutable exists !? write even if const
 };
 
 ///@cond
@@ -635,7 +649,7 @@ void AdaptiveTimeloop<ContainerType>::do_integrate(
     value_type deltaT = t1-t_current;
     bool forward = (deltaT > 0);
 
-    value_type& dt_current = m_dt_current.data();
+    value_type& dt_current = m_dt_current;
     if( dt_current == 0)
         dt_current = forward ? 1e-6 : -1e-6; // a good a guess as any
     if( (dt_current < 0 && forward) || ( dt_current > 0 && !forward) )

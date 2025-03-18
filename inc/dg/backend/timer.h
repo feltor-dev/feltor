@@ -34,7 +34,6 @@ class Timer //OMP non-MPI
 }//namespace dg
 #else // MPI_VERSION not defined and THRUST == CPU
 
-///@cond
 #include <chrono>
 namespace dg{
 class Timer

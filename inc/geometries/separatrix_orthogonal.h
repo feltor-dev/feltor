@@ -205,6 +205,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      */
     SeparatrixOrthogonal( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):
+        m_verbose(verbose),
         psi_(psi), chi_(chi),
         sep_( psi, chi, xX, yX, x0, y0, firstline, verbose)
     {
@@ -261,17 +262,17 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
                 z_initF.push_back( z_init[i]);
             }
         }
-
         thrust::host_vector<double> xIC, yIC, hIC, xOC,yOC,hOC;
         thrust::host_vector<double> xIF, yIF, hIF, xOF,yOF,hOF;
+        // Let's reduce default tolerance from 1e-13 because sometimes it takes forever
         orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC,
-                xIC, yIC, hIC);
+                xIC, yIC, hIC, 1e-11,m_verbose);
         orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC,
-                xOC, yOC, hOC);
+                xOC, yOC, hOC, 1e-11,m_verbose);
         orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF,
-                xIF, yIF, hIF);
+                xIF, yIF, hIF, 1e-11,m_verbose);
         orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF,
-                xOF, yOF, hOF);
+                xOF, yOF, hOF, 1e-11,m_verbose);
         //now glue far and close back together
         thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size());
         thrust::host_vector<double> yI(xI), hI(xI), yO(xO),hO(xO);
@@ -343,6 +344,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     virtual double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
     virtual double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
+    bool m_verbose;
     double f0_, psi_0_;
     int firstline_;
     CylindricalFunctorsLvl2 psi_;

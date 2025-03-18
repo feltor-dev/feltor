@@ -32,20 +32,47 @@ namespace gpu
 ///////////////////////////////////////////////////////////////////////////
 template<class T>
 __device__
-static inline double get_element( T x, int i){
-	return (double)x;
+inline T get_element( T x, int i){
+	return x;
 }
 template<class T>
 __device__
-static inline double get_element( T* x, int i){
-	return (double)(*(x+i));
+inline T get_element( T* x, int i){
+	return *(x+i);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Auxiliary functions
+////////////////////////////////////////////////////////////////////////////////
+__device__
+inline double TwoProductFMA(double a, double b, double *d) {
+    double p = a * b;
+    *d = __fma_rn(a, b, -p);
+    return p;
+}
+
+template<class T>
+__device__
+inline std::enable_if_t<!std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T *s) {
+    T r = a + b;
+    T z = r - a;
+    *s = (a - (r - z)) + (b - z);
+    return r;
+}
+template<typename T> // for unsigned, int, char etc.
+__device__
+inline std::enable_if_t<std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T * s)
+{
+    *s = T(0);
+    return a + b;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
 __device__
-static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride = 1) {
+inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride = 1) {
     // With atomic superacc updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -88,13 +115,12 @@ static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int s
 /**
 * @brief Accumulate a double to the superaccumulator (GPU version)
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
 * @param x the double to add to the superaccumulator
 * @param stride stride in which accumulator is to be accessed
 */
 __device__
-static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //transposed accumulation
+inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //transposed accumulation
     if (x == 0)
         return;
     //MW: This assert does not help very much in finding out where the nan originates
@@ -125,7 +151,6 @@ static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) {
 /**
 * @brief Normalize a superaccumulator (GPU version)
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
 * @param imin the first index in the accumulator
 * @param imax the last index in the accumulator
@@ -134,7 +159,7 @@ static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) {
 * @return  carry in bit (sign)
 */
 __device__
-static int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1) {
+inline int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1) {
     int64_t carry_in = accumulator[(imin)*stride] >> DIGITS;
     accumulator[(imin)*stride] -= carry_in << DIGITS;
     int i;
@@ -160,12 +185,11 @@ static int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1
 /**
 * @brief Convert a superaccumulator to the nearest double precision number (GPU version)
 *
-* @ingroup highlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
 * @return the double precision number nearest to the superaccumulator
 */
 __device__
-static inline double Round( int64_t * accumulator) {
+inline double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     int negative = Normalize(accumulator, imin, imax);

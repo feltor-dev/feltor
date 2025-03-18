@@ -48,8 +48,7 @@ int main( int argc, char* argv[])
         std::string input( length, 'x');
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
-        Json::Value js;
-        dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
+        auto js = dg::file::string2Json( input, dg::file::comments::are_forbidden);
         const eule::Parameters p(js);
         
 	size_t start0d  = 0;    

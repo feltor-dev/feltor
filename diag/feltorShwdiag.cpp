@@ -30,8 +30,7 @@ int main( int argc, char* argv[])
     std::string input(length, 'x');
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
-    Json::Value js;
-    dg::file::string2Json( input, js, dg::file::comments::are_forbidden);
+    auto js = dg::file::string2Json( input, dg::file::comments::are_forbidden);
     const eule::Parameters p(js);
     p.display(std::cout);
     ///////////////////////////////////////////////////////////////////////////
@@ -65,7 +64,7 @@ int main( int argc, char* argv[])
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa); 
     dg::HVec nprof(dg::evaluate(prof,g2d));
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
-    dg::Average<dg::HVec> polavg(g2d, dg::coo2d::y);
+    dg::Average<dg::IHMatrix,dg::HVec> polavg(g2d, dg::coo2d::y);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x_phi, p.bc_y);

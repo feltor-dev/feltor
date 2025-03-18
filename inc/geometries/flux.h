@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include "dg/algorithm.h"
 #include "fluxfunctions.h"
 #include "ribeiro.h"
@@ -28,7 +29,9 @@ struct Fpsi
     {
         //Find O-point
         double R_O = x0, Z_O = y0;
-        dg::geo::findOpoint( psip, R_O, Z_O);
+        m_opoint = dg::geo::findOpoint( psip, R_O, Z_O);
+        m_ovalue = psip.f()(R_O,Z_O);
+
         //define angle with respect to O-point
         fieldRZYT_ = dg::geo::flux::FieldRZYT(psip, ipol, R_O, Z_O);
         X_init = x0, Y_init = y0;
@@ -38,6 +41,9 @@ struct Fpsi
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0)
     {
+        if( ((m_opoint == 1) && (psi < m_ovalue +1e-10)) ||
+            ((m_opoint == 2) && (psi > m_ovalue -1e-10)))
+            throw std::runtime_error( "GradPsi integrator cannot integrate beyond or so close to O-point!");
         unsigned N = 50;
         std::array<double, 2> begin2d{ {0,0} }, end2d(begin2d), end2d_old(begin2d);
         if(m_verbose)std::cout << "In init function\n";
@@ -87,6 +93,10 @@ struct Fpsi
 
     double operator()( double psi)
     {
+        // This is to make the SafetyFactor nothrow
+        if( ((m_opoint == 1) && (psi < m_ovalue +1e-10)) ||
+            ((m_opoint == 2) && (psi > m_ovalue -1e-10)))
+            return std::nan("");
         double R_0, Z_0;
         return construct_f( psi, R_0, Z_0);
     }
@@ -120,6 +130,8 @@ struct Fpsi
     }
 
     private:
+    int m_opoint;
+    double m_ovalue;
     double X_init, Y_init;
     CylindricalFunctorsLvl1 psip_;
     dg::geo::flux::FieldRZYT fieldRZYT_;
@@ -135,11 +147,27 @@ struct Fpsi
 /**
  * @brief A symmetry flux generator
  *
- * Symmetry flux coordinates fulfill the condition \f$\sqrt{g} = \frac{R}{I}\f$
+ * The radial coordinate is given by \f$ \zeta = f_0 (\psi_p - \psi_0)\f$.
+ *
+ * The poloidal coordinate lines are obtained by integrating
+ * \f{align}{
+   \frac{d R}{d \eta}   &=   \frac{B^R}{B^\eta} =  \frac{q R}{I} \frac{\partial \psi_p}{\partial Z} \\
+   \frac{d Z}{d \eta}   &=   \frac{B^Z}{B^\eta} = -\frac{q R}{I} \frac{\partial \psi_p}{\partial R} \f},
+ * i.e. is obtained from a magnetic field where the \f$ B^\varphi\f$ component is scaled
+ * by the safety factor \f$ q(\psi_p)\f$, which can here be understood as the normalisation constant
+ * that makes the poloidal \f$ \eta\f$ coordinate go from 0 to \f$2\pi\f$.
+ * Symmetry flux coordinates fulfill the condition \f$\sqrt{g} = \frac{R}{I}\f$.
+ *
+ * When an "equalarc" adaption is chosen then the integration is changed to
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial R} \f},
+ * where \f$ f(\psi_p)\f$ is the normalization constant now.
+ *
  * The symmetry refers to the symmetry in the toroidal angle while flux coordinates allow the representation
  * of the magnetic field in Clebsch form
  * @ingroup generators_geo
- * @snippet flux_t.cu doxygen
+ * @snippet flux_t.cpp doxygen
  */
 struct FluxGenerator : public aGenerator2d
 {
@@ -230,9 +258,23 @@ struct FluxGenerator : public aGenerator2d
 };
 
 /**
- * @brief Same as the Ribeiro class just but uses psi as a flux label directly
+ * @brief Same as the Ribeiro class but uses \f$ \zeta = f_0 (\psi_p - \psi_0)\f$ as a flux label directly
+ *
+ * The radial coordinate is given by \f$ \zeta = f_0 (\psi_p - \psi_0)\f$.
+ *
+ * The poloidal coordinate lines are given by
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)(\nabla\psi_p)^2} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)(\nabla\psi_p)^2} \frac{\partial \psi_p}{\partial R} \f},
+ * where \f$ f(\psi_p)\f$ is the normalisation constant
+ * that makes the poloidal \f$ \eta\f$ coordinate go from 0 to \f$2\pi\f$.
+ *
+ * When an "equalarc" adaption is chosen then the integration is changed to
+ * \f{align}{
+ * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial Z} \\
+ * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial R} \f},
  * @ingroup generators_geo
- * @snippet flux_t.cu doxygen
+ * @snippet flux_t.cpp doxygen
  */
 struct RibeiroFluxGenerator : public aGenerator2d
 {

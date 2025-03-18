@@ -3,11 +3,42 @@
 
 #include "dg/file/nc_utilities.h"
 #include "parameters.h"
+#include "feltor.h"
 
 namespace feltor
-{//We use the typedefs and DG_RANK0
-//
-//everyone reads their portion of the input data
+{
+
+using Feltor = feltor::Explicit< dg::x::CylindricalGrid3d, dg::x::IDMatrix,
+        dg::x::DMatrix, dg::x::DVec>;
+
+std::vector<dg::file::Record<void(dg::x::DVec&, Feltor&), dg::file::LongNameAttribute>> restart3d_list = {
+    {"restart_electrons", "electron density",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_density(0), result);
+        }
+    },
+    {"restart_ions", "ion density",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_density(1), result);
+        }
+    },
+    {"restart_Ue", "parallel electron velocity",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_velocity(0), result);
+        }
+    },
+    {"restart_Ui", "parallel ion velocity",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_velocity(1), result);
+        }
+    },
+    {"restart_aparallel", "parallel magnetic potential",
+        []( dg::x::DVec& result, Feltor& f ) {
+             dg::blas1::copy(f.restart_aparallel(), result);
+        }
+    }
+};
+
 std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
         const dg::x::CylindricalGrid3d& grid, const Parameters& p,
         double& time)
@@ -19,42 +50,31 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     std::array<std::array<dg::x::DVec,2>,2> y0;
     ///////////////////read in and show inputfile
 
-    dg::file::NC_Error_Handle errIN;
-    int ncidIN;
-    errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
-    dg::file::WrappedJsonValue jsIN;
-    size_t length;
-    errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
-    std::string input(length, 'x');
-    errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
-    dg::file::string2Json( input, jsIN.asJson(), dg::file::comments::are_forbidden);
+    dg::file::NcFile file( file_name, dg::file::nc_nowrite);
+    dg::file::WrappedJsonValue jsIN = dg::file::string2Json(
+        file.get_att_as<std::string>(".", "inputfile"),
+        dg::file::comments::are_forbidden);
     feltor::Parameters pIN( jsIN);
-    unsigned  pINn  = pIN.n;
-    unsigned  pINNx = pIN.Nx;
-    unsigned  pINNy = pIN.Ny;
-    unsigned  pINNz = pIN.Nz;
-    bool      pINsymmetric = pIN.symmetric;
-    DG_RANK0 std::cout << "RESTART from file "<<file_name<< std::endl;
-    DG_RANK0 std::cout << " file parameters:" << std::endl;
-    DG_RANK0 std::cout << pINn<<" x "<<pINNx<<" x "<<pINNy<<" x "<<pINNz
-                <<" : symmetric "<<std::boolalpha<<pINsymmetric<<std::endl;
+    DG_RANK0 std::cout << "# RESTART from file "<<file_name<< std::endl;
+    DG_RANK0 std::cout << "#  file parameters:" << std::endl;
+    DG_RANK0 std::cout << pIN.n<<" x "<<pIN.Nx<<" x "<<pIN.Ny<<" x "<<pIN.Nz
+                <<" : symmetric "<<std::boolalpha<<pIN.symmetric<<std::endl;
 
     // Now read in last timestep
     dg::x::CylindricalGrid3d grid_IN( grid.x0(), grid.x1(), grid.y0(),
         grid.y1(), grid.z0(), grid.z1(),
-        pINn, pINNx, pINNy, pINNz, dg::DIR, dg::DIR, dg::PER
+        pIN.n, pIN.Nx, pIN.Ny, pIN.Nz, dg::DIR, dg::DIR, dg::PER
         #ifdef WITH_MPI
         , grid.communicator()
         #endif //WITH_MPI
         );
+    // Theoretically we can change resolution
     dg::x::IHMatrix interpolateIN;
     dg::x::HVec transferIN;
-    if( pINsymmetric)
+    if( pIN.symmetric)
     {
-        std::unique_ptr< typename dg::x::CylindricalGrid3d::perpendicular_grid>
-            grid_perp ( static_cast<typename
-                dg::x::CylindricalGrid3d::perpendicular_grid*>(grid.perp_grid()));
-        interpolateIN = dg::create::interpolation( grid, *grid_perp);
+        std::unique_ptr<dg::x::aGeometry2d> grid_perp( grid.perp_grid());
+        interpolateIN = dg::create::prolongation( grid, std::array{2u});
         transferIN = dg::evaluate(dg::zero, *grid_perp);
     }
     else
@@ -62,55 +82,18 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
         interpolateIN = dg::create::interpolation( grid, grid_IN);
         transferIN = dg::evaluate(dg::zero, grid_IN);
     }
-
-    #ifdef WITH_MPI
-    int dimsIN[3],  coordsIN[3];
-    int periods[3] = {false, false, true}; //non-, non-, periodic
-    MPI_Cart_get( grid.communicator(), 3, dimsIN, periods, coordsIN);
-    size_t countIN[3] = {grid_IN.local().Nz(),
-            grid_IN.n()*(grid_IN.local().Ny()),
-            grid_IN.n()*(grid_IN.local().Nx())};
-    size_t startIN[3] = {coordsIN[2]*countIN[0],
-                         coordsIN[1]*countIN[1],
-                         coordsIN[0]*countIN[2]};
-    #else //WITH_MPI
-    size_t startIN[3] = {0, 0, 0};
-    size_t countIN[3] = {grid_IN.Nz(), grid_IN.n()*grid_IN.Ny(),
-        grid_IN.n()*grid_IN.Nx()};
-    #endif //WITH_MPI
-    if( pINsymmetric)
-    {
-        countIN[0] = 1;
-        startIN[0] = 0;
-    }
     std::vector<dg::x::HVec> transferOUTvec( 5, dg::evaluate( dg::zero, grid));
 
-    std::string namesIN[5] = {"restart_electrons", "restart_ions",
-        "restart_Ue", "restart_Ui", "restart_aparallel"};
-
-    int timeIDIN;
-    size_t size_time, count_time = 1;
     /////////////////////Get time length and initial data///////////////////////////
-    errIN = nc_inq_dimid( ncidIN, "time", &timeIDIN);
-    errIN = nc_inq_dimlen(ncidIN, timeIDIN, &size_time);
-    errIN = nc_inq_varid( ncidIN, "time", &timeIDIN);
-    size_time -= 1;
-    errIN = nc_get_vara_double( ncidIN, timeIDIN, &size_time, &count_time, &time);
-    DG_RANK0 std::cout << " Current time = "<< time <<  std::endl;
-    for( unsigned i=0; i<5; i++)
+    unsigned size_time = file.get_dim_size("time");
+    file.get_var( "time", {size_time-1}, time);
+    DG_RANK0 std::cout << "# Current time = "<< time <<  std::endl;
+    for( unsigned i=0; i<restart3d_list.size(); i++)
     {
-        int dataID;
-        errIN = nc_inq_varid( ncidIN, namesIN[i].data(), &dataID);
-        errIN = nc_get_vara_double( ncidIN, dataID, startIN, countIN,
-            #ifdef WITH_MPI
-                transferIN.data().data()
-            #else //WITH_MPI
-                transferIN.data()
-            #endif //WITH_MPI
-            );
+        file.get_var( restart3d_list[i].name, {grid}, transferIN);
         dg::blas2::gemv( interpolateIN, transferIN, transferOUTvec[i]);
     }
-    errIN = nc_close(ncidIN);
+    file.close();
     /// ///////////////Now Construct initial fields ////////////////////////
     //
     //Convert to W
@@ -125,4 +108,5 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     dg::assign( transferOUTvec[3], y0[1][1]); //Wi
     return y0;
 }
+
 }//namespace feltor

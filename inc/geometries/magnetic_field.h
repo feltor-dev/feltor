@@ -36,7 +36,9 @@ enum class modifier
 {
     none, //!< no modification
     heaviside, //!< Psip is dampened to a constant outside a critical value
-    sol_pfr //!< Psip is dampened in the SOL and PFR regions but not in the closed field line region
+    sol_pfr, //!< Psip is dampened in the SOL and PFR regions but not in the closed field line region
+    sol_pfr_2X, //!< Psip is dampened in the SOL and PFR regions of each of 2 X-points but not in the closed field line region
+    // TODO There should be the "circular" parameter from feltor and should there be a "heavisideX"?
 };
 /**
  * @brief How flux function looks like. Decider on whether and what flux aligned grid to construct
@@ -54,7 +56,7 @@ enum class description
     centeredX //!< one X-point in the middle, no O-point, only open flux surfaces, X-grids cannot be constructed
 };
 ///@cond
-static const std::map<std::string, equilibrium> str2equilibrium{
+inline const std::map<std::string, equilibrium> str2equilibrium{
     {"solovev", equilibrium::solovev},
     {"taylor", equilibrium::taylor},
     {"polynomial", equilibrium::polynomial},
@@ -62,12 +64,13 @@ static const std::map<std::string, equilibrium> str2equilibrium{
     {"toroidal", equilibrium::toroidal},
     {"circular", equilibrium::circular}
 };
-static const std::map<std::string, modifier> str2modifier{
+inline const std::map<std::string, modifier> str2modifier{
     {"none", modifier::none},
     {"heaviside", modifier::heaviside},
-    {"sol_pfr", modifier::sol_pfr}
+    {"sol_pfr", modifier::sol_pfr},
+    {"sol_pfr_2X", modifier::sol_pfr_2X}
 };
-static const std::map<std::string, description> str2description{
+inline const std::map<std::string, description> str2description{
     {"standardO", description::standardO},
     {"standardX", description::standardX},
     {"doubleX", description::doubleX},
@@ -156,7 +159,7 @@ struct MagneticFieldParameters
  \f$
  where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the poloidal current
  and \f$ \psi_p\f$ the poloidal flux function.
- @snippet ds_t.cu doxygen
+ @snippet ds_t.cpp doxygen
 */
 struct TokamakMagneticField
 {
@@ -211,14 +214,14 @@ struct TokamakMagneticField
 };
 
 ///@cond
-static inline CylindricalFunctorsLvl1 periodify( const CylindricalFunctorsLvl1& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
+inline CylindricalFunctorsLvl1 periodify( const CylindricalFunctorsLvl1& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
 {
     return CylindricalFunctorsLvl1(
             Periodify( in.f(),   R0, R1, Z0, Z1, bcx, bcy),
             Periodify( in.dfx(), R0, R1, Z0, Z1, inverse(bcx), bcy),
             Periodify( in.dfy(), R0, R1, Z0, Z1, bcx, inverse(bcy)));
 }
-static inline CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
+inline CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& in, double R0, double R1, double Z0, double Z1, bc bcx, bc bcy)
 {
     return CylindricalFunctorsLvl2(
             Periodify( in.f(),   R0, R1, Z0, Z1, bcx, bcy),
@@ -244,7 +247,7 @@ static inline CylindricalFunctorsLvl2 periodify( const CylindricalFunctorsLvl2& 
  *
  * @return new periodified magnetic field
  */
-static inline TokamakMagneticField periodify( const TokamakMagneticField& mag, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy)
+inline TokamakMagneticField periodify( const TokamakMagneticField& mag, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy)
 {
     return TokamakMagneticField( mag.R0(),
             periodify( mag.get_psip(), R0, R1, Z0, Z1, bcx, bcy),
@@ -735,11 +738,11 @@ struct BHatP: public aCylindricalFunctor<BHatP>
 
 
 /**
- * @brief Contravariant components of the unit vector field (0, 0, +/- 1/R)
+ * @brief Contravariant components of the unit vector field (0, 0, \f$\pm 1/R \f$)
  * and its Divergence and derivative (0,0)
  * in cylindrical coordinates.
  * @param sign indicate positive or negative unit vector
- * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ 1/R \f$, Constant(0), Constant(0)
+ * @return the tuple dg::geo::Constant(0), dg::geo::Constant(0), \f$ \pm 1/R \f$
  * @note This is equivalent to inserting a toroidal magnetic field into the \c dg::geo::createBHat function.
  */
 inline CylindricalVectorLvl1 createEPhi( int sign ){
@@ -934,7 +937,8 @@ inline CylindricalVectorLvl1 createBHat( const TokamakMagneticField& mag){
            );
 }
 
-/*@brief \f$ \sqrt{1. - \psi_p/ \psi_{p,O}} \f$
+/**
+ * @brief \f$ \sqrt{1. - \psi_p/ \psi_{p,O}} \f$
  *
  * @attention undefined if there is no O-point near [R_0 , 0], except for
  * \c description::centeredX when we take psipO = -10

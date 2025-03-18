@@ -65,6 +65,7 @@ inline void doSymv_cusp_dispatch( Matrix&& m,
                     cusp::sparse_format,
                     AnyPolicyTag)
 {
+    //TODO maybe we can redirect to a cusparse matrix - vector multiplication?
     cusp::array1d_view< typename Container1::const_iterator> cx( x.cbegin(), x.cend());
     cusp::array1d_view< typename Container2::iterator> cy( y.begin(), y.end());
     cusp::multiply( std::forward<Matrix>(m), cx, cy);
@@ -94,6 +95,8 @@ inline void doSymv( Matrix&& m,
     if( y.size() != m.num_rows) {
         throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows);
     }
+    if( m.num_rows == 0)
+        return;
     doSymv_cusp_dispatch( std::forward<Matrix>(m),x,y,
             typename std::decay_t<Matrix>::format(),
             get_execution_policy<Vector1>());

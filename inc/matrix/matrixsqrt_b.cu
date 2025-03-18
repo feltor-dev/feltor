@@ -1,5 +1,3 @@
-#define SILENT
-
 #include <iostream>
 #include <iomanip>
 

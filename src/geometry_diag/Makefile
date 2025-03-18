@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: geometry_diag
 
 geometry_diag: geometry_diag.cpp
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(VERSION_FLAGS) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(VERSION_FLAGS) $(JSONLIB) -g
 
 doc:
 	pdflatex -shell-escape ./geometry_diag.tex;

@@ -226,7 +226,9 @@ void construct_rz( Nemov nemov,
         const thrust::host_vector<double>& z_init, //1d intial values of the first psi surface
         thrust::host_vector<double>& r,
         thrust::host_vector<double>& z,
-        thrust::host_vector<double>& h
+        thrust::host_vector<double>& h,
+        double rtol  = 1e-13,
+        bool verbose = false
     )
 {
     unsigned N = 1;
@@ -249,7 +251,7 @@ void construct_rz( Nemov nemov,
         N = 1;
         eps = 1e10, eps_old=2e10;
         begin = temp;
-        while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
+        while( (eps < eps_old || eps > 1e-6) && eps > rtol)
         {
             r_old = r_new, z_old = z_new; eps_old = eps;
             //h_old = h_new;
@@ -279,14 +281,14 @@ void construct_rz( Nemov nemov,
             try{
                 eps = sqrt( dg::blas1::dot( r_diff, 1.)/sizeY); //should be relative to the interpoint distances
                 //double eps_h = sqrt( dg::blas1::dot( h_diff, 1.)/sizeY);
-                //std::cout << "Effective Relative diff-h error is "<<eps_h<<" with "<<N<<" steps\n";
+                //if(verbose)std::cout << "Effective Relative diff-h error is "<<eps_h<<" with "<<N<<" steps\n";
             } catch ( dg::Error& )
             {
                 eps = eps_old;
                 r_new = r_old , z_new = z_old;
                 //h_new = h_old;
             }
-            //std::cout << "Effective Absolute diff-r error is "<<eps<<" with "<<N<<" steps\n";
+            if(verbose)std::cout << "Effective Absolute diff-r error is "<<eps<<" with "<<N<<" steps\n";
             N*=2;
             if( (eps > eps_old && N > 1024 && eps > 1e-6) || N > 64000)
                 throw dg::Error(dg::Message(_ping_) <<
@@ -322,7 +324,7 @@ void construct_rz( Nemov nemov,
  * Psi is the radial coordinate and you can choose various discretizations of
  * the first line
  * @ingroup generators_geo
- * @snippet flux_t.cu doxygen
+ * @snippet flux_t.cpp doxygen
  */
 struct SimpleOrthogonal : public aGenerator2d
 {

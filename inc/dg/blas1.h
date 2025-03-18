@@ -56,16 +56,82 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
  * NaN or Inf from y while \c dg::blas1::copy( 0, y ) does.
  */
 
+/*! @brief \f$ \sum_i f(x_{0i}, x_{1i}, ...)\f$ Extended Precision transform reduce
+ *
+ * This routine computes \f[ \sum_i f(x_{0i}, x_{1i}, ...)\f]
+ * @copydoc hide_iterations
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp vdot
+ * or
+ * @snippet{trimleft} blas1_t.cpp vcdot
+ * @note The main motivator for this version of \c dot is that it works for complex numbers.
+ * @attention if one of the input vectors contains \c Inf or \c NaN or the
+ * product of the input numbers reaches \c Inf or \c Nan then the behaviour
+ * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
+ * dg::ISNSANE in that case
+ * @note This implementation does **not guarantee binary reproducible** results.
+ * The sum is computed with **extended precision** and the result is rounded
+ * to the nearest double precision number.
+ * This is possible with the help of an adapted version of the \c dg::exblas library and
+ * works for single and double precision.
+
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention \c Functor must be callable on the device in use. In particular,
+ * with CUDA it must be a functor tpye (@b not function) and its signatures
+ * must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param f The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x First input
+ * @param xs More input (may alias x)
+ * @return Scalar product as defined above
+ * @note This routine is always executed synchronously due to the
+        implicit memcpy of the result. With mpi the result is broadcasted to all processes.
+ * @copydoc hide_ContainerType
+ */
+template<class Functor, class ContainerType, class ...ContainerTypes>
+auto vdot( Functor f, const ContainerType& x, const ContainerTypes& ...xs) ->
+    std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>
+{
+    // The reason it is called vdot and not dot is because of the amgiuity when vdot is called
+    // with two arguments
+    using T = std::invoke_result_t<Functor, dg::get_value_type<ContainerType>, dg::get_value_type<ContainerTypes>...>;
+
+    int status = 0;
+    if constexpr( std::is_integral_v<T>) // e.g. T = int
+    {
+        std::array<T, 1> fpe;
+        dg::blas1::detail::doDot_fpe( &status, fpe, f, x, xs ...);
+        if( fpe[0] - fpe[0] != T(0))
+            throw dg::Error(dg::Message(_ping_)
+                <<"dg::blas1::vdot (integral type) failed "
+                <<"since one of the inputs contains NaN or Inf");
+        return fpe[0];
+    }
+    else
+    {
+        constexpr size_t N = 3;
+        std::array<T, N> fpe;
+        dg::blas1::detail::doDot_fpe( &status, fpe, f, x, xs ...);
+        for( unsigned u=0; u<N; u++)
+        {
+            if( fpe[u] - fpe[u] != T(0))
+                throw dg::Error(dg::Message(_ping_)
+                    <<"dg::blas1::vdot (floating type) failed "
+                    <<"since one of the inputs contains NaN or Inf");
+        }
+        return exblas::cpu::Round(fpe);
+    }
+}
+
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
  * @copydoc hide_iterations
  *
-For example
-@code{.cpp}
-dg::DVec two( 100,2), three(100,3);
-double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
-@endcode
+ * For example
+ * @snippet{trimleft} blas1_t.cpp dot
+ * or
+ * @snippet{trimleft} blas1_t.cpp cdot
  * @attention if one of the input vectors contains \c Inf or \c NaN or the
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
  * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
@@ -75,6 +141,8 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * to the nearest double precision number.
  * This is possible with the help of an adapted version of the \c dg::exblas library and
 * works for single and double precision.
+* @attention Binary Reproducible results are only guaranteed for **float** or **double** input.
+* All other value types redirect to <tt> dg::blas1::vdot( dg::Product(), x, y);</tt>
 
  * @param x Left Container
  * @param y Right Container may alias x
@@ -84,11 +152,25 @@ double result = dg::blas1::dot( two, three); // result = 600 (100*(2*3))
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class ContainerType2>
-inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
+inline auto dot( const ContainerType1& x, const ContainerType2& y)
 {
-    std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( x,y);
-    return exblas::cpu::Round(acc.data());
+    if constexpr (std::is_floating_point_v<get_value_type<ContainerType1>> &&
+                  std::is_floating_point_v<get_value_type<ContainerType2>>)
+    {
+        int status = 0;
+        std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( &status,
+            x,y);
+        if( status != 0)
+            throw dg::Error(dg::Message(_ping_)<<"dg::blas1::dot failed "
+                <<"since one of the inputs contains NaN or Inf");
+        return exblas::cpu::Round(acc.data());
+    }
+    else
+    {
+        return dg::blas1::vdot( dg::Product(), x, y);
+    }
 }
+
 
 /*! @brief \f$ f(x_0) \otimes f(x_1) \otimes \dots \otimes f(x_{N-1}) \f$ Custom (transform) reduction
  *
@@ -100,15 +182,10 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
  * which means that the associated reduction looses precision due to inexact arithmetic. For binary reproducible exactly rounded results use the dg::blas1::dot function.
  * However, this function is more general and faster to execute than dg::blas1::dot.
 
-For example
-@code{.cpp}
-//Check if a vector contains Inf or NaN
-thrust::device_vector<double> x( 100);
-bool hasnan = false;
-hasnan = dg::blas1::reduce( x, false, thrust::logical_or<bool>(),
-    dg::ISNFINITE<double>());
-std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
-@endcode
+ * For example
+ * @snippet{trimleft} blas1_t.cpp reduce nan
+ * or
+ * @snippet{trimleft} blas1_t.cpp reduce min
  * @param x Container to reduce
  * @param zero The neutral element with respect to binary_op that is
  * <tt> x == binary_op( zero, x) </tt>. Determines the \c OutputType so make
@@ -133,6 +210,7 @@ std::cout << "x contains Inf or NaN "<<std::boolalpha<<hasnan<<"\n";
  * @tparam OutputType The type of the result. Infered from \c zero so make sure
  * \c zero's type is clear to the compiler.
  * @copydoc hide_ContainerType
+ * @sa For partial reductions see \c dg::Average
  */
 template< class ContainerType, class OutputType, class BinaryOp, class UnaryOp
     = IDENTITY>
@@ -151,6 +229,9 @@ inline OutputType reduce( const ContainerType& x, OutputType zero, BinaryOp
  *
  * explicit pointwise assignment \f$ y_i = x_i\f$
  * @copydoc hide_iterations
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp copy
  * @param source vector to copy
  * @param target (write-only) destination
  * @note in contrast to the \c dg::assign functions the \c copy function uses
@@ -162,7 +243,7 @@ inline OutputType reduce( const ContainerType& x, OutputType zero, BinaryOp
  */
 template<class ContainerTypeIn, class ContainerTypeOut>
 inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
-    if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==(const ContainerTypeIn*)&target)
+    if( std::is_same_v<ContainerTypeIn, ContainerTypeOut> && &source==(const ContainerTypeIn*)&target)
         return;
     dg::blas1::subroutine( dg::equals(), source, target);
 }
@@ -171,55 +252,51 @@ inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
  *
  * This routine computes \f[ \alpha x_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2);
-dg::blas1::scal( two,  0.5 )); // result[i] = 1.
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp scal
  * @param alpha Scalar
  * @param x (read/write) x
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType>
-inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
+template< class ContainerType, class value_type>
+inline void scal( ContainerType& x, value_type alpha)
 {
-    if( alpha == get_value_type<ContainerType>(1))
+    if( alpha == value_type(1))
         return;
-    dg::blas1::subroutine( dg::Scal<get_value_type<ContainerType>>(alpha), x );
+    dg::blas1::subroutine( dg::Scal<value_type>(alpha), x );
 }
 
 /*! @brief \f$ x = x + \alpha \f$
  *
  * This routine computes \f[ x_i + \alpha \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2);
-dg::blas1::plus( two,  3. )); // two[i] = 5.
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp plus
  * @param alpha Scalar
  * @param x (read/write) x
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType>
-inline void plus( ContainerType& x, get_value_type<ContainerType> alpha)
+template< class ContainerType, class value_type>
+inline void plus( ContainerType& x, value_type alpha)
 {
-    if( alpha == get_value_type<ContainerType>(0))
+    if( alpha == value_type(0))
         return;
-    dg::blas1::subroutine( dg::Plus<get_value_type<ContainerType>>(alpha), x );
+    dg::blas1::subroutine( dg::Plus(alpha), x );
 }
 
 /*! @brief \f$ y = \alpha x + \beta y\f$
  *
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three(100,3);
-dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp axpby
  * @param alpha Scalar
  * @param x ContainerType x may alias y
  * @param beta Scalar
@@ -227,31 +304,27 @@ dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
  */
-template< class ContainerType, class ContainerType1>
-inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class value_type, class value_type1>
+inline void axpby( value_type alpha, const ContainerType1& x, value_type1 beta, ContainerType& y)
 {
-    using value_type = get_value_type<ContainerType>;
     if( alpha == value_type(0) ) {
         scal( y, beta);
         return;
     }
-    if( std::is_same<ContainerType, ContainerType1>::value && &x==(const ContainerType1*)&y){
+    if( std::is_same_v<ContainerType, ContainerType1> && &x==(const ContainerType1*)&y){
         dg::blas1::scal( y, (alpha+beta));
         return;
     }
-    dg::blas1::subroutine( dg::Axpby<get_value_type<ContainerType>>(alpha, beta),  x, y);
+    dg::blas1::subroutine( dg::Axpby(alpha, beta),  x, y);
 }
 
 /*! @brief \f$ z = \alpha x + \beta y + \gamma z\f$
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two(100,2), five(100,5), result(100, 12);
-dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
-// result[i] = -21 (2.5*2+2*5-3*12)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp axpby
  * @param alpha Scalar
  * @param x ContainerType x may alias result
  * @param beta Scalar
@@ -260,45 +333,44 @@ dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
  * @param z (read/write) ContainerType contains solution on output
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1& x, get_value_type<ContainerType> beta, const ContainerType2& y, get_value_type<ContainerType> gamma, ContainerType& z)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1, class value_type2>
+inline void axpbypgz( value_type alpha, const ContainerType1& x, value_type1 beta, const ContainerType2& y, value_type2 gamma, ContainerType& z)
 {
-    using value_type = get_value_type<ContainerType>;
     if( alpha == value_type(0) )
     {
         axpby( beta, y, gamma, z);
         return;
     }
-    else if( beta == value_type(0) )
+    else if( beta == value_type1(0) )
     {
         axpby( alpha, x, gamma, z);
         return;
     }
-    if( std::is_same<ContainerType1, ContainerType2>::value && &x==(const ContainerType1*)&y){
+    if( std::is_same_v<ContainerType1, ContainerType2> && &x==(const ContainerType1*)&y){
         dg::blas1::axpby( alpha+beta, x, gamma, z);
         return;
     }
-    else if( std::is_same<ContainerType1, ContainerType>::value && &x==(const ContainerType1*)&z){
+    else if( std::is_same_v<ContainerType1, ContainerType> && &x==(const ContainerType1*)&z){
         dg::blas1::axpby( beta, y, alpha+gamma, z);
         return;
     }
-    else if( std::is_same<ContainerType2, ContainerType>::value && &y==(const ContainerType2*)&z){
+    else if( std::is_same_v<ContainerType2, ContainerType> && &y==(const ContainerType2*)&z){
         dg::blas1::axpby( alpha, x, beta+gamma, z);
         return;
     }
-    dg::blas1::subroutine( dg::Axpbypgz<get_value_type<ContainerType>>(alpha, beta, gamma),  x, y, z);
+    dg::blas1::subroutine( dg::Axpbypgz(alpha, beta, gamma),  x, y, z);
 }
 
 /*! @brief \f$ z = \alpha x + \beta y\f$
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three(100,3), result(100);
-dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp axpbyz
+ *
  * @param alpha Scalar
  * @param x ContainerType x may alias z
  * @param beta Scalar
@@ -306,9 +378,10 @@ dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
  * @param z (write-only) ContainerType z contains solution on output
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x, get_value_type<ContainerType> beta, const ContainerType2& y, ContainerType& z)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1>
+inline void axpby( value_type alpha, const ContainerType1& x, value_type1 beta, const ContainerType2& y, ContainerType& z)
 {
     dg::blas1::evaluate( z , dg::equals(), dg::PairSum(), alpha, x, beta, y);
 }
@@ -318,12 +391,10 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  *
  * Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100,6);
-dg::blas1::pointwiseDot(2., two,  three, -4., result );
-// result[i] = -12. (2*2*3-4*6)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp pointwiseDot
+ *
  * @param alpha scalar
  * @param x1 ContainerType x1
  * @param x2 ContainerType x2 may alias x1
@@ -331,37 +402,37 @@ dg::blas1::pointwiseDot(2., two,  three, -4., result );
  * @param y (read/write)  ContainerType y contains result on output ( may alias x1 or x2)
  * @copydoc hide_naninf
  * @copydoc hide_ContainerType
+ * @copydoc hide_value_type
  */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1>
+inline void pointwiseDot( value_type alpha, const ContainerType1& x1, const ContainerType2& x2, value_type1 beta, ContainerType& y)
 {
-    if( alpha == get_value_type<ContainerType>(0) ) {
+    if( alpha == value_type(0) ) {
         dg::blas1::scal(y, beta);
         return;
     }
     //not sure this is necessary performance-wise, subroutine does allow aliases
-    if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x2, y );
+    if( std::is_same_v<ContainerType, ContainerType1> && &x1==(const ContainerType1*)&y){
+        dg::blas1::subroutine( dg::AxyPby(alpha,beta), x2, y );
 
         return;
     }
-    if( std::is_same<ContainerType, ContainerType2>::value && &x2==(const ContainerType2*)&y){
-        dg::blas1::subroutine( dg::AxyPby<get_value_type<ContainerType>>(alpha,beta), x1, y );
+    if( std::is_same_v<ContainerType, ContainerType2> && &x2==(const ContainerType2*)&y){
+        dg::blas1::subroutine( dg::AxyPby(alpha,beta), x1, y );
 
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDot(alpha,beta), x1, x2, y );
 }
 
 /*! @brief \f$ y = x_1 x_2 \f$
 *
 * Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100);
-dg::blas1::pointwiseDot( two,  three, result ); // result[i] = 6.
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDot 2
+*
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
 * @param y (write-only) ContainerType y contains result on output ( may alias x1 or x2)
@@ -379,12 +450,10 @@ inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, Co
 *
 * Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
-dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
-// result[i] = 24. (2*2*3*4-4*6)
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDot 3
+*
 * @param alpha scalar
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
@@ -393,15 +462,16 @@ dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
 * @param y  (read/write) ContainerType y contains result on output ( may alias x1,x2 or x3)
 * @copydoc hide_naninf
 * @copydoc hide_ContainerType
+* @copydoc hide_value_type
 */
-template< class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3>
-inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, const ContainerType3& x3, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class value_type, class value_type1>
+inline void pointwiseDot( value_type alpha, const ContainerType1& x1, const ContainerType2& x2, const ContainerType3& x3, value_type1 beta, ContainerType& y)
 {
-    if( alpha == get_value_type<ContainerType>(0) ) {
+    if( alpha == value_type(0) ) {
         dg::blas1::scal(y, beta);
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, x2, x3, y );
+    dg::blas1::subroutine( dg::PointwiseDot(alpha,beta), x1, x2, x3, y );
 }
 
 /**
@@ -410,12 +480,10 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 * Divides two vectors element by element: \f[ y_i = \alpha x_{1i}/x_{2i} + \beta y_i \f]
 
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100,1);
-dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
-// result[i] = 7 (3*2/3+5*1)
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDivide
+*
 * @param alpha scalar
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
@@ -423,20 +491,21 @@ dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
 * @param y  (read/write) ContainerType y contains result on output ( may alias x1 and/or x2)
 * @copydoc hide_naninf
 * @copydoc hide_ContainerType
+* @copydoc hide_value_type
 */
-template< class ContainerType, class ContainerType1, class ContainerType2>
-inline void pointwiseDivide( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y)
+template< class ContainerType, class ContainerType1, class ContainerType2, class value_type, class value_type1>
+inline void pointwiseDivide( value_type alpha, const ContainerType1& x1, const ContainerType2& x2, value_type1 beta, ContainerType& y)
 {
-    if( alpha == get_value_type<ContainerType>(0) ) {
+    if( alpha == value_type(0) ) {
         dg::blas1::scal(y, beta);
         return;
     }
-    if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
-        dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha,beta), x2, y );
+    if( std::is_same_v<ContainerType, ContainerType1> && &x1==(const ContainerType1*)&y){
+        dg::blas1::subroutine( dg::PointwiseDivide(alpha,beta), x2, y );
 
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha, beta), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDivide(alpha, beta), x1, x2, y );
 }
 
 /**
@@ -444,12 +513,10 @@ inline void pointwiseDivide( get_value_type<ContainerType> alpha, const Containe
 *
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), three( 100,3), result(100);
-dg::blas1::pointwiseDivide( two,  three, result );
-// result[i] = -0.666... (2/3)
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDivide 2
+*
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
 * @param y  (write-only) ContainerType y contains result on output ( may alias x1 and/or x2)
@@ -467,12 +534,10 @@ inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2,
 *
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]
 * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
-dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
-// result[i] = -56.
-@endcode
+*
+* For example
+* @snippet{trimleft} blas1_t.cpp pointwiseDot 4
+*
 * @param alpha scalar
 * @param x1 ContainerType x1
 * @param y1 ContainerType y1
@@ -484,37 +549,35 @@ dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
 * @note all aliases are allowed
 * @copydoc hide_naninf
 * @copydoc hide_ContainerType
+* @copydoc hide_value_type
 */
-template<class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
-void pointwiseDot(  get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& y1,
-                    get_value_type<ContainerType> beta,  const ContainerType3& x2, const ContainerType4& y2,
-                    get_value_type<ContainerType> gamma, ContainerType & z)
+template<class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4, class value_type, class value_type1, class value_type2>
+void pointwiseDot(  value_type alpha, const ContainerType1& x1, const ContainerType2& y1,
+                    value_type1 beta,  const ContainerType3& x2, const ContainerType4& y2,
+                    value_type2 gamma, ContainerType & z)
 {
-    using value_type = get_value_type<ContainerType>;
     if( alpha==value_type(0)){
         pointwiseDot( beta, x2,y2, gamma, z);
         return;
     }
-    else if( beta==value_type(0)){
+    else if( beta==value_type1(0)){
         pointwiseDot( alpha, x1,y1, gamma, z);
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha, beta, gamma), x1, y1, x2, y2, z );
+    dg::blas1::subroutine( dg::PointwiseDot2(alpha, beta, gamma), x1, y1, x2, y2, z );
 }
 
 /*! @brief \f$ y = op(x)\f$
  *
  * This routine computes \f[ y_i = op(x_i) \f]
  * @copydoc hide_iterations
-
-@code{.cpp}
-dg::DVec two( 100,2), result(100);
-dg::blas1::transform( two, result, dg::EXP<double>());
-// result[i] = 7.389056... (e^2)
-@endcode
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp transform
+ *
  * @param x ContainerType x may alias y
  * @param y (write-only) ContainerType y contains result, may alias x
- * @param op unary %Operator to use on every element
+ * @param op unary %SquareMatrix to use on every element
  * @tparam UnaryOp Functor with signature: <tt> value_type operator()( value_type) </tt>
  * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_naninf
@@ -531,14 +594,9 @@ inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
  * This routine elementwise evaluates \f[ f(g(x_{0i}, x_{1i}, ...), y_i) \f]
  * @copydoc hide_iterations
  *
-@code{.cpp}
-double function( double x, double y) {
-    return sin(x)*sin(y);
-}
-dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
-dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
-// result[i] = sin(M_PI/2.)*sin(3*M_PI/2.) = -1
-@endcode
+ * For example
+ * @snippet{trimleft} blas1_t.cpp evaluate
+ *
  * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
  * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
  * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
@@ -562,21 +620,33 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
 ///@cond
 namespace detail{
 
-template< class ContainerType1, class ContainerType2>
-inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const ContainerType2& y)
+template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
+inline void doDot_fpe( int* status, std::array<T,N>& fpe, Functor f,
+    const ContainerType& x, const ContainerTypes& ...xs)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType1>::value,
-            dg::is_vector<ContainerType2>::value>::value,
+    static_assert( ( dg::is_vector_v<ContainerType> && ...
+                  && dg::is_vector_v<ContainerTypes>),
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( ( dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value &&
+              ... && dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    return doDot_fpe( tensor_category(), status, fpe, f, x, xs ...);
+
+}
+
+template< class ContainerType1, class ContainerType2>
+inline std::vector<int64_t> doDot_superacc( int * status, const ContainerType1& x, const ContainerType2& y)
+{
+    static_assert( ( dg::is_vector_v<ContainerType1> && dg::is_vector_v<ContainerType2>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerType2>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerType2, tensor_category>::value
-            >::value,
+    static_assert( ( dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value
+                  && dg::is_scalar_or_same_base_category<ContainerType2, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    return doDot_superacc( x, y, tensor_category());
+    return doDot_superacc( status, x, y, tensor_category());
 }
 
 }//namespace detail
@@ -589,18 +659,9 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Conta
  * \f[ f(x_{0i}, x_{1i}, ...)  \f]
  * @copydoc hide_iterations
  *
-@code{.cpp}
-struct Routine{
-DG_DEVICE
-void operator()( double x, double y, double& z){
-   z = 7*x+y + z ;
-}
-};
-dg::DVec two( 100,2), four(100,4);
-dg::blas1::subroutine( Routine(), two, 3., four);
-// four[i] now has the value 21 (7*2+3+4)
-@endcode
-
+ * For example
+ * @snippet{trimleft} blas1_t.cpp subroutine
+ *
  * @param f the subroutine, see @ref variadic_subroutines for a collection of predefind subroutines to use here
  * @param x the first argument
  * @param xs other arguments
@@ -617,19 +678,68 @@ except the scalar product, which is not trivially parallel.
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType>::value,
-            dg::is_vector<ContainerTypes>::value...>::value,
+    static_assert( ( dg::is_vector_v<ContainerType> &&
+               ...&& dg::is_vector_v<ContainerTypes>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
+    static_assert( ( dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value &&
+              ... && dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+}
+
+/*! @brief \f$ f(g(x_{0i_0},x_{1i_1},...), y_I)\f$ (Kronecker evaluation)
+ *
+ * This routine elementwise evaluates \f[ f(g(x_{0i_0}, x_{1i_1}, ..., x_{(n-1)i_{n-1}}), y_{((i_{n-1} N_{n-2} +...)N_1+i_1)N_0+i_0}) \f]
+ * for all @b combinations of input values.
+ * \f$ N_i\f$ is the size of the vector \f$ x_i\f$.
+ * The **first index \f$i_0\f$ is the fastest varying in the output**, then \f$ i_1\f$, etc.
+ * If \f$ x_i\f$ is a scalar then the size \f$ N_i = 1\f$.
+ * @attention None of the \f$ x_i\f$ or \f$ y\f$ can have the \c dg::RecursiveVectorTag
+ *
+ * The size of the output \f$ y\f$ must match the product of sizes of input vectors i.e.
+ * \f[ N_y = \prod_{i=0}^{n-1} N_i \f]
+ * The order of evaluations is undefined.
+ * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp kronecker
+ *
+ * @note This function is trivially parallel and the MPI version simply calls the appropriate shared memory version
+ * The user is responsible for making sure that the result has the correct communicator
+ * @note For the function \f$ f(x_0, x_1, ..., x_{n-1}) = x_0 x_1 ... x_{n-1} \f$ <tt> dg::blas1::kronecker(y, dg::equals(), x_0, x_1, ...) </tt>computes the actual Kronecker product of the arguments **in reversed order** \f[ y = x_{n-1} \otimes x_{n-2} \otimes ... \otimes x_1 \otimes x_0\f] (or the outer product)
+ * With this behaviour we can in e.g. Cartesian coordinates naturally define functions \f$ f(x,y,z)\f$ and evaluate this function on product space coordinates and have **\f$ x \f$ as the fastest varying coordinate in memory**.
+ *
+ * @tparam BinarySubroutine Functor with signature: <tt> void ( value_type_g, value_type_y&) </tt> i.e. it reads the first (and second) and writes into the second argument
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param y contains result (size of y must match the product of sizes of \f$ x_i\f$)
+ * @param f The subroutine, for example \c dg::equals or \c dg::plus_equals, see @ref binary_operators for a collection of predefined functors to use here
+ * @param g The functor to evaluate, see @ref functions and @ref variadic_evaluates for a collection of predefined functors to use here
+ * @param x0 first input
+ * @param xs more input
+ * @note all aliases allowed
+ * @copydoc hide_naninf
+ * @copydoc hide_ContainerType
+ *
+ * @sa dg::kronecker
+ */
+template< class ContainerType0, class BinarySubroutine, class Functor, class ContainerType1, class ...ContainerTypes>
+inline void kronecker( ContainerType0& y, BinarySubroutine f, Functor g, const ContainerType1& x0, const ContainerTypes& ...xs)
+{
+    static_assert( ( (dg::is_vector_v<ContainerType0> &&
+                      dg::is_vector_v<ContainerType1>) &&
+                      ... && dg::is_vector_v<ContainerTypes>),
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( (
+            (dg::is_scalar_or_same_base_category<ContainerType0, tensor_category>::value &&
+             dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value) &&
+            ... && dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    dg::blas1::detail::doKronecker(tensor_category(), y, f, g, x0, xs...);
 }
 
 ///@}
@@ -643,14 +753,8 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
  * to achieve what you want.
 
  * For example
- * @code{.cpp}
-dg::HVec host( 100, 1.);
-dg::DVec device(100);
-dg::assign( host, device );
-//let us construct a std::vector of 3 dg::DVec from a host vector
-std::vector<dg::DVec> device_vec(3);
-dg::assign( host, device_vec, 3);
- * @endcode
+ * @snippet{trimleft} blas1_t.cpp assign
+ *
  * @param from source vector
  * @param to target vector contains a copy of \c from on output (memory is automatically resized if necessary)
  * @param ps additional parameters usable for the transfer operation
@@ -659,7 +763,7 @@ dg::assign( host, device_vec, 3);
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to assign objects of Type \c ContainerType
  * @copydoc hide_ContainerType
- * @ingroup backend
+ * @ingroup blas1
  */
 template<class from_ContainerType, class ContainerType, class ...Params>
 inline void assign( const from_ContainerType& from, ContainerType& to, Params&& ... ps)
@@ -673,15 +777,9 @@ inline void assign( const from_ContainerType& from, ContainerType& to, Params&& 
  * The idea of this function is to convert between types with the same data
  * layout but different execution policies (e.g. from a thrust::host_vector to a thrust::device_vector)
  * If the layout differs, additional parameters can be used to achieve what you want.
-
+ *
  * For example
- * @code{.cpp}
-dg::HVec host( 100, 1.);
-dg::DVec device = dg::construct<dg::DVec>( host );
-std::array<dg::DVec, 3> device_arr = dg::construct<std::array<dg::DVec, 3>>( host );
-//let us construct a std::vector of 3 dg::DVec from a host vector
-std::vector<dg::DVec> device_vec = dg::construct<std::vector<dg::DVec>>( host, 3);
- * @endcode
+ * @snippet{trimleft} blas1_t.cpp construct
  * @param from source vector
  * @param ps additional parameters necessary to construct a \c ContainerType object
  * @return \c from converted to the new format (memory is allocated accordingly)
@@ -690,12 +788,78 @@ std::vector<dg::DVec> device_vec = dg::construct<std::vector<dg::DVec>>( host, 3
  * @tparam from_ContainerType must have the same data policy derived from \c AnyVectorTag as \c ContainerType (with the exception of \c std::array and \c std::vector) but can have different execution policy
  * @tparam Params in some cases additional parameters that are necessary to construct objects of Type \c ContainerType
  * @copydoc hide_ContainerType
- * @ingroup backend
+ * @ingroup blas1
  */
 template<class ContainerType, class from_ContainerType, class ...Params>
 inline ContainerType construct( const from_ContainerType& from, Params&& ... ps)
 {
     return dg::detail::doConstruct<ContainerType, from_ContainerType, Params...>( from, get_tensor_category<ContainerType>(), get_tensor_category<from_ContainerType>(), std::forward<Params>(ps)...);
+}
+
+/**
+ * @brief \f$ y_I = f(x_{0i_0}, x_{1i_1}, ...) \f$ Memory allocating version of \c dg::blas1::kronecker
+ *
+ * In a shared memory space with serial execution this function is implemented roughly as in the following pseudo-code
+ * @code{.cpp}
+ * // assume x0, xs are host vectors
+ * size = product( x0.size(), xs.size(), ...)
+ * using value_type = decltype( f(x0[0], xs[0]...));
+ * thrust::host_vector<value_type> y(size);
+ * dg::blas1::kronecker( y, dg::equals(), f, x0, xs...);
+ * @endcode
+ * @note The return type is inferred from the \c execution_policy and the \c
+ * tensor_category of the input vectors.  It is unspecified. It is such that
+ * the resulting vector is exactly compatible in a call to
+ * <tt> dg::kronecker( result, dg::equals(), f, x0, xs...); </tt>
+ *
+ * The MPI distributed version of this function is implemented as
+ * @code{.cpp}
+ * MPI_Comm comm_kron = dg::mpi_cart_kron( x0.communicator(), xs.communicator()...);
+ * return MPI_Vector{dg::kronecker( f, x0.data(), xs.data()...), comm_kron}; // a dg::MPI_Vector
+ * @endcode
+ * @attention In particular this means that in MPI all the communicators in the
+ * input argument vectors need to be Cartesian communicators that were created
+ * from a common Cartesian root communicator and both root and all sub
+ * communicators need to be registered in the dg library through calls to \c
+ * dg::register_mpi_cart_sub or \c dg::mpi_cart_sub. Further, the order of
+ * input-communicators must match the dimensions in the common root
+ * communicator (see \c dg::mpi_cart_kron) i.e. currently **in MPI it is not
+ * possible to transpose with this function**
+ *
+ * The rationale for this behaviour is that:
+ *
+ * -# the MPI standard has no easy way of finding a common ancestor to
+ * Cartesin sub communicators
+ * -# the MPI standard has no easy way of re-joining previously split
+ * Cartesian communicators
+ * -# we want to avoid creating a new communicator every time this
+ * function is called.
+ * .
+ *
+ * For example
+ * @snippet{trimleft} blas1_t.cpp dg kronecker
+ * @tparam Functor signature: <tt> value_type_g operator()( value_type_x0, value_type_x1, ...) </tt>
+ * @attention \c Functor must be callable on the device in use. In particular,
+ * with CUDA it must be a functor tpye (@b not a function) and its signature
+ * must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @param f The functor to evaluate, see @ref functions and @ref
+ * variadic_evaluates for a collection of predefined functors to use here
+ * @param x0 first input
+ * @param xs more input
+ * @return newly allocated result (size of container matches the product of sizes of \f$ x_i\f$)
+ *
+ * @note all aliases allowed
+ * @copydoc hide_naninf
+ * @copydoc hide_ContainerType
+ *
+ * @sa dg::blas1::kronecker dg::mpi_cart_kron
+ * @ingroup blas1
+ */
+template<class ContainerType, class Functor, class ...ContainerTypes>
+auto kronecker( Functor&& f, const ContainerType& x0, const ContainerTypes& ... xs)
+{
+    using tensor_category  = get_tensor_category<ContainerType>;
+    return dg::detail::doKronecker( tensor_category(), std::forward<Functor>(f), x0, xs...);
 }
 
 

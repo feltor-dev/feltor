@@ -14,28 +14,28 @@
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    std::stringstream title;
-    Json::Value js;
+    std::string input;
     if( argc == 1)
-        dg::file::file2Json( "input.json", js, dg::file::comments::are_discarded);
+        input = "input.json";
     else if( argc == 2)
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_discarded);
+        input = argv[1];
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const toefl::Parameters p( js);
+    const toefl::Parameters p(  dg::file::file2Json(input));
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
-    dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
-    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    std::stringstream title;
+    dg::file::WrappedJsonValue js = dg::file::file2Json( "window_params.json");
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
+    draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     /////////////////////////////////////////////////////////////////////////
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bcx, p.bcy);
     //create RHS
     bool mhw = (p.model == "modified");
-    hw::HW<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rhs( grid, p.kappa,
+    hw::HW<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec > rhs( grid, p.kappa,
             p.tau, p.nu, p.eps_pol[0], mhw);
     dg::DVec one( grid.size(), 1.);
     //create initial vector

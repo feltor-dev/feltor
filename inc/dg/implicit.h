@@ -44,7 +44,12 @@ struct Adaptor
  *         dg::blas1::axpby( 1., x, -a, y);
  *     };
  *     dg::blas1::copy( ys, y); // take rhs as initial guess
- *     pcg.solve( wrapper, y, ys, im.precond(), im.weights(), eps);
+ *     Timer t;
+ *     t.tic();
+ *     unsigned number = pcg.solve( wrapper, y, ys, im.precond(), im.weights(), eps);
+ *     t.toc();
+ *     DG_RANK0 std::cout << "# of pcg iterations time solver: "
+ *           <<number<<"/"<<pcg.get_max()<<" took "<<t.diff()<<"s\n";
  *  };
  * @endcode
  * @sa In general it is recommended to write your own solver using a wrapper

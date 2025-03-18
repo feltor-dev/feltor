@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
@@ -25,15 +24,11 @@ int main( int argc, char* argv[])
     std::cout << argv[0] <<" -> "<<argv[1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    dg::file::NC_Error_Handle err;
-    int ncid_in;
-    err = nc_open( argv[1], NC_NOWRITE, &ncid_in); //open 3d file
-    size_t length;
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-    std::string inputfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
+    dg::file::NcFile file_in( argv[1], dg::file::nc_nowrite);
+    std::string inputfile = file_in.get_att_as<std::string>( "inputfile");
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(inputfile,
+        dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
     std::cout << js.asJson() <<  std::endl;
@@ -49,15 +44,11 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    const double Zmin=-p.boxscaleZm*mag.params().a();
-    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    const double Zmax=p.boxscaleZp*mag.params().a();
-
     /////////////////////////////////////////////////////////////////////////
-    dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    auto box = common::box( js);
+    dg::CylindricalGrid3d g3d( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
         p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::CylindricalGrid3d g2d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g2d( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
     //    p.n, p.Nx, p.Ny, p.Nz, p.bcxN, p.bcyN, dg::PER);
         p.n, p.Nx, p.Ny, 1, p.bcxN, p.bcyN, dg::PER);
     std::cout << "Opening file "<<argv[1]<<"\n";
@@ -105,10 +96,7 @@ int main( int argc, char* argv[])
     std::cin >> jfactor;
     for( int i =0; i<7; i++)
     {
-        int dataID;
-        err = nc_inq_varid(ncid_in, names[i].data(), &dataID);
-        err = nc_get_var_double( ncid_in, dataID,
-                        transferH.data());
+        file_in.get_var( names[i], {g3d}, transferH);
         auto split_view = dg::split( transferH, g3d);
         dg::assign( split_view[k], vecs[names[i]]);
         //dg::assign( transferH, vecs[names[i]]);
@@ -169,25 +157,20 @@ int main( int argc, char* argv[])
     dg::assign( phi, transferH2d);
     dg::blas1::copy( transferH2d, split_sol[k]);
     }
-    //int dataID;
-    //err = nc_inq_varid(ncid_in, "sol", &dataID);
-    //err = nc_get_var_double( ncid_in, dataID,
-    //                    transferH.data());
-    //dg::blas1::axpby( 1., phi_sol, -1., transferH, phi_sol);
-    //double error = dg::blas2::dot( phi_sol, weightsH, phi_sol);
-    //double norm = dg::blas2::dot( transferH, weightsH, transferH);
-    //std::cout << "Norm error3d Inv Phi "<<sqrt(error/norm)<<"\n";
+    file_in.close();
 
-    nc_close(ncid_in);
-    int ncid_out, vecID;
-    int dim_ids[3];
-    err = nc_create( "pol_out.nc", NC_NETCDF4|NC_CLOBBER, &ncid_out);
-    err = dg::file::define_dimensions( ncid_out, dim_ids, g2d,
-                {"z", "y", "x"});
-    err = nc_def_var( ncid_out, "phi", NC_DOUBLE, 3,
-                    dim_ids, &vecID);
-    dg::file::put_var_double( ncid_out, vecID, g2d, transferH2d);
-    err = nc_close(ncid_out);
+    dg::file::NcFile file( "pol_out.nc", dg::file::nc_clobber);
+    file.defput_dim( "x", {{"axis", "X"},
+        {"long_name", "R-coordinate in Cylindrical system"}},
+        g2d.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"},
+        {"long_name", "Z-coordinate in Cylindrical system"}},
+        g2d.abscissas(1));
+    file.defput_dim( "z", {{"axis", "Z"},
+        {"long_name", "Phi-coordinate in Cylindrical system"}},
+        g2d.abscissas(2));
+    file.defput_var( "phi", {"z", "y", "x"}, {}, {g2d}, transferH2d);
+    file.close();
 
     return 0;
 }

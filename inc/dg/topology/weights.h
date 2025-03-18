@@ -2,6 +2,8 @@
 
 #include <thrust/host_vector.h>
 #include "grid.h"
+#include "../functors.h"
+#include "../blas1.h"
 #include "../enums.h"
 
 /*! @file
@@ -11,155 +13,104 @@
 
 namespace dg{
 namespace create{
+///@cond
+template< class Topology, size_t N, size_t ...I>
+auto do_weights( const Topology& g, std::array<bool, N> coo, std::index_sequence<I...>)
+{
+    std::array< decltype(g.weights(0)),N> weights;
+    for( unsigned u=0; u<N; u++)
+        weights[u] = g.weights(u);
+    for( unsigned u=0; u<N; u++)
+        if( !coo[u])
+            dg::blas1::copy( 1, weights[u]);
+    return dg::kronecker( dg::Product(), weights[I]...);
+}
+template< class Topology, size_t ...I>
+auto do_weights( const Topology& g, std::index_sequence<I...>)
+{
+    return dg::kronecker( dg::Product(), g.weights(I)...);
+}
 
-///@addtogroup highlevel
+///@endcond
+
+///@addtogroup evaluation
 ///@{
 
-/*!@class hide_weights_doc
-* @brief Nodal weight coefficients
-* @param g The grid
-* @return Host Vector
-* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+
+/*! @brief Nodal weight coefficients
+ *
+ * %Equivalent to the following:
+ *
+ * -# from the given Nd dimensional grid generate Nd one-dimensional lists of
+ *  integraion weights <tt> w_i = g.weights( i)</tt>
+ * -# take the kronecker product of the 1d weights and store the result in the
+ *  output vector <tt> w = dg::kronecker( dg::Product(), w_0, w_1, ...)</tt>
+ *  The **0 dimension is the contiguous dimension** in the return vector \c w
+ * .
+ * For example
+ * @snippet{trimleft} evaluation_t.cpp evaluate2d
+ * @tparam Topology A fixed sized grid type with member functions <tt> static
+ * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and
+ * <tt> vector_type Topology::weights( unsigned dim)</tt> giving the integration
+ * weights in dimension \c dim
+ * @param g The grid
+ * @return The output vector \c w as a host vector. Its value type is the same
+ * as the grid value type
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+ */
+template<class Topology>
+auto weights( const Topology& g)
+{
+    return do_weights( g, std::make_index_sequence<Topology::ndim()>());
+}
+
+/*! @brief Nodal weight coefficients on a subset of dimensions
+ *
+ * %Equivalent to the following:
+ *
+ * -# from the given Nd dimensional grid generate Nd one-dimensional lists of
+ *  integraion weights <tt> w_i = remains[i] ? g.weights( i) : 1</tt>
+ * -# take the kronecker product of the 1d weights and store the result in the
+ *  output vector <tt> w = dg::kronecker( dg::Product(), w_0, w_1, ...)</tt>
+ *  The **0 dimension is the contiguous dimension** in the return vector \c w
+ * .
+ * @tparam Topology A fixed sized grid type with member functions <tt> static
+ * constexpr size_t Topology::ndim()</tt> giving the number of dimensions and
+ * <tt> vector_type Topology::weights( unsigned dim)</tt> giving the integration
+ * weights in dimension \c dim
+ * @param g The grid
+ * @param remains For each dimension determine whether to use weights or a vector of 1s
+ * @return Host Vector with full grid size
+ * @note If you want the weights of the sub-grid that consists of the remaining dimensions
+ * you need to manually create that sub-grid and use \c dg::create::weights( sub_grid)
+ * The difference is the size of the resulting vector or the result of this function is
+ * to prolongate the sub-grid weights to the full grid again
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+ */
+template<class Topology>
+auto weights( const Topology& g, std::array<bool,Topology::ndim()> remains)
+{
+    return do_weights( g, remains, std::make_index_sequence<Topology::ndim()>());
+}
+
+
+/*! @brief Inverse nodal weight coefficients
+ *
+ * Short for
+ * @code{.cpp}
+ *   auto v = weights( g);
+ *   dg::blas1::transform( v, v, dg::INVERT());
+ *   return v;
+ * @endcode
 */
-/*!@class hide_inv_weights_doc
-* @brief inverse nodal weight coefficients
-* @param g The grid
-* @return Host Vector
-* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
-*/
-/*!@class hide_weights_coo_doc
-* @brief nodal weight coefficients
-* @param g The grid
-* @param coo The coordinate for which to generate the weights (in 2d only \c dg::x and \c dg::y are allowed)
-* @return Host Vector with full grid size
-* @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
-*/
-
-///@copydoc hide_weights_doc
-///@copydoc hide_code_evaluate1d
-template<class real_type>
-thrust::host_vector<real_type> weights( const RealGrid1d<real_type>& g)
+template<class Topology>
+auto inv_weights( const Topology& g)
 {
-    thrust::host_vector<real_type> v( g.size());
-    for( unsigned i=0; i<g.N(); i++)
-        for( unsigned j=0; j<g.n(); j++)
-            v[i*g.n() + j] = g.h()/2.*g.dlt().weights()[j];
-    return v;
-}
-///@copydoc hide_inv_weights_doc
-template<class real_type>
-thrust::host_vector<real_type> inv_weights( const RealGrid1d<real_type>& g)
-{
-    thrust::host_vector<real_type> v = weights( g);
-    for( unsigned i=0; i<g.size(); i++)
-        v[i] = 1./v[i];
+    auto v = weights( g);
+    dg::blas1::transform( v, v, dg::INVERT());
     return v;
 }
 
-///@copydoc hide_weights_doc
-///@copydoc hide_code_evaluate2d
-template<class real_type>
-thrust::host_vector<real_type> weights( const aRealTopology2d<real_type>& g)
-{
-    thrust::host_vector<real_type> v( g.size());
-    for( unsigned i=0; i<g.size(); i++)
-        v[i] = g.hx()*g.hy()/4.*
-                g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()]*
-                g.dltx().weights()[i%g.nx()];
-    return v;
-}
-///@copydoc hide_inv_weights_doc
-template<class real_type>
-thrust::host_vector<real_type> inv_weights( const aRealTopology2d<real_type>& g)
-{
-    thrust::host_vector<real_type> v = weights( g);
-    for( unsigned i=0; i<g.size(); i++)
-        v[i] = 1./v[i];
-    return v;
-}
-
-///@copydoc hide_weights_coo_doc
-template<class real_type>
-thrust::host_vector<real_type> weights( const aRealTopology2d<real_type>& g, enum coo2d coo)
-{
-    thrust::host_vector<real_type> w( g.size());
-    if( coo == coo2d::x) {
-        for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
-    }
-    else if( coo == coo2d::y) {
-        for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
-    }
-    return w;
-}
-
-
-///@copydoc hide_weights_doc
-///@copydoc hide_code_evaluate3d
-template<class real_type>
-thrust::host_vector<real_type> weights( const aRealTopology3d<real_type>& g)
-{
-    // this implementation is binary compatible with nz = 1 old implementation
-    thrust::host_vector<real_type> v( g.size());
-    for( unsigned i=0; i<g.size(); i++)
-        v[i] = g.hx()*g.hy()*g.hz()/4.*
-               (g.dltz().weights()[(i/(g.nx()*g.ny()*g.Nx()*g.Ny()))%g.nz()]/2.)*
-               g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()]*
-               g.dltx().weights()[i%g.nx()];
-    return v;
-}
-
-///@copydoc hide_inv_weights_doc
-template<class real_type>
-thrust::host_vector<real_type> inv_weights( const aRealTopology3d<real_type>& g)
-{
-    thrust::host_vector<real_type> v = weights( g);
-    for( unsigned i=0; i<g.size(); i++)
-        v[i] = 1./v[i];
-    return v;
-}
-
-///@copydoc hide_weights_coo_doc
-template<class real_type>
-thrust::host_vector<real_type> weights( const aRealTopology3d<real_type>& g, enum coo3d coo)
-{
-    thrust::host_vector<real_type> w( g.size());
-    if( coo == coo3d::x) {
-        for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
-    }
-    else if( coo == coo3d::y) {
-        for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
-    }
-    else if( coo == coo3d::z) {
-        for( unsigned i=0; i<g.size(); i++)
-            w[i] = g.hz()/2.* g.dltz().weights()[(i/(g.nx()*g.Nx()*g.ny()*g.Ny()))%g.nz()];
-    }
-    else if( coo == coo3d::xy) {
-        for( unsigned i=0; i<g.size(); i++)
-        {
-            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
-            w[i]*= g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
-        }
-    }
-    else if( coo == coo3d::yz) {
-        for( unsigned i=0; i<g.size(); i++)
-        {
-            w[i] = g.hy()/2.* g.dlty().weights()[(i/(g.nx()*g.Nx()))%g.ny()];
-            w[i]*= g.hz()/2.* g.dltz().weights()[(i/(g.nx()*g.Nx()*g.ny()*g.Ny()))%g.nz()];
-        }
-    }
-    else if( coo == coo3d::xz) {
-        for( unsigned i=0; i<g.size(); i++)
-        {
-            w[i] = g.hx()/2.* g.dltx().weights()[i%g.nx()];
-            w[i]*= g.hz()/2.* g.dltz().weights()[(i/(g.nx()*g.Nx()*g.ny()*g.Ny()))%g.nz()];
-        }
-    }
-    return w;
-}
 
 ///@}
 }//namespace create

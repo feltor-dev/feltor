@@ -247,7 +247,10 @@ struct SafetyFactorAverage
  * @brief Evaluation of the safety factor q based on direct integration of
  * \f$ q(\psi_0) = \frac{1}{2\pi} \int d\Theta \frac{B^\varphi}{B^\Theta} \f$
 
- * @attention Return value undefined if evaluated outside the closed fieldline region, but the function always returns, it won't throw an error or something
+ * @note The sign of q is **positive for right-handed** field line winding and negative else
+ * @attention Return value undefined if evaluated outside the closed fieldline
+ * region, or if \c psip0 lies at or beyond the O-point or the separatrix. The
+ * function always returns however, it won't throw an error or something
  * @copydoc hide_container
  * @ingroup misc_geo
  *
@@ -260,11 +263,15 @@ struct SafetyFactor
     /**
      * @brief Calculate q(psip0)
      * @param psip0 the flux surface
-     * @return q(psip0)
+     * @return q(psip0), undefined if  psip0 beyond the O-point value, or if
+     * psip0 == 0 and there is an X-point
+     * @attention If psip0 == 0 and there is an X-point, the integrator may
+     * integrate for a very long time before realizing something is wrong
      */
     double operator()( double psip0)
     {
-        return 1./m_fpsi( psip0);
+        // Sign from experimentation
+        return -1./m_fpsi( psip0);
     }
 private:
     dg::geo::flux::detail::Fpsi m_fpsi;

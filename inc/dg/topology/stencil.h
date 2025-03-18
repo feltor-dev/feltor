@@ -3,7 +3,7 @@
 #include <cusp/coo_matrix.h>
 #include "xspacelib.h"
 #ifdef MPI_VERSION
-#include "mpi_projection.h" // for convert function
+#include "mpi_projection.h" // for make_mpi_matrix function
 #endif // MPI_VERSION
 
 /*! @file
@@ -88,6 +88,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> window_stencil(
     return A;
 }
 
+// Rethink this approach if we ever need to make it work with MPI again
 template<class real_type>
 cusp::csr_matrix<int, real_type, cusp::host_memory> limiter_stencil(
         const RealGrid1d<real_type>& local,
@@ -102,9 +103,9 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> limiter_stencil(
     unsigned num_cols = global.size();
     int L0 = round((local.x0() - global.x0())/global.h())*global.n();
     // We need the first two lines of forward
-    dg::Operator<real_type> forward = local.dlt().forward();
+    dg::SquareMatrix<real_type> forward = dg::DLT<real_type>::forward(local.n());
     // and the second column of backward
-    dg::Operator<real_type> backward = local.dlt().backward();
+    dg::SquareMatrix<real_type> backward = dg::DLT<real_type>::backward(local.n());
     if( global.n() == 1)
         throw dg::Error( dg::Message(_ping_) << "Limiter stencil not possible for n==1!");
 
@@ -199,7 +200,7 @@ dg::IHMatrix_t<real_type> window_stencil(
  * @return A sparse matrix with 0 or 3n entries per row (the zero coefficient has 3n entries, the remaining coefficients have 0). The values contain the transformation matrices necessary to implement the filter
  * @tparam real_type The value type of the matrix
  * @sa \c dg::blas2::stencil \c dg::CSRSlopeLimiter
- * @attention Do not sort the matrix as then the ordering is destroyed
+ * @attention Do not sort the matrix as then the ordering is destroyed. CANNOT BE USED IN MPI
  * @note Does unfortunately not work very well in more than 1 dimension
  */
 template<class real_type>
@@ -332,7 +333,7 @@ dg::MIHMatrix_t<real_type> window_stencil(
     auto mx = detail::window_stencil(window_size[0], g.local().gx(), g.global().gx(), bcx);
     auto my = detail::window_stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
     auto local = dg::tensorproduct( my, mx);
-    return dg::convert( local, g);
+    return dg::make_mpi_matrix( local, g);
 }
 
 ///@copydoc window_stencil(std::array<int,2>,const aRealTopology3d<real_type>&,dg::bc,dg::bc)
@@ -346,59 +347,7 @@ dg::MIHMatrix_t<real_type> window_stencil(
     auto my = detail::window_stencil(window_size[1], g.local().gy(), g.global().gy(), bcy);
     auto mz = detail::identity_matrix( g.local().gz(), g.global().gz());
     auto out = dg::tensorproduct( mz, dg::tensorproduct( my, mx));
-    return dg::convert( out, g);
-}
-
-///@copydoc limiter_stencil(const RealGrid1d<real_type>&,dg::bc)
-///@param direction The limiter acts on only 1 direction at a time
-template<class real_type>
-dg::MIHMatrix_t<real_type> limiter_stencil(
-        enum coo3d direction,
-        const aRealMPITopology2d<real_type>& g,
-        dg::bc bound)
-{
-    if( direction == dg::coo3d::x)
-    {
-        auto mx = detail::limiter_stencil(g.local().gx(), g.global().gx(), bound);
-        auto einsy = detail::identity_matrix( g.local().gy(), g.global().gy());
-        auto local = dg::tensorproduct( einsy, mx);
-        return dg::convert( (dg::IHMatrix)local, g);
-    }
-    auto my = detail::limiter_stencil(g.local().gy(), g.global().gy(), bound);
-    auto einsx = detail::identity_matrix( g.local().gx(), g.global().gx());
-    auto local = dg::tensorproduct( my, einsx);
-    return dg::convert( local, g);
-}
-
-///@copydoc limiter_stencil(const RealGrid1d<real_type>&,dg::bc)
-///@param direction The limiter acts on only 1 direction at a time
-template<class real_type>
-dg::MIHMatrix_t<real_type> limiter_stencil(
-        enum coo3d direction,
-        const aRealMPITopology3d<real_type>& g,
-        dg::bc bound)
-{
-    if( direction == dg::coo3d::x)
-    {
-        auto mx = detail::limiter_stencil(g.local().gx(), g.global().gx(), bound);
-        auto einsy = detail::identity_matrix( g.local().gy(), g.global().gy());
-        auto einsz = detail::identity_matrix( g.local().gz(), g.global().gz());
-        auto local = dg::tensorproduct( einsz, dg::tensorproduct( einsy, mx));
-        return dg::convert( local, g);
-    }
-    if( direction == dg::coo3d::y)
-    {
-        auto einsx = detail::identity_matrix( g.local().gx(), g.global().gx());
-        auto my = detail::limiter_stencil(g.local().gy(), g.global().gy(), bound);
-        auto einsz = detail::identity_matrix( g.local().gz(), g.global().gz());
-        auto local = dg::tensorproduct( einsz, dg::tensorproduct( my, einsx));
-        return dg::convert( local, g);
-    }
-    auto mz = detail::limiter_stencil(g.local().gz(), g.global().gz(), bound);
-    auto einsy = detail::identity_matrix( g.local().gy(), g.global().gy());
-    auto einsx = detail::identity_matrix( g.local().gx(), g.global().gx());
-    auto local = dg::tensorproduct( mz, dg::tensorproduct( einsy, einsx));
-    return dg::convert( local, g);
+    return dg::make_mpi_matrix( out, g);
 }
 
 #endif // MPI_VERSION

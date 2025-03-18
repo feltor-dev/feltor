@@ -29,28 +29,28 @@ namespace cpu {
 //********* Here, the change from float to double happens ***************//
 ///////////////////////////////////////////////////////////////////////////
 #ifndef _WITHOUT_VCL
-static inline vcl::Vec8d make_vcl_vec8d( double x, int i){
+inline vcl::Vec8d make_vcl_vec8d( double x, int i){
     return vcl::Vec8d(x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){
+inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){
     return vcl::Vec8d().load( x+i);
 }
-static inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){
     return vcl::Vec8d(x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){
     return vcl::Vec8d().load_partial( num, x+i);
 }
-static inline vcl::Vec8d make_vcl_vec8d( float x, int i){
+inline vcl::Vec8d make_vcl_vec8d( float x, int i){
     return vcl::Vec8d((double)x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i){
+inline vcl::Vec8d make_vcl_vec8d( const float* x, int i){
     return vcl::Vec8d( x[i], x[i+1], x[i+2], x[i+3], x[i+4], x[i+5], x[i+6], x[i+7]);
 }
-static inline vcl::Vec8d make_vcl_vec8d( float x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( float x, int i, int num){
     return vcl::Vec8d((double)x);
 }
-static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
     double tmp[8];
     for(int j=0; j<num; j++)
         tmp[j] = (double)x[i+j];
@@ -58,19 +58,117 @@ static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
 }
 #endif//_WITHOUT_VCL
 template<class T>
-inline double get_element( T x, int i){
-	return (double)x;
+inline T get_element( T x, int i){
+	return x;
 }
 template<class T>
-inline double get_element( T* x, int i){
-	return (double)(*(x+i));
+inline T get_element( T* x, int i){
+	return *(x+i);
+}
+////////////////////////////////////////////////////////////////////////////////
+// Auxiliary functions
+////////////////////////////////////////////////////////////////////////////////
+
+// Knuth 2Sum.
+template<typename T>
+inline std::enable_if_t<!std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T & s)
+{
+    T r = a + b;
+    T z = r - a;
+    s = (a - (r - z)) + (b - z);
+    return r;
+}
+template<typename T> // for unsigned, int, char etc.
+inline std::enable_if_t<std::is_integral_v<T>,T> KnuthTwoSum(T a, T b, T & s)
+{
+    s = 0;
+    return a + b;
 }
 
+template<typename T>
+inline T TwoProductFMA(T a, T b, T &d) {
+    T p = a * b;
+#ifdef _WITHOUT_VCL
+    d = a*b-p;
+#else
+    d = vcl::mul_sub_x(a, b, p); //extra precision even if FMA is not available
+#endif//_WITHOUT_VCL
+    return p;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// FPE Accumulate and Round function for leightweight implementation
+////////////////////////////////////////////////////////////////////////////////
+//does not check for NaN
+template<typename T, size_t N> UNROLL_ATTRIBUTE
+void Accumulate(T x, std::array<T,N>& fpe , int* status)
+{
+    if( x == T(0) )
+        return;
+    for(unsigned int i = 0; i != N; ++i) {
+        T s;
+        fpe[i] = KnuthTwoSum(fpe[i], x, s);
+        x = s;
+        if( x == T(0)) //early exit
+	        return;
+    }
+
+    if (x != T(0) && *status != 1) {
+        *status = 2;
+    }
+}
+/**
+* @brief Convert a fpe to the nearest number (CPU version)
+*
+* @param fpe a pointer to N doubles on the CPU (representing the fpe)
+* @return the double precision number nearest to the fpe
+*/
+template<class T, size_t N>
+inline T Round( const std::array<T,N>& fpe ) {
+    // Our own implementation
+    // Just accumulate to a FPE of size 2 and return sum;
+    std::array<T, 2> fpe_red{T(0),T(0)};
+    int status_red;
+    for( unsigned u = 0; u<N; u++)
+        Accumulate( fpe[u], fpe_red, &status_red);
+    return fpe_red[0] + fpe_red[1];
+
+    // The problem with the following is to get it to work for complex
+
+    //// Sylvie Boldo, and Guillaume Melquiond. "Emulation of a FMA and correctly rounded sums: proved algorithms using rounding to odd." IEEE Transactions on Computers, 57, no. 4 (2008): 462-471.
+    //// Listing 1 CorrectRoundedSum3
+    //// xh = fpe[0], xm = fpe[1], xl = fpe[2]
+    //static_assert( N > 2, "FPE size must be greater than 2");
+    //union {
+    //    double d;
+    //    int64_t l;
+    //} thdb;
+
+    //double tl;
+    //double th = KnuthTwoSum(fpe[1], fpe[2], tl);
+
+    //if (tl != 0.0) {
+    //    thdb.d = th;
+    //    // if the mantissa of th is odd, there is nothing to do
+    //    if (!(thdb.l & 1)) {
+    //        // choose the rounding direction
+    //        // depending of the signs of th and tl
+    //        if ((tl > 0.0) ^ (th < 0.0))
+    //            thdb.l++;
+    //        else
+    //            thdb.l--;
+    //        th = thdb.d;
+    //    }
+    //}
+
+    //// final addition rounded to nearest
+    //return fpe[0] + th;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
-static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
+inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
     // With atomic accumulator updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -113,11 +211,10 @@ static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 /**
 * @brief Accumulate a double to the superaccumulator
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @param x the double to add to the superaccumulator
 */
-static inline void Accumulate( int64_t* accumulator, double x) {
+inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
     //assert( !std::isnan(x) && "Detected NaN in dot product!!");
@@ -140,7 +237,7 @@ static inline void Accumulate( int64_t* accumulator, double x) {
     }
 }
 #ifndef _WITHOUT_VCL
-static inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
+inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
     double v[8];
     x.store(v);
 
@@ -161,14 +258,13 @@ static inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
 /**
 * @brief Normalize a superaccumulator
 *
-* @ingroup lowlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @param imin the first index in the accumulator
 * @param imax the last index in the accumulator
 *
 * @return  carry in bit (sign)
 */
-static inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
+inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
     int64_t carry_in = accumulator[imin] >> DIGITS;
     accumulator[imin] -= carry_in << DIGITS;
     int i;
@@ -195,11 +291,10 @@ static inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
 /**
 * @brief Convert a superaccumulator to the nearest double precision number (CPU version)
 *
-* @ingroup highlevel
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @return the double precision number nearest to the superaccumulator
 */
-static inline double Round( int64_t * accumulator) {
+inline double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     bool negative = Normalize(accumulator, imin, imax);

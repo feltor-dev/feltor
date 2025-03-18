@@ -22,7 +22,7 @@ namespace dg{
  * operator
  *
  * Can be used by the \c dg::PCG class. The following example shows how the class can be used to act as a \c Helmholtz2 operator:
- @snippet helmholtzg2_b.cu doxygen
+ @snippet helmholtzg2_b.cpp doxygen
  * @copydoc hide_geometry_matrix_container
  * @note The intention is for Matrix to be one of the Elliptic classes with
  * the \c weights() and \c precond() methods defined. If Matrix is to be an
@@ -153,7 +153,7 @@ using Helmholtz3d = GeneralHelmholtz<dg::Elliptic3d<Geometry,Matrix,Container>, 
  * @note The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
  * @attention It is MUCH better to solve the normal \c Helmholtz operator twice,
  * consecutively, than solving the \c Helmholtz2 operator once. The following code snippet shows how to do it:
- @snippet helmholtzg2_b.cu doxygen
+ @snippet helmholtzg2_b.cpp doxygen
  */
 template< class Geometry, class Matrix, class Container>
 struct Helmholtz2

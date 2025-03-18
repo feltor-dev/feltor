@@ -1,5 +1,3 @@
-// #define DG_DEBUG
-
 #include <iostream>
 #include <iomanip>
 
@@ -14,9 +12,9 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 const double m=4.;
 const double n=4.;
-const double alpha = -0.5;
-const double ell_fac = -alpha*(m*m+n*n);
-const double helm_fac = 1.+ ell_fac;
+const double alpha = 0.5;
+const double ell_fac = (m*m+n*n);
+//const double helm_fac = 1.+ ell_fac;
 
 double lhs( double x, double y){ return sin(x*m)*sin(y*n);}
 
@@ -54,7 +52,8 @@ int main(int argc, char * argv[])
     double min_weights = dg::blas1::reduce(w2d, max_weights, dg::AbsMin<double>() );
     std::cout << "#   min(W)  = "<<min_weights <<"  max(W) = "<<max_weights << "\n";
     const double kappa = sqrt(max_weights/min_weights); //condition number
-    dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( alpha, {g, dg::centered});
+    //dg::Helmholtz<dg::CartesianGrid2d, Matrix, Container> A( alpha, {g, dg::centered});
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> A( {g, dg::centered, 1.0});
     dg::mat::UniversalLanczos<Container> lanczos( A.weights(), 20);
     auto T = lanczos.tridiag( A, A.weights(), A.weights());
     auto extremeEVs = dg::mat::compute_extreme_EV( T);
@@ -62,24 +61,34 @@ int main(int argc, char * argv[])
     double EVmax = extremeEVs[1];
 
     std::vector< std::function<double (double)>> funcs{
-        [](double x) { return sqrt(x);},
-        [](double x) { return 1./sqrt(x);},
-        [](double x) { return 1./exp(x);},
-        [](double x) {
-            return 1./boost::math::cyl_bessel_i(0, x);},
-        [](double x){
-            return 1./exp(x)/boost::math::cyl_bessel_i(0, x);
-        },
-        [](double x) { return 1./x;}
+	//Elliptic
+        [](double x) { return sqrt(alpha*x);},
+        [](double x) { return 1./sqrt(alpha*x);},
+        [](double x) { return exp(-alpha*x);},
+        [](double x) { return boost::math::cyl_bessel_j(0, alpha*sqrt(x));},
+        [](double x) { return exp(-alpha*x)*boost::math::cyl_bessel_i(0, -alpha*x);},
+        [](double x) { return 1./(alpha*x);},
+	//Helmholtz
+        [](double x) { return sqrt(1.+alpha*x);},
+        [](double x) { return 1./sqrt(1.+alpha*x);},
+        [](double x) { return 1./(1.+alpha*x);}
     };
-    std::vector<std::string> outs = {"Sqrt", "Inv-Sqrt", "Inv-Exp",
-        "Inv-Bessel", "Inv-Gamma", "Inverse"};
+    std::vector<std::string> outs = {
+	    "Sqrt(alpha A)", 
+	    "Inv(Sqrt(alpha A))", 
+	    "Exp(-alpha A)",
+        "BesselJ0(alpha Sqrt( A))",
+	    "Exp(-alpha A) BesselI0(-alpha A)", 
+	    "Inv(alpha A)",
+        "Sqrt(1+alpha A)", 
+	    "Inv(Sqrt(1+alpha A))", 
+	    "Inv(1+alpha A)"};
     for( unsigned u=0; u<funcs.size(); u++)
     {
-        std::cout << "\n#Compute x = "<<outs[u]<<"(1+ alpha Delta) b " << std::endl;
+        std::cout << "\n#Compute x = "<<outs[u]<<" b " << std::endl;
 
         Container x = dg::evaluate(lhs, g), x_exac(x), b(x), error(x);
-        dg::blas1::scal(x_exac, funcs[u](helm_fac));
+        dg::blas1::scal(x_exac, funcs[u](ell_fac));
 
         double res_fac = kappa*funcs[u](EVmin);
         std::cout << "#   min(EV) = "<<EVmin <<"  max(EV) = "<<EVmax << "\n";

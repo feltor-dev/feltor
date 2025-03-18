@@ -95,11 +95,11 @@ struct RealIdentityXRefinement : public aRealRefinementX2d<real_type>
     private:
     virtual void do_generateX( const RealGrid1d<real_type>& g, unsigned nodeXX, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final{
         weights=dg::create::weights(g);
-        abscissas=dg::create::abscissas(g);
+        abscissas = g.abscissas()[0];
     }
     virtual void do_generateY( const RealGridX1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final{
         weights=dg::create::weights(g);
-        abscissas=dg::create::abscissas(g);
+        abscissas = g.abscissas()[0];
     }
     virtual unsigned do_Nx_new( unsigned Nx_old, real_type fx) const override final{ return Nx_old; }
     virtual unsigned do_Ny_new( unsigned Ny_old, real_type fy) const override final{ return Ny_old; }
@@ -235,7 +235,7 @@ using ExponentialXRefinement    = dg::RealExponentialXRefinement<double>;
 
 /**
  * @brief Refined X-point grid
- * @ingroup geometry
+ * @ingroup basicXgeometry
  */
 template<class real_type>
 struct RealCartesianRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
@@ -277,7 +277,7 @@ struct RealCartesianRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
 
 /**
  * @brief Refined X-point grid
- * @ingroup geometry
+ * @ingroup basicXgeometry
  */
 template<class real_type>
 struct RealCartesianRefinedGridX3d : public dg::aRealGeometryX3d<real_type>

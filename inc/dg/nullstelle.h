@@ -47,21 +47,21 @@ class NoRoot1d: public std::exception
  * @ingroup invert
  * It is assumed that a sign change occurs at the root.
  * Function jumps closer to the root by checking the sign.
+ * @snippet{trimleft} nullstelle_t.cpp sqrt
  * \tparam UnaryOp unary function operator
  * \param op Function or Functor
  * \param x_min left boundary, contains new left boundary on execution
  * \param x_max right boundary, contains new right boundary on execution
  * \param eps accuracy of the root finding. Algorithm successful if
  *  \f$ |x_{\max} - x_{\min}| < \varepsilon |x_{\max}| + \varepsilon \f$
- * \return number of used steps to reach the desired accuracy
+ * \return number of function calls to reach the desired accuracy
  * \throw NoRoot1d if no root lies between the given boundaries
  * \throw std::runtime_error if after 60 steps the accuracy wasn't reached
  *
- * \code bisection1d(f, x_min, x_max, eps); \endcode
- * \note If the root is found exactly the x_min = x_max
+ * \note If the root is found exactly then x_min = x_max
  */
 template <typename UnaryOp>
-int bisection1d (UnaryOp& op, double& x_min, double& x_max, const double eps)
+int bisection1d (UnaryOp&& op, double& x_min, double& x_max, const double eps)
 {
     double  mitte;
     double wert_max, wert_mitte, wert_min;

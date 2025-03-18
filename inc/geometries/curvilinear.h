@@ -111,12 +111,17 @@ dg::SparseTensor<host_vector> square( const dg::SparseTensor<host_vector >& jac,
 template<class real_type>
 struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
 {
+    RealCurvilinearGrid2d() = default;
     ///@copydoc hide_grid_parameters2d
     RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
         RealCurvilinearGrid2d( generator, {n,Nx,bcx}, {n,Ny,bcy}){}
     ///@copydoc hide_grid_product2d
-    RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty) :
-        dg::aRealGeometry2d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b}), m_handle(generator)
+    RealCurvilinearGrid2d( const aRealGenerator2d<real_type>& generator,
+            Topology1d tx, Topology1d ty) :
+        dg::aRealGeometry2d<real_type>( {0.,0.},
+                {generator.width(), generator.height()},
+                {tx.n,ty.n},{tx.N,ty.N}, { tx.b, ty.b}),
+        m_handle(generator)
     {
         construct( tx.n, tx.N, ty.n, ty.N);
     }
@@ -131,10 +136,18 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
     const aRealGenerator2d<real_type>& generator() const{return *m_handle;}
     virtual RealCurvilinearGrid2d* clone()const override final{return new RealCurvilinearGrid2d(*this);}
     private:
-    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny) override final
+    virtual void do_set(std::array<unsigned,2> new_n, std::array<unsigned,2> new_N) override final
     {
-        dg::aRealTopology2d<real_type>::do_set( nx, Nx, ny,Ny);
-        construct( nx, Nx, ny, Ny);
+        dg::aRealTopology2d<real_type>::do_set( new_n, new_N);
+        construct( new_n[0], new_N[0], new_n[1], new_N[1]);
+    }
+    virtual void do_set(std::array<dg::bc,2> new_bc) override final
+    {
+        dg::aRealTopology2d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
     void construct( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny);
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const override final{
@@ -159,14 +172,19 @@ template<class real_type>
 struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_type>
 {
     using perpendicular_grid = RealCurvilinearGrid2d<real_type>;
+    RealCurvilinearProductGrid3d() = default;
 
     ///@copydoc hide_grid_parameters3d
     RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         RealCurvilinearProductGrid3d( generator, {n,Nx,bcx}, {n,Ny,bcy}, {0., 2.*M_PI, 1,Nz,bcz}){}
 
     ///@copydoc hide_grid_product3d
-    RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator, Topology1d tx, Topology1d ty, RealGrid1d<real_type> gz):
-        dg::aRealProductGeometry3d<real_type>( {0, generator.width(), tx.n, tx.N, tx.b}, {0., generator.height(), ty.n, ty.N, ty.b},gz), m_handle(generator)
+    RealCurvilinearProductGrid3d( const aRealGenerator2d<real_type>& generator,
+            Topology1d tx, Topology1d ty, RealGrid1d<real_type> gz):
+        dg::aRealProductGeometry3d<real_type>(
+                {0.,0., gz.x0()},{ generator.width(),
+                generator.height(),gz.x1()}, {tx.n,ty.n, gz.n()},
+                {tx.N, ty.N, gz.N()},{ tx.b, ty.b, gz.bcx()}), m_handle(generator)
     {
         m_map.resize(3);
         constructPerp( this->nx(), this->Nx(), this->ny(), this->Ny());
@@ -179,11 +197,22 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
     virtual RealCurvilinearProductGrid3d* clone()const override final{return new RealCurvilinearProductGrid3d(*this);}
     private:
     virtual RealCurvilinearGrid2d<real_type>* do_perp_grid() const override final;
-    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny,unsigned nz,unsigned Nz) override final{
-        dg::aRealTopology3d<real_type>::do_set( nx, Nx, ny, Ny, nz, Nz);
-        if( !( nx == this->nx() && Nx == this->Nx() && ny == this->ny() && Ny == this->Ny() ) )
-            constructPerp( nx, Nx, ny,Ny);
-        constructParallel(nz,Nz);
+    virtual void do_set( std::array<unsigned,3> new_n, std::array<unsigned,3> new_N) override final
+    {
+        auto old_n = this->get_n(), old_N = this->get_N();
+        dg::aRealTopology3d<real_type>::do_set( new_n, new_N);
+        if( !( new_n[0] == old_n[0] && new_N[0] == old_N[0] &&
+               new_n[1] == old_n[1] && new_N[1] == old_N[1] ) )
+            constructPerp( new_n[0], new_N[0], new_n[1],new_N[1]);
+        constructParallel(new_n[2],new_N[2]);
+    }
+    virtual void do_set(std::array<dg::bc,3> new_bc) override final
+    {
+        dg::aRealTopology3d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
     //construct phi and lift rest to 3d
     void constructParallel(unsigned nz,unsigned Nz)
@@ -244,9 +273,9 @@ using CurvilinearProductGrid3d  = CurvilinearProductGrid3d ;
 ///@cond
 template<class real_type>
 RealCurvilinearGrid2d<real_type>::RealCurvilinearGrid2d( RealCurvilinearProductGrid3d<real_type> g):
-    dg::aRealGeometry2d<real_type>( g.gx(), g.gy() ), m_handle(g.generator())
+    dg::aRealGeometry2d<real_type>( std::array{g.gx(), g.gy()} ), m_handle(g.generator())
 {
-    g.set( this->nx(), this->Nx(), this->ny(), this->Ny(), 1, 1); //shouldn't trigger 2d grid generator
+    g.set( {this->nx(), this->ny(), 1}, {this->Nx(), this->Ny(),1}); //shouldn't trigger 2d grid generator
     m_map=g.map();
     m_jac=g.jacobian();
     m_metric=g.metric();

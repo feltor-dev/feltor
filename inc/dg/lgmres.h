@@ -38,6 +38,8 @@ namespace dg{
 * Basically the Krylov subspace is augmented by \c k approximations to the error.
 * The storage requirement is m+3k vectors
 *
+* @snippet bicgstabl_t.cpp lgmres
+*
 * @note We use **right preconditioning** because this makes the residual norm automatically available in each iteration
 * @note the orthogonalization is done with respect to a user-provided inner product \c W.
 * @note the first cycle of LGMRES(m,k) is equivalent to the first cycle of GMRES(m+k)

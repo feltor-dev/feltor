@@ -187,7 +187,7 @@ auto make_SqrtODE_Te1( int exp, std::string tableau, value_type rtol,
  * @return an operator to use in \c UniversalLanczos solve method
  * @sa \c UniversalLanczos
  */
-inline static auto make_Linear_Te1( int exp)
+inline auto make_Linear_Te1( int exp)
 {
     return [= ](const auto& T)
     {

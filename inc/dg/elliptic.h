@@ -4,9 +4,8 @@
 #include "enums.h"
 #include "backend/memory.h"
 #include "topology/evaluation.h"
-#include "topology/derivatives.h"
+#include "topology/derivativesA.h"
 #ifdef MPI_VERSION
-#include "topology/mpi_derivatives.h"
 #include "topology/mpi_evaluation.h"
 #endif
 #include "topology/geometry.h"
@@ -17,6 +16,7 @@
   */
 namespace dg
 {
+    //TODO Elliptic can be made complex aware with a 2nd complex ContainerType
 // Note that there are many tests for this file : elliptic2d_b,
 // elliptic2d_mpib, elliptic_b, elliptic_mpib, ellipticX2d_b
 // And don't forget inc/geometries/elliptic3d_t (testing alignment and
@@ -75,6 +75,8 @@ class Elliptic1d
      * @brief Construct from Grid
      *
      * @param g The Grid, boundary conditions are taken from here
+     * (can be 2d or 3d grid, but the volume form is always 1 and the 2nd and
+     * 3rd dimension are trivially parallel)
      * @param dir Direction of the right first derivative in x
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
@@ -88,7 +90,8 @@ class Elliptic1d
 
     /**
      * @brief Construct from grid and boundary conditions
-     * @param g The Grid
+     * @param g The Grid (can be 2d or 3d grid, but the volume form is always 1
+     * and the 2nd and 3rd dimension are trivially parallel)
      * @param bcx boundary condition in x
      * @param dir Direction of the right first derivative in x
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
@@ -102,7 +105,7 @@ class Elliptic1d
         m_jfactor=jfactor;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), m_leftx);
         dg::blas2::transfer( dg::create::dx( g, bcx, dir), m_rightx);
-        dg::blas2::transfer( dg::create::jump( g, bcx),   m_jumpX);
+        dg::blas2::transfer( dg::create::jumpX( g, bcx),   m_jumpX);
 
         dg::assign( dg::create::weights(g),       m_weights);
         dg::assign( dg::evaluate( dg::one, g),    m_precond);
@@ -215,7 +218,7 @@ class Elliptic1d
  @copydoc hide_note_jump
 
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
- * @snippet elliptic2d_b.cu pcg
+ * @snippet elliptic2d_b.cpp pcg
  * @copydoc hide_geometry_matrix_container
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.
@@ -239,12 +242,17 @@ class Elliptic2d
     /**
      * @brief Construct from Grid
      *
+     * Initialize \f$ \chi=\sqrt{g}g^{-1}\f$ so that a negative laplacian operator results
+     *
      * @param g The Grid, boundary conditions are taken from here
      * @param dir Direction of the right first derivative in x and y
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
-     * @note chi is assumed the metric per default
+     * @note The grid can be a 3d grid, then the 3rd row and column of \f$
+     * \chi\f$ (and / or the metric) are ignored in the discretization, which
+     * makes the 3rd dimension trivially parallel; the volume form will be the
+     * full 3d volume form though)
      */
     Elliptic2d( const Geometry& g,
         direction dir = forward, value_type jfactor=1., bool chi_weight_jump = false):
@@ -254,6 +262,8 @@ class Elliptic2d
 
     /**
      * @brief Construct from grid and boundary conditions
+     *
+     * Initialize \f$ \chi=\sqrt{g}g^{-1}\f$ so that a negative laplacian operator results
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
@@ -261,7 +271,10 @@ class Elliptic2d
      *  (i.e. \c dg::forward, \c dg::backward or \c dg::centered),
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @param chi_weight_jump If true, the Jump terms are multiplied with the Chi matrix, else it is ignored
-     * @note chi is assumed the metric per default
+     * @note The grid can be a 3d grid, then the 3rd row and column of \f$
+     * \chi\f$ (and / or the metric) are ignored in the discretization, which
+     * makes the 3rd dimension trivially parallel; the volume form will be the
+     * full 3d volume form though)
      */
     Elliptic2d( const Geometry& g, bc bcx, bc bcy,
         direction dir = forward,
@@ -529,7 +542,7 @@ using Elliptic = Elliptic2d<Geometry, Matrix, Container>;
 
 
  The following code snippet demonstrates the use of \c Elliptic3d in an inversion problem
- * @snippet elliptic_b.cu invert
+ * @snippet elliptic_b.cpp invert
  * @copydoc hide_geometry_matrix_container
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.

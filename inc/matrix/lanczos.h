@@ -56,7 +56,7 @@ with
    \end{pmatrix}
 \f]
 *
-* The common lanczos method (and M-Lanczos) method are prone to loss of
+* The common Lanczos method (and M-Lanczos) method are prone to loss of
 * orthogonality for finite precision. Here, only the basic Paige fix is used.
 * Thus the iterations should be kept as small as possible. Could be fixed via
 * full, partial or selective reorthogonalization strategies, but so far no
@@ -68,7 +68,6 @@ class UniversalLanczos
 {
   public:
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
     using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
     using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
@@ -113,6 +112,11 @@ class UniversalLanczos
     ///@brief Norm of \c b from last call to \c operator()
     ///@return bnorm
     value_type get_bnorm() const{return m_bnorm;}
+
+    ///@brief Get the number of iterations in the last call to \c tridiag or \c solve
+    /// (same as T.num_rows)
+    ///@return the number of iterations in the last call to \c tridiag or \c solve
+    unsigned get_iter() const {return m_iter;}
 
     /**
     * @brief \f$ x = f(A)b \approx ||b||_W V f(T) e_1 \f$
@@ -161,44 +165,29 @@ class UniversalLanczos
         return m_iter;
     }
     /**
-     * @brief Tridiagonalization of A using Lanczos method.
+     * @brief Tridiagonalization of A using Lanczos method with \f$ f(x) = x^{-1}\f$.
      *
-     * Tridiagonalize \f$A\f$ using Lanczos algorithm with a residual or
-     * universal stopping criterion
-     * @param A A self-adjoint, positive definit matrix
-     * @param b The initial vector that starts orthogonalization
-     * @param weights Weights that define the scalar product in which \c A is
-     *  self-adjoint and in which the error norm is computed.
-     * @param eps relative accuracy of residual
-     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
-     * @param error_norm Either "residual" or "universal"
-     * @param res_fac factor \f$ \tau\f$ that is multiplied to the norm of the
-     *  residual. Used to account for specific matrix function and operator in
-     *  the convergence criterium
-     * @param q The q-number in the "universal stopping criterion
-     *
-     * @return returns the tridiagonal matrix T. Note that \f$ T = (MV)^T A V \f$.
-     *  The number of iterations is given by \c T.num_rows
+     * @note Just calls the general \c tridiag method with the function \f$ f(x) = x^{-1}\f$. Useful if one wants to compute the extreme Eigenvalues of \f$A\f$
+ * @code{.cpp}
+ *  dg::mat::UniversalLanczos lanczos( A.weights(), 20);
+ *  auto T = lanczos.tridiag( A, A.weights(), A.weights());
+ *  auto EV = dg::mat::compute_extreme_EV( T);
+ *  // EV[0] is the minimum, EV[1] the maximum Eigenvalue
+ * @endcode
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
     const HDiaMatrix& tridiag( MatrixType&& A, const ContainerType0& b,
             const ContainerType1& weights, value_type eps = 1e-12,
             value_type nrmb_correction = 1.,
-            std::string error_norm = "universal", value_type res_fac = 1.,
-            unsigned q = 1
-        )
+            std::string error_norm = "universal",
+            value_type res_fac = 1.,
+            unsigned q = 1 )
     {
         auto op = make_Linear_Te1( -1);
         tridiag( op, std::forward<MatrixType>(A), b, weights, eps,
                 nrmb_correction, error_norm, res_fac, q);
         return m_TH;
     }
-
-    ///@brief Get the number of iterations in the last call to \c tridiag or \c solve
-    /// (same as T.num_rows)
-    ///@return the number of iterations in the last call to \c tridiag or \c solve
-    unsigned get_iter() const {return m_iter;}
-  private:
 
     /** @brief compute \f$ x = |b|_W V y \f$ from a given tridiagonal matrix T
      * and in-place re-computation of V
@@ -233,6 +222,7 @@ class UniversalLanczos
             if( y[i] != 0)
                 less_iter = i+1;
         dg::blas1::axpby( y[0]*bnorm, m_v, 1., x); //Compute b= |b| V y
+
         for ( unsigned i=0; i<less_iter-1; i++)
         {
             dg::blas2::symv( std::forward<MatrixType>(A), m_v, m_vp);
@@ -243,12 +233,33 @@ class UniversalLanczos
             dg::blas1::axpby( y[i+1]*bnorm, m_vp, 1., x); //Compute b= |b| V y
             m_vm.swap( m_v);
             m_v.swap( m_vp);
-
         }
     }
-    template < class MatrixType, class ContainerType1,
-             class ContainerType2, class UnaryOp>
-    void tridiag(UnaryOp f,
+
+    /**
+     * @brief Tridiagonalization of A using Lanczos method.
+     *
+     * Tridiagonalize \f$A\f$ using Lanczos algorithm with a residual or
+     * universal stopping criterion on the function \f$ f(x) \f$
+     * @param f Unary function
+     * @param A A self-adjoint, positive definit matrix
+     * @param b The initial vector that starts orthogonalization
+     * @param weights Weights that define the scalar product in which \c A is
+     *  self-adjoint and in which the error norm is computed.
+     * @param eps relative accuracy of residual
+     * @param nrmb_correction the absolute error \c C in units of \c eps to be respected
+     * @param error_norm Either "residual" or "universal"
+     * @param res_fac factor \f$ \tau\f$ that is multiplied to the norm of the
+     *  residual. Used to account for specific matrix function and operator in
+     *  the convergence criterium
+     * @param q The q-number in the "universal stopping criterion
+     *
+     * @return returns the tridiagonal matrix T. Note that \f$ T = (MV)^T A V \f$.
+     *  The number of iterations is given by \c T.num_rows
+      */
+    template < class UnaryOp, class MatrixType,
+             class ContainerType1, class ContainerType2>
+    const HDiaMatrix& tridiag(UnaryOp f,
             MatrixType&& A, const ContainerType1& b,
             const ContainerType2& weights, value_type eps,
             value_type nrmb_correction,
@@ -270,7 +281,7 @@ class UniversalLanczos
         if( m_bnorm == 0)
         {
             set_iter(1);
-            return;
+            return m_TH;
         }
         value_type residual;
         dg::blas1::axpby(1./m_bnorm, b, 0.0, m_v); //m_v[1] = x/||x||
@@ -326,7 +337,9 @@ class UniversalLanczos
             m_v.swap( m_vp);
             set_iter( m_max_iter);
         }
+        return m_TH;
     }
+    private:
     value_type compute_residual_error( const HDiaMatrix& TH, unsigned iter)
     {
         value_type T1 = compute_Tinv_m1( TH, iter+1);

@@ -4,7 +4,6 @@
 #include <string>
 #include <cmath>
 
-#include "json/json.h"
 #include "dg/file/json_utilities.h"
 
 namespace feltor{
@@ -12,9 +11,10 @@ namespace feltor{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz;
-    std::string tableau, timestepper;
 
-    unsigned itstp;
+    unsigned itstp, maxout;
+    double Tend, deltaT;
+    unsigned cx, cy;
 
     std::vector<double> eps_pol;
     double jfactor;
@@ -36,11 +36,6 @@ struct Parameters
     std::string slope_limiter;
 
     double source_rate, nwall, uwall, wall_rate;
-    double sheath_rate, sheath_max_angle;
-    std::string sheath_coord;
-
-    double boxscaleRm, boxscaleRp;
-    double boxscaleZm, boxscaleZp;
 
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP, bcxA, bcyA;
     enum dg::direction pol_dir;
@@ -48,12 +43,9 @@ struct Parameters
     std::string sheath_bc;
     std::string fci_bc;
     std::string output;
-    bool symmetric, calibrate, periodify;
-    bool penalize_wall, penalize_sheath, modify_B;
+    bool symmetric, calibrate, modify_diff, no_diff_penalization;
+    bool penalize_wall, penalize_sheath;
     bool partitioned;
-    //bool mass_conserv, energy_theorem, toroidal_mom, parallel_mom, parallel_e_force, zonal_flow, COCE_GF, COCE_fluid; //To define which variable to be saved in the output (from input)
-    bool probes;
-    unsigned num_pins;
     //
 
     Parameters() = default;
@@ -63,14 +55,7 @@ struct Parameters
         Nx          = js["grid"].get("Nx", 0).asUInt();
         Ny          = js["grid"].get("Ny", 0).asUInt();
         Nz          = js["grid"].get("Nz", 0).asUInt();
-        boxscaleRm  = js["grid"][ "scaleR"].get( 0u, 1.05).asDouble();
-        boxscaleRp  = js["grid"][ "scaleR"].get( 1u, 1.05).asDouble();
-        boxscaleZm  = js["grid"][ "scaleZ"].get( 0u, 1.05).asDouble();
-        boxscaleZp  = js["grid"][ "scaleZ"].get( 1u, 1.05).asDouble();
-        tableau     = js["timestepper"].get("tableau", "TVB-3-3").asString();
-        timestepper = js["timestepper"].get("type", "multistep").asString();
         partitioned = false;
-        itstp       = js["output"].get("itstp", 0).asUInt();
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
             throw std::runtime_error( "Output type "+output+" not recognized!\n");
@@ -78,6 +63,8 @@ struct Parameters
         if( "glfw" == output)
             throw std::runtime_error( "Output type glfw not possible without glfw compiled!\n");
 #endif
+        cx = js["output"]["compression"].get(0u,1).asUInt();
+        cy = js["output"]["compression"].get(1u,1).asUInt();
 
         stages      = js["elliptic"].get( "stages", 3).asUInt();
         eps_pol.resize(stages);
@@ -98,7 +85,6 @@ struct Parameters
         my          = js["FCI"]["refine"].get( 1u, 1).asUInt();
         rk4eps      = js["FCI"].get( "rk4eps", 1e-6).asDouble();
         interpolation_method = js["FCI"].get("interpolation-method", "dg").asString();
-        periodify   = js["FCI"].get( "periodify", true).asBool();
         fci_bc      = js["FCI"].get( "bc", "along_field").asString();
 
         diff_order  = js["regularization"].get( "order", 2).asUInt();
@@ -172,12 +158,10 @@ struct Parameters
 
 
         curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
-        modify_B = penalize_wall = penalize_sheath = false;
-        nwall = uwall = wall_rate = sheath_rate = sheath_max_angle = 0.;
-        sheath_coord = "s";
+        penalize_wall = penalize_sheath = false;
+        nwall = uwall = wall_rate = 0.;
         if( js["boundary"]["wall"].get("type","none").asString() != "none")
         {
-            modify_B = js["boundary"]["wall"].get( "modify-B", false).asBool();
             penalize_wall = js["boundary"]["wall"].get( "penalize-rhs",
                     false).asBool();
             wall_rate = js ["boundary"]["wall"].get( "penalization",
@@ -185,18 +169,14 @@ struct Parameters
             nwall = js["boundary"]["wall"].get( "nwall", 1.0).asDouble();
             uwall = js["boundary"]["wall"].get( "uwall", 0.0).asDouble();
         }
-        if( js["boundary"]["sheath"].get("type","none").asString() != "none")
+        if( sheath_bc != "none")
         {
             penalize_sheath = js["boundary"]["sheath"].get( "penalize-rhs",
                     false).asBool();
-            sheath_rate = js ["boundary"]["sheath"].get( "penalization",
-                    0.).asDouble();
-            sheath_coord = js["boundary"]["sheath"].get( "coordinate", "s").asString();
-            sheath_max_angle = js["boundary"]["sheath"].get( "max_angle", 4).asDouble()*2.*M_PI;
         }
 
         // Computing flags
-        symmetric = calibrate = false;
+        symmetric = calibrate = modify_diff = no_diff_penalization = false;
         for( unsigned i=0; i<js["flags"].size(); i++)
         {
             std::string flag = js["flags"].get(i,"symmetric").asString();
@@ -209,18 +189,35 @@ struct Parameters
                             "Calibrate not possible with glfw output!\n");
                 calibrate = true;
             }
+            else if( flag == "modify-diff")
+                modify_diff = true;
+            else if( flag == "no-diff-penalization")
+                no_diff_penalization = true;
             else
                 throw std::runtime_error( "Flag "+flag+" not recognized!\n");
         }
 
-        //Probes
-        probes = js.asJson().isMember("probes");
-        if(probes)
+        // output frequencies
+        maxout = js["output"].get( "maxout", 0).asUInt();
+        std::string output_mode = js["timestepper"].get(
+                "output-mode", "Tend").asString();
+        Tend = 0, deltaT = 0.;
+        itstp       = js["output"].get("itstp", 0).asUInt();
+        if( output_mode == "Tend")
         {
-            num_pins = js["probes"]["num_pins"].asUInt();
+            Tend = js["timestepper"].get( "Tend", 1).asDouble();
+            deltaT = Tend/(double)(maxout*itstp);
+        }
+        else if( output_mode == "deltaT")
+        {
+            deltaT = js["timestepper"].get( "deltaT", 1).asDouble()/(double)(itstp);
+            Tend = deltaT*(double)(maxout*itstp);
         }
         else
-            num_pins = 0;
+        {
+            throw std::runtime_error( "Error: Unrecognized timestepper: output-mode: '"
+                               + output_mode);
+        }
     }
 };
 

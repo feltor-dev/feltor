@@ -41,24 +41,9 @@ namespace dg
 * \end{pmatrix}
 * \f]
 * which in code can be assembled as
-@code{.cpp}
-dg::SparseTensor<dg::HVec> metric; // allocate 3x3 index matrix
-metric.idx(0,0) = 1, metric.idx(0,1) = 0, metric.idx(0,2) = 0;
-metric.idx(1,0) = 0, metric.idx(1,1) = 2, metric.idx(2,2) = 0;
-metric.idx(2,0) = 0, metric.idx(2,1) = 0, metric.idx(2,2) = 3;
-std::vector<dg::HVec> values( 4);
-values[0] = dg::evaluate( dg::zero, grid);
-values[1] = ... // construct gxx element
-values[2] = ... // construct gyy element
-values[3] = ... // construct gzz element
-metric.values() = values;
-// then we can for example use dg::tensor functions:
-dg::HVec det = dg::tensor::determinant( metric);
-// the individual elements can be accessed via the access operator
-dg::HVec gxx = metric(0,0);
-@endcode
+* @snippet{trimleft} multiply_t.cpp sparse tensor
 * @tparam container must be default constructible and copyable.
-* @ingroup sparsematrix
+* @ingroup tensor
 * @sa dg::tensor
 */
 template<class container>
@@ -185,7 +170,7 @@ struct SparseTensor
     }
 
     private:
-    dg::Operator<int> m_mat_idx;
+    dg::SquareMatrix<int> m_mat_idx;
     std::vector<container> m_values;
 };
 

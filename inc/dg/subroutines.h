@@ -67,39 +67,55 @@ DG_DEVICE void operator()( T1 x, T2& y) const
 ///@addtogroup variadic_evaluates
 ///@{
 
-///\f$ y = x_1/x_2 \f$
-struct divides
-{
-    template< class T1, class T2>
-DG_DEVICE T1 operator()( T1 x1, T2 x2) const
-    {
-        return x1/x2;
-    }
-};
 
 ///@brief \f$ y = \sum_i x_i \f$
 struct Sum
 {
     ///@brief \f[ \sum_i x_i \f]
     template< class T1, class ...Ts>
-DG_DEVICE T1 operator()( T1 x, Ts... rest) const
+DG_DEVICE auto operator()( T1 x, Ts... rest) const
     {
-        T1 tmp = T1{0};
-        sum( tmp, x, rest...);
-        return tmp;
+        // unfortunately the fold expression ( x + ... + rest)
+        // does currently not guarantee the order of execution
+        // so we need to wait for DR 2611 to be implemented in g++ to use it
+        return sum( x, rest ...);
     }
     private:
-    template<class T, class ...Ts>
-DG_DEVICE void sum( T& tmp, T x, Ts... rest) const
+    template< class T1, class ...Ts>
+DG_DEVICE auto sum( T1 x, Ts... rest) const
     {
-        tmp += x;
-        sum( tmp, rest...);
+        return x + sum( rest...);
     }
 
-    template<class T>
-DG_DEVICE void sum( T& tmp, T x) const
+    template<class T1>
+DG_DEVICE auto sum( T1 x1) const
     {
-        tmp += x;
+        return x1;
+    }
+};
+
+
+///@brief \f$ y = \prod_i x_i \f$
+struct Product
+{
+    ///@brief \f[ \sum_i x_i \f]
+    template< class T1, class ...Ts>
+DG_DEVICE auto operator()( T1 x, Ts... rest) const
+    {
+        // manual implement ( x * ... * rest) until DR 2611 is resolved
+        return prod(x, rest...);
+    }
+    private:
+    template< class T1, class ...Ts>
+DG_DEVICE auto prod( T1 x, Ts... rest) const
+    {
+        return x * prod( rest...);
+    }
+
+    template<class T1>
+DG_DEVICE auto prod( T1 x1) const
+    {
+        return x1;
     }
 };
 
@@ -107,50 +123,44 @@ DG_DEVICE void sum( T& tmp, T x) const
 struct PairSum
 {
     ///@brief \f[ \sum_i a_i x_i \f]
-    template< class T, class ...Ts>
-DG_DEVICE T operator()( T a, T x, Ts... rest) const
+    template< class T1, class T2, class ...Ts>
+DG_DEVICE auto operator()( T1 a, T2 x, Ts... rest) const
     {
-        T tmp = T{0};
-        sum( tmp, a, x, rest...);
-        return tmp;
+        return sum( a, x, rest...);
     }
     private:
-    template<class T, class ...Ts>
-DG_DEVICE void sum( T& tmp, T alpha, T x, Ts... rest) const
+    template<class T1, class T2, class ...Ts>
+DG_DEVICE auto sum( T1 alpha, T2 x, Ts... rest) const
     {
-        tmp = DG_FMA( alpha, x, tmp);
-        sum( tmp, rest...);
+        return DG_FMA( alpha, x, sum(rest...));
     }
 
-    template<class T>
-DG_DEVICE void sum( T& tmp, T alpha, T x) const
+    template< class T1, class T2>
+DG_DEVICE auto sum( T1 alpha, T2 x) const
     {
-        tmp = DG_FMA(alpha, x, tmp);
+        return alpha*x;
     }
 };
 ///@brief \f$ y = \sum_i a_i x_i y_i \f$
 struct TripletSum
 {
     ///@brief \f[ \sum_i \alpha_i x_i y_i \f]
-    template< class T1, class ...Ts>
-DG_DEVICE T1 operator()( T1 a, T1 x1, T1 y1, Ts... rest) const
+    template< class T0, class T1, class T2, class ...Ts>
+DG_DEVICE auto operator()( T0 a, T1 x1, T2 y1, Ts... rest) const
     {
-        T1 tmp = T1{0};
-        sum( tmp, a, x1, y1, rest...);
-        return tmp;
+        return sum( a, x1, y1, rest...);
     }
     private:
-    template<class T, class ...Ts>
-DG_DEVICE void sum( T& tmp, T alpha, T x, T y, Ts... rest) const
+    template<class T0, class T1, class T2, class ...Ts>
+DG_DEVICE auto sum( T0 alpha, T1 x, T2 y, Ts... rest) const
     {
-        tmp = DG_FMA( alpha*x, y, tmp);
-        sum( tmp, rest...);
+        return DG_FMA( alpha*x, y, sum(rest...));
     }
 
-    template<class T>
-DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
+    template<class T0, class T1, class T2>
+DG_DEVICE auto sum( T0 alpha, T1 x, T2 y) const
     {
-        tmp = DG_FMA(alpha*x, y, tmp);
+        return (alpha*x)*y;
     }
 };
 
@@ -159,10 +169,10 @@ DG_DEVICE void sum( T& tmp, T alpha, T x, T y) const
 ///@addtogroup variadic_subroutines
 ///@{
 
-///@brief \f$ y = \sum_i a_i x_i + b y,\quad \tilde y = \sum_i \tilde a_i x_i + \tilde b y \f$
+///@brief \f$ y = \sum_i b_i x_i + b_0 y,\quad \tilde y = \sum_i \tilde b_i x_i + \tilde b_0 y \f$
 struct EmbeddedPairSum
 {
-    ///@brief \f[ \sum_i \alpha_i x_i \f]
+    ///@brief \f$ y = \sum_i b_i x_i + b_0 y,\quad \tilde y = \sum_i \tilde b_i x_i + \tilde b_0 y \f$
     template< class T1, class ...Ts>
 DG_DEVICE void operator()( T1& y, T1& yt, T1 b, T1 bt, Ts... rest) const
     {
@@ -187,13 +197,17 @@ DG_DEVICE void sum( T1& y_1, T1& yt_1, T1 b, T1 bt, T1 k) const
     }
 };
 
+///@}
+
+//The only reason the following classes exist is that nvcc does not allow
+//device lambdas or local classes inside host functions
+///@cond
+
 /// \f$ f( y, g(x_0, ..., x_s)) \f$
 template<class BinarySub, class Functor>
 struct Evaluate
 {
-    Evaluate( BinarySub sub, Functor g):
-        m_f( sub),
-        m_g( g) {}
+    Evaluate( BinarySub sub, Functor g): m_f( sub), m_g( g) {}
 #ifdef __CUDACC__
 // cuda compiler spits out a lot of warnings if
 // e.g. dg::transform is used on host vectors with host function
@@ -212,13 +226,15 @@ DG_DEVICE void operator() ( T& y, Ts... xs){
     Functor m_g;
 };
 
+
 /// \f$ y\leftarrow ay \f$
 template<class T>
 struct Scal
 {
     Scal( T a): m_a(a){}
+    template<class T1>
 DG_DEVICE
-    void operator()( T& y)const{
+    void operator()( T1& y)const{
         y *= m_a;
     }
     private:
@@ -230,8 +246,9 @@ template<class T>
 struct Plus
 {
     Plus( T a): m_a(a){}
+    template<class T1>
 DG_DEVICE
-    void operator()( T& y) const{
+    void operator()( T1& y) const{
         y += m_a;
     }
     private:
@@ -240,99 +257,128 @@ DG_DEVICE
 
 ///@brief \f$ y\leftarrow ax+by \f$
 ///@ingroup binary_operators
-template<class T>
+template<class T0, class T1>
 struct Axpby
 {
-    Axpby( T a, T b): m_a(a), m_b(b){}
+    Axpby( T0 a, T1 b): m_a(a), m_b(b){}
+    template<class T2, class T3>
 DG_DEVICE
-    void operator()( T x, T& y)const {
-        T temp = y*m_b;
-        y = DG_FMA( m_a, x, temp);
+    void operator()( T2 x, T3& y)const {
+        y *= m_b;
+        y = DG_FMA( m_a, x, y);
     }
     private:
-    T m_a, m_b;
+    T0 m_a;
+    T1 m_b;
 };
 ///@brief \f$ y\leftarrow axy+by \f$
 ///@ingroup binary_operators
-template<class T>
+template<class T0, class T1>
 struct AxyPby
 {
-    AxyPby( T a, T b): m_a(a), m_b(b){}
+    AxyPby( T0 a, T1 b): m_a(a), m_b(b){}
+    template<class T2, class T3>
 DG_DEVICE
-    void operator()( T x, T& y)const {
-        T temp = y*m_b;
-        y = DG_FMA( m_a*x, y, temp);
+    void operator()( T2 x, T3& y)const {
+        y *= m_b;
+        y = DG_FMA( m_a*x, y, y);
     }
     private:
-    T m_a, m_b;
+    T0 m_a;
+    T1 m_b;
 };
 
 /// \f$ z\leftarrow ax+by+gz \f$
-template<class T>
+template<class T0, class T1, class T2>
 struct Axpbypgz
 {
-    Axpbypgz( T a, T b, T g): m_a(a), m_b(b), m_g(g){}
+    Axpbypgz( T0 a, T1 b, T2 g): m_a(a), m_b(b), m_g(g){}
+    template<class T3, class T4, class T5>
 DG_DEVICE
-    void operator()( T x, T y, T& z)const{
-        T temp = z*m_g;
-        temp = DG_FMA( m_a, x, temp);
-        temp = DG_FMA( m_b, y, temp);
-        z = temp;
+    void operator()( T3 x, T4 y, T5& z)const{
+        z *= m_g;
+        z = DG_FMA( m_a, x, z);
+        z = DG_FMA( m_b, y, z);
     }
     private:
-    T m_a, m_b, m_g;
+    T0 m_a;
+    T1 m_b;
+    T2 m_g;
 };
 
-/// \f$ z\leftarrow ax_1y_1+bx_2y_2+gz \f$
-template<class T>
+/// \f$ z\leftarrow ax_1y_1+bz \f$
+template<class T0, class T1>
 struct PointwiseDot
 {
-    PointwiseDot( T a, T b, T g = (T)0): m_a(a), m_b(b), m_g(g) {}
+    PointwiseDot( T0 a, T1 b): m_a(a), m_b(b) {}
+    template<class T3, class T4, class T5>
     ///\f$ z = axy+bz \f$
-DG_DEVICE void operator()( T x, T y, T& z)const{
-        T temp = z*m_b;
-        z = DG_FMA( m_a*x, y, temp);
+DG_DEVICE void operator()( T3 x, T4 y, T5& z)const{
+        z *= m_b;
+        z = DG_FMA( m_a*x, y, z);
     }
     ///\f$ y = ax_1x_2x_3 +by \f$
+    template<class T3, class T4, class T5, class T6>
 DG_DEVICE
-    void operator()( T x1, T x2, T x3, T& y)const{
-        T temp = y*m_b;
-        y = DG_FMA( m_a*x1, x2*x3, temp);
-    }
-    /// \f$ z = ax_1y_1+bx_2y_2+gz \f$
-DG_DEVICE
-    void operator()( T x1, T y1, T x2, T y2, T& z)const{
-        T temp = z*m_g;
-        temp = DG_FMA( m_a*x1, y1, temp);
-        temp = DG_FMA( m_b*x2, y2, temp);
-        z = temp;
+    void operator()( T3 x1, T4 x2, T5 x3, T6& y)const{
+        y *= m_b;
+        y = DG_FMA( m_a*x1, x2*x3, y);
     }
     private:
-    T m_a, m_b, m_g;
+    T0 m_a;
+    T1 m_b;
+};
+/// \f$ z\leftarrow ax_1y_1+bx_2y_2+gz \f$
+template<class T0, class T1, class T2>
+struct PointwiseDot2
+{
+    PointwiseDot2( T0 a, T1 b, T2 g): m_a(a), m_b(b), m_g(g) {}
+    /// \f$ z = ax_1y_1+bx_2y_2+gz \f$
+    template<class T3, class T4, class T5, class T6, class T7>
+DG_DEVICE
+    void operator()( T3 x1, T4 y1, T5 x2, T6 y2, T7& z)const{
+        z *= m_g;
+        z = DG_FMA( m_a*x1, y1, z);
+        z = DG_FMA( m_b*x2, y2, z);
+    }
+    private:
+    T0 m_a;
+    T1 m_b;
+    T2 m_g;
+};
+
+///\f$ y = x_1/x_2 \f$
+struct divides
+{
+    template< class T1, class T2>
+DG_DEVICE auto operator()( T1 x1, T2 x2) const
+    {
+        return x1/x2;
+    }
 };
 
 /// \f$ z\leftarrow ax/y + bz \f$
-template<class T>
+template<class T0, class T1>
 struct PointwiseDivide
 {
-    PointwiseDivide( T a, T b): m_a(a), m_b(b){}
+    PointwiseDivide( T0 a, T1 b): m_a(a), m_b(b){}
     ///\f$ z = az/y +bz \f$
+    template<class T3, class T4>
 DG_DEVICE
-    void operator()( T y, T& z)const{
-        T temp = z*m_b;
-        z = DG_FMA( m_a, z/y, temp);
+    void operator()( T3 y, T4& z)const{
+        z *= m_b;
+        z = DG_FMA( m_a, z/y, z);
     }
+    template<class T3, class T4, class T5>
 DG_DEVICE
-    void operator()( T x, T y, T& z)const{
-        T temp = z*m_b;
-        z = DG_FMA( m_a, x/y, temp);
+    void operator()( T3 x, T4 y, T5& z)const{
+        z *= m_b;
+        z = DG_FMA( m_a, x/y, z);
     }
     private:
-    T m_a, m_b;
+    T0 m_a;
+    T1 m_b;
 };
-///@}
-
-///@cond
 namespace detail
 {
 template<class F, class G>

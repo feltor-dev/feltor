@@ -41,7 +41,7 @@ thrust::host_vector<real_type> normalize_weights_and_compute_abscissas( const Re
         for( unsigned j=0; j<g.n(); j++)
         {
             abs[i*g.n()+j] =  (boundaries[i+1]+boundaries[i])/2. +
-                (boundaries[i+1]-boundaries[i])/2.*g.dlt().abscissas()[j];
+                (boundaries[i+1]-boundaries[i])/2.*dg::DLT<real_type>::abscissas(g.n())[j];
         }
     }
     return abs;
@@ -100,7 +100,7 @@ struct RealIdentityRefinement : public aRealRefinement1d<real_type>
     private:
     virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final{
         weights=dg::create::weights(g);
-        abscissas=dg::create::abscissas(g);
+        abscissas=g.abscissas(0);
     }
     virtual unsigned do_N_new( unsigned N_old, bc bcx) const override final{
         return N_old;
@@ -193,7 +193,7 @@ struct RealFemRefinement : public aRealRefinement1d<real_type>
     }
     virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
     {
-        thrust::host_vector<real_type> old = dg::create::abscissas(g);
+        thrust::host_vector<real_type> old = g.abscissas(0);
         if( m_M == 1)
         {
             abscissas = old;
@@ -277,7 +277,7 @@ struct RealEquidistRefinement : public aRealRefinement1d<real_type>
         if( add_x_ == 0 || howm_ == 0)
         {
             thrust::host_vector<real_type> w_( g.size(), 1);
-            abscissas = dg::create::abscissas(g);
+            abscissas = g.abscissas(0);
             weights = w_;
             return;
         }
@@ -352,7 +352,7 @@ struct RealExponentialRefinement : public aRealRefinement1d<real_type>
         if( add_x_ == 0)
         {
             thrust::host_vector<real_type> w_( g.size(), 1);
-            abscissas= dg::create::abscissas(g);
+            abscissas= g.abscissas(0);
             weights = w_;
             return;
         }
@@ -412,13 +412,15 @@ using ExponentialRefinement = dg::RealExponentialRefinement<double>;
 
 /**
  * @brief Refined RealCartesian grid
- * @ingroup geometry
+ * @ingroup basicgeometry
  */
 template<class real_type>
 struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
 {
     RealCartesianRefinedGrid2d( const aRealRefinement1d<real_type>& refX, const aRealRefinement1d<real_type>& refY, real_type x0, real_type x1, real_type y0, real_type y1,
-            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::aGeometry2d( {x0, x1, n, refX.N_new(Nx,bcx), bcx}, {y0, y1, n, refY.N_new(Ny,bcy),bcy}), refX_(refX), refY_(refY), w_(2), a_(2)
+            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) :
+            dg::aGeometry2d( {x0,y0},{x1,y1}, {n,n},{refX.N_new(Nx,bcx),refY.N_new(Ny,bcy)}, {bcx,bcy}),
+            refX_(refX), refY_(refY), w_(2), a_(2)
     {
         construct_weights_and_abscissas(n,Nx,n,Ny);
     }
@@ -446,9 +448,19 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
                 a_[1][i*wx.size()+j] = ay[i];
             }
     }
-    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny)override final{
-        aRealTopology2d<real_type>::do_set(nx,refX_->N_new(Nx,this->bcx()),ny,refY_->N_new(Ny, this->bcy()));
-        construct_weights_and_abscissas(nx,Nx,ny,Ny);
+    virtual void do_set(std::array<unsigned,2> new_n, std::array<unsigned,2> new_N)override final{
+        unsigned Nx = new_N[0], Ny = new_N[1];
+        aRealTopology2d<real_type>::do_set(new_n,{refX_->N_new(Nx,this->bcx()),
+                                                  refY_->N_new(Ny,this->bcy())});
+        construct_weights_and_abscissas(new_n[0], Nx, new_n[1], Ny);
+    }
+    virtual void do_set(std::array<dg::bc,2> new_bc) override final
+    {
+        dg::aRealTopology2d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
         SparseTensor<thrust::host_vector<real_type> > t(*this);
@@ -473,14 +485,16 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
 
 /**
  * @brief Refined RealCartesian grid
- * @ingroup geometry
+ * @ingroup basicgeometry
  */
 template< class real_type>
 struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
 {
     RealCartesianRefinedGrid3d( const aRealRefinement1d<real_type>& refX, const aRealRefinement1d<real_type>& refY, aRealRefinement1d<real_type>& refZ, real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1,
             unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz=dg::PER) :
-        dg::aGeometry3d( {x0, x1, n, refX.N_new(Nx,bcx), bcx}, { y0, y1, refY.N_new(Ny,bcy), bcy}, {z0,z1, 1, refZ.N_new(Nz,bcz), bcz}), refX_(refX), refY_(refY), refZ_(refZ), w_(3), a_(3)
+        dg::aGeometry3d( {x0,y0,z0},{x1,y1,z1}, {n,n,1},
+            {refX.N_new(Nx,bcx),refY.N_new(Ny,bcy),refZ.N_new(Nz,bcz)}, {bcx,bcy,bcz}),
+            refX_(refX), refY_(refY), refZ_(refZ), w_(3), a_(3)
     {
         construct_weights_and_abscissas(n, Nx, n, Ny,1, Nz);
     }
@@ -513,9 +527,20 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
                 a_[2][(s*w[1].size()+i)*w[0].size()+j] = a[1][s];
             }
     }
-    virtual void do_set(unsigned nx, unsigned Nx, unsigned ny, unsigned Ny, unsigned nz, unsigned Nz) override final{
-        aRealTopology3d<real_type>::do_set(nx,refX_->N_new(Nx, this->bcx()),ny,refY_->N_new(Ny,this->bcy()), nz, refZ_->N_new(Nz,this->bcz()));
-        construct_weights_and_abscissas(nx, Nx, ny, Ny, nz, Nz);
+    virtual void do_set(std::array<unsigned,3> new_n, std::array<unsigned,3> new_N)override final{
+        unsigned Nx = new_N[0], Ny = new_N[1], Nz = new_N[2];
+        aRealTopology3d<real_type>::do_set(new_n,{refX_->N_new(Nx,this->bcx()),
+                                                  refY_->N_new(Ny,this->bcy()),
+                                                  refZ_->N_new(Nz,this->bcz())});
+        construct_weights_and_abscissas(new_n[0], Nx, new_n[1], Ny, new_n[2], Nz);
+    }
+    virtual void do_set(std::array<dg::bc,3> new_bc) override final
+    {
+        dg::aRealTopology3d<real_type>::do_set( new_bc);
+    }
+    virtual void do_set_pq(std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final
+    {
+        throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
         SparseTensor<thrust::host_vector<real_type> > t(*this);

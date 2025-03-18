@@ -23,7 +23,8 @@ namespace detail
 {
 
 template< class Vector1, class Matrix, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, RecursiveVectorTag, RecursiveVectorTag)
+inline std::vector<int64_t> doDot_superacc( int* status, const Vector1& x,
+    const Matrix& m, const Vector2& y, RecursiveVectorTag, RecursiveVectorTag)
 {
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
     std::vector<int64_t> acc( exblas::BIN_COUNT, (int64_t)0);
@@ -31,7 +32,9 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     for( auto el : get_idx<vector_idx>(x1,x2))
     {
         try{
-        std::vector<int64_t> temp = doDot_superacc( do_get_vector_element(x,i,get_tensor_category<Vector1>()), m[i], do_get_vector_element(y,i,get_tensor_category<Vector2>()));
+        std::vector<int64_t> temp = doDot_superacc( status,
+            do_get_vector_element(x,i,get_tensor_category<Vector1>()), m[i],
+            do_get_vector_element(y,i,get_tensor_category<Vector2>()));
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<=exblas::IMAX; k++)

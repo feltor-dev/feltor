@@ -20,12 +20,11 @@ std::array<dg::x::DVec,2> init_from_file( std::string file_name, const dg::x::Ca
     dg::file::NC_Error_Handle errIN;
     int ncidIN;
     errIN = nc_open( file_name.data(), NC_NOWRITE, &ncidIN);
-    dg::file::WrappedJsonValue jsIN;
     size_t length;
     errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &length);
     std::string input(length, 'x');
     errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &input[0]);
-    dg::file::string2Json( input, jsIN.asJson(), dg::file::comments::are_forbidden);
+    auto jsIN = dg::file::string2Json( input, dg::file::comments::are_forbidden);
     poet::Parameters pIN( jsIN);
 
     DG_RANK0 std::cout << "RESTART from file "<<file_name<< std::endl;

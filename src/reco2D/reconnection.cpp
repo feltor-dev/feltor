@@ -30,15 +30,14 @@ int main( int argc, char* argv[])
 #endif //WITH_MPI
 
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Value js;
+    dg::file::WrappedJsonValue ws( dg::file::error::is_throw);
     if( argc == 1)
-        dg::file::file2Json( "input/default.json", js, dg::file::comments::are_discarded);
+        ws = dg::file::file2Json( "input/default.json", dg::file::comments::are_discarded);
     else
-        dg::file::file2Json( argv[1], js);
-    DG_RANK0 std::cout << js <<std::endl;
+        ws = dg::file::file2Json( argv[1]);
+    DG_RANK0 std::cout << ws.toStyledString() <<std::endl;
 
-    const asela::Parameters p( js);
-    dg::file::WrappedJsonValue ws ( js, dg::file::error::is_throw);
+    const asela::Parameters p( ws);
 
     //////////////////////////////////////////////////////////////////////////
     //Make grid
@@ -103,7 +102,7 @@ int main( int argc, char* argv[])
         asela( 0., y0, y1);
     }
     t.toc();
-    var.duration = t.diff();
+    double duration = t.diff();
     t.tic();
 
     DG_RANK0 std::cout << "Begin computation \n";
@@ -115,9 +114,9 @@ int main( int argc, char* argv[])
     if( "glfw" == output)
     {
         /////////glfw initialisation ////////////////////////////////////////////
-        dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
-        GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
-        draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+        ws = dg::file::file2Json( "window_params.json", dg::file::comments::are_discarded);
+        GLFWwindow* w = draw::glfwInitAndCreateWindow( ws["width"].asDouble(), ws["height"].asDouble(), "");
+        draw::RenderHostData render(ws["rows"].asDouble(), ws["cols"].asDouble());
         //create visualisation vectors
         dg::DVec visual( grid.size()), temp(visual);
         dg::HVec hvisual( grid.size());
@@ -195,10 +194,9 @@ int main( int argc, char* argv[])
         else
             outputfile = argv[2];
         /// //////////////////////set up netcdf/////////////////////////////////////
-        dg::file::NC_Error_Handle err;
-        int ncid=-1;
+        dg::file::NcFile file;
         try{
-            DG_RANK0 err = nc_create( outputfile.c_str(),NC_NETCDF4|NC_CLOBBER, &ncid);
+            file.open(outputfile, dg::file::nc_clobber);
         }catch( std::exception& e)
         {
             std::cerr << "ERROR creating file "<<outputfile<<std::endl;
@@ -206,30 +204,17 @@ int main( int argc, char* argv[])
             dg::abort_program();
         }
         /// Set global attributes
-        std::map<std::string, std::string> att;
+        std::map<std::string, dg::file::nc_att_t> att;
         att["title"] = "Output file of feltor/src/reco2D/reconnection.cu";
         att["Conventions"] = "CF-1.8";
-        ///Get local time and begin file history
-        auto ttt = std::time(nullptr);
-        std::ostringstream oss;
-        ///time string  + program-name + args
-        oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
-        for( int i=0; i<argc; i++) oss << " "<<argv[i];
-        att["history"] = oss.str();
+        att["history"] = dg::file::timestamp( argc, argv);
         att["comment"] = "Find more info in feltor/src/reco2D/reconnection.tex";
         att["source"] = "FELTOR";
-        att["git-hash"] = GIT_HASH;
-        att["git-branch"] = GIT_BRANCH;
-        att["compile-time"] = COMPILE_TIME;
         att["references"] = "https://github.com/feltor-dev/feltor";
-        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
-        att["inputfile"] = inputfile;
-        for( auto pair : att)
-            DG_RANK0 err = nc_put_att_text( ncid, NC_GLOBAL,
-                pair.first.data(), pair.second.size(), pair.second.data());
+        att["inputfile"] = ws.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+        file.put_atts( att);
+        file.put_atts( dg::file::version_flags);
 
-        int dim_ids[3], tvarID;
-        std::map<std::string, int> id1d, id3d;
         unsigned n_out     = ws[ "output"]["n"].asUInt( 3);
         unsigned Nx_out    = ws[ "output"]["Nx"].asUInt( 48);
         unsigned Ny_out    = ws[ "output"]["Ny"].asUInt( 48);
@@ -239,77 +224,42 @@ int main( int argc, char* argv[])
             #endif //WITH_MPI
             );
         dg::x::IHMatrix projection = dg::create::interpolation( grid_out, grid);
-        err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid_out,
-                {"time", "y", "x"});
-
-        //Create field IDs
-        for( auto& record : asela::diagnostics2d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            id3d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 3, dim_ids,
-                    &id3d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id3d.at(name), "long_name",
-                    long_name.size(), long_name.data());
-            // and the 1d fields
-            name = record.name + "_1d";
-            long_name = record.long_name + " (Volume integrated)";
-            id1d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
-                &id1d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name",
-                    long_name.size(), long_name.data());
-        }
-        for( auto& record : asela::diagnostics1d_list)
-        {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            id1d[name] = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 1, &dim_ids[0],
-                &id1d.at(name));
-            DG_RANK0 err = nc_put_att_text( ncid, id1d.at(name), "long_name", long_name.size(),
-                long_name.data());
-        }
-        dg::x::DVec volume = dg::create::volume( grid);
-        dg::x::DVec resultD = volume;
         dg::x::HVec resultH = dg::evaluate( dg::zero, grid);
-        dg::x::HVec transferH = dg::evaluate( dg::zero, grid_out);
+        dg::x::DVec resultD( resultH);
+        dg::x::HVec resultP = dg::evaluate( dg::zero, grid_out);
+        file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
+        file.defput_dim( "x", {{"axis", "X"},
+            {"long_name", "x-coordinate in Cartesian system"}},
+            grid_out.abscissas(0));
+        file.defput_dim( "y", {{"axis", "Y"},
+            {"long_name", "y-coordinate in Cartesian system"}},
+            grid_out.abscissas(1));
         for( auto& record : asela::diagnostics2d_static_list)
         {
-            std::string name = record.name;
-            std::string long_name = record.long_name;
-            int staticID = 0;
-            DG_RANK0 err = nc_def_var( ncid, name.data(), NC_DOUBLE, 2, &dim_ids[1],
-                &staticID);
-            DG_RANK0 err = nc_put_att_text( ncid, staticID, "long_name", long_name.size(),
-                long_name.data());
-            record.function( resultD, var);
-            dg::assign( resultD, resultH);
-            dg::blas2::gemv( projection, resultH, transferH);
-            dg::file::put_var_double( ncid, staticID, grid_out, transferH);
+            record.function ( resultH, var);
+            dg::blas2::symv( projection, resultH, resultP);
+            file.def_var_as<double>( record.name, {"y","x"}, record.atts);
+            file.put_var( record.name, {grid_out}, resultP);
         }
-        size_t start = {0};
-        size_t count = {1};
-        ///////////////////////////////////first output/////////////////////////
+        const dg::x::DVec volume = dg::create::volume( grid);
         for( auto& record : asela::diagnostics2d_list)
         {
-            record.function( resultD, var);
-            double result = dg::blas1::dot( volume, resultD);
+            record.function ( resultD, var);
             dg::assign( resultD, resultH);
-            dg::blas2::gemv( projection, resultH, transferH);
-            dg::file::put_vara_double( ncid, id3d.at(record.name), start,
-                    grid_out, transferH);
-            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"),
-                    &start, &count, &result);
+            dg::blas2::symv( projection, resultH, resultP);
+            file.def_var_as<double>( record.name, {"time", "y","x"}, {{"long_name", record.atts}});
+            file.put_var( record.name, {0, grid_out}, resultP);
+
+            double result = dg::blas1::dot( volume, resultD);
+            file.def_var_as<double>( record.name + "_1d", {"time"}, {{"long_name",
+                record.atts + " (Volume integrated)"}});
+            file.put_var( record.name + "_1d", {0}, result);
         }
-        for( auto& record : asela::diagnostics1d_list)
-        {
-            double result = record.function( var);
-            DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
-        }
-        DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-        DG_RANK0 err = nc_close( ncid);
+        file.put_var( "time", {0}, time);
+        file.def_var_as<double>( "time_per_step", {"time"}, {{"long_name",
+            "Computation time per step"}});
+        file.put_var( "time_per_step", {0}, duration);
+        file.close();
         ///////////////////////////////////timeloop/////////////////////////
         for( unsigned i=1; i<=maxout; i++)
         {
@@ -330,30 +280,26 @@ int main( int argc, char* argv[])
                 }
             }
             ti.toc();
-            var.duration = ti.diff() / (double) itstp;
+            duration = ti.diff() / (double) itstp;
             step+=itstp;
             DG_RANK0 std::cout << "\n\t Step "<<step <<" of "<<itstp*maxout <<" at time "<<time << " with current timestep "<<dt;
             DG_RANK0 std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)itstp<<"s\n\n"<<std::flush;
             //output all fields
             ti.tic();
-            start = i;
-            DG_RANK0 err = nc_open(outputfile.c_str(), NC_WRITE, &ncid);
-            DG_RANK0 err = nc_put_vara_double( ncid, tvarID, &start, &count, &time);
-            for( auto& record : asela::diagnostics2d_list)
+            file.open( outputfile, dg::file::nc_write);
+            for( const auto& record : asela::diagnostics2d_list)
             {
-                record.function( resultD, var);
-                double result = dg::blas1::dot( volume, resultD);
+                record.function ( resultD, var);
                 dg::assign( resultD, resultH);
-                dg::blas2::gemv( projection, resultH, transferH);
-                dg::file::put_vara_double( ncid, id3d.at(record.name), start, grid_out, transferH);
-                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name+"_1d"), &start, &count, &result);
+                dg::apply( projection, resultH, resultP);
+                file.put_var( record.name, {i, grid_out}, resultP);
+                double result = dg::blas1::dot( volume, resultD);
+                file.put_var( record.name + "_1d", {i}, result);
             }
-            for( auto& record : asela::diagnostics1d_list)
-            {
-                double result = record.function( var);
-                DG_RANK0 err = nc_put_vara_double( ncid, id1d.at(record.name), &start, &count, &result);
-            }
-            DG_RANK0 err = nc_close( ncid);
+            file.put_var( "time", {i}, time);
+            file.put_var( "time_per_step", {i}, duration);
+
+            file.close();
             ti.toc();
             DG_RANK0 std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
         }

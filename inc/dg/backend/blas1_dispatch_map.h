@@ -20,7 +20,7 @@ namespace detail
 {
 
 template< class Vector1, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2, StdMapTag)
+inline std::vector<int64_t> doDot_superacc( int* status, const Vector1& x1, const Vector2& x2, StdMapTag)
 {
     //find out which one is the RecursiveVector and determine size
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
@@ -29,7 +29,10 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2
     for( auto el : get_idx<vector_idx>(x1,x2))
     {
         try{
-        std::vector<int64_t> temp = doDot_superacc( do_get_vector_element(x1,el.first,get_tensor_category<Vector1>()), do_get_vector_element(x2,el.first,get_tensor_category<Vector2>()));
+        std::vector<int64_t> temp = doDot_superacc(
+            status,
+            do_get_vector_element(x1,el.first,get_tensor_category<Vector1>()),
+            do_get_vector_element(x2,el.first,get_tensor_category<Vector2>()));
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<=exblas::IMAX; k++)

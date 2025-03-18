@@ -4,94 +4,75 @@
  * classes defined and used by the discontinuous Galerkin library.
  */
 /*!
- * @defgroup backend Level 1: Vectors, Matrices and basic operations
+ * @defgroup level1 Level 1: Vectors, Matrices and basic operations
  * @{
- *     @defgroup blas Basic container independent subroutines
+ *    @defgroup blas1 BLAS level 1 routines: Vector-Vector
+ *    @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
  *
- * These routines form the heart of our container free numerical algorithms.
- * They are called by all our numerical algorithms like conjugate gradient or
- * time integrators.
- *     @{
- *         @defgroup blas1 BLAS level 1 routines: Vector-Vector
- *         @brief \f$ f( x_{0i}, x_{1i}, x_{2i}, ...) \f$ and \f$ x^T y\f$
+ *      @note Successive calls to blas routines are executed sequentially
+ *      @note A manual synchronization of threads or devices is never needed in
+ *      an application using these functions. All functions returning a value
+ *      block until the value is ready.
+ *    @defgroup blas2 BLAS level 2 routines: Matrix-Vector
+ *    @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
  *
- * @note Successive calls to blas routines are executed sequentially
- * @note A manual synchronization of threads or devices is never needed in an application
- * using these functions. All functions returning a value block until the value is ready.
- *         @defgroup blas2 BLAS level 2 routines: Matrix-Vector
- *         @brief \f$ \alpha M \cdot x + \beta y\f$ and \f$ x^T M y \f$
- *
- * @note Successive calls to blas routines are executed sequentially
- * @note A manual synchronization of threads or devices is never needed in an application
- * using these functions. All functions returning a value block until the value is ready.
- *         @defgroup tensor Tensor-Vector operations
- *         @brief \f$ v^i = T^{ij} w_j\f$
- *
- * Although a tensor needs a topology to be well-defined mathematically,
- * we do not need a grid to perform basic operations computationally.
- * This is why the tensor operations can appear already in Level 1
- * of this library.
- *     @}
- *     @defgroup typedefs Useful Typedefs
- *     @defgroup sparsematrix Sparse matrix formats
- *     @defgroup densematrix Dense matrix formats
- *     @defgroup view Vector view
- *     @defgroup mpi_structures MPI backend
- *
- * In this section the blas functions are implemented for the MPI+X
- * hardware architectures, where X is e.g. CPU, GPU, accelerator
- * cards...
- * The general idea to achieve this is to separate global
- * communication from local computations and thus readily reuse the
- * existing, optimized library for the local part.
- *     @defgroup dispatch The tag dispatch system
- *     @{
- *          @defgroup traits All TensorTraits specialisations
- *     @}
+ *      @note Successive calls to blas routines are executed sequentially
+ *      @note A manual synchronization of threads or devices is never needed in an application
+ *      using these functions. All functions returning a value block until the value is ready.
+ *    @defgroup mpi_structures MPI backend
+ *    @{
+ *        @defgroup mpi_matvec Distributed Matrix and Vector
+ *        @defgroup mpi_comm MPI Distributed Gather and Scatter
+ *    @}
+ *    @defgroup utility Utility
+ *    @{
+ *        @defgroup dispatch The tag dispatch system
+ *        @{
+ *           @defgroup traits All TensorTraits specialisations
+ *        @}
+ *        @defgroup sparsematrix Sparse matrix formats
+ *        @defgroup densematrix Dense matrix formats
+ *        @defgroup view Vector view
+ *        @defgroup typedefs Typedefs for Vectors and Matrices
+ *    @}
+ *    @brief \#include <mpi.h> before any other dg header file
  * @}
- * @defgroup numerical0 Level 2: Basic numerical algorithms
+ * @defgroup lvevl2 Level 2: Basic numerical algorithms
  * @{
- *     @defgroup time Time integration
+ *     @defgroup time ODE integration
  *     @brief \f$ \dot y = f(y,t) \f$
- *     @defgroup time_utils Utilities for ODE solvers
+ *     @{
+ *       @defgroup time_utils Utilities for ODE integrators
+ *     @}
  *     @defgroup integration Quadrature
  *     @brief \f$ \int_{t_0}^T u(t) dt \f$
  *     @defgroup extrapolation Extrapolation
  *     @defgroup invert Linear and nonlinear solvers
  *     @brief Linear \f$ Ax = b\f$ and non-linear \f$ f(x) = b\f$
+ *
  * @}
- * @defgroup geo Level 3: Topology and Geometry
+ * @defgroup level3 Level 3: Topology and Geometry
  * @{
  *     @defgroup grid Topological grids and operations
  *
  * Objects that store topological information (which point is neighbour of
  * which other point) about the grid.
  *     @{
- *         @defgroup basictopology Topology base classes
- *         @defgroup evaluation evaluate
+ *         @defgroup basictopology Discontinuous Galerkin Nd grid
+ *         @defgroup basicXtopology Discontinuous Galerkin grids with X-point
+ *         @defgroup evaluation Evaluate, integrate, weights
  *         @brief \f$ f_i = f(\vec x_i) \f$
- *
- * The function discretisation routines compute the dG discretisation
- * of analytic functions on a given grid. In 1D the discretisation
- * simply consists of n function values per grid cell ( where n is the number
- * of Legendre coefficients used; currently \f$ 1 <= n <= 20\f$  ) evaluated at
- * the Gaussian abscissas in the respective cell. In 2D and 3D we simply
- * use the product space.
- * @note We choose x to be the contiguous direction.
- * E.g. in 2D the first element of the resulting vector lies in the grid corner \f$ (x_0,y_0)\f$ and the last
- * in \f$(x_1, y_1)\f$ .
- *         @defgroup highlevel create weights
- *
- * overloads for the \c dg::create::weights and \c dg::create::inv_weights functions for all
- * available topologies
- *         @defgroup creation create derivatives
+ *         @defgroup creation Create derivatives
  *         @brief  \f$ D_x\f$, \f$ D_y\f$ and \f$ D_z \f$
  *
  * High level matrix creation functions
- *         @defgroup stencil create stencils
+ *         @defgroup stencil Create stencils
  *         @defgroup interpolation Interpolation, Projection, Transformation
+ *         @{
+ *              @defgroup fast_interpolation Fast interpolation
+ *         @}
  *         @brief \f$ I \f$ and \f$ P = I^\dagger\f$
- *         @defgroup utilities Averaging
+ *         @defgroup average Averaging, prolongation and partial reductions
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and tensor operations
@@ -99,17 +80,21 @@
  * These routines form the heart of our geometry free numerical algorithms.
  * They are called by our geometric operators like the Poisson bracket.
  *     @{
- *         @defgroup basicgeometry Geometry base classes
- *         @defgroup pullback pullback and pushforward
- *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$
- *         @defgroup metric create volume
- *         @brief \f$ \sqrt{g} \f$
- *         @defgroup generators Grid Refinement classes
+ *         @defgroup basicgeometry Geometry classes
+ *         @defgroup basicXgeometry Geometry classes with X-point
+ *         @defgroup generators Grid refinement
+ *
+ *         @defgroup tensor Tensor-Vector operations
+ *         @brief \f$ v^i = T^{ij} w_j\f$
+ *
+ *         @defgroup pullback Pullback, pushforward, volume
+ *         @brief \f$ f_i = f( x (\zeta_i,\eta_i), y(\zeta_i,\eta_i)) \f$, \f$
+ *         \sqrt{g} \f$
  *     @}
  *     @defgroup fem Finite Element Methods
- *     @defgroup gridtypes Useful Typedefs
+ *     @defgroup gridtypes Grid Typedefs
  * @}
- * @defgroup numerical1 Level 4: Advanced numerical schemes
+ * @defgroup lvel4 Level 4: Advanced numerical schemes
  *
  * These routines make use of both the basic operations as well as the
  * interfaces defined in the Geometry section.
@@ -121,7 +106,7 @@
  *     @defgroup multigrid Multigrid matrix inversion
  *     @brief \f$ A x = b\f$
  * @}
- * @defgroup misc Level 0: Miscellaneous additions
+ * @defgroup misc Level 99: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
  *     @brief  t.tic(); t.toc(); t.diff();
@@ -146,6 +131,10 @@
  *
  *          @defgroup filters dg::blas2::stencil subroutines
  *          @brief Functors to use in dg::blas2::stencil function
+ *     @}
+ *     @defgroup mpi_utility MPI utility functions
+ *     @{
+ *          @defgroup mpi_legacy Legacy MPI functions
  *     @}
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *
@@ -173,6 +162,12 @@
 * @return A copyable object; what it contains is undefined, its size is important
 */
 
+ /**
+  * @class hide_value_type>
+  * @tparam value_type
+  * Any type that can be used in an arithmetic operation with
+  * <tt>dg::get_value_type<ContainerType></tt>
+  */
  /** @class hide_ContainerType
   * @tparam ContainerType
   * Any class for which a specialization of \c TensorTraits exists and which
@@ -340,94 +335,6 @@ struct TensorTraits
  *   recursively called with the Matrix on all elements of the Vectors.
  */
 
- /*!
- * @addtogroup mpi_structures
- * @section mpi_backend The MPI interface
-@note The mpi backend is activated by including \c mpi.h before any other feltor header file
-@subsection mpi_vector MPI Vectors and the blas functions
-
-In Feltor each mpi process usually gets an equally sized chunk of a vector.
-In particular the \c dg::aRealMPITopology2d and \c dg::aRealMPITopology3d classes
-represent the standard Cartesian process and point distribution (meaning every process gets an equally sized 2d / 3d box out of the global domain ).
-The corresponding mpi vector structure in FELTOR is the \c dg::MPI_Vector, which is
-nothing but a wrapper around a container type object and a \c MPI_Comm.
-With this the \c dg::blas1 functions can readily be implemented by just redirecting to the
-implementation for the container type. The only functions that need
-additional
-communication are the \c dg::blas1::dot and \c dg::blas2::dot functions (\c MPI_Allreduce).
-@subsection mpi_matrix MPI Matrices and the symv function
-
-Contrary to a vector
-a matrix can be distributed among processes in two ways:
-\a row-wise and \a column-wise.
-When we implement a matrix-vector multiplication the order
-of communication and computation depends on the distribution
-of the matrix.
-
-\subsubsection mpi_row Row distributed matrices
-
-In a row-distributed matrix each process holds the
-rows of the matrix that correspond to the portion of the
-\c MPI_Vector it holds. Every process thus holds the same amount of rows.
-When we implement a matrix-vector multiplication
-each process first has to gather
-all the elements of the input vector it needs to be able to compute the elements of its output. In general this requires MPI communication.
-(read the documentation of \c dg::aCommunicator for more info of how global scatter/gather operations work).
-After the elements have been gathered into a buffer the local matrix-vector
-multiplications can be executed.
-Formally, the gather operation can be written as a matrix \f$G\f$
-of \f$1'\f$s and \f$0'\f$s and we write.
-\f[
-M v = R\cdot G v
-\f]
-where \f$R\f$ is the row-distributed matrix with modified indices
-into a buffer vector
-and \f$G\f$ is the gather matrix, in which the MPI-communication takes place.
-In this way we achieve a simple split between communication \f$ w=Gv\f$
-and computation \f$ Rw\f$. Since the computation of \f$ R w\f$ is entirely local we can reuse the existing
-implementation for shared memory systems.
-Correspondingly, we define the structure \c dg::MPIDistMat as a simple a wrapper around a
-\c LocalMatrix type object
-and an instance of a \c dg::aCommunicator.
-
-\subsubsection mpi_column Column distributed matrices
-
-In a column-distributed matrix each process holds the
-columns of the matrix that correspond to the portion of the
-\c MPI_Vector it holds. Each process thus holds the same amount of columns.
-In a column distributed matrix the local matrix-vector multiplication can be executed first because each processor already
-has all vector elements it needs.
-However the resulting elements have to be communicated back to
-the process they belong to. Furthermore, a process has to sum
-all elements it receives from other processes on the same
-index. This is a scatter and reduce operation and
-it can be written as a scatter matrix \f$S\f$ (s.a. \c dg::aCommunicator).
-\f[
-M v= S\cdot C v
-\f]
-where \f$S\f$ is the scatter matrix and \f$C\f$ is the column distributed
-matrix with modified indices.
-Again, we can reuse our shared memory algorithms to implement
-the local matrix-vector operation \f$ w=Cv\f$ before the communication
-step \f$ S w\f$.
-This is also implemented in \c dg::MPIDistMat.
-
-\subsubsection mpi_row_col Row and Column distributed
-The \c dg::RowColDistMat goes one step further on a row distributed matrix and separates the matrix \f$ R = R_{inner} + R_{outer}\f$ into
-a part that can be computed entirely on the local process and a part that needs communication.
-This enables the implementation of overlapping communication and computation. (s.a. \c dg::NearestNeighborComm)
-\subsubsection mpi_transpose Transposition
-It turns out that a row-distributed matrix can be transposed
-by transposition of both the local matrix and the gather matrix (s.a. \c dg::transpose):
-\f[ M^\mathrm{T} = G^\mathrm{T} R^\mathrm{T}\f]
-The result is then a column distributed matrix.
-Analogously, the transpose of a column distributed matrix is a row-distributed matrix.
-\subsubsection mpi_create Creation
-You can create a row-distributed MPI matrix given its local parts on each process with local row and global column indices by our \c dg::convert function.
-If you have a column distributed matrix with its local parts on each process with global row and local columns indices, you can
-use a combination of \c dg::convertLocal2GlobalCols and \c dg::convertGlobal2LocalRows to bring it to a row-distributed form. The latter can then be used in \c dg::convert again.
-*/
-
 namespace dg{
 /*! @brief Simple tool for performance measuring
  *
@@ -463,3 +370,9 @@ struct Timer
     double diff()const;
 };
 }
+
+/**
+ * @brief Expands to \__host__ \__device__ if compiled with nvcc else is empty
+ * @ingroup typedefs
+ */
+#define DG_DEVICE

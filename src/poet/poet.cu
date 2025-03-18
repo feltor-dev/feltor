@@ -1,5 +1,3 @@
-#define SILENT
-// #define DG_DEBUG
 #include <iostream>
 #include <iomanip>
 #include <vector>
@@ -25,15 +23,8 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
-    Json::Value js;
-    if( argc == 1)
-        dg::file::file2Json( "/input/default.json", js, dg::file::comments::are_discarded);
-    else
-    {
-        dg::file::file2Json( argv[1], js, dg::file::comments::are_discarded);
-    }
-    const poet::Parameters p( js);
-    dg::file::WrappedJsonValue ws ( js, dg::file::error::is_throw);  
+    dg::file::WrappedJsonValue ws = dg::file::file2Json( argc == 1 ? "input/default.json" : argv[1]);
+    const poet::Parameters p( ws);
     
 #ifdef WITH_MPI
     ////////////////////////////////setup MPI///////////////////////////////
@@ -44,7 +35,7 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif //WITH_MPI
 
-    DG_RANK0 std::cout << js <<std::endl;
+    DG_RANK0 std::cout << ws.toStyledString() <<std::endl;
 
     ///////MAKE GRID///////////////////////////////////////////////
     dg::x::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y
@@ -137,7 +128,7 @@ int main( int argc, char* argv[])
     if( "glfw" == p.output)
     {
         /////////glfw initialisation ////////////////////////////////////////////
-        dg::file::file2Json( "window_params.json", js, dg::file::comments::are_discarded);
+        dg::file::WrappedJsonValue js = dg::file::file2Json( "window_params.json");
         GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
         draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
         //create visualisation vectors
@@ -210,7 +201,7 @@ int main( int argc, char* argv[])
 #endif //WITHOT_GLFW    
     if( "netcdf" == p.output)
     {
-        std::string inputfile = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+        std::string inputfile = ws.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
         std::string outputfile;
         if( argc==1 || argc == 2 )
             outputfile = "poet.nc";

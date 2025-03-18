@@ -137,7 +137,7 @@ struct ZCutter : public aCylindricalFunctor<ZCutter>
 };
 
 /**
- * @brief This function uses the dg::Grid2d::shift member to extend another function beyond the grid boundaries
+ * @brief This function extends another function beyond the grid boundaries
  * @sa dg::geo::periodify
  */
 struct Periodify : public aCylindricalFunctor<Periodify>
@@ -160,11 +160,15 @@ struct Periodify : public aCylindricalFunctor<Periodify>
      * @param bcx boundary condition in x (determines how function is periodified)
      * @param bcy boundary condition in y (determines how function is periodified)
      */
-    Periodify( CylindricalFunctor functor, double R0, double R1, double Z0, double Z1, dg::bc bcx, dg::bc bcy): m_g( R0, R1, Z0, Z1, 3, 10, 10, bcx, bcy), m_f(functor) {}
+    Periodify( CylindricalFunctor functor, double R0, double R1, double Z0,
+            double Z1, dg::bc bcx, dg::bc bcy):
+        m_g( R0, R1, Z0, Z1, 3, 10, 10, bcx, bcy), m_f(functor)
+    {}
     double do_compute( double R, double Z) const
     {
         bool negative = false;
-        m_g.shift( negative, R, Z);
+        dg::create::detail::shift( negative, R, m_g.bcx(), m_g.x0(), m_g.x1());
+        dg::create::detail::shift( negative, Z, m_g.bcy(), m_g.y0(), m_g.y1());
         if( negative) return -m_f(R,Z);
         return m_f( R, Z);
     }
@@ -176,7 +180,7 @@ struct Periodify : public aCylindricalFunctor<Periodify>
 /**
 * @brief This struct bundles a function and its first derivatives
 *
-* @snippet flux_t.cu hector
+* @snippet flux_t.cpp hector
 */
 struct CylindricalFunctorsLvl1
 {
@@ -213,7 +217,7 @@ struct CylindricalFunctorsLvl1
 /**
 * @brief This struct bundles a function and its first and second derivatives
 *
-* @snippet flux_t.cu hector
+* @snippet flux_t.cpp hector
 */
 struct CylindricalFunctorsLvl2
 {
@@ -272,7 +276,7 @@ struct CylindricalFunctorsLvl2
  * 3 if saddle point
  * @ingroup misc_geo
  */
-static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
     std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
     X[0] = RC, X[1] = ZC;
@@ -329,7 +333,7 @@ static inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double&
  * @return 1 if local minimum, 2 if local maximum,
  * @ingroup misc_geo
  */
-static inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
     int point = findCriticalPoint( psi, RC, ZC);
     if( point == 3 || point == 0 )
@@ -347,7 +351,7 @@ static inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, do
  * @param ZC start value on input, X-point on output
  * @ingroup misc_geo
  */
-static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
 {
     int point = findCriticalPoint( psi, RC, ZC);
     if( point != 3)
@@ -356,7 +360,7 @@ static inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, d
 
 
 /// A symmetric 2d tensor field and its divergence
-///@snippet flux_t.cu hector
+///@snippet flux_t.cpp hector
 struct CylindricalSymmTensorLvl1
 {
     /**
@@ -407,7 +411,7 @@ struct CylindricalSymmTensorLvl1
 };
 
 /// A vector field with three components that depend only on the first two coordinates
-///@snippet ds_t.cu doxygen
+///@snippet ds_t.cpp doxygen
 struct CylindricalVectorLvl0
 {
     CylindricalVectorLvl0(){}
@@ -522,10 +526,10 @@ struct SquareNorm : public aCylindricalFunctor<SquareNorm>
  * @tparam Geometry3d A three-dimensional geometry
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
+dg::SparseTensor<typename Geometry3d::host_vector> createAlignmentTensor(
     const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
-    using host_vector = dg::get_host_vector<Geometry3d>;
+    using host_vector = typename Geometry3d::host_vector;
     SparseTensor<host_vector> t;
     std::array<host_vector,3> bt;
     dg::pushForward( bhat.x(), bhat.y(), bhat.z(), bt[0], bt[1], bt[2], g);
@@ -555,10 +559,10 @@ dg::SparseTensor<dg::get_host_vector<Geometry3d>> createAlignmentTensor(
  * @tparam Geometry3d A three-dimensional geometry
  */
 template<class Geometry3d>
-dg::SparseTensor<dg::get_host_vector<Geometry3d>> createProjectionTensor(
+dg::SparseTensor<typename Geometry3d::host_vector> createProjectionTensor(
     const dg::geo::CylindricalVectorLvl0& bhat, const Geometry3d& g)
 {
-    using host_vector = dg::get_host_vector<Geometry3d>;
+    using host_vector = typename Geometry3d::host_vector;
     dg::SparseTensor<host_vector> t = dg::geo::createAlignmentTensor( bhat, g);
     dg::SparseTensor<host_vector> m = g.metric();
     dg::blas1::axpby( 1., m.value(0,0), -1., t.values()[0]);

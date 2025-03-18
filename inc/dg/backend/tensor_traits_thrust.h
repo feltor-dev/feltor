@@ -2,6 +2,7 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <thrust/complex.h>
 #include "vector_categories.h"
 #include "tensor_traits.h"
 
@@ -12,7 +13,7 @@ namespace dg
 
 ///@brief prototypical Shared Vector with Serial Tag
 template<class T>
-struct TensorTraits<thrust::host_vector<T>> //, std::enable_if_t< std::is_arithmetic<T>::value>>
+struct TensorTraits<thrust::host_vector<T>> //, std::enable_if_t< dg::is_scalar<T>::value>>
 {
     using value_type        = T;
     using tensor_category   = ThrustVectorTag;
@@ -22,7 +23,7 @@ struct TensorTraits<thrust::host_vector<T>> //, std::enable_if_t< std::is_arithm
 //// or std::complex or similar
 //template<class T>
 //struct TensorTraits<thrust::host_vector<T>,
-//    std::enable_if_t< !std::is_arithmetic<T>::value>>
+//    std::enable_if_t< !dg::is_scalar<T>::value>>
 //{
 //    using value_type        = get_value_type<T>;
 //    using tensor_category   = RecursiveVectorTag;
@@ -42,6 +43,14 @@ struct TensorTraits<thrust::device_vector<T> >
 #else
     using execution_policy  = SerialTag ;
 #endif
+};
+
+template<class T>
+struct TensorTraits<thrust::complex<T>>
+{
+    using value_type        = thrust::complex<T>;
+    using tensor_category   = ComplexTag;
+    using execution_policy  = AnyPolicyTag;
 };
 ///@}
 ///@cond

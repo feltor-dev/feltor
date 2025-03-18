@@ -61,7 +61,7 @@ struct RealGridX3d;
 * The left boundary is x0 and the right x1, the inner boundaries lie at
 * x0 + f*Lx and x1-f*Lx
 * therefore f must be smaller than 0.5
-* @ingroup grid
+* @ingroup basicXtopology
 */
 template<class real_type>
 struct RealGridX1d
@@ -70,6 +70,9 @@ struct RealGridX1d
     /// The host vector type used by host functions like evaluate
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGridX1d<real_type>;
+    /// @brief number of dimensions : 1
+    constexpr static unsigned ndim() {return 1;}
+    RealGridX1d() = default;
     /**
      * @brief 1D X-point grid
      *
@@ -82,7 +85,7 @@ struct RealGridX1d
      */
     RealGridX1d( real_type x0, real_type x1, real_type f, unsigned n, unsigned N, bc bcx = NEU):
         x0_(x0), x1_(x1), f_(f),
-        n_(n), Nx_(N), bcx_(bcx), dlt_(n)
+        n_(n), Nx_(N), bcx_(bcx)
     {
         assert( (f >= 0) && (f < 0.5) );
         assert( fabs(outer_N() - f*(real_type)N) < 1e-14);
@@ -91,6 +94,10 @@ struct RealGridX1d
         assert( n != 0 );
         assert( bcx != PER);
     }
+    host_vector abscissas(unsigned u=0) const { return grid().abscissas(0);}
+    host_vector weights(unsigned u=0) const { return grid().weights(0);}
+    unsigned shape(unsigned u=0) const { return grid().shape(0);}
+    auto get_shape() const { return grid().get_shape();}
     /**
      * @brief left boundary
      *
@@ -176,13 +183,7 @@ struct RealGridX1d
             <<"Boundary conditions in x are: \n"
             <<"    "<<bc2str(bcx_)<<"\n";
     }
-    /**
-     * @brief the discrete legendre transformation
-     *
-     * @return
-     */
-    const DLT<real_type>& dlt() const {return dlt_;}
-    RealGrid1d<real_type> grid() const{return RealGrid1d<real_type>( x0_, x1_, n_, Nx_, bcx_);}
+    RealGrid<real_type,1> grid() const{return RealGrid<real_type,1>( x0_, x1_, n_, Nx_, bcx_);}
 
     /**
      * @brief Shifts a point coordinate due to topology
@@ -230,7 +231,6 @@ struct RealGridX1d
     real_type x0_, x1_, f_;
     unsigned n_, Nx_;
     bc bcx_;
-    DLT<real_type> dlt_;
 };
 
 //template<class real_type>
@@ -250,7 +250,7 @@ struct RealGridX1d
     fy*ly
  @endcode
  *
- * @ingroup basictopology
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct aRealTopologyX2d
@@ -259,6 +259,12 @@ struct aRealTopologyX2d
     /// The host vector type used by host functions like evaluate
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGridX2d<real_type>;
+    /// @brief number of dimensions : 2
+    constexpr static unsigned ndim() {return 2;}
+    host_vector abscissas(unsigned u=0) const { return grid().abscissas(u);}
+    host_vector weights(unsigned u=0) const { return grid().weights(u);}
+    unsigned shape(unsigned u=0) const { return grid().shape(u);}
+    auto get_shape() const { return grid().get_shape();}
 
     /**
      * @brief Left boundary in x
@@ -379,13 +385,7 @@ struct aRealTopologyX2d
      *
      * @return
      */
-    RealGrid2d<real_type> grid() const {return RealGrid2d<real_type>( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
-    /**
-     * @brief discrete legendre trafo
-     *
-     * @return
-     */
-    const DLT<real_type>& dlt() const{return dlt_;}
+    RealGrid<real_type,2> grid() const {return RealGrid<real_type,2>( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
     /**
      * @brief real_typehe total number of points
      *
@@ -479,11 +479,12 @@ struct aRealTopologyX2d
   protected:
     ///disallow destruction through base class pointer
     ~aRealTopologyX2d() = default;
+    aRealTopologyX2d() = default;
     ///@copydoc hide_gridX_parameters2d
     ///@copydoc hide_bc_parameters2d
     aRealTopologyX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fy),
-        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
+        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy)
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
@@ -494,20 +495,19 @@ struct aRealTopologyX2d
         assert( Nx_ > 0  && Ny > 0 );
         assert( bcy != PER);
     }
-    ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealTopologyX2d(const aRealTopologyX2d& src) = default;
-    ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
+    ///@copydoc aRealTopology::operator=
     aRealTopologyX2d& operator=(const aRealTopologyX2d& src) = default;
   private:
     real_type x0_, x1_, y0_, y1_;
     real_type fx_, fy_;
     unsigned n_, Nx_, Ny_;
     bc bcx_, bcy_;
-    DLT<real_type> dlt_;
 };
 /**
  * @brief The simplest implementation of aRealTopologyX2d
- * @ingroup grid
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct RealGridX2d : public aRealTopologyX2d<real_type>
@@ -534,7 +534,7 @@ struct RealGridX2d : public aRealTopologyX2d<real_type>
     |--- ---------- ---|
     fy*Ly
  @endcode
- * @ingroup basictopology
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct aRealTopologyX3d
@@ -543,6 +543,12 @@ struct aRealTopologyX3d
     /// The host vector type used by host functions like evaluate
     using host_vector = thrust::host_vector<real_type>;
     using host_grid = RealGridX3d<real_type>;
+    /// @brief number of dimensions : 3
+    constexpr static unsigned ndim() {return 3;}
+    host_vector abscissas(unsigned u=0) const { return grid().abscissas(u);}
+    host_vector weights(unsigned u=0) const { return grid().weights(u);}
+    unsigned shape(unsigned u=0) const { return grid().shape(u);}
+    auto get_shape() const { return grid().get_shape();}
     /**
      * @brief left boundary in x
      *
@@ -702,15 +708,9 @@ struct aRealTopologyX3d
      *
      * @return
      */
-    RealGrid3d<real_type> grid() const {
-        return RealGrid3d<real_type>( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);
+    RealGrid<real_type,3> grid() const {
+        return RealGrid<real_type,3>( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);
     }
-    /**
-     * @brief discrete legendre transformation
-     *
-     * @return
-     */
-    const DLT<real_type>& dlt() const{return dlt_;}
     /**
      * @brief real_typehe total number of points
      *
@@ -771,11 +771,12 @@ struct aRealTopologyX3d
   protected:
     ///disallow destruction through base class pointer
     ~aRealTopologyX3d() = default;
+    aRealTopologyX3d() = default;
     ///@copydoc hide_gridX_parameters3d
     ///@copydoc hide_bc_parameters3d
     aRealTopologyX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz)
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
@@ -785,21 +786,20 @@ struct aRealTopologyX3d
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
     }
-    ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
+    ///@copydoc aRealTopology::aRealTopology(const aRealTopology&)
     aRealTopologyX3d(const aRealTopologyX3d& src) = default;
-    ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
+    ///@copydoc aRealTopology::operator=
     aRealTopologyX3d& operator=(const aRealTopologyX3d& src) = default;
   private:
     real_type x0_, x1_, y0_, y1_, z0_, z1_;
     real_type fx_,fy_;
     unsigned n_, Nx_, Ny_, Nz_;
     bc bcx_, bcy_, bcz_;
-    DLT<real_type> dlt_;
 };
 
 /**
  * @brief The simplest implementation of aRealTopologyX3d
- * @ingroup grid
+ * @ingroup basicXtopology
  */
 template<class real_type>
 struct RealGridX3d : public aRealTopologyX3d<real_type>

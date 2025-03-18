@@ -134,12 +134,12 @@ struct IpolZ : public aCylindricalFunctor<IpolZ>
     private:
 };
 
-static inline CylindricalFunctorsLvl2 createPsip( double R_0)
+inline CylindricalFunctorsLvl2 createPsip( double R_0)
 {
     return CylindricalFunctorsLvl2( Psip(R_0), PsipR(R_0), PsipZ(R_0),
         PsipRR(R_0), PsipRZ(R_0), PsipZZ(R_0));
 }
-static inline CylindricalFunctorsLvl1 createIpol( double I_0)
+inline CylindricalFunctorsLvl1 createIpol( double I_0)
 {
     return CylindricalFunctorsLvl1( Ipol(I_0), IpolR(), IpolZ());
 }
@@ -155,7 +155,7 @@ static inline CylindricalFunctorsLvl1 createIpol( double I_0)
  * @return A magnetic field object
  * @ingroup guenter
  */
-static inline dg::geo::TokamakMagneticField createGuenterField( double R_0, double I_0)
+inline dg::geo::TokamakMagneticField createGuenterField( double R_0, double I_0)
 {
     MagneticFieldParameters params = { 1., 1., 0.,
             equilibrium::guenter, modifier::none, description::square};

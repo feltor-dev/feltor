@@ -17,23 +17,23 @@ feltordiag: feltordiag.cpp feltordiag.h
 interpolate_in_3d: interpolate_in_3d.cpp feltordiag.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
-feltor: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h common.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
-feltor_hpc: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor_hpc: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h common.h
 	$(CC) -g $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITHOUT_GLFW $(VERSION_FLAGS)
 
-feltor_mpi: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor_mpi: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h common.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DWITHOUT_GLFW $(VERSION_FLAGS)
 
-feltor_pol: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h
+feltor_pol: feltor.cpp feltordiag.h feltor.h init.h parameters.h init_from_file.h common.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI -DWRITE_POL_FILE -DWITHOUT_GLFW $(VERSION_FLAGS)
 
 multigrid_b: multigrid_b.cpp parameters.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
 convert_b: convert_b.cpp parameters.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g $(VERSION_FLAGS)
 
 .PHONY: clean doc
 
@@ -44,4 +44,4 @@ doc:
 	pdflatex -shell-escape feltor.tex
 
 clean:
-	rm -f feltor feltor_hpc feltor_mpi feltordiag interpolate_in_3d feltor.bbl feltor.blg feltor.aux feltor.log feltor.out feltor.toc
+	rm -f feltor feltor_hpc feltor_mpi feltordiag interpolate_in_3d feltor.bbl feltor.blg feltor.aux feltor.log feltor.out feltor.toc convert_b multigrid_b feltor_pol

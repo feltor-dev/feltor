@@ -1,12 +1,12 @@
 #error Documentation only
 /*!
  *
- * @defgroup generators_geo 1. Grid generators
+ * @defgroup grids 1. General Curvilinear grids
+ * @defgroup generators_geo 2. Curvilinear grid generators
  * @brief \f$( x,\ y,\ \zeta_x,\ \zeta_y,\ \eta_x,\ \eta_y)\f$ dg::geo::Hector
  *
  *      All the grids introduced by this extension can be constructed with
  *      generator classes.
- * @defgroup grids 2. New geometric grids
  * @defgroup geom_functors 3. New functors surrounding the magnetic field geometry
  * @brief \f$ f(R,Z,\varphi)\f$
 
@@ -28,7 +28,7 @@
       @}
       @defgroup magnetic 3.2 Magnetic field, curvatures and associated functors
       @defgroup profiles 3.3 Penalization, weight and monitor metric functors
-      @defgroup fluxfunctions 3.4. Utility functor functionality
+      @defgroup fluxfunctions 3.4. Utility functors and classes
       @brief \f$ h^{ij}\f$
  * @}
  * @defgroup fieldaligned 4. Fieldaligned derivatives
@@ -39,6 +39,7 @@
 /*! @mainpage
  * This extension adds new features to the FELTOR core dg library.
  *
+ * - This header incurs a dependency on \c jsoncpp (or \c nlohmann::json if \c DG_USE_JSONHPP is defined)
  * - several grid generator classes are added, among them our new Hector class
  *   are added to the \c dg::geo namespace
  * - a bunch of new functors implementing various magnetic field geometries

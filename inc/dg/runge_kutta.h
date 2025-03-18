@@ -12,7 +12,7 @@
 #include "implicit.h"
 
 /*! @file
- * @brief Runge-Kutta explicit time-integrators
+ * @brief Runge-Kutta explicit ODE-integrators
  */
 
 namespace dg{
@@ -155,7 +155,7 @@ You can provide your own coefficients or use one of the embedded methods
 in the following table:
 @copydoc hide_explicit_butcher_tableaus
 
-* @note The name of this class is in reminiscence of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/index.html
+* @note The name of this class is in reminiscence of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/index.html
 * @copydoc hide_ContainerType
 */
 template< class ContainerType>
@@ -403,7 +403,7 @@ void FilteredERKStep<ContainerType>::step( const std::tuple<ExplicitRHS, Limiter
 /*!
  * @brief Additive Runge Kutta (semi-implicit) time-step with error estimate
  * following
- * <a href="http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Mathematics.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
+ * <a href="https://sundials.readthedocs.io/en/latest/arkode/Mathematics_link.html#arkstep-additive-runge-kutta-methods">The ARKode library</a>
  *
  * Currently, the possible Butcher Tableaus for a fully implicit-explicit scheme
  * are the "Cavaglieri-3-1-2", "Cavaglieri-4-2-3", "ARK-4-2-3", "ARK-6-3-4" and "ARK-8-4-5" combinations.
@@ -767,7 +767,7 @@ void DIRKStep<ContainerType>::step( const std::tuple<ImplicitRHS,Solver>& ode,  
 ///@endcond
 
 /**
-* @brief Runge-Kutta fixed-step explicit time-integration
+* @brief Runge-Kutta fixed-step explicit ODE integrator
 * \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right) \\
@@ -784,8 +784,8 @@ You can provide your own coefficients or use one of our predefined methods (incl
 The following code snippet demonstrates how to use the class for the integration of
 the harmonic oscillator:
 
-@snippet runge_kutta_t.cu function
-@snippet runge_kutta_t.cu doxygen
+@snippet runge_kutta_t.cpp function
+@snippet runge_kutta_t.cpp doxygen
 *
 * @note Uses only \c dg::blas1 routines to integrate one step.
 * @copydoc hide_ContainerType
@@ -794,7 +794,7 @@ template<class ContainerType>
 using RungeKutta = ERKStep<ContainerType>;
 
 /**
-* @brief Filtered Runge-Kutta fixed-step explicit time-integration
+* @brief Filtered Runge-Kutta fixed-step explicit ODE integrator
 * \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, \Lambda\Pi \left[u^n + \Delta t \sum_{j=1}^{i-1} a_{ij} k_j\right]\right) \\
@@ -807,7 +807,7 @@ template<class ContainerType>
 using FilteredRungeKutta = FilteredERKStep<ContainerType>;
 
 /**
-* @brief Shu-Osher fixed-step explicit time-integration with Slope Limiter / Filter
+* @brief Shu-Osher fixed-step explicit ODE integrator with Slope Limiter / Filter
 * \f$
  \begin{align}
     u_0 &= u_n \\
@@ -921,7 +921,7 @@ struct ShuOsher
     value_type m_t1 = 1e300;
 };
 /**
-* @brief Runge-Kutta fixed-step implicit time-integration
+* @brief Runge-Kutta fixed-step implicit ODE integrator
 * \f$
  \begin{align}
     k_i = f\left( t^n + c_i \Delta t, u^n + \Delta t \sum_{j=1}^{s} a_{ij} k_j\right) \\
@@ -943,28 +943,37 @@ template<class ContainerType>
 using ImplicitRungeKutta = DIRKStep<ContainerType>;
 
 
-/// Checks if two number are same within accuracy
-/// @ingroup misc
+/// Checks if two number are equal within accuracy
+/// @ingroup basics
 inline bool is_same( double x, double y, double eps = 1e-15)
 {
-    return fabs(x - y) < std::max(1.0, std::max( fabs(x), fabs(y)));
+    return fabs(x - y) < eps * std::max(1.0, std::max( fabs(x), fabs(y)));
 }
-/// Checks if two number are same within accuracy
-/// @ingroup misc
+/// Checks if two number are equal within accuracy
+/// @ingroup basics
 inline bool is_same( float x, float y, float eps = 1e-6)
 {
     return fabsf(x - y) < eps * std::max(1.0f, std::max( fabsf(x), fabsf(y)));
 }
+
+/// Alias for <tt> x == y </tt>
+/// @ingroup basics
+template<class T>
+inline bool is_same( T x, T y)
+{
+    return x == y;
+}
+
 /// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
-/// @ingroup misc
+/// @ingroup basics
 inline bool is_divisable( double a, double b, double eps = 1e-15)
 {
     return is_same( round(a/b)*b, a);
 }
 /// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
-/// @ingroup misc
+/// @ingroup basics
 inline bool is_divisable( float a, float b, float eps = 1e-6)
 {
     return is_same( (float)round(a/b)*b, (float)a);
@@ -1022,7 +1031,7 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
     {
         // Open/Close Principle (OCP) Software entities should be open for extension but closed for modification
         m_step = [=, cap = std::tuple<Stepper, ODE>(std::forward<Stepper>(stepper),
-                std::forward<ODE>(ode))  ]( auto t0, auto y0, auto& t1, auto& y1,
+                std::forward<ODE>(ode))  ]( auto t0, const auto& y0, auto& t1, auto& y1,
                 auto dtt) mutable
         {
             std::get<0>(cap).step( std::get<1>(cap), t0, y0, t1, y1, dtt);
@@ -1070,7 +1079,7 @@ struct SinglestepTimeloop : public aTimeloop<ContainerType>
         SinglestepTimeloop(*this);}
     private:
     virtual void do_integrate(value_type& t0, const container_type& u0, value_type t1, container_type& u1, enum to mode) const;
-    std::function<void ( value_type, ContainerType, value_type&,
+    std::function<void ( value_type, const ContainerType&, value_type&,
             ContainerType&, value_type)> m_step;
     virtual value_type do_dt( ) const { return m_dt;}
     value_type m_dt;

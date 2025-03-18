@@ -79,19 +79,24 @@ That means the function can do whatever it pleases
 including throwing an exception, aborting the program or execute normally as if nothing happened. 
 
 **assert** is a C-macro that writes a message to std::cerr and then calls abort when the input expression is false.
-The macro is disabled if a macro with the name NDEBUG is defined. The message  includes the expression, the filename and the line-number. 
+The macro is disabled if a macro with the name NDEBUG is defined. The message
+includes the expression, the filename and the line-number. In Feltor we
+generally avoid using assert. As a library we shouldn't crash a user's program
+just because some input condition isn't met. Program aborts in a library
+function should only occur if something seriously wrong happens that cannot be
+recovered from.
 
-**throw** is a mechanism in C++ to initiate stack-unwinding. 
-If it is not caught in a try and catch block std::terminate (in g++ it tries to catch a std::exception, 
-print the what message and then calls abort) is called. The throw mechanism can do more than the C-assert. 
-Note that if the documentation says that a function will throw an exception for certain input paramters, 
-this does not indicate a bug. It is the predicted behaviour of the function. 
-The bug would be if the documentation says the function throws for certain 
-input parameter and then the function does not throw for these parameters. 
+**throw** is a mechanism in C++ to initiate stack-unwinding.
+If it is not caught in a try and catch block std::terminate (in g++ it tries to catch a std::exception,
+print the what message and then calls abort) is called. The throw mechanism can do more than the C-assert.
+Note that if the documentation says that a function will throw an exception for certain input paramters,
+this does not indicate a bug. It is the predicted behaviour of the function.
+The bug would be if the documentation says the function throws for certain
+input parameter and then the function does not throw for these parameters.
 
-A bug is detected by checking that pre- and postconditions of a function 
-meet the documentation. Unfortunately, we can never guarantee that a 
-function always works correctly we can only proof that it works incorrectly. 
+A bug is detected by checking that pre- and postconditions of a function
+meet the documentation. Unfortunately, we can never guarantee that a
+function always works correctly we can only proof that it works incorrectly.
 However, we do write **a lot** of test programs to try to debug as good as we can.
 
 ---

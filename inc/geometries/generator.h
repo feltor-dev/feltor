@@ -11,7 +11,7 @@ namespace geo
 A generator is there to construct coordinate transformations from physical coordinates
 \f$ x,y\f$ to the computational domain \f$\zeta, \eta\f$, which
 is a product space. It can be used to construct curvilinear grids like the following code snippet demonstrates:
-@snippet flux_t.cu doxygen
+@snippet flux_t.cpp doxygen
 @note the origin of the computational space is assumed to be (0,0)
  @ingroup generators_geo
 */

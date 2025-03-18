@@ -44,12 +44,12 @@ namespace dg{
 * @sa This implements the PCG algorithm (applied to \f$(WA)\f$ as given in
 * https://en.wikipedia.org/wiki/Conjugate_gradient_method
 * or the book
-* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">Iterative Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
+* <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">"Iterative Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * @note Conjugate gradients might become unstable for positive semidefinite
 * matrices arising e.g. in the discretization of the periodic laplacian
 * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
 *
-* @snippet cg2d_t.cu doxygen
+* @snippet bicgstabl_t.cpp pcg
 * @copydoc hide_ContainerType
 */
 template< class ContainerType>

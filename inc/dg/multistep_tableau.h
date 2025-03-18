@@ -124,23 +124,24 @@ MultistepTableau<real_type> imex_adams_2_2()
     c[2] = 1./16.;
     return MultistepTableau<real_type>( steps, order, a, b, c);
 }
-template<class real_type>
-MultistepTableau<real_type> imex_adams_3_3()
-{
-    // 3rd order AB method extended to ImEx
-    // C ~ 0.16, D = 0.67
-    unsigned steps = 3, order = 3;
-    std::vector<real_type> a(steps,0), b(steps, 0), c(steps+1,0);
-    a[0] = 1.;
-    b[0] =  23./12.;
-    b[1] = -4./3.;
-    b[2] = 5./12.;
-    c[0] =   4661./10000.;
-    c[1] =  15551./30000.;
-    c[2] =     1949/30000;
-    c[3] = -1483./30000.;
-    return MultistepTableau<real_type>( steps, order, a, b, c);
-}
+//For some reason this tableau does not pass the convergence test
+//template<class real_type>
+//MultistepTableau<real_type> imex_adams_3_3()
+//{
+//    // 3rd order AB method extended to ImEx
+//    // C ~ 0.16, D = 0.67
+//    unsigned steps = 3, order = 3;
+//    std::vector<real_type> a(steps,0), b(steps, 0), c(steps+1,0);
+//    a[0] = 1.;
+//    b[0] =  23./12.;
+//    b[1] = -4./3.;
+//    b[2] = 5./12.;
+//    c[0] =   4661./10000.;
+//    c[1] =  15551./30000.;
+//    c[2] =     1949/30000;
+//    c[3] = -1483./30000.;
+//    return MultistepTableau<real_type>( steps, order, a, b, c);
+//}
 template<class real_type>
 MultistepTableau<real_type> imex_koto_2_2()
 {
@@ -148,8 +149,8 @@ MultistepTableau<real_type> imex_koto_2_2()
     unsigned steps = 2, order = 2;
     std::vector<real_type> am(steps,0), bm(steps, 0), cm(steps+1,0);
     std::vector<real_type> ap(steps+1,0), bp(steps+1, 0), cp(steps+1,0);
-    //real_type a = 1.5, b = 1.5;
-    real_type a = 20., b = 20.;
+    real_type a = 1.5, b = 1.5;
+    //real_type a = 20., b = 20.;
     ap[0] = a;
     ap[1] = 1-2.*a;
     ap[2] = a-1;
@@ -364,7 +365,6 @@ enum multistep_identifier{
     //IMEX methods
     IMEX_EULER_1_1,
     IMEX_ADAMS_2_2,
-    IMEX_ADAMS_3_3,
     IMEX_KOTO_2_2,
     IMEX_BDF_2_2,
     IMEX_BDF_3_3,
@@ -410,12 +410,11 @@ enum multistep_identifier{
 ///@cond
 namespace create{
 
-static std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
+inline const std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
     //Implicit-Explicit methods
     {"Euler", IMEX_EULER_1_1},
     {"Euler-1-1", IMEX_EULER_1_1},
     {"ImEx-Adams-2-2", IMEX_ADAMS_2_2},
-    {"ImEx-Adams-3-3", IMEX_ADAMS_3_3},
     {"ImEx-Koto-2-2", IMEX_KOTO_2_2},
     {"ImEx-BDF-2-2", IMEX_BDF_2_2},
     {"ImEx-BDF-3-3", IMEX_BDF_3_3},
@@ -458,14 +457,14 @@ static std::unordered_map<std::string, enum multistep_identifier> str2lmsid{
     {"BDF-5-5", BDF_5_5},
     {"BDF-6-6", BDF_6_6},
 };
-static inline enum multistep_identifier str2lmstableau( std::string name)
+inline enum multistep_identifier str2lmstableau( std::string name)
 {
-    if( str2lmsid.find(name) == str2lmsid.end())
+    auto it = str2lmsid.find(name);
+    if( it == str2lmsid.end())
         throw dg::Error(dg::Message(_ping_)<<"Multistep coefficients for "<<name<<" not found!");
-    else
-        return str2lmsid[name];
+    return it->second;
 }
-static inline std::string lmstableau2str( enum multistep_identifier id)
+inline std::string lmstableau2str( enum multistep_identifier id)
 {
     for( auto name: str2lmsid)
     {
@@ -483,8 +482,6 @@ MultistepTableau<real_type> lmstableau( enum multistep_identifier id)
             return dg::tableau::imex_euler_1_1<real_type>();
         case IMEX_ADAMS_2_2:
             return dg::tableau::imex_adams_2_2<real_type>();
-        case IMEX_ADAMS_3_3:
-            return dg::tableau::imex_adams_3_3<real_type>();
         case IMEX_KOTO_2_2:
             return dg::tableau::imex_koto_2_2<real_type>();
         case IMEX_BDF_2_2:
@@ -587,7 +584,7 @@ MultistepTableau<real_type> lmstableau( std::string name)
  *   ImEx-Euler-1-1         | dg::IMEX_EULER_1_1 | Explicit Euler combined with Implicit Euler
  *   Euler                  | dg::IMEX_EULER_1_1 | For convenience
     ImEx-Koto-2-2 | dg::IMEX_KOTO_2_2 | <a href="https://dx.doi.org/10.1007/s11464-009-0005-9">Koto T. Front. Math. China 2009, 4(1): 113-129</a> A stabilized 2nd order scheme with a large region of stability
-    ImEx-Adams-X-X | dg::IMEX_ADAMS_X_X | <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> @note **Possible values for X: 2 (C=0.44), 3 (C=0.16)**
+    ImEx-Adams-2-2 | dg::IMEX_ADAMS_2_2 | <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> @note **(C=0.44)**
     ImEx-BDF-X-X | dg::IMEX_BDF_X_X | The family of schems described in <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> <br>The implicit part is a normal BDF scheme https://en.wikipedia.org/wiki/Backward_differentiation_formula while the explicit part equals the Minimal Projecting method by <a href = "https://www.ams.org/journals/mcom/1979-33-148/S0025-5718-1979-0537965-0/S0025-5718-1979-0537965-0.pdf"> Alfeld, P., Math. Comput. 33.148 1195-1212 (1979)</a> or **extrapolated BDF** in <a href = "https://doi.org/10.1137/S0036142902406326"> Hundsdorfer, W., Ruuth, S. J., & Spiteri, R. J. (2003). Monotonicity-preserving linear multistep methods. SIAM Journal on Numerical Analysis, 41(2), 605-623 </a> <br> @note Possible values for **X: 1 (C=1.00), 2 (C=0.63), 3 (C=0.39), 4 (C=0.22), 5 (C=0.09), 6** <br> Note that X=3 is identical to the "Karniadakis" scheme
     * Karniadakis | dg::IMEX_BDF_3_3 | The ImEx-BDF-3-3 scheme is identical to the widely used "Karniadakis" scheme <a href = "https://dx.doi.org/10.1016/0021-9991(91)90007-8"> Karniadakis, et al. J. Comput. Phys. 97 (1991)</a>
     ImEx-TVB-X-X | dg::IMEX_TVB_X_X | The family of schems described in < <a href="https://dx.doi.org/10.1016/j.jcp.2007.03.003">Hundsdorfer and Ruuth, Journal of Computational Physics 225 (2007)</a> <br> The explicit part is a TVB scheme while the implicit part is optimized to maximize damping of high wavelength <br> @note Possible values for **X: 3 (C=0.54), 4 (C=0.46), 5 (C=0.38)**

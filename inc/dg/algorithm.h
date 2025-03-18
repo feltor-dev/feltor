@@ -7,11 +7,10 @@
  */
 #include "backend/config.h"
 #include "backend/timer.h"
-#include "backend/transpose.h"
 #include "topology/split_and_join.h"
 #include "topology/xspacelib.h"
 #include "topology/evaluationX.h"
-#include "topology/derivativesX.h"
+#include "topology/derivativesA.h"
 #include "topology/weightsX.h"
 #include "topology/interpolationX.h"
 #include "topology/projectionX.h"
@@ -20,7 +19,6 @@
 #include "blas.h"
 #include "helmholtz.h"
 #include "pcg.h"
-#include "precond.h"
 #include "bicgstabl.h"
 #include "andersonacc.h"
 #include "lgmres.h"
@@ -39,6 +37,5 @@
 #include "nullstelle.h"
 #include "topology/average.h"
 #ifdef MPI_VERSION
-#include "topology/average_mpi.h"
 #include "backend/mpi_init.h"
 #endif

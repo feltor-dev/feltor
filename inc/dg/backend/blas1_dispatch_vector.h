@@ -127,10 +127,30 @@ namespace blas1
 
 namespace detail
 {
+template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
+inline void doDot_fpe( RecursiveVectorTag, int* status, std::array<T,N>& fpe, Functor f,
+    const ContainerType& x, const ContainerTypes& ...xs)
+{
+    //find out which one is the RecursiveVector and determine size
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>::value;
+    auto size = get_idx<vector_idx>(x,xs...).size();
+    //reduce received data (serial execution)
+    for( unsigned k=0; k<N; k++)
+        fpe[k] = T(0);
+    for( unsigned u=0; u<size; u++)
+    {
+        std::array<T,N> tmp;
+        doDot_fpe( status, tmp, f,
+            do_get_vector_element(x, u, get_tensor_category<ContainerType>()),
+            do_get_vector_element(xs, u, get_tensor_category<ContainerTypes>())...);
+        for (unsigned k = 0; k < N; ++k)
+            exblas::cpu::Accumulate( tmp[k], fpe, status);
+    }
+}
 
 
 template< class Vector1, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2, RecursiveVectorTag)
+inline std::vector<int64_t> doDot_superacc( int* status, const Vector1& x1, const Vector2& x2, RecursiveVectorTag)
 {
     //find out which one is the RecursiveVector and determine size
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
@@ -138,7 +158,9 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2
     std::vector<int64_t> acc( exblas::BIN_COUNT, (int64_t)0);
     for( unsigned i=0; i<size; i++)
     {
-        std::vector<int64_t> temp = doDot_superacc( do_get_vector_element(x1,i,get_tensor_category<Vector1>()), do_get_vector_element(x2,i,get_tensor_category<Vector2>()));
+        std::vector<int64_t> temp = doDot_superacc( status,
+            do_get_vector_element(x1,i,get_tensor_category<Vector1>()),
+            do_get_vector_element(x2,i,get_tensor_category<Vector2>()));
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<=exblas::IMAX; k++)

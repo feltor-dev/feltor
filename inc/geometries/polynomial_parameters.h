@@ -1,9 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#ifdef JSONCPP_VERSION_STRING
 #include <dg/file/json_utilities.h>
-#endif
 /*!@file
  *
  * Geometry parameters
@@ -40,7 +38,6 @@ namespace polynomial
 /**
  * @brief Constructs and display geometric parameters for the polynomial fields
  * @ingroup polynomial
- * @note include \c json/json.h before \c geometries.h in order to activate json functionality
  */
 struct Parameters
 {
@@ -54,14 +51,13 @@ struct Parameters
              N; //!< number of coefficients in Z
     std::vector<double> c;  //!< M*N coefficients for the polynomial equilibrium, \c c[i*N+j] corresponds to R^i Z^j;
     std::string description;
-#ifdef JSONCPP_VERSION_STRING
+    Parameters() = default;
     /**
      * @brief Construct from Json dataset
      * @copydoc hide_polynomial_json
      * @sa dg::geo::description to see valid values for the %description field
      * @param js valid Json object (see code above to see the valid key : value pairs)
      * @note the default values in brackets are taken if the variables are not found in the input file
-     * @attention This Constructor is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
     Parameters( const dg::file::WrappedJsonValue& js) {
         pp  = js.get( "PP", 1).asDouble();
@@ -82,16 +78,15 @@ struct Parameters
      * @brief Put values into a json string
      *
      * @return Json value
-     * @attention This member is only defined if \c json/json.h is included before \c dg/geometries/geometries.h
      */
-    Json::Value dump( ) const
+    dg::file::JsonType dump( ) const
     {
-        Json::Value js;
+        dg::file::JsonType js;
         js["M"] = M;
         js["N"] = N;
         js["PP"] = pp;
         js["PI"] = pi;
-        for (unsigned i=0;i<N*N;i++) js["c"][i] = c[i];
+        for (unsigned i=0;i<M*N;i++) js["c"][i] = c[i];
         js["R_0"] = R_0;
         js["inverseaspectratio"] = a/R_0;
         js["elongation"] = elongation;
@@ -100,7 +95,6 @@ struct Parameters
         js[ "description"] = description;
         return js;
     }
-#endif // JSONCPP_VERSION_STRING
     /**
     * @brief True if \c pp==0
     *
@@ -114,20 +108,9 @@ struct Parameters
     ///Write variables as a formatted string
     void display( std::ostream& os = std::cout ) const
     {
+        dg::file::WrappedJsonValue js = dump();
         os << "Polynomial Geometrical parameters are: \n"
-            <<" Prefactor Psi   = "<<pp<<"\n"
-            <<" Prefactor I     = "<<pi<<"\n"
-            <<" number in R     = "<<M<<"\n"
-            <<" number in Z     = "<<N<<"\n";
-        for( unsigned i=0; i<M*N; i++)
-            os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
-
-        os  <<" R0            = "<<R_0<<"\n"
-            <<" a             = "<<a<<"\n"
-            <<" epsilon_a     = "<<a/R_0<<"\n"
-            <<" description   = "<<description<<"\n"
-            <<" elongation    = "<<elongation<<"\n"
-            <<" triangularity = "<<triangularity<<"\n";
+            <<js.toStyledString();
         os << std::flush;
 
     }

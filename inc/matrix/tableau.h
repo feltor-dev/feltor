@@ -217,14 +217,14 @@ FunctionalButcherTableau<real_type> hochbruck_3_3_4()
 /**
 * @brief Identifiers for Butcher Tableaus
 *
-* We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html
+* We follow the naming convention of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html
 * as **NAME-S-P-Q** or **NAME-S-Q**, where
 *  - NAME is the author or name of the method
 *  - S is the number of stages in the method
 *  - P is the global order of the embedding
 *  - Q is the global order of the method
 *
-*  @ingroup time_utils
+*  @ingroup exp_int
 */
 enum func_tableau_identifier{
     EXPLICIT_EULER_1_1, //!
@@ -236,21 +236,21 @@ enum func_tableau_identifier{
 ///@cond
 namespace create{
 
-static std::unordered_map<std::string, enum func_tableau_identifier> str2id{
+inline const std::unordered_map<std::string, enum func_tableau_identifier> str2id{
     //Explicit methods
     {"Euler", EXPLICIT_EULER_1_1},
     {"Midpoint-2-2", MIDPOINT_2_2},
     {"Runge-Kutta-4-4", CLASSIC_4_4},
     {"Hochbruck-3-3-4", HOCHBRUCK_3_3_4},
 };
-static inline enum func_tableau_identifier str2func_tableau( std::string name)
+inline enum func_tableau_identifier str2func_tableau( std::string name)
 {
-    if( str2id.find(name) == str2id.end())
+    auto it = str2id.find(name);
+    if( it == str2id.end())
         throw dg::Error(dg::Message(_ping_)<<"Tableau "<<name<<" not found!");
-    else
-        return str2id[name];
+    return it->second;
 }
-static inline std::string func_tableau2str( enum func_tableau_identifier id)
+inline std::string func_tableau2str( enum func_tableau_identifier id)
 {
     for( auto name: str2id)
     {
@@ -288,7 +288,7 @@ FunctionalButcherTableau<real_type> func_tableau( std::string name)
 
 /*! @class hide_func_explicit_butcher_tableaus
  *
- * We follow the naming convention of the ARKode library http://runge.math.smu.edu/arkode_dev/doc/guide/build/html/Butcher.html (They also provide nice stability plots for their methods)
+ * We follow the naming convention of the ARKode library https://sundials.readthedocs.io/en/latest/arkode/Butcher_link.html (They also provide nice stability plots for their methods)
  * as **NAME-S-P-Q** or **NAME-S-Q**, where
  *  - NAME is the author or name of the method
  *  - S is the number of stages in the method
@@ -316,7 +316,7 @@ FunctionalButcherTableau<real_type> func_tableau( std::string name)
  *
  * @copydoc hide_func_explicit_butcher_tableaus
  * @param real_type The type of the coefficients in the FunctionalButcherTableau
- * @ingroup time_utils
+ * @ingroup exp_int
  */
 template<class real_type>
 struct ConvertsToFunctionalButcherTableau

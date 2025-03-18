@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
@@ -15,10 +14,10 @@
 struct Entry
 {
     std::string description;
-    int dimension_length;
-    int* dimensions;
     bool exists;
 };
+
+// The only dependence on feltor is through Parameters and equation_list
 
 int main( int argc, char* argv[])
 {
@@ -32,70 +31,50 @@ int main( int argc, char* argv[])
     std::cout << " -> "<<argv[argc-1]<<std::endl;
 
     //------------------------open input nc file--------------------------------//
-    dg::file::NC_Error_Handle err;
-    int ncid_in;
-    err = nc_open( argv[2], NC_NOWRITE, &ncid_in); //open 3d file
+    dg::file::NcFile file( argv[2], dg::file::nc_nowrite);
+
+    std::string inputfile = file.get_att_as<std::string>( "inputfile");
+    file.close();
     // create output early so that netcdf failures register early
     // and simplesimdb knows that file is under construction
-    int ncid_out;
-    err = nc_create(argv[argc-1],NC_NETCDF4|NC_NOCLOBBER, &ncid_out);
-    size_t length;
-    err = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-    std::string inputfile(length, 'x');
-    err = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &inputfile[0]);
-    err = nc_close( ncid_in);
+    file.open( argv[argc-1], dg::file::nc_noclobber);
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    dg::file::string2Json(inputfile, js.asJson(), dg::file::comments::are_forbidden);
+    js.asJson() = dg::file::string2Json(inputfile, dg::file::comments::are_forbidden);
     //we only need some parameters from p, not all
     const feltor::Parameters p(js);
-    std::cout << js.asJson() <<  std::endl;
+    std::cout << js.toStyledString() <<  std::endl;
     dg::file::WrappedJsonValue config( dg::file::error::is_warning);
     try{
-        dg::file::file2Json( argv[1], config.asJson(),
+        config.asJson() = dg::file::file2Json( argv[1],
                 dg::file::comments::are_discarded, dg::file::error::is_warning);
     } catch( std::exception& e) {
         DG_RANK0 std::cerr << "ERROR in input file "<<argv[1]<<std::endl;
         DG_RANK0 std::cerr << e.what()<<std::endl;
         return -1;
     }
-    std::string configfile = config.asJson().toStyledString();
+    std::string configfile = config.toStyledString();
     std::cout << configfile <<  std::endl;
 
     //-------------------Construct grids-------------------------------------//
 
-    dg::geo::CylindricalFunctor wall, transition;
-    dg::geo::TokamakMagneticField mag, mod_mag;
-    try{
-        mag = dg::geo::createMagneticField(js["magnetic_field"]["params"]);
-        mod_mag = dg::geo::createModifiedField(js["magnetic_field"]["params"],
-                js["boundary"]["wall"], wall, transition);
-    }catch(std::runtime_error& e)
-    {
-        std::cerr << "ERROR in input file "<<argv[2]<<std::endl;
-        std::cerr <<e.what()<<std::endl;
-        return -1;
-    }
-
-    const double Rmin=mag.R0()-p.boxscaleRm*mag.params().a();
-    const double Zmin=-p.boxscaleZm*mag.params().a();
-    const double Rmax=mag.R0()+p.boxscaleRp*mag.params().a();
-    const double Zmax=p.boxscaleZp*mag.params().a();
+    auto box = common::box( js);
     const unsigned FACTOR=config.get( "Kphi", 10).asUInt();
 
     unsigned cx = js["output"]["compression"].get(0u,1).asUInt();
     unsigned cy = js["output"]["compression"].get(1u,1).asUInt();
     unsigned n_out = p.n, Nx_out = p.Nx/cx, Ny_out = p.Ny/cy;
-    dg::Grid2d g2d_out( Rmin,Rmax, Zmin,Zmax,
+    dg::Grid2d g2d_out( box.at("Rmin"),box.at("Rmax"), box.at("Zmin"),box.at("Zmax"),
         n_out, Nx_out, Ny_out, p.bcxN, p.bcyN);
     /////////////////////////////////////////////////////////////////////////
-    dg::CylindricalGrid3d g3d( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g3d( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
         n_out, Nx_out, Ny_out, p.Nz, p.bcxN, p.bcyN, dg::PER);
-    dg::CylindricalGrid3d g3d_fine( Rmin, Rmax, Zmin, Zmax, 0., 2.*M_PI,
+    dg::CylindricalGrid3d g3d_fine( box.at("Rmin"), box.at("Rmax"), box.at("Zmin"), box.at("Zmax"), 0., 2.*M_PI,
         n_out, Nx_out, Ny_out, FACTOR*p.Nz, p.bcxN, p.bcyN, dg::PER);
 
-    //create RHS
-    if( p.periodify)
-        mod_mag = dg::geo::periodify( mod_mag, Rmin, Rmax, Zmin, Zmax, dg::NEU, dg::NEU);
+    dg::geo::TokamakMagneticField mag, mod_mag, unmod_mag;
+    dg::geo::CylindricalFunctor wall, transition;
+    common::create_mag_wall( argv[2], js, mag, mod_mag, unmod_mag, wall, transition);
+
     dg::HVec psipog2d = dg::evaluate( mod_mag.psip(), g2d_out);
     // Construct weights and temporaries
 
@@ -109,7 +88,7 @@ int main( int argc, char* argv[])
     double fx_0 = config.get( "fx_0", 1./8.).asDouble(); //must evenly divide Npsi
     unsigned inner_Nx = (unsigned)round((1-fx_0)*(double)gridX2d.Nx());
     /// ------------------- Compute flux labels ---------------------//
-    dg::Average<dg::HVec > poloidal_average( gridX2d, dg::coo2d::y);
+    dg::Average<dg::IHMatrix, dg::HVec > poloidal_average( gridX2d, dg::coo2d::y);
     dg::Grid1d g1d_out, g1d_out_eta;
     dg::HVec dvdpsip, volX2d;
     auto map1d = feltor::compute_oneflux_labels( poloidal_average,
@@ -127,54 +106,34 @@ int main( int argc, char* argv[])
     //-----------------And 1d static output                     ----------//
 
     /// Set global attributes
-    std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/feltor/feltordiag.cu";
+    std::map<std::string, dg::file::nc_att_t> att;
+    att["title"] = "Output file of feltor/src/feltor/feltordiag.cpp";
     att["Conventions"] = "CF-1.7";
-    ///Get local time and begin file history
-    auto ttt = std::time(nullptr);
-    auto tm = *std::localtime(&ttt);
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
+    att["history"] = dg::file::timestamp(argc, argv);
     att["comment"] = "Find more info in feltor/src/feltor.tex";
     att["source"] = "FELTOR";
     att["references"] = "https://github.com/feltor-dev/feltor";
     att["inputfile"] = inputfile;
     att["configfile"] = configfile;
-    for( auto pair : att)
-        err = nc_put_att_text( ncid_out, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
+    file.put_atts( att);
 
-    int dim_id1d = 0;
-    err = dg::file::define_dimension( ncid_out, &dim_id1d, g1d_out, {"psi"} );
-    int dim_idX[2]= { 0, dim_id1d};
-    err = dg::file::define_dimension( ncid_out, &dim_idX[0], g1d_out_eta, {"eta"} );
+    file.defput_dim( "psi", {{"axis", "X"}}, g1d_out.abscissas());
+    file.defput_dim( "eta", {{"axis", "Y"}}, g1d_out_eta.abscissas());
     //write 1d static vectors (psi, q-profile, ...) into file
     for( auto tp : map1d)
     {
-        int vid;
-        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 1, &dim_id1d, &vid);
-        err = nc_put_att_text( ncid_out, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef(ncid_out);
-        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid_out);
+        file.defput_var( std::get<0>(tp), {"psi"}, {{"long_name", std::get<2>(tp)}},
+            g1d_out, std::get<1>(tp));
     }
+    dg::Grid2d gX2d{  g1d_out, g1d_out_eta};
     for( auto tp : map2d)
     {
-        int vid;
-        err = nc_def_var( ncid_out, std::get<0>(tp).data(), NC_DOUBLE, 2, dim_idX, &vid);
-        err = nc_put_att_text( ncid_out, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_enddef(ncid_out);
-        err = nc_put_var_double( ncid_out, vid, std::get<1>(tp).data());
-        err = nc_redef(ncid_out);
+        file.defput_var( std::get<0>(tp), {"eta", "psi"}, {{"long_name",
+            std::get<2>(tp)}}, {gX2d}, std::get<1>(tp));
     }
     if( p.calibrate )
     {
-        err = nc_close( ncid_out);
+        file.close();
         return 0;
     }
     //
@@ -195,72 +154,28 @@ int main( int argc, char* argv[])
     if( psipO > psipmax)
         dpsi = dg::create::dx( g1d_out, dg::forward);
     //although the first point outside LCFS is still wrong
-    // define 2d and 1d and 0d dimensions and variables
-    int dim_ids[3], tvarID;
-    err = dg::file::define_dimensions( ncid_out, dim_ids, &tvarID, g2d_out);
+    file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"},
+        {"long_name", "Time at which 2d fields are written"}});
+    file.defput_dim( "x", {{"axis", "X"},
+        {"long_name", "R-coordinate in 2d plane"}}, g2d_out.abscissas(0));
+    file.defput_dim( "y", {{"axis", "Y"},
+        {"long_name", "Z-coordinate in 2d plane"}}, g2d_out.abscissas(1));
 
-    int dim_ids2d[2] = {dim_ids[0], dim_id1d}; //time,  psi
-    int dim_ids2dX[3]= {dim_ids[0], dim_idX[0], dim_idX[1]};
-    //Write long description
-    std::string long_name = "Time at which 2d fields are written";
-    err = nc_put_att_text( ncid_out, tvarID, "long_name", long_name.size(),
-            long_name.data());
-
-    size_t count1d[2] = {1, g1d_out.n()*g1d_out.N()};
-    size_t count2d[3] = {1, g2d_out.n()*g2d_out.Ny(), g2d_out.n()*g2d_out.Nx()};
-    size_t count2dX[3] = {1, g1d_out_eta.n()*g1d_out_eta.N(), g1d_out.n()*g1d_out.N()};//NEW: Definition of count2dX
-    size_t start2d[3] = {0, 0, 0};
-
-
-    std::vector<std::vector<feltor::Record>> equation_list;
-    bool equation_list_exists = js["output"].asJson().isMember("equations");
-    if( equation_list_exists)
-    {
-        for( unsigned i=0; i<js["output"]["equations"].size(); i++)
-        {
-            std::string eqn = js["output"]["equations"][i].asString();
-            if( eqn == "Basic")
-                equation_list.push_back(feltor::basicDiagnostics2d_list);
-            else if( eqn == "Mass-conserv")
-                equation_list.push_back(feltor::MassConsDiagnostics2d_list);
-            else if( eqn == "Energy-theorem")
-                equation_list.push_back(feltor::EnergyDiagnostics2d_list);
-            else if( eqn == "Toroidal-momentum")
-                equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
-            else if( eqn == "Parallel-momentum")
-                equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
-            else if( eqn == "Zonal-Flow-Energy")
-                equation_list.push_back(feltor::RSDiagnostics2d_list);
-            else if( eqn == "COCE")
-                equation_list.push_back(feltor::COCEDiagnostics2d_list);
-            else
-                throw std::runtime_error( "output: equations: "+eqn+" not recognized!\n");
-        }
-    }
-    else // default diagnostics
-    {
-        equation_list.push_back(feltor::basicDiagnostics2d_list);
-        equation_list.push_back(feltor::MassConsDiagnostics2d_list);
-        equation_list.push_back(feltor::EnergyDiagnostics2d_list);
-        equation_list.push_back(feltor::ToroidalExBDiagnostics2d_list);
-        equation_list.push_back(feltor::ParallelMomDiagnostics2d_list);
-        equation_list.push_back(feltor::RSDiagnostics2d_list);
-    }
-
+    auto equation_list = feltor::generate_equation_list( js);
 
     std::map<std::string, Entry> diag_list = {
-        {"fsa" , {" (Flux surface average.)", 2, dim_ids2d, false}  },
-        {"fsa2d" , {" (Flux surface average interpolated to 2d plane.)", 3, dim_ids, false} },
-        {"cta2d" , {" (Convoluted toroidal average on 2d plane.)", 3, dim_ids, false}},
-        {"cta2dX" , {" (Convoluted toroidal average on magnetic plane.)", 3, dim_ids2dX, false}},
-        {"fluc2d" , {" (Fluctuations wrt fsa on phi = 0 plane.)", 3, dim_ids, false}},
-        {"ifs", { " (wrt. vol integrated flux surface average)", 2, dim_ids2d, false}},
+        {"fsa" , {" (Flux surface average.)", false} },
+        {"fsa2d" , {" (Flux surface average interpolated to 2d plane.)", false} },
+        {"cta2d" , {" (Convoluted toroidal average on 2d plane.)", false}},
+        {"cta2dX" , {" (Convoluted toroidal average on magnetic plane.)", false}},
+        {"fluc2d" , {" (Fluctuations wrt fsa on phi = 0 plane.)", false}},
+        {"ifs", { " (wrt. vol integrated flux surface average)", false}},
         {"ifs_lcfs",
-            { " (wrt. vol integrated flux surface average evaluated on last closed flux surface)", 1, dim_ids, false}},
-        {"ifs_norm", {" (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)",1, dim_ids, false}},
-        {"std_fsa", {" (Flux surface average standard deviation on outboard midplane.)", 2, dim_ids2d, false}}
+            { " (wrt. vol integrated flux surface average evaluated on last closed flux surface)", false}},
+        {"ifs_norm", {" (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)", false}},
+        {"std_fsa", {" (Flux surface average standard deviation on outboard midplane.)", false }}
     };
-    bool diagnostics_list_exists = config.asJson().isMember("diagnostics");
+    bool diagnostics_list_exists = config.isMember("diagnostics");
     if( diagnostics_list_exists)
     {
         for( unsigned i=0; i<config["diagnostics"].size(); i++)
@@ -280,11 +195,9 @@ int main( int argc, char* argv[])
     else // compute all diagnostics
         for( auto& entry : diag_list)
             entry.second.exists = true;
-    std::map<std::string, int> IDS;
 
 
-    for(auto& m_list : equation_list) //Loop over the output lists (different equations studied).
-    for( auto& record : m_list) //Loop over the different variables inside each of the lists of outputs.
+    for(auto& record : equation_list)
     for( auto entry : diag_list)
     {
         if( !entry.second.exists)
@@ -302,10 +215,15 @@ int main( int argc, char* argv[])
             long_name = record.long_name + " (flux surface average evaluated on the last closed flux surface)";
         if((diag=="ifs_norm") && (record_name[0] == 'j'))
             long_name = record.long_name + " (wrt. vol integrated square derivative of the flux surface average from 0 to lcfs)";
-        err = nc_def_var( ncid_out, name.data(), NC_DOUBLE, entry.second.dimension_length,
-            entry.second.dimensions, &IDS[name]);
-        err = nc_put_att_text( ncid_out, IDS[name], "long_name", long_name.size(),
-            long_name.data());
+        if( diag == "ifs_norm" || diag == "ifs_lcfs")
+            file.def_var_as<double>( name, {"time"}, {{"long_name", long_name}});
+        else if( diag == "fsa" || diag == "ifs" || diag == "std_fsa")
+            file.def_var_as<double>( name, {"time", "psi"}, {{"long_name", long_name}});
+        else if( diag == "cta2dX")
+            file.def_var_as<double>( name, {"time", "eta", "psi"}, {{"long_name", long_name}});
+        else // fsa2d cta2d fluc2d
+            file.def_var_as<double>( name, {"time", "y", "x"}, {{"long_name", long_name}});
+
     }
 
     std::cout << "Construct Fieldaligned derivative ... \n";
@@ -322,16 +240,14 @@ int main( int argc, char* argv[])
             config.get("cta-interpolation","dg").asString());
     }
     /////////////////////////////////////////////////////////////////////////
-    size_t counter = 0;
-    int ncid;
     std::cout << "Using flux-surface-average mode: "<<fsa_mode << "\n";
+    size_t stack = 0;
     for( int j=2; j<argc-1; j++)
     {
-        int timeID;
-        size_t steps;
         std::cout << "Opening file "<<argv[j]<<"\n";
+        dg::file::NcFile file_in;
         try{
-            err = nc_open( argv[j], NC_NOWRITE, &ncid); //open 3d file
+            file_in.open( argv[j], dg::file::nc_nowrite);
         } catch ( dg::file::NC_Error& error)
         {
             std::cerr << "An error occurded opening file "<<argv[j]<<"\n";
@@ -339,49 +255,38 @@ int main( int argc, char* argv[])
             std::cerr << "Continue with next file\n";
             continue;
         }
-        err = nc_inq_unlimdim( ncid, &timeID);
-        err = nc_inq_dimlen( ncid, timeID, &steps);
-        err = nc_inq_varid(ncid, "time", &timeID);
-        //steps = 3;
+        size_t steps = file_in.get_dim_size("time");
+        // Get a list of all variable names
+        auto names = file_in.get_var_names();
+        //steps = 2; // for testing
         for( unsigned i=0; i<steps; i++)//timestepping
         {
             if( j > 2 && i == 0)
                 continue; // else we duplicate the first timestep
-            start2d[0] = i;
-            size_t start2d_out[3] = {counter, 0,0};
-            size_t start1d_out[2] = {counter, 0};
             // read and write time
             double time=0.;
-            err = nc_get_vara_double( ncid, timeID, start2d, count2d, &time);
-            std::cout << counter << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
-            counter++;
-            err = nc_put_vara_double( ncid_out, tvarID, start2d_out, count2d, &time);
-            for(auto& m_list : equation_list)
-            {
-            for( auto& record : m_list)
+            file_in.get_var( "time", {i}, time);
+            std::cout << " Timestep = " << i <<"/"<<steps-1 << "  time = " << time << std::endl;
+            file.put_var( "time", {stack}, time);
+            for(auto& record : equation_list)
             {
             std::string record_name = record.name;
             if( record_name[0] == 'j')
                 record_name[1] = 'v';
             //1. Read toroidal average
-            int dataID =0;
             bool available = true;
-            try{
-                err = nc_inq_varid(ncid, (record.name+"_ta2d").data(), &dataID);
-            } catch (dg::file::NC_Error& error)
+            if( std::find( names.begin(), names.end(), record.name+"_ta2d") == names.end())
             {
                 if(  i == 0)
                 {
-                    std::cerr << error.what() <<std::endl;
-                    std::cerr << "Offending variable is "<<record.name+"_ta2d\n";
+                    std::cerr << "Variable "<<record.name<<"_ta2d not found!" <<std::endl;
                     std::cerr << "Writing zeros ... \n";
                 }
                 available = false;
             }
             if( available)
             {
-                err = nc_get_vara_double( ncid, dataID,
-                    start2d, count2d, transferH2d.data());
+                file_in.get_var( record.name+"_ta2d", {i,g2d_out}, transferH2d);
                 if( fsa_mode == "convoluted-toroidal-average" || diag_list["cta2d"].exists
                         || diag_list["cta2dX"].exists)
                 {
@@ -422,55 +327,47 @@ int main( int argc, char* argv[])
             }
             if(diag_list["fsa"].exists)
             {
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fsa"),
-                    start1d_out, count1d, fsa1d.data());
+                file.put_var( record_name+"_fsa", {stack, g1d_out}, fsa1d);
             }
             if(diag_list[ "fsa2d"].exists)
             {
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fsa2d"),
-                    start2d_out, count2d, transferH2d.data() );
+                file.put_var( record_name+"_fsa2d", {stack, g2d_out}, transferH2d);
             }
             if(diag_list["cta2d"].exists)
             {
                 if( record_name[0] == 'j')
                     dg::blas1::pointwiseDot( cta2d_mp, dvdpsip2d, cta2d_mp );//make it jv
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_cta2d"),
-                    start2d_out, count2d, cta2d_mp.data() );
+                file.put_var( record_name+"_cta2d", {stack, g2d_out}, cta2d_mp);
             }
             if(diag_list["cta2dX"].exists)
             {
                 if( record_name[0] == 'j')
                     record_name[1] = 's';
-                err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_cta2dX"),
-                    start2d_out, count2dX, cta2dX.data() ); //NEW: saving de X_grid data
+                file.put_var( record_name+"_cta2dX", {stack, gX2d}, cta2dX);
                 if( record_name[0] == 'j')
                     record_name[1] = 'v';
             }
             //4. Read 2d variable and compute fluctuations
             available = true;
-            try{
-                err = nc_inq_varid(ncid, (record.name+"_2d").data(), &dataID);
-            } catch ( dg::file::NC_Error& error)
+            if( std::find( names.begin(), names.end(), record.name+"_2d") == names.end())
             {
                 if(  i == 0)
                 {
-                    std::cerr << error.what() <<std::endl;
-                    std::cerr << "Offending variable is "<<record.name+"_2d\n";
+                    std::cerr << "Variable "<<record.name<<"_2d not found!" <<std::endl;
                     std::cerr << "Writing zeros ... \n";
                 }
                 available = false;
             }
             if( available)
             {
-                err = nc_get_vara_double( ncid, dataID, start2d, count2d,
-                    cta2d_mp.data());
+                file_in.get_var( record.name+"_2d", {i, g2d_out}, cta2d_mp);
                 if( record_name[0] == 'j')
                     dg::blas1::pointwiseDot( cta2d_mp, dvdpsip2d, cta2d_mp );
                 dg::blas1::axpby( 1.0, cta2d_mp, -1.0, transferH2d);
                 if(diag_list["fluc2d"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fluc2d"),
-                        start2d_out, count2d, transferH2d.data() );
+                    file.put_var( record_name+"_fluc2d", {stack, g2d_out},
+                        transferH2d);
                 }
                 //5. flux surface integral/derivative
                 double result =0.;
@@ -495,14 +392,12 @@ int main( int argc, char* argv[])
                 }
                 if(diag_list[ "ifs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs"),
-                        start1d_out, count1d, transfer1d.data());
+                    file.put_var( record_name+"_ifs", {stack, g1d_out}, transfer1d);
                 }
                 //flux surface integral/derivative on last closed flux surface
                 if(diag_list[ "ifs_lcfs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_lcfs"),
-                        start2d_out, count2d, &result );
+                    file.put_var( record_name+"_ifs_lcfs", {stack}, result);
                 }
                 //6. Compute norm of time-integral terms to get relative importance
                 if( record_name[0] == 'j') //j indicates a flux
@@ -527,8 +422,7 @@ int main( int argc, char* argv[])
                 result = sqrt(dg::blas1::dot( temp1, temp2));
                 if(diag_list["ifs_norm"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_norm"),
-                        start2d_out, count2d, &result );
+                    file.put_var( record_name+"_ifs_norm", {stack}, result);
                 }
                 //7. Compute midplane fluctuation amplitudes
                 dg::blas1::pointwiseDot( transferH2d, transferH2d, transferH2d);
@@ -546,8 +440,7 @@ int main( int argc, char* argv[])
                 dg::blas1::transform ( fsa1d, fsa1d, dg::SQRT<double>() );
                 if(diag_list["std_fsa"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_std_fsa"),
-                        start1d_out, count1d, fsa1d.data());
+                    file.put_var( record_name+"_std_fsa", {stack, g1d_out}, fsa1d);
                 }
             }
             else // make everything zero
@@ -557,35 +450,33 @@ int main( int argc, char* argv[])
                 double result = 0.;
                 if(diag_list["fluc2d"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_fluc2d"),
-                        start2d_out, count2d, transferH2d.data() );
+                    file.put_var( record_name+"_fluc2d", {stack, g2d_out},
+                        transferH2d);
                 }
                 if(diag_list["ifs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs"),
-                        start1d_out, count1d, transfer1d.data());
+                    file.put_var( record_name+"_ifs", {stack, g1d_out},
+                        transfer1d);
                 }
                 if(diag_list["ifs_lcfs"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_lcfs"),
-                        start2d_out, count2d, &result );
+                    file.put_var( record_name+"_ifs_lcfs", {stack}, result);
                 }
                 if(diag_list["ifs_norm"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_ifs_norm"),
-                        start2d_out, count2d, &result );
+                    file.put_var( record_name+"_ifs_norm", {stack}, result);
                 }
                 if(diag_list["std_fsa"].exists)
                 {
-                    err = nc_put_vara_double( ncid_out, IDS.at(record_name+"_std_fsa"),
-                        start1d_out, count1d, transfer1d.data());
+                    file.put_var( record_name+"_std_fsa", {stack, g1d_out},
+                        transfer1d);
                 }
             }
-            }
-        }
+            } // equation_list
+            stack++;
         } //end timestepping
-        err = nc_close(ncid);
+        file_in.close();
     }
-    err = nc_close(ncid_out);
+    file.close();
     return 0;
 }

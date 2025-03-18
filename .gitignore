@@ -1,17 +1,30 @@
-doc/
-data/
-pics/
-poster/
-videos/
-inc/dg/doc/
-inc/toefl/doc/
-inc/file/doc/
-src/feltor/doc/
+# https://stackoverflow.com/questions/5711120/gitignore-binary-files-that-have-no-extension
+# Ignore all
+*
+
+# Unignore all with extensions
+!*.*
+
+# Unignore all dirs
+!*/
+
+### Above combination will ignore all files without extension ###
+
+# Ignore certain directories
+
+doc/dg
+doc/exblas
+doc/file
+doc/geometries
+doc/matrix
+doc/index.html
+
+*/_minted-* # Latex docu
+
+# Ignore files with certain extension
+*.o
+*.tag
 *.sh
-*_b
-*_t
-*_mpib
-*_mpit
 *.nc
 *.py
 *.in
@@ -22,7 +35,18 @@ src/feltor/doc/
 *.txt
 *.pdf
 *.aux
+*.blg
+*.bbl
 *.log
+*.toc
 *.png
 *.pvsm
 *.bak
+*.info
+*.csv
+*.json
+*.js
+*.ipynb
+## From _minted
+*.pygtex
+*.pygstyle

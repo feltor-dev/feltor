@@ -346,12 +346,12 @@ struct IpolZ: public aCylindricalFunctor<IpolZ>
     std::function<double(double,double)> m_psip, m_psipZ;
 };
 
-static inline dg::geo::CylindricalFunctorsLvl2 createPsip( const Parameters& gp)
+inline dg::geo::CylindricalFunctorsLvl2 createPsip( const Parameters& gp)
 {
     return CylindricalFunctorsLvl2( Psip(gp), PsipR(gp), PsipZ(gp),
         PsipRR(gp), PsipRZ(gp), PsipZZ(gp));
 }
-static inline dg::geo::CylindricalFunctorsLvl1 createIpol( const Parameters& gp, const CylindricalFunctorsLvl1& psip)
+inline dg::geo::CylindricalFunctorsLvl1 createIpol( const Parameters& gp, const CylindricalFunctorsLvl1& psip)
 {
     return CylindricalFunctorsLvl1(
             solovev::Ipol(gp, psip.f()),
@@ -372,7 +372,7 @@ static inline dg::geo::CylindricalFunctorsLvl1 createIpol( const Parameters& gp,
  * @return A magnetic field object
  * @ingroup solovev
  */
-static inline dg::geo::TokamakMagneticField createSolovevField(
+inline dg::geo::TokamakMagneticField createSolovevField(
     dg::geo::solovev::Parameters gp)
 {
     MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
@@ -397,7 +397,7 @@ static inline dg::geo::TokamakMagneticField createSolovevField(
  * @return A magnetic field object
  * @ingroup solovev
  */
-static inline dg::geo::TokamakMagneticField createModifiedSolovevField(
+inline dg::geo::TokamakMagneticField createModifiedSolovevField(
     dg::geo::solovev::Parameters gp, double psi0, double alpha, double sign = -1)
 {
     MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,

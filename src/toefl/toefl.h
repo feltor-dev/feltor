@@ -182,6 +182,12 @@ void Explicit<G, M, Container>::polarisation( double t,
     //invert
 
     m_old_phi.extrapolate(t, m_phi[0]);
+    // Test experimental least squares
+    //dg::Timer timer;
+    //timer.tic();
+    //m_old_phi.extrapolate_least_squares( m_multi_pol[0], m_omega, m_phi[0], m_multi_pol[0].weights());
+    //timer.toc();
+    //std::cout << "Finding initial guess took "<<timer.diff()<<"s\n";
     m_multigrid.set_benchmark( true, "Polarisation");
     m_multigrid.solve( m_multi_pol, m_phi[0], m_omega, m_p.eps_pol);
     m_old_phi.update( t, m_phi[0]);

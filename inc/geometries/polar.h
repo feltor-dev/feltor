@@ -7,8 +7,9 @@ namespace geo {
 /**
 * @brief Polar coordinates
 
- \f[ x = r \cos(\eta) \\
-     y = r \sin(\eta) \f]
+ \f{align}{
+     x &= r \cos(\eta) \\
+     y &= r \sin(\eta) \f}
      with \f$ r = \zeta + r_{min}\f$
  * @ingroup generators_geo
 */
@@ -73,8 +74,9 @@ struct PolarGenerator : public aGenerator2d
 /**
 * @brief Log Polar coordinates (conformal)
 
- \f[ x = \exp(l) \cos(\eta) \\
-     y = \exp(l) \sin(\eta) \f]
+ \f{align}{
+     x &= \exp(l) \cos(\eta) \\
+     y &= \exp(l) \sin(\eta) \f}
      with \f$ l = \zeta + \log (r_{min})\f$
  * @ingroup generators_geo
 */

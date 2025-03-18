@@ -34,22 +34,20 @@ namespace blas2{
 namespace detail{
 
 template< class ContainerType1, class MatrixType, class ContainerType2>
-inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
+inline std::vector<int64_t> doDot_superacc( int* status, const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType1>::value,
-            dg::is_vector<MatrixType>::value,
-            dg::is_vector<ContainerType2>::value>::value,
+    static_assert(
+            dg::is_vector_v<ContainerType1> && dg::is_vector_v<MatrixType> &&
+            dg::is_vector_v<ContainerType2> ,
         "The container types must have a vector data layout (AnyVector)!");
     //check ContainerTypes: must be either scalar or same base category
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerType2>;
     using vector_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType1, vector_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerType2, vector_category>::value
-            >::value,
+    static_assert(
+            dg::is_scalar_or_same_base_category<ContainerType1, vector_category>::value &&
+            dg::is_scalar_or_same_base_category<ContainerType2, vector_category>::value,
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    return doDot_superacc( x, m, y, get_tensor_category<MatrixType>(), vector_category());
+    return doDot_superacc( status, x, m, y, get_tensor_category<MatrixType>(), vector_category());
 }
 
 }//namespace detail
@@ -57,49 +55,78 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
 
 /*! @brief \f$ x^T M y\f$; Binary reproducible general dot product
  *
- * This routine computes the scalar product defined by the symmetric positive definite
- * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
+ * This routine computes the scalar product defined by the symmetric positive
+ * definite matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
  *
- * @copydoc hide_code_evaluate2d
+ * For example
+ * @snippet{trimleft} blas_t.cpp dot
+ * Or a more elaborate use case
+ * @snippet{trimleft} evaluation_t.cpp evaluate2d
+ *
  * @attention if one of the input vectors contains \c Inf or \c NaN or the
  * product of the input numbers reaches \c Inf or \c Nan then the behaviour
  * is undefined and the function may throw. See @ref dg::ISNFINITE and @ref
  * dg::ISNSANE in that case
- * @note Our implementation guarantees **binary reproducible** results up to and excluding the last mantissa bit of the result.
- * Furthermore, the sum is computed with **infinite precision** and the result is then rounded
- * to the nearest double precision number. Although the products are not computed with
- * infinite precision, the order of multiplication is guaranteed.
- * This is possible with the help of an adapted version of the \c dg::exblas library and
-* works for single and double precision.
+ * @note Our implementation guarantees **binary reproducible** results up to
+ * and excluding the last mantissa bit of the result.  Furthermore, the sum is
+ * computed with **infinite precision** and the result is then rounded to the
+ * nearest double precision number. Although the products are not computed with
+ * infinite precision, the order of multiplication is guaranteed.  This is
+ * possible with the help of an adapted version of the \c dg::exblas library
+ * and works for single and double precision.
+ * @attention Binary Reproducible results are only guaranteed for **float** or
+ * **double** input.  All other value types redirect to <tt>dg::blas1::vdot(
+ * dg::Product(), x, m, y);</tt>
  *
  * @param x Left input
  * @param m The diagonal Matrix.
  * @param y Right input (may alias \c x)
- * @return Generalized scalar product. If \c x and \c y are vectors of containers and \c m is not, then we sum the results of \c dg::blas2::dot( x[i], m, y[i])
+ * @return Generalized scalar product. If \c x and \c y are vectors of
+ * containers and \c m is not, then we sum the results of <tt>dg::blas2::dot(
+ * x[i], m, y[i])</tt>
  * @note This routine is always executed synchronously due to the
-    implicit memcpy of the result. With mpi the result is broadcasted to all processes. Also note that the behaviour is undefined when one of the containers contains \c nan
- * @tparam MatrixType \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
+    implicit memcpy of the result. With mpi the result is broadcasted to all
+    processes. Also note that the behaviour is undefined when one of the
+    containers contains \c nan
+ * @tparam MatrixType \c MatrixType has to have a category derived from \c
+ * AnyVectorTag and must be compatible with the \c ContainerTypes
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class MatrixType, class ContainerType2>
-inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
+inline auto dot( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
 {
-    std::vector<int64_t> acc = dg::blas2::detail::doDot_superacc( x,m,y);
-    return exblas::cpu::Round(acc.data());
+    if constexpr (std::is_floating_point_v<get_value_type<ContainerType1>> &&
+                  std::is_floating_point_v<get_value_type<MatrixType>>   &&
+                  std::is_floating_point_v<get_value_type<ContainerType2>>)
+    {
+        int status = 0;
+        std::vector<int64_t> acc = dg::blas2::detail::doDot_superacc( &status,
+            x,m,y);
+        if( status != 0)
+            throw dg::Error(dg::Message(_ping_)<<"dg::blas2::dot failed "
+                <<"since one of the inputs contains NaN or Inf");
+        return exblas::cpu::Round(acc.data());
+    }
+    else
+    {
+        return dg::blas1::vdot( dg::Product(), x, m, y);
+    }
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
  *
- * Equivalent to \c dg::blas2::dot( x,m,x)
+ * Alias for \c dg::blas2::dot( x,m,x)
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
  * @param m The diagonal Matrix
  * @param x Right input
- * @return Generalized scalar product. If \c x is a vector of containers and \c m is not, then we sum the results of \c dg::blas2::dot( m, x[i])
+ * @return Generalized scalar product. If \c x is a vector of containers and \c
+ * m is not, then we sum the results of \c dg::blas2::dot( m, x[i])
  * @note This routine is always executed synchronously due to the
-    implicit memcpy of the result.
+ *   implicit memcpy of the result.
  * @note This routine is equivalent to the call \c dg::blas2::dot( x, m, x);
-     which should be prefered because it looks more explicit
- * @tparam MatrixType \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
+ * which should be prefered because it looks more explicit
+ * @tparam MatrixType \c MatrixType has to have a category derived from \c
+ * AnyVectorTag and must be compatible with the \c ContainerTypes
  * @copydoc hide_ContainerType
  */
 template< class MatrixType, class ContainerType>
@@ -137,16 +164,17 @@ inline void doSymv( get_value_type<ContainerType1> alpha,
                   ContainerType2& y,
                   AnyMatrixTag)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_execution_policy<ContainerType1>,
+                                  get_execution_policy<ContainerType2>>,
                                 "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
-                                "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_tensor_category<ContainerType1>,
-                                get_tensor_category<ContainerType2>>::value,
+    // We want to allow double matrix on complex vector ...
+    //static_assert( std::is_same_v<get_value_type<ContainerType1>,
+    //                              get_value_type<MatrixType>> &&
+    //               std::is_same_v<get_value_type<ContainerType2>,
+    //                              get_value_type<MatrixType>>,
+    //                            "Vector and Matrix types must have same value type");
+    static_assert( std::is_same_v<get_tensor_category<ContainerType1>,
+                                  get_tensor_category<ContainerType2>>,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( alpha, std::forward<MatrixType>(M), x, beta, y,
             get_tensor_category<MatrixType>(),
@@ -158,16 +186,17 @@ inline void doSymv( MatrixType&& M,
                   ContainerType2& y,
                   AnyMatrixTag)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_execution_policy<ContainerType1>,
+                                  get_execution_policy<ContainerType2>>,
                                 "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
-                                "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_tensor_category<ContainerType1>,
-                                get_tensor_category<ContainerType2>>::value,
+    // We want to allow double matrix on complex vector ...
+    //static_assert( std::is_same_v<get_value_type<ContainerType1>,
+    //                              get_value_type<MatrixType>> &&
+    //               std::is_same_v<get_value_type<ContainerType2>,
+    //                              get_value_type<MatrixType>>,
+    //                            "Vector and Matrix types must have same value type");
+    static_assert( std::is_same_v<get_tensor_category<ContainerType1>,
+                                  get_tensor_category<ContainerType2>>,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( std::forward<MatrixType>(M), x, y,
             get_tensor_category<MatrixType>(),
@@ -181,16 +210,17 @@ inline void doStencil(
                   ContainerType2& y,
                   AnyMatrixTag)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
+    static_assert( std::is_same_v<get_execution_policy<ContainerType1>,
+                                  get_execution_policy<ContainerType2>>,
                                 "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
-                                "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_tensor_category<ContainerType1>,
-                                get_tensor_category<ContainerType2>>::value,
+    // We want to allow double matrix on complex vector ...
+    //static_assert( std::is_same_v<get_value_type<ContainerType1>,
+    //                              get_value_type<MatrixType>> &&
+    //               std::is_same_v<get_value_type<ContainerType2>,
+    //                              get_value_type<MatrixType>>,
+    //                            "Vector and Matrix types must have same value type");
+    static_assert( std::is_same_v<get_tensor_category<ContainerType1>,
+                                  get_tensor_category<ContainerType2>>,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doStencil( f, std::forward<MatrixType>(M), x, y,
             get_tensor_category<MatrixType>(),
@@ -229,12 +259,17 @@ inline void doSymv( MatrixType&& M,
  *
  * This routine computes \f[ y = \alpha M x + \beta y \f]
  * where \f$ M\f$ is a matrix (or functor that is called like \c M(alpha,x,beta,y)).
- * There is nothing that prevents you from making the matrix \c M non-symmetric or even
+ * @note There is nothing that prevents \c M from being non-symmetric or even
  * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
  * multiplication) is misleading.  For better code readability we introduce
  * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
  * \c dg::apply (general, possibly non-linear functor application).
- * @copydoc hide_code_blas2_symv
+ *
+ * For example
+ * @snippet{trimleft,cpp} operator_t.cpp symv 2
+ * or a more elaborate use case
+ * @snippet{trimleft} derivatives_t.cpp derive
+ *
  * @param alpha A Scalar
  * @param M The Matrix.
  * @param x input vector
@@ -266,12 +301,17 @@ inline void symv( get_value_type<ContainerType1> alpha,
  *
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix (or functor that is called like \c M(x,y)).
- * There is nothing that prevents you from making the matrix \c M non-symmetric or even
+ * @note There is nothing that prevents \c M from being non-symmetric or even
  * non-linear. In this sense the term "symv" (symmetrix-Matrix-Vector
  * multiplication) is misleading.  For better code readability we introduce
  * aliases: \c dg::blas2::gemv (general Matrix-Vector multiplication) and
  * \c dg::apply (general, possibly non-linear functor application)
- * @copydoc hide_code_blas2_symv
+ *
+ * For example
+ * @snippet{trimleft,cpp} operator_t.cpp symv 1
+ * or a more elaborate use case
+ * @snippet{trimleft} derivatives_t.cpp derive
+ *
  * @param M The Matrix.
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
@@ -290,10 +330,12 @@ inline void symv( MatrixType&& M,
 {
     dg::blas2::detail::doSymv( std::forward<MatrixType>(M), x, y, get_tensor_category<MatrixType>());
 }
-/*! @brief \f$ y = \alpha M x + \beta y \f$;
- * (alias for symv)
+/*! @brief Alias for \c blas2::symv \f$ y = \alpha M x + \beta y \f$;
  *
- * @copydetails symv(get_value_type<ContainerType1>,MatrixType&&,const ContainerType1&,get_value_type<ContainerType1>,ContainerType2&)
+ * This Alias exists for code readability: if your "symmetric matrix" is not
+ * actually a symmetric matrix then it may seem unnatural to write \c
+ * blas2::symv in your code
+ * @ingroup blas2
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void gemv( get_value_type<ContainerType1> alpha,
@@ -305,10 +347,12 @@ inline void gemv( get_value_type<ContainerType1> alpha,
     dg::blas2::symv( alpha, std::forward<MatrixType>(M), x, beta, y);
 }
 
-/*! @brief \f$ y = M x\f$;
- * (alias for symv)
+/*! @brief Alias for \c blas2::symv \f$ y = M x\f$;
  *
- * @copydetails symv(MatrixType&&,const ContainerType1&,ContainerType2&)
+ * This Alias exists for code readability: if your "symmetric matrix" is not
+ * actually a symmetric matrix then it may seem unnatural to write \c
+ * blas2::symv in your code
+ * @ingroup blas2
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void gemv( MatrixType&& M,
@@ -331,27 +375,20 @@ inline void gemv( MatrixType&& M,
  * It is equivalent to the following
  * @code
  * for(unsigned i=0; i<N; i++)
- *     f( i, *x_0[0], *x_1[0], ...);
+ *     f( i, &x_0[0], &x_1[0], ...);
  * @endcode
- * With this function very general for-loops can be parallelized like for example a forward finite difference:
-@code{.cpp}
-dg::DVec x( 100,2), y(100,4);
-unsigned N = 100;
-double hx = 1.;
-// implement forward difference with periodic boundaries
-dg::blas1::parallel_for( [&]DG_DEVICE( unsigned i, const double* x, double* y){
-    unsigned ip = (i+1)%N;
-    y[i] = (x[ip] - x[i])/hx;
-}, N, x, y);
-// y[i] now has the value 0
-@endcode
-
+ * With this function very general for-loops can be parallelized like for
+ * example
+ * @snippet{trimleft} blas_t.cpp parallel_for
+ * or
+ * @snippet{trimleft} blas_t.cpp parallel_transpose
+ *
  * @note In a way this function is a generalization of \c dg::blas1::subroutine
  * to non-trivial parallelization tasks. However, this comes at a price:
  * this function only works for containers with the \c dg::SharedVectorTag and sclar types.
  * The reason it cannot work for MPI is that the stencil (and thus the
  * communication pattern) is unkown. However, it can serve as an important
- * building block for other parallel functions like \c dg::blas2::parallel_for.
+ * building block for other parallel functions like \c dg::blas2::stencil.
  * @note This is the closest function we have to <tt> kokkos::parallel_for</tt> of the <a href="https://github.com/kokkos/kokkos">Kokkos library</a>.
  *
  * @param f the loop body
@@ -379,18 +416,14 @@ inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTyp
 {
     // Is the assumption that results are automatically ready on return still true?
     // Do we have to introduce barriers around this function?
-    static_assert( all_true<
-            dg::is_vector<ContainerType>::value,
-            dg::is_vector<ContainerTypes>::value...>::value,
+    static_assert( (dg::is_vector_v<ContainerType> &&
+             ... && dg::is_vector_v<ContainerTypes>),
         "All container types must have a vector data layout (AnyVector)!");
     using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
     using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
+    static_assert(( dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value &&
+              ... &&dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value),
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    //using basic_tag_type  = std::conditional_t< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >;
     dg::blas2::detail::doParallelFor(tensor_category(), f, N, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 /*! @brief \f$ F(M, x, y)\f$
@@ -416,7 +449,7 @@ inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTyp
  *  <tt> void operator()( unsigned, pointer, [m_pointers], const_pointer) </tt>  For GPU vector the functor
  *  must be callable on the device.
  * @tparam MatrixType So far only one of the \c cusp::csr_matrix types and their MPI variants <tt> dg::MPIDistMat<cusp::csr_matrix, Comm> </tt> are allowed
- * @sa dg::convert, dg::CSRMedianFilter, dg::create::window_stencil
+ * @sa dg::CSRMedianFilter, dg::create::window_stencil
  * @copydoc hide_ContainerType
  */
 template< class FunctorType, class MatrixType, class ContainerType1, class ContainerType2>
@@ -437,7 +470,6 @@ inline void stencil(
  * @param x source
  * @param y sink
  * @note y gets resized properly
- * @copydoc hide_code_blas2_symv
  */
 template<class MatrixType, class AnotherMatrixType>
 inline void transfer( const MatrixType& x, AnotherMatrixType& y)
@@ -449,13 +481,12 @@ inline void transfer( const MatrixType& x, AnotherMatrixType& y)
 ///@}
 
 } //namespace blas2
-/*! @brief \f$ y = \alpha M(x) + \beta y \f$;
- * (alias for \c dg::blas2::symv)
+/*! @brief Alias for \c dg::blas2::symv \f$ y = \alpha M(x) + \beta y \f$;
  *
  * This Alias exists for code readability: if your matrix is not actually a matrix but
  * a functor then it may seem unnatural to write \c blas2::symv in your code especially
  * if  \c M is non-linear.
- * @ingroup backend
+ * @ingroup blas2
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void apply( get_value_type<ContainerType1> alpha,
@@ -467,13 +498,12 @@ inline void apply( get_value_type<ContainerType1> alpha,
     dg::blas2::symv( alpha, std::forward<MatrixType>(M), x, beta, y);
 }
 
-/*! @brief \f$ y = M( x)\f$;
- * (alias for \c dg::blas2::symv)
+/*! @brief Alias for \c dg::blas2::symv \f$ y = M( x)\f$;
  *
  * This Alias exists for code readability: if your matrix is not actually a matrix but
  * a functor then it may seem unnatural to write \c blas2::symv in your code especially
  * if  \c M is non-linear.
- * @ingroup backend
+ * @ingroup blas2
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void apply( MatrixType&& M,

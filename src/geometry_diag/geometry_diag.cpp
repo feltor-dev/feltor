@@ -11,28 +11,18 @@
 #include "dg/file/file.h"
 #include "dg/geometries/geometries.h"
 
-// The purpose of this program is to diagnose geometry.json files with
-// as little effort as possible. This program should also remain
-// independent of any specific code and therefore does not test or output
-// any initialization related functions that require specific parameters in
-// the input file
-// We currently just
-// - write magnetic functions into file
-// - compute Flux - surface averages and write into file
-//
 
 int main( int argc, char* argv[])
 {
     dg::file::WrappedJsonValue js( dg::file::error::is_warning);
     std::string inputfile = argc==1 ? "geometry_diag.json" : argv[1];
-    dg::file::file2Json( inputfile, js.asJson(),
-            dg::file::comments::are_discarded);
+    js.asJson() = dg::file::file2Json( inputfile);
 
     std::string geometry_params = js["magnetic_field"]["input"].asString();
     if( geometry_params == "file")
     {
         std::string path = js["magnetic_field"]["file"].asString();
-        dg::file::file2Json( path, js.asJson()["magnetic_field"]["file"],
+        js.asJson()["magnetic_field"]["file"] = dg::file::file2Json( path,
                 dg::file::comments::are_discarded);
     }
     //Test coefficients
@@ -76,28 +66,52 @@ int main( int argc, char* argv[])
 
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
     dg::DVec psipog2d   = dg::evaluate( mag.psip(), grid2d);
-    double psipO = dg::blas1::reduce( psipog2d, 0., thrust::minimum<double>());
-    double psipmax = dg::blas1::reduce( psipog2d, 0., thrust::maximum<double>());
+    double RO = mag.R0(), ZO = 0.;
+    double psipO = dg::blas1::reduce( psipog2d, +1e308, thrust::minimum<double>());
+    double psipmax = dg::blas1::reduce( psipog2d, -1e308, thrust::maximum<double>());
+    if ( psipmax == psipO) // toroidal field
+        psipmax += 1;
+    // find O-point
     if( mag_description == dg::geo::description::standardX ||
         mag_description == dg::geo::description::standardO ||
         mag_description == dg::geo::description::square ||
         mag_description == dg::geo::description::doubleX
         )
     {
-        //Find O-point
-        double RO = mag.R0(), ZO = 0.;
-        int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
-        psipO = mag.psip()( RO, ZO);
-        std::cout << "O-point found at "<<RO<<" "<<ZO
-                  <<" with Psip "<<psipO<<std::endl;
-        if( point == 1 )
-            std::cout << " (minimum)"<<std::endl;
-        if( point == 2 )
-            std::cout << " (maximum)"<<std::endl;
-        double psip0 = mag.psip()(mag.R0(), 0);
-        std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
-        double fx_0 = 0.125; // must evenly divide Npsi
-        psipmax = -fx_0/(1.-fx_0)*psipO;
+        try
+        {
+            int point = dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+            psipO = mag.psip()( RO, ZO);
+            std::cout << "O-point found at "<<RO<<" "<<ZO
+                      <<" with Psip "<<psipO<<std::endl;
+            if( point == 1 )
+                std::cout << " (minimum)"<<std::endl;
+            if( point == 2 )
+                std::cout << " (maximum)"<<std::endl;
+            double psip0 = mag.psip()(mag.R0(), 0);
+            std::cout << "psip( R_0, 0) = "<<psip0<<"\n";
+            double fx_0 = 0.125; // must evenly divide Npsi
+            psipmax = -fx_0/(1.-fx_0)*psipO;
+        } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
+    }
+    double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
+    double ZX = -1.1*mag.params().elongation()*mag.params().a();
+    double Z2X = Zmax, R2X = RX;
+    // find X-point
+    if( mag_description == dg::geo::description::standardX
+        || mag_description == dg::geo::description::doubleX)
+    {
+        try{
+            dg::geo::findXpoint( mag.get_psip(), RX, ZX);
+            std::cout << "X-point found at "<<RX<<" "<<ZX<<std::endl;
+            if( mag_description == dg::geo::description::doubleX)
+            {
+                R2X = RX;
+                Z2X = -ZX;
+                dg::geo::findXpoint( mag.get_psip(), R2X, Z2X);
+                std::cout << "2nd X-point found at "<<R2X<<" "<<Z2X<<std::endl;
+            }
+        } catch( dg::Error& e) { std::cerr << e.what()<<"\n"; }
     }
     double width_factor = js.get("width-factor",1.0).asDouble();
     dg::geo::FluxSurfaceIntegral<dg::HVec> fsi( grid2d, mag, width_factor);
@@ -109,6 +123,7 @@ int main( int argc, char* argv[])
     //Generate list of functions to evaluate
     std::vector< std::tuple<std::string, std::string, dg::geo::CylindricalFunctor >> map{
         {"Psip", "Flux function", mag.psip()},
+        {"modPsip", "Modified Flux function", mod_mag.psip()},
         {"PsipR", "Flux function derivative in R", mag.psipR()},
         {"PsipZ", "Flux function derivative in Z", mag.psipZ()},
         {"PsipRR", "Flux function derivative in RR", mag.psipRR()},
@@ -164,6 +179,8 @@ int main( int argc, char* argv[])
         {"PsiLimiter", "A flux aligned Heaviside", dg::compose( dg::Heaviside( 1.03), dg::geo::RhoP(mag) )},
         {"MagneticTransition", "The region where the magnetic field is modified", transition},
         {"Delta", "A flux aligned Gaussian peak", dg::compose( dg::GaussianX( psipO*0.2, deltaPsi, 1./(sqrt(2.*M_PI)*deltaPsi)), mag.psip())},
+        {"ClosedFieldlineRegion", "Region of closed fieldlines", dg::compose( [](bool x){ return double(x);}, dg::geo::mod::ClosedFieldlineRegion( mag) )},
+        {"SOL", "The scrape off layer region", dg::compose( [](bool x){ return double(x);}, dg::geo::mod::SOLRegion( mag, wall) )},
         ////
         { "Hoo", "The novel h02 factor", dg::geo::Hoo( mag) },
         {"Wall", "Penalization region that acts as the wall", wall },
@@ -176,19 +193,19 @@ int main( int argc, char* argv[])
         /////////////////////////////////////
         {"WallFieldlineAnglePDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, maxPhi, 1e-6, "phi") },
+                    sheath_walls, maxPhi, 1e-6, "phi", dg::geo::mod::SOLRegion( mag, wall)) },
         {"WallFieldlineAngleMDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, -maxPhi, 1e-6, "phi") },
+                    sheath_walls, -maxPhi, 1e-6, "phi", dg::geo::mod::SOLRegion( mag, wall)) },
         {"WallFieldlineSPDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, maxPhi, 1e-6, "s") },
+                    sheath_walls, maxPhi, 1e-6, "s", dg::geo::mod::SOLRegion( mag, wall)) },
         {"WallFieldlineSMDistance", "Distance to wall along fieldline",
             dg::geo::WallFieldlineDistance( dg::geo::createBHat(mod_mag),
-                    sheath_walls, -maxPhi, 1e-6, "s") },
+                    sheath_walls, -maxPhi, 1e-6, "s", dg::geo::mod::SOLRegion( mag, wall)) },
         {"Sheath", "Sheath region", sheath},
         {"SheathDirection", "Direction of magnetic field relative to sheath", dg::geo::WallDirection(mag, sheath_walls) },
-        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, maxPhi, 1e-6, "s")}
+        {"SheathCoordinate", "Coordinate from -1 to 1 of magnetic field relative to sheath", dg::geo::WallFieldlineCoordinate( dg::geo::createBHat( mod_mag), sheath_walls, maxPhi, 1e-4, "s")}
     };
 
     ///////////TEST CURVILINEAR GRID TO COMPUTE FSA QUANTITIES
@@ -225,7 +242,7 @@ int main( int argc, char* argv[])
         map1d.emplace_back( "gridX", dg::HVec(npsi*Npsi,0.0), "Time to generated X-grid", t.diff());
         std::cout << "DONE! \n";
         t.tic();
-        dg::Average<dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
+        dg::Average<dg::IHMatrix, dg::HVec > avg_eta( *gX2d, dg::coo2d::y);
         std::vector<dg::HVec> coordsX = gX2d->map();
         dg::SparseTensor<dg::HVec> metricX = gX2d->metric();
         dg::HVec volX2d = dg::tensor::volume2d( metricX);
@@ -297,6 +314,7 @@ int main( int argc, char* argv[])
         }
     }
     /// --------- More flux labels --------------------------------
+
     dg::Grid1d grid1d(psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO, npsi, Npsi,dg::DIR_NEU); //inner value is always zero
     if( compute_q &&
@@ -335,16 +353,7 @@ int main( int argc, char* argv[])
         if( mag_description == dg::geo::description::standardX
             || mag_description == dg::geo::description::doubleX)
         {
-            double RX = mag.R0()-1.1*mag.params().triangularity()*mag.params().a();
-            double ZX = -1.1*mag.params().elongation()*mag.params().a();
             try{
-                dg::geo::findXpoint( mag.get_psip(), RX, ZX);
-                double Z2X = Zmax;
-                if( mag_description == dg::geo::description::doubleX)
-                {
-                    Z2X = -ZX;
-                    dg::geo::findXpoint( mag.get_psip(), RX, Z2X);
-                }
                 dg::Grid2d grid2d_tmp(Rmin,Rmax,ZX,Z2X, n,Nx,Ny);
                 double width_factor = js.get("width-factor",0.03).asDouble();
                 dg::geo::SafetyFactorAverage qprof_avg(grid2d_tmp, mag, width_factor);
@@ -401,36 +410,34 @@ int main( int argc, char* argv[])
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     std::cout << "CREATING/OPENING FILE ... \n";
-    dg::file::NC_Error_Handle err;
-    int ncid;
     std::string newfilename = argc<3 ? "geometry_diag.nc" : argv[2];
-    err = nc_create( newfilename.c_str(), NC_NETCDF4|NC_CLOBBER, &ncid);
+    dg::file::NcFile file( newfilename, dg::file::nc_clobber);
     /// Set global attributes
-    std::map<std::string, std::string> att;
-    att["title"] = "Output file of feltor/src/geometry_diag/geometry_diag.cpp";
-    att["Conventions"] = "CF-1.7";
-    ///Get local time and begin file history
-    auto tt = std::time(nullptr);
-    auto tm = *std::localtime(&tt);
+    std::map<std::string, dg::file::nc_att_t> g_atts;
+    g_atts["title"] = "Output file of feltor/src/geometry_diag/geometry_diag.cpp";
+    g_atts["Conventions"] = "CF-1.7";
+    g_atts["history"] = dg::file::timestamp( argc, argv);
+    g_atts["comment"] = "Find more info in feltor/src/geometry_diag/geometry_diag.tex";
+    g_atts["source"] = "FELTOR";
+    g_atts["references"] = "https://github.com/feltor-dev/feltor";
+    g_atts["inputfile"] = js.toStyledString();
+    file.put_atts( g_atts);
+    file.put_atts( dg::file::version_flags);
 
-    std::ostringstream oss;
-    ///time string  + program-name + args
-    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-    for( int i=0; i<argc; i++) oss << " "<<argv[i];
-    att["history"] = oss.str();
-    att["comment"] = "Find more info in feltor/src/geometry_diag/geometry_diag.tex";
-    att["source"] = "FELTOR";
-    att["git-hash"] = GIT_HASH;
-    att["git-branch"] = GIT_BRANCH;
-    att["compile-time"] = COMPILE_TIME;
-    att["references"] = "https://github.com/feltor-dev/feltor";
-    std::string input = js.asJson().toStyledString();
-    att["inputfile"] = input;
-    for( auto pair : att)
-        err = nc_put_att_text( ncid, NC_GLOBAL,
-            pair.first.data(), pair.second.size(), pair.second.data());
+    if( mag_description == dg::geo::description::standardX ||
+        mag_description == dg::geo::description::standardO ||
+        mag_description == dg::geo::description::square ||
+        mag_description == dg::geo::description::doubleX
+        )
+    {
+        file.put_att( {"opoint", std::vector{RO, ZO}});
+        if( mag_description == dg::geo::description::standardX)
+            file.put_att( {"xpoint", std::vector{RX, ZX}});
+        if( mag_description == dg::geo::description::doubleX)
+            file.put_att( {"xpoint", std::vector{RX, ZX, R2X, Z2X}});
+    }
 
-    int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
+
     if( compute_fsa &&
         (
         mag_description == dg::geo::description::standardX ||
@@ -440,52 +447,30 @@ int main( int argc, char* argv[])
         )
         )
     {
-        int dim_idsX[2] = {0,0};
-        //err = dg::file::define_dimensions( ncid, dim_idsX, gX2d->grid(), {"eta", "zeta"} );
-        err = dg::file::define_dimensions( ncid, dim_idsX, *gX2d, {"eta", "zeta"} );
-        std::string long_name = "Flux surface label";
-        err = nc_put_att_text( ncid, dim_idsX[0], "long_name",
-            long_name.size(), long_name.data());
-        long_name = "Flux angle";
-        err = nc_put_att_text( ncid, dim_idsX[1], "long_name",
-            long_name.size(), long_name.data());
-        int xccID, yccID;
-        err = nc_def_var( ncid, "xcc", NC_DOUBLE, 2, dim_idsX, &xccID);
-        err = nc_def_var( ncid, "ycc", NC_DOUBLE, 2, dim_idsX, &yccID);
-        long_name="Cartesian x-coordinate";
-        err = nc_put_att_text( ncid, xccID, "long_name",
-            long_name.size(), long_name.data());
-        long_name="Cartesian y-coordinate";
-        err = nc_put_att_text( ncid, yccID, "long_name",
-            long_name.size(), long_name.data());
-        err = nc_put_var_double( ncid, xccID, gX2d->map()[0].data());
-        err = nc_put_var_double( ncid, yccID, gX2d->map()[1].data());
-        dim1d_ids[0] = dim_idsX[1];
+        file.defput_dim( "zeta", {{"axis", "X"},
+            {"long_name", "Radial coordinate in X grid"}},
+            gX2d->abscissas(0));
+        file.defput_dim( "eta", {{"axis", "Y"},
+            {"long_name", "Poloidal coordinate in X grid"}},
+            gX2d->abscissas(1));
+        file.defput_var( "xcc", {"eta", "zeta"}, {{"long_name",
+            "Cartesian x-coordinate"}},*gX2d, gX2d->map()[0]);
+        file.defput_var( "ycc", {"eta", "zeta"}, {{"long_name",
+            "Cartesian y-coordinate"}},*gX2d, gX2d->map()[1]);
     }
     else
-    {
-        err = dg::file::define_dimension( ncid, &dim1d_ids[0], grid1d, "zeta");
-        std::string psi_long_name = "Flux surface label";
-        err = nc_put_att_text( ncid, dim1d_ids[0], "long_name",
-            psi_long_name.size(), psi_long_name.data());
-    }
-    dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
-    dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
+        file.defput_dim( "zeta", {{"axis", "X"},
+            {"long_name", "Flux surface label"}},
+            grid1d.abscissas(0));
 
-    err = dg::file::define_dimensions( ncid, &dim3d_ids[0], fgrid3d);
-    dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
+    dg::CylindricalGrid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
 
     //write 1d vectors
     std::cout << "WRTING 1D FIELDS ... \n";
     for( auto tp : map1d)
     {
-        int vid;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_DOUBLE, 1,
-            &dim1d_ids[0], &vid);
-        err = nc_put_att_double( ncid, vid, "time", NC_DOUBLE, 1, &std::get<3>(tp));
-        err = nc_put_att_text( ncid, vid, "long_name",
-            std::get<2>(tp).size(), std::get<2>(tp).data());
-        err = nc_put_var_double( ncid, vid, std::get<1>(tp).data());
+        file.defput_var(std::get<0>(tp), {"zeta"}, {{"long_name",
+            std::get<2>(tp)}, {"time", std::get<3>(tp)}}, grid1d, std::get<1>(tp));
     }
     //write 2d vectors
     //allocate mem for visual
@@ -493,41 +478,34 @@ int main( int argc, char* argv[])
     dg::HVec hvisual3d = dg::evaluate( dg::zero, grid3d);
     dg::fHVec fvisual, fvisual3d;
     std::cout << "WRTING 2D/3D CYLINDRICAL FIELDS ... \n";
+    dg::RealCylindricalGrid3d<float> fgrid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
+    file.defput_dim( "R", {{"axis", "X"}, {"long_name", "R coordinate in Cylindrical system"}},
+        fgrid3d.abscissas(0));
+    file.defput_dim( "Z", {{"axis", "Y"}, {"long_name", "Z coordinate in Cylindrical system"}},
+        fgrid3d.abscissas(1));
+    file.defput_dim( "P", {{"axis", "Z"}, {"long_name", "Phi coordinate in Cylindrical system"}},
+        fgrid3d.abscissas(2));
+    dg::RealGrid2d<float> fgrid2d( Rmin, Rmax, Zmin,Zmax, n, Nx, Ny);
+    auto prolong = dg::create::prolongation( grid3d, std::array{2u});
     for(auto tp : map)
     {
-        int vectorID, vectorID3d;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 2,
-            &dim2d_ids[0], &vectorID);
-        err = nc_def_var( ncid, (std::get<0>(tp)+"3d").data(), NC_FLOAT, 3,
-            &dim3d_ids[0], &vectorID3d);
-        err = nc_put_att_text( ncid, vectorID, "long_name",
-            std::get<1>(tp).size(), std::get<1>(tp).data());
-        err = nc_put_att_text( ncid, vectorID3d, "long_name",
-            std::get<1>(tp).size(), std::get<1>(tp).data());
-        std::string coordinates = "zc yc xc";
-        err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
         hvisual = dg::evaluate( std::get<2>(tp), grid2d);
-        dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
+        dg::apply( prolong, hvisual, hvisual3d);
         dg::assign( hvisual, fvisual);
         dg::assign( hvisual3d, fvisual3d);
-        err = nc_put_var_float( ncid, vectorID, fvisual.data());
-        err = nc_put_var_float( ncid, vectorID3d, fvisual3d.data());
+
+        std::map<std::string, dg::file::nc_att_t> atts;
+        atts["long_name"] = std::get<1>(tp);
+        file.defput_var( std::get<0>(tp), {"Z", "R"}, atts,
+            *fgrid3d.perp_grid(), fvisual);
+        atts["coordinates"] = "zc yc xc";
+        file.defput_var( std::get<0>(tp)+"3d", {"P", "Z", "R"}, atts, fgrid3d,
+            fvisual3d);
     }
     if( compute_sheath)
     {
         for(auto tp : sheath_map)
         {
-            int vectorID, vectorID3d;
-            err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 2,
-                &dim2d_ids[0], &vectorID);
-            err = nc_def_var( ncid, (std::get<0>(tp)+"3d").data(), NC_FLOAT, 3,
-                &dim3d_ids[0], &vectorID3d);
-            err = nc_put_att_text( ncid, vectorID, "long_name",
-                std::get<1>(tp).size(), std::get<1>(tp).data());
-            err = nc_put_att_text( ncid, vectorID3d, "long_name",
-                std::get<1>(tp).size(), std::get<1>(tp).data());
-            std::string coordinates = "zc yc xc";
-            err = nc_put_att_text( ncid, vectorID3d, "coordinates", coordinates.size(), coordinates.data());
             dg::Timer t;
             t.tic();
             hvisual = dg::evaluate( std::get<2>(tp), grid2d);
@@ -535,11 +513,16 @@ int main( int argc, char* argv[])
             if((    std::get<0>(tp).find("Wall") != std::string::npos)
                 ||( std::get<0>(tp).find("Sheath") != std::string::npos))
                 std::cout<< std::get<0>(tp) << " took "<<t.diff()<<"s\n";
-            dg::extend_line( grid2d.size(), grid3d.Nz(), hvisual, hvisual3d);
+            auto prolong = dg::create::prolongation( grid3d, std::array{2u});
+            dg::apply( prolong, hvisual, hvisual3d);
             dg::assign( hvisual, fvisual);
             dg::assign( hvisual3d, fvisual3d);
-            err = nc_put_var_float( ncid, vectorID, fvisual.data());
-            err = nc_put_var_float( ncid, vectorID3d, fvisual3d.data());
+
+            std::map<std::string, dg::file::nc_att_t> atts;
+            atts["long_name"] = std::get<1>(tp);
+            file.defput_var( std::get<0>(tp), {"Z", "R"}, atts, *fgrid3d.perp_grid(), fvisual);
+            atts["coordinates"] = "zc yc xc";
+            file.defput_var( std::get<0>(tp)+"3d", {"P", "Z", "R"}, atts, fgrid3d, fvisual3d);
         }
     }
     std::cout << "WRTING 3D FIELDS ... \n";
@@ -557,21 +540,17 @@ int main( int argc, char* argv[])
     };
     for( auto tp : map3d)
     {
-        int vectorID;
-        err = nc_def_var( ncid, std::get<0>(tp).data(), NC_FLOAT, 3,
-            &dim3d_ids[0], &vectorID);
-        err = nc_put_att_text( ncid, vectorID, "long_name",
-            std::get<1>(tp).size(), std::get<1>(tp).data());
+        std::map<std::string, dg::file::nc_att_t> atts;
+        atts["long_name"] = std::get<1>(tp);
         if( std::get<1>(tp) != "xc" && std::get<1>(tp) != "yc" &&std::get<1>(tp) != "zc")
         {
-            std::string coordinates = "zc yc xc";
-            err = nc_put_att_text( ncid, vectorID, "coordinates", coordinates.size(), coordinates.data());
+            atts["coordinates"] = "zc yc xc";
         }
         hvisual3d = dg::evaluate( std::get<2>(tp), grid3d);
         dg::assign( hvisual3d, fvisual3d);
-        err = nc_put_var_float( ncid, vectorID, fvisual3d.data());
+        file.defput_var( std::get<0>(tp), {"P", "Z", "R"}, atts, fgrid3d, fvisual3d);
     }
     //////////////////////////////Finalize////////////////////////////////////
-    err = nc_close(ncid);
+    file.close();
     return 0;
 }

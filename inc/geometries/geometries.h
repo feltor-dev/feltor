@@ -33,6 +33,7 @@
 #include "fluxfunctions.h"
 #include "magnetic_field.h"
 #include "adaption.h"
+#include "sheath.h"
 
 //include average
 #include "average.h"

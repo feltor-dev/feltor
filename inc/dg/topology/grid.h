@@ -1,18 +1,17 @@
 #pragma once
-
-#include <cassert>
+#include <array>
 #include <cmath>
 #include <thrust/host_vector.h>
-#include "topological_traits.h"
+#include "../backend/tensor_traits.h" // for get_value_type
+#include "../backend/config.h" // for DG_FMA
 #include "dlt.h"
 #include "../enums.h"
 
 /*! @file
   @brief base topology classes
   */
-
 /*!@class hide_grid_parameters2d
- * @brief Equal polynomial coefficients
+ * @brief Construct with equal polynomial coefficients
  *
  * @param x0 left boundary in x
  * @param x1 right boundary in x
@@ -28,7 +27,7 @@
  * @param bcy boundary condition in y
  */
 /*!@class hide_grid_parameters3d
- * @brief Equal polynomial coefficients
+ * @brief Construct with equal polynomial coefficients
  *
  * @param x0 left boundary in x
  * @param x1 right boundary in x
@@ -47,855 +46,782 @@
  * @param bcy boundary condition in y
  * @param bcz boundary condition in z
  */
-/*!@class hide_shift_doc
- * @brief Shift any point coordinate to a corresponding grid coordinate according to the boundary condition
- *
- * If the given point is already inside the grid, the function does nothing, else along each dimension the following happens: check the boundary condition.
- *If \c dg::PER, the point will be shifted topologically back onto the domain (modulo operation). Else the
- * point will be mirrored at the closest boundary. If the boundary is a Dirichlet boundary (happens for \c dg::DIR, \c dg::DIR_NEU and \c dg::NEU_DIR; the latter two apply \c dg::DIR to the respective left or right boundary )
- * an additional sign flag is swapped. This process is repeated until the result lies inside the grid. This function forms the basis for extending/periodifying a
- * function discretized on the grid beyond the grid boundaries.
- * @sa interpolate
- * @note For periodic boundaries the right boundary point is considered outside the grid and is shifted to the left boundary point.
- * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
- * @param x point to shift (inout) the result is guaranteed to lie inside the grid
- */
 
 namespace dg{
 
 ///@cond
-template<class real_type>
-struct RealGrid2d;
-template<class real_type>
-struct RealGrid3d;
+template<class real_type, size_t Nd>
+struct RealGrid;
+///@endcond
+///
+/**
+ * @class hide_grid_description
+ * This grid defines a discretization of the \f$N_d\f$ dimensional hypercube
+ * given by
+ * \f[ [\vec p, \vec q] = [p_0, p_1] \times [p_1,q_1] \times ... \times
+ * [p_{N_d-1}, q_{N_d-1}]\f]
+ * Each axis \f$ [p_i, q_i] \f$ is discretized using \f$ N_i\f$ equidistant
+ * cells. Each cells is then further discretized using \f$ n_i\f$
+ * Gauss-Legendre nodes. The Gauss-Legendre nodes are tabulated by the \c
+ * dg::DLT class for \f$ 1\leq n_i \leq 20\f$.  Each axis further can have a
+ * boundary condition \f$ b_i \f$ that is given by \c dg::bc
+ * For more information dG methods see
+ * @sa <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a>
+ *
+ * @class hide_grid_xyz_description
+ * For code readability in many physical contexts the first 3 dimensions get
+ * special names \f$ x,\ y,\ z\f$ i.e. \f$ \vec p = (x_0, y_0, z_0)\f$ and \f$
+ * \vec q = (x_1, y_1, z_1)\f$. The class provides coresponding getters and
+ * setters like e.g. \c x0() or \c Nx() for \c p(0) and \c N(0)
+ */
+
+/**
+ * @brief An abstract base class for Nd-dimensional dG grids
+ *
+ * @copydoc hide_grid_description
+ *
+ * This class in essence provides a collection of getters and setters for the
+ * aforementioned parameters together with the \c abscissas and \c weights
+ * members that are necessary for \c dg::evaluate and \c dg::create::weights.
+ * Lastly, we provide \c start and \c count members such that the grid can be
+ * used as a \c dg::file::NcHyperslab in NetCDF output in dg::file
+ * @copydoc hide_grid_xyz_description
+ * @ingroup basictopology
+ * @tparam real_type Determines value type of abscissas and weights
+ * @tparam Nd The number of dimensions \f$ N_d\f$
+ */
+template<class real_type, size_t Nd>
+struct aRealTopology
+{
+    // ///////////////// TYPE TRAITS ////////////////////////////
+    /// value type of abscissas and weights
+    using value_type = real_type;
+    /// vector type of abscissas and weights; Is used to recognise shared
+    ///topology (vs MPI)
+    /// <tt>dg::is_vector_v< typename Topology::host_vector, SharedVectorTag></tt>
+    using host_vector = thrust::host_vector<real_type>;
+    /// Associated realisation
+    using host_grid = RealGrid<real_type, Nd>;
+    /// Dimensionality == Nd
+    constexpr static unsigned ndim() { return Nd;}
+
+    // ///////////////// TOPOLOGY CONCEPT ////////////////////////////
+    /**
+     * @brief \f$ n_u N_u\f$ the total number of points of an axis
+     * @param u Axis number \c u<Nd
+     * @return \f$ n_u N_u\f$
+     */
+    unsigned shape(unsigned u=0) const
+    {
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>=Nd not allowed! You typed: "
+                    <<u<<" while Nd is "<<Nd);
+        return m_n[u]*m_N[u];
+    }
+
+    /*! @brief Construct grid abscissas of the \c u axis
+     *
+     * @param u Axis number \c u<Nd
+     * @return Vector \f$ \vec a_u\f$ containing abscissas for axis \c u
+     * @sa dg::evaluate dg::DLT
+     */
+    host_vector abscissas(unsigned u=0) const
+    {
+        // On getting n,N,x0,x1 given the abscissas:
+        // Unfortunately, we cannot invert this to binary precision
+        // at least not with our pyfeltor implementation
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>=Nd not allowed! You typed: "
+                    <<u<<" while Nd is "<<Nd);
+        host_vector abs(m_n[u]*m_N[u]);
+        real_type hu = h(u);
+        auto aa = dg::DLT<real_type>::abscissas(m_n[u]);
+        for( unsigned i=0; i<m_N[u]; i++)
+            for( unsigned j=0; j<m_n[u]; j++)
+            {
+                real_type xmiddle = DG_FMA( hu, (real_type)(i), m_x0[u]);
+                real_type h2 = hu/2.;
+                real_type absj = 1.+aa[j];
+                abs[i*m_n[u]+j] = DG_FMA( h2, absj, xmiddle);
+            }
+        return abs;
+    }
+    /*! @brief Get the weights of the \c u axis
+     *
+     * @param u Axis number \c u<Nd
+     * @return Vector \f$ \vec w_u\f$ containing weights for axis \c u
+     * @sa dg::create::weights dg::DLT
+     */
+    host_vector weights(unsigned u=0) const
+    {
+        if( u >= Nd)
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+        host_vector v( m_n[u]*m_N[u]);
+        auto ww = dg::DLT<real_type>::weights(m_n[u]);
+        real_type hu = h(u);
+        for( unsigned i=0; i<m_N[u]; i++)
+            for( unsigned j=0; j<m_n[u]; j++)
+                v[i*m_n[u] + j] = hu/2.*ww[j];
+        return v;
+    }
+
+    // ///////////////// GETTERS ////////////////////////////
+    /**
+     * @brief \f$ n_u N_u\f$ the total number of points of an axis
+     * @return \f$ n_u N_u\f$ for all \f$ u < N_d\f$
+     */
+    std::array<unsigned,Nd> get_shape() const{
+        std::array<unsigned,Nd> ss;
+        for( unsigned u=0; u<Nd; u++)
+            ss[u] = shape(u);
+        return ss;
+    }
+    /**
+     * @brief Construct abscissas for all axes
+     * @return \f$ \vec a_u\f$ for all \f$ u < N_d\f$
+     */
+    std::array<host_vector,Nd> get_abscissas() const{
+        std::array<host_vector,Nd> abs;
+        for( unsigned u=0; u<Nd; u++)
+            abs[u] = abscissas(u);
+        return abs;
+    }
+    /**
+     * @brief Construct weights for all axes
+     * @return \f$ \vec w_u\f$ for all \f$ u < N_d\f$
+     */
+    std::array<host_vector,Nd> get_weights() const{
+        std::array<host_vector,Nd> w;
+        for( unsigned u=0; u<Nd; u++)
+            w[u] = weights(u);
+        return w;
+    }
+
+    ///@brief Get left boundary point \f$ \vec p\f$
+    ///@return Left boundary \f$ \vec p\f$
+    std::array<real_type,Nd> get_p() const{
+        return m_x0;
+    }
+    ///@brief Get right boundary point \f$ \vec q\f$
+    ///@return right boundary \f$ \vec q\f$
+    std::array<real_type,Nd> get_q() const{
+        return m_x1;
+    }
+    ///@brief Get grid length \f$ l_u = q_u - p_u\f$ for all axes
+    ///@return Grid length \f$ l_u\f$ for all \c u
+    std::array<real_type,Nd> get_l() const{
+        std::array<real_type, Nd> p;
+        for( unsigned u=0; u<Nd; u++)
+            p[u] = l(u);
+        return p;
+    }
+    ///@brief Get grid constant \f$ h_u = \frac{q_u - p_u}{N_u}\f$ for all axes
+    ///@return Grid constant \f$ h_u\f$ for all \c u
+    std::array<real_type,Nd> get_h() const{
+        std::array<real_type, Nd> hh;
+        for( unsigned u=0; u<Nd; u++)
+            hh[u] = h(u);
+        return hh;
+    }
+    ///@brief Get number of cells \f$ N_u\f$ for all axes
+    ///@return Number of cells \f$ N_u\f$ for all \c u
+    std::array<unsigned, Nd> get_N() const
+    {
+        return m_N;
+    }
+    ///@brief Get number of polynomial coefficients \f$ n_u\f$ for all axes
+    ///@return Number of polynomial coefficients \f$ n_u\f$ for all \c u
+    std::array<unsigned, Nd> get_n() const
+    {
+        return m_n;
+    }
+    ///@brief Get boundary condition \f$ b_u\f$ for all axes
+    ///@return Boundary condition \f$ b_u\f$ for all \c u
+    std::array<dg::bc, Nd> get_bc() const
+    {
+        return m_bcs;
+    }
+
+    /*! 
+     * @brief Get left boundary point \f$ p_u\f$ for axis \c u
+     * @param u Axis number \c u<Nd
+     * @return Value for axis \c u
+     */
+    real_type p( unsigned u=0) const { return m_x0.at(u);}
+    ///@brief Get right boundary point \f$ q_u\f$ for axis \c u
+    ///@copydetails p(unsigned)const
+    real_type q( unsigned u=0) const { return m_x1.at(u);}
+    ///@brief Get grid constant \f$ h_u = \frac{q_u - p_u}{N_u}\f$ for axis \c u
+    ///@copydetails p(unsigned)const
+    real_type h( unsigned u=0) const { return (m_x1.at(u) - m_x0.at(u))/(real_type)m_N.at(u);}
+    ///@brief Get grid length \f$ l_u = q_u - p_u\f$ for axis \c u
+    ///@copydetails p(unsigned)const
+    real_type l( unsigned u=0) const { return m_x1.at(u) - m_x0.at(u);}
+    ///@brief Get number of polynomial coefficients \f$ n_u\f$ for axis \c u
+    ///@copydetails p(unsigned)const
+    unsigned n( unsigned u=0) const { return m_n.at(u);}
+    ///@brief Get number of cells \f$ N_u\f$ for axis \c u
+    ///@copydetails p(unsigned)const
+    unsigned N( unsigned u=0) const { return m_N.at(u);}
+    ///@brief Get boundary condition \f$ b_u\f$ for axis \c u
+    ///@copydetails p(unsigned)const
+    dg::bc bc( unsigned u=0) const { return m_bcs.at(u);}
+    /*!
+     * @brief Get axis \c u as a 1d grid
+     * @param u Axis number \c u<Nd
+     * @return One dimensional grid
+     */
+    RealGrid<real_type,1> grid(unsigned u ) const{
+        if( u < Nd)
+            return RealGrid<real_type,1>{ m_x0[u], m_x1[u], m_n[u], m_N[u], m_bcs[u]};
+        else
+            throw Error( Message(_ping_)<<"u>Nd not allowed! You typed: "<<u<<" while Nd is "<<Nd);
+    }
+    /// @brief An alias for "grid"
+    /// @copydetails grid(unsigned)const
+    RealGrid<real_type,1> axis(unsigned u ) const{ return grid(u);}
+    /// Equivalent to <tt>p(0)</tt>
+    template<size_t Md = Nd>
+    real_type x0() const {return std::get<0>(m_x0);}
+    /// Equivalent to <tt>p(1)</tt>
+    template<size_t Md = Nd>
+    real_type x1() const {return std::get<0>(m_x1);}
+    /// Equivalent to <tt>p(2)</tt>
+    template<size_t Md = Nd>
+    real_type y0() const {return std::get<1>(m_x0);}
+    /// Equivalent to <tt>q(0)</tt>
+    template<size_t Md = Nd>
+    real_type y1() const {return std::get<1>(m_x1);}
+    /// Equivalent to <tt>q(1)</tt>
+    template<size_t Md = Nd>
+    real_type z0() const {return std::get<2>(m_x0);}
+    /// Equivalent to <tt>q(2)</tt>
+    template<size_t Md = Nd>
+    real_type z1() const {return std::get<2>(m_x1);}
+
+    /// Equivalent to <tt>l(0)</tt>
+    template<size_t Md = Nd>
+    real_type lx() const {return std::get<0>(get_l());}
+    /// Equivalent to <tt>l(1)</tt>
+    template<size_t Md = Nd>
+    real_type ly() const {return std::get<1>(get_l());}
+    /// Equivalent to <tt>l(2)</tt>
+    template<size_t Md = Nd>
+    real_type lz() const {return std::get<2>(get_l());}
+
+    /// Equivalent to <tt>h(0)</tt>
+    template<size_t Md = Nd>
+    real_type hx() const {return std::get<0>(get_h());}
+    /// Equivalent to <tt>h(1)</tt>
+    template<size_t Md = Nd>
+    real_type hy() const {return std::get<1>(get_h());}
+    /// Equivalent to <tt>h(2)</tt>
+    template<size_t Md = Nd>
+    real_type hz() const {return std::get<2>(get_h());}
+
+    /// Equivalent to <tt>n(0)</tt>
+    template<size_t Md = Nd>
+    unsigned nx() const {return std::get<0>(m_n);}
+    /// Equivalent to <tt>n(1)</tt>
+    template<size_t Md = Nd>
+    unsigned ny() const {return std::get<1>(m_n);}
+    /// Equivalent to <tt>n(2)</tt>
+    template<size_t Md = Nd>
+    unsigned nz() const {return std::get<2>(m_n);}
+
+    /// Equivalent to <tt>N(0)</tt>
+    template<size_t Md = Nd>
+    unsigned Nx() const {return std::get<0>(m_N);}
+    /// Equivalent to <tt>N(1)</tt>
+    template<size_t Md = Nd>
+    unsigned Ny() const {return std::get<1>(m_N);}
+    /// Equivalent to <tt>N(2)</tt>
+    template<size_t Md = Nd>
+    unsigned Nz() const {return std::get<2>(m_N);}
+
+    /// Equivalent to <tt>bc(0)</tt>
+    template<size_t Md = Nd>
+    dg::bc bcx() const {return std::get<0>(m_bcs);}
+    /// Equivalent to <tt>bc(1)</tt>
+    template<size_t Md = Nd>
+    dg::bc bcy() const {return std::get<1>(m_bcs);}
+    /// Equivalent to <tt>bc(2)</tt>
+    template<size_t Md = Nd>
+    dg::bc bcz() const {return std::get<2>(m_bcs);}
+
+    /// Equivalent to <tt>grid(0)</tt>
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gx() const {
+        static_assert( Nd > 0);
+        return grid(0);
+    }
+    /// Equivalent to <tt>grid(1)</tt>
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gy() const {
+        static_assert( Nd > 1);
+        return grid(1);
+    }
+    /// Equivalent to <tt>grid(2)</tt>
+    template<size_t Md = Nd>
+    RealGrid<real_type,1> gz() const {
+        static_assert( Nd > 2);
+        return grid(2);
+    }
+
+    /*! @brief Start coordinate in C-order for \c dg::file::NcHyperslab
+     *
+     * Used to construct \c dg::file::NcHyperslab together with \c count()
+     * @return \c {0}
+     */
+    std::array<unsigned, Nd> start() const { return {0};}
+    /*! @brief Count vector in C-order for \c dg::file::NcHyperslab
+     *
+     * Used to construct \c dg::file::NcHyperslab together with \c start()
+     * @return <tt> reverse( get_shape())</tt>
+     * @note In C-order the fastest dimension is the last one while our \c
+     * dg::evaluate and \c dg::kronecker make the 0 dimension/ 1st argument the
+     * fastest varying, so we return the reverse order of \c get_shape()
+     */
+    std::array<unsigned, Nd> count() const
+    {
+        std::array<unsigned,Nd> ss;
+        for( unsigned u=0; u<Nd; u++)
+            ss[Nd-1-u] = m_n[u]*m_N[u];
+        return ss;
+    }
+
+    // //////////////////SETTERS/////////////////////////////
+    /**
+    * @brief Multiply the number of cells in the first two dimensions with a
+    * given factor
+    *
+    * With this function you can resize the grid ignorantly of its current size
+    * @param fx new global number of cells is fx*Nx()
+    * @param fy new global number of cells is fy*Ny()
+    * The remaining dimensions are left unchanged
+    */
+    template<size_t Md = Nd>
+    std::enable_if_t< (Md>=2),void> multiplyCellNumbers( real_type fx, real_type fy){
+        auto Ns = m_N;
+        Ns[0] = round(fx*(real_type)m_N[0]);
+        Ns[1] = round(fy*(real_type)m_N[1]);
+        if( fx != 1 or fy != 1)
+            set( m_n, Ns);
+    }
+    /**
+     * @brief Set n and N in a 1-dimensional grid
+     *
+    * @param new_n new number of %Gaussian nodes
+    * @param new_Nx new number of cells
+     */
+    template<size_t Md = Nd>
+    std::enable_if_t<(Md == 1), void> set( unsigned new_n, unsigned new_Nx)
+    {
+        set(std::array{new_n}, std::array{new_Nx});
+    }
+
+    /**
+     * @brief Set n and N in a 2-dimensional grid
+     *
+    * @param new_n new number of %Gaussian nodes in x and y
+    * @param new_Nx new number of cells
+    * @param new_Ny new number of cells
+     */
+    template<size_t Md = Nd>
+    std::enable_if_t<(Md == 2), void> set( unsigned new_n, unsigned new_Nx,
+        unsigned new_Ny)
+    {
+        set({new_n,new_n}, {new_Nx,new_Ny});
+    }
+    /**
+    * @brief Set n and N in a 3-dimensional grid
+    *
+    * Same as <tt>set({new_n,new_n,1}, {new_Nx,new_Ny,new_Nz})</tt>
+    * @param new_n new number of %Gaussian nodes in x and y
+    * @attention Set \c nz to 1
+    * @param new_Nx new number of cells in x
+    * @param new_Ny new number of cells in y
+    * @param new_Nz new number of cells in z
+    */
+    template<size_t Md = Nd>
+    std::enable_if_t<(Md == 3), void> set( unsigned new_n, unsigned new_Nx,
+        unsigned new_Ny, unsigned new_Nz)
+    {
+        set({new_n,new_n,1}, {new_Nx,new_Ny,new_Nz});
+    }
+    /// Same as <tt> set( {new_n, new_n,...}, new_N);</tt>
+    void set( unsigned new_n, std::array<unsigned,Nd> new_N)
+    {
+        std::array<unsigned , Nd> tmp;
+        for( unsigned u=0; u<Nd; u++)
+            tmp[u] = new_n;
+        set( tmp, new_N);
+    }
+    /**
+     * @brief Set n and N for axis \c coord
+     *
+     * @param coord Axis <tt>coord<Nd</tt>
+     * @param new_n new number of %Gaussian nodes of axis \c coord
+     * @param new_N new number of cells
+     */
+    void set_axis( unsigned coord, unsigned new_n , unsigned new_N)
+    {
+        std::array<unsigned,Nd> n = m_n, N = m_N;
+        n[coord] = new_n;
+        N[coord] = new_N;
+        set( n, N);
+    }
+
+    /**
+    * @brief Set the number of polynomials and cells
+    *
+    * @param new_n new number of %Gaussian nodes in each dimension
+    * @param new_N new number of cells in each dimension
+    */
+    void set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
+    {
+        if( new_n==m_n && new_N == m_N)
+            return;
+        do_set(new_n, new_N);
+    }
+
+    /**
+     * @brief Reset the boundaries of the grid
+     *
+     * @param new_p new left boundary
+     * @param new_q new right boundary ( > x0)
+     */
+    void set_pq( std::array<real_type,Nd> new_p, std::array<real_type,Nd>
+            new_q)
+    {
+        do_set_pq( new_p, new_q);
+    }
+    /**
+     * @brief Reset the boundary conditions of the grid
+     *
+     * @param new_bcs new boundary condition
+     */
+    void set_bcs( std::array<dg::bc,Nd> new_bcs)
+    {
+        do_set( new_bcs);
+    }
+
+    /**
+     * @brief Reset the entire grid
+     *
+     * @param new_p new left boundary
+     * @param new_q new right boundary ( > x0)
+     * @param new_n new number of %Gaussian nodes in each dimension
+     * @param new_N new number of cells in each dimension
+     * @param new_bcs new boundary condition
+     */
+    void set( std::array<real_type,Nd> new_p, std::array<real_type,Nd> new_q,
+        std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N,
+        std::array<dg::bc,Nd> new_bcs)
+    {
+        set_pq( new_p,new_q);
+        set( new_n, new_N);
+        set_bcs( new_bcs);
+    }
+    // //////////////////UTILITY/////////////////////////////
+    /**
+     * @brief The total number of points
+     *
+     * @return \f$ \prod_{i=0}^{N-1} n_i N_i\f$
+     */
+    unsigned size() const {
+        unsigned size=1;
+        for( unsigned u=0; u<Nd; u++)
+            size *= m_n[u]*m_N[u];
+        return size;
+    }
+
+
+    /**
+     * @brief Display
+     *
+     * @param os output stream
+     */
+    void display( std::ostream& os = std::cout) const
+    {
+        for( unsigned u=0; u<Nd; u++)
+        {
+            os << "Topology parameters for Grid "<<u<<" are: \n"
+                <<"    n  = "<<m_n[u]<<"\n"
+                <<"    N  = "<<m_N[u]<<"\n"
+                <<"    x0 = "<<m_x0[u]<<"\n"
+                <<"    x1 = "<<m_x1[u]<<"\n"
+                <<"    h  = "<<h(u)<<"\n"
+                <<"    l  = "<<l(u)<<"\n"
+                <<"    bc = "<<bc2str(m_bcs[u])<<"\n";
+        }
+    }
+
+    ///@copydoc contains(const Vector&)const
+    template<size_t Md = Nd>
+    std::enable_if_t<(Md == 1), bool> contains( real_type x) const
+    {
+        return contains( std::array<real_type,1>{x});
+    }
+
+    /**
+     * @brief Check if the grid contains a point
+     *
+     * Used for example in \c integrate_in_domain method of  \c dg::AdaptiveTimeloop
+     * @note doesn't check periodicity!!
+     * @param x point to check
+     *
+     * @return true if p0[u]<=x[u]<=p1[u] for all u, false else
+     * @attention returns false if x[u] is NaN or INF
+     */
+    template<class Vector>
+    bool contains( const Vector& x)const
+    {
+        for( unsigned u=0; u<Nd; u++)
+        {
+            if( !std::isfinite(x[u]) ) return false;
+            //should we catch the case x1==x && dg::PER?
+            if( x[u] < m_x0[u]) return false;
+            if( x[u] > m_x1[u]) return false;
+        }
+        return true;
+    }
+
+    protected:
+    ///disallow deletion through base class pointer
+    ~aRealTopology() = default;
+    /// default constructor
+    aRealTopology() = default;
+    /**
+     * @brief Construct a topology directly from points and dimensions
+     *
+     * @param p left boundary point
+     * @param q right boundary point
+     * @param n number of polynomial coefficients for each axis
+     * @param N number of cells for each axis
+     * @param bcs boundary condition for each axis
+     */
+    aRealTopology(
+        std::array<real_type,Nd> p,
+        std::array<real_type,Nd> q,
+        std::array<unsigned,Nd> n,
+        std::array<unsigned,Nd> N,
+        std::array<dg::bc, Nd> bcs) : m_x0(p), m_x1(q), m_n(n), m_N(N), m_bcs(bcs)
+    {}
+    /**
+     * @brief Construct a topology as the product of 1d axes grids
+     *
+     * @param axes One-dimensional grids for each dimension
+     */
+    aRealTopology( const std::array< RealGrid<real_type, 1>, Nd>& axes)
+    {
+        for( unsigned u=0; u<Nd; u++)
+        {
+            m_x0[u] = axes[u].p();
+            m_x1[u] = axes[u].q();
+            m_n[u] = axes[u].n();
+            m_N[u] = axes[u].N();
+            m_bcs[u] = axes[u].bc();
+        }
+    }
+
+    ///explicit copy constructor (default)
+    ///@param src source
+    aRealTopology(const aRealTopology& src) = default;
+    ///explicit assignment operator (default)
+    ///@param src source
+    aRealTopology& operator=(const aRealTopology& src) = default;
+
+    ///@copydoc set(std::array<unsigned,Nd>,std::array<unsigned,Nd>)
+    virtual void do_set(std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) = 0;
+    ///@copydoc set_pq
+    virtual void do_set_pq( std::array<real_type, Nd> new_p, std::array<real_type,Nd> new_q) = 0;
+    ///@copydoc set_bcs(std::array<dg::bc,Nd>)
+    virtual void do_set( std::array<dg::bc, Nd> new_bcs) = 0;
+
+    // MW: This constructor causes nvcc-12.4 to segfault when constructing a Geometry
+    // Funnily the mpi version works (but let's kill it for now
+    // Maybe in the future a free function "make_grid" ...
+    //template< size_t M0, size_t M1, size_t ...Ms>
+    //aRealTopology( const aRealTopology<real_type,M0>& g0, const aRealTopology<real_type,M1>& g1, const aRealTopology<real_type,Ms>& ...gs)
+    //{
+    //    auto grid = aRealTopology<real_type, Nd - M0>( g1, gs ...);
+    //    *this = aRealTopology<real_type, Nd>( g0, grid);
+    //}
+    //template< size_t M0, size_t M1>
+    //aRealTopology( const aRealTopology<real_type,M0>& g0, const aRealTopology<real_type,M1>& g1)
+    //{
+    //    static_assert( (M0 + M1) == Nd);
+
+    //    for( unsigned u=0; u<M0; u++)
+    //    {
+    //        m_n[u] = g0.n(u);
+    //        m_N[u] = g0.N(u);
+    //        m_x0[u] = g0.p(u);
+    //        m_x1[u] = g0.q(u);
+    //        m_bcs[u] = g0.bc(u);
+    //    }
+    //    for( unsigned u=0; u<M1; u++)
+    //    {
+    //        m_n[M0+u] = g1.n(u);
+    //        m_N[M0+u] = g1.N(u);
+    //        m_x0[M0+u] = g1.p(u);
+    //        m_x1[M0+u] = g1.q(u);
+    //        m_bcs[M0+u] = g1.bc(u);
+    //    }
+    //}
+  private:
+    std::array<real_type,Nd> m_x0;
+    std::array<real_type,Nd> m_x1;
+    std::array<unsigned,Nd> m_n;
+    std::array<unsigned,Nd> m_N;
+    std::array<dg::bc,Nd> m_bcs;
+};
+///@cond
+// pure virtual implementations must be declared outside class
+template<class real_type,size_t Nd>
+void aRealTopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
+{
+    m_n = new_n;
+    m_N = new_N;
+}
+template<class real_type,size_t Nd>
+void aRealTopology<real_type,Nd>::do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
+{
+    m_x0 = x0;
+    m_x1 = x1;
+}
+template<class real_type,size_t Nd>
+void aRealTopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
+{
+    m_bcs = bcs;
+}
+
 ///@endcond
 
 /**
-* @brief 1D grid
-* @ingroup grid
-* @copydoc hide_code_evaluate1d
-*/
-template<class real_type>
-struct RealGrid1d
+ * @brief The simplest implementation of aRealTopology
+ *
+ * @ingroup basictopology
+ * @snippet{trimleft} evaluation_t.cpp evaluate2d
+ */
+template<class real_type, size_t Nd>
+struct RealGrid : public aRealTopology<real_type, Nd>
 {
-    using value_type = real_type;
-    /// The host vector type used by host functions like evaluate
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid = RealGrid1d<real_type>;
     /**
      * @brief construct an empty grid
      * this leaves the access functions undefined
      */
-    RealGrid1d() = default;
+    RealGrid() = default;
     /**
      * @brief 1D grid
      *
      * @param x0 left boundary
      * @param x1 right boundary
      * @param n # of polynomial coefficients
-     *  (1<=n<=20, note that the library is optimized for n=3 )
-     * @param N # of cells
+     *  (1<=n<=20)
+     * @param Nx # of cells
      * @param bcx boundary conditions
      */
-    RealGrid1d( real_type x0, real_type x1, unsigned n, unsigned N, bc bcx = PER)
+    template<size_t Md = Nd>
+    RealGrid( real_type x0, real_type x1, unsigned n, unsigned Nx, dg::bc bcx = dg::PER ):
+        aRealTopology<real_type,1>{{x0}, {x1}, {n}, {Nx}, {bcx}}
     {
-        set(x0,x1,bcx);
-        set(n,N);
     }
-    //////////////////////////////////////////get/////////////////////////////
-    /**
-     * @brief left boundary
-     *
-     * @return
-     */
-    real_type x0() const {return x0_;}
-    /**
-     * @brief right boundary
-     *
-     * @return
-     */
-    real_type x1() const {return x1_;}
-    /**
-     * @brief total length of interval
-     *
-     * @return
-     */
-    real_type lx() const {return x1_-x0_;}
-    /**
-     * @brief cell size
-     *
-     * @return
-     */
-    real_type h() const {return lx()/(real_type)Nx_;}
-    /**
-     * @brief number of cells
-     *
-     * @return
-     */
-    unsigned N() const {return Nx_;}
-    /**
-     * @brief number of polynomial coefficients
-     *
-     * @return
-     */
-    unsigned n() const {return n_;}
-    /**
-     * @brief boundary conditions
-     *
-     * @return
-     */
-    bc bcx() const {return bcx_;}
-    //////////////////////////////////////////set/////////////////////////////
-    /**
-     * @brief reset the boundaries of the grid
-     *
-     * @param x0 new left boundary
-     * @param x1 new right boundary ( > x0)
-     * @param bcx new boundary condition
-     */
-    void set(real_type x0, real_type x1, bc bcx)
-    {
-        assert( x1 > x0 );
-        x0_=x0, x1_=x1;
-        bcx_=bcx;
-    }
-    /**
-     * @brief reset the cell numbers in the grid
-     *
-     * @param n new # of polynomial coefficients (0<n<21)
-     * @param N new # of cells (>0)
-     */
-    void set( unsigned n, unsigned N)
-    {
-        assert( N > 0  );
-        Nx_=N; n_=n;
-        dlt_=DLT<real_type>(n);
-    }
-    /**
-     * @brief Reset all values of the grid
-     *
-     * @param x0 new left boundary
-     * @param x1 new right boundary
-     * @param n new # of polynomial coefficients
-     * @param N new # of cells
-     * @param bcx new boundary condition
-     */
-    void set( real_type x0, real_type x1, unsigned n, unsigned N, bc bcx)
-    {
-        set(x0,x1,bcx);
-        set(n,N);
-    }
-    /////////////////////////////////////////convencience//////////////////////////////
-
-    /// @brief \c n()*\c N() (Total number of grid points)
-    unsigned size() const { return n_*Nx_;}
-    /**
-     * @brief the discrete legendre transformation
-     *
-     * @return
-     */
-    const DLT<real_type>& dlt() const {return dlt_;}
-    void display( std::ostream& os = std::cout) const
-    {
-        os << "Topology parameters are: \n"
-            <<"    n  = "<<n_<<"\n"
-            <<"    N = "<<Nx_<<"\n"
-            <<"    h = "<<h()<<"\n"
-            <<"    x0 = "<<x0_<<"\n"
-            <<"    x1 = "<<x1_<<"\n"
-            <<"    lx = "<<lx()<<"\n"
-            <<"Boundary conditions in x are: \n"
-            <<"    "<<bc2str(bcx_)<<"\n";
-    }
-
-    /**
-     * @copydoc hide_shift_doc
-     */
-    void shift( bool& negative, real_type& x)const
-    {
-        shift( negative, x, bcx_);
-    }
-    /**
-     * @copydoc hide_shift_doc
-     * @param bcx overrule grid internal boundary condition with this value
-     */
-    void shift( bool& negative, real_type &x, bc bcx)const
-    {
-        if( bcx == dg::PER)
-        {
-            real_type N = floor((x-x0_)/(x1_-x0_)); // ... -2[ -1[ 0[ 1[ 2[ ...
-            x = x - N*(x1_-x0_); //shift
-        }
-        //mirror along boundary as often as necessary
-        while( (x<x0_) || (x>x1_) )
-        {
-            if( x < x0_){
-                x = 2.*x0_ - x;
-                //every mirror swaps the sign if Dirichlet
-                if( bcx == dg::DIR || bcx == dg::DIR_NEU)
-                    negative = !negative;//swap sign
-            }
-            if( x > x1_){
-                x = 2.*x1_ - x;
-                if( bcx == dg::DIR || bcx == dg::NEU_DIR) //notice the different boundary NEU_DIR to the above DIR_NEU !
-                    negative = !negative; //swap sign
-            }
-        }
-    }
-
-    /**
-     * @brief Check if the grid contains a point
-     *
-     * @note Does not consider periodicity!!
-     * @param x point to check
-     *
-     * @return true if x0()<=x<=x1(), false else
-     * @attention returns false if x is NaN or INF
-     */
-    bool contains( real_type x)const
-    {
-        if( !std::isfinite(x) ) return false;
-        //should we catch the case x1_==x && dg::PER?
-        if( (x>=x0_ && x <= x1_)) return true;
-        return false;
-    }
-
-  private:
-    real_type x0_, x1_;
-    unsigned n_, Nx_;
-    bc bcx_;
-    DLT<real_type> dlt_;
-};
-
-/**
- * @brief An abstract base class for two-dimensional grids
- * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
- * @ingroup basictopology
- */
-template<class real_type>
-struct aRealTopology2d
-{
-    using value_type = real_type;
-    /// The host vector type used by host functions like evaluate
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid = RealGrid2d<real_type>;
-
-    /**
-     * @brief Left boundary in x
-     *
-     * @return
-     */
-    real_type x0() const {return gx_.x0();}
-    /**
-     * @brief Right boundary in x
-     *
-     * @return
-     */
-    real_type x1() const {return gx_.x1();}
-    /**
-     * @brief left boundary in y
-     *
-     * @return
-     */
-    real_type y0() const {return gy_.x0();}
-    /**
-     * @brief Right boundary in y
-     *
-     * @return
-     */
-    real_type y1() const {return gy_.x1();}
-    /**
-     * @brief length of x
-     *
-     * @return
-     */
-    real_type lx() const {return gx_.lx();}
-    /**
-     * @brief length of y
-     *
-     * @return
-     */
-    real_type ly() const {return gy_.lx();}
-    /**
-     * @brief cell size in x
-     *
-     * @return
-     */
-    real_type hx() const {return gx_.h();}
-    /**
-     * @brief cell size in y
-     *
-     * @return
-     */
-    real_type hy() const {return gy_.h();}
-    /**
-     * @brief number of polynomial coefficients in x
-     *
-     * @return
-     */
-    unsigned n() const {return gx_.n();}
-    /// number of polynomial coefficients in x
-    unsigned nx() const {return gx_.n();}
-    /// number of polynomial coefficients in y
-    unsigned ny() const {return gy_.n();}
-    /**
-     * @brief number of cells in x
-     *
-     * @return
-     */
-    unsigned Nx() const {return gx_.N();}
-    /**
-     * @brief number of cells in y
-     *
-     * @return
-     */
-    unsigned Ny() const {return gy_.N();}
-    /**
-     * @brief boundary conditions in x
-     *
-     * @return
-     */
-    bc bcx() const {return gx_.bcx();}
-    /**
-     * @brief boundary conditions in y
-     *
-     * @return
-     */
-    bc bcy() const {return gy_.bcx();}
-    /**
-     * @brief discrete legendre trafo
-     *
-     * @return
-     */
-    //const DLT<real_type>& dlt() const{return gx_.dlt();}
-    /// discrete legendre transformation in x
-    const DLT<real_type>& dltx() const{return gx_.dlt();}
-    /// discrete legendre transformation in y
-    const DLT<real_type>& dlty() const{return gy_.dlt();}
-
-    /// The x-axis grid
-    const RealGrid1d<real_type>& gx() const {return gx_;}
-    /// The y-axis grid
-    const RealGrid1d<real_type>& gy() const {return gy_;}
-
-    /**
-    * @brief Multiply the number of cells with a given factor
-    *
-    * With this function you can resize the grid ignorantly of its current size
-    * the number of polynomial coefficients is left as is
-    * @param fx new number of cells is the nearest integer to fx*Nx()
-    * @param fy new number of cells is the nearest integer to fy*Ny()
-    */
-    void multiplyCellNumbers( real_type fx, real_type fy){
-        if( fx != 1 || fy != 1)
-            do_set(nx(), round(fx*(real_type)Nx()), ny(), round(fy*(real_type)Ny()));
-    }
-    /**
-    * @brief Set the number of polynomials and cells
-    *
-    * Same as \c set(new_n,new_Nx,new_n,new_Ny)
-    * @param new_n new number of %Gaussian nodes for both x and y
-    * @param new_Nx new number of cells in x
-    * @param new_Ny new number of cells in y
-    */
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        set( new_n, new_Nx, new_n, new_Ny);
-    }
-    /**
-    * @brief Set the number of polynomials and cells
-    *
-    * @param new_nx new number of %Gaussian nodes in x
-    * @param new_Nx new number of cells in x
-    * @param new_ny new number of %Gaussian nodes in y
-    * @param new_Ny new number of cells in y
-    */
-    void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny) {
-        if( new_nx==nx() && new_Nx==Nx() && new_ny==ny() && new_Ny == Ny())
-            return;
-        do_set(new_nx,new_Nx,new_ny,new_Ny);
-    }
-
-
-    /**
-     * @brief The total number of points
-     *
-     * @return nx*ny*Nx*Ny
-     */
-    unsigned size() const { return gx_.size()*gy_.size();}
-    /**
-     * @brief Display
-     *
-     * @param os output stream
-     */
-    void display( std::ostream& os = std::cout) const
-    {
-        os << "Topology parameters are: \n"
-            <<"    nx = "<<nx()<<"\n"
-            <<"    ny = "<<ny()<<"\n"
-            <<"    Nx = "<<Nx()<<"\n"
-            <<"    Ny = "<<Ny()<<"\n"
-            <<"    hx = "<<hx()<<"\n"
-            <<"    hy = "<<hy()<<"\n"
-            <<"    x0 = "<<x0()<<"\n"
-            <<"    x1 = "<<x1()<<"\n"
-            <<"    y0 = "<<y0()<<"\n"
-            <<"    y1 = "<<y1()<<"\n"
-            <<"    lx = "<<lx()<<"\n"
-            <<"    ly = "<<ly()<<"\n"
-            <<"Boundary conditions in x are: \n"
-            <<"    "<<bc2str(bcx())<<"\n"
-            <<"Boundary conditions in y are: \n"
-            <<"    "<<bc2str(bcy())<<"\n";
-    }
-    /**
-     * @copydoc hide_shift_doc
-     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
-     */
-    void shift( bool& negative, real_type& x, real_type& y)const
-    {
-        shift( negative, x, y, bcx(), bcy());
-    }
-    /**
-     * @copydoc hide_shift_doc
-     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
-     * @param bcx overrule grid internal boundary condition with this value
-     * @param bcy overrule grid internal boundary condition with this value
-     */
-    void shift( bool& negative, real_type& x, real_type& y, bc bcx, bc bcy)const
-    {
-        gx_.shift( negative, x,bcx);
-        gy_.shift( negative, y,bcy);
-    }
-    /**
-     * @brief Check if the grid contains a point
-     *
-     * @note doesn't check periodicity!!
-     * @param x x-coordinate to check
-     * @param y y-coordinate to check
-     *
-     * @return true if x0()<=x<=x1() and y0()<=y<=y1(), false else
-     */
-    bool contains( real_type x, real_type y)const
-    {
-        if( gx_.contains(x) && gy_.contains(y)) return true;
-        return false;
-    }
-    /// Shortcut for contains( x[0], x[1])
-    template<class Vector>
-    bool contains( const Vector& x) const{
-        return contains( x[0], x[1]);
-    }
-    protected:
-    ///disallow destruction through base class pointer
-    ~aRealTopology2d() = default;
-    /**
-     * @brief Construct a 2d grid as the product of two 1d grids
-     *
-     * @code
-     * dg::Grid2d g2d( {x0,x1,nx,Nx,bcx},{y0,y1,ny,Ny,bcy});
-     * @endcode
-     * @param gx a Grid in x - direction
-     * @param gy a Grid in y - direction
-     */
-    aRealTopology2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy): gx_(gx),gy_(gy) { }
-
-    ///explicit copy constructor (default)
-    ///@param src source
-    aRealTopology2d(const aRealTopology2d& src) = default;
-    ///explicit assignment operator (default)
-    ///@param src source
-    aRealTopology2d& operator=(const aRealTopology2d& src) = default;
-    virtual void do_set( unsigned new_nx, unsigned new_Nx, unsigned new_ny,
-            unsigned new_Ny)=0;
-    private:
-    RealGrid1d<real_type> gx_, gy_;
-};
-
-
-
-/**
- * @brief An abstract base class for three-dimensional grids
- * @note although it is abstract, objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
- * @ingroup basictopology
- */
-template<class real_type>
-struct aRealTopology3d
-{
-    using value_type = real_type;
-    /// The host vector type used by host functions like evaluate
-    using host_vector = thrust::host_vector<real_type>;
-    using host_grid = RealGrid3d<real_type>;
-
-    /**
-     * @brief left boundary in x
-     *
-     * @return
-     */
-    real_type x0() const {return gx_.x0();}
-    /**
-     * @brief right boundary in x
-     *
-     * @return
-     */
-    real_type x1() const {return gx_.x1();}
-
-    /**
-     * @brief left boundary in y
-     *
-     * @return
-     */
-    real_type y0() const {return gy_.x0();}
-    /**
-     * @brief right boundary in y
-     *
-     * @return
-     */
-    real_type y1() const {return gy_.x1();}
-
-    /**
-     * @brief left boundary in z
-     *
-     * @return
-     */
-    real_type z0() const {return gz_.x0();}
-    /**
-     * @brief right boundary in z
-     *
-     * @return
-     */
-    real_type z1() const {return gz_.x1();}
-
-    /**
-     * @brief length in x
-     *
-     * @return
-     */
-    real_type lx() const {return gx_.lx();}
-    /**
-     * @brief length in y
-     *
-     * @return
-     */
-    real_type ly() const {return gy_.lx();}
-    /**
-     * @brief length in z
-     *
-     * @return
-     */
-    real_type lz() const {return gz_.lx();}
-
-    /**
-     * @brief cell size in x
-     *
-     * @return
-     */
-    real_type hx() const {return gx_.h();}
-    /**
-     * @brief cell size in y
-     *
-     * @return
-     */
-    real_type hy() const {return gy_.h();}
-    /**
-     * @brief cell size in z
-     *
-     * @return
-     */
-    real_type hz() const {return gz_.h();}
-    /**
-     * @brief number of polynomial coefficients in x
-     *
-     * @return
-     */
-    unsigned n() const {return gx_.n();}
-    /// number of polynomial coefficients in x
-    unsigned nx() const {return gx_.n();}
-    /// number of polynomial coefficients in y
-    unsigned ny() const {return gy_.n();}
-    /// number of polynomial coefficients in z
-    unsigned nz() const {return gz_.n();}
-    /**
-     * @brief number of points in x
-     *
-     * @return
-     */
-    unsigned Nx() const {return gx_.N();}
-    /**
-     * @brief number of points in y
-     *
-     * @return
-     */
-    unsigned Ny() const {return gy_.N();}
-    /**
-     * @brief number of points in z
-     *
-     * @return
-     */
-    unsigned Nz() const {return gz_.N();}
-    /**
-     * @brief boundary conditions in x
-     *
-     * @return
-     */
-    bc bcx() const {return gx_.bcx();}
-    /**
-     * @brief boundary conditions in y
-     *
-     * @return
-     */
-    bc bcy() const {return gy_.bcx();}
-    /**
-     * @brief boundary conditions in z
-     *
-     * @return
-     */
-    bc bcz() const {return gz_.bcx();}
-    /// discrete legendre transformation in x
-    const DLT<real_type>& dltx() const{return gx_.dlt();}
-    /// discrete legendre transformation in y
-    const DLT<real_type>& dlty() const{return gy_.dlt();}
-    /// discrete legendre transformation in z
-    const DLT<real_type>& dltz() const{return gz_.dlt();}
-    /// The x-axis grid
-    const RealGrid1d<real_type>& gx() const {return gx_;}
-    /// The y-axis grid
-    const RealGrid1d<real_type>& gy() const {return gy_;}
-    /// The z-axis grid
-    const RealGrid1d<real_type>& gz() const {return gz_;}
-    /**
-     * @brief The total number of points
-     *
-     * @return nx*ny*nz*Nx*Ny*Nz
-     */
-    unsigned size() const { return gx_.size()*gy_.size()*gz_.size();}
-    /**
-     * @brief Display
-     *
-     * @param os output stream
-     */
-    void display( std::ostream& os = std::cout) const
-    {
-        os << "Topology parameters are: \n"
-            <<"    nx = "<<nx()<<"\n"
-            <<"    ny = "<<ny()<<"\n"
-            <<"    nz = "<<nz()<<"\n"
-            <<"    Nx = "<<Nx()<<"\n"
-            <<"    Ny = "<<Ny()<<"\n"
-            <<"    Nz = "<<Nz()<<"\n"
-            <<"    hx = "<<hx()<<"\n"
-            <<"    hy = "<<hy()<<"\n"
-            <<"    hz = "<<hz()<<"\n"
-            <<"    x0 = "<<x0()<<"\n"
-            <<"    x1 = "<<x1()<<"\n"
-            <<"    y0 = "<<y0()<<"\n"
-            <<"    y1 = "<<y1()<<"\n"
-            <<"    z0 = "<<z0()<<"\n"
-            <<"    z1 = "<<z1()<<"\n"
-            <<"    lx = "<<lx()<<"\n"
-            <<"    ly = "<<ly()<<"\n"
-            <<"    lz = "<<lz()<<"\n"
-            <<"Boundary conditions in x are: \n"
-            <<"    "<<bc2str(bcx())<<"\n"
-            <<"Boundary conditions in y are: \n"
-            <<"    "<<bc2str(bcy())<<"\n"
-            <<"Boundary conditions in z are: \n"
-            <<"    "<<bc2str(bcz())<<"\n";
-    }
-
-    /**
-     * @copydoc hide_shift_doc
-     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
-     * @param z point (z) to shift (inout) the result is guaranteed to lie inside the grid
-     */
-    void shift( bool& negative, real_type& x, real_type& y, real_type& z)const
-    {
-        shift( negative, x,y,z, bcx(), bcy(), bcz());
-    }
-    /**
-     * @copydoc hide_shift_doc
-     * @param y point (y) to shift (inout) the result is guaranteed to lie inside the grid
-     * @param z point (z) to shift (inout) the result is guaranteed to lie inside the grid
-     * @param bcx overrule grid internal boundary condition with this value
-     * @param bcy overrule grid internal boundary condition with this value
-     * @param bcz overrule grid internal boundary condition with this value
-     */
-    void shift( bool& negative, real_type& x, real_type& y, real_type& z, bc bcx, bc bcy, bc bcz)const
-    {
-        gx_.shift( negative, x,bcx);
-        gy_.shift( negative, y,bcy);
-        gz_.shift( negative, z,bcz);
-    }
-
-    /**
-     * @brief Check if the grid contains a point
-     *
-     * @note doesn't check periodicity!!
-     * @param x x-coordinate to check
-     * @param y y-coordinate to check
-     * @param z z-coordinate to check
-     *
-     * @return true if x0()<=x<=x1() and y0()<=y<=y1() and z0()<=z<=z1() , false else
-     */
-    bool contains( real_type x, real_type y, real_type z)const
-    {
-        if( gx_.contains(x) && gy_.contains(y) && gz_.contains(z))
-            return true;
-        return false;
-    }
-    /// Shortcut for contains( x[0], x[1], x[2])
-    template<class Vector>
-    bool contains( const Vector& x) const{
-        return contains( x[0], x[1], x[2]);
-    }
-    ///@copydoc aRealTopology2d::multiplyCellNumbers()
-    void multiplyCellNumbers( real_type fx, real_type fy){
-        if( fx != 1 || fy != 1)
-            do_set(nx(), round(fx*(real_type)Nx()), ny(),
-                    round(fy*(real_type)Ny()), nz(), Nz());
-    }
-    /**
-    * @brief Set the number of polynomials and cells
-    *
-    * Set \c nz to 1
-    * Same as \c set(new_n,new_Nx,new_n,new_Ny,1,new_Nz)
-    * @param new_n new number of %Gaussian nodes in x and y
-    * @param new_Nx new number of cells in x
-    * @param new_Ny new number of cells in y
-    * @param new_Nz new number of cells in z
-    */
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        set(new_n,new_Nx,new_n,new_Ny,1,new_Nz);
-    }
-    /**
-    * @brief Set the number of polynomials and cells
-    *
-    * @param new_nx new number of %Gaussian nodes in x
-    * @param new_Nx new number of cells in x
-    * @param new_ny new number of %Gaussian nodes in y
-    * @param new_Ny new number of cells in y
-    * @param new_nz new number of %Gaussian nodes in z
-    * @param new_Nz new number of cells in z
-    */
-    void set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz) {
-        if( new_nx==nx() && new_Nx ==Nx() && new_ny == ny() && new_Ny == Ny() && new_nz == nz() && new_Nz==Nz())
-            return;
-        do_set(new_nx,new_Nx,new_ny,new_Ny,new_nz,new_Nz);
-    }
-    protected:
-    ///disallow deletion through base class pointer
-    ~aRealTopology3d() = default;
-    /**
-     * @brief Construct a 3d topology as the product of three 1d grids
-     *
-     * @code
-     * dg::Grid3d g3d( {x0,x1,nx,Nx,bcx},{y0,y1,ny,Ny,bcy},{z0,z1,nz,Nz,bcz});
-     * @endcode
-     * @param gx a Grid1d in x - direction
-     * @param gy a Grid1d in y - direction
-     * @param gz a Grid1d in z - direction
-     */
-    aRealTopology3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz):
-        gx_(gx),gy_(gy),gz_(gz){
-    }
-    ///explicit copy constructor (default)
-    ///@param src source
-    aRealTopology3d(const aRealTopology3d& src) = default;
-    ///explicit assignment operator (default)
-    ///@param src source
-    aRealTopology3d& operator=(const aRealTopology3d& src) = default;
-    virtual void do_set(unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz)=0;
-  private:
-    RealGrid1d<real_type> gx_,gy_,gz_;
-};
-
-/**
- * @brief The simplest implementation of aRealTopology2d
- * @ingroup grid
- * @copydoc hide_code_evaluate2d
- */
-template<class real_type>
-struct RealGrid2d : public aRealTopology2d<real_type>
-{
     ///@copydoc hide_grid_parameters2d
     ///@copydoc hide_bc_parameters2d
-    RealGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        aRealTopology2d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy}) { }
-
-    ///@copydoc aRealTopology2d()
-    RealGrid2d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy): aRealTopology2d<real_type>(gx,gy){ }
-
-    ///@brief allow explicit type conversion from any other topology
-    ///@param src source
-    explicit RealGrid2d( const aRealTopology2d<real_type>& src): aRealTopology2d<real_type>(src){}
-    private:
-    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny) override final{
-        aRealTopology2d<real_type>::do_set(nx,Nx,ny,Ny);
+    template<size_t Md = Nd>
+    RealGrid( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx = PER, dg::bc bcy = PER):
+        aRealTopology<real_type,2>({x0,y0}, {x1,y1}, {n,n}, {Nx, Ny}, {bcx,bcy})
+    {
     }
-
-};
-
-/**
- * @brief The simplest implementation of aRealTopology3d
- * @ingroup grid
- * @copydoc hide_code_evaluate3d
- */
-template<class real_type>
-struct RealGrid3d : public aRealTopology3d<real_type>
-{
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
-    RealGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
-        aRealTopology3d<real_type>({x0,x1,n,Nx,bcx},{y0,y1,n,Ny,bcy},{z0,z1,1,Nz,bcz}) { }
-    ///@copydoc aRealTopology3d::aRealTopology3d(RealGrid1d,RealGrid1d,RealGrid1d)
-    RealGrid3d( RealGrid1d<real_type> gx, RealGrid1d<real_type> gy, RealGrid1d<real_type> gz): aRealTopology3d<real_type>(gx,gy,gz){ }
+    template<size_t Md = Nd>
+    RealGrid( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx = PER, dg::bc bcy = PER, dg::bc bcz=PER):
+        aRealTopology<real_type,3>({x0,y0,z0}, {x1,y1,z1}, {n,n,1}, {Nx, Ny,Nz}, {bcx,bcy, bcz})
+        {}
+
+    ///@copydoc aRealTopology::aRealTopology(const std::array<RealGrid<real_type,1>,Nd>&)
+    RealGrid( const std::array<RealGrid<real_type,1>,Nd>& axes) :
+        aRealTopology<real_type,Nd>( axes){}
+
+    /**
+     * @brief Construct from given 1d grids
+     * Equivalent to <tt>RealGrid( std::array{g0,gs...})</tt>
+     * @param g0 Axis 0 grid
+     * @param gs more axes
+     */
+    template<class ...Grid1ds>
+    RealGrid( const RealGrid<real_type,1>& g0, const Grid1ds& ...gs) :
+        aRealTopology<real_type,Nd>( std::array<RealGrid<real_type,1>,Nd>{g0, gs...}){}
+
+    ///@copydoc aRealTopology::aRealTopology(std::array<real_type,Nd>,std::array<real_type,Nd>,std::array<unsigned,Nd>,std::array<unsigned,Nd>,std::array<dg::bc,Nd>)
+    RealGrid( std::array<real_type,Nd> p, std::array<real_type,Nd> q,
+        std::array<unsigned,Nd> n, std::array<unsigned,Nd> N,
+        std::array<dg::bc,Nd> bcs) : aRealTopology<real_type,Nd>( p,q,n,N,bcs)
+    {}
 
     ///@brief allow explicit type conversion from any other topology
     ///@param src source
-    explicit RealGrid3d( const aRealTopology3d<real_type>& src): aRealTopology3d<real_type>(src){ }
+    explicit RealGrid( const aRealTopology<real_type,Nd>& src): aRealTopology<real_type,Nd>(src){}
     private:
-    virtual void do_set( unsigned nx, unsigned Nx, unsigned ny, unsigned Ny,
-            unsigned nz, unsigned Nz) override final{
-        aRealTopology3d<real_type>::do_set(nx,Nx,ny,Ny,nz,Nz);
+    virtual void do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N) override final{
+        aRealTopology<real_type,Nd>::do_set(new_n,new_N);
     }
+    virtual void do_set_pq( std::array<real_type,Nd> new_x0, std::array<real_type,Nd> new_x1) override final{
+        aRealTopology<real_type,Nd>::do_set_pq(new_x0,new_x1);
+    }
+    virtual void do_set( std::array<dg::bc,Nd> new_bcs) override final{
+        aRealTopology<real_type,Nd>::do_set(new_bcs);
+    }
+
 };
-
-///@cond
-template<class real_type>
-void aRealTopology2d<real_type>::do_set( unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny)
-{
-    gx_.set(new_nx, new_Nx);
-    gy_.set(new_ny, new_Ny);
-}
-template<class real_type>
-void aRealTopology3d<real_type>::do_set(unsigned new_nx, unsigned new_Nx, unsigned new_ny, unsigned new_Ny, unsigned new_nz, unsigned new_Nz)
-{
-    gx_.set(new_nx, new_Nx);
-    gy_.set(new_ny, new_Ny);
-    gz_.set(new_nz, new_Nz);
-}
-
-template<class Topology>
-using get_host_vector = typename Topology::host_vector;
-
-template<class Topology>
-using get_host_grid = typename Topology::host_grid;
-
-///@endcond
 
 ///@addtogroup gridtypes
 ///@{
-using Grid1d        = dg::RealGrid1d<double>;
-using Grid2d        = dg::RealGrid2d<double>;
-using Grid3d        = dg::RealGrid3d<double>;
-using aTopology2d   = dg::aRealTopology2d<double>;
-using aTopology3d   = dg::aRealTopology3d<double>;
+using Grid0d        = dg::RealGrid<double,0>;
+using Grid1d        = dg::RealGrid<double,1>;
+using Grid2d        = dg::RealGrid<double,2>;
+using Grid3d        = dg::RealGrid<double,3>;
+template<size_t Nd>
+using Grid          = dg::RealGrid<double,Nd>;
+using aTopology2d   = dg::aRealTopology<double,2>;
+using aTopology3d   = dg::aRealTopology<double,3>;
+template<class T>
+using aRealTopology2d   = dg::aRealTopology<T,2>;
+template<class T>
+using aRealTopology3d   = dg::aRealTopology<T,3>;
+template<class T>
+using RealGrid0d   = dg::RealGrid<T,0>;
+template<class T>
+using RealGrid1d   = dg::RealGrid<T,1>;
+template<class T>
+using RealGrid2d   = dg::RealGrid<T,2>;
+template<class T>
+using RealGrid3d   = dg::RealGrid<T,3>;
 #ifndef MPI_VERSION
 namespace x {
+using Grid0d        = Grid0d      ;
 using Grid1d        = Grid1d      ;
 using Grid2d        = Grid2d      ;
 using Grid3d        = Grid3d      ;
+template<size_t Nd>
+using Grid          = Grid<Nd>    ;
 using aTopology2d   = aTopology2d ;
 using aTopology3d   = aTopology3d ;
+template<class T>
+using aRealTopology2d   = aRealTopology<T,2>;
+template<class T>
+using aRealTopology3d   = aRealTopology<T,3>;
+template<class T>
+using RealGrid0d   = RealGrid<T,0>;
+template<class T>
+using RealGrid1d   = RealGrid<T,1>;
+template<class T>
+using RealGrid2d   = RealGrid<T,2>;
+template<class T>
+using RealGrid3d   = RealGrid<T,3>;
 } //namespace x
 #endif
 ///@}

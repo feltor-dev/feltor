@@ -1,6 +1,5 @@
 #pragma once
 #include "dg/enums.h"
-#include "json/json.h"
 
 namespace heat{
 struct Parameters
@@ -11,6 +10,7 @@ struct Parameters
     double dt;
     unsigned itstp, maxout;
     unsigned mx, my;
+    std::string interpolation_method;
     std::string p_diff;
     double nu_parallel, nu_perp;
 
@@ -19,7 +19,7 @@ struct Parameters
     enum dg::bc bcx, bcy;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
     double eps_time, rtol, rk4eps;
-    Parameters( const Json::Value& js) {
+    Parameters( dg::file::WrappedJsonValue js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();
@@ -33,6 +33,7 @@ struct Parameters
         maxout = js["maxout"].asUInt();
         mx = js["mx"].asUInt();
         my = js["my"].asUInt();
+        interpolation_method = js["interpolation-method"].asString();
         rk4eps = js.get("rk4eps", 1e-5).asDouble();
 
         nu_parallel = js["nu_parallel"].asDouble();
@@ -86,6 +87,7 @@ struct Parameters
         os << "Operator parameters are: \n"
             <<"     mx =                  "<<mx<<"\n"
             <<"     my =                  "<<my<<"\n"
+            <<"     interpolation-method ="<<interpolation_method<<"\n"
             <<"     p_diff =              "<<p_diff<<"\n";
         os << "Boundary condition is: \n"
             <<"     BC X       =              "<<bc2str(bcx)<<"\n"

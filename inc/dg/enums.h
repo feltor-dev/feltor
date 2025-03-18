@@ -34,7 +34,7 @@ enum bc{
  * @param bcx the boundary condition
  * @return a string
  */
-static inline std::string bc2str( bc bcx)
+inline std::string bc2str( bc bcx)
 {
     std::string s;
     switch(bcx)
@@ -63,7 +63,7 @@ static inline std::string bc2str( bc bcx)
  * @return a valid boundary condition
  * \throw std::runtime_error if string doesn't match any of the above
  */
-static inline bc str2bc( std::string s)
+inline bc str2bc( std::string s)
 {
     if( s=="PER"||s=="per"||s=="periodic"||s=="Periodic" || s == "PERIODIC")
         return PER;
@@ -84,7 +84,7 @@ static inline bc str2bc( std::string s)
  * @param bound boundary condition to invert
  * @return NEU for DIR, DIR for NEU, NEU_DIR for DIR_NEU, DIR_NEU for NEU_DIR and PER for PER
  */
-static inline bc inverse( bc bound)
+inline bc inverse( bc bound)
 {
     if( bound == DIR) return NEU;
     if( bound == NEU) return DIR;
@@ -113,7 +113,7 @@ enum direction{
  * @return a valid direction
  * \throw std::runtime_error if string doesn't match any of the above
  */
-static inline direction str2direction( std::string s)
+inline direction str2direction( std::string s)
 {
     if( "forward" == s)
         return forward;
@@ -134,7 +134,7 @@ static inline direction str2direction( std::string s)
  * @param dir the input direction
  * @return a string
  */
-static inline std::string direction2str( enum direction dir)
+inline std::string direction2str( enum direction dir)
 {
     std::string s;
     switch(dir)
@@ -153,7 +153,7 @@ static inline std::string direction2str( enum direction dir)
  * @param dir direction to invert
  * @return backward for forward, forward for backward, centered for centered
  */
-static inline direction inverse( direction dir)
+inline direction inverse( direction dir)
 {
     if( dir == forward) return backward;
     if( dir == backward) return forward;
@@ -166,21 +166,20 @@ enum space{
     xspace //!< Configuration space "nodal values"
 };
 
+// With arbitrary dimensionality enabled maybe we can rethink if
+// enum coo { x = 0, y = 1, ...} is a good idea? And how and where to use it?
 ///@brief 2d coordinates
 enum class coo2d : char
 {
     x = 'x', //!< x direction
     y = 'y', //!< y direction
 };
-///@brief 3d contra- and covariant coordinates
+///@brief 3d coordinates
 enum class coo3d : char
 {
     x = 'x', //!< x direction
     y = 'y', //!< y direction
     z = 'z', //!< z direction
-    xy = 'a', //!< xy plane
-    yz = 'b', //!< yz plane
-    xz = 'c', //!< xz plane
 };
 
 ///@}

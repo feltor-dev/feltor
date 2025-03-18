@@ -9,42 +9,45 @@
 #include <cassert>
 #include "dlt.h"
 #include "../blas1.h" // reproducible DOT products
+#include "../blas2.h" // Matrix tensor traits
 
 namespace dg{
+
 
 /**
 * @brief A square nxn matrix
 *
-* @ingroup densematrix
-* An enhanced square dynamic matrix
-* for which arithmetic operators are overloaded.
-* It is not meant for performance critical code but is very convenient
-* for example for the assembly of matrices.
-* @sa \c dg::create::inverse, \c dg::create::lu_pivot, \c dg::create::lu_solve
+* An enhanced square dynamic matrix for which arithmetic operators are
+* overloaded.  It is not meant for performance critical code but is very
+* convenient for example for the assembly of matrices or testing code.
+* @sa There are some direct inversion routines that make use of the
+* extended accuracy of \c dg::exblas and are thus quite robust agains almost
+* singular matrices: \c dg::invert, \c dg::create::lu_pivot, \c dg::lu_solve
 * @tparam T value type
+* @ingroup densematrix
 */
 template< class T>
-class Operator
+class SquareMatrix
 {
   public:
     typedef T value_type; //!< typically double or float
     /**
-    * @brief Construct empty Operator
+    * @brief Construct empty SquareMatrix
     */
-    Operator() = default;
+    SquareMatrix() = default;
     /**
      * @brief allocate storage for nxn matrix
      *
      * @param n size
      */
-    explicit Operator( const unsigned n): n_(n), data_(n_*n_){}
+    explicit SquareMatrix( const unsigned n): n_(n), data_(n_*n_){}
     /**
     * @brief Initialize elements.
     *
     * @param n matrix is of size n x n
     * @param value Every element is initialized to.
     */
-    Operator( const unsigned n, const T& value): n_(n), data_(n_*n_, value) {}
+    SquareMatrix( const unsigned n, const T& value): n_(n), data_(n_*n_, value) {}
     /**
      * @brief Construct from iterators
      *
@@ -53,7 +56,7 @@ class Operator
      * @param last
      */
     template< class InputIterator>
-    Operator( InputIterator first, InputIterator last, std::enable_if_t<!std::is_integral<InputIterator>::value>* = 0): data_(first, last)
+    SquareMatrix( InputIterator first, InputIterator last, std::enable_if_t<!std::is_integral<InputIterator>::value>* = 0): data_(first, last)
     {
         unsigned n = std::distance( first, last);
         n_ = (unsigned)sqrt( (double)n);
@@ -64,7 +67,7 @@ class Operator
      *
      * @param src size must be a square number
      */
-    Operator( const std::vector<T>& src): data_(src)
+    SquareMatrix( const std::vector<T>& src): data_(src)
     {
         unsigned n = src.size();
         n_ = (unsigned)sqrt( (double)n);
@@ -81,15 +84,12 @@ class Operator
 
     /*! @brief access operator
      *
-     * A range check is performed if DG_DEBUG is defined
      * @param i row index
      * @param j column index
      * @return reference to value at that location
      */
-    T& operator()(const size_t i, const size_t j){
-#ifdef DG_DEBUG
-        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
-#endif
+    T& operator()(const size_t i, const size_t j)
+    {
         return data_[ i*n_+j];
     }
     /*! @brief const access operator
@@ -99,14 +99,11 @@ class Operator
      * @return const value at that location
      */
     const T& operator()(const size_t i, const size_t j) const {
-#ifdef DG_DEBUG
-        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
-#endif
         return data_[ i*n_+j];
     }
 
     /**
-     * @brief Size n of the Operator
+     * @brief Size n of the SquareMatrix
      *
      * @return n
      */
@@ -147,11 +144,11 @@ class Operator
     /**
     * @brief Transposition
     *
-    * @return  A newly generated Operator containing the transpose.
+    * @return  A newly generated SquareMatrix containing the transpose.
     */
-    Operator transpose() const
+    SquareMatrix transpose() const
     {
-        Operator o(*this);
+        SquareMatrix o(*this);
         for( unsigned i=0; i<n_; i++)
             for( unsigned j=0; j<i; j++)
             {
@@ -160,12 +157,49 @@ class Operator
         return o;
     }
 
+    /*! @brief Matrix vector multiplication \f$ y = S x\f$
+     *
+     * This makes SquareMatrix usable in \c dg::blas2::symv
+     * @tparam ContainerType Any container with <tt>operator[]</tt>
+     * @param x input vector
+     * @param y contains the solution on output (may not alias \p x)
+     */
+    template<class ContainerType1, class ContainerType2>
+    void symv( const ContainerType1& x, ContainerType2& y) const
+    {
+        for( unsigned j=0; j<n_; j++)
+        {
+            y[j] = 0;
+            for( unsigned k=0; k<n_; k++)
+                y[j] += data_[j*n_+k]*x[k];
+        }
+    }
+    /*! @brief Matrix vector multiplication \f$ y = \alpha S x + \beta y\f$
+     *
+     * This makes SquareMatrix usable in \c dg::blas2::symv
+     * @tparam ContainerType Any container with <tt>operator[]</tt>
+     * @param alpha A scalar
+     * @param x input vector
+     * @param beta A scalar
+     * @param y contains the solution on output (may not alias \p x)
+     */
+    template<class value_type1, class ContainerType1, class value_type2, class ContainerType2>
+    void symv( value_type1 alpha, const ContainerType1& x, value_type2 beta, ContainerType2& y) const
+    {
+        for( unsigned j=0; j<n_; j++)
+        {
+            y[j] *= beta;
+            for( unsigned k=0; k<n_; k++)
+                y[j] += alpha*data_[j*n_+k]*x[k];
+        }
+    }
+
     /*! @brief two Matrices are considered equal if elements are equal
      *
      * @param rhs Matrix to be compared to this
      * @return true if rhs does not equal this
      */
-    bool operator!=( const Operator& rhs) const{
+    bool operator!=( const SquareMatrix& rhs) const{
         for( size_t i = 0; i < n_*n_; i++)
             if( data_[i] != rhs.data_[i])
                 return true;
@@ -177,16 +211,16 @@ class Operator
      * @param rhs Matrix to be compared to this
      * @return true if rhs equals this
      */
-    bool operator==( const Operator& rhs) const {return !((*this != rhs));}
+    bool operator==( const SquareMatrix& rhs) const {return !((*this != rhs));}
 
     /**
      * @brief subtract
      *
      * @return
      */
-    Operator operator-() const
+    SquareMatrix operator-() const
     {
-        Operator temp(n_, 0.);
+        SquareMatrix temp(n_, 0.);
         for( unsigned i=0; i<n_*n_; i++)
             temp.data_[i] = -data_[i];
         return temp;
@@ -198,11 +232,8 @@ class Operator
      *
      * @return
      */
-    Operator& operator+=( const Operator& op)
+    SquareMatrix& operator+=( const SquareMatrix& op)
     {
-#ifdef DG_DEBUG
-        assert( op.size() == this->size());
-#endif//DG_DEBUG
         for( unsigned i=0; i<n_*n_; i++)
             data_[i] += op.data_[i];
         return *this;
@@ -214,11 +245,8 @@ class Operator
      *
      * @return
      */
-    Operator& operator-=( const Operator& op)
+    SquareMatrix& operator-=( const SquareMatrix& op)
     {
-#ifdef DG_DEBUG
-        assert( op.size() == this->size());
-#endif//DG_DEBUG
         for( unsigned i=0; i<n_*n_; i++)
             data_[i] -= op.data_[i];
         return *this;
@@ -230,7 +258,7 @@ class Operator
      *
      * @return
      */
-    Operator& operator*=( const T& value )
+    SquareMatrix& operator*=( const T& value )
     {
         for( unsigned i=0; i<n_*n_; i++)
             data_[i] *= value;
@@ -244,9 +272,9 @@ class Operator
      *
      * @return
      */
-    friend Operator operator+( const Operator& lhs, const Operator& rhs)
+    friend SquareMatrix operator+( const SquareMatrix& lhs, const SquareMatrix& rhs)
     {
-        Operator temp(lhs);
+        SquareMatrix temp(lhs);
         temp+=rhs;
         return temp;
     }
@@ -258,9 +286,9 @@ class Operator
      *
      * @return
      */
-    friend Operator operator-( const Operator& lhs, const Operator& rhs)
+    friend SquareMatrix operator-( const SquareMatrix& lhs, const SquareMatrix& rhs)
     {
-        Operator temp(lhs);
+        SquareMatrix temp(lhs);
         temp-=rhs;
         return temp;
     }
@@ -272,9 +300,9 @@ class Operator
      *
      * @return
      */
-    friend Operator operator*( const T& value, const Operator& rhs )
+    friend SquareMatrix operator*( const T& value, const SquareMatrix& rhs )
     {
-        Operator temp(rhs);
+        SquareMatrix temp(rhs);
         temp*=value;
         return temp;
     }
@@ -287,7 +315,7 @@ class Operator
      *
      * @return
      */
-    friend Operator operator*( const Operator& lhs, const T& value)
+    friend SquareMatrix operator*( const SquareMatrix& lhs, const T& value)
     {
         return  value*lhs;
     }
@@ -300,13 +328,10 @@ class Operator
      *
      * @return
      */
-    friend Operator operator*( const Operator& lhs, const Operator& rhs)
+    friend SquareMatrix operator*( const SquareMatrix& lhs, const SquareMatrix& rhs)
     {
         unsigned n_ = lhs.n_;
-#ifdef DG_DEBUG
-        assert( lhs.size() == rhs.size());
-#endif//DG_DEBUG
-        Operator temp(n_, 0.);
+        SquareMatrix temp(n_, 0.);
         for( unsigned i=0; i< n_; i++)
             for( unsigned j=0; j<n_; j++)
             {
@@ -317,6 +342,23 @@ class Operator
         return temp;
     }
 
+    /**
+     * @brief matrix-vector multiplication  \f$  y = S x\f$
+     *
+     * @snippet{trimleft} operator_t.cpp matvec
+     * @param S Matrix
+     * @param x Vector
+     *
+     * @return Vector
+     */
+    template<class ContainerType>
+    friend ContainerType operator*( const SquareMatrix& S, const ContainerType& x)
+    {
+        ContainerType out(x);
+        S.symv( x, out);
+        return out;
+    }
+
     /*! @brief puts a matrix linewise in output stream
      *
      * @tparam Ostream The stream e.g. std::cout
@@ -325,7 +367,7 @@ class Operator
      * @return the outstream
      */
     template< class Ostream>
-    friend Ostream& operator<<(Ostream& os, const Operator& mat)
+    friend Ostream& operator<<(Ostream& os, const SquareMatrix& mat)
     {
         unsigned n_ = mat.n_;
         for( size_t i=0; i < n_ ; i++)
@@ -347,7 +389,7 @@ class Operator
      * @return The istream
      */
     template< class Istream>
-    friend Istream& operator>> ( Istream& is, Operator<T>& mat){
+    friend Istream& operator>> ( Istream& is, SquareMatrix<T>& mat){
         unsigned n_ = mat.n_;
         for( size_t i=0; i<n_; i++)
             for( size_t j=0; j<n_; j++)
@@ -360,22 +402,36 @@ class Operator
     std::vector<T> data_;
 };
 
+///@ingroup traits
+template<class T>
+struct TensorTraits<SquareMatrix<T>>
+{
+    using value_type  = T;
+    using execution_policy = SerialTag;
+    using tensor_category = SelfMadeMatrixTag;
+};
+
+
 namespace create
 {
+///@addtogroup invert
+///@{
+
 /*! @brief LU Decomposition with partial pivoting
  *
+ * For example
+ * @snippet{trimleft} operator_t.cpp det
  * @tparam T value type
  * @throw std::runtime_error if the matrix is singular
  * @param m  contains lu decomposition of input on output (inplace transformation)
- * @param p contains the pivot elements on output
+ * @param p contains the pivot elements on output (will be resized)
  * @return determinant of \c m
  * @note uses extended accuracy of \c dg::exblas which makes it quite robust
  * against almost singular matrices
- * @ingroup densematrix
- * @sa \c dg::create::lu_solve
+ * @sa \c dg::lu_solve
  */
 template< class T>
-T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
+T lu_pivot( dg::SquareMatrix<T>& m, std::vector<unsigned>& p)
 {
     //from numerical recipes
     T pivot, determinant=(T)1;
@@ -433,16 +489,63 @@ T lu_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
 }
 
 /**
- * @brief Solve the linear system with the LU decomposition
+ * @brief Invert a square matrix
  *
+ * using lu decomposition in combination with our accurate scalar products
+ *
+ * For example
+ * @snippet{trimleft} operator_t.cpp invert
  * @tparam T value type
- * @param lu result of \c dg::create::lu_pivot
- * @param p pivot vector from \c dg::create::lu_pivot
- * @param b right hand side (contains solution on output)
- * @ingroup densematrix
+ * @param in input matrix
+ *
+ * @return the inverse of in if it exists
+ * @throw std::runtime_error if in is singular
+ * @note uses extended accuracy of \c dg::exblas which makes it quite robust
+ * against almost singular matrices
  */
 template<class T>
-void lu_solve( const dg::Operator<T>& lu, const std::vector<unsigned>& p, std::vector<T>& b)
+dg::SquareMatrix<T> inverse( const dg::SquareMatrix<T>& in)
+{
+    dg::SquareMatrix<T> out(in);
+    const unsigned n = in.size();
+    std::vector<unsigned> pivot( n);
+    dg::SquareMatrix<T> lu(in);
+    T determinant = lu_pivot( lu, pivot);
+    if( fabs(determinant ) == 0)
+        throw std::runtime_error( "Determinant zero!");
+    for( unsigned i=0; i<n; i++)
+    {
+        std::vector<T> unit(n, 0);
+        unit[i] = 1;
+        lu_solve( lu, pivot, unit);
+        for( unsigned j=0; j<n; j++)
+            out(j,i) = unit[j];
+    }
+    return out;
+}
+
+///@cond
+
+/**
+ * @brief Create the unit matrix
+ *
+ * @param n # of polynomial coefficients
+ *
+ * @return SquareMatrix
+ */
+template<class real_type>
+SquareMatrix<real_type> delta( unsigned n)
+{
+    SquareMatrix<real_type> op(n, 0);
+    for( unsigned i=0; i<n; i++)
+        op( i,i) = 1.;
+    return op;
+}
+
+
+// Not sure why we called this dg::create::lu_solve instead of dg::lu_solve
+template<class T>
+void lu_solve( const dg::SquareMatrix<T>& lu, const std::vector<unsigned>& p, std::vector<T>& b)
 {
     assert(p.size() == lu.size() && p.size() == b.size());
     const size_t n = p.size();
@@ -467,98 +570,30 @@ void lu_solve( const dg::Operator<T>& lu, const std::vector<unsigned>& p, std::v
     }
 }
 
-//
-/**
- * @brief Compute the inverse of a square matrix
- *
- * using lu decomposition in combination with our accurate scalar products
- * @tparam T value type
- * @param in input matrix
- *
- * @ingroup densematrix
- * @return the inverse of in if it exists
- * @throw std::runtime_error if in is singular
- */
-template<class T>
-dg::Operator<T> inverse( const dg::Operator<T>& in)
-{
-    dg::Operator<T> out(in);
-    const unsigned n = in.size();
-    std::vector<unsigned> pivot( n);
-    dg::Operator<T> lu(in);
-    T determinant = lu_pivot( lu, pivot);
-    if( fabs(determinant ) < 1e-14)
-        throw std::runtime_error( "Determinant zero!");
-    for( unsigned i=0; i<n; i++)
-    {
-        std::vector<T> unit(n, 0);
-        unit[i] = 1;
-        lu_solve( lu, pivot, unit);
-        for( unsigned j=0; j<n; j++)
-            out(j,i) = unit[j];
-    }
-    return out;
-}
 
-///@addtogroup lowlevel
-///@{
-
-/**
- * @brief Create the unit matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// S-matrix
 template<class real_type>
-Operator<real_type> delta( unsigned n)
+SquareMatrix<real_type> pipj( unsigned n)
 {
-    Operator<real_type> op(n, 0);
-    for( unsigned i=0; i<n; i++)
-        op( i,i) = 1.;
-    return op;
-}
-/**
- * @brief Create the S-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
-template<class real_type>
-Operator<real_type> pipj( unsigned n)
-{
-    Operator<real_type> op(n, 0);
+    SquareMatrix<real_type> op(n, 0);
     for( unsigned i=0; i<n; i++)
         op( i,i) = 2./(real_type)(2*i+1);
     return op;
 }
-/**
- * @brief Create the T-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// T-matrix
 template<class real_type>
-Operator<real_type> pipj_inv( unsigned n)
+SquareMatrix<real_type> pipj_inv( unsigned n)
 {
-    Operator<real_type> op(n, 0);
+    SquareMatrix<real_type> op(n, 0);
     for( unsigned i=0; i<n; i++)
         op( i,i) = (real_type)(2*i+1)/2.;
     return op;
 }
-/**
- * @brief Create the D-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// D-matrix
 template<class real_type>
-Operator<real_type> pidxpj( unsigned n)
+SquareMatrix<real_type> pidxpj( unsigned n)
 {
-    Operator<real_type> op(n, 0);
+    SquareMatrix<real_type> op(n, 0);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
         {
@@ -570,57 +605,33 @@ Operator<real_type> pidxpj( unsigned n)
         }
     return op;
 }
-/**
- * @brief Create the R-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// R-matrix
 template<class real_type>
-Operator<real_type> rirj( unsigned n)
+SquareMatrix<real_type> rirj( unsigned n)
 {
-    return Operator<real_type>( n, 1.);
+    return SquareMatrix<real_type>( n, 1.);
 }
-/**
- * @brief Create the RL-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// RL-matrix
 template<class real_type>
-Operator<real_type> rilj( unsigned n)
+SquareMatrix<real_type> rilj( unsigned n)
 {
-    Operator<real_type> op( n, -1.);
+    SquareMatrix<real_type> op( n, -1.);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
             if( j%2 == 0)
                 op( i,j) = 1.;
     return op;
 }
-/**
- * @brief Create the LR-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// LR-matrix
 template<class real_type>
-Operator<real_type> lirj( unsigned n) {
+SquareMatrix<real_type> lirj( unsigned n) {
     return rilj<real_type>( n).transpose();
 }
-/**
- * @brief Create the L-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// L-matrix
 template<class real_type>
-Operator<real_type> lilj( unsigned n)
+SquareMatrix<real_type> lilj( unsigned n)
 {
-    Operator<real_type> op( n, -1.);
+    SquareMatrix<real_type> op( n, -1.);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
             if( ((i+j)%2) == 0)
@@ -628,17 +639,11 @@ Operator<real_type> lilj( unsigned n)
     return op;
 }
 
-/**
- * @brief Create the N-matrix
- *
- * @param n # of polynomial coefficients
- *
- * @return Operator
- */
+// N-matrix
 template<class real_type>
-Operator<real_type> ninj( unsigned n)
+SquareMatrix<real_type> ninj( unsigned n)
 {
-    Operator<real_type> op( n, 0.);
+    SquareMatrix<real_type> op( n, 0.);
     for( int i=0; i<(int)n; i++)
         for( int j=0; j<(int)n; j++)
         {
@@ -650,52 +655,41 @@ Operator<real_type> ninj( unsigned n)
     op(0,0) = 2;
     return op;
 }
+///@endcond
 
 
-/**
- * @brief Construct a diagonal operator with weights
- *
- * @param dlt
- *
- * @return new operator
- */
-template<class real_type>
-Operator<real_type> weights( const DLT<real_type>& dlt)
-{
-    unsigned n = dlt.weights().size();
-    Operator<real_type> op( n, 0);
-    for( unsigned i=0; i<n; i++)
-        op(i,i) = dlt.weights()[i];
-    return op;
-}
-/**
- * @brief Construct a diagonal operator with inverse weights
- *
- * @param dlt
- *
- * @return new operator
- */
-template<class real_type>
-Operator<real_type> inv_weights( const DLT<real_type>& dlt)
-{
-    unsigned n = dlt.weights().size();
-    Operator<real_type> op( n, 0);
-    for( unsigned i=0; i<n; i++)
-        op(i,i) = 1./dlt.weights()[i];
-    return op;
-}
 ///@}
 }//namespace create
 
-
-///@brief Alias for \c dg::create::inverse. Compute inverse of square matrix
-///@copydetails dg::create::inverse(const dg::Operator<T>&)
-///@ingroup densematrix
+/**
+ * @brief Solve the linear system with the LU decomposition
+ *
+ * @tparam T value type
+ * @param lu result of \c dg::create::lu_pivot
+ * @param p pivot vector from \c dg::create::lu_pivot
+ * @param b right hand side (contains solution on output)
+ * @ingroup invert
+ * @sa dg::create::lu_pivot
+ */
 template<class T>
-dg::Operator<T> invert( const dg::Operator<T>& in)
+void lu_solve( const dg::SquareMatrix<T>& lu, const std::vector<unsigned>& p, std::vector<T>& b)
+{
+    dg::create::lu_solve( lu, p, b);
+}
+
+///@brief Compute inverse of square matrix (alias for \c dg::create::inverse)
+///@copydetails dg::create::inverse(const dg::SquareMatrix<T>&)
+///@ingroup invert
+template<class T>
+dg::SquareMatrix<T> invert( const dg::SquareMatrix<T>& in)
 {
     return dg::create::inverse(in);
 }
+///
+/// @brief The old name for SquareMatrix was Operator
+/// @ingroup densematrix
+template<class T>
+using Operator = SquareMatrix<T>;
 
 } //namespace dg
 

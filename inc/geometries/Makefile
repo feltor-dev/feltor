@@ -7,21 +7,21 @@ include ../../config/devices/devices.mk
 
 INCLUDE+= -I../../inc   # other project libraries
 
-CUFILES=$(wildcard *.cu)
+CPPFILES=$(wildcard *.cpp)
 
-all: $(CUFILES:%.cu=%)
+all: $(CPPFILES:%.cpp=%)
 
-%_t: %_t.cu
+%_t: %_t.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
-%_b: %_b.cu
+%_b: %_b.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 
-%_mpit: %_mpit.cu
-	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS)  $< -o $@ $(LIBS) $(JSONLIB) -g
+%_mpit: %_t.cpp
+	$(MPICC) $(OPT) $(INCLUDE) $(MPICFLAGS)  $< -o $@ $(LIBS) $(JSONLIB) -g -DWITH_MPI
 
-%_mpib: %_mpib.cu
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ -g $(INCLUDE) $(LIBS) $(JSONLIB) -g
+%_mpib: %_b.cpp
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ -g $(INCLUDE) $(LIBS) $(JSONLIB) -g -DWITH_MPI
 
 
 

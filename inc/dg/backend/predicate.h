@@ -7,6 +7,7 @@
 #include "tensor_traits.h"
 
 namespace dg{
+///@cond
 namespace detail{
 template<template <typename> class Predicate, unsigned n, class Default, class... Ts>
 struct find_if_impl;
@@ -47,22 +48,55 @@ using find_if_t = typename detail::find_if_impl<Predicate,0, Default, T, Ts...>:
 //find the corresponding element's index in the parameter pack
 template<template <typename> class Predicate, class Default, class T, class... Ts>
 using find_if_v = std::integral_constant<unsigned, detail::find_if_impl<Predicate,0, Default, T, Ts...>::value>;
+///@endcond
 
 /////////////////////////////////////////////////////////////////////////////////
-//is scalar
-template< class T>
-using is_scalar = std::conditional_t< std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
-template< class T>
-using is_not_scalar = std::conditional_t< !std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
-//is vector (or scalar)
-template< class T>
-using is_vector = std::conditional_t< std::is_base_of<AnyVectorTag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
-//is matrix (or vector or scalar)
-template< class T>
-using is_matrix = std::conditional_t< std::is_base_of<AnyMatrixTag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
+/// @addtogroup dispatch
+/// @{
 
-template< class T>
-using is_tensor = std::conditional_t< std::is_same<NotATensorTag, get_tensor_category<T>>::value, std::false_type, std::true_type>;
+/// @brief Does a type have a tensor_category derived from \c Tag
+/// @sa dg::is_scalar_v
+template< class T, class Tag = AnyScalarTag>
+using is_scalar = typename std::is_base_of<Tag, get_tensor_category<T>>::type;
+/// @brief Does a type have a tensor_category derived from \c Tag
+/// @sa dg::is_vector_v
+template< class T, class Tag = AnyVectorTag>
+using is_vector = typename std::is_base_of<Tag, get_tensor_category<T>>::type;
+/// @brief Does a type have a tensor_category derived from \c Tag
+/// @sa dg::is_matrix_v
+template< class T, class Tag = AnyMatrixTag>
+using is_matrix = typename std::is_base_of<Tag, get_tensor_category<T>>::type;
+
+/// Utility typedef
+template< class T, class Tag = AnyScalarTag>
+constexpr bool is_scalar_v = is_scalar<T, Tag>::value;
+/// Utility typedef
+template< class T, class Tag = AnyVectorTag>
+constexpr bool is_vector_v = is_vector<T, Tag>::value;
+/// Utility typedef
+template< class T, class Tag = AnyMatrixTag>
+constexpr bool is_matrix_v = is_matrix<T, Tag>::value;
+
+/// @brief Does a type have a execution_policy derived from \c Tag
+/// @sa dg::has_policy_v
+template< class T, class Tag = AnyPolicyTag>
+using has_policy = std::is_same<Tag, get_execution_policy<T>>;
+/// Utility typedef
+template< class T, class Tag = AnyPolicyTag>
+constexpr bool has_policy_v = has_policy<T, Tag>::value;
+
+/*! This is a utility class to get type information at compile time for
+ * debugging purposes Use like
+ * @code{.cpp}
+ * dg::WhichType<T>{};
+ * @endcode
+ */
+template< typename ...> struct WhichType;
+/// @}
+/// @cond
+
+template< class T, class Tag = AnyScalarTag>
+using is_not_scalar = std::conditional_t< !std::is_base_of<Tag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
 
 namespace detail
 {
@@ -70,14 +104,12 @@ template<class Category>
 using find_base_category = std::conditional_t< std::is_base_of<SharedVectorTag, Category>::value, SharedVectorTag,
         std::conditional_t< std::is_base_of<RecursiveVectorTag, Category>::value, RecursiveVectorTag, MPIVectorTag>>;
 }//namesapce detail
-//is scalar or same tensor category
+//is scalar or same base vector category
 template<class T, class Category>
 using is_scalar_or_same_base_category = std::conditional_t< std::is_base_of<detail::find_base_category<Category>, get_tensor_category<T>>::value || is_scalar<T>::value , std::true_type, std::false_type>;
 
-
-//has trivial policy
 template< class T>
-using has_any_policy = std::conditional_t< std::is_same<AnyPolicyTag, get_execution_policy<T>>::value, std::true_type, std::false_type>;
+using has_any_policy = has_policy<T, AnyPolicyTag>;
 template< class T>
 using has_not_any_policy = std::conditional_t< !std::is_same<AnyPolicyTag, get_execution_policy<T>>::value, std::true_type, std::false_type>;
 //has any or same policy tag
@@ -88,13 +120,8 @@ template< class T>
 using is_not_scalar_has_not_any_policy = std::conditional_t< !is_scalar<T>::value && !has_any_policy<T>::value, std::true_type, std::false_type>;
 
 /////////////////////////////////////////////////////////////////////////////////
-//from stackoverflow implement Columbo's bool pack trick to check parameter packs
-template < bool...> struct bool_pack;
 
-template<bool... v>
-using all_true = std::is_same<bool_pack<true,v...>, bool_pack<v..., true>>;
-
-template< typename ...> struct WhichType; //!< This is a utility class to get type information at compile time for debugging purposes Use like @code dg::WhichType<T>{};@endcode
+/// @endcond
 
 
 }//namespace dg

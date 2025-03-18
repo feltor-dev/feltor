@@ -20,7 +20,7 @@
 #pragma message( "NOTE: Fast std::fma(a,b,c) not activated! Using a*b+c instead!")
 #define DG_FMA(a,b,c) (a*b+c)
 #else
-#define DG_FMA(a,b,c) (fma(a,b,c))
+#define DG_FMA(a,b,c) (dg::detail::dg_fma(a,b,c))
 #endif
 
 //%%%%%%%%%%%%%check for SIMD support in OpenMP4 if device system is OMP%%%%%%%%%%
@@ -57,21 +57,55 @@
 #endif //compilers
 #endif //THRUST_DEVICE_SYSTEM
 
-//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
-#ifdef MPI_VERSION
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 
+//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
+//TODO This should be tested somewhere
+namespace dg{
+#ifdef MPI_VERSION
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA // cuda is involved
+//{;
+
+#ifdef DG_CUDA_UNAWARE_MPI
+//{;
+#pragma message( "Assume CUDA-unaware MPI support as per user indication!")
+inline constexpr bool cuda_aware_mpi = false;
+//}
+#else // ! DG_CUDA_UNAWARE_MPI
+//{;
+#if defined(OPEN_MPI) && OPEN_MPI
+//{;
 #include "mpi-ext.h"
+// Open-MPI header defines MPIX_CUDA_AWARE if compiled with cuda
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
 #pragma message( "CUDA-aware MPI support detected! Yay!")
-//Has cuda aware MPI support. Everything fine
-#elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-#warning "No CUDA aware MPI installation! Falling back to regular MPI!"
-#define _DG_CUDA_UNAWARE_MPI
+inline constexpr bool cuda_aware_mpi = true;
 #else
-#pragma message( "Cannot determine CUDA-aware MPI support! Falling back to regular MPI!")
-#define _DG_CUDA_UNAWARE_MPI
-#endif //MPIX_CUDA
-
+#pragma message( "No CUDA aware MPI installation! Falling back to regular MPI!")
+inline constexpr bool cuda_aware_mpi = false;
+#endif
+//}
+#else // Other than open-mpi there seems no way to determine cuda support
+//{;
+#pragma message( "We assume CUDA-aware MPI support! Compile with -DDG_CUDA_UNAWARE_MPI if we should not!")
+inline constexpr bool cuda_aware_mpi = true;
+//}
+#endif // OPEN_MPI
+//}
+#endif // DG_CUDA_UNAWARE_MPI
+//}
+#else // THRUST != CUDA
+//{;
+inline constexpr bool cuda_aware_mpi = false;
+//}
 #endif //THRUST == CUDA
 #endif //MPI_VERSION
+} // namespace dg
+
+//%%%%%%%%%%%%%%%Define DG_DEVICE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+///@brief Expands to \__host__ \__device__ if compiled with nvcc else is empty
+#define DG_DEVICE
+#ifdef __CUDACC__
+#undef DG_DEVICE
+#define DG_DEVICE __host__ __device__
+#endif
+#include "fma.h"

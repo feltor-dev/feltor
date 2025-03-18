@@ -1,4 +1,3 @@
-// #define DG_DEBUG
 #include <iostream>
 #include <iomanip>
 #include <mpi.h>

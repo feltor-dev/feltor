@@ -63,13 +63,6 @@ struct FPExpansionVect
      */
     void Accumulate(T x);
 
-    ////**
-    // * This function accumulates two values x to the floating-point expansion
-    // * \param x1 input value
-    // * \param x2 input value
-    // */
-    //void Accumulate(T x1, T x2);
-
     /**
      * This function is used to flush the floating-point expansion to the superaccumulator
      */
@@ -101,45 +94,6 @@ FPExpansionVect<T,N,TRAITS>::FPExpansionVect(int64_t * sa) :
     std::fill(a, a + N, 0);
 }
 
-// Knuth 2Sum.
-template<typename T>
-inline static T KnuthTwoSum(T a, T b, T & s)
-{
-    // MW: The compiler may not respect the order here (if one of the inputs is 0?)
-    // better use fmas to avoid unsafe optimization
-    T r = a + b;
-    T z = r - a;
-    s = (a - (r - z)) + (b - z);
-    return r;
-}
-template<typename T>
-inline static T TwoProductFMA(T a, T b, T &d) {
-    T p = a * b;
-#ifdef _WITHOUT_VCL
-    d = a*b-p;
-#else
-    d = vcl::mul_sub_x(a, b, p); //extra precision even if FMA is not available
-#endif//_WITHOUT_VCL
-    return p;
-}
-
-// Knuth 2Sum with FMAs
-template<typename T>
-inline static T FMA2Sum(T a, T b, T & s)
-{
-#ifndef _WITHOUT_VCL
-    T r = a + b;
-    T z = vcl::mul_sub(1., r, a);
-    s = vcl::mul_add(1., a - vcl::mul_sub(1., r, z), b - z);
-    return r;
-#else
-    T r = a + b;
-    T z = r - a;
-    s = (a - (r - z)) + (b - z);
-    return r;
-#endif//_WITHOUT_VCL
-}
-
 template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE
 void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
 {
@@ -162,28 +116,13 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
 template<typename T, int N, typename TRAITS>
 T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
 {
-//#if INSTRSET > 7                       // AVX2 and later
-	// Assume Haswell-style architecture with parallel Add and FMA pipelines
-	return FMA2Sum(a, b, s);
-//#else
-    //if(TRAITS::Biased2Sum) {
-    //    return BiasedSIMD2Sum(a, b, s);
-    //}
-    //else {
-    //    return KnuthTwoSum(a, b, s);
-    //}
-//#endif
+	return KnuthTwoSum(a, b, s);
 }
 
 template<typename T, int N, typename TRAITS>
 void FPExpansionVect<T,N,TRAITS>::Swap(T & x1, T & x2)
 {
-    //if(TRAITS::ConditionalSwap) {
-    //    swap_if_nonzero(x1, x2);
-    //}
-    //else {
-        std::swap(x1, x2);
-    //}
+    std::swap(x1, x2);
 }
 
 template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE
@@ -245,10 +184,6 @@ void FPExpansionVect<T,N,TRAITS>::Insert(T & x1, T & x2)
         Swap(x2, a[1]);
     }
 }
-
-#undef IACA
-#undef IACA_START
-#undef IACA_END
 
 template<typename T, int N, typename TRAITS>
 void FPExpansionVect<T,N,TRAITS>::Flush()

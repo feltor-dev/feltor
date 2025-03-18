@@ -15,7 +15,7 @@
 #include "refined_gridX.h"
 //#include "cartesianX.h"
 #ifdef MPI_VERSION
-#include "mpi_base.h"
+#include "mpi_base_geometry.h"
 #endif//MPI_VERSION
 #include "tensor.h"
 #include "transform.h"

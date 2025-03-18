@@ -8,10 +8,8 @@
 #define FELTORPERP 1
 
 #ifdef WRITE_POL_FILE
-int ncid_pol;
-int dim_ids_pol[3];
 int counter = 0;
-dg::file::NC_Error_Handle err_pol;
+dg::file::NcFile file_pol;
 #endif // WRITE_POL_FILE
 
 
@@ -270,12 +268,19 @@ struct Explicit
                 swap( temp0, temp1);
                 dg::blas2::symv( 1., m_lapperpU, temp1, 0., temp0);
             }
-            dg::blas1::pointwiseDivide( -alpha*m_p.nu_perp_u, temp0, density, beta, result);
+            if( !m_p.modify_diff)
+                dg::blas1::pointwiseDivide( -alpha*m_p.nu_perp_u, temp0, density, beta, result);
+            else
+                dg::blas1::axpby( -alpha*m_p.nu_perp_u, temp0, beta, result);
         }
         else
             dg::blas1::scal( result, beta);
-        if( m_p.nu_perp_n > 0)
+        double nu = m_p.nu_perp_n;
+        if( m_p.modify_diff)
+            nu += m_p.nu_perp_u;
+        if( nu > 0 )
         {
+
             dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
             for( unsigned s=0; s<m_p.diff_order-1; s++)
             {
@@ -291,7 +296,7 @@ struct Explicit
                 dg::blas2::symv( m_dxF_N, temp0, temp1);
             else
                 dg::blas2::symv( m_dxB_N, temp0, temp1);
-            dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
+            dg::blas1::pointwiseDivide( -nu, temp1, density, 0., temp1);
             dg::blas2::symv( m_dxB_U, velocity, temp2);
             dg::blas2::symv( m_dxF_U, velocity, temp3);
             dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
@@ -303,13 +308,39 @@ struct Explicit
                 dg::blas2::symv( m_dyF_N, temp0, temp1);
             else
                 dg::blas2::symv( m_dyB_N, temp0, temp1);
-            dg::blas1::pointwiseDivide( -m_p.nu_perp_n, temp1, density, 0., temp1);
+            dg::blas1::pointwiseDivide( -nu, temp1, density, 0., temp1);
             dg::blas2::symv( m_dyB_U, velocity, temp2);
             dg::blas2::symv( m_dyF_U, velocity, temp3);
             dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
                     temp1, temp2, temp3);
         }
     }
+
+    void compute_parallel_diffusiveN( int i, Container& result)
+    {
+        dg::blas1::axpby( m_p.nu_parallel_n, lapParN(i), 0., result);
+    }
+    void compute_parallel_diffusiveU( int i, Container& result)
+    {
+        double nu = m_p.nu_parallel_n;
+        if( m_p.modify_diff)
+            nu += m_p.nu_parallel_u[i];
+        if( nu > 0)
+        {
+            dg::blas1::pointwiseDot( dsN(i), dsU(i), result);
+            dg::blas1::pointwiseDivide( nu, result, density(1), 0., result);
+        }
+        else
+            dg::blas1::copy( 0, result);
+        if( m_p.nu_parallel_u[i] > 0)
+        {
+            if( !m_p.modify_diff)
+                dg::blas1::pointwiseDivide( m_p.nu_parallel_u[i], lapParU(i), density(i), 1., result);
+            else
+                dg::blas1::axpby( m_p.nu_parallel_u[i], lapParU(i), 1., result);
+        }
+    }
+
 
     // Compute divergence using centered derivatives
     // note that no matter how divergence is computed you always loose one order
@@ -826,6 +857,15 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
     construct_invert( g, p, mag);
+#ifdef MPI_VERSION
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
+    if( m_p.modify_diff)
+        DG_RANK0 std::cout << "# Optional parameter \"modify-diff\" activated\n";
+    if( m_p.no_diff_penalization)
+        DG_RANK0 std::cout << "# Optional parameter \"no-diff-penalization\" activated\n";
+
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -943,26 +983,16 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         counter++;
     if( counter == 10)
     {
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        dg::x::HVec transferH;
-        int vecID;
-        std::string names [6] = {"chi", "sol", "rhs", "ne", "Ni", "phiH"};
-        const Container* vecs [6] = {&m_multi_chi[0], &phi, &m_temp0, &density[0], &density[1], &m_old_phi.head()};
-        for ( unsigned i=0; i<6; i++)
-        {
-            DG_RANK0 err_pol = nc_def_var( ncid_pol, names[i].data(), NC_DOUBLE, 3,
-                        dim_ids_pol, &vecID);
-            dg::assign (*(vecs[i]), transferH);
-            dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
-        }
-        DG_RANK0 err_pol = nc_def_var( ncid_pol, "phi0", NC_DOUBLE, 3,
-                    dim_ids_pol, &vecID);
+        typename dg::file::NcFile::Hyperslab slab( m_multigrid.grid(0));
+        pol_file.defput_var( "chi",  {"z","y","x"}, {}, slab, m_multi_chi[0]);
+        pol_file.defput_var( "sol",  {"z","y","x"}, {}, slab, phi);
+        pol_file.defput_var( "rhs",  {"z","y","x"}, {}, slab, m_temp0);
+        pol_file.defput_var( "ne",   {"z","y","x"}, {}, slab, density[0]);
+        pol_file.defput_var( "Ni",   {"z","y","x"}, {}, slab, density[1]);
+        pol_file.defput_var( "phiH", {"z","y","x"}, {}, slab, m_old_phi.head());
         m_old_phi.extrapolate( time, phi);
-        dg::assign ( phi, transferH);
-        dg::file::put_var_double( ncid_pol, vecID, m_fa.grid(), transferH);
-        DG_RANK0 err_pol = nc_close(ncid_pol);
-        MPI_Barrier( MPI_COMM_WORLD);
+        pol_file.defput_var( "phi0",  {"z","y","x"}, {}, slab, phi);
+        pol_file.close();
         dg::abort_program();
     }
 #endif // WRITE_POL_FILE
@@ -1845,13 +1875,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
     double beta,
     std::array<Container,2>& yp)
 {
-#if FELTORPERP == 1
-    for( unsigned i=0; i<2; i++)
-        compute_perp_diffusiveN( 1., density[i], m_temp0,
-                m_temp1, beta, yp[i]);
-#else
     dg::blas1::scal( yp, beta);
-#endif
 #if FELTORPARALLEL == 1
     for( unsigned i=0; i<2; i++)
     {
@@ -1862,11 +1886,28 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
         }
     }
 #endif
-    for( unsigned i=0; i<2; i++)
+    if( m_p.no_diff_penalization)
     {
-        multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
-        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
-            -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
+                -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
+        }
+    }
+#if FELTORPERP == 1
+    for( unsigned i=0; i<2; i++)
+        compute_perp_diffusiveN( 1., density[i], m_temp0,
+                m_temp1, 1., yp[i]);
+#endif
+    if( !m_p.no_diff_penalization)
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
+                -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
+        }
     }
 }
 
@@ -1879,17 +1920,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
     double beta,
     std::array<Container,N>& yp)
 {
+    dg::blas1::scal( yp, beta);
     // velocityST[0] := u_e^dagger
     // velocityST[1] := U_i^dagger
-#if FELTORPERP == 1
-    for( unsigned i=0; i<2; i++)
-    {
-        compute_perp_diffusiveU( 1., velocityST[i], densityST[i], m_temp0,
-                m_temp1, m_dFU[i][0], m_dFU[i][1], beta, yp[i]);
-    }
-#else
-    dg::blas1::scal( yp, beta);
-#endif
 #if FELTORPARALLEL == 1
     for( unsigned i=0; i<2; i++)
     {
@@ -1898,13 +1931,18 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         {
             dg::geo::dssd_centered( m_fa, m_p.nu_parallel_u[i],
                     m_minusU[i], m_zeroU[i], m_plusU[i], 0., m_temp0);
-            dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
+            if( !m_p.modify_diff)
+                dg::blas1::pointwiseDivide( 1., m_temp0, densityST[i], 1., yp[i]);
+            else
+                dg::blas1::axpby( 1., m_temp0, 1., yp[i]);
         }
-        if( m_p.nu_parallel_n > 0)
+        double nu = m_p.nu_parallel_n;
+        if( m_p.modify_diff)
+            nu += m_p.nu_parallel_u[i];
+        if( nu > 0)
         {
             // Add density gradient correction
             double delta = m_fa.deltaPhi();
-            double nu = m_p.nu_parallel_n;
             dg::blas1::subroutine( [delta, nu]DG_DEVICE ( double& WDot,
                         double QN, double PN, double UM, double U0, double UP,
                         double bphi)
@@ -1924,11 +1962,30 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
         }
     }
 #endif
+    if( m_p.no_diff_penalization)
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
+                -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
+        }
+    }
+#if FELTORPERP == 1
     for( unsigned i=0; i<2; i++)
     {
-        multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
-        dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
-            -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
+        compute_perp_diffusiveU( 1., velocityST[i], densityST[i], m_temp0,
+                m_temp1, m_dFU[i][0], m_dFU[i][1], 1., yp[i]);
+    }
+#endif
+    if( !m_p.no_diff_penalization)
+    {
+        for( unsigned i=0; i<2; i++)
+        {
+            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
+                -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
+        }
     }
 }
 

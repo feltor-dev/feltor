@@ -24,13 +24,11 @@ namespace dg
 * @return The  tensor product
 */
 template< class T>
-Operator<T> tensorproduct( const Operator<T>& op1, const Operator<T>& op2)
+SquareMatrix<T> tensorproduct( const SquareMatrix<T>& op1, const SquareMatrix<T>& op2)
 {
-#ifdef DG_DEBUG
     assert( op1.size() == op2.size());
-#endif //DG_DEBUG
     unsigned n = op1.size();
-    Operator<T> prod( n*n);
+    SquareMatrix<T> prod( n*n);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
             for( unsigned k=0; k<n; k++)
@@ -54,12 +52,12 @@ op &   &   &   &   & \\
 * Can be used to create tensors that operate on each dg-vector entry
 * @tparam T value type
 * @param N Size of the identity (=number of times op is repeated in the matrix)
-* @param op The Operator
+* @param op The SquareMatrix
 * @return A newly allocated cusp matrix (of size  <tt> N*op.size()</tt> )
 * @sa fast_transform
 */
 template< class T>
-cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Operator<T>& op)
+cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const SquareMatrix<T>& op)
 {
     assert( N>0);
     unsigned n = op.size();
@@ -94,7 +92,7 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Oper
  * @return A newly allocated cusp matrix
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const Operator<T>& right)
+cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const SquareMatrix<T>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const SquareMatrix<T>& right)
 {
     assert( left.size() == right.size());
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;

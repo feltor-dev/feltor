@@ -7,7 +7,7 @@
 namespace dg
 {
 
-///@addtogroup basicgeometry
+///@addtogroup basicXgeometry
 ///@{
 
 /**
@@ -36,7 +36,7 @@ struct aRealGeometryX2d : public aRealTopologyX2d<real_type>
     using aRealTopologyX2d<real_type>::aRealTopologyX2d;
     ///@copydoc aRealTopologyX2d::aRealTopologyX2d(const aRealTopologyX2d&)
     aRealGeometryX2d( const aRealGeometryX2d& src) = default;
-    ///@copydoc aRealTopologyX2d::operator=(const aRealTopologyX2d&)
+    ///@copydoc aRealTopologyX2d::operator=
     aRealGeometryX2d& operator=( const aRealGeometryX2d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
@@ -81,7 +81,7 @@ struct aRealGeometryX3d : public aRealTopologyX3d<real_type>
     using aRealTopologyX3d<real_type>::aRealTopologyX3d;
     ///@copydoc aRealTopologyX3d::aRealTopologyX3d(const aRealTopologyX3d&)
     aRealGeometryX3d( const aRealGeometryX3d& src) = default;
-    ///@copydoc aRealTopologyX3d::operator=(const aRealTopologyX3d&)
+    ///@copydoc aRealTopologyX3d::operator=
     aRealGeometryX3d& operator=( const aRealGeometryX3d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
@@ -99,10 +99,6 @@ struct aRealGeometryX3d : public aRealTopologyX3d<real_type>
     }
 };
 
-///@}
-
-///@addtogroup geometry
-///@{
 
 /**
  * @brief two-dimensional GridX with RealCartesian metric
@@ -110,7 +106,8 @@ struct aRealGeometryX3d : public aRealTopologyX3d<real_type>
 template<class real_type>
 struct RealCartesianGridX2d: public dg::aRealGeometryX2d<real_type>
 {
-    ///@copydoc GridX2d::GridX2d()
+    ///@copydoc hide_gridX_parameters2d
+    ///@copydoc hide_bc_parameters2d
     RealCartesianGridX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometryX2d<real_type>(x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy){}
     /**
      * @brief Construct from existing topology
@@ -128,7 +125,8 @@ struct RealCartesianGridX2d: public dg::aRealGeometryX2d<real_type>
 template<class real_type>
 struct RealCartesianGridX3d: public dg::aRealGeometryX3d<real_type>
 {
-    ///@copydoc GridX3d::GridX3d()
+    ///@copydoc hide_gridX_parameters3d
+    ///@copydoc hide_bc_parameters3d
     RealCartesianGridX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aRealGeometryX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Implicit type conversion from GridX3d
@@ -140,30 +138,6 @@ struct RealCartesianGridX3d: public dg::aRealGeometryX3d<real_type>
     }
 };
 ///@}
-
-///@copydoc pullback(const Functor&,const aRealGeometry2d&)
-///@ingroup pullback
-template< class Functor, class real_type>
-thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX2d<real_type>& g)
-{
-    std::vector<thrust::host_vector<real_type> > map = g.map();
-    thrust::host_vector<real_type> vec( g.size());
-    for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( map[0][i], map[1][i]);
-    return vec;
-}
-
-///@copydoc pullback(const Functor&,const aRealGeometry3d&)
-///@ingroup pullback
-template< class Functor, class real_type>
-thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX3d<real_type>& g)
-{
-    std::vector<thrust::host_vector<real_type> > map = g.map();
-    thrust::host_vector<real_type> vec( g.size());
-    for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( map[0][i], map[1][i], map[2][i]);
-    return vec;
-}
 
 ///@addtogroup gridtypes
 ///@{

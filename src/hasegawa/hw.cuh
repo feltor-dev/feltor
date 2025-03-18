@@ -10,7 +10,7 @@ namespace hw
 {
 
 
-template< class Geometry, class Matrix, class Container >
+template< class Geometry, class IMatrix, class Matrix, class Container >
 struct HW
 {
     using Vector = std::vector<Container>;
@@ -66,7 +66,7 @@ struct HW
     //matrices and solvers
     dg::ArakawaX< Geometry, Matrix, Container> arakawa; 
     dg::PCG<Container > pcg;
-    dg::Average<Container> average;
+    dg::Average<IMatrix, Container> average;
     dg::Elliptic<Geometry, Matrix, Container> A, laplaceM;
 
     const Container w2d;
@@ -81,12 +81,12 @@ struct HW
 
 };
 
-template< class Geometry, class Matrix, class Container>
-HW<Geometry,Matrix, Container>::HW( const Geometry& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
+template< class Geometry, class IMatrix, class Matrix, class Container>
+HW<Geometry, IMatrix, Matrix, Container>::HW( const Geometry& grid, double alpha, double g, double nu, double eps_pol, bool mhw ):
     chi( grid.size(), 0.), omega(chi), phi( chi), phi_old( chi), dyphi( chi),
     lapphiM(chi), lapy( 2, chi),  laplapy( lapy),
-    arakawa( grid), 
-    pcg( omega, omega.size()), 
+    arakawa( grid),
+    pcg( omega, omega.size()),
     average( grid,dg::coo2d::y),
     A( grid,  dg::centered), laplaceM( grid,  dg::centered),
     w2d( dg::create::weights(grid)),
@@ -96,8 +96,8 @@ HW<Geometry,Matrix, Container>::HW( const Geometry& grid, double alpha, double g
 }
 
 //computes and modifies expy!!
-template<class G, class M, class Container>
-const Container& HW<G, M, Container>::polarisation( const std::vector<Container>& y)
+template<class G, class IM, class M, class Container>
+const Container& HW<G, IM, M, Container>::polarisation( const std::vector<Container>& y)
 {
     //extrapolate phi and gamma_n
     dg::blas1::axpby( 2., phi, -1.,  phi_old);
@@ -116,12 +116,12 @@ const Container& HW<G, M, Container>::polarisation( const std::vector<Container>
     std::cout<< "took \t"<<t.diff()<<"s\n";
     double meanPhi = dg::blas2::dot( phi, w2d, 1.);
     std::cout << "Mean phi "<<meanPhi<<"\n";
-#endif //DG_DEBUG
+#endif //DG_BENCHMARK
     return phi;
 }
 
-template< class G, class M, class Container>
-void HW< G, M, Container>::operator()( double t, const std::vector<Container>& y, std::vector<Container>& yp)
+template< class G, class IM, class M, class Container>
+void HW< G, IM, M, Container>::operator()( double t, const std::vector<Container>& y, std::vector<Container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

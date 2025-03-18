@@ -12,7 +12,7 @@ all: esol esol_hpc esol_mpi
 
 esol: esol.cu esol.h init.h diag.h parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK  -g
-	
+
 esol_hpc: esol.cu esol.h init.h diag.h parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK -DWITHOUT_GLFW
 

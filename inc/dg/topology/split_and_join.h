@@ -13,6 +13,8 @@
 
 namespace dg
 {
+    // TODO The only place this is tested implicitly is in fieldaligned and mpi_fieldaligned ?!
+    // And in elliptic_mpib
 
 ///@addtogroup scatter
 ///@{
@@ -29,9 +31,9 @@ namespace dg
 template<class SharedContainer, class real_type>
 void split( SharedContainer& in, std::vector<View<SharedContainer>>& out, const aRealTopology3d<real_type>& grid)
 {
-    assert( out.size() == grid.nz()*grid.Nz());
-    unsigned size2d=grid.nx()*grid.ny()*grid.Nx()*grid.Ny();
-    for(unsigned i=0; i<grid.nz()*grid.Nz(); i++)
+    assert( out.size() == grid.shape(2));
+    unsigned size2d=grid.shape(0)*grid.shape(1);
+    for(unsigned i=0; i<grid.shape(2); i++)
         out[i].construct( thrust::raw_pointer_cast(in.data()) + i*size2d, size2d);
 }
 
@@ -47,10 +49,9 @@ template<class SharedContainer, class real_type>
 std::vector<View<SharedContainer>> split( SharedContainer& in, const aRealTopology3d<real_type>& grid)
 {
     std::vector<View<SharedContainer>> out;
-    RealGrid3d<real_type> l( grid);
-    unsigned size2d=l.nx()*l.ny()*l.Nx()*l.Ny();
-    out.resize( l.nz()*l.Nz());
-    for(unsigned i=0; i<l.nz()*l.Nz(); i++)
+    unsigned size2d=grid.shape(0)*grid.shape(1);
+    out.resize( grid.shape(2));
+    for(unsigned i=0; i<grid.shape(2); i++)
         out[i].construct( thrust::raw_pointer_cast(in.data()) + i*size2d, size2d);
     return out;
 }
@@ -58,22 +59,19 @@ std::vector<View<SharedContainer>> split( SharedContainer& in, const aRealTopolo
 /**
  * @brief Construct a 3d vector given a 2d host vector
  *
- * Conceptually the same as a split of the out vector followed by assigning
- * the input to each plane
+ * A shortcut for
+ * @code{.cpp}
+    out = dg::construct<Container>(dg::kronecker ( dg::cooX2d, in2d, grid.abscissas(2)));
+ * @endcode
  * @param in2d the 2d input
  * @param out output (memory will be allocated)
  * @param grid provide dimensions in 3rd and first two dimensions
  */
-template<class Container, class real_type>
-void assign3dfrom2d( const thrust::host_vector<real_type>& in2d, Container&
-        out, const aRealTopology3d<real_type>& grid)
+template<class Container, class host_vector, class Topology>
+void assign3dfrom2d( const host_vector& in2d, Container&
+        out, const Topology& grid)
 {
-    thrust::host_vector<real_type> vector( grid.size());
-    std::vector<dg::View< thrust::host_vector<real_type>>> view =
-        dg::split( vector, grid); //3d vector
-    for( unsigned i=0; i<grid.nz()*grid.Nz(); i++)
-        dg::blas1::copy( in2d, view[i]);
-    dg::assign( vector, out);
+    out = dg::construct<Container>(dg::kronecker ( dg::cooX2d, in2d, grid.abscissas(2)));
 }
 
 
@@ -103,8 +101,8 @@ void split( MPIContainer& in, std::vector<get_mpi_view_type<MPIContainer> >&
 {
     //local size2d
     RealGrid3d<real_type> l = grid.local();
-    unsigned size2d=l.nx()*l.ny()*l.Nx()*l.Ny();
-    for(unsigned i=0; i<l.nz()*l.Nz(); i++)
+    unsigned size2d=l.shape(0)*l.shape(1);
+    for(unsigned i=0; i<l.shape(2); i++)
     {
         out[i].data().construct( thrust::raw_pointer_cast(in.data().data()) +
             i*size2d, size2d);
@@ -127,42 +125,20 @@ std::vector<get_mpi_view_type<MPIContainer> > split(
     int result;
     MPI_Comm_compare( in.communicator(), grid.communicator(), &result);
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-    MPI_Comm planeComm = grid.get_perp_comm(), comm_mod, comm_mod_reduce;
-    exblas::mpi_reduce_communicator( planeComm, &comm_mod, &comm_mod_reduce);
+    MPI_Comm planeComm = grid.get_perp_comm();
     //local size2d
     RealGrid3d<real_type> l = grid.local();
-    unsigned size2d=l.nx()*l.ny()*l.Nx()*l.Ny();
-    out.resize( l.nz()*l.Nz());
-    for(unsigned i=0; i<l.nz()*l.Nz(); i++)
+    unsigned size2d=l.shape(0)*l.shape(1);
+    out.resize( l.shape(2));
+    for(unsigned i=0; i<l.shape(2); i++)
     {
         out[i].data().construct( thrust::raw_pointer_cast(in.data().data())
             + i*size2d, size2d);
-        out[i].set_communicator( planeComm, comm_mod, comm_mod_reduce);
+        out[i].set_communicator( planeComm);
     }
     return out;
 }
 
-/**
- * @brief MPI Version of assign3dfrom2d
- *
- * Conceptually the same as a split of the out vector followed by assigning
- * the input to each plane
- * @param in2d the 2d input (communicator is ignored)
- * @param out output (memory will be allocated)
- * @param grid provide dimensions in 3rd and first two dimensions
- */
-template<class LocalContainer, class real_type>
-void assign3dfrom2d( const MPI_Vector<thrust::host_vector<real_type>>& in2d,
-        MPI_Vector<LocalContainer>& out,
-        const aRealMPITopology3d<real_type>& grid)
-{
-    MPI_Vector<thrust::host_vector<real_type>> vector = dg::evaluate( dg::zero, grid);
-    std::vector<MPI_Vector<dg::View<thrust::host_vector<real_type>>> > view =
-        dg::split( vector, grid); //3d vector
-    for( unsigned i=0; i<grid.nz()*grid.local().Nz(); i++)
-        dg::blas1::copy( in2d, view[i]);
-    dg::assign( vector, out);
-}
 #endif //MPI_VERSION
 
 ///@}

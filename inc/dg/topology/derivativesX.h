@@ -76,49 +76,27 @@ namespace create{
 /**
  * @brief Create 2d derivative in x-direction
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative)
  * @param g The grid on which to create dx
- * @param bcx The boundary condition
+ * @param bc The boundary condition
  * @param dir The direction of the first derivative
  *
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX2d<real_type>& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > derivative( unsigned coord, const aRealTopologyX2d<real_type>& g, dg::bc bc, direction dir = centered)
 {
-    EllSparseBlockMat<real_type>  dx;
-    dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.set_left_size( g.n()*g.Ny());
-    return dx;
-}
-
-/**
- * @brief Create 2d derivative in x-direction
- *
- * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX2d<real_type>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
-
-/**
- * @brief Create 2d derivative in y-direction
- *
- * @param g The grid on which to create dy
- * @param bcy The boundary condition
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX2d<real_type>& g, bc bcy, direction dir = centered)
-{
-    EllSparseBlockMat<real_type>  dy_inner, dy_outer;
-    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    dy_inner = dx( g1d_inner, bcy, dir);
-    dy_outer = dx( g1d_outer, bcy, dir);
+    if( coord == 0)
+    {
+        EllSparseBlockMat<real_type, thrust::host_vector>  dx;
+        dx = dx_normed( g.n(), g.Nx(), g.hx(), bc, dir);
+        dx.set_left_size( g.n()*g.Ny());
+        return dx;
+    }
+    EllSparseBlockMat<real_type, thrust::host_vector>  dy_inner, dy_outer;
+    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
+    dy_inner = dx( g1d_inner, bc, dir);
+    dy_outer = dx_normed( g.n(), g.Ny(), g.hy(), bc, dir );
     dy_inner.right_size = g.n()*g.Nx();
     dy_inner.right_range[0] = 0;
     dy_inner.right_range[1] = g.n()*g.inner_Nx();
@@ -126,54 +104,34 @@ Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX2d<real_type>& 
     dy_outer.right_range[1] = g.n()*g.Nx();
     dy_outer.right_size = g.n()*g.Nx();
 
-    Composite<EllSparseBlockMat<real_type> > c( dy_inner, dy_outer);
+    Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( dy_inner, dy_outer);
     return c;
+    // TODO throw on coord > 1 ?
 }
-
-/**
- * @brief Create 2d derivative in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX2d<real_type>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms in X direction
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative)
  * @param g grid
- * @param bcx boundary condition in x
+ * @param bc boundary condition in x
  *
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX2d<real_type>& g, bc bcx)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > jump( unsigned coord, const aRealTopologyX2d<real_type>& g, bc bc)
 {
-    EllSparseBlockMat<real_type>  jx;
-    jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.set_left_size( g.n()*g.Ny());
-    return jx;
-}
-
-/**
- * @brief Matrix that contains 2d jump terms in Y direction
- *
- * @param g grid
- * @param bcy boundary condition in y
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX2d<real_type>& g, bc bcy)
-{
-    EllSparseBlockMat<real_type>  jy_inner, jy_outer;
-    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    jy_inner = jump( g1d_inner, bcy);
-    jy_outer = jump( g1d_outer, bcy);
+    if( coord == 0)
+    {
+        EllSparseBlockMat<real_type, thrust::host_vector>  jx;
+        jx = jump( g.n(), g.Nx(), g.hx(), bc);
+        jx.set_left_size( g.n()*g.Ny());
+        return jx;
+    }
+    EllSparseBlockMat<real_type, thrust::host_vector>  jy_inner, jy_outer;
+    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
+    jy_inner = jump( g1d_inner, bc);
+    jy_outer = jump( g.n(), g.Ny(), g.hy(), bc);
     jy_inner.right_size = g.n()*g.Nx();
     jy_inner.right_range[0] = 0;
     jy_inner.right_range[1] = g.n()*g.inner_Nx();
@@ -181,240 +139,101 @@ Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX2d<real_type
     jy_outer.right_range[1] = g.n()*g.Nx();
     jy_outer.right_size = g.n()*g.Nx();
 
-    Composite<EllSparseBlockMat<real_type> > c( jy_inner, jy_outer);
+    Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( jy_inner, jy_outer);
     return c;
-}
-
-/**
- * @brief Matrix that contains 2d jump terms in X direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX2d<real_type>& g)
-{
-    return jumpX( g, g.bcx());
-}
-
-/**
- * @brief Matrix that contains 2d jump terms in Y direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX2d<real_type>& g)
-{
-    return jumpY( g, g.bcy());
+    // TODO throw on coord > 1 ?
 }
 
 ///////////////////////////////////////////3D VERSIONS//////////////////////
-//jumpX, jumpY, jumpZ, dx, dy, dz
 /**
  * @brief Matrix that contains jump terms in X direction in 3D
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative) or 2 (for z derivative)
  * @param g The 3D grid
- * @param bcx boundary condition in x
+ * @param bc boundary condition
  *
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX3d<real_type>& g, bc bcx)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > jump( unsigned coord, const aRealTopologyX3d<real_type>& g, bc bc)
 {
-    EllSparseBlockMat<real_type>  jx;
-    jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.set_left_size( g.n()*g.Ny()*g.Nz());
-    return jx;
-}
+    if( coord == 0)
+    {
+        EllSparseBlockMat<real_type, thrust::host_vector>  jx;
+        jx = jump( g.n(), g.Nx(), g.hx(), bc);
+        jx.set_left_size( g.n()*g.Ny()*g.Nz());
+        return jx;
+    }
+    else if ( coord == 1)
+    {
+        EllSparseBlockMat<real_type, thrust::host_vector>  jy_inner, jy_outer;
+        RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
+        jy_inner = jump( g1d_inner, bc);
+        jy_outer = jump( g.n(), g.Ny(), g.hy(), bc);
+        jy_inner.right_size = g.n()*g.Nx();
+        jy_inner.right_range[0] = 0;
+        jy_inner.right_range[1] = g.n()*g.inner_Nx();
+        jy_outer.right_range[0] = g.n()*g.inner_Nx();
+        jy_outer.right_range[1] = g.n()*g.Nx();
+        jy_outer.right_size = g.n()*g.Nx();
+        jy_inner.left_size = g.Nz();
+        jy_outer.left_size = g.Nz();
 
-/**
- * @brief Matrix that contains jump terms in Y direction in 3D
- *
- * @param g The 3D grid
- * @param bcy boundary condition in y
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX3d<real_type>& g, bc bcy)
-{
-    EllSparseBlockMat<real_type>  jy_inner, jy_outer;
-    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    jy_inner = jump( g1d_inner, bcy);
-    jy_outer = jump( g1d_outer, bcy);
-    jy_inner.right_size = g.n()*g.Nx();
-    jy_inner.right_range[0] = 0;
-    jy_inner.right_range[1] = g.n()*g.inner_Nx();
-    jy_outer.right_range[0] = g.n()*g.inner_Nx();
-    jy_outer.right_range[1] = g.n()*g.Nx();
-    jy_outer.right_size = g.n()*g.Nx();
-    jy_inner.left_size = g.Nz();
-    jy_outer.left_size = g.Nz();
-
-    Composite<EllSparseBlockMat<real_type> > c( jy_inner, jy_outer);
-    return c;
-}
-
-/**
- * @brief Matrix that contains jump terms in Z direction in 3D
- *
- * @param g The 3D grid
- * @param bcz boundary condition in z
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpZ( const aRealTopologyX3d<real_type>& g, bc bcz)
-{
-    EllSparseBlockMat<real_type>  jz;
-    jz = jump( 1, g.Nz(), g.hz(), bcz);
+        Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( jy_inner, jy_outer);
+        return c;
+    }
+    EllSparseBlockMat<real_type, thrust::host_vector>  jz;
+    jz = jump( 1, g.Nz(), g.hz(), bc);
     jz.set_right_size( g.n()*g.Nx()*g.n()*g.Ny());
     return jz;
-}
-
-/**
- * @brief Matrix that contains 3d jump terms in X direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX3d<real_type>& g)
-{
-    return jumpX( g, g.bcx());
-}
-
-/**
- * @brief Matrix that contains 3d jump terms in Y direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX3d<real_type>& g)
-{
-    return jumpY( g, g.bcy());
-}
-
-/**
- * @brief Matrix that contains 3d jump terms in Z direction taking boundary conditions from the grid
- *
- * @param g grid
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpZ( const aRealTopologyX3d<real_type>& g)
-{
-    return jumpZ( g, g.bcz());
+    // TODO throw on coord > 2 ?
 }
 
 
 /**
  * @brief Create 3d derivative in x-direction
  *
+ * @param coord Either 0 (for x derivative) or 1 (for y derivative) or 2 (for z derivative)
  * @param g The grid on which to create dx
- * @param bcx The boundary condition
+ * @param bc The boundary condition
  * @param dir The direction of the first derivative
  *
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX3d<real_type>& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat<real_type, thrust::host_vector> > derivative( unsigned coord, const aRealTopologyX3d<real_type>& g, bc bc, direction dir = centered)
 {
-    EllSparseBlockMat<real_type>  dx;
-    dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.set_left_size( g.n()*g.Ny()*g.Nz());
-    return dx;
-}
+    if( coord == 0)
+    {
+        EllSparseBlockMat<real_type, thrust::host_vector>  dx;
+        dx = dx_normed( g.n(), g.Nx(), g.hx(), bc, dir);
+        dx.set_left_size( g.n()*g.Ny()*g.Nz());
+        return dx;
+    }
+    else if( coord == 1)
+    {
+        EllSparseBlockMat<real_type, thrust::host_vector>  dy_inner, dy_outer;
+        RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bc);
+        dy_inner = dx( g1d_inner, bc, dir);
+        dy_outer = dx_normed( g.n(), g.Ny(), g.hy(), bc, dir );
+        dy_inner.right_size = g.n()*g.Nx();
+        dy_inner.right_range[0] = 0;
+        dy_inner.right_range[1] = g.n()*g.inner_Nx();
+        dy_outer.right_range[0] = g.n()*g.inner_Nx();
+        dy_outer.right_range[1] = g.n()*g.Nx();
+        dy_outer.right_size = g.n()*g.Nx();
+        dy_inner.left_size = g.Nz();
+        dy_outer.left_size = g.Nz();
 
-/**
- * @brief Create 3d derivative in x-direction
- *
- * @param g The grid on which to create dx (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX3d<real_type>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
-
-/**
- * @brief Create 3d derivative in y-direction
- *
- * @param g The grid on which to create dy
- * @param bcy The boundary condition
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX3d<real_type>& g, bc bcy, direction dir = centered)
-{
-    EllSparseBlockMat<real_type>  dy_inner, dy_outer;
-    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
-    dy_inner = dx( g1d_inner, bcy, dir);
-    dy_outer = dx( g1d_outer, bcy, dir);
-    dy_inner.right_size = g.n()*g.Nx();
-    dy_inner.right_range[0] = 0;
-    dy_inner.right_range[1] = g.n()*g.inner_Nx();
-    dy_outer.right_range[0] = g.n()*g.inner_Nx();
-    dy_outer.right_range[1] = g.n()*g.Nx();
-    dy_outer.right_size = g.n()*g.Nx();
-    dy_inner.left_size = g.Nz();
-    dy_outer.left_size = g.Nz();
-
-    Composite<EllSparseBlockMat<real_type> > c( dy_inner, dy_outer);
-    return c;
-}
-
-/**
- * @brief Create 3d derivative in y-direction
- *
- * @param g The grid on which to create dy (boundary condition is taken from here)
- * @param dir The direction of the first derivative
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX3d<real_type>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
-
-/**
- * @brief Create 3d derivative in z-direction
- *
- * @param g The grid on which to create dz
- * @param bcz The boundary condition
- * @param dir The direction of the stencil
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dz( const aRealTopologyX3d<real_type>& g, bc bcz, direction dir = centered)
-{
-    EllSparseBlockMat<real_type>  dz;
-    dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
+        Composite<EllSparseBlockMat<real_type, thrust::host_vector> > c( dy_inner, dy_outer);
+        return c;
+    }
+    EllSparseBlockMat<real_type, thrust::host_vector>  dz;
+    dz = dx_normed( 1, g.Nz(), g.hz(), bc, dir);
     dz.set_right_size( g.n()*g.n()*g.Nx()*g.Ny());
     return dz;
-
+    // TODO throw on coord > 2 ?
 }
-
-/**
- * @brief Create 3d derivative in z-direction
- *
- * @param g The grid on which to create dz (boundary condition is taken from here)
- * @param dir The direction of the stencil
- *
- * @return A host matrix
- */
-template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dz( const aRealTopologyX3d<real_type>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 
 
 
