@@ -1,5 +1,7 @@
 
 #include <iostream>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
 #include "sparsematrix.h"
 #include "catch2/catch_all.hpp"
 
@@ -101,5 +103,35 @@ TEST_CASE( "Linear algebra")
         CHECK( C.row_offsets() == std::vector<int>{ 0,3,5,7});
         CHECK( C.column_indices() == std::vector<int>{ 0,3,4,0,2,1,4});
         CHECK( C.values() == std::vector<double>{ 0.5,1,1.5,1,2.5,2,0.5});
+    }
+}
+TEST_CASE( "SpMV on device")
+{
+    // 1 0 0 2 3
+    // 2 0 5 0 0
+    // 0 4 0 0 1
+    unsigned num_rows = 3, num_cols = 5;
+    std::vector<int> rows = {0,3,5,7}, cols = {0,3,4,0,2,1,4};
+    std::vector<double> vals = {1,2,3,2,5,4,1};
+    dg::SparseMatrix<int,double,thrust::host_vector> A ( num_rows, num_cols, rows, cols, vals);
+    dg::SparseMatrix<int,double, thrust::device_vector> dA( A);
+    SECTION( "gemv")
+    {
+        thrust::host_vector<double> v(5,2), w(3,0);
+        for( unsigned i=0; i<v.size(); i++)
+            v[i] = double(i+1);
+        thrust::device_vector<double> dv( v), dw( w);
+
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+        dA.symv( dg::SharedVectorTag(), dg::CudaTag(), 1., thrust::raw_pointer_cast( &dv[0]), 0., thrust::raw_pointer_cast( &dw[0]));
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
+        dA.symv( dg::SharedVectorTag(), dg::OmpTag(), 1., thrust::raw_pointer_cast( &dv[0]), 0., thrust::raw_pointer_cast( &dw[0]));
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP
+        dA.symv( dg::SharedVectorTag(), dg::SerialTag(), 1., thrust::raw_pointer_cast( &dv[0]), 0., thrust::raw_pointer_cast( &dw[0]));
+#endif
+        w = dw;
+        CHECK( w[0] == 24);
+        CHECK( w[1] == 17);
+        CHECK( w[2] == 13);
     }
 }

@@ -43,6 +43,15 @@ struct SparseMatrix
     {
     }
 
+    template< class I, class V, template<class> class Vec>
+    friend class SparseMatrix; // enable copy
+    template< class I, class V, template<class> class Vec>
+    SparseMatrix( const SparseMatrix<I,V,Vec>& src)
+    : m_num_rows( src.m_num_rows), m_num_cols( src.m_num_cols), m_row_offsets(
+        src.m_row_offsets), m_cols( src.m_cols), m_vals( src.m_vals)
+    {
+    }
+
     void set( size_t num_rows, size_t num_cols, const Vector<Index>& row_offsets, const Vector<Index> cols, const Vector<Value>& vals)
     {
         m_num_rows = num_rows, m_num_cols = num_cols;
@@ -62,17 +71,24 @@ struct SparseMatrix
         detail::spmv_cpu_kernel( m_num_rows, m_row_offsets, m_cols, m_vals, alpha, beta, x, y);
     }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    private:
+    mutable detail::CusparseCSRCache m_cache;
+    public:
     template<class value_type>
-    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
-    //{
-    //    detail::spmv_gpu_kernel( m_num_rows, m_row_offsets, m_cols, m_vals, alpha, beta, x, y);
-    //}
+    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
+    {
+        const auto* val_ptr = thrust::raw_pointer_cast( &m_vals[0]);
+        const auto* row_ptr = thrust::raw_pointer_cast( &m_row_offsets[0]);
+        const auto* col_ptr = thrust::raw_pointer_cast( &m_cols[0]);
+        detail::spmv_gpu_kernel( m_cache, m_num_rows, m_num_cols,
+            m_vals.size(), row_ptr, col_ptr, val_ptr, alpha, beta, x, y);
+    }
 #elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
     template<class value_type>
-    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
-    //{
-    //    detail::spmv_omp_kernel( m_num_rows, m_row_offsets, m_cols, m_vals, alpha, beta, x, y);
-    //}
+    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
+    {
+        detail::spmv_omp_kernel( m_num_rows, m_row_offsets, m_cols, m_vals, alpha, beta, x, y);
+    }
 #endif
 
     /**
