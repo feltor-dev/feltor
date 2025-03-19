@@ -2,6 +2,7 @@
 #pragma once
 
 #include "tensor_traits.h"
+#include "predicate.h"
 #include "exceptions.h"
 #include "config.h"
 
@@ -37,6 +38,10 @@ I coo2csr( unsigned num_rows, const I& coo)
 template<class Index = int, class Value = double, template<class> class Vector = thrust::host_vector>
 struct SparseMatrix
 {
+    using policy = dg::get_execution_policy<Vector<Value>>;
+    template<class OtherMatrix>
+    using enable_if_serial = std::enable_if_t<std::is_same_v<typename OtherMatrix::policy, SerialTag>, OtherMatrix>;
+
     SparseMatrix() = default;
     SparseMatrix( size_t num_rows, size_t num_cols, Vector<Index> row_offsets, Vector<Index> cols, Vector<Value> vals)
     : m_num_rows( num_rows), m_num_cols( num_cols), m_row_offsets( row_offsets), m_cols(cols), m_vals(vals)
@@ -56,30 +61,40 @@ struct SparseMatrix
     {
         m_num_rows = num_rows, m_num_cols = num_cols;
         m_row_offsets = row_offsets, m_cols = cols, m_vals = vals;
+        // Since the matrix changed we need to forget cached performance information
+        m_cache.forget();
     }
 
+    size_t total_num_rows() const { return m_num_rows;}
+    size_t total_num_cols() const { return m_num_cols;}
     size_t num_rows() const { return m_num_rows;}
     size_t num_cols() const { return m_num_cols;}
     size_t num_vals() const { return m_vals.size();}
     const Vector<Index> & row_offsets() const { return m_row_offsets;}
     const Vector<Index> & column_indices() const { return m_cols;}
     const Vector<Value> & values() const { return m_vals;}
+    /*! @brief Values can be changed without influencing the performance cache
+     * @return Values array reference
+     */
+    Vector<Value> & values() { return m_vals;}
 
     template<class value_type>
     void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
     {
-        detail::spmv_cpu_kernel( m_num_rows, m_row_offsets, m_cols, m_vals, alpha, beta, x, y);
+        const auto* row_ptr = thrust::raw_pointer_cast( &m_row_offsets[0]);
+        const auto* col_ptr = thrust::raw_pointer_cast( &m_cols[0]);
+        const auto* val_ptr = thrust::raw_pointer_cast( &m_vals[0]);
+        detail::spmv_cpu_kernel( m_cache, m_num_rows, m_num_cols,
+            m_vals.size(), row_ptr, col_ptr, val_ptr, alpha, beta, x, y);
     }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    private:
-    mutable detail::CusparseCSRCache m_cache;
     public:
     template<class value_type>
     void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
     {
-        const auto* val_ptr = thrust::raw_pointer_cast( &m_vals[0]);
         const auto* row_ptr = thrust::raw_pointer_cast( &m_row_offsets[0]);
         const auto* col_ptr = thrust::raw_pointer_cast( &m_cols[0]);
+        const auto* val_ptr = thrust::raw_pointer_cast( &m_vals[0]);
         detail::spmv_gpu_kernel( m_cache, m_num_rows, m_num_cols,
             m_vals.size(), row_ptr, col_ptr, val_ptr, alpha, beta, x, y);
     }
@@ -87,16 +102,32 @@ struct SparseMatrix
     template<class value_type>
     void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
     {
-        detail::spmv_omp_kernel( m_num_rows, m_row_offsets, m_cols, m_vals, alpha, beta, x, y);
+        const auto* row_ptr = thrust::raw_pointer_cast( &m_row_offsets[0]);
+        const auto* col_ptr = thrust::raw_pointer_cast( &m_cols[0]);
+        const auto* val_ptr = thrust::raw_pointer_cast( &m_vals[0]);
+        if( !omp_in_parallel())
+        {
+            #pragma omp parallel
+            {
+                detail::spmv_omp_kernel( m_cache, m_num_rows, m_num_cols,
+                    m_vals.size(), row_ptr, col_ptr, val_ptr, alpha, beta, x, y);
+            }
+            return;
+        }
+        detail::spmv_omp_kernel( m_cache, m_num_rows, m_num_cols,
+            m_vals.size(), row_ptr, col_ptr, val_ptr, alpha, beta, x, y);
     }
 #endif
+    //
+    // We enable the following only for serial sparse matrices
 
     /**
     * @brief Transposition
     *
     * @return  A newly generated SparseMatrix containing the transpose.
     */
-    SparseMatrix transpose() const
+    template<class OtherMatrix = SparseMatrix>
+    enable_if_serial<OtherMatrix> transpose() const
     {
         SparseMatrix o(*this);
         auto coo = csr2coo(o.m_row_offsets);
@@ -111,7 +142,8 @@ struct SparseMatrix
      * @param rhs Matrix to be compared to this
      * @return true if rhs does not equal this
      */
-    bool operator!=( const SparseMatrix& rhs) const{
+    template<class OtherMatrix = SparseMatrix>
+    std::enable_if_t<dg::has_policy_v<OtherMatrix, SerialTag>, bool> operator!=( const SparseMatrix& rhs) const{
         if( rhs.m_num_rows != m_num_rows)
             return true;
         if( rhs.m_num_cols != m_num_cols)
@@ -133,14 +165,16 @@ struct SparseMatrix
      * @param rhs Matrix to be compared to this
      * @return true if rhs equals this
      */
-    bool operator==( const SparseMatrix& rhs) const {return !((*this != rhs));}
+    template<class OtherMatrix = SparseMatrix>
+    std::enable_if_t<dg::has_policy_v<OtherMatrix, SerialTag>, bool> operator==( const SparseMatrix& rhs) const {return !((*this != rhs));}
 
     /**
      * @brief subtract
      *
      * @return
      */
-    SparseMatrix operator-() const
+    template<class OtherMatrix = SparseMatrix>
+    enable_if_serial<OtherMatrix> operator-() const
     {
         SparseMatrix temp(*this);
         for( unsigned i=0; i<m_vals.size(); i++)
@@ -154,7 +188,8 @@ struct SparseMatrix
      *
      * @return
      */
-    SparseMatrix& operator+=( const SparseMatrix& op)
+    template<class OtherMatrix = SparseMatrix>
+    enable_if_serial<OtherMatrix>& operator+=( const SparseMatrix& op)
     {
         SparseMatrix tmp = *this + op;
         swap( tmp, *this);
@@ -166,7 +201,8 @@ struct SparseMatrix
      *
      * @return
      */
-    SparseMatrix& operator-=( const SparseMatrix& op)
+    template<class OtherMatrix = SparseMatrix>
+    enable_if_serial<OtherMatrix>& operator-=( const SparseMatrix& op)
     {
         SparseMatrix tmp = *this + (-op);
         swap( tmp, *this);
@@ -178,7 +214,8 @@ struct SparseMatrix
      *
      * @return
      */
-    SparseMatrix& operator*=( const Value& value )
+    template<class OtherMatrix = SparseMatrix>
+    enable_if_serial<OtherMatrix>& operator*=( const Value& value )
     {
         for( unsigned i=0; i<m_vals.size(); i++)
             m_vals[i] *= value;
@@ -192,7 +229,8 @@ struct SparseMatrix
      *
      * @return
      */
-    friend SparseMatrix operator+( const SparseMatrix& lhs, const SparseMatrix& rhs)
+    template<class OtherMatrix = SparseMatrix>
+    friend enable_if_serial<OtherMatrix> operator+( const SparseMatrix& lhs, const SparseMatrix& rhs)
     {
         if( lhs.m_num_cols != rhs.m_num_cols)
             throw dg::Error( dg::Message( _ping_) << "Error: cannot add matrix with "
@@ -219,7 +257,8 @@ struct SparseMatrix
      *
      * @return
      */
-    friend SparseMatrix operator-( const SparseMatrix& lhs, const SparseMatrix& rhs)
+    template<class OtherMatrix = SparseMatrix>
+    friend enable_if_serial<OtherMatrix> operator-( const SparseMatrix& lhs, const SparseMatrix& rhs)
     {
         SparseMatrix temp(lhs);
         temp-=rhs;
@@ -233,7 +272,8 @@ struct SparseMatrix
      *
      * @return
      */
-    friend SparseMatrix operator*( const Value& value, const SparseMatrix& rhs )
+    template<class OtherMatrix = SparseMatrix>
+    friend enable_if_serial<OtherMatrix> operator*( const Value& value, const SparseMatrix& rhs )
     {
         SparseMatrix temp(rhs);
         temp*=value;
@@ -248,7 +288,8 @@ struct SparseMatrix
      *
      * @return
      */
-    friend SparseMatrix operator*( const SparseMatrix& lhs, const Value& value)
+    template<class OtherMatrix = SparseMatrix>
+    friend enable_if_serial<OtherMatrix> operator*( const SparseMatrix& lhs, const Value& value)
     {
         return  value*lhs;
     }
@@ -261,7 +302,8 @@ struct SparseMatrix
      *
      * @return
      */
-    friend SparseMatrix operator*( const SparseMatrix& lhs, const SparseMatrix& rhs)
+    template<class OtherMatrix = SparseMatrix>
+    friend enable_if_serial<OtherMatrix> operator*( const SparseMatrix& lhs, const SparseMatrix& rhs)
     {
         if( lhs.m_num_cols != rhs.m_num_rows)
             throw dg::Error( dg::Message( _ping_) << "Error: cannot multiply matrix with "
@@ -282,22 +324,24 @@ struct SparseMatrix
     /**
      * @brief matrix-vector multiplication  \f$  y = S x\f$
      *
+     * Works if ContainerType has the same execution policy as the SparseMatrix
      * @snippet{trimleft} operator_t.cpp matvec
      * @param S Matrix
      * @param x Vector
      *
      * @return Vector
      */
-    friend Vector<Value> operator*( const SparseMatrix& S, const Vector<Value>& x)
+    template<class ContainerType, class = std::enable_if_t < dg::has_policy_v<ContainerType, policy> and dg::is_vector_v<ContainerType> >>
+    friend ContainerType operator*( const SparseMatrix& S, const ContainerType& x)
     {
         if( S.m_num_cols != x.size())
             throw dg::Error( dg::Message( _ping_) << "Error: cannot multiply matrix with "
                 <<S.m_num_cols<<" columns with vector with "<<x.size()<<" rows\n");
 
-        Vector<Value> out(S.m_num_rows);
+        ContainerType out(S.m_num_rows);
         const Value* RESTRICT x_ptr = thrust::raw_pointer_cast( x.data());
         Value* RESTRICT y_ptr = thrust::raw_pointer_cast( out.data());
-        S.symv( SharedVectorTag(), SerialTag(), Value(1), x_ptr, Value(0), y_ptr);
+        S.symv( SharedVectorTag(), policy(), Value(1), x_ptr, Value(0), y_ptr);
         return out;
     }
 
@@ -308,8 +352,9 @@ struct SparseMatrix
      * @param mat the matrix to output
      * @return the outstream
      */
-    template< class Ostream>
-    friend Ostream& operator<<(Ostream& os, const SparseMatrix& mat)
+    template< class Ostream, class OtherMatrix = SparseMatrix>
+    friend std::enable_if_t<dg::has_policy_v<OtherMatrix, SerialTag>, Ostream>
+        & operator<<(Ostream& os, const SparseMatrix& mat)
     {
         os << "Sparse Matrix with "<<mat.m_num_rows<<" rows and "<<mat.m_num_cols<<" columns\n";
         os << " # non-zeroes "<<mat.m_vals.size()<<"\n";
@@ -325,6 +370,18 @@ struct SparseMatrix
     }
 
     private:
+    // The task of the cache is to keep performance information across multiple calls to
+    // symv. The cache needs to forget said information any time the matrix changes
+    mutable std::conditional_t< std::is_same_v<policy, SerialTag>, detail::CSRCache_cpu,
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+            detail::CSRCache_gpu>
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
+            detail::CSRCache_omp>
+#else
+            detail::CSRCache_cpu>
+#endif
+            m_cache;
+
     size_t m_num_rows, m_num_cols;
     Vector<Index> m_row_offsets, m_cols;
     Vector<Value> m_vals;
@@ -337,6 +394,7 @@ struct TensorTraits<SparseMatrix<I, T, V> >
 {
     using value_type  = T;
     using tensor_category = SparseBlockMatrixTag;
+    using execution_policy = typename SparseMatrix<I,T,V>::policy;
 };
 ///@}
 }//namespace dg

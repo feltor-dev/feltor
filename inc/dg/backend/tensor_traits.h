@@ -8,7 +8,12 @@
 #include "matrix_categories.h"
 #include "execution_policy.h"
 
-// TODO make inclusion of tensor_traits easier if all you want is to use the full traits system in feltor
+// Q: Make inclusion of tensor_traits easier if all you want is to use the full traits system in feltor?
+// A: Some subtle issues:
+// - Do you want the thrust header? (And thus depend on thrust library?)
+// - Do you want all matrix traits as well?
+// - If so, do you want the sparsematrix.h which incurs -lcusparse dependency
+// In fact, it is possible to include tensor_traits.h as is and include the specialisation later when it is needed
 
 namespace dg{
 ///@addtogroup dispatch

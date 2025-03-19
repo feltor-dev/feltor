@@ -85,51 +85,52 @@ struct CusparseHandle
 inline bool cusparse_is_initialized = false;
 
 // https://docs.nvidia.com/cuda/cusparse/#cusparsespmv
-struct CusparseCSRCache
+struct CSRCache_gpu
 {
-    CusparseCSRCache() = default;
+    CSRCache_gpu() = default;
     template<class I, class V>
-    CusparseCSRCache(
+    CSRCache_gpu(
         size_t num_rows, size_t num_cols, size_t nnz,
         const I* pos , const I* idx, const V* val)
     {
         update( num_rows, num_cols, nnz, pos, idx, val);
     }
-    CusparseCSRCache( const CusparseCSRCache& src)
+    CSRCache_gpu( const CSRCache_gpu& src)
     {
         // Copying makes the cache inactive
     }
-    CusparseCSRCache( CusparseCSRCache&& src)
+    CSRCache_gpu( CSRCache_gpu&& src)
     {
         src.swap(*this);
     }
-    CusparseCSRCache& operator=( const CusparseCSRCache& src){
+    CSRCache_gpu& operator=( const CSRCache_gpu& src){
         if( &src != this)
         {
-            CusparseCSRCache tmp(src);
+            CSRCache_gpu tmp(src);
             tmp.swap( *this);
         }
         return *this;
     }
-    CusparseCSRCache& operator=( CusparseCSRCache&& src){
-        CusparseCSRCache tmp( std::move(src));
+    CSRCache_gpu& operator=( CSRCache_gpu&& src){
+        CSRCache_gpu tmp( std::move(src));
         tmp.swap(*this);
         return *this;
     }
-    ~CusparseCSRCache( )
+    ~CSRCache_gpu( )
     {
         if ( m_dBuffer != nullptr)
             cudaFree( m_dBuffer);
         if( m_active)
             cusparseDestroySpMat( m_matA);
     }
-    void swap( CusparseCSRCache& src)
+    void swap( CSRCache_gpu& src)
     {
         std::swap( m_active, src.m_active);
         std::swap( m_matA, src.m_matA);
         std::swap( m_dBuffer, src.m_dBuffer);
         std::swap( m_bufferSize, src.m_bufferSize);
     }
+    void forget() { m_active = false;}
     bool isUpToDate() const { return m_active;}
     template<class I, class V>
     void update(
@@ -155,7 +156,11 @@ struct CusparseCSRCache
         err = cusparseSpMV_bufferSize( CusparseHandle::getInstance().handle(),
             CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, m_matA, vecX, &beta, vecY,
             getCudaDataType<V>(), CUSPARSE_SPMV_CSR_ALG1, &bufferSize);
+        // Re-allocate buffer
+        if ( m_dBuffer != nullptr)
+            cudaFree( m_dBuffer);
         cudaMalloc( &m_dBuffer, bufferSize);
+
         m_active = true;
         err = cusparseSpMV_preprocess( CusparseHandle::getInstance().handle(),
             CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, m_matA, vecX, &beta, vecY,
@@ -180,7 +185,7 @@ struct CusparseCSRCache
 //y = alpha A*x + beta y
 template<class I, class V, class value_type, class C1, class C2>
 void spmv_gpu_kernel(
-    CusparseCSRCache& cache,
+    CSRCache_gpu& cache,
     size_t A_num_rows, size_t A_num_cols, size_t A_nnz,
     const I* A_pos , const I* A_idx, const V* A_val,
     value_type alpha, value_type beta, const C1* x_ptr, C2* y_ptr

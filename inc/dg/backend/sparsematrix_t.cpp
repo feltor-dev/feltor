@@ -2,6 +2,8 @@
 #include <iostream>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include "tensor_traits_std.h"
+#include "tensor_traits_thrust.h"
 #include "sparsematrix.h"
 #include "catch2/catch_all.hpp"
 
@@ -47,6 +49,7 @@ TEST_CASE( "Linear algebra")
     cols = {0,1,2,3,2,3,0,3};
     vals = {2,3,3,5,4,5,1,2};
     dg::SparseMatrix<int,double,std::vector> B ( num_rows, num_cols, rows, cols, vals);
+    static_assert( std::is_same_v <typename dg::SparseMatrix<int,double,std::vector>::policy, dg::SerialTag>);
 
     SECTION( "gemv")
     {
@@ -121,14 +124,8 @@ TEST_CASE( "SpMV on device")
         for( unsigned i=0; i<v.size(); i++)
             v[i] = double(i+1);
         thrust::device_vector<double> dv( v), dw( w);
-
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-        dA.symv( dg::SharedVectorTag(), dg::CudaTag(), 1., thrust::raw_pointer_cast( &dv[0]), 0., thrust::raw_pointer_cast( &dw[0]));
-#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
-        dA.symv( dg::SharedVectorTag(), dg::OmpTag(), 1., thrust::raw_pointer_cast( &dv[0]), 0., thrust::raw_pointer_cast( &dw[0]));
-#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CPP
-        dA.symv( dg::SharedVectorTag(), dg::SerialTag(), 1., thrust::raw_pointer_cast( &dv[0]), 0., thrust::raw_pointer_cast( &dw[0]));
-#endif
+        dw = dA*dv;
+        // bring to host
         w = dw;
         CHECK( w[0] == 24);
         CHECK( w[1] == 17);
