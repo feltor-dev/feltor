@@ -3,6 +3,8 @@
 
 #include <numeric>
 #include <thrust/sort.h>
+#include <thrust/gather.h>
+#include <thrust/sequence.h>
 #include "tensor_traits.h"
 #include "predicate.h"
 #include "exceptions.h"
@@ -18,6 +20,8 @@
 namespace dg
 {
 
+namespace detail
+{
 template<class I>
 I csr2coo( const I& csr)
 {
@@ -39,7 +43,11 @@ I coo2csr( unsigned num_rows, const I& coo)
     {
         csr[i] = std::lower_bound( coo.begin(), coo.end(), i) - coo.begin();
     }
+    if( (size_t)csr[num_rows] != (size_t)coo.size())
+        throw dg::Error( dg::Message( _ping_) << "Error: Row indices contain values beyond num_rows "
+                <<num_rows<<"\n");
     return csr;
+}
 }
 
 template<class Index = int, class Value = double, template<class> class Vector = thrust::host_vector>
@@ -63,6 +71,70 @@ struct SparseMatrix
     : m_num_rows( src.m_num_rows), m_num_cols( src.m_num_cols), m_row_offsets(
         src.m_row_offsets), m_cols( src.m_cols), m_vals( src.m_vals)
     {
+    }
+
+
+    // May be unsorted but not duplicate
+    void setFromCoo( size_t num_rows, size_t num_cols, const Vector<Index>& rows, const Vector<Index>& cols, const Vector<Value>& vals)
+    {
+        if( rows.size() != vals.size())
+            throw dg::Error( dg::Message( _ping_) << "Error: Row indices size "
+                <<rows.size()<<" not equal to values size "<<vals.size()<<"\n");
+        if( cols.size() != vals.size())
+            throw dg::Error( dg::Message( _ping_) << "Error: Column indices size "
+                <<cols.size()<<" not equal to values size "<<vals.size()<<"\n");
+
+        if constexpr( std::is_same_v < policy, SerialTag>)
+        {
+            // All this just to avoid gcc vomiting warnings at me
+            thrust::host_vector<Index> trows( rows.begin(), rows.end());
+            thrust::host_vector<Index> tcols( cols.begin(), cols.end());
+            thrust::host_vector<Value> tvals( vals.begin(), vals.end());
+            thrust::host_vector<Index> p( rows.size()); // permutation
+            thrust::sequence( p.begin(), p.end());
+            // First sort columns
+            thrust::sort_by_key( tcols.begin(), tcols.end(), p.begin());
+            // Repeat sort on rows
+            thrust::gather( p.begin(), p.end(), rows.begin(), trows.begin());
+            // Now sort rows preserving relative ordering
+            thrust::stable_sort_by_key( trows.begin(), trows.end(), p.begin());
+            // Repeat sort on cols and vals
+            thrust::gather( p.begin(), p.end(), cols.begin(), tcols.begin());
+            thrust::gather( p.begin(), p.end(), vals.begin(), tvals.begin());
+            auto row_offsets = detail::coo2csr( num_rows, trows);
+            m_row_offsets.resize( row_offsets.size());
+            m_cols.resize( tcols.size());
+            m_vals.resize( tvals.size());
+            thrust::copy( row_offsets.begin(), row_offsets.end(), m_row_offsets.begin());
+            thrust::copy( tcols.begin(), tcols.end(), m_cols.begin());
+            thrust::copy( tvals.begin(), tvals.end(), m_vals.begin());
+        }
+        else
+        {
+            // Same as above with Vector instead of thrust::host_vector
+            Vector<Index> trows( rows.begin(), rows.end());
+            Vector<Index> tcols( cols.begin(), cols.end());
+            Vector<Value> tvals( vals.begin(), vals.end());
+            Vector<Index> p( rows.size()); // permutation
+            thrust::sequence( p.begin(), p.end());
+            // First sort columns
+            thrust::sort_by_key( tcols.begin(), tcols.end(), p.begin());
+            // Repeat sort on rows
+            thrust::gather( p.begin(), p.end(), rows.begin(), trows.begin());
+            // Now sort rows preserving relative ordering
+            thrust::stable_sort_by_key( trows.begin(), trows.end(), p.begin());
+            // Repeat sort on cols and vals
+            thrust::gather( p.begin(), p.end(), cols.begin(), tcols.begin());
+            thrust::gather( p.begin(), p.end(), vals.begin(), tvals.begin());
+            auto row_offsets = detail::coo2csr( num_rows, trows);
+            m_row_offsets.resize( row_offsets.size());
+            m_cols.resize( tcols.size());
+            m_vals.resize( tvals.size());
+            thrust::copy( row_offsets.begin(), row_offsets.end(), m_row_offsets.begin());
+            thrust::copy( tcols.begin(), tcols.end(), m_cols.begin());
+            thrust::copy( tvals.begin(), tvals.end(), m_vals.begin());
+        }
+        m_cache.forget();
     }
 
     void set( size_t num_rows, size_t num_cols, const Vector<Index>& row_offsets, const Vector<Index> cols, const Vector<Value>& vals)
@@ -139,9 +211,9 @@ struct SparseMatrix
     enable_if_serial<OtherMatrix> transpose() const
     {
         SparseMatrix o(*this);
-        auto coo = csr2coo(o.m_row_offsets);
+        auto coo = detail::csr2coo(o.m_row_offsets);
         o.m_cols.swap( coo);
-        o.m_row_offsets = coo2csr( o.m_num_cols, coo);
+        o.m_row_offsets = detail::coo2csr( o.m_num_cols, coo);
         return o;
     }
 
@@ -393,6 +465,12 @@ struct SparseMatrix
 
     void sort()
     {
+        if( m_num_rows != m_row_offsets.size()-1)
+            throw dg::Error( dg::Message( _ping_) << "Error: Row offsets have size "
+                <<m_row_offsets.size()<<" but num_rows is "<<m_num_rows<<"\n");
+        if( m_cols.size() != m_vals.size())
+            throw dg::Error( dg::Message( _ping_) << "Error: Column indices size "
+                <<m_cols.size()<<" not equal to values size "<<m_vals.size()<<"\n");
         // Sort each row
         for( unsigned row=0; row<m_num_rows; row++)
         {

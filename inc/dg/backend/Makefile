@@ -12,7 +12,8 @@ TARGETS=fma_t\
 index_t\
 memory_t\
 traits_t\
-view_t
+view_t\
+sparsematrix_t
 
 TARGETSMPI=mpi_gather_kron_mpit\
 mpi_gather_mpit\

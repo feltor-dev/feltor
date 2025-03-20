@@ -10,9 +10,9 @@
 TEST_CASE("Format conversion")
 {
     std::vector<int> coo_row = { 0 , 0, 1,1,1, 3, 4,4};
-    std::vector<int> csr_row = dg::coo2csr( 5, coo_row);
+    std::vector<int> csr_row = dg::detail::coo2csr( 5, coo_row);
     CHECK( csr_row == std::vector{ 0, 2, 5, 5, 6, 8});
-    auto coo = dg::csr2coo( csr_row );
+    auto coo = dg::detail::csr2coo( csr_row );
     CHECK( coo == coo_row);
 
 
@@ -46,6 +46,20 @@ TEST_CASE( "Construct sparse matrix")
         std::vector<int> rows = {0,3,5,7}, cols = {4,3,0,2,0,4,1};
         std::vector<double> vals = {3,2,1,5,2,1,4};
         dg::SparseMatrix<int,double,std::vector> A ( num_rows, num_cols, rows, cols, vals);
+        CHECK( A.row_offsets() == std::vector{0,3,5,7});
+        CHECK( A.column_indices() == std::vector{0,3,4,0,2,1,4});
+        CHECK( A.values() == std::vector<double>{1,2,3,2,5,4,1});
+    }
+    SECTION( "setFromCoo")
+    {
+        // 1 0 0 2 3
+        // 2 0 5 0 0
+        // 0 4 0 0 1
+        unsigned num_rows = 3, num_cols = 5;
+        std::vector<int> rows = {2,2,0,0,0,1,1}, cols = {4,1,4,3,0,2,0};
+        std::vector<double> vals = {1,4, 3,2,1,5,2};
+        dg::SparseMatrix<int,double,std::vector> A;
+        A.setFromCoo( num_rows, num_cols, rows, cols, vals);
         CHECK( A.row_offsets() == std::vector{0,3,5,7});
         CHECK( A.column_indices() == std::vector{0,3,4,0,2,1,4});
         CHECK( A.values() == std::vector<double>{1,2,3,2,5,4,1});
