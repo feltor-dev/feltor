@@ -53,32 +53,36 @@ struct TriDiagonal
     ///convert to a sparse matrix format
     dg::IHMatrix_t<value_type> asIMatrix() const{
         unsigned size = M.size();
-        cusp::coo_matrix<int,value_type,cusp::host_memory>  A( size, size, 3*size-2);
-        A.row_indices[0] = 0;
-        A.column_indices[0] = 0;
-        A.values[0] = O[0];
+        cusp::array1d<int, cusp::host_memory> A_row_offsets(size+1), A_column_indices( 3*size-2);
+        cusp::array1d<value_type, cusp::host_memory> A_values( 3*size-2);
+        A_row_offsets[0] = 0;
+        A_column_indices[0] = 0;
+        A_values[0] = O[0];
 
-        A.row_indices[1] = 0;
-        A.column_indices[1] = 1;
-        A.values[1] = P[0];
+        A_column_indices[1] = 1;
+        A_values[1] = P[0];
+
+        A_row_offsets[1] = 2;
 
         for( unsigned i=1;i<size; i++)
         {
-            A.row_indices[3*i-1+0] = i;
-            A.column_indices[3*i-1+0] = i-1;
-            A.values[3*i-1+0] = M[i];
+            A_column_indices[3*i-1+0] = i-1;
+            A_values[3*i-1+0] = M[i];
 
-            A.row_indices[3*i-1+1] = i;
-            A.column_indices[3*i-1+1] = i;
-            A.values[3*i-1+1] = O[i];
+            A_column_indices[3*i-1+1] = i;
+            A_values[3*i-1+1] = O[i];
 
             if( i != (size-1))
             {
-                A.row_indices[3*i-1+2] = i;
-                A.column_indices[3*i-1+2] = i+1;
-                A.values[3*i-1+2] = P[i];
+                A_column_indices[3*i-1+2] = i+1;
+                A_values[3*i-1+2] = P[i];
             }
+            A_row_offsets[i+1] = A_row_offsets[i] + ( i != (size-1) ? 3 : 2);
         }
+        cusp::csr_matrix<int,value_type,cusp::host_memory>  A( size, size, 3*size-2);
+        A.row_offsets = A_row_offsets;
+        A.column_indices = A_column_indices;
+        A.values = A_values;
         return dg::IHMatrix_t<value_type>(A);
     }
 

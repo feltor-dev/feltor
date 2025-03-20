@@ -1,7 +1,6 @@
 #pragma once
 //#include <iomanip>
 
-#include <cusp/coo_matrix.h>
 #include <cusp/csr_matrix.h>
 #include "dg/backend/typedefs.h"
 #include "dg/backend/view.h"
@@ -304,27 +303,26 @@ void interpolation_row( dg::space sp, real_type X,
 
 // dG interpolation
 template<class host_vector, class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation1d(
+cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation1d(
     dg::space sp,
     const host_vector& x, // can be a view...
     const RealGrid1d<real_type>& g,
     dg::bc bcx )
 {
     cusp::array1d<real_type, cusp::host_memory> values;
-    cusp::array1d<int, cusp::host_memory> row_indices;
+    cusp::array1d<int, cusp::host_memory> row_offsets;
     cusp::array1d<int, cusp::host_memory> column_indices;
     auto ptr = x.begin();
+    row_offsets.push_back(0);
     for( unsigned i=0; i<x.size(); i++)
     {
-        unsigned size = values.size();
         interpolation_row( sp, *ptr, g, bcx, column_indices, values);
-        for( unsigned u=0; u<values.size()-size; u++)
-            row_indices.push_back(i);
+        row_offsets.push_back( values.size());
         ptr++;
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
+    cusp::csr_matrix<int, real_type, cusp::host_memory> A(
             x.size(), g.size(), values.size());
-    A.row_indices = row_indices;
+    A.row_offsets = row_offsets;
     A.column_indices = column_indices;
     A.values = values;
     return A;
@@ -332,7 +330,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation1d(
 
 // nearest, linear or cubic interpolation
 template<class host_vector1, class host_vector2 >
-cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> interpolation1d(
+cusp::csr_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> interpolation1d(
         const host_vector1& x,
         const host_vector2& abs, // must be sorted
         dg::bc bcx, dg::get_value_type<host_vector2> x0, dg::get_value_type<host_vector2> x1,
@@ -342,7 +340,7 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
     // boundary condidions for dg::Box likely won't work | Box is now removed
     // from library ...
     cusp::array1d<real_type, cusp::host_memory> values;
-    cusp::array1d<int, cusp::host_memory> row_indices;
+    cusp::array1d<int, cusp::host_memory> row_offsets;
     cusp::array1d<int, cusp::host_memory> column_indices;
     unsigned points_per_line = 1;
     if( method == "nearest")
@@ -354,8 +352,10 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
     else
         throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
     auto ptr = x.begin();
+    row_offsets.push_back(0);
     for( unsigned i=0; i<x.size(); i++)
     {
+        row_offsets.push_back(row_offsets[i]);
         real_type X = *ptr;
         ptr++;
         bool negative = false;
@@ -381,21 +381,21 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
             // px may have size != points_per_line (at boundary)
             for ( unsigned l=0; l<px.size(); l++)
             {
-                row_indices.push_back(i);
+                row_offsets[i+1]++;
                 column_indices.push_back( cols[l]);
                 values.push_back(negative ? -px[l] : px[l]);
             }
         }
         else //the point already exists
         {
-            row_indices.push_back(i);
+            row_offsets[i+1]++;
             column_indices.push_back(idxX);
             values.push_back( negative ? -1. : 1.);
         }
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
+    cusp::csr_matrix<int, real_type, cusp::host_memory> A(
             x.size(), abs.size(), values.size());
-    A.row_indices = row_indices;
+    A.row_offsets = row_offsets;
     A.column_indices = column_indices;
     A.values = values;
     return A;

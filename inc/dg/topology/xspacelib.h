@@ -3,7 +3,6 @@
 
 #include <thrust/host_vector.h>
 
-#include <cusp/coo_matrix.h>
 #include <cassert>
 
 #include "dg/backend/typedefs.h"
@@ -46,9 +45,10 @@ cusp::csr_matrix< int, T, cusp::host_memory> tensorproduct(
     int num_cols     = lhs.num_cols*rhs.num_cols;
     int num_entries  = lhs.num_entries* rhs.num_entries;
     // allocate output matrix
-    cusp::csr_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
+    cusp::array1d<int, cusp::host_memory> A_row_offsets(num_rows+1), A_column_indices( num_entries);
+    cusp::array1d<T, cusp::host_memory> A_values( num_entries);
     //LHS x RHS
-    A.row_offsets[0] = 0;
+    A_row_offsets[0] = 0;
     int counter = 0;
     for( unsigned i=0; i<lhs.num_rows; i++)
     for( unsigned j=0; j<rhs.num_rows; j++)
@@ -56,17 +56,22 @@ cusp::csr_matrix< int, T, cusp::host_memory> tensorproduct(
         int num_entries_in_row =
             (lhs.row_offsets[i+1] - lhs.row_offsets[i])*
             (rhs.row_offsets[j+1] - rhs.row_offsets[j]);
-        A.row_offsets[i*rhs.num_rows+j+1] =
-            A.row_offsets[i*rhs.num_rows+j] + num_entries_in_row;
+        A_row_offsets[i*rhs.num_rows+j+1] =
+            A_row_offsets[i*rhs.num_rows+j] + num_entries_in_row;
         for( int k=lhs.row_offsets[i]; k<lhs.row_offsets[i+1]; k++)
         for( int l=rhs.row_offsets[j]; l<rhs.row_offsets[j+1]; l++)
         {
-            A.column_indices[counter] =
+            A_column_indices[counter] =
                 lhs.column_indices[k]*rhs.num_cols +  rhs.column_indices[l];
-            A.values[counter]  = lhs.values[k]*rhs.values[l];
+            A_values[counter]  = lhs.values[k]*rhs.values[l];
             counter++;
         }
     }
+    // allocate output matrix
+    cusp::csr_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
+    A.row_offsets = A_row_offsets;
+    A.column_indices = A_column_indices;
+    A.values = A_values;
     return A;
 }
 
@@ -106,53 +111,58 @@ cusp::csr_matrix< int, T, cusp::host_memory> tensorproduct_cols(
         num_entries += num_entries_in_row;
     }
     // allocate output matrix
-    cusp::csr_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
+    cusp::array1d<int, cusp::host_memory> A_row_offsets(num_rows+1), A_column_indices( num_entries);
+    cusp::array1d<T, cusp::host_memory> A_values( num_entries);
     //LHS x RHS
-    A.row_offsets[0] = 0;
+    A_row_offsets[0] = 0;
     int counter = 0;
     for( unsigned i=0; i<lhs.num_rows; i++)
     {
         int num_entries_in_row =
             (lhs.row_offsets[i+1] - lhs.row_offsets[i])*
             (rhs.row_offsets[i+1] - rhs.row_offsets[i]);
-        A.row_offsets[i+1] = A.row_offsets[i] + num_entries_in_row;
+        A_row_offsets[i+1] = A_row_offsets[i] + num_entries_in_row;
         for( int k=lhs.row_offsets[i]; k<lhs.row_offsets[i+1]; k++)
         for( int l=rhs.row_offsets[i]; l<rhs.row_offsets[i+1]; l++)
         {
-            A.column_indices[counter] =
+            A_column_indices[counter] =
                 lhs.column_indices[k]*rhs.num_cols +  rhs.column_indices[l];
-            A.values[counter]  = lhs.values[k]*rhs.values[l];
+            A_values[counter]  = lhs.values[k]*rhs.values[l];
             counter++;
         }
     }
+    cusp::csr_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
+    A.row_offsets = A_row_offsets;
+    A.column_indices = A_column_indices;
+    A.values = A_values;
     return A;
 }
 ///@cond
-template< class T>
-cusp::coo_matrix< int, T, cusp::host_memory> tensorproduct(
-        const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
-        const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
-{
-    //dimensions of the matrix
-    int num_rows     = lhs.num_rows*rhs.num_rows;
-    int num_cols     = lhs.num_cols*rhs.num_cols;
-    int num_entries  = lhs.num_entries* rhs.num_entries;
-    // allocate output matrix
-    cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
-    //LHS x RHS
-    int counter = 0;
-    for( int k=0; k<lhs.num_entries; k++)
-    for( int l=0; l<rhs.num_entries; l++)
-    {
-        A.row_indices[counter] =
-            lhs.row_indices[k]*rhs.num_rows + rhs.row_indices[l];
-        A.column_indices[counter] =
-            lhs.column_indices[k]*rhs.num_cols +  rhs.column_indices[l];
-        A.values[counter]  = lhs.values[k]*rhs.values[l];
-        counter++;
-    }
-    return A;
-}
+//template< class T>
+//cusp::coo_matrix< int, T, cusp::host_memory> tensorproduct(
+//        const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
+//        const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
+//{
+//    //dimensions of the matrix
+//    int num_rows     = lhs.num_rows*rhs.num_rows;
+//    int num_cols     = lhs.num_cols*rhs.num_cols;
+//    int num_entries  = lhs.num_entries* rhs.num_entries;
+//    // allocate output matrix
+//    cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
+//    //LHS x RHS
+//    int counter = 0;
+//    for( int k=0; k<lhs.num_entries; k++)
+//    for( int l=0; l<rhs.num_entries; l++)
+//    {
+//        A.row_indices[counter] =
+//            lhs.row_indices[k]*rhs.num_rows + rhs.row_indices[l];
+//        A.column_indices[counter] =
+//            lhs.column_indices[k]*rhs.num_cols +  rhs.column_indices[l];
+//        A.values[counter]  = lhs.values[k]*rhs.values[l];
+//        counter++;
+//    }
+//    return A;
+//}
 // tensorproduct_cols does not work for coo_matrix without converting to csr_matrix ...
 ///@endcond
 

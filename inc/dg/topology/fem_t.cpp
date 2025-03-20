@@ -9,11 +9,10 @@ static double function( double x, double y){return sin(x)*cos(y);}
 static double function( double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 
 using Vector = dg::DVec;
-using Matrix = cusp::coo_matrix<int,double,cusp::device_memory>;
+using Matrix = cusp::csr_matrix<int,double,cusp::device_memory>;
 using MassMatrix = dg::KroneckerTriDiagonal2d<Vector>;
 using InvMassMatrix = dg::InverseKroneckerTriDiagonal2d<Vector>;
 
-// TODO This test fails! Fix it!
 TEST_CASE("FEM")
 {
     unsigned n = 3, Nx = 18, Ny = 24, mx = 3;
@@ -59,7 +58,7 @@ TEST_CASE("FEM")
             Matrix Vf = dg::create::diagonal( (dg::HVec)v2d), tmp;
             cusp::multiply( interT, Wf, tmp);
             cusp::multiply( Vf, tmp, project);
-            project.sort_by_row_and_column();
+            //project.sort_by_row_and_column();
 
             Vector barfunc(func);
             dg::blas2::symv( project, func_f, barfunc);
@@ -88,7 +87,7 @@ TEST_CASE("FEM")
             cusp::transpose( interC, interT);
             cusp::multiply( interT, Wf, tmp);
             cusp::multiply( Vf, tmp, project);
-            project.sort_by_row_and_column();
+            //project.sort_by_row_and_column();
             dg::blas2::symv( project, func_f, barfunc);
             fem_mass = dg::create::fem_linear2const( gDIR);
 

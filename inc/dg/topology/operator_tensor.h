@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include <cusp/coo_matrix.h>
 #include <cusp/multiply.h>
 #include "operator.h"
 
@@ -57,25 +56,29 @@ op &   &   &   &   & \\
 * @sa fast_transform
 */
 template< class T>
-cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const SquareMatrix<T>& op)
+cusp::csr_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const SquareMatrix<T>& op)
 {
     assert( N>0);
     unsigned n = op.size();
-    //compute number of nonzeroes in op
-    unsigned number = n*n;
     // allocate output matrix
-    cusp::coo_matrix<int, T, cusp::host_memory> A(n*N, n*N, N*number);
-    number = 0;
+    cusp::array1d<int, cusp::host_memory> A_row_offsets(n*N+1), A_column_indices( N*n*n);
+    cusp::array1d<T, cusp::host_memory> A_values( N*n*n);
+    A_row_offsets[0] = 0;
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<n; i++)
+        {
+            A_row_offsets[k*n+i+1]      = A_row_offsets[k*n+i] + n;
             for( unsigned j=0; j<n; j++)
                 //if( op(i,j) != 0)
                 {
-                    A.row_indices[number]      = k*n+i;
-                    A.column_indices[number]   = k*n+j;
-                    A.values[number]           = op(i,j);
-                    number++;
+                    A_column_indices[(k*n+i)*n+j]   = k*n+j;
+                    A_values[(k*n+i)*n+j]           = op(i,j);
                 }
+        }
+    cusp::csr_matrix<int, T, cusp::host_memory> A(n*N, n*N, N*n*n);
+    A.row_offsets = A_row_offsets;
+    A.column_indices = A_column_indices;
+    A.values = A_values;
     return A;
 }
 
@@ -92,10 +95,10 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Squa
  * @return A newly allocated cusp matrix
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const SquareMatrix<T>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const SquareMatrix<T>& right)
+cusp::csr_matrix<int, T, cusp::host_memory> sandwich( const SquareMatrix<T>& left,  const cusp::csr_matrix<int, T, cusp::host_memory>& m, const SquareMatrix<T>& right)
 {
     assert( left.size() == right.size());
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    typedef cusp::csr_matrix<int, T, cusp::host_memory> Matrix;
     unsigned n = left.size();
     unsigned N = m.num_rows/n;
     Matrix r = tensorproduct( N, right);

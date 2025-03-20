@@ -3,11 +3,14 @@
 #include "exceptions.h"
 #include "tensor_traits.h"
 #include "tensor_traits.h"
+#include "sparsematrix.h"
 #include "sparseblockmat.h"
 //
 ///@cond
 namespace dg{
 namespace blas2{
+template< class Stencil, class ContainerType, class ...ContainerTypes>
+inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs);
 namespace detail{
 
 
@@ -125,6 +128,58 @@ inline void doSymv(
               SparseBlockMatrixTag)
 {
     doSymv( 1., std::forward<Matrix>(m), x, 0., y, SparseBlockMatrixTag());
+}
+/////////////////// STENCIL /////////////////////////////////////
+// Only works for SparseMatrix, not SparseBlockMatrix
+template<class Functor, class Matrix, class Vector1, class Vector2>
+inline void doStencil(
+                    Functor f,
+                    Matrix&& m,
+                    const Vector1&x,
+                    Vector2& y,
+                    SparseMatrixTag,
+                    SharedVectorTag  )
+{
+    static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector2>>::value,
+        "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
+    static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value, "Execution policies must be equal!");
+    typedef typename std::decay_t<Matrix>::value_type value_type;
+    static_assert( std::is_same< get_value_type<Vector1>, value_type >::value,
+        "Value types must be equal"
+    );
+    static_assert( std::is_same< get_value_type<Vector2>, value_type >::value,
+        "Value types must be equal"
+    );
+
+    if( x.size() != m.num_cols()) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
+    }
+    if( y.size() != m.num_rows()) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows());
+    }
+    dg::blas2::parallel_for( f, m.num_rows(), m.row_offsets(), m.column_indices(), m.values(), x, y);
+}
+template< class Functor, class Matrix, class Vector1, class Vector2>
+inline void doStencil( get_value_type<Vector1> alpha,
+                    Functor f,
+                    Matrix&& m,
+                    const Vector1&x,
+                    get_value_type<Vector1> beta,
+                    Vector2& y,
+                    SparseMatrixTag,
+                    RecursiveVectorTag  )
+{
+    static_assert( std::is_base_of<RecursiveVectorTag, get_tensor_category<Vector2>>::value,
+        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
+    if( x.size() != m.num_cols()) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
+    }
+    if( y.size() != m.num_rows()) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows());
+    }
+    using inner_container = typename std::decay_t<Vector1>::value_type;
+    for ( unsigned i=0; i<x.size(); i++)
+        doStencil( f,std::forward<Matrix>(m),x[i],y[i], SparseMatrixTag(), get_tensor_category<inner_container>());
 }
 
 } //namespace detail

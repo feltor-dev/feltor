@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cmath>
+#include <numeric>
 #include <thrust/host_vector.h>
-#include <cusp/coo_matrix.h>
+#include <cusp/csr_matrix.h>
 #include "exblas/exdot_serial.h"
 #include "config.h"
 #include "exceptions.h"
@@ -104,7 +105,7 @@ struct EllSparseBlockMat
      *
      * @return The matrix in coo sparse matrix format
      */
-    cusp::coo_matrix<int, real_type, cusp::host_memory> asCuspMatrix() const;
+    cusp::csr_matrix<int, real_type, cusp::host_memory> asCuspMatrix() const;
 
     /**
     * @brief Apply the matrix to a vector
@@ -386,7 +387,7 @@ struct CooSparseBlockMat
 //    }
 //}
 template<class real_type, template<class> class Vector>
-cusp::coo_matrix<int, real_type, cusp::host_memory> EllSparseBlockMat<real_type, Vector>::asCuspMatrix() const
+cusp::csr_matrix<int, real_type, cusp::host_memory> EllSparseBlockMat<real_type, Vector>::asCuspMatrix() const
 {
     cusp::array1d<real_type, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
@@ -400,18 +401,19 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> EllSparseBlockMat<real_type,
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
         {
-            row_indices.push_back(I);
             int J = cols_idx[i*blocks_per_line+d];
             if ( J == invalid_index)
                 continue;
+            row_indices.push_back(I);
             column_indices.push_back(
                 ((s*num_cols + J)*n+q)*right_size+j);
             values.push_back(data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]);
         }
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
+    cusp::csr_matrix<int, real_type, cusp::host_memory> A(
         total_num_rows(), total_num_cols(), values.size());
-    A.row_indices = row_indices;
+    A.row_offsets[0] = 0;
+    std::inclusive_scan( row_indices.begin(), row_indices.end(), A.row_offsets.begin()+1);
     A.column_indices = column_indices;
     A.values = values;
     return A;

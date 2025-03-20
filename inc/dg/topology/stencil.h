@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cusp/coo_matrix.h>
 #include "xspacelib.h"
 #ifdef MPI_VERSION
 #include "mpi_projection.h" // for make_mpi_matrix function

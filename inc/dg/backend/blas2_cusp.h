@@ -150,7 +150,7 @@ inline void doStencil(
     dg::blas2::parallel_for( f, m.num_rows, m.row_offsets, m.column_indices, m.values, x, y);
 }
 template< class Functor, class Matrix, class Vector1, class Vector2>
-inline void doSymv( get_value_type<Vector1> alpha,
+inline void doStencil( get_value_type<Vector1> alpha,
                     Functor f,
                     Matrix&& m,
                     const Vector1&x,

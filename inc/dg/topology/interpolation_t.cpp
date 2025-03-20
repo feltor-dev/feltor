@@ -14,7 +14,7 @@ static double function( double x, double y){return sin(x)*sin(y);}
 static double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
 
 
-using Matrix = cusp::coo_matrix<int, double, cusp::host_memory>;
+using Matrix = cusp::csr_matrix<int, double, cusp::host_memory>;
 
 TEST_CASE( "Interpolation")
 {

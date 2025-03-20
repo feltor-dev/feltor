@@ -128,14 +128,13 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> prolongation(
  * @sa Reduction is the transpose of a \c prolongation
  */
 template<class real_type, size_t Nd, size_t Md>
-cusp::coo_matrix<int, real_type, cusp::host_memory> reduction(
+cusp::csr_matrix<int, real_type, cusp::host_memory> reduction(
     std::array<unsigned,Md> axes,
     const aRealTopology<real_type,Nd>& g_old)
 {
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = prolongation(
+    cusp::csr_matrix<int, real_type, cusp::host_memory> temp = prolongation(
             g_old, axes), A;
     cusp::transpose( temp, A);
-    A.sort_by_row_and_column();
     return A;
 }
 
@@ -158,7 +157,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> reduction(
  * @sa Projection is the adjoint of a \c prolongation
  */
 template<class real_type, size_t Nd, size_t Md>
-cusp::coo_matrix<int, real_type, cusp::host_memory> projection(
+cusp::csr_matrix<int, real_type, cusp::host_memory> projection(
     std::array<unsigned,Md> axes,
     const aRealTopology<real_type,Nd>& g_old)
 {
@@ -169,14 +168,14 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> projection(
     RealGrid<real_type, Nd-Md> g_new(gs);
     auto w_old = dg::create::weights( g_old);
     auto v_new = dg::create::inv_weights( g_new);
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = prolongation(
+    cusp::csr_matrix<int, real_type, cusp::host_memory> temp = prolongation(
             g_old, axes), A;
     cusp::transpose( temp, A);
     auto Wf = dg::create::diagonal( w_old);
     auto Vc = dg::create::diagonal( v_new);
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
+    //A.sort_by_row_and_column();
     return A;
 }
 ///@}
