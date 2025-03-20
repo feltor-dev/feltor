@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <numeric>
+#include <thrust/sort.h>
 #include "tensor_traits.h"
 #include "predicate.h"
 #include "exceptions.h"
@@ -19,6 +21,7 @@ namespace dg
 template<class I>
 I csr2coo( const I& csr)
 {
+    static_assert( dg::has_policy_v<I, dg::SerialTag>);
     unsigned num_rows = csr.size()-1;
     I coo( csr[num_rows]);
     for( unsigned i=0; i<num_rows; i++)
@@ -30,8 +33,12 @@ I csr2coo( const I& csr)
 template<class I>
 I coo2csr( unsigned num_rows, const I& coo)
 {
+    static_assert( dg::has_policy_v<I, dg::SerialTag>);
     I csr(num_rows+1,0);
-    std::inclusive_scan( coo.begin(), coo.end(), csr.begin()+1);
+    for( unsigned i=0; i<num_rows+1; i++)
+    {
+        csr[i] = std::lower_bound( coo.begin(), coo.end(), i) - coo.begin();
+    }
     return csr;
 }
 
@@ -46,6 +53,7 @@ struct SparseMatrix
     SparseMatrix( size_t num_rows, size_t num_cols, Vector<Index> row_offsets, Vector<Index> cols, Vector<Value> vals)
     : m_num_rows( num_rows), m_num_cols( num_cols), m_row_offsets( row_offsets), m_cols(cols), m_vals(vals)
     {
+        sort();
     }
 
     template< class I, class V, template<class> class Vec>
@@ -61,12 +69,13 @@ struct SparseMatrix
     {
         m_num_rows = num_rows, m_num_cols = num_cols;
         m_row_offsets = row_offsets, m_cols = cols, m_vals = vals;
-        // Since the matrix changed we need to forget cached performance information
+        sort();
         m_cache.forget();
     }
 
     size_t total_num_rows() const { return m_num_rows;}
     size_t total_num_cols() const { return m_num_cols;}
+    size_t num_entries() const { return m_vals.size();}
     size_t num_rows() const { return m_num_rows;}
     size_t num_cols() const { return m_num_cols;}
     size_t num_vals() const { return m_vals.size();}
@@ -382,6 +391,29 @@ struct SparseMatrix
 #endif
             m_cache;
 
+    void sort()
+    {
+        // Sort each row
+        for( unsigned row=0; row<m_num_rows; row++)
+        {
+            if constexpr( std::is_same_v < policy, SerialTag>)
+            {
+                // All this just to avoid gcc vomiting warnings at me
+                thrust::host_vector<Index> tcols( m_cols.begin() + m_row_offsets[row],
+                    m_cols.begin() + m_row_offsets[row+1]);
+                thrust::host_vector<Value> tvals( m_vals.begin() + m_row_offsets[row],
+                    m_vals.begin() + m_row_offsets[row+1]);
+                thrust::stable_sort_by_key( tcols.begin(), tcols.end(), tvals.begin());
+                thrust::copy( tcols.begin(), tcols.end(), m_cols.begin() + m_row_offsets[row]);
+                thrust::copy( tvals.begin(), tvals.end(), m_vals.begin() + m_row_offsets[row]);
+
+            }
+            else
+                thrust::stable_sort_by_key( m_cols.begin()+m_row_offsets[row],
+                    m_cols.begin() + m_row_offsets[row+1],
+                    m_vals.begin(), thrust::less<Index>()); // this changes both row_offsets and vals
+        }
+    }
     size_t m_num_rows, m_num_cols;
     Vector<Index> m_row_offsets, m_cols;
     Vector<Value> m_vals;

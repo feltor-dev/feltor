@@ -7,6 +7,16 @@
 #include "sparsematrix.h"
 #include "catch2/catch_all.hpp"
 
+TEST_CASE("Format conversion")
+{
+    std::vector<int> coo_row = { 0 , 0, 1,1,1, 3, 4,4};
+    std::vector<int> csr_row = dg::coo2csr( 5, coo_row);
+    CHECK( csr_row == std::vector{ 0, 2, 5, 5, 6, 8});
+    auto coo = dg::csr2coo( csr_row );
+    CHECK( coo == coo_row);
+
+
+}
 TEST_CASE( "Construct sparse matrix")
 {
     size_t num_rows = 3, num_cols = 5, num_nnz = 6;
@@ -26,6 +36,19 @@ TEST_CASE( "Construct sparse matrix")
         CHECK( mat.num_rows() == num_rows);
         CHECK( mat.num_cols() == num_cols);
         CHECK( mat.num_vals() == vals.size());
+    }
+    SECTION( "Constructing sorts columns")
+    {
+        // 1 0 0 2 3
+        // 2 0 5 0 0
+        // 0 4 0 0 1
+        unsigned num_rows = 3, num_cols = 5;
+        std::vector<int> rows = {0,3,5,7}, cols = {4,3,0,2,0,4,1};
+        std::vector<double> vals = {3,2,1,5,2,1,4};
+        dg::SparseMatrix<int,double,std::vector> A ( num_rows, num_cols, rows, cols, vals);
+        CHECK( A.row_offsets() == std::vector{0,3,5,7});
+        CHECK( A.column_indices() == std::vector{0,3,4,0,2,1,4});
+        CHECK( A.values() == std::vector<double>{1,2,3,2,5,4,1});
     }
 
 }
