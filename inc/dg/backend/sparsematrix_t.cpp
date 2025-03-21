@@ -25,6 +25,8 @@ TEST_CASE( "Construct sparse matrix")
     SECTION( "Construct")
     {
         dg::SparseMatrix<int,double,thrust::host_vector> mat ( num_rows, num_cols, rows, cols, vals);
+        static_assert( std::is_same_v< dg::get_tensor_category< dg::SparseMatrix<
+            int,double,thrust::host_vector>>, dg::SparseMatrixTag>);
         CHECK( mat.num_rows() == num_rows);
         CHECK( mat.num_cols() == num_cols);
         CHECK( mat.num_vals() == vals.size());
@@ -111,6 +113,34 @@ TEST_CASE( "Linear algebra")
         CHECK( C.column_indices() == std::vector<int>{ 0,3,0,2, 0,1,2,3});
         CHECK( C.values() == std::vector<double>{ 5,16,4,20,1,12,12,22});
     }
+    SECTION( "A * 1")
+    {
+        unsigned size = 5;
+        std::vector<int> urows = {0,1,2,3,4,5}, ucols = {0,1,2,3,4};
+        std::vector<double> uvals = {1., 1., 1., 1., 1.};
+        dg::SparseMatrix<int,double,std::vector> unit5( size, size, urows, ucols, uvals);
+        auto C = A*unit5;
+        CHECK( C.num_rows() == 3);
+        CHECK( C.num_cols() == 5);
+        CHECK( C.row_offsets() == std::vector<int>{ 0,3,5,7});
+        CHECK( C.column_indices() == std::vector<int>{ 0,3,4,0, 2,1,4});
+        CHECK( C.values() == std::vector<double>{ 1,2,3,2,5,4,1});
+
+    }
+    SECTION( "1 * A")
+    {
+        unsigned size = 3;
+        std::vector<int> urows = {0,1,2,3}, ucols = {0,1,2};
+        std::vector<double> uvals = {1., 1., 1.};
+        dg::SparseMatrix<int,double,std::vector> unit3( size, size, urows, ucols, uvals);
+        auto C = unit3*A;
+        CHECK( C.num_rows() == 3);
+        CHECK( C.num_cols() == 5);
+        CHECK( C.row_offsets() == std::vector<int>{ 0,3,5,7});
+        CHECK( C.column_indices() == std::vector<int>{ 0,3,4,0, 2,1,4});
+        CHECK( C.values() == std::vector<double>{ 1,2,3,2,5,4,1});
+
+    }
     SECTION( "Addition")
     {
         // 0 2 0 0 4
@@ -155,6 +185,20 @@ TEST_CASE( "SpMV on device")
     std::vector<double> vals = {1,2,3,2,5,4,1};
     dg::SparseMatrix<int,double,thrust::host_vector> A ( num_rows, num_cols, rows, cols, vals);
     dg::SparseMatrix<int,double, thrust::device_vector> dA( A);
+    SECTION( "transpose")
+    {
+        // 1 2 0
+        // 0 0 4
+        // 0 5 0
+        // 2 0 0
+        // 3 0 1
+        auto B = A.transpose();
+        CHECK( B.num_rows() == 5);
+        CHECK( B.num_cols() == 3);
+        CHECK( B.row_offsets() == std::vector<int>{ 0,2,3,4,5,7});
+        CHECK( B.column_indices() == std::vector<int>{ 0,1,2,1,0,0,2});
+        CHECK( B.values() == std::vector<double>{ 1,2,4,5,2,3,1});
+    }
     SECTION( "gemv")
     {
         thrust::host_vector<double> v(5,2), w(3,0);

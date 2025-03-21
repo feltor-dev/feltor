@@ -18,7 +18,7 @@ namespace detail
 // Entries in A are sorted
 template<class I, class V>
 void spgemm_cpu_kernel(
-    size_t B_num_rows, size_t B_num_cols,
+    size_t B_num_rows, size_t B_num_cols, size_t C_num_cols,
     const I& B_pos , const I& B_idx, const V& B_val,
     const I& C_pos , const I& C_idx, const V& C_val,
           I& A_pos ,       I& A_idx,       V& A_val
@@ -35,7 +35,7 @@ void spgemm_cpu_kernel(
     // (Theoretically this could be cached if we did the same multiplication multiple times)
     A_pos.resize( B_num_rows+1);
     A_pos[0] = 0;
-    std::vector<bool> w( B_num_cols, false); // A dense work array
+    std::vector<bool> w( C_num_cols, false); // A dense work array
     // A_ij  = B_ik C_kj
     I wlist; // one row of A
     for( int i = 0; i<(int)B_num_rows; i++)
@@ -71,7 +71,7 @@ void spgemm_cpu_kernel(
     // 2. Figure 1d) Do the actual multiplication
 
     // A dense workspace array
-    V workspace( B_num_cols, 0);
+    V workspace( C_num_cols, 0);
     for (int i = 0; i < (int)B_num_rows; i++)
     {
         // Dense Workspace array
@@ -184,7 +184,7 @@ template<class I, class V, class value_type, class C1, class C2>
 void spmv_cpu_kernel(
     CSRCache_cpu& cache,
     size_t A_num_rows, size_t A_num_cols, size_t A_nnz,
-    const I* RESTRICT A_pos , const I* RESTRICT A_idx, const V*RESTRICT  A_val,
+    const I* RESTRICT A_pos , const I* RESTRICT A_idx, const V* RESTRICT  A_val,
     value_type alpha, value_type beta, const C1* RESTRICT x_ptr, C2* RESTRICT y_ptr
 )
 {
@@ -205,14 +205,14 @@ void spmv_cpu_kernel(
 //    #pragma omp for nowait
         for(int i = 0; i < (int)A_num_rows; i++)
         {
-            value_type temp = beta*y_ptr[i];
+            value_type temp = 0;
             for (int jj = A_pos[i]; jj < A_pos[i+1]; jj++)
             {
                 int j = A_idx[jj];
-                temp = DG_FMA( A_val[jj], x_ptr[j], temp);
+                temp = DG_FMA( alpha*A_val[jj], x_ptr[j], temp);
             }
 
-            y_ptr[i] = DG_FMA( alpha, temp, y_ptr[i]);
+            y_ptr[i] = DG_FMA( beta, y_ptr[i], temp);
         }
     }
 }
