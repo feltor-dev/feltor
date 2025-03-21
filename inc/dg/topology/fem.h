@@ -11,8 +11,10 @@ namespace dg{
 ///@{
 /*!@brief Fast (shared memory) tridiagonal sparse matrix
  *
- * Consists of the three diagonal vectors [M, O, P] (for "Minus", "ZerO", "Plus), i.e.
- * M is the subdiagonal, O the diagonal and P the superdiagonal vector.
+ * Consists of the three diagonal vectors [M, O, P] (for "Minus" -1, "ZerO" 0,
+ * "Plus +1 diagonal), i.e.  M is the subdiagonal, O the diagonal and P the
+ * superdiagonal vector.
+ * \f$ M_0 \f$ and \f$ P_{N-1}\f$ are ignored
  * @note Implemented using \c dg::blas2::parallel_for (which only works on shared memory vectors though)
  * @tparam Container One of the shared memory containers
  */
@@ -31,6 +33,12 @@ struct TriDiagonal
         dg::assign( other.P, this->P);
     }
     unsigned size()const {return O.size();}
+    void resize( unsigned size)
+    {
+        M.resize( size);
+        O.resize( size);
+        P.resize( size);
+    }
     void operator()( const Container& x, Container& y) const
     {
         unsigned size = M.size();
@@ -53,8 +61,8 @@ struct TriDiagonal
     ///convert to a sparse matrix format
     dg::IHMatrix_t<value_type> asIMatrix() const{
         unsigned size = M.size();
-        cusp::array1d<int, cusp::host_memory> A_row_offsets(size+1), A_column_indices( 3*size-2);
-        cusp::array1d<value_type, cusp::host_memory> A_values( 3*size-2);
+        thrust::host_vector<int> A_row_offsets(size+1), A_column_indices( 3*size-2);
+        thrust::host_vector<value_type> A_values( 3*size-2);
         A_row_offsets[0] = 0;
         A_column_indices[0] = 0;
         A_values[0] = O[0];
@@ -79,11 +87,7 @@ struct TriDiagonal
             }
             A_row_offsets[i+1] = A_row_offsets[i] + ( i != (size-1) ? 3 : 2);
         }
-        cusp::csr_matrix<int,value_type,cusp::host_memory>  A( size, size, 3*size-2);
-        A.row_offsets = A_row_offsets;
-        A.column_indices = A_column_indices;
-        A.values = A_values;
-        return dg::IHMatrix_t<value_type>(A);
+        return {size, size, A_row_offsets, A_column_indices, A_values};
     }
 
     Container M, O, P;

@@ -30,8 +30,6 @@ private:
 };
 
 
-using DiaMatrix = cusp::dia_matrix<int, double, cusp::device_memory>;
-using CooMatrix = cusp::coo_matrix<int, double, cusp::device_memory>;
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
 using SubContainer = dg::DVec;

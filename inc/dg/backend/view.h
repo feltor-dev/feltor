@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cusp/array1d.h>
 #include "tensor_traits.h"
 
 namespace dg

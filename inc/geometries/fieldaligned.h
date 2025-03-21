@@ -1,8 +1,6 @@
 #pragma once
 #include <cmath>
 #include <array>
-#include <cusp/csr_matrix.h>
-#include <cusp/transpose.h>
 
 #include "dg/algorithm.h"
 #include "magnetic_field.h"
@@ -535,8 +533,13 @@ struct Fieldaligned
     bool m_have_adjoint = false;
     void updateAdjoint( )
     {
-        cusp::transpose( m_plus, m_plusT);
-        cusp::transpose( m_minus, m_minusT);
+        // Transpose only works on host
+        dg::SparseMatrix< typename IMatrix::index_type, typename IMatrix::value_type, thrust::host_vector>
+            tmp;
+        tmp = m_plus;
+        m_plusT = tmp.transpose();
+        tmp = m_minus;
+        m_minusT = tmp.transpose();
         m_have_adjoint = true;
     }
 };
@@ -633,9 +636,8 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
         projection = dg::create::projection( *grid_transform, grid_fine);
     else
     {
-        multi = dg::create::projection( grid_equidist, grid_fine, project_m);
-        fine = dg::create::inv_backproject( *grid_transform);
-        cusp::multiply( fine, multi, projection);
+        projection = dg::create::inv_backproject( *grid_transform)*
+            dg::create::projection( grid_equidist, grid_fine, project_m);
     }
     std::array<dg::HVec*,3> xcomp{ &yp[0], &Xf, &ym[0]};
     std::array<dg::HVec*,3> ycomp{ &yp[1], &Yf, &ym[1]};
@@ -645,19 +647,14 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     {
         if( inter_m == "dg")
         {
-            fine = dg::create::interpolation( *xcomp[u], *ycomp[u],
+            *result[u] = projection*dg::create::interpolation( *xcomp[u], *ycomp[u],
                 *grid_transform, bcx, bcy, "dg");
-            cusp::multiply( projection, fine, multi);
-            dg::blas2::transfer( multi, *result[u]);
         }
         else
         {
-            fine = dg::create::backproject( *grid_transform); // from dg to equidist
-            multi = dg::create::interpolation( *xcomp[u], *ycomp[u],
-                grid_equidist, bcx, bcy, inter_m);
-            cusp::multiply( multi, fine, temp);
-            cusp::multiply( projection, temp, multi);
-            dg::blas2::transfer( multi, *result[u]);
+            *result[u] = projection *  dg::create::interpolation( *xcomp[u], *ycomp[u],
+                grid_equidist, bcx, bcy, inter_m) *  dg::create::backproject(
+                *grid_transform); // from dg to equidist
         }
     }
     }

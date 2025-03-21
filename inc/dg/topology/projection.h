@@ -1,7 +1,5 @@
 #pragma once
 #include <vector>
-#include <cusp/csr_matrix.h>
-#include <cusp/transpose.h>
 #include "grid.h"
 #include "interpolation.h"
 #include "weights.h"
@@ -63,11 +61,11 @@ namespace create{
  * @return diagonal matrix
  */
 template<class real_type>
-cusp::csr_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::host_vector<real_type>& diagonal)
+dg::SparseMatrix< int, real_type, thrust::host_vector> diagonal( const thrust::host_vector<real_type>& diagonal)
 {
     unsigned size = diagonal.size();
-    cusp::array1d<int, cusp::host_memory> A_row_offsets(size+1), A_column_indices( size);
-    cusp::array1d<real_type, cusp::host_memory> A_values( size);
+    thrust::host_vector<int> A_row_offsets(size+1), A_column_indices( size);
+    thrust::host_vector<real_type> A_values( size);
 
     A_row_offsets[0] = 0;
     for( unsigned i=0; i<size; i++)
@@ -76,11 +74,7 @@ cusp::csr_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
         A_column_indices[i] = i;
         A_values[i] = diagonal[i];
     }
-    cusp::csr_matrix<int, real_type, cusp::host_memory> A( size, size, size);
-    A.row_offsets = A_row_offsets;
-    A.column_indices = A_column_indices;
-    A.values = A_values;
-    return A;
+    return { size, size, A_row_offsets, A_column_indices, A_values};
 }
 
 
@@ -111,7 +105,7 @@ cusp::csr_matrix< int, real_type, cusp::host_memory> diagonal( const thrust::hos
  * polynomial coefficients is lower or the same in the new grid
  */
 template<class real_type, size_t Nd>
-cusp::csr_matrix< int, real_type, cusp::host_memory> projection(
+dg::SparseMatrix< int, real_type, thrust::host_vector> projection(
     const aRealTopology<real_type,Nd>& g_new,
     const aRealTopology<real_type,Nd>& g_old, std::string method = "dg")
 {
@@ -139,17 +133,10 @@ cusp::csr_matrix< int, real_type, cusp::host_memory> projection(
     //                   <<g_old.n(u)<<" new n: "<<g_new.n(u)<<"\n");
     //}
     //form the adjoint
-    cusp::csr_matrix<int, real_type, cusp::host_memory> Wf =
-        dg::create::diagonal( dg::create::weights( g_old));
-    cusp::csr_matrix<int, real_type, cusp::host_memory> Vc =
-        dg::create::diagonal( dg::create::inv_weights( g_new));
-    cusp::csr_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new, method), A;
-    cusp::transpose( temp, A);
-    //!!! cusp::multiply removes explicit zeros in the output
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A); // multiplication may leave result unsorted
-    //A.sort_by_row_and_column();
-    return A;
+    auto w_old = dg::create::weights( g_old);
+    auto v_new = dg::create::inv_weights( g_new);
+    return dg::create::diagonal( v_new)* interpolation(
+            g_old, g_new, method).transpose() * dg::create::diagonal(w_old);
 }
 
 /**
@@ -175,7 +162,7 @@ cusp::csr_matrix< int, real_type, cusp::host_memory> projection(
  * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
  */
 template<class real_type, size_t Nd>
-cusp::csr_matrix< int, real_type, cusp::host_memory> transformation(
+dg::SparseMatrix< int, real_type, thrust::host_vector> transformation(
     const aRealTopology<real_type,Nd>& g_new,
     const aRealTopology<real_type,Nd>& g_old)
 {
@@ -186,11 +173,7 @@ cusp::csr_matrix< int, real_type, cusp::host_memory> transformation(
         N_lcm [u] = lcm( g_new.N(u), g_old.N(u));
     }
     RealGrid<real_type, Nd> g_lcm ( g_new.get_p(), g_new.get_q(), n_lcm, N_lcm, g_new.get_bc());
-    cusp::csr_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
-    cusp::csr_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
-    cusp::multiply( P, Q, Y);
-    //Y.sort_by_row_and_column();
-    return Y;
+    return create::projection( g_new, g_lcm)*create::interpolation( g_lcm, g_old);
 }
 
 ///@}
@@ -217,9 +200,9 @@ dg::IHMatrix_t<real_type> backproject( const aRealTopology<real_type,Nd>& g)
         dg::RealGrid1d<real_type> g_new( -1., 1., 1, n);
         auto block = dg::create::transformation( g_new, g_old);
         dg::SquareMatrix<real_type> op(n, 0.);
-        for( unsigned i=0; i<block.num_rows; i++)
-            for( unsigned j=block.row_offsets[i]; j<(unsigned)block.row_offsets[i+1]; j++)
-                op( i, block.column_indices[j]) = block.values[j];
+        for( unsigned i=0; i<block.num_rows(); i++)
+            for( unsigned j=block.row_offsets()[i]; j<(unsigned)block.row_offsets()[i+1]; j++)
+                op( i, block.column_indices()[j]) = block.values()[j];
         matrix[u] = (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(u), op);
 
     }
@@ -249,9 +232,9 @@ dg::IHMatrix_t<real_type> inv_backproject( const aRealTopology<real_type,Nd>& g)
         dg::RealGrid1d<real_type> g_new( -1., 1., 1, n);
         auto block = dg::create::transformation( g_new, g_old);
         dg::SquareMatrix<real_type> op(n, 0.);
-        for( unsigned i=0; i<block.num_rows; i++)
-            for( unsigned j=block.row_offsets[i]; j<(unsigned)block.row_offsets[i+1]; j++)
-                op( i, block.column_indices[j]) = block.values[j];
+        for( unsigned i=0; i<block.num_rows(); i++)
+            for( unsigned j=block.row_offsets()[i]; j<(unsigned)block.row_offsets()[i+1]; j++)
+                op( i, block.column_indices()[j]) = block.values()[j];
         matrix[u] = (dg::IHMatrix_t<real_type>)dg::tensorproduct( g.N(u), dg::invert(op));
 
     }

@@ -34,10 +34,10 @@ inline void doSymv_dispatch(
 
     int size_x = x.size();
     int size_y = y.size();
-    if( size_x != m.total_num_cols()) {
+    if( (size_t)size_x != (size_t)m.total_num_cols()) {
         throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.total_num_cols());
     }
-    if( size_y != m.total_num_rows()) {
+    if( (size_t)size_y != (size_t)m.total_num_rows()) {
         throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.total_num_rows());
     }
     const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
@@ -143,7 +143,7 @@ inline void doStencil(
     static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
     static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value, "Execution policies must be equal!");
-    typedef typename std::decay_t<Matrix>::value_type value_type;
+    using value_type = dg::get_value_type<Matrix>;
     static_assert( std::is_same< get_value_type<Vector1>, value_type >::value,
         "Value types must be equal"
     );

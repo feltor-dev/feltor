@@ -55,6 +55,8 @@ template<class Index = int, class Value = double, template<class> class Vector =
 struct SparseMatrix
 {
     using policy = dg::get_execution_policy<Vector<Value>>;
+    using index_type = Index;
+    using value_type = Value;
     template<class OtherMatrix>
     using enable_if_serial = std::enable_if_t<std::is_same_v<typename OtherMatrix::policy, SerialTag>, OtherMatrix>;
 

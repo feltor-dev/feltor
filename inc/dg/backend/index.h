@@ -7,7 +7,6 @@
 #include "tensor_traits.h"
 #include "tensor_traits_scalar.h"
 #include "tensor_traits_thrust.h"
-#include "tensor_traits_cusp.h"
 #include "tensor_traits_std.h"
 
 namespace dg

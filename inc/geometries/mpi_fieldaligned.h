@@ -261,33 +261,27 @@ struct Fieldaligned< ProductMPIGeometry, MIMatrix, MPI_Vector<LocalContainer> >
     {
         if( inter_m == "dg")
         {
-            fine = dg::create::interpolation( *xcomp[u], *ycomp[u],
+            multi = projection * dg::create::interpolation( *xcomp[u], *ycomp[u],
                 grid_transform->global(), bcx, bcy, "dg");
-            cusp::multiply( projection, fine, multi);
             multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
         }
         else
         {
-            fine = dg::create::backproject( grid_transform->global()); // from dg to equidist
-            multi = dg::create::interpolation( *xcomp[u], *ycomp[u],
-                grid_equidist_global, bcx, bcy, inter_m);
-            cusp::multiply( multi, fine, temp);
-            cusp::multiply( projection, temp, multi);
+            multi = projection * dg::create::interpolation( *xcomp[u], *ycomp[u],
+                grid_equidist_global, bcx, bcy, inter_m) *
+                dg::create::backproject( grid_transform->global()); // from dg to equidist
             multi = dg::convertGlobal2LocalRows( multi, *grid_transform);
         }
 
         if( project_m != "dg")
         {
-            fine = dg::create::inv_backproject( grid_transform->local());
-            cusp::multiply( fine, multi, temp);
-            temp.swap(multi);
+            multi = dg::create::inv_backproject( grid_transform->local()) * multi;
         }
         dg::MIHMatrix mpi = dg::make_mpi_matrix( multi, *grid_transform); //, tempT;
         dg::blas2::transfer( mpi, *result[u]);
         if( make_adjoint and  u != 1)
         {
-            dg::IHMatrix multiT;
-            cusp::transpose( multi, multiT);
+            dg::IHMatrix multiT = multi.transpose();
             // multiT is column distributed
             // multiT has global rows and local column indices
             dg::convertLocal2GlobalCols( multiT, *grid_transform);

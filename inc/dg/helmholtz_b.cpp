@@ -1,10 +1,5 @@
 #include <iostream>
 
-#include <cusp/precond/diagonal.h>
-#include <cusp/precond/ainv.h>
-#include <cusp/krylov/cg.h>
-#include <cusp/monitor.h>
-
 #include "blas.h"
 
 #include "backend/timer.h"

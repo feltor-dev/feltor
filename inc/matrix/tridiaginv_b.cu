@@ -1,18 +1,11 @@
 #include <iostream>
 #include <iomanip>
-#include <cusp/transpose.h>
-#include <cusp/print.h>
-#include <cusp/array2d.h>
-#include <cusp/elementwise.h>
-#include <cusp/blas/blas.h>
-#include <cusp/print.h>
 
 #include "tridiaginv.h"
 
 using value_type = double;
-using memory_type = cusp::host_memory;
-using CooMatrix =  cusp::coo_matrix<int, double, memory_type>;
-using DiaMatrix =  cusp::dia_matrix<int, double, memory_type>;
+using CooMatrix =  dg::SquareMatrix<double>;
+using DiaMatrix =  dg::TriDiagonal<thrust::host_vector<double>>;
 using Container = dg::HVec;
 
 double mu(double s, unsigned i, unsigned n) {
@@ -61,67 +54,55 @@ int main()
     std::cout << "#Constructing Matrix inversion and linear solvers\n";
     value_type eps= 1e-20;
     t.tic();
-    dg::PCG <Container> pcg( x,  size*size+1);
+    dg::PCG pcg( x,  size*size+1);
     t.toc();
     std::cout << "#Construction of CG took "<< t.diff()<<"s \n";
     t.tic();
-    dg::LGMRES <Container> lgmres( x, max_outer, max_inner, restarts);
+    dg::LGMRES lgmres( x, max_outer, max_inner, restarts);
     t.toc();
     std::cout << "#Construction of LGMRES took "<< t.diff()<<"s \n";
     t.tic();
-    dg::BICGSTABl <Container> bicg( x,size*size,4);
+    dg::BICGSTABl bicg( x,size*size,4);
     t.toc();
     std::cout << "#Construction of BICGSTABl took "<< t.diff()<<"s \n";
     t.tic();
-    dg::mat::TridiagInvDF<Container, DiaMatrix, CooMatrix> tridiaginvDF(a);
+    dg::mat::TridiagInvDF<double> tridiaginvDF(a);
     t.toc();
     std::cout << "#Construction of Tridiagonal inversion DF routine took "<< t.diff()<<"s \n";
     t.tic();
-    dg::mat::TridiagInvD<Container, DiaMatrix, CooMatrix> tridiaginvD(a);
+    dg::mat::TridiagInvD<double> tridiaginvD(a);
     t.toc();
     std::cout << "#Construction of Tridiagonal inversion D routine took "<< t.diff()<<"s \n";
 
     //Create Tridiagonal and fill matrix
     DiaMatrix T, Tsym;
-    T.resize(size, size, 3*size-2, 3);
-    T.diagonal_offsets[0] = -1;
-    T.diagonal_offsets[1] =  0;
-    T.diagonal_offsets[2] =  1;
-    Tsym.resize(size, size, 3*size-2, 3);
-    Tsym.diagonal_offsets[0] = -1;
-    Tsym.diagonal_offsets[1] =  0;
-    Tsym.diagonal_offsets[2] =  1;
+    T.resize(size);
+    Tsym.resize(size);
 
     for( unsigned i=0; i<size; i++)
     {
-        T.values(i,1)   =  a[i];  // 0 diagonal
-        T.values(i,0)   =  c[i];  // -1 diagonal
-        T.values(i,2)   =  b[i];  // +1 diagonal
-        Tsym.values(i,1)   =  a_sym[i];  // 0 diagonal
-        Tsym.values(i,0)   =  c_sym[i];  // -1 diagonal
-        Tsym.values(i,2)   =  b_sym[i];  // +1 diagonal
+        T.O[i]   =  a[i];  // 0 diagonal
+        T.M[i]   =  c[i];  // -1 diagonal
+        T.P[i]   =  b[i];  // +1 diagonal
+        Tsym.O[i]   =  a_sym[i];  // 0 diagonal
+        Tsym.M[i]   =  c_sym[i];  // -1 diagonal
+        Tsym.P[i]   =  b_sym[i];  // +1 diagonal
     }
 
     //Create Inverse of tridiagonal matrix
-    CooMatrix Tinv, Tsyminv, Tinv_sol, Tsyminv_sol;
-    Tinv_sol.resize(size, size,  size* size);
-    Tsyminv_sol.resize(size, size,  size* size);
+    CooMatrix Tinv, Tsyminv, Tinv_sol(size), Tsyminv_sol(size);
     for( unsigned i=0; i<size; i++) //row index
     {
         for( unsigned j=0; j<size; j++) //column index
         {
-            Tinv_sol.row_indices[i*size+j]    = i;
-            Tinv_sol.column_indices[i*size+j] = j;
-            Tsyminv_sol.row_indices[i*size+j]    = i;
-            Tsyminv_sol.column_indices[i*size+j] = j;
             if (i>= j)
             {
-                Tinv_sol.values[i*size+j] = (2.0+s)/(1.0+s)*mu(s,i+1,size+1)*mu(s,size+1-(j+1),size+1)/mu(s,0,size+1);
-                Tsyminv_sol.values[i*size+j] = (j+1.0)/(i+1.0);
+                Tinv_sol(i,j) = (2.0+s)/(1.0+s)*mu(s,i+1,size+1)*mu(s,size+1-(j+1),size+1)/mu(s,0,size+1);
+                Tsyminv_sol(i,j) = (j+1.0)/(i+1.0);
             }
             else
             {
-                Tsyminv_sol.values[i*size+j] = (i+1.0)/(j+1.0);
+                Tsyminv_sol(i,j) = (i+1.0)/(j+1.0);
             }
         }
     }
@@ -131,7 +112,7 @@ int main()
         {
             if (i<j)
             {
-                Tinv_sol.values[i*size+j] = pow(1.0/(1.0+s),j-i)*Tinv_sol.values[j*size+i];
+                Tinv_sol(i,j) = pow(1.0/(1.0+s),j-i)*Tinv_sol(j,i);
             }
         }
     }
@@ -164,7 +145,7 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_symsol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_symsol,x_symsol)) << "\n";
-    std::cout <<  "    #error_rel in T_{m,1}: " << fabs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/fabs(Tsyminv_sol.values[size-1]) << "\n";
+    std::cout <<  "    #error_rel in T_{m,1}: " << fabs(Tsyminv(size-1,0) - Tsyminv_sol(size-1,0))/fabs(Tsyminv_sol(size-1,0)) << "\n";
     if(  size < 150)
     {
     std::cout << "InvtridiagD(v_sym):" << std::endl;
@@ -183,7 +164,7 @@ int main()
     dg::blas1::axpby(1.0, x, -1.0, x_symsol, err );
     std::cout <<  "    time: "<< t.diff()<<"s \n";
     std::cout <<  "    error_rel: " << sqrt(dg::blas1::dot(err,err)/dg::blas1::dot(x_symsol,x_symsol)) << "\n";
-    std::cout <<  "    #error_rel in T_{m,1}: " << fabs(Tsyminv.values[size-1] - Tsyminv_sol.values[size-1])/fabs(Tsyminv_sol.values[size-1]) << "\n";
+    std::cout <<  "    #error_rel in T_{m,1}: " << fabs(Tsyminv(size-1,0) - Tsyminv_sol(size-1,0))/fabs(Tsyminv_sol(size-1,0)) << "\n";
     }
     std::cout << "# Test Thomas algorithm\n";
     t.tic();
