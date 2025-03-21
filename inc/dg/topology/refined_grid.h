@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cusp/transpose.h"
 #include "dg/backend/memory.h"
 #include "dg/blas.h"
 #include "grid.h"

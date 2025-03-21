@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cusp/print.h>
 #include "average.h"
 #include "stencil.h"
 #include "filter.h"

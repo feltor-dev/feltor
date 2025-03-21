@@ -4,7 +4,6 @@
 #include "backend/tensor_traits.h"
 #include "backend/tensor_traits_scalar.h"
 #include "backend/tensor_traits_thrust.h"
-#include "backend/tensor_traits_cusp.h"
 #include "backend/tensor_traits_std.h"
 
 #include "catch2/catch_all.hpp"
