@@ -5,10 +5,12 @@
 #include <thrust/sort.h>
 #include <thrust/gather.h>
 #include <thrust/sequence.h>
+#include <thrust/binary_search.h>
 #include "tensor_traits.h"
 #include "predicate.h"
 #include "exceptions.h"
 #include "config.h"
+#include "blas2_stencil.h"
 
 #include "sparsematrix_cpu.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
@@ -22,27 +24,45 @@ namespace dg
 
 namespace detail
 {
+template<class I0, class I1>
+void csr2coo_inline( const I0& csr, I1& coo)
+{
+    using policy = dg::get_execution_policy<I0>;
+    static_assert( dg::has_policy_v<I1, policy>, "Vector types must have same execution policy");
+    using I0_t = dg::get_value_type<I0>;
+    using I1_t = dg::get_value_type<I1>;
+    dg::blas2::detail::doParallelFor_dispatch( policy(), csr.size()-1,
+            []DG_DEVICE( unsigned i, const I0_t* csr_ptr, I1_t* coo_ptr)
+            {
+                for (int jj = csr_ptr[i]; jj < csr_ptr[i+1]; jj++)
+                    coo_ptr[jj] = i;
+            },
+            thrust::raw_pointer_cast(csr.data()),
+            thrust::raw_pointer_cast(coo.data()));
+}
 template<class I>
 I csr2coo( const I& csr)
 {
-    static_assert( dg::has_policy_v<I, dg::SerialTag>);
-    unsigned num_rows = csr.size()-1;
-    I coo( csr[num_rows]);
-    for( unsigned i=0; i<num_rows; i++)
-        for (int jj = csr[i]; jj < csr[i+1]; jj++)
-            coo[jj] = i;
+    I coo( csr.back());
+    csr2coo_inline( csr, coo);
     return coo;
 }
 //coo must be sorted
+template<class I0, class I1>
+void coo2csr_inline( const I0& coo, I1& csr)
+{
+    using policy = dg::get_execution_policy<I0>;
+    static_assert( dg::has_policy_v<I1, policy>, "Vector types must have same execution policy");
+    thrust::lower_bound( coo.begin(), coo.end(),
+            thrust::counting_iterator<dg::get_value_type<I1>>(0),
+            thrust::counting_iterator<dg::get_value_type<I1>>( csr.size()),
+            csr.begin());
+}
 template<class I>
 I coo2csr( unsigned num_rows, const I& coo)
 {
-    static_assert( dg::has_policy_v<I, dg::SerialTag>);
     I csr(num_rows+1,0);
-    for( unsigned i=0; i<num_rows+1; i++)
-    {
-        csr[i] = std::lower_bound( coo.begin(), coo.end(), i) - coo.begin();
-    }
+    coo2csr_inline( coo, csr);
     if( (size_t)csr[num_rows] != (size_t)coo.size())
         throw dg::Error( dg::Message( _ping_) << "Error: Row indices contain values beyond num_rows "
                 <<num_rows<<"\n");
