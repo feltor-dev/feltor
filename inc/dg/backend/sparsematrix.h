@@ -57,15 +57,15 @@ void coo2csr_inline( const I0& coo, I1& csr)
             thrust::counting_iterator<dg::get_value_type<I1>>(0),
             thrust::counting_iterator<dg::get_value_type<I1>>( csr.size()),
             csr.begin());
+    //if( (size_t)csr[num_rows] != (size_t)coo.size())
+    //    throw dg::Error( dg::Message( _ping_) << "Error: Row indices contain values beyond num_rows "
+    //            <<num_rows<<"\n");
 }
 template<class I>
 I coo2csr( unsigned num_rows, const I& coo)
 {
     I csr(num_rows+1,0);
     coo2csr_inline( coo, csr);
-    if( (size_t)csr[num_rows] != (size_t)coo.size())
-        throw dg::Error( dg::Message( _ping_) << "Error: Row indices contain values beyond num_rows "
-                <<num_rows<<"\n");
     return csr;
 }
 }
@@ -81,10 +81,10 @@ struct SparseMatrix
     using enable_if_serial = std::enable_if_t<std::is_same_v<typename OtherMatrix::policy, SerialTag>, OtherMatrix>;
 
     SparseMatrix() = default;
+    // Sort is somewhat expensive and it is allowed to have unsorted column indices (at least in cusparse; for our stencil we also rely on keeping unsorted indices)
     SparseMatrix( size_t num_rows, size_t num_cols, Vector<Index> row_offsets, Vector<Index> cols, Vector<Value> vals)
     : m_num_rows( num_rows), m_num_cols( num_cols), m_row_offsets( row_offsets), m_cols(cols), m_vals(vals)
     {
-        sort();
     }
 
     template< class I, class V, template<class> class Vec>
@@ -97,11 +97,9 @@ struct SparseMatrix
     }
 
 
-    // May be unsorted but not duplicate
-    // Only works on host
-    template<class OtherMatrix = SparseMatrix>
-    std::enable_if_t<dg::has_policy_v<OtherMatrix, SerialTag>, void>
-        setFromCoo( size_t num_rows, size_t num_cols, const Vector<Index>& rows, const Vector<Index>& cols, const Vector<Value>& vals)
+    // May be unsorted; if duplicates exist symv may not be correct (from cusparse)
+    // if sort sorts by row and column
+    void setFromCoo( size_t num_rows, size_t num_cols, const Vector<Index>& rows, const Vector<Index>& cols, const Vector<Value>& vals, bool sort = false)
     {
         if( rows.size() != vals.size())
             throw dg::Error( dg::Message( _ping_) << "Error: Row indices size "
@@ -112,36 +110,51 @@ struct SparseMatrix
         m_num_rows = num_rows;
         m_num_cols = num_cols;
 
-        // All this just to avoid gcc vomiting warnings at me
-        thrust::host_vector<Index> trows( rows.begin(), rows.end());
-        thrust::host_vector<Index> tcols( cols.begin(), cols.end());
-        thrust::host_vector<Value> tvals( vals.begin(), vals.end());
-        thrust::host_vector<Index> p( rows.size()); // permutation
-        thrust::sequence( p.begin(), p.end());
-        // First sort columns
-        thrust::sort_by_key( tcols.begin(), tcols.end(), p.begin());
-        // Repeat sort on rows
-        thrust::gather( p.begin(), p.end(), rows.begin(), trows.begin());
-        // Now sort rows preserving relative ordering
-        thrust::stable_sort_by_key( trows.begin(), trows.end(), p.begin());
-        // Repeat sort on cols and vals
-        thrust::gather( p.begin(), p.end(), cols.begin(), tcols.begin());
-        thrust::gather( p.begin(), p.end(), vals.begin(), tvals.begin());
-        auto row_offsets = detail::coo2csr( num_rows, trows);
-        m_row_offsets.resize( row_offsets.size());
-        m_cols.resize( tcols.size());
-        m_vals.resize( tvals.size());
-        thrust::copy( row_offsets.begin(), row_offsets.end(), m_row_offsets.begin());
-        thrust::copy( tcols.begin(), tcols.end(), m_cols.begin());
-        thrust::copy( tvals.begin(), tvals.end(), m_vals.begin());
+        m_row_offsets.resize( num_rows+1);
+        m_cols.resize( cols.size());
+        m_vals.resize( vals.size());
+
+        if( sort)
+        {
+            Vector<Index> trows( rows);
+            Vector<Index> tcols( cols);
+            Vector<Index> p( rows.size()); // permutation
+            thrust::sequence( p.begin(), p.end());
+            // First sort columns
+            thrust::sort_by_key( tcols.begin(), tcols.end(), p.begin());
+            // Repeat sort on rows
+            thrust::gather( p.begin(), p.end(), rows.begin(), trows.begin());
+            // Now sort rows preserving relative ordering
+            thrust::stable_sort_by_key( trows.begin(), trows.end(), p.begin());
+            m_row_offsets.resize( num_rows+1);
+            detail::coo2csr_inline( trows, m_row_offsets);
+            // Repeat sort on cols and vals
+            thrust::gather( p.begin(), p.end(), cols.begin(), m_cols.begin());
+            thrust::gather( p.begin(), p.end(), vals.begin(), m_vals.begin());
+        }
+        else
+        {
+            detail::coo2csr_inline( rows, m_row_offsets);
+            thrust::copy( cols.begin(), cols.end(), m_cols.begin());
+            thrust::copy( vals.begin(), vals.end(), m_vals.begin());
+        }
         m_cache.forget();
     }
 
-    void set( size_t num_rows, size_t num_cols, const Vector<Index>& row_offsets, const Vector<Index> cols, const Vector<Value>& vals)
+    // May be unsorted; if duplicates exist symv may not be correct (from cusparse)
+    // if sort sorts by row and column
+    void set( size_t num_rows, size_t num_cols, const Vector<Index>& row_offsets, const Vector<Index> cols, const Vector<Value>& vals, bool sort = false)
     {
-        m_num_rows = num_rows, m_num_cols = num_cols;
-        m_row_offsets = row_offsets, m_cols = cols, m_vals = vals;
-        sort();
+        if ( sort)
+        {
+            Vector<Index> rows = detail::csr2coo( row_offsets);
+            setFromCoo( num_rows, num_cols, rows, cols, vals, true);
+        }
+        else
+        {
+            m_num_rows = num_rows, m_num_cols = num_cols;
+            m_row_offsets = row_offsets, m_cols = cols, m_vals = vals;
+        }
         m_cache.forget();
     }
 
@@ -169,7 +182,6 @@ struct SparseMatrix
             m_vals.size(), row_ptr, col_ptr, val_ptr, alpha, beta, x, y);
     }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    public:
     template<class value_type>
     void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
     {
@@ -203,17 +215,33 @@ struct SparseMatrix
     /**
     * @brief Transposition
     *
+    * The transpose is sorted even if the original is not
     * @return  A newly generated SparseMatrix containing the transpose.
     */
-    template<class OtherMatrix = SparseMatrix>
-    enable_if_serial<OtherMatrix> transpose() const
+    SparseMatrix transpose() const
     {
-        auto rows = detail::csr2coo(m_row_offsets);
+        auto cols = detail::csr2coo(m_row_offsets);
+        // cols are sorted
 
         // We need to sort now
         SparseMatrix<Index,Value,thrust::host_vector> o;
-        o.setFromCoo( m_num_cols, m_num_rows, m_cols, rows, m_vals);
-        // Convert to device
+        o.m_num_rows = m_num_cols;
+        o.m_num_cols = m_num_rows;
+
+        Vector<Index> rows( m_cols.begin(), m_cols.end());
+        Vector<Index> p( rows.size()); // permutation
+        thrust::sequence( p.begin(), p.end());
+
+        thrust::stable_sort_by_key( rows.begin(), rows.end(), p.begin());
+        o.m_row_offsets.resize( o.m_num_rows+1);
+        detail::coo2csr_inline( rows, o.m_row_offsets);
+        // Repeat sort on cols and vals
+        o.m_cols.resize( cols.size());
+        o.m_vals.resize( m_vals.size());
+        // Since cols are sorted o.m_cols will be as well
+        thrust::gather( p.begin(), p.end(),   cols.begin(), o.m_cols.begin());
+        thrust::gather( p.begin(), p.end(), m_vals.begin(), o.m_vals.begin());
+        o.m_cache.forget();
         return o;
 
     }
@@ -298,11 +326,14 @@ struct SparseMatrix
      *
      * @return
      */
-    template<class OtherMatrix = SparseMatrix>
-    enable_if_serial<OtherMatrix>& operator*=( const Value& value )
+    SparseMatrix& operator*=( const Value& value )
     {
-        for( unsigned i=0; i<m_vals.size(); i++)
-            m_vals[i] *= value;
+        dg::blas2::detail::doParallelFor_dispatch( policy(), m_vals.size(),
+            [value]DG_DEVICE( unsigned i, Value* val_ptr)
+            {
+                val_ptr[i] *= value;
+            },
+            thrust::raw_pointer_cast(m_vals.data()));
         return *this;
     }
     /**
@@ -311,7 +342,7 @@ struct SparseMatrix
      * @param lhs
      * @param rhs
      *
-     * @return
+     * @return addition (sorted even if lhs and rhs are not)
      */
     template<class OtherMatrix = SparseMatrix>
     friend enable_if_serial<OtherMatrix> operator+( const SparseMatrix& lhs, const SparseMatrix& rhs)
@@ -339,7 +370,7 @@ struct SparseMatrix
      * @param lhs
      * @param rhs
      *
-     * @return
+     * @return subtraction (sorted even if lhs and rhs are not)
      */
     template<class OtherMatrix = SparseMatrix>
     friend enable_if_serial<OtherMatrix> operator-( const SparseMatrix& lhs, const SparseMatrix& rhs)
@@ -384,7 +415,7 @@ struct SparseMatrix
      * @param lhs
      * @param rhs
      *
-     * @return
+     * @return multiplication (sorted even if lhs and rhs are not)
      */
     template<class OtherMatrix = SparseMatrix>
     friend enable_if_serial<OtherMatrix> operator*( const SparseMatrix& lhs, const SparseMatrix& rhs)
@@ -453,6 +484,23 @@ struct SparseMatrix
         return os;
     }
 
+    // Somewhat expensive
+    void sort_indices()
+    {
+        if( m_num_rows != m_row_offsets.size()-1)
+            throw dg::Error( dg::Message( _ping_) << "Error: Row offsets have size "
+                <<m_row_offsets.size()<<" but num_rows is "<<m_num_rows<<"\n");
+        if( m_cols.size() != m_vals.size())
+            throw dg::Error( dg::Message( _ping_) << "Error: Column indices size "
+                <<m_cols.size()<<" not equal to values size "<<m_vals.size()<<"\n");
+
+        // Sort each row
+        Vector<Index> rows = detail::csr2coo( m_row_offsets);
+        Vector<Index> cols = m_cols;
+        Vector<Value> vals = m_vals;
+        setFromCoo( m_num_rows, m_num_cols, rows, cols, vals, true);
+    }
+
     private:
     // The task of the cache is to keep performance information across multiple calls to
     // symv. The cache needs to forget said information any time the matrix changes
@@ -466,26 +514,6 @@ struct SparseMatrix
 #endif
             m_cache;
 
-    void sort()
-    {
-        if( m_num_rows != m_row_offsets.size()-1)
-            throw dg::Error( dg::Message( _ping_) << "Error: Row offsets have size "
-                <<m_row_offsets.size()<<" but num_rows is "<<m_num_rows<<"\n");
-        if( m_cols.size() != m_vals.size())
-            throw dg::Error( dg::Message( _ping_) << "Error: Column indices size "
-                <<m_cols.size()<<" not equal to values size "<<m_vals.size()<<"\n");
-        // Sort each row
-        //thrust::host_vector<Index> row_offsets( m_row_offsets.begin(), m_row_offsets.end());
-        for( unsigned row=0; row<m_num_rows; row++)
-        {
-            // If you're here because the compiler vomited warnings about __host__ __device__ functions
-            // you can saefely ignore them
-            thrust::stable_sort_by_key( m_cols.begin()+m_row_offsets[row],
-                m_cols.begin() + m_row_offsets[row+1],
-                m_vals.begin() + m_row_offsets[row],
-                thrust::less<Index>()); // this changes both row_offsets and vals
-        }
-    }
     size_t m_num_rows, m_num_cols;
     Vector<Index> m_row_offsets, m_cols;
     Vector<Value> m_vals;

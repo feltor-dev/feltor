@@ -15,7 +15,7 @@ namespace detail
 
 // A = B*C
 // We do not catch explicit zeros in A
-// Entries in A are sorted
+// Entries in A are sorted (even if B and/or C are not)
 template<class I, class V>
 void spgemm_cpu_kernel(
     size_t B_num_rows, size_t B_num_cols, size_t C_num_cols,

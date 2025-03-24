@@ -48,6 +48,7 @@ TEST_CASE( "Construct sparse matrix")
         std::vector<int> rows = {0,3,5,7}, cols = {4,3,0,2,0,4,1};
         std::vector<double> vals = {3,2,1,5,2,1,4};
         dg::SparseMatrix<int,double,std::vector> A ( num_rows, num_cols, rows, cols, vals);
+        A.sort_indices();
         CHECK( A.row_offsets() == std::vector{0,3,5,7});
         CHECK( A.column_indices() == std::vector{0,3,4,0,2,1,4});
         CHECK( A.values() == std::vector<double>{1,2,3,2,5,4,1});
@@ -61,7 +62,7 @@ TEST_CASE( "Construct sparse matrix")
         std::vector<int> rows = {2,2,0,0,0,1,1}, cols = {4,1,4,3,0,2,0};
         std::vector<double> vals = {1,4, 3,2,1,5,2};
         dg::SparseMatrix<int,double,std::vector> A;
-        A.setFromCoo( num_rows, num_cols, rows, cols, vals);
+        A.setFromCoo( num_rows, num_cols, rows, cols, vals, true);
         CHECK( A.row_offsets() == std::vector{0,3,5,7});
         CHECK( A.column_indices() == std::vector{0,3,4,0,2,1,4});
         CHECK( A.values() == std::vector<double>{1,2,3,2,5,4,1});
@@ -181,8 +182,9 @@ TEST_CASE( "SpMV on device")
     // 2 0 5 0 0
     // 0 4 0 0 1
     unsigned num_rows = 3, num_cols = 5;
-    std::vector<int> rows = {0,3,5,7}, cols = {0,3,4,0,2,1,4};
-    std::vector<double> vals = {1,2,3,2,5,4,1};
+    // UNSORTED!!
+    std::vector<int> rows = {0,3,5,7}, cols = {0,4,3,0,2,1,4};
+    std::vector<double> vals = {1,3,2,2,5,4,1};
     dg::SparseMatrix<int,double,thrust::host_vector> A ( num_rows, num_cols, rows, cols, vals);
     dg::SparseMatrix<int,double, thrust::device_vector> dA( A);
     SECTION( "transpose")
