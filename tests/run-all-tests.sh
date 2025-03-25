@@ -10,6 +10,7 @@ do
     do
         echo "#########################"
         echo "DIRECTORY" $dir "TEST DEVICE" $dev
+        make clean # Delete leftovers from previous tests
         make tests -j 4 device=$dev
         ./tests
         make mpi-tests -j 4 device=$dev

@@ -13,6 +13,15 @@ template< class Stencil, class ContainerType, class ...ContainerTypes>
 inline void parallel_for( Stencil f, unsigned N, ContainerType&& x, ContainerTypes&&... xs);
 namespace detail{
 
+template<class T>
+struct SCAL
+{
+    SCAL( T beta) : m_beta(beta){}
+    DG_DEVICE void operator()( unsigned i, T* y) { y[i] *= m_beta;}
+    private:
+    T m_beta;
+};
+
 
 template<class Matrix1, class Matrix2>
 inline void doTransfer( const Matrix1& x, Matrix2& y, AnyMatrixTag, SparseBlockMatrixTag)
@@ -39,6 +48,17 @@ inline void doSymv_dispatch(
     }
     if( (size_t)size_y != (size_t)m.total_num_rows()) {
         throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.total_num_rows());
+    }
+    // This happens sometimes in MPI
+    if( m.total_num_rows() == 0) // no elements in y
+        return;
+    if( m.total_num_cols() == 0) // no elements in x
+    {
+        if ( beta == value_type(1))
+            return;
+        else
+            dg::blas2::parallel_for( SCAL(beta), m.total_num_rows(),  y);
+
     }
     const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
           value_type * y_ptr = thrust::raw_pointer_cast(y.data());

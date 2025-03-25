@@ -47,24 +47,20 @@ Open a terminal and clone the repository into any folder you like
 git clone https://www.github.com/feltor-dev/feltor
 ----
 
-You also need to clone https://github.com/nvidia/thrust[thrust] and
-https://github.com/cusplibrary/cusplibrary[cusp] distributed under the
+You also need to clone https://github.com/nvidia/cccl[cccl]
+ distributed under the
 Apache-2.0 license. Also, we need Agner Fog's https://github.com/vectorclass/version1[vcl] library (Apache 2.0). So again in a folder of your choice
 
 [source,sh]
 ----
-git clone https://www.github.com/nvidia/thrust
-git clone https://www.github.com/cusplibrary/cusplibrary
-git clone https://www.github.com/vectorclass/version1 vcl
-# We need to checkout an older version of thrust compatible with cusp
-cd thrust
-git checkout 1.9.3
+git clone https://www.github.com/nvidia/cccl
+git clone https://www.github.com/vectorclass/version2 vcl
 ----
 
 ____
 Our code only depends on external libraries that are themselves openly
 available.
- We use version1 of the vectorclass library, as version2 requires C{plus}{plus}-17 and does not work with the intel compiler.
+If version2 of the vectorclass library does not work for you, you can also try version1.
 ____
 
 .System requirements [[tab_requirements]]
@@ -73,15 +69,15 @@ ____
 |=======================================================================
 |    | Minimum system requirements  | Recommended system requirements
 | *CPU*     | Any         |support for AVX and FMA instruction set
-| *Compiler*| gcc-5.1 or msvc-15 or icc-17.0 (C{plus}{plus}-17 standard)| gcc-9.3, OpenMP-4 support, avx, fma instruction set flags
-| *GPU*     | - | NVidia GPU with compute-capability > 6 and nvcc-11.0
+| *Compiler*| gcc >= 9 or msvc >= 19 or icc >= 19.0 (C{plus}{plus}-17 standard)| OpenMP-4 support, avx, fma instruction set flags
+| *GPU*     | - | NVidia GPU with compute-capability >= 6.1 and nvcc >= 11.0
 | *MPI*     | - | mpi installation compatible with compiler (ideally cuda-aware in case hybrid MPI+GPU is the target system)
 |=======================================================================
 ____
 Our GPU backend uses the
 https://developer.nvidia.com/cuda-zone[Nvidia-CUDA] programming
 environment and in order to compile and run a program for a GPU a user
-needs at least the nvcc-8.0 compiler (available free of charge) and a NVidia
+needs at least the nvcc-11.0 compiler (available free of charge) and a NVidia
 GPU. However, we explicitly note here that due to the modular design of
 our software a user does not have to possess a GPU nor the nvcc
 compiler. The CPU version of the backend is equally valid and provides
@@ -103,8 +99,10 @@ directory
 cd ~
 mkdir include
 cd include
-ln -s path/to/thrust/thrust # Yes, thrust is there twice!
-ln -s path/to/cusplibrary/cusp
+ln -s path/to/cccl/thrust/thrust # Yes, thrust is there twice!
+ln -s path/to/cccl/cub/cub
+ln -s path/to/cccl/libcudacxx/include/cuda
+ln -s path/to/cccl/libcudacxx/include/nv
 ln -s path/to/vcl
 ----
 
@@ -404,10 +402,8 @@ Please clone all four of the following URLs using `File -> Clone repository...`
 [source,sh]
 ----
 https://www.github.com/feltor-dev/feltor
-https://www.github.com/nvidia/thrust
-# Checkout thrust to 1.9.3
-https://www.github.com/cusplibrary/cusplibrary
-https://www.github.com/vectorclass/version1 # local path "vcl"
+https://www.github.com/nvidia/cccl
+https://www.github.com/vectorclass/version2 # local path "vcl"
 ----
 Please also have a look at the relevant <<tab_requirements, system requirements>> Table.
 
@@ -421,8 +417,8 @@ the FELTOR library headers `dg/algorithm.h` and/or `dg/geometries/geometries.h`
 to a convenient location.
 * Double click on `FeltorPropertySheet` (expand your solution and any of the Debug or Release tabs to find it)
 ** In `VC++ Directories -> Include Directories` click on `Edit` Then add the four lines
-`path\to\feltor\inc`, `path\to\thrust`,
-`path\to\cusplibrary` and `path\to\folder_containing_vcl`
+`path\to\feltor\inc`, `path\to\cccl\thrust`,
+`path\to\cccl\cub`, `path\to\cccl\libcudacxx\include`  and `path\to\folder_containing_vcl`
 ** In `C/C++ -> Optimization -> Enable Intrinsic Functions` select `Yes (/Oi)`
 ** In `C/C++ -> Preprocessor -> Preprocessor Definitions` select `Edit` and
 add the line `THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP` (Selects the CPU backend in FELTOR)
@@ -494,34 +490,17 @@ LaTeX::
 Install https://miktex.org/[MikTex] and https://texstudio.org[TeXstudio] (in that order) in order to be able to
 compile the tex file(s) of the documentation.
 
-=== Troubleshooting [[sec_troubleshooting]]
-==== I get a compile error: identifier "__thrust_compiler_fence" is undefined
-
-This is an error of the unmaintained cusp that does not like the newly
-updated thrust version on github. Currently, you can either go back to
-version 1.9.3 in thrust:
-
-```sh
-cd path/to/thrust
-git checkout 1.9.3
-```
-or alternatively there is a fix in cusp that can be accessed via
-```sh
-cd path/to/cusplibrary
-git checkout cuda10
-```
 == 2. Documentation
 
 The
-https://mwiesenberger.github.io/feltor/dg/html/modules.html[documentation]
+https://mwiesenberger.github.io/feltor/dg/html/topics.html[documentation]
 of the dg library was generated with
-http://www.doxygen.org[Doxygen] and LateX. You can generate a local
+http://www.doxygen.org[Doxygen]. You can generate a local
 version directly from source code. This depends on the `doxygen`,
-`libjs-mathjax` and `graphviz` packages and LateX (for equations). Type `make doc` in
+`libjs-mathjax`, `graphviz` and `doxygen-awesome` packages. Type `make doc` in
 the folder `path/to/feltor/doc` and open `index.html` (a symbolic link
 to `dg/html/modules.html`) with your favorite browser.
-Finally, also note the documentations of https://thrust.github.io/doc/modules.html[thrust]
-and https://cusplibrary.github.io/[cusp].
+Finally, also note the documentations of https://nvidia.github.io/cccl/thrust[thrust].
 
 We maintain tex files in every src folder for
 technical documentation, which can be compiled using pdflatex with

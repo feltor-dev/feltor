@@ -33,9 +33,9 @@
 ###
 
 # doxygen-awesome-css path
-#  if installed via system package manager
+# If installed via system package manager:
 #dapath=/usr/share/doxygen-awesome-css
-# installed via make install
+# If installed via make install:
 dapath=/usr/local/share/doxygen-awesome-css
 # Relative paths won't work!!
 #dapath=../../doxygen-awesome-css
