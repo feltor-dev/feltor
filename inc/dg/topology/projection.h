@@ -135,8 +135,14 @@ dg::SparseMatrix< int, real_type, thrust::host_vector> projection(
     //form the adjoint
     auto w_old = dg::create::weights( g_old);
     auto v_new = dg::create::inv_weights( g_new);
-    return dg::create::diagonal( v_new)* interpolation(
-            g_old, g_new, method).transpose() * dg::create::diagonal(w_old);
+    auto project = interpolation( g_old, g_new, method).transpose();
+    for( unsigned row=0; row<project.num_rows(); row++)
+        for ( int jj = project.row_offsets()[row]; jj < project.row_offsets()[row+1]; jj++)
+        {
+            int col = project.column_indices()[jj];
+            project.values()[jj] = v_new[row] * ( project.values()[jj]* w_old[col]);
+        }
+    return project;
 }
 
 /**
