@@ -139,14 +139,15 @@ struct CSRCache_gpu
     {
         // cusparse practically only supports uniform data-types (e.g. double Matrix, complex vector is not supported)
         CusparseErrorHandle err;
-        cusparseConstDnVecDescr_t vecX;
+        cusparseDnVecDescr_t vecX;
         cusparseDnVecDescr_t vecY;
-        err = cusparseCreateConstCsr( &m_matA, num_rows, num_cols, nnz,
-            pos, idx, val, getCudaIndexType<I>(), getCudaIndexType<I>(),
+        err = cusparseCreateCsr( &m_matA, num_rows, num_cols, nnz,
+            const_cast<I*>(pos), const_cast<I*>(idx), const_cast<V*>(val),
+	    getCudaIndexType<I>(), getCudaIndexType<I>(),
             CUSPARSE_INDEX_BASE_ZERO, getCudaDataType<V>() );
         V * x_ptr;
         cudaMalloc( &x_ptr, num_cols*sizeof(V));
-        err = cusparseCreateConstDnVec( &vecX, num_cols, x_ptr, getCudaDataType<V>());
+        err = cusparseCreateDnVec( &vecX, num_cols, x_ptr, getCudaDataType<V>());
         V * y_ptr;
         cudaMalloc( &y_ptr, num_cols*sizeof(V));
         err = cusparseCreateDnVec( &vecY, num_rows, y_ptr, getCudaDataType<V>());
@@ -162,10 +163,12 @@ struct CSRCache_gpu
         cudaMalloc( &m_dBuffer, bufferSize);
 
         m_active = true;
+#if (CUDART_VERSION >= 12040) // _preprocess only exists as of 12.4 
         err = cusparseSpMV_preprocess( CusparseHandle::getInstance().handle(),
             CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, m_matA, vecX, &beta, vecY,
             getCudaDataType<V>(), CUSPARSE_SPMV_CSR_ALG1, m_dBuffer);
         // m_buffer is now associated to m_matA
+#endif
         err = cusparseDestroyDnVec( vecX);
         err = cusparseDestroyDnVec( vecY);
         cudaFree( x_ptr);
@@ -173,11 +176,11 @@ struct CSRCache_gpu
     }
     size_t getBufferSize() { return m_bufferSize;}
     void * getBuffer() { return m_dBuffer;}
-    cusparseConstSpMatDescr_t getSpMat() const { return m_matA;}
+    cusparseSpMatDescr_t getSpMat() const { return m_matA;}
 
     private:
     bool m_active = false;
-    cusparseConstSpMatDescr_t m_matA;
+    cusparseSpMatDescr_t m_matA;
     void * m_dBuffer = nullptr;
     size_t m_bufferSize = 0;
 };
@@ -193,9 +196,9 @@ void spmv_gpu_kernel(
 {
     CusparseErrorHandle err;
     // Assume here that the descriptors are lightweight structures ...
-    cusparseConstDnVecDescr_t vecX;
+    cusparseDnVecDescr_t vecX;
     cusparseDnVecDescr_t vecY;
-    err = cusparseCreateConstDnVec( &vecX, A_num_cols, x_ptr, getCudaDataType<C1>());
+    err = cusparseCreateDnVec( &vecX, A_num_cols, const_cast<C1*>(x_ptr), getCudaDataType<C1>());
     err = cusparseCreateDnVec( &vecY, A_num_rows, y_ptr, getCudaDataType<C2>());
 
     if( not cache.isUpToDate())
