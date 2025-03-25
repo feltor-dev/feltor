@@ -188,7 +188,7 @@ dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const
     B.setFromCoo( row_policy.local_size(), global.num_cols(),
         dg::detail::flatten_map( row_buf),
         dg::detail::flatten_map(col_buf),
-        dg::detail::flatten_map(val_buf));
+        dg::detail::flatten_map(val_buf), true);
     return B;
     // 4. Reduce on identical rows/cols
     // .... Maybe later
