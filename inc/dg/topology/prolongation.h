@@ -170,6 +170,7 @@ dg::SparseMatrix<int, real_type, thrust::host_vector> projection(
         for ( int jj = project.row_offsets()[row]; jj < project.row_offsets()[row+1]; jj++)
         {
             int col = project.column_indices()[jj];
+            // Note that w_old is multiplied before v_new (keeps results backwards reproducible)
             project.values()[jj] = v_new[row] * ( project.values()[jj]* w_old[col]);
         }
     return project;
