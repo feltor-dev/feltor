@@ -95,7 +95,7 @@ dg::SparseMatrix<int, T, thrust::host_vector> sandwich( const SquareMatrix<T>& l
     assert( left.size() == right.size());
     unsigned n = left.size();
     unsigned N = m.num_rows()/n;
-    return tensorproduct( N, left)*m*tensorproduct( N, right);
+    return tensorproduct( N, left)*(m*tensorproduct( N, right));
 }
 
 

@@ -15,7 +15,6 @@ namespace dg{
  * "Plus +1 diagonal), i.e.  M is the subdiagonal, O the diagonal and P the
  * superdiagonal vector.
  * \f$ M_0 \f$ and \f$ P_{N-1}\f$ are ignored
- * @note Implemented using \c dg::blas2::parallel_for (which only works on shared memory vectors though)
  * @tparam Container One of the shared memory containers
  */
 template<class Container>
@@ -23,9 +22,22 @@ struct TriDiagonal
 {
     using value_type = dg::get_value_type<Container>;
     TriDiagonal() = default;
+    /*! @brief Allocate size elements for M, O and P
+     */
     TriDiagonal( unsigned size) : M(size), O(size), P(size){}
+
+    /*! @brief Directly construct from M, O and P
+     * @param M Subdiagonal
+     * @param O Diagonal
+     * @param P Superdiagonal
+     */
     TriDiagonal( Container M, Container O, Container P)
         : M(M), O(O), P(P){}
+
+    /*! @brief Assign M, O, and P from other matrix
+     * @tparam Container2
+     * @param other
+     */
     template<class Container2>
     TriDiagonal( const TriDiagonal<Container2>& other){
         dg::assign( other.M, this->M);
@@ -33,12 +45,22 @@ struct TriDiagonal
         dg::assign( other.P, this->P);
     }
     unsigned size()const {return O.size();}
+    /*! @brief Resize M, O, and P to given size
+     * @param size New size
+     */
     void resize( unsigned size)
     {
         M.resize( size);
         O.resize( size);
         P.resize( size);
     }
+    /*! @brief Compute Matrix-vector product \f$y = Tx\f$
+     *
+     * @note Implemented using \c dg::blas2::parallel_for (which only works on
+     * shared memory vectors)
+     * @param x input
+     * @param y result
+     */
     void operator()( const Container& x, Container& y) const
     {
         unsigned size = M.size();
@@ -90,7 +112,9 @@ struct TriDiagonal
         return {size, size, A_row_offsets, A_column_indices, A_values};
     }
 
-    Container M, O, P;
+    Container M; //!< Subdiagonal ["Minus" -1] <tt>M[0]</tt> maps to <tt>T_10</tt>
+    Container O; //!< Diagonal ["zerO" 0]       <tt>O[0]</tt> maps to <tt>T_00</tt>
+    Container P; //!< Uper diagonal ["Plus" +1] <tt>P[0]</tt> maps to <tt>T_01</tt>
 };
 
 /*!@brief Fast inverse tridiagonal sparse matrix

@@ -533,13 +533,8 @@ struct Fieldaligned
     bool m_have_adjoint = false;
     void updateAdjoint( )
     {
-        // Transpose only works on host
-        dg::SparseMatrix< typename IMatrix::index_type, typename IMatrix::value_type, thrust::host_vector>
-            tmp;
-        tmp = m_plus;
-        m_plusT = tmp.transpose();
-        tmp = m_minus;
-        m_minusT = tmp.transpose();
+        m_plusT = m_plus.transpose();
+        m_minusT = m_minus.transpose();
         m_have_adjoint = true;
     }
 };
