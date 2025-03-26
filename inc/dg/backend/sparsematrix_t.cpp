@@ -9,6 +9,7 @@
 #include "../blas2.h"
 #include "catch2/catch_all.hpp"
 
+// MW Possible update: With the newest thrust version std::vector can be replaced by thrust::host_vector everywhere
 TEST_CASE("Format conversion")
 {
     std::vector<int> coo_row = { 0 , 0, 1,1,1, 3, 4,4};

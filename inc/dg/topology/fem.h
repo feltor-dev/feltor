@@ -7,15 +7,21 @@
 
 namespace dg{
 
-///@addtogroup fem
-///@{
 /*!@brief Fast (shared memory) tridiagonal sparse matrix
  *
  * Consists of the three diagonal vectors [M, O, P] (for "Minus" -1, "ZerO" 0,
- * "Plus +1 diagonal), i.e.  M is the subdiagonal, O the diagonal and P the
+ * "Plus +1), i.e.  M is the subdiagonal, O the diagonal and P the
  * superdiagonal vector.
  * \f$ M_0 \f$ and \f$ P_{N-1}\f$ are ignored
+    \f[ T = \begin{pmatrix}
+    O_0 & P_0 &   &   &   & \\
+    M_1 & O_1 & P_1 &   &   & \\
+      & M_2 & O_2 & P_2 &   & \\
+      &   & M_3 & O_3 & P_3 & \\
+      &   &   &...&   &
+      \end{pmatrix}\f]
  * @tparam Container One of the shared memory containers
+ * @ingroup sparsematrix
  */
 template<class Container>
 struct TriDiagonal
@@ -112,7 +118,7 @@ struct TriDiagonal
         return {size, size, A_row_offsets, A_column_indices, A_values};
     }
 
-    Container M; //!< Subdiagonal ["Minus" -1] <tt>M[0]</tt> maps to <tt>T_10</tt>
+    Container M; //!< Subdiagonal ["Minus" -1] <tt>M[0]</tt> is ignored <tt>M[1]</tt> maps to <tt>T_10</tt>
     Container O; //!< Diagonal ["zerO" 0]       <tt>O[0]</tt> maps to <tt>T_00</tt>
     Container P; //!< Uper diagonal ["Plus" +1] <tt>P[0]</tt> maps to <tt>T_01</tt>
 };
@@ -121,6 +127,8 @@ struct TriDiagonal
  *
  * When applied to a vector, uses Thomas algorithm to compute \f$ T^{-1} v\f$
  * @attention Only for shared memory host vectors
+ * @ingroup sparsematrix
+ * @sa dg::mat::TridiagInvDF
  */
 template<class value_type>
 struct InverseTriDiagonal
@@ -133,6 +141,7 @@ struct InverseTriDiagonal
         dg::assign( tri.P, this->P);
     }
 
+    /// \f$ x = T^{-1} y\f$
     void operator()( const thrust::host_vector<value_type>& y, thrust::host_vector<value_type>& x) const
     {
         unsigned size = M.size();
@@ -152,6 +161,8 @@ struct InverseTriDiagonal
     private:
     thrust::host_vector<value_type> M, O, P;
 };
+///@addtogroup fem
+///@{
 
 /*!@brief Fast tridiagonal sparse matrix in 2d \f$ T_y\otimes T_x\f$
  *
