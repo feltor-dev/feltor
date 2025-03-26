@@ -1,6 +1,4 @@
 #pragma once
-#include <cusp/dia_matrix.h>
-#include <cusp/coo_matrix.h>
 
 #include "dg/algorithm.h"
 #include "tridiaginv.h"
@@ -68,8 +66,6 @@ class UniversalLanczos
 {
   public:
     using value_type = get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
-    using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
     UniversalLanczos(){}
     /**
@@ -176,7 +172,7 @@ class UniversalLanczos
  * @endcode
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    const HDiaMatrix& tridiag( MatrixType&& A, const ContainerType0& b,
+    const dg::TriDiagonal<thrust::host_vector<value_type>>& tridiag( MatrixType&& A, const ContainerType0& b,
             const ContainerType1& weights, value_type eps = 1e-12,
             value_type nrmb_correction = 1.,
             std::string error_norm = "universal",
@@ -194,17 +190,17 @@ class UniversalLanczos
      *
      * We avoid explicit storage of the large matrix V
      * @param A A self-adjoint positive definit matrix
-     * @param T Tridiagonal matrix (cusp::dia_matrix format)
+     * @param T Tridiagonal matrix
      * @param y a (host) vector e.g y= T e_1 or y= f(T) e_1, must have size of
      *  \c T.num_rows
      * @param x The result vector (output)
      * @param b Contains the initial value of lanczos method
      * @param bnorm the norm of b in weights, \c get_bnorm()
      */
-    template< class MatrixType, class DiaMatrixType, class ContainerType0,
+    template< class MatrixType, class ContainerType0,
         class ContainerType1,class ContainerType2>
     void normMbVy( MatrixType&& A,
-            const DiaMatrixType& T,
+            const dg::TriDiagonal<thrust::host_vector<value_type>>& T,
             const ContainerType0& y,
             ContainerType1& x,
             const ContainerType2& b, value_type bnorm)
@@ -227,9 +223,9 @@ class UniversalLanczos
         {
             dg::blas2::symv( std::forward<MatrixType>(A), m_v, m_vp);
             dg::blas1::axpbypgz(
-                    -T.values(i,0)/T.values(i,2), m_vm,
-                    -T.values(i,1)/T.values(i,2), m_v,
-                               1.0/T.values(i,2), m_vp);
+                    -T.M[i]/T.P[i], m_vm,
+                    -T.O[i]/T.P[i], m_v,
+                               1.0/T.P[i], m_vp);
             dg::blas1::axpby( y[i+1]*bnorm, m_vp, 1., x); //Compute b= |b| V y
             m_vm.swap( m_v);
             m_v.swap( m_vp);
@@ -259,7 +255,7 @@ class UniversalLanczos
       */
     template < class UnaryOp, class MatrixType,
              class ContainerType1, class ContainerType2>
-    const HDiaMatrix& tridiag(UnaryOp f,
+    const dg::TriDiagonal<thrust::host_vector<value_type>>& tridiag(UnaryOp f,
             MatrixType&& A, const ContainerType1& b,
             const ContainerType2& weights, value_type eps,
             value_type nrmb_correction,
@@ -289,11 +285,11 @@ class UniversalLanczos
         value_type alphai = 0.;
         for( unsigned i=0; i<m_max_iter; i++)
         {
-            m_TH.values(i,0) =  betaip; // -1 diagonal
+            m_TH.M[i] =  betaip; // -1 diagonal
             dg::blas2::symv(std::forward<MatrixType>(A), m_v, m_vp);
             dg::blas1::axpby(-betaip, m_vm, 1.0, m_vp);  // only - if i>0, therefore no if (i>0)
             alphai  = dg::blas2::dot(m_vp, weights, m_v);
-            m_TH.values(i,1) = alphai;
+            m_TH.O[i] = alphai;
             dg::blas1::axpby(-alphai, m_v, 1.0, m_vp);
             betaip = sqrt(dg::blas2::dot(m_vp, weights, m_vp));
             if (betaip == 0)
@@ -303,7 +299,7 @@ class UniversalLanczos
                 set_iter(i+1);
                 break;
             }
-            m_TH.values(i,2) = betaip;  // +1 diagonal
+            m_TH.P[i] = betaip;  // +1 diagonal
 
             value_type xnorm = 0.;
             if( "residual" == error_norm)
@@ -340,33 +336,30 @@ class UniversalLanczos
         return m_TH;
     }
     private:
-    value_type compute_residual_error( const HDiaMatrix& TH, unsigned iter)
+    value_type compute_residual_error( const dg::TriDiagonal<thrust::host_vector<value_type>>& TH, unsigned iter)
     {
         value_type T1 = compute_Tinv_m1( TH, iter+1);
-        return TH.values(iter,2)*fabs(T1); //Tinv_i1
+        return TH.P[iter]*fabs(T1); //Tinv_i1
     }
     template<class UnaryOp>
-    value_type compute_universal_error( const HDiaMatrix& TH, unsigned iter,
+    value_type compute_universal_error( const dg::TriDiagonal<thrust::host_vector<value_type>>& TH, unsigned iter,
             unsigned q, UnaryOp f, HVec& yH)
     {
         unsigned new_iter = iter + 1 + q;
         set_iter( iter+1);
-        HDiaMatrix THtilde( new_iter, new_iter, 3*new_iter-2, 3);
-        THtilde.diagonal_offsets[0] = -1;
-        THtilde.diagonal_offsets[1] =  0;
-        THtilde.diagonal_offsets[2] =  1;
+        dg::TriDiagonal<thrust::host_vector<value_type>> THtilde( new_iter);
         for( unsigned u=0; u<iter+1; u++)
         {
-            THtilde.values(u,0) = TH.values(u,0);
-            THtilde.values(u,1) = TH.values(u,1);
-            THtilde.values(u,2) = TH.values(u,2);
+            THtilde.M[u] = TH.M[u];
+            THtilde.O[u] = TH.O[u];
+            THtilde.P[u] = TH.P[u];
         }
         for( unsigned u=1; u<=q; u++)
         {
-            THtilde.values( iter+u, 0) = u==1 ? TH.values(iter,2) :
-                TH.values( iter+1-u, 1);
-            THtilde.values( iter+u, 1) = TH.values( iter-u, 1);
-            THtilde.values( iter+u, 2) = TH.values( iter-u, 0);
+            THtilde.M[ iter+u] = u==1 ? TH.P[iter] :
+                TH.O[iter+1-u];
+            THtilde.O[ iter+u] = TH.O[ iter-u];
+            THtilde.P[ iter+u] = TH.M[ iter-u];
         }
         yH = f( TH);
         HVec yHtilde = f( THtilde);
@@ -379,16 +372,11 @@ class UniversalLanczos
     ///@brief Set the new number of iterations and resize Matrix T and V
     ///@param new_iter new number of iterations
     void set_iter( unsigned new_iter) {
-        // The alignment (which is the pitch of the underlying values)
-        // of m_max_iter preserves the existing elements
-        m_TH.resize(new_iter, new_iter, 3*new_iter-2, 3, m_max_iter);
-        m_TH.diagonal_offsets[0] = -1;
-        m_TH.diagonal_offsets[1] =  0;
-        m_TH.diagonal_offsets[2] =  1;
+        m_TH.resize(new_iter);
         m_iter = new_iter;
     }
     ContainerType  m_v, m_vp, m_vm;
-    HDiaMatrix m_TH;
+    dg::TriDiagonal<thrust::host_vector<value_type>> m_TH;
     HVec m_yH;
     unsigned m_iter, m_max_iter;
     bool m_verbose = false;

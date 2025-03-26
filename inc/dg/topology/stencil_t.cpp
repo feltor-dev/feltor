@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cusp/print.h>
 #include "average.h"
 #include "stencil.h"
 #include "filter.h"
@@ -42,12 +41,12 @@ TEST_CASE( "Stencil")
         {
             auto stencil = dg::create::limiter_stencil( g1d, bc);
             INFO( "Test "<<dg::bc2str( bc)<<" boundary");
-            for( unsigned i=0; i<stencil.row_offsets.size(); i++)
-                INFO( stencil.row_offsets[i]<<" ");
-            for( unsigned i=0; i<stencil.column_indices.size(); i++)
-                INFO( stencil.column_indices[i]<<" ");
-            for( unsigned i=0; i<stencil.column_indices.size(); i++)
-                INFO( stencil.values[i]<<" ");
+            for( unsigned i=0; i<stencil.row_offsets().size(); i++)
+                INFO( stencil.row_offsets()[i]<<" ");
+            for( unsigned i=0; i<stencil.column_indices().size(); i++)
+                INFO( stencil.column_indices()[i]<<" ");
+            for( unsigned i=0; i<stencil.column_indices().size(); i++)
+                INFO( stencil.values()[i]<<" ");
         }
     }
     SECTION( "Test DIR boundary");

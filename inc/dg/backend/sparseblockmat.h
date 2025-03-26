@@ -1,12 +1,13 @@
 #pragma once
 
 #include <cmath>
+#include <numeric>
 #include <thrust/host_vector.h>
-#include <cusp/coo_matrix.h>
 #include "exblas/exdot_serial.h"
 #include "config.h"
 #include "exceptions.h"
 #include "tensor_traits.h"
+#include "sparsematrix.h"
 
 namespace dg
 {
@@ -100,11 +101,11 @@ struct EllSparseBlockMat
     }
 
     /**
-     * @brief Convert to a cusp coordinate sparse matrix
+     * @brief Convert to a sparse matrix
      *
-     * @return The matrix in coo sparse matrix format
+     * @return The matrix in sparse matrix format
      */
-    cusp::coo_matrix<int, real_type, cusp::host_memory> asCuspMatrix() const;
+    dg::SparseMatrix<int, real_type, thrust::host_vector> asCuspMatrix() const;
 
     /**
     * @brief Apply the matrix to a vector
@@ -386,11 +387,11 @@ struct CooSparseBlockMat
 //    }
 //}
 template<class real_type, template<class> class Vector>
-cusp::coo_matrix<int, real_type, cusp::host_memory> EllSparseBlockMat<real_type, Vector>::asCuspMatrix() const
+dg::SparseMatrix<int, real_type, thrust::host_vector> EllSparseBlockMat<real_type, Vector>::asCuspMatrix() const
 {
-    cusp::array1d<real_type, cusp::host_memory> values;
-    cusp::array1d<int, cusp::host_memory> row_indices;
-    cusp::array1d<int, cusp::host_memory> column_indices;
+    thrust::host_vector<real_type > values;
+    thrust::host_vector<int> row_indices;
+    thrust::host_vector<int> column_indices;
     for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
@@ -400,20 +401,17 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> EllSparseBlockMat<real_type,
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
         {
-            row_indices.push_back(I);
             int J = cols_idx[i*blocks_per_line+d];
             if ( J == invalid_index)
                 continue;
+            row_indices.push_back(I);
             column_indices.push_back(
                 ((s*num_cols + J)*n+q)*right_size+j);
             values.push_back(data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]);
         }
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
-        total_num_rows(), total_num_cols(), values.size());
-    A.row_indices = row_indices;
-    A.column_indices = column_indices;
-    A.values = values;
+    dg::SparseMatrix<int,real_type, thrust::host_vector> A;
+    A.setFromCoo( total_num_rows(), total_num_cols(), row_indices, column_indices, values);
     return A;
 }
 

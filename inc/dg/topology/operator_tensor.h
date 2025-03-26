@@ -2,8 +2,6 @@
 
 #include <algorithm>
 
-#include <cusp/coo_matrix.h>
-#include <cusp/multiply.h>
 #include "operator.h"
 
 namespace dg
@@ -53,30 +51,30 @@ op &   &   &   &   & \\
 * @tparam T value type
 * @param N Size of the identity (=number of times op is repeated in the matrix)
 * @param op The SquareMatrix
-* @return A newly allocated cusp matrix (of size  <tt> N*op.size()</tt> )
+* @return A newly allocated sparse matrix (of size  <tt> N*op.size()</tt> )
 * @sa fast_transform
 */
 template< class T>
-cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const SquareMatrix<T>& op)
+dg::SparseMatrix<int,T, thrust::host_vector> tensorproduct( unsigned N, const SquareMatrix<T>& op)
 {
     assert( N>0);
     unsigned n = op.size();
-    //compute number of nonzeroes in op
-    unsigned number = n*n;
     // allocate output matrix
-    cusp::coo_matrix<int, T, cusp::host_memory> A(n*N, n*N, N*number);
-    number = 0;
+    thrust::host_vector<int> A_row_offsets(n*N+1), A_column_indices( N*n*n);
+    thrust::host_vector<T> A_values( N*n*n);
+    A_row_offsets[0] = 0;
     for( unsigned k=0; k<N; k++)
         for( unsigned i=0; i<n; i++)
+        {
+            A_row_offsets[k*n+i+1]      = A_row_offsets[k*n+i] + n;
             for( unsigned j=0; j<n; j++)
                 //if( op(i,j) != 0)
                 {
-                    A.row_indices[number]      = k*n+i;
-                    A.column_indices[number]   = k*n+j;
-                    A.values[number]           = op(i,j);
-                    number++;
+                    A_column_indices[(k*n+i)*n+j]   = k*n+j;
+                    A_values[(k*n+i)*n+j]           = op(i,j);
                 }
-    return A;
+        }
+    return {n*N, n*N, A_row_offsets, A_column_indices, A_values};
 }
 
 
@@ -89,22 +87,15 @@ cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Squa
  * @param m The matrix
  * @param right The right hand side
  *
- * @return A newly allocated cusp matrix
+ * @return A newly allocated sparse matrix
  */
 template< class T>
-cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const SquareMatrix<T>& left,  const cusp::coo_matrix<int, T, cusp::host_memory>& m, const SquareMatrix<T>& right)
+dg::SparseMatrix<int, T, thrust::host_vector> sandwich( const SquareMatrix<T>& left,  const dg::SparseMatrix<int, T, thrust::host_vector>& m, const SquareMatrix<T>& right)
 {
     assert( left.size() == right.size());
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     unsigned n = left.size();
-    unsigned N = m.num_rows/n;
-    Matrix r = tensorproduct( N, right);
-    Matrix l = tensorproduct( N, left);
-    Matrix mr(m ), lmr(m);
-
-    cusp::multiply( m, r, mr);
-    cusp::multiply( l, mr, lmr);
-    return lmr;
+    unsigned N = m.num_rows()/n;
+    return tensorproduct( N, left)*(m*tensorproduct( N, right));
 }
 
 

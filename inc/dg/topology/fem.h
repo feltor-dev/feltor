@@ -7,23 +7,44 @@
 
 namespace dg{
 
-///@addtogroup fem
-///@{
 /*!@brief Fast (shared memory) tridiagonal sparse matrix
  *
- * Consists of the three diagonal vectors [M, O, P] (for "Minus", "ZerO", "Plus), i.e.
- * M is the subdiagonal, O the diagonal and P the superdiagonal vector.
- * @note Implemented using \c dg::blas2::parallel_for (which only works on shared memory vectors though)
+ * Consists of the three diagonal vectors [M, O, P] (for "Minus" -1, "ZerO" 0,
+ * "Plus +1), i.e.  M is the subdiagonal, O the diagonal and P the
+ * superdiagonal vector.
+ * \f$ M_0 \f$ and \f$ P_{N-1}\f$ are ignored
+    \f[ T = \begin{pmatrix}
+    O_0 & P_0 &   &   &   & \\
+    M_1 & O_1 & P_1 &   &   & \\
+      & M_2 & O_2 & P_2 &   & \\
+      &   & M_3 & O_3 & P_3 & \\
+      &   &   &...&   &
+      \end{pmatrix}\f]
  * @tparam Container One of the shared memory containers
+ * @ingroup sparsematrix
+ * @sa dg::mat::TridiagInvDF dg::mat::compute_Tinv_y
  */
 template<class Container>
 struct TriDiagonal
 {
     using value_type = dg::get_value_type<Container>;
     TriDiagonal() = default;
+    /*! @brief Allocate size elements for M, O and P
+     */
     TriDiagonal( unsigned size) : M(size), O(size), P(size){}
+
+    /*! @brief Directly construct from M, O and P
+     * @param M Subdiagonal
+     * @param O Diagonal
+     * @param P Superdiagonal
+     */
     TriDiagonal( Container M, Container O, Container P)
         : M(M), O(O), P(P){}
+
+    /*! @brief Assign M, O, and P from other matrix
+     * @tparam Container2
+     * @param other
+     */
     template<class Container2>
     TriDiagonal( const TriDiagonal<Container2>& other){
         dg::assign( other.M, this->M);
@@ -31,6 +52,22 @@ struct TriDiagonal
         dg::assign( other.P, this->P);
     }
     unsigned size()const {return O.size();}
+    /*! @brief Resize M, O, and P to given size
+     * @param size New size
+     */
+    void resize( unsigned size)
+    {
+        M.resize( size);
+        O.resize( size);
+        P.resize( size);
+    }
+    /*! @brief Compute Matrix-vector product \f$y = Tx\f$
+     *
+     * @note Implemented using \c dg::blas2::parallel_for (which only works on
+     * shared memory vectors)
+     * @param x input
+     * @param y result
+     */
     void operator()( const Container& x, Container& y) const
     {
         unsigned size = M.size();
@@ -53,42 +90,47 @@ struct TriDiagonal
     ///convert to a sparse matrix format
     dg::IHMatrix_t<value_type> asIMatrix() const{
         unsigned size = M.size();
-        cusp::coo_matrix<int,value_type,cusp::host_memory>  A( size, size, 3*size-2);
-        A.row_indices[0] = 0;
-        A.column_indices[0] = 0;
-        A.values[0] = O[0];
+        thrust::host_vector<int> A_row_offsets(size+1), A_column_indices( 3*size-2);
+        thrust::host_vector<value_type> A_values( 3*size-2);
+        A_row_offsets[0] = 0;
+        A_column_indices[0] = 0;
+        A_values[0] = O[0];
 
-        A.row_indices[1] = 0;
-        A.column_indices[1] = 1;
-        A.values[1] = P[0];
+        A_column_indices[1] = 1;
+        A_values[1] = P[0];
+
+        A_row_offsets[1] = 2;
 
         for( unsigned i=1;i<size; i++)
         {
-            A.row_indices[3*i-1+0] = i;
-            A.column_indices[3*i-1+0] = i-1;
-            A.values[3*i-1+0] = M[i];
+            A_column_indices[3*i-1+0] = i-1;
+            A_values[3*i-1+0] = M[i];
 
-            A.row_indices[3*i-1+1] = i;
-            A.column_indices[3*i-1+1] = i;
-            A.values[3*i-1+1] = O[i];
+            A_column_indices[3*i-1+1] = i;
+            A_values[3*i-1+1] = O[i];
 
             if( i != (size-1))
             {
-                A.row_indices[3*i-1+2] = i;
-                A.column_indices[3*i-1+2] = i+1;
-                A.values[3*i-1+2] = P[i];
+                A_column_indices[3*i-1+2] = i+1;
+                A_values[3*i-1+2] = P[i];
             }
+            A_row_offsets[i+1] = A_row_offsets[i] + ( i != (size-1) ? 3 : 2);
         }
-        return dg::IHMatrix_t<value_type>(A);
+        return {size, size, A_row_offsets, A_column_indices, A_values};
     }
 
-    Container M, O, P;
+    Container M; //!< Subdiagonal ["Minus" -1] <tt>M[0]</tt> is ignored <tt>M[1]</tt> maps to <tt>T_10</tt>
+    Container O; //!< Diagonal ["zerO" 0]       <tt>O[0]</tt> maps to <tt>T_00</tt>
+    Container P; //!< Uper diagonal ["Plus" +1] <tt>P[0]</tt> maps to <tt>T_01</tt>
 };
 
-/*!@brief Fast inverse tridiagonal sparse matrix
+///@addtogroup fem
+///@{
+/*!@brief DEPRECATED/UNTESTED Fast inverse tridiagonal sparse matrix
  *
  * When applied to a vector, uses Thomas algorithm to compute \f$ T^{-1} v\f$
  * @attention Only for shared memory host vectors
+ * @sa dg::mat::TridiagInvDF dg::mat::compute_Tinv_y
  */
 template<class value_type>
 struct InverseTriDiagonal
@@ -101,6 +143,7 @@ struct InverseTriDiagonal
         dg::assign( tri.P, this->P);
     }
 
+    /// \f$ x = T^{-1} y\f$
     void operator()( const thrust::host_vector<value_type>& y, thrust::host_vector<value_type>& x) const
     {
         unsigned size = M.size();

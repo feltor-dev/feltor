@@ -24,7 +24,7 @@ namespace create{
  * @return interpolation matrix
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const RealGridX1d<real_type>& g)
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation( const thrust::host_vector<real_type>& x, const RealGridX1d<real_type>& g)
 {
     return interpolation( x, g.grid());
 }
@@ -41,7 +41,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @return interpolation matrix
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealTopologyX2d<real_type>& g , dg::bc globalbcz = dg::NEU)
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealTopologyX2d<real_type>& g , dg::bc globalbcz = dg::NEU)
 {
     return interpolation( x,y, g.grid(), globalbcz);
 }
@@ -62,7 +62,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @note The values of x, y and z must lie within the boundaries of g
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aRealTopologyX3d<real_type>& g, dg::bc globalbcz= dg::NEU)
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aRealTopologyX3d<real_type>& g, dg::bc globalbcz= dg::NEU)
 {
     return interpolation( x,y,z, g.grid(), globalbcz);
 }
@@ -80,7 +80,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const RealGridX1d<real_type>& g_new, const RealGridX1d<real_type>& g_old)
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation( const RealGridX1d<real_type>& g_new, const RealGridX1d<real_type>& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -97,7 +97,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const RealGri
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopologyX2d<real_type>& g_new, const aRealTopologyX2d<real_type>& g_old)
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation( const aRealTopologyX2d<real_type>& g_new, const aRealTopologyX2d<real_type>& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -115,7 +115,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTo
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopologyX3d<real_type>& g_new, const aRealTopologyX3d<real_type>& g_old)
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation( const aRealTopologyX3d<real_type>& g_new, const aRealTopologyX3d<real_type>& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }

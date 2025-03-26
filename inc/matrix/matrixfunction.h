@@ -2,12 +2,6 @@
 #include <cmath>
 
 #include <boost/math/special_functions.hpp> // has to be included before lapack in certain versions
-#include <cusp/transpose.h>
-#include <cusp/array1d.h>
-#include <cusp/array2d.h>
-//#include <cusp/print.h>
-
-#include <cusp/lapack/lapack.h>
 #include "dg/algorithm.h"
 
 #include "functors.h"
@@ -37,23 +31,19 @@ auto make_FuncEigen_Te1( UnaryOp f)
     return [f]( const auto& T)
     {
         using value_type = typename std::decay_t<decltype(T)>::value_type;
-        unsigned iter = T.num_rows;
-        cusp::array2d< value_type, cusp::host_memory> evecs(iter,iter);
-        cusp::array1d< value_type, cusp::host_memory> evals(iter);
+        unsigned iter = T.O.size();
+        thrust::host_vector<value_type> evals = T.O, plus  = T.P;
+        thrust::host_vector<value_type> work (2*iter-2);
+        dg::SquareMatrix<value_type> EHt(iter);
+        //Compute Eigendecomposition
+        lapack::stev(LAPACK_COL_MAJOR, 'V', evals, plus, EHt.data(), work);
+        auto EH = EHt.transpose();
+        //for( unsigned u=0; u<iter; u++)
+        //    std::cout << u << " "<<evals[u]<<std::endl;
+        //Compute f(T) e1 = E f(Lambda) E^t e1
         dg::HVec e1H(iter,0.), yH(e1H);
         e1H[0] = 1.;
         yH.resize( iter);
-        //Compute Eigendecomposition
-        //MW !! the subdiagonal entries start at 0 in lapack, the n-th element
-        // is used as workspace (from lapack docu)
-        cusp::lapack::stev(T.values.column(1), T.values.column(2),
-                evals, evecs, 'V');
-        //for( unsigned u=0; u<iter; u++)
-        //    std::cout << u << " "<<evals[u]<<std::endl;
-        cusp::coo_matrix<int, value_type, cusp::host_memory> EH, EHt;
-        cusp::convert(evecs, EH);
-        cusp::transpose(EH, EHt);
-        //Compute f(T) e1 = E f(Lambda) E^t e1
         dg::blas2::symv(EHt, e1H, yH);
         dg::blas1::transform(evals, e1H, [f] (double x){
             try{
@@ -93,7 +83,7 @@ auto make_SqrtCauchy_Te1( int exp, std::array<value_type,2> EVs, unsigned stepsC
 {
     return [=]( const auto& T)
     {
-        unsigned size = T.num_rows;
+        unsigned size = T.O.size();
         thrust::host_vector<value_type> e1H(size, 0.), yH(e1H);
         e1H[0] = 1.;
 
@@ -138,7 +128,7 @@ auto make_SqrtCauchyEigen_Te1( int exp, std::array<value_type,2> EVs, unsigned s
     auto cauchy = make_SqrtCauchy_Te1( exp, EVs, stepsCauchy);
     return [=]( const auto& T)
     {
-        unsigned size = T.num_rows;
+        unsigned size = T.O.size();
         dg::HVec yH;
         if ( size < 40)
             yH = eigen( T);
@@ -165,7 +155,7 @@ auto make_SqrtODE_Te1( int exp, std::string tableau, value_type rtol,
 {
     return [=, &num = number](const auto& T)
     {
-        unsigned size = T.num_rows;
+        unsigned size = T.O.size();
         HVec e1H(size, 0), yH(e1H);
         e1H[0] = 1.;
         auto inv_sqrt = make_inv_sqrtodeTri( T, e1H);
@@ -191,7 +181,7 @@ inline auto make_Linear_Te1( int exp)
 {
     return [= ](const auto& T)
     {
-        unsigned size = T.num_rows;
+        unsigned size = T.O.size();
         HVec e1H(size, 0), yH(e1H);
         e1H[0] = 1.;
         if( exp < 0)

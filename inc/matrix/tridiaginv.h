@@ -1,9 +1,7 @@
 #pragma once
 
 #include <boost/math/special_functions.hpp> // has to be included before lapack in certain versions
-#include <cusp/dia_matrix.h>
-#include <cusp/coo_matrix.h>
-#include <cusp/lapack/lapack.h>
+#include "lapacke.h"
 #include "dg/algorithm.h"
 
 #include "functors.h"
@@ -13,6 +11,71 @@
 
 namespace dg{
 namespace mat{
+///@cond
+namespace lapack
+{
+// Resources:
+// FORTRAN     https://www.netlib.org/lapack/explore-html/index.html
+// C-Bindings  https://www.netlib.org/lapack/lapacke.html
+// How to convert the fortran binding to our interface:
+// 1. Go to relevant Fortran routine ( usually there are separate routine for
+// each value type; single, double  ,complex )
+// 2.0 The C-bindings return a lapack_int "info": throw an error if it is not 0
+// 2.1 When matrices are involved they take as first parameter a lapack_int "order"  LAPACK_COL_MAJOR or LAPACK_ROW_MAJOR (Using the latter is slower because it needs to transpose, but is how e.g. our SquareMatrix is ordered)
+// 3. Replace all arrays with a ContainerType in our interface
+// 4. Use C++-17 if constexpr to dispatch value type
+//
+// Compute Eigenvalues and, optionally, Eigenvectors of a real symmetric tridiagonal matrix A
+template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3>
+void stev(
+    lapack_int order,  // LAPACK_ROW_MAJOR or LAPACK_COL_MAJOR
+    char job,          // 'N' Compute Eigenvalues only, 'V' Compute Eigenvalues and Eigenvectors
+    ContainerType0& D, // diagonal of T on input, Eigenvalues on output
+    ContainerType1& E, // subdiagonal of T on input |size D.size()-1 ; in E[0] - E[D.size()-2]|; destroyed on output
+    ContainerType2& Z, // IF job = 'V' && column major then the i-th column contains i-th EV, if job = 'N' not referenced
+    ContainerType3& work // If job = 'V' needs size max( 1, 2*D.size() - 2), else not referenced
+    )
+{
+    using value_type = dg::get_value_type<ContainerType0>;
+    static_assert( std::is_same_v<value_type, double> or std::is_same_v<value_type, float>,
+                   "Value type must be either float or double");
+    static_assert( std::is_same_v<dg::get_value_type<ContainerType1>, value_type> &&
+                   std::is_same_v<dg::get_value_type<ContainerType2>, value_type> &&
+                   std::is_same_v<dg::get_value_type<ContainerType3>, value_type>,
+                   "All Vectors must have same value type");
+    static_assert( std::is_same_v<dg::get_execution_policy<ContainerType0>, dg::SerialTag> &&
+                   std::is_same_v<dg::get_execution_policy<ContainerType1>, dg::SerialTag> &&
+                   std::is_same_v<dg::get_execution_policy<ContainerType2>, dg::SerialTag> &&
+                   std::is_same_v<dg::get_execution_policy<ContainerType3>, dg::SerialTag>,
+                   "All Vectors must have serial execution policy");
+
+    // job = 'N' Compute Eigenvalues only
+    // job = 'V' Compute Eigenvalues and Eigenvectors
+    lapack_int N = D.size();
+    value_type * D_ptr = thrust::raw_pointer_cast( &D[0]);
+    value_type * E_ptr = thrust::raw_pointer_cast( &E[0]);
+    value_type * Z_ptr = nullptr;
+    lapack_int ldz = N;
+    value_type * work_ptr = nullptr;
+    if( job == 'V')
+    {
+        Z_ptr = thrust::raw_pointer_cast( &Z[0]);
+        work_ptr = thrust::raw_pointer_cast( &work[0]);
+    }
+
+    lapack_int info;
+    if constexpr ( std::is_same_v<value_type, double>)
+        info = LAPACKE_dstev_work( order, job, N, D_ptr, E_ptr, Z_ptr, ldz, work_ptr);
+    else if constexpr ( std::is_same_v<value_type, float>)
+        info = LAPACKE_sstev_work( order, job, N, D_ptr, E_ptr, Z_ptr, ldz, work_ptr);
+    if( info != 0)
+    {
+        throw dg::Error( dg::Message(_ping_) << "stev failed with error code "<<info<<"\n");
+    }
+}
+
+}
+///@endcond
 
 ///@addtogroup matrixinvert
 ///@{
@@ -29,16 +92,19 @@ namespace mat{
  * @return \f$ (T^{-1})_{1m}\f$
  */
 template<class value_type>
-value_type compute_Tinv_m1( const cusp::dia_matrix<int, value_type,
-        cusp::host_memory>& T, unsigned size)
+value_type compute_Tinv_m1( const dg::TriDiagonal<thrust::host_vector<value_type>>
+        & T, unsigned size)
 {
-    value_type ci = T.values(0,2)/T.values(0,1), ciold = 0.;
-    value_type di = 1./T.values(0,1), diold = 0.;
+    // P = Plus diagonal
+    // O = zerO diagonal
+    // M = Minus diagonal
+    value_type ci = T.P[0]/T.O[0], ciold = 0.;
+    value_type di = 1./T.O[0], diold = 0.;
     for( unsigned i=1; i<size; i++)
     {
         ciold = ci, diold = di;
-        ci = T.values(i,2)/ ( T.values(i,1)-T.values(i,0)*ciold);
-        di = -T.values( i, 0)*diold/(T.values(i,1)-T.values(i,0)*ciold);
+        ci = T.P[i]/ ( T.O[i]-T.M[i]*ciold);
+        di = -T.M[i]*diold/(T.O[i]-T.M[i]*ciold);
     }
     return di;
 }
@@ -55,8 +121,8 @@ value_type compute_Tinv_m1( const cusp::dia_matrix<int, value_type,
  * @param d optional addition to diagonal of T
  */
 template<class value_type>
-void compute_Tinv_y( const cusp::dia_matrix<int, value_type,
-        cusp::host_memory>& T,
+void compute_Tinv_y( const dg::TriDiagonal<thrust::host_vector<value_type>>
+        & T,
         thrust::host_vector<value_type>& x,
         const thrust::host_vector<value_type>& y, value_type a  = 1.,
         value_type d = 0.)
@@ -64,13 +130,13 @@ void compute_Tinv_y( const cusp::dia_matrix<int, value_type,
     unsigned size = y.size();
     x.resize(size);
     thrust::host_vector<value_type> ci(size), di(size);
-    ci[0] = a*T.values(0,2)/( a*T.values(0,1) + d);
-    di[0] = y[0]/( a*T.values(0,1) + d);
+    ci[0] = a*T.P[0]/( a*T.O[0] + d);
+    di[0] = y[0]/( a*T.O[0] + d);
     for( unsigned i=1; i<size; i++)
     {
-        ci[i] = a*T.values(i,2)/ ( a*T.values(i,1) + d -a*T.values(i,0)*ci[i-1]);
-        di[i] = (y[i]-a*T.values( i, 0)*di[i-1])/(a*T.values(i,1) + d
-                -a*T.values(i,0)*ci[i-1]);
+        ci[i] = a*T.P[i]/ ( a*T.O[i] + d -a*T.M[i]*ci[i-1]);
+        di[i] = (y[i]-a*T.M[i]*di[i-1])/(a*T.O[i] + d
+                -a*T.M[i]*ci[i-1]);
     }
     x[size-1] = di[size-1];
     for( int i=size-2; i>=0; i--)
@@ -86,15 +152,13 @@ void compute_Tinv_y( const cusp::dia_matrix<int, value_type,
 *  Is unstable for matrix size of roughly > 150. Fails for certain
 *  tridiagonal matrix forms.
 * @attention Not tested thoroughly!
-* @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
-* @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
-* @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
+* @tparam real_type float or double
 */
-template< class ContainerType, class DiaMatrix, class CooMatrix>
+template< class real_type>
 class TridiagInvHMGTI
 {
   public:
-    using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
+    using value_type = real_type; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     TridiagInvHMGTI(){}
     /**
@@ -102,7 +166,7 @@ class TridiagInvHMGTI
      *
      * @param copyable vector
      */
-    TridiagInvHMGTI(const ContainerType& copyable)
+    TridiagInvHMGTI(const thrust::host_vector<real_type>& copyable)
     {
         m_size = copyable.size();
         m_alphas.assign(m_size+1,0.);
@@ -136,12 +200,12 @@ class TridiagInvHMGTI
      * @param Tinv the inverse of the tridiagonal matrix (coordinate format)
      *  gets resized if necessary
      **/
-    void operator()(const DiaMatrix& T, CooMatrix& Tinv)
+    void operator()(const dg::TriDiagonal<thrust::host_vector<real_type>>& T, dg::SquareMatrix<real_type>& Tinv)
     {
         this->operator()(
-                T.values.column(1), // 0 diagonal
-                T.values.column(2), // +1 diagonal
-                T.values.column(0), // -1 diagonal
+                T.O, // 0 diagonal
+                T.P, // +1 diagonal
+                T.M, // -1 diagonal
                 Tinv);
     }
     /**
@@ -150,33 +214,31 @@ class TridiagInvHMGTI
      * @param T tridiagonal matrix
      * @return the inverse of the tridiagonal matrix (coordinate format)
      **/
-    CooMatrix operator()(const DiaMatrix& T)
+    dg::SquareMatrix<real_type> operator()(const dg::TriDiagonal<thrust::host_vector<real_type>>& T)
     {
-        CooMatrix Tinv;
+        dg::SquareMatrix<real_type> Tinv;
         this->operator()( T, Tinv);
         return Tinv;
     }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
      *
-     * The diagonal vectors are given as in the cusp dia_matrix format
-     * @param a  "0" diagonal vector (index 0 is on row 0)
-     * @param b "+1" diagonal vector (index 0 is on row 0, last index outside)
-     * @param c "-1" diagonal vector (index 0 is on row 0, outside of matrix)
+     * The diagonal vectors are given as in the \c dg::TriDiagonal matrix format
+     * @param a  "0" diagonal vector (index 0 is on row 0, \c O in \c dg::TriDiagonal)
+     * @param b "+1" diagonal vector (index 0 is on row 0, last index outside, \c P in \c dg::TriDiagonal)
+     * @param c "-1" diagonal vector (index 0 is on row 0, outside of matrix, \c M in \c dg::TriDiagonal)
      * @param Tinv the inverse of the tridiagonal matrix (coordinate format)
      *  gets resized if necessary
      */
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     void operator()(const ContainerType0& a, const ContainerType1& b,
-            const ContainerType2& c, CooMatrix& Tinv)
+            const ContainerType2& c, dg::SquareMatrix<real_type>& Tinv)
     {
         unsigned ss = m_size;
-        Tinv.resize(ss, ss,  ss* ss);
+        Tinv.resize(ss);
         if( ss == 1)
         {
-            Tinv.row_indices[0] = 0;
-            Tinv.column_indices[0] = 0;
-            Tinv.values[0] = 1./b[0];
+            Tinv(0,0) = 1./b[0];
             return;
         }
         //fill alphas
@@ -205,18 +267,12 @@ class TridiagInvHMGTI
             }
         }
         //Diagonal entries
-        Tinv.row_indices[0*ss+0]    = 0;
-        Tinv.column_indices[0*ss+0]    = 0;
-        Tinv.row_indices[(ss-1)*ss+(ss-1)]    = (ss-1);
-        Tinv.column_indices[(ss-1)*ss+(ss-1)]    = (ss-1);
-        Tinv.values[0*ss+0] = 1.0/(a[0]-c[1]*b[0]*m_betas[2]/m_betas[1]);
-        Tinv.values[(ss-1)*ss+(ss-1)] = 1.0/(a[ss-1] -
+        Tinv(0, 0) = 1.0/(a[0]-c[1]*b[0]*m_betas[2]/m_betas[1]);
+        Tinv(ss-1, ss-1) = 1.0/(a[ss-1] -
                 c[ss-1]*b[ss-2]*m_alphas[ss-2]/m_alphas[ss-1]);
         for( unsigned i=1; i<ss-1; i++)
         {
-            Tinv.row_indices[i*ss+i]    = i;
-            Tinv.column_indices[i*ss+i] = i;
-            Tinv.values[i*ss+i] =
+            Tinv( i,i) =
                 1.0/(a[i]-c[i]*b[i-1]*m_alphas[i-1]/m_alphas[i]
                          -c[i+1]*b[i]*m_betas[i+2]/m_betas[i+1]);
         }
@@ -228,7 +284,7 @@ class TridiagInvHMGTI
                 Tinv.row_indices[i*ss+j]    = j;
                 Tinv.column_indices[i*ss+j] = i;
                 if (i<j) {
-                    Tinv.values[i*ss+j] =
+                    Tinv(j, i) =
                         sign(j-i)*std::accumulate(std::next(b.begin(),i),
                                 std::next(b.begin(),j), 1.,
                                 std::multiplies<value_type>())*
@@ -236,7 +292,7 @@ class TridiagInvHMGTI
                 }
                 else if (i>j)
                 {
-                    Tinv.values[i*ss+j] =
+                    Tinv(j, i) =
                         sign(i-j)*std::accumulate(std::next(c.begin(),j+1),
                                 std::next(c.begin(),i+1), 1.,
                                 std::multiplies<value_type>())*
@@ -252,7 +308,7 @@ class TridiagInvHMGTI
         if (i%2==0) return 1;
         else return -1;
     }
-    ContainerType m_alphas, m_betas;
+    thrust::host_vector<real_type> m_alphas, m_betas;
     unsigned m_size;
 };
 
@@ -263,15 +319,13 @@ class TridiagInvHMGTI
 *  This is the algorihm of "On the inverses of general tridiagonal matrices" by Hou-Biao Li, Ting-Zhu Huang, Xing-Ping Liu, Hong Li
 *  Appears to be the same as the algorithm in "ON AN INVERSE FORMULA OF A TRIDIAGONAL MATRIX" by Tomoyuki Sugimoto
 *
-* @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
-* @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
-* @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
+* @tparam real_type float or double
 */
-template< class ContainerType, class DiaMatrix, class CooMatrix>
+template< class real_type>
 class TridiagInvDF
 {
   public:
-    using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
+    using value_type = real_type; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     TridiagInvDF(){}
     /**
@@ -279,7 +333,7 @@ class TridiagInvDF
      *
      * @param copyable vector
      */
-    TridiagInvDF(const ContainerType& copyable)
+    TridiagInvDF(const thrust::host_vector<real_type>& copyable)
     {
         m_size = copyable.size();
         m_phi.assign(m_size,0.);
@@ -313,12 +367,12 @@ class TridiagInvDF
      * @param Tinv the inverse of the tridiagonal matrix (coordinate format),
      *  gets resized if necessary
      **/
-    void operator()(const DiaMatrix& T, CooMatrix& Tinv)
+    void operator()(const dg::TriDiagonal<thrust::host_vector<real_type>>& T, dg::SquareMatrix<real_type>& Tinv)
     {
         this->operator()(
-                T.values.column(1), // 0 diagonal
-                T.values.column(2), // +1 diagonal
-                T.values.column(0), // -1 diagonal
+                T.O, // 0 diagonal
+                T.P, // +1 diagonal
+                T.M, // -1 diagonal
                 Tinv);
     }
     /**
@@ -327,27 +381,27 @@ class TridiagInvDF
      * @param T tridiagonal matrix
      * @return the inverse of the tridiagonal matrix (coordinate format)
      **/
-    CooMatrix operator()(const DiaMatrix& T)
+    dg::SquareMatrix<real_type> operator()(const dg::TriDiagonal<thrust::host_vector<real_type>>& T)
     {
-        CooMatrix Tinv;
+        dg::SquareMatrix<real_type> Tinv;
         this->operator()( T, Tinv);
         return Tinv;
     }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
      *
-     * The diagonal vectors are given as in the cusp dia_matrix format
-     * @param a  "0" diagonal vector (index 0 is on row 0)
-     * @param b "+1" diagonal vector (index 0 is on row 0, last index outside)
-     * @param c "-1" diagonal vector (index 0 is on row 0, outside of matrix)
+     * The diagonal vectors are given as in the \c dg::TriDiagonal matrix format
+     * @param a  "0" diagonal vector (index 0 is on row 0, \c O in \c dg::TriDiagonal)
+     * @param b "+1" diagonal vector (index 0 is on row 0, last index outside, \c P in \c dg::TriDiagonal)
+     * @param c "-1" diagonal vector (index 0 is on row 0, outside of matrix, \c M in \c dg::TriDiagonal)
      * @param Tinv the inverse of the tridiagonal matrix (coordinate format)
      *  gets resized if necessary
      */
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     void operator()(const ContainerType0& a, const ContainerType1& b,
-            const ContainerType2& c, CooMatrix& Tinv)
+            const ContainerType2& c, dg::SquareMatrix<real_type>& Tinv)
     {
-        Tinv.resize(m_size, m_size,  m_size* m_size);
+        Tinv.resize(m_size);
         value_type helper = 0.0;
         //fill phi values
         m_phi[0] = - b[0]/a[0];
@@ -373,50 +427,40 @@ class TridiagInvDF
         }
 //         m_theta[0] = 0.0;
         //Diagonal entries
-        Tinv.row_indices[0*m_size+0]    = 0;
-        Tinv.column_indices[0*m_size+0]    = 0;
         helper = a[0] + b[0]* m_theta[1];
         if (helper==0) throw dg::Error( dg::Message(_ping_)<< "Failure: No inverse exists\n");
-        else Tinv.values[0*m_size+0] = 1.0/helper;
+        else Tinv(0,0) = 1.0/helper;
 
-        Tinv.row_indices[(m_size-1)*m_size+(m_size-1)]    = (m_size-1);
-        Tinv.column_indices[(m_size-1)*m_size+(m_size-1)]    = (m_size-1);
         if (m_size == 1) helper = a[m_size-1];
         else helper = a[m_size-1] + c[m_size-1]*m_phi[m_size-2];
 
         if (helper==0) throw dg::Error( dg::Message(_ping_)<< "Failure: No inverse exists\n");
-        else Tinv.values[(m_size-1)*m_size+m_size-1] = 1.0/helper;
+        else Tinv( m_size -1 , m_size - 1) = 1.0/helper;
 
         for( unsigned i=1; i<m_size-1; i++)
         {
-            Tinv.row_indices[i*m_size+i]    = i;
-            Tinv.column_indices[i*m_size+i] = i;
             helper = a[i] + c[i]*m_phi[i-1] + b[i]* m_theta[i+1];
             if (helper==0) throw dg::Error( dg::Message(_ping_)<< "Failure: No inverse exists\n");
-            else Tinv.values[i*m_size+i] = 1.0/helper;
+            else Tinv(i,i) = 1.0/helper;
         }
         //Off-diagonal entries
         for( unsigned j=0; j<m_size-1; j++) //row index
         {
             for (unsigned i=j+1; i<m_size; i++)
             {
-                Tinv.row_indices[i*m_size+j]    = i;
-                Tinv.column_indices[i*m_size+j] = j;
-                Tinv.values[i*m_size+j] = m_theta[i]*Tinv.values[(i-1)*m_size+j];
+                Tinv(i,j) = m_theta[i]*Tinv(i-1, j);
             }
         }
         for( unsigned j=1; j<m_size; j++) //row index
         {
             for (int i=j-1; i>=0; i--)
             {
-                Tinv.row_indices[i*m_size+j]    = i;
-                Tinv.column_indices[i*m_size+j] = j;
-                Tinv.values[i*m_size+j] = m_phi[i]*Tinv.values[(i+1)*m_size+j];
+                Tinv(i,j) = m_phi[i]*Tinv(i+1,j);
             }
         }
     }
   private:
-    ContainerType m_phi, m_theta;
+    thrust::host_vector<real_type> m_phi, m_theta;
     unsigned m_size;
 };
 
@@ -427,15 +471,13 @@ class TridiagInvDF
 *  it performs extremely fast if it stays below this value.  This is the
 *  algorihm of "Inversion of a Tridiagonal Jacobi Matrix" by Riaz A. Usmani
 *
-* @tparam ContainerType \c thrust::host_vector<value_type> or similar shared memory host vector
-* @tparam CooMatrix \c cusp::coo_matrix<int, value_type, cusp::host_memory>;
-* @tparam DiaMatrix \c cusp::dia_matrix<int, value_type, cusp::host_memory>;
+* @tparam real_type float or double
 */
-template< class ContainerType, class DiaMatrix, class CooMatrix>
+template< class real_type>
 class TridiagInvD
 {
   public:
-    using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
+    using value_type = real_type; //!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     TridiagInvD(){}
     /**
@@ -443,7 +485,7 @@ class TridiagInvD
      *
      * @param copyable vector
      */
-    TridiagInvD(const ContainerType& copyable)
+    TridiagInvD(const thrust::host_vector<real_type>& copyable)
     {
         m_size = copyable.size();
         m_phi.assign(m_size+1,0.);
@@ -477,12 +519,12 @@ class TridiagInvD
      * @param Tinv the inverse of the tridiagonal matrix (coordinate format)
      *  gets resized if necessary
      **/
-    void operator()(const DiaMatrix& T, CooMatrix& Tinv)
+    void operator()(const dg::TriDiagonal<thrust::host_vector<real_type>>& T, dg::SquareMatrix<real_type>& Tinv)
     {
         this->operator()(
-                T.values.column(1), // 0 diagonal
-                T.values.column(2), // +1 diagonal
-                T.values.column(0), // -1 diagonal
+                T.O, // 0 diagonal
+                T.P, // +1 diagonal
+                T.M, // -1 diagonal
                 Tinv);
     }
     /**
@@ -491,27 +533,27 @@ class TridiagInvD
      * @param T tridiagonal matrix
      * @return the inverse of the tridiagonal matrix (coordinate format)
      **/
-    CooMatrix operator()(const DiaMatrix& T)
+    dg::SquareMatrix<real_type> operator()(const dg::TriDiagonal<thrust::host_vector<real_type>>& T)
     {
-        CooMatrix Tinv;
+        dg::SquareMatrix<real_type> Tinv;
         this->operator()( T, Tinv);
         return Tinv;
     }
      /**
      * @brief Compute the inverse of a tridiagonal matrix with diagonal vectors a,b,c
      *
-     * The diagonal vectors are given as in the cusp dia_matrix format
-     * @param a  "0" diagonal vector (index 0 is on row 0)
-     * @param b "+1" diagonal vector (index 0 is on row 0, last index outside)
-     * @param c "-1" diagonal vector (index 0 is on row 0, outside of matrix)
+     * The diagonal vectors are given as in the \c dg::TriDiagonal matrix format
+     * @param a  "0" diagonal vector (index 0 is on row 0, \c O in \c dg::TriDiagonal)
+     * @param b "+1" diagonal vector (index 0 is on row 0, last index outside, \c P in \c dg::TriDiagonal)
+     * @param c "-1" diagonal vector (index 0 is on row 0, outside of matrix, \c M in \c dg::TriDiagonal)
      * @param Tinv the inverse of the tridiagonal matrix (coordinate format)
      *  gets resized if necessary
      */
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     void operator()(const ContainerType0& a, const ContainerType1& b,
-            const ContainerType2& c, CooMatrix& Tinv)
+            const ContainerType2& c, dg::SquareMatrix<real_type>& Tinv)
     {
-        Tinv.resize( m_size, m_size, m_size*m_size);
+        Tinv.resize( m_size);
         unsigned is=0;
         for( unsigned i = 0; i<m_size+1; i++)
         {
@@ -538,10 +580,8 @@ class TridiagInvD
         {
             for( unsigned j=0; j<m_size; j++) //column index
             {
-                Tinv.row_indices[i*m_size+j]    = i;
-                Tinv.column_indices[i*m_size+j] = j;
                 if (i<j) {
-                    Tinv.values[i*m_size+j] =
+                    Tinv(i,j) =
                         std::accumulate(std::next(b.begin(),i),
                                 std::next(b.begin(),j), 1.,
                                 std::multiplies<value_type>())*sign(i+j) *
@@ -549,11 +589,11 @@ class TridiagInvD
                 }
                 else if (i==j)
                 {
-                    Tinv.values[i*m_size+j] =  m_theta[i] * m_phi[i+1]/m_theta[m_size];
+                    Tinv(i,j) =  m_theta[i] * m_phi[i+1]/m_theta[m_size];
                 }
                 else // if (i>j)
                 {
-                    Tinv.values[i*m_size+j] =
+                    Tinv(i,j) =
                         std::accumulate(std::next(c.begin(),j+1),
                                 std::next(c.begin(),i+1), 1.,
                                 std::multiplies<value_type>())*sign(i+j) *
@@ -569,7 +609,7 @@ class TridiagInvD
         if (i%2==0) return 1;
         else return -1;
     }
-    ContainerType m_phi, m_theta;
+    thrust::host_vector<real_type> m_phi, m_theta;
     unsigned m_size;
 };
 
@@ -585,13 +625,10 @@ class TridiagInvD
  * @param Tinv (gets resized if necessary)
  */
 template<class value_type>
-void invert(const cusp::dia_matrix<int,value_type,cusp::host_memory>& T,
-        cusp::coo_matrix<int,value_type,cusp::host_memory>& Tinv)
+void invert(const dg::TriDiagonal<thrust::host_vector<value_type>>& T,
+        dg::SquareMatrix<value_type>& Tinv)
 {
-    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
-    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
-    using HVec = dg::HVec;
-    return TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T, Tinv);
+    TridiagInvDF<value_type>( T.O.size())(T, Tinv);
 }
 /**
  * @brief Invert a tridiagonal matrix
@@ -605,13 +642,10 @@ void invert(const cusp::dia_matrix<int,value_type,cusp::host_memory>& T,
  * @return Tinv
  */
 template<class value_type>
-cusp::coo_matrix<int,value_type,cusp::host_memory> invert(
-        const cusp::dia_matrix<int,value_type,cusp::host_memory>& T)
+dg::SquareMatrix<value_type> invert(
+        const dg::TriDiagonal<thrust::host_vector<value_type>>& T)
 {
-    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
-    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
-    using HVec = dg::HVec;
-    return TridiagInvDF<HVec,HDiaMatrix,HCooMatrix>( T.num_rows)(T);
+    return TridiagInvDF<value_type>( T.O.size())(T);
 }
 
 /**
@@ -628,13 +662,12 @@ cusp::coo_matrix<int,value_type,cusp::host_memory> invert(
  * @return {EVmin, EVmax}
  */
 template<class value_type>
-std::array<value_type, 2> compute_extreme_EV( const cusp::dia_matrix<int,value_type, cusp::host_memory>& T)
+std::array<value_type, 2> compute_extreme_EV( const dg::TriDiagonal<thrust::host_vector<value_type>>& T)
 {
-    unsigned size = T.num_rows;
-    cusp::array2d< value_type, cusp::host_memory> evecs;
-    cusp::array1d< value_type, cusp::host_memory> evals(size);
-    cusp::lapack::stev(T.values.column(1), T.values.column(2),
-            evals, evecs, 'N');
+    dg::SquareMatrix<value_type> evecs;
+    // We use P as "subdiagonal" because it is symmetric and the first element must be on 0 index
+    thrust::host_vector<value_type> evals( T.O), subdiagonal( T.P), Z, work;
+    lapack::stev(LAPACK_COL_MAJOR, 'N', evals,  subdiagonal, Z, work);
     value_type EVmax = dg::blas1::reduce( evals, 0., dg::AbsMax<value_type>());
     value_type EVmin = dg::blas1::reduce( evals, EVmax, dg::AbsMin<value_type>());
     return std::array<value_type, 2>{EVmin, EVmax};

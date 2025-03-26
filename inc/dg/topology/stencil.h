@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cusp/coo_matrix.h>
 #include "xspacelib.h"
 #ifdef MPI_VERSION
 #include "mpi_projection.h" // for make_mpi_matrix function
@@ -18,11 +17,12 @@ namespace detail
 {
 template<class real_type>
     void set_boundary(
-        cusp::array1d<real_type, cusp::host_memory>& values,
-        cusp::array1d<int, cusp::host_memory>& column_indices,
+        thrust::host_vector<real_type>& values,
+        thrust::host_vector<int>& column_indices,
         dg::bc bcx,
         int num_cols)
 {
+    // Fix this leads to duplicate values (do not sort or remove them though)
     for( unsigned k=0; k<values.size(); k++)
     {
         if( column_indices[k] < 0 )
@@ -53,15 +53,15 @@ template<class real_type>
 }
 
 template<class real_type>
-cusp::csr_matrix<int, real_type, cusp::host_memory> window_stencil(
+dg::SparseMatrix<int, real_type, thrust::host_vector> window_stencil(
         unsigned stencil_size,
         const RealGrid1d<real_type>& local,
         const RealGrid1d<real_type>& global,
         dg::bc bcx)
 {
-    cusp::array1d<real_type, cusp::host_memory> values;
-    cusp::array1d<int, cusp::host_memory> row_offsets;
-    cusp::array1d<int, cusp::host_memory> column_indices;
+    thrust::host_vector<real_type> values;
+    thrust::host_vector<int> row_offsets;
+    thrust::host_vector<int> column_indices;
 
     unsigned num_rows = local.size();
     unsigned num_cols = global.size();
@@ -80,24 +80,20 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> window_stencil(
     }
     set_boundary( values, column_indices, bcx, num_cols);
 
-    cusp::csr_matrix<int, real_type, cusp::host_memory> A(
-            num_rows, num_cols, values.size());
-    A.row_offsets = row_offsets;
-    A.column_indices = column_indices;
-    A.values = values;
-    return A;
+    // DO NOT SORT and KEEP DUPLICATES
+    return {num_rows, num_cols, row_offsets, column_indices, values};
 }
 
 // Rethink this approach if we ever need to make it work with MPI again
 template<class real_type>
-cusp::csr_matrix<int, real_type, cusp::host_memory> limiter_stencil(
+dg::SparseMatrix<int, real_type, thrust::host_vector> limiter_stencil(
         const RealGrid1d<real_type>& local,
         const RealGrid1d<real_type>& global,
         dg::bc bcx)
 {
-    cusp::array1d<real_type, cusp::host_memory> values;
-    cusp::array1d<int, cusp::host_memory> row_offsets;
-    cusp::array1d<int, cusp::host_memory> column_indices;
+    thrust::host_vector<real_type> values;
+    thrust::host_vector<int> row_offsets;
+    thrust::host_vector<int> column_indices;
 
     unsigned num_rows = local.size();
     unsigned num_cols = global.size();
@@ -113,9 +109,9 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> limiter_stencil(
     row_offsets.push_back( 0);
     for( unsigned k=0; k<local.N(); k++)
     {
-        row_offsets.push_back(row_offsets[row_offsets.size()-1] + 3*local.n());
+        row_offsets.push_back(row_offsets.back() + 3*local.n());
         for( unsigned j=1; j<local.n(); j++)
-            row_offsets.push_back(row_offsets[row_offsets.size()-1]);
+            row_offsets.push_back(row_offsets.back());
         // Order is important
         for( unsigned j=0; j<local.n(); j++)
         {
@@ -136,28 +132,25 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> limiter_stencil(
     assert( row_offsets.size() == num_rows+1);
     set_boundary( values, column_indices, bcx, num_cols);
 
-    cusp::csr_matrix<int, real_type, cusp::host_memory> A(
-            num_rows, num_cols, values.size());
-    A.row_offsets = row_offsets;
-    A.column_indices = column_indices;
-    A.values = values;
-    return A;
+    // DO NOT SORT and KEEP DUPLICATES
+    return {num_rows, num_cols, row_offsets, column_indices, values};
 }
 
 template<class real_type>
-cusp::csr_matrix< int, real_type, cusp::host_memory> identity_matrix( const RealGrid1d<real_type>& local, const RealGrid1d<real_type>& global)
+dg::SparseMatrix< int, real_type, thrust::host_vector> identity_matrix( const RealGrid1d<real_type>& local, const RealGrid1d<real_type>& global)
 {
-    cusp::csr_matrix<int,real_type,cusp::host_memory> A( local.size(),
-            global.size(), local.size());
     int L0 = round((local.x0() - global.x0())/global.h())*global.n();
-    A.row_offsets[0] = 0;
+    thrust::host_vector<real_type> values( local.size());
+    thrust::host_vector<int> row_offsets( local.size()+1);
+    thrust::host_vector<int> column_indices( local.size());
+    row_offsets[0] = 0;
     for( unsigned i=0; i<local.size(); i++)
     {
-        A.row_offsets[i+1] = 1 + A.row_offsets[i];
-        A.column_indices[i] = L0 + i;
-        A.values[i] = 1.;
+        row_offsets[i+1] = 1 + row_offsets[i];
+        column_indices[i] = L0 + i;
+        values[i] = 1.;
     }
-    return A;
+    return {local.size(), global.size(), row_offsets, column_indices, values};
 }
 
 } //namespace detail

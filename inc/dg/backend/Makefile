@@ -12,7 +12,8 @@ TARGETS=fma_t\
 index_t\
 memory_t\
 traits_t\
-view_t
+view_t\
+sparsematrix_t
 
 TARGETSMPI=mpi_gather_kron_mpit\
 mpi_gather_mpit\
@@ -40,10 +41,10 @@ version: version.cpp
 	./$@
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
-	$(CC) $(OPT) -o $@ $^ -lCatch2
+	$(CC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 %_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
-	$(MPICC) $(OPT) -o $@ $^ -lCatch2
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
@@ -52,10 +53,10 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
-	$(CC) -o $@ $^ -lCatch2
+	$(CC) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 mpi-tests: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
-	$(MPICC) -o $@ $^ -lCatch2
+	$(MPICC) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 .PHONY: clean
 

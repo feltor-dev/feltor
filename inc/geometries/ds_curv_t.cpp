@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 
 #ifdef WITH_MPI
 #include <mpi.h>

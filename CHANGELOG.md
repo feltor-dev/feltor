@@ -15,6 +15,27 @@ far away from strictly following it really.
 > Only changes in code are reported here, we do not track changes in the
 > doxygen documentation, READMEs or tex writeups.
 > As of v7.0 we also stop reporting changes in test and benchmark programs.
+## [v8.1] Remove cusp dependency
+### Added
+ - New `dg::SparseMatrix` class to replace our previous `cusp::csr_matrix` and `cusp::coo_matrix`
+ - The `SPARSELIB` Makefile variables expands to `-lcusparse` when compiling with cuda
+ - resize method in `dg::TriDiagonal`
+ - Writeable data method in `dg::SquareMatrix`
+### Changed
+ - The `LIBS` Makefile variable includes `-lcusparse` dependency when compiling with cuda. This is rather trivial because cuda ships with cusparse.
+ - Default build should now use `https://github.com/nvidia/cccl` repository
+ - Default build should now use `https://github.com/vectorclass/version2` (instead of version1)
+ - All dg functions/classes/typedefs returning or depending on any cusp coo or csr matrix now use `dg::SparseMatrix`
+ - All dg functions/classes returning or depending on `cusp::dia_matrix` now use `dg::TriDiagonal`
+ - All dg functions/classes returning or depending on `cusp::array1d` now use `thrust::host_vector`
+ - All dg functions/classes returning or depending on `cusp::array2d` now use `dg::SquareMatrix`
+ - The inverse type of tridiagonal matrices in `dg/matrix/matrix.h` is `dg::SquareMatrix`
+### Deprecated
+ - `dg::InverseTriDiagonal` because untested and unused over `dg::mat::compute_Tinv_y`
+### Removed
+ - All cusp header files are removed from `dg/algorithm.h`, `dg/geometries/geometries.h` and `dg/matrix/matrix.h` (The relevant tensor traits for cusp can still manually be included though)
+### Fixed
+ - Thrust library can now be used at newest version
 
 ## [v8.0] Improved foundations
 ### Added

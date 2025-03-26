@@ -13,14 +13,14 @@ LIBS    +=-L$(NETCDF_C_LIB) -lnetcdf -lcurl
 #LAPACKLIB = -L$(LAPACK_LIB) -llapacke
 endif
 #########################Modules to load ##################
-# module load gcc/11.3.0
-# module load cuda/11.8
+# module load gcc/12.2
+# module load cuda/12.1
 # 
 # module load spack
 # # spack list jsoncpp
 # # spack spec -Il jsoncpp
-# # spack install jsoncpp %gcc@11.3.0
-# spack load jsoncpp
+# # spack install jsoncpp %gcc@12.2.0
+# spack load jsoncpp%gcc@12.2.0
 # module load openmpi/4.1.4--gcc--11.3.0-cuda-11.8
 # module load boost/1.80.0--gcc--11.3.0
 # module load hdf5/1.12.2--gcc--11.3.0

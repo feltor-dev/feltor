@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include <cusp/coo_matrix.h>
 
 #include "dlt.h"
 #include "functions.h"
@@ -28,14 +27,13 @@ TEST_CASE( "SquareMatrix tensorproduct")
         CHECK( op(i+6,k+6) == Op2(i,k));
     }
 
-    cusp::coo_matrix<int, double, cusp::host_memory> test2 = dg::tensorproduct(
-        2, Op2);
-    std::vector<int> row = {0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5};
+    auto test2 = dg::tensorproduct( 2, Op2);
+    std::vector<int> row = {0,3,6,9,12,15,18};
     std::vector<int> col = {0,1,2,0,1,2,0,1,2,3,4,5,3,4,5,3,4,5};
-    cusp::array1d<double, cusp::host_memory> val( 18);
+    thrust::host_vector<double> val( 18);
     thrust::copy( Op2.data().begin(), Op2.data().end(), val.begin());
     thrust::copy( Op2.data().begin(), Op2.data().end(), val.begin()+9);
-    CHECK( row == test2.row_indices);
-    CHECK( col == test2.column_indices);
-    CHECK( val == test2.values);
+    CHECK( row == test2.row_offsets());
+    CHECK( col == test2.column_indices());
+    CHECK( val == test2.values());
 }

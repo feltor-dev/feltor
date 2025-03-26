@@ -1,8 +1,6 @@
 #pragma once
 //#include <iomanip>
 
-#include <cusp/coo_matrix.h>
-#include <cusp/csr_matrix.h>
 #include "dg/backend/typedefs.h"
 #include "dg/backend/view.h"
 #include "grid.h"
@@ -247,8 +245,8 @@ std::vector<real_type> choose_1d_abscissas( real_type X,
 template<class real_type>
 void interpolation_row( dg::space sp, real_type X,
     const RealGrid1d<real_type>& g, dg::bc bcx,
-    cusp::array1d<int, cusp::host_memory>& cols,
-    cusp::array1d<real_type, cusp::host_memory>& vals)
+    thrust::host_vector<int>& cols,
+    thrust::host_vector<real_type>& vals)
 {
     bool negative = false;
     detail::shift( negative, X, bcx, g.x0(), g.x1());
@@ -304,35 +302,29 @@ void interpolation_row( dg::space sp, real_type X,
 
 // dG interpolation
 template<class host_vector, class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation1d(
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation1d(
     dg::space sp,
     const host_vector& x, // can be a view...
     const RealGrid1d<real_type>& g,
     dg::bc bcx )
 {
-    cusp::array1d<real_type, cusp::host_memory> values;
-    cusp::array1d<int, cusp::host_memory> row_indices;
-    cusp::array1d<int, cusp::host_memory> column_indices;
+    thrust::host_vector<real_type> values;
+    thrust::host_vector<int> row_offsets;
+    thrust::host_vector<int> column_indices;
     auto ptr = x.begin();
+    row_offsets.push_back(0);
     for( unsigned i=0; i<x.size(); i++)
     {
-        unsigned size = values.size();
         interpolation_row( sp, *ptr, g, bcx, column_indices, values);
-        for( unsigned u=0; u<values.size()-size; u++)
-            row_indices.push_back(i);
+        row_offsets.push_back( values.size());
         ptr++;
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
-            x.size(), g.size(), values.size());
-    A.row_indices = row_indices;
-    A.column_indices = column_indices;
-    A.values = values;
-    return A;
+    return {x.size(), g.size(), row_offsets, column_indices, values};
 }
 
 // nearest, linear or cubic interpolation
 template<class host_vector1, class host_vector2 >
-cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> interpolation1d(
+dg::SparseMatrix<int, dg::get_value_type<host_vector2>, thrust::host_vector> interpolation1d(
         const host_vector1& x,
         const host_vector2& abs, // must be sorted
         dg::bc bcx, dg::get_value_type<host_vector2> x0, dg::get_value_type<host_vector2> x1,
@@ -341,9 +333,9 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
     using real_type = dg::get_value_type<host_vector2>;
     // boundary condidions for dg::Box likely won't work | Box is now removed
     // from library ...
-    cusp::array1d<real_type, cusp::host_memory> values;
-    cusp::array1d<int, cusp::host_memory> row_indices;
-    cusp::array1d<int, cusp::host_memory> column_indices;
+    thrust::host_vector<real_type> values;
+    thrust::host_vector<int> row_offsets;
+    thrust::host_vector<int> column_indices;
     unsigned points_per_line = 1;
     if( method == "nearest")
         points_per_line = 1;
@@ -354,8 +346,10 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
     else
         throw std::runtime_error( "Interpolation method "+method+" not recognized!\n");
     auto ptr = x.begin();
+    row_offsets.push_back(0);
     for( unsigned i=0; i<x.size(); i++)
     {
+        row_offsets.push_back(row_offsets[i]);
         real_type X = *ptr;
         ptr++;
         bool negative = false;
@@ -381,24 +375,19 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
             // px may have size != points_per_line (at boundary)
             for ( unsigned l=0; l<px.size(); l++)
             {
-                row_indices.push_back(i);
+                row_offsets[i+1]++;
                 column_indices.push_back( cols[l]);
                 values.push_back(negative ? -px[l] : px[l]);
             }
         }
         else //the point already exists
         {
-            row_indices.push_back(i);
+            row_offsets[i+1]++;
             column_indices.push_back(idxX);
             values.push_back( negative ? -1. : 1.);
         }
     }
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A(
-            x.size(), abs.size(), values.size());
-    A.row_indices = row_indices;
-    A.column_indices = column_indices;
-    A.values = values;
-    return A;
+    return {x.size(), abs.size(), row_offsets, column_indices, values};
 }
 
 }//namespace detail
@@ -441,14 +430,14 @@ cusp::coo_matrix<int, dg::get_value_type<host_vector2>, cusp::host_memory> inter
  * @copydoc hide_method
  */
 template<class RecursiveHostVector, class real_type, size_t Nd>
-cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation(
         const RecursiveHostVector& x,
         const aRealTopology<real_type, Nd>& g,
         std::array<dg::bc, Nd> bcx,
         std::string method = "dg")
 {
 
-    std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
+    std::array<dg::SparseMatrix<int,real_type,thrust::host_vector>,Nd> axes;
     for( unsigned u=0; u<Nd; u++)
     {
         if( x[u].size() != x[0].size())
@@ -488,7 +477,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @attention removes explicit zeros in the interpolation matrix
  */
 template<class host_vector, class real_type, typename = std::enable_if_t<dg::is_vector_v<host_vector>>>
-cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation(
         const host_vector& x,
         const RealGrid1d<real_type>& g,
         dg::bc bcx = dg::NEU,
@@ -522,7 +511,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @attention removes explicit zeros in the interpolation matrix
  */
 template<class host_vector, class real_type>
-cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation(
         const host_vector& x,
         const host_vector& y,
         const aRealTopology2d<real_type>& g,
@@ -560,7 +549,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
 template<class host_vector, class real_type>
-cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation(
         const host_vector& x,
         const host_vector& y,
         const host_vector& z,
@@ -594,7 +583,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
  * @attention Explicit zeros in the returned matrix are removed
  */
 template<class real_type, size_t Nd>
-cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
+dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation(
     const aRealTopology<real_type,Nd>& g_new,
     const aRealTopology<real_type,Nd>& g_old, std::string method = "dg")
 {
@@ -608,7 +597,7 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> interpolation(
             std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.q(u)<<" lies outside old grid "<<g_old.q(u)<<" "<<g_old.q(u)-g_new.q(u)<<"\n";
         assert( g_new.q(u) <= g_old.q(u));
     }
-    std::array<cusp::csr_matrix<int,real_type,cusp::host_memory>,Nd> axes;
+    std::array<dg::SparseMatrix<int,real_type,thrust::host_vector>,Nd> axes;
     for( unsigned u=0; u<Nd; u++)
     {
         if( method == "dg")
@@ -660,8 +649,8 @@ real_type interpolate(
     dg::bc bcx = dg::NEU)
 {
     assert( v.size() == g.size());
-    cusp::array1d<real_type, cusp::host_memory> vals;
-    cusp::array1d<int, cusp::host_memory> cols;
+    thrust::host_vector<real_type> vals;
+    thrust::host_vector<int> cols;
     create::detail::interpolation_row( sp, x, g, bcx, cols, vals);
     //multiply x
     real_type value = 0;
@@ -698,11 +687,11 @@ real_type interpolate(
     dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU )
 {
     assert( v.size() == g.size());
-    cusp::array1d<real_type, cusp::host_memory> valsx;
-    cusp::array1d<int, cusp::host_memory> colsx;
+    thrust::host_vector<real_type> valsx;
+    thrust::host_vector<int> colsx;
     create::detail::interpolation_row( sp, x, g.gx(), bcx, colsx, valsx);
-    cusp::array1d<real_type, cusp::host_memory> valsy;
-    cusp::array1d<int, cusp::host_memory> colsy;
+    thrust::host_vector<real_type> valsy;
+    thrust::host_vector<int> colsy;
     create::detail::interpolation_row( sp, y, g.gy(), bcy, colsy, valsy);
     //multiply x
     real_type value = 0;

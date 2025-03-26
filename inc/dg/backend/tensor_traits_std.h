@@ -7,6 +7,7 @@
 
 #include "vector_categories.h"
 #include "tensor_traits.h"
+#include "tensor_traits_scalar.h"
 #include "predicate.h"
 
 namespace dg

@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include <cusp/print.h>
 #include "xspacelib.h"
 #include "interpolation.h"
 #include "fast_interpolation.h"
@@ -14,7 +13,7 @@ static double function( double x, double y){return sin(x)*sin(y);}
 static double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
 
 
-using Matrix = cusp::coo_matrix<int, double, cusp::host_memory>;
+using Matrix = dg::SparseMatrix<int, double, thrust::host_vector>;
 
 TEST_CASE( "Interpolation")
 {
@@ -35,9 +34,9 @@ TEST_CASE( "Interpolation")
 
         auto method = GENERATE( "dg", "nearest", "linear", "cubic");
         Matrix Xm = dg::create::interpolation( xminus, g1d, dg::DIR, method);
-        CHECK( Xm.values.size() == g1d.size());
+        CHECK( Xm.values().size() == g1d.size());
         Matrix Xp = dg::create::interpolation( xplus, g1d, dg::DIR, method);
-        CHECK( Xp.values.size() == g1d.size());
+        CHECK( Xp.values().size() == g1d.size());
     }
     SECTION( "1D equidist interpolate")
     {

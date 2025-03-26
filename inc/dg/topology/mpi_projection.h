@@ -61,68 +61,66 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
     MPI_Comm_rank( col_policy.communicator(), &rank);
 
     const dg::IHMatrix_t<real_type>& A = global_cols;
-    std::vector<int> outer_row( A.num_rows, 0);
+    std::vector<int> global_row( A.num_rows(), 0);
     // 1st pass determine local rows
-    for(int i = 0; i < (int)A.num_rows; i++)
-    for (int jj = A.row_offsets[i]; jj < A.row_offsets[i+1]; jj++)
+    for(int i = 0; i < (int)A.num_rows(); i++)
+    for (int jj = A.row_offsets()[i]; jj < A.row_offsets()[i+1]; jj++)
     {
         int lIdx=0, pid = 0;
-        assert( col_policy.global2localIdx( A.column_indices[jj], lIdx, pid));
+        assert( col_policy.global2localIdx( A.column_indices()[jj], lIdx, pid));
         if( pid != rank)
-            outer_row[i] = 1;
+            global_row[i] = 1;
     }
 
     // 2nd pass: distribute entries
     thrust::host_vector<std::array<int,2>> outer_col;
-    cusp::array1d<int, cusp::host_memory> inner_row, inner_col, buffer_row;
-    cusp::array1d<real_type, cusp::host_memory> inner_val, outer_val;
-    int buffer_row_idx = 0;
+    thrust::host_vector<int> inner_row, inner_col, outer_row;
+    thrust::host_vector<real_type> inner_val, outer_val;
     thrust::host_vector<int> row_scatter;
-    for(int i = 0; i < (int)A.num_rows; i++)
+    inner_row.push_back(0);
+    outer_row.push_back(0);
+    for(int i = 0; i < (int)A.num_rows(); i++)
     {
-        for (int jj = A.row_offsets[i]; jj < A.row_offsets[i+1]; jj++)
+        for (int jj = A.row_offsets()[i]; jj < A.row_offsets()[i+1]; jj++)
         {
             int lIdx=0, pid = 0;
-            col_policy.global2localIdx( A.column_indices[jj], lIdx, pid);
-            if( outer_row[i] == 1)
+            col_policy.global2localIdx( A.column_indices()[jj], lIdx, pid);
+            if( global_row[i] == 1)
             {
-                buffer_row.push_back( buffer_row_idx);
                 outer_col.push_back( {pid,lIdx});
-                outer_val.push_back( A.values[jj]);
+                outer_val.push_back( A.values()[jj]);
             }
             else
             {
-                inner_row.push_back( i);
                 inner_col.push_back( lIdx);
-                inner_val.push_back( A.values[jj]);
+                inner_val.push_back( A.values()[jj]);
             }
         }
-        if( outer_row[i] == 1)
+        if( global_row[i] == 1)
         {
-            buffer_row_idx++;
             row_scatter.push_back(i);
+            int old_end = outer_row.back();
+            outer_row.push_back( old_end + A.row_offsets()[i+1] - A.row_offsets()[i]);
+            inner_row.push_back( inner_row[i]);
+        }
+        else
+        {
+            inner_row.push_back( inner_row[i] + A.row_offsets()[i+1] - A.row_offsets()[i]);
         }
     }
     // 3. Now make MPI Gather object
+    dg::SparseMatrix<int, real_type, thrust::host_vector> inner( A.num_rows(),
+            col_policy.local_size(), inner_row, inner_col, inner_val);
+
     thrust::host_vector<int> lColIdx;
     auto gather_map = dg::gIdx2unique_idx( outer_col, lColIdx);
     MPIGather<thrust::host_vector> mpi_gather( gather_map,
             col_policy.communicator());
-    cusp::coo_matrix<int, real_type, cusp::host_memory> inner( A.num_rows,
-            col_policy.local_size(), inner_val.size());
-    inner.row_indices    = inner_row;
-    inner.column_indices = inner_col;
-    inner.values         = inner_val;
-    if( inner.row_indices.size() > 0)
-        inner.sort_by_row_and_column();
-    cusp::coo_matrix<int, real_type, cusp::host_memory> outer( buffer_row_idx,
-            mpi_gather.buffer_size(), outer_val.size());
-    outer.row_indices    = buffer_row;
-    outer.column_indices = lColIdx;
-    outer.values         = outer_val;
-    if( outer.row_indices.size() > 0)
-        outer.sort_by_row_and_column();
-    return { inner, outer, mpi_gather, row_scatter}; // implicitly convert
+
+    dg::SparseMatrix<int, real_type, thrust::host_vector> outer( outer_row.size()-1,
+            mpi_gather.buffer_size(), outer_row, lColIdx, outer_val);
+
+    return { inner, outer, mpi_gather, row_scatter};
 }
 
 
@@ -168,31 +166,30 @@ dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const
     dg::IHMatrix_t<real_type>& global, const ConversionPolicy& row_policy)
 {
     // 0. Convert to coo matrix
-    cusp::coo_matrix<int, real_type, cusp::host_memory> A = global;
+    thrust::host_vector<int> global_row_indices = dg::detail::csr2coo( global.row_offsets());
+
     // 1. For all rows determine pid to which it belongs
-    auto gIdx = dg::gIdx2gIdx( A.row_indices, row_policy);
-    std::map<int, cusp::array1d<int, cusp::host_memory>> rows, cols;
-    std::map<int, cusp::array1d<real_type, cusp::host_memory>> vals;
+    auto gIdx = dg::gIdx2gIdx( global_row_indices, row_policy);
+    std::map<int, thrust::host_vector<int>> rows, cols;
+    std::map<int, thrust::host_vector<real_type>> vals;
     for( unsigned u=0; u<gIdx.size(); u++)
     {
         rows[gIdx[u][0]].push_back( gIdx[u][1]);
-        cols[gIdx[u][0]].push_back( A.column_indices[u]);
-        vals[gIdx[u][0]].push_back( A.values[u]);
+        cols[gIdx[u][0]].push_back( global.column_indices()[u]);
+        vals[gIdx[u][0]].push_back( global.values()[u]);
     }
     // 2. Now send those rows to where they belong
     auto row_buf = dg::mpi_permute( rows, row_policy.communicator());
     auto col_buf = dg::mpi_permute( cols, row_policy.communicator());
     auto val_buf = dg::mpi_permute( vals, row_policy.communicator());
 
-    cusp::coo_matrix<int, real_type, cusp::host_memory> B(
-        row_policy.local_size(), global.num_cols,
-        dg::detail::flatten_map(row_buf).size());
-    B.row_indices    = dg::detail::flatten_map(row_buf);
-    B.column_indices = dg::detail::flatten_map(col_buf);
-    B.values         = dg::detail::flatten_map(val_buf);
-    if( B.row_indices.size() > 0) // BugFix
-        B.sort_by_row_and_column();
-    return dg::IHMatrix_t<real_type>(B);
+    dg::SparseMatrix<int, real_type, thrust::host_vector> B;
+    // indices come in any order ( so we need to sort)
+    B.setFromCoo( row_policy.local_size(), global.num_cols(),
+        dg::detail::flatten_map( row_buf),
+        dg::detail::flatten_map(col_buf),
+        dg::detail::flatten_map(val_buf), true);
+    return B;
     // 4. Reduce on identical rows/cols
     // .... Maybe later
 }
@@ -235,10 +232,11 @@ void convertLocal2GlobalCols( dg::IHMatrix_t<real_type>& local, const Conversion
     // 1. For all columns determine pid to which it belongs
     int rank=0;
     MPI_Comm_rank( policy.communicator(), &rank);
+    thrust::host_vector<int> local_cols = local.column_indices();
 
-    for(unsigned i=0; i<local.column_indices.size(); i++)
-        assert( policy.local2globalIdx(local.column_indices[i], rank, local.column_indices[i]) );
-    local.num_cols = policy.size();
+    for(unsigned i=0; i<local.column_indices().size(); i++)
+        assert( policy.local2globalIdx(local_cols[i], rank, local_cols[i]) );
+    local.set( local.num_rows(), policy.size(), local.row_offsets(), local_cols, local.values());
 }
 
 namespace create

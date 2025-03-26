@@ -30,7 +30,7 @@ Within the file you can overwrite or add to any of the following variables:
 |   NVCC    | nvcc                                     | CUDA compiler                            |
 | NVCCFLAGS | -std=c++17  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (minimum instruction set is sse4.1, avx and fma are recommended)                         |
 | NVCCARCH  | -arch sm_61                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
-|  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
+|  INCLUDE  | -I$(HOME)/include                        | thrust, cub, cuda, nv vcl and the draw (if needed) libraries. The default expects to find (symbolic links to ) these libraries in your home/include folder |
 |   LIBS    | -lnetcdf -lhdf5_serial -ldhf5_serial_hl                | netcdf and hdf5 library. Normally, we would use -lhdf5 and -lhdf5_hl but the libhdf5-dev package installs them with "_serial". |
 |  JSONLIB  | -ljsoncpp          | the JSON library, the default is assumed to be jsoncpp; if instead `-DDG_USE_JSONHPP` is set then the (header-only) nlohmann-json library is used                       |
 |  LAPACKLIB  | -llapacke | the lapack library                      |
@@ -41,7 +41,7 @@ The main purpose of the file `feltor/config/devices/devices.mk` is to configure 
 
 | value | description                                                  | flags                                                        |
 | ----- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS | `CC = $(NVCC) -x cu --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) -x cu --compiler-bindir $(MPICC)` `MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)` |
+| gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS, Add `-lcusparse` to `LIBS` | `CC = $(NVCC) -x cu --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) -x cu --compiler-bindir $(MPICC)` `MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)` |
 | omp   | all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `CFLAGS += -x c++ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP  $(OMPFLAG)`, `MPICFLAGS+=$(CFLAGS)` |
 | cpu   | all thrust device calls redirect to single thread version using the THRUST_DEVICE_SYSTEM macro | `CFLAGS += -x c++ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP`, `MPICFLAGS+=$(CFLAGS)` |
 | knl   | same as omp but specifies OPT for Intel Xeon Phi architecture | `OPT = -O3 -xMIC-AVX512`                                     |

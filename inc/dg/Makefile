@@ -39,10 +39,10 @@ mpi_blas1_t\
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
 %_mpib: %_b.cpp
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -DWITH_MPI
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -DWITH_MPI $(SPARSELIB)
 
 %_b: %_b.cpp
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -g $(SPARSELIB)
 
 %_t.$(device).o: %_t.cpp %.h
 	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
@@ -51,10 +51,10 @@ mpi_%_t.$(device).o: %_t.cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
-	$(CC) $(OPT) -o $@ $^ -lCatch2
+	$(CC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 mpi_%_t: $(CATCHMPI).$(device).o mpi_%_t.$(device).o
-	$(MPICC) $(OPT) -o $@ $^ -lCatch2
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
@@ -63,10 +63,10 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
-	$(CC) -o $@ $^ -lCatch2
+	$(CC) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 mpi-tests: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
-	$(MPICC) -o $@ $^ -lCatch2
+	$(MPICC) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 .PHONY: clean doc
 

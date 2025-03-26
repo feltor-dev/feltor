@@ -91,14 +91,14 @@ std::array<unsigned,Topology::ndim()-Md> complement( const Topology& g, std::arr
  * @sa Prolongation is the transpose of a \c reduction and adjoint of \c projection
  */
 template<class real_type, size_t Nd, size_t Md>
-cusp::csr_matrix<int, real_type, cusp::host_memory> prolongation(
+dg::SparseMatrix<int, real_type, thrust::host_vector> prolongation(
     const aRealTopology<real_type,Nd>& g_new,
     std::array<unsigned,Md> axes)
 {
     static_assert( Md < Nd && Md > 0 && Nd > 0);
     std::array<unsigned,Nd-Md> remains = detail::complement( g_new, axes);
     auto full_abs = detail::do_full_abscissas( g_new, remains, std::make_index_sequence<Nd>());
-    std::vector<cusp::csr_matrix<int,real_type,cusp::host_memory>> matrix(Nd-Md);
+    std::vector<dg::SparseMatrix<int,real_type,thrust::host_vector>> matrix(Nd-Md);
     for( unsigned u=0; u<Nd-Md; u++)
     {
         matrix[u] = detail::interpolation1d( dg::xspace, full_abs[u],
@@ -128,15 +128,11 @@ cusp::csr_matrix<int, real_type, cusp::host_memory> prolongation(
  * @sa Reduction is the transpose of a \c prolongation
  */
 template<class real_type, size_t Nd, size_t Md>
-cusp::coo_matrix<int, real_type, cusp::host_memory> reduction(
+dg::SparseMatrix<int, real_type, thrust::host_vector> reduction(
     std::array<unsigned,Md> axes,
     const aRealTopology<real_type,Nd>& g_old)
 {
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = prolongation(
-            g_old, axes), A;
-    cusp::transpose( temp, A);
-    A.sort_by_row_and_column();
-    return A;
+    return prolongation( g_old, axes).transpose();
 }
 
 /*!@brief Projection matrix along given axes
@@ -158,7 +154,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> reduction(
  * @sa Projection is the adjoint of a \c prolongation
  */
 template<class real_type, size_t Nd, size_t Md>
-cusp::coo_matrix<int, real_type, cusp::host_memory> projection(
+dg::SparseMatrix<int, real_type, thrust::host_vector> projection(
     std::array<unsigned,Md> axes,
     const aRealTopology<real_type,Nd>& g_old)
 {
@@ -169,15 +165,15 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> projection(
     RealGrid<real_type, Nd-Md> g_new(gs);
     auto w_old = dg::create::weights( g_old);
     auto v_new = dg::create::inv_weights( g_new);
-    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = prolongation(
-            g_old, axes), A;
-    cusp::transpose( temp, A);
-    auto Wf = dg::create::diagonal( w_old);
-    auto Vc = dg::create::diagonal( v_new);
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
-    return A;
+    auto project = prolongation( g_old, axes).transpose();
+    for( unsigned row=0; row<project.num_rows(); row++)
+        for ( int jj = project.row_offsets()[row]; jj < project.row_offsets()[row+1]; jj++)
+        {
+            int col = project.column_indices()[jj];
+            // Note that w_old is multiplied before v_new (keeps results backwards reproducible)
+            project.values()[jj] = v_new[row] * ( project.values()[jj]* w_old[col]);
+        }
+    return project;
 }
 ///@}
 

@@ -2,6 +2,9 @@ ifeq ($(strip $(device)),gpu)
 ccc_:=$(CC)
 CC = $(NVCC) --compiler-bindir $(ccc_)
 CFLAGS = -x cu $(NVCCARCH) $(NVCCFLAGS)
+# We put cusparse both in LIBS as well as a separate SPARSELIB
+SPARSELIB= -lcusparse
+LIBS+=$(SPARSELIB)
 # 21.1.25 commented out next 2 lines
 # Seems to work, shouldn't have any performance issues!?
 #CFLAGS+=-D_FORCE_INLINES # solves issue with std=c++11

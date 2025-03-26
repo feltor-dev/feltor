@@ -275,7 +275,7 @@ TEST_CASE( "Dot throws")
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     // only some ranks throw?
-    dg::MDVec x { dg::DVec{10, rank%2 == 0? -10 : +10}, MPI_COMM_WORLD};
+    dg::MDVec x { dg::DVec{10, rank%2 == 0? -10. : +10.}, MPI_COMM_WORLD};
 #else
     dg::DVec x(10, -10);
 #endif

@@ -185,17 +185,17 @@ dg::HMatrix_t<real_type> fast_interpolation1d( const RealGrid1d<real_type>& t, u
     dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
     dg::RealGrid1d<real_type> g_new( -1., 1., n*multiplyn, multiplyNx);
     // Does not generate explicit zeros ...
-    cusp::coo_matrix<int, real_type, cusp::host_memory> interpolX =
+    dg::SparseMatrix<int, real_type, thrust::host_vector> interpolX =
         dg::create::interpolation( g_new, g_old);
     unsigned size = multiplyn*multiplyNx;
     EllSparseBlockMat<real_type, thrust::host_vector> iX( size*t.N(), t.N(), 1, size, t.n());
     dg::blas1::copy( 0., iX.data);
-    for( unsigned l=0; l<interpolX.num_entries; l++)
+    for( unsigned row=0; row<interpolX.num_rows(); row++)
+    for( unsigned l=interpolX.row_offsets()[row]; l<(unsigned)interpolX.row_offsets()[row+1]; l++)
     {
-        int row = interpolX.row_indices[l];
-        int col = interpolX.column_indices[l];
-        real_type val = interpolX.values[l];
-        iX.data[row*interpolX.num_cols + col] = val;
+        int col = interpolX.column_indices()[l];
+        real_type val = interpolX.values()[l];
+        iX.data[row*interpolX.num_cols() + col] = val;
     }
     for( unsigned i=0; i<size*t.N(); i++)
     {
@@ -237,15 +237,15 @@ dg::HMatrix_t<real_type> fast_projection1d( const RealGrid1d<real_type>& t, unsi
     dg::RealGrid1d<real_type> g_old( -1., 1., n*dividen, divideNx);
     dg::RealGrid1d<real_type> g_new( -1., 1., n, 1);
     // Does not generate explicit zeros ...
-    cusp::coo_matrix<int, real_type, cusp::host_memory> projectX = dg::create::projection( g_new, g_old);
+    dg::SparseMatrix<int, real_type, thrust::host_vector> projectX = dg::create::projection( g_new, g_old);
     unsigned size = dividen*divideNx;
     EllSparseBlockMat<real_type, thrust::host_vector> pX( t.N()/divideNx, t.N()*dividen, size, size, n);
     dg::blas1::copy( 0., pX.data);
-    for( unsigned ll=0; ll<projectX.num_entries; ll++)
+    for( unsigned row=0; row<projectX.num_rows(); row++)
+    for( unsigned ll=projectX.row_offsets()[row]; ll<(unsigned)projectX.row_offsets()[row+1]; ll++)
     {
-        int row = projectX.row_indices[ll];
-        int col = projectX.column_indices[ll];
-        real_type val = projectX.values[ll];
+        int col = projectX.column_indices()[ll];
+        real_type val = projectX.values()[ll];
         int k = col/(n*dividen), l = (col/n)%dividen, i = row, j = col%n;
         pX.data[((k*dividen+l)*n+i)*n+j] = val;
     }

@@ -20,7 +20,6 @@
 //using Vector = thrust::host_vector<double>;
 using Vector = dg::x::DVec;
 using value_type = double;
-//using Vector = cusp::array1d<double, cusp::device_memory>;
 
 template<class Vector, class T>
 bool equal( const Vector& vec, T result)

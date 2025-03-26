@@ -4,7 +4,6 @@
 #ifdef MPI_VERSION
 #include "mpi_prolongation.h"
 #endif
-#include <cusp/print.h>
 
 /*! @file
   @brief Classes for poloidal and toroidal average computations.

@@ -7,7 +7,6 @@
 #include "tensor_traits.h"
 #include "tensor_traits_scalar.h"
 #include "tensor_traits_thrust.h"
-#include "tensor_traits_cusp.h"
 #include "tensor_traits_std.h"
 
 namespace dg
@@ -129,7 +128,7 @@ Unique<typename host_vector::value_type> find_unique_order_preserving(
     std::vector<std::vector<int>> sort; // gather sorted from unsorted elements
     for( unsigned u=0; u<unsorted_elements.size(); u++)
     {
-        auto it =std::find( uni.unique.begin(),
+        auto it =thrust::find( uni.unique.begin(),
                 uni.unique.end(), unsorted_elements[u]);
         if(  it == uni.unique.end()) // not found
         {

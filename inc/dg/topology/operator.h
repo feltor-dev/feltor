@@ -125,6 +125,13 @@ class SquareMatrix
      * @return
      */
     const std::vector<value_type>& data() const {return data_;}
+    /**
+     * @brief Write access to underlying data
+     *
+     * @attention If you resize the data everything bad that happens is on you
+     * @return
+     */
+    std::vector<value_type>& data() {return data_;}
 
     /**
      * @brief Swap two lines in the square matrix

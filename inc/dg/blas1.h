@@ -4,11 +4,9 @@
 #include "backend/tensor_traits.h"
 #include "backend/tensor_traits_scalar.h"
 #include "backend/tensor_traits_thrust.h"
-#include "backend/tensor_traits_cusp.h"
 #include "backend/tensor_traits_std.h"
 #include "backend/blas1_dispatch_scalar.h"
 #include "backend/blas1_dispatch_shared.h"
-#include "backend/tensor_traits_cusp.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
 #include "backend/blas1_dispatch_mpi.h"

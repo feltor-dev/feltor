@@ -1,6 +1,5 @@
 #pragma once
 
-#include "cusp/transpose.h"
 #include "interpolation.h"
 #include "evaluationX.h"
 #include "weightsX.h"

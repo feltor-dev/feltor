@@ -117,8 +117,7 @@ mpi matrix to a row distributed mpi matrix. In code
     dg::IHMatrix matrix;
     //...
     // Suppose we have row distributed matrix with local rows and global cols
-    dg::IHMatrix matrixT;
-    cusp::transpose( matrix, matrixT);
+    dg::IHMatrix matrixT= matrix.transpose();
     // matrixT is column distributed
     // matrixT has global rows and local column indices
     dg::convertLocal2GlobalCols( matrixT, grid);
@@ -503,7 +502,7 @@ struct MPIDistMat
 
         using value_type = dg::get_value_type<ContainerType1>;
         m_recv_buffer.template set<value_type>( m_g.buffer_size());
-        m_comp_buffer.template set<value_type>( m_o.num_rows);
+        m_comp_buffer.template set<value_type>( m_o.num_rows());
         auto& recv_buffer = m_recv_buffer.template get<value_type>();
         auto& comp_buffer = m_comp_buffer.template get<value_type>();
 
@@ -554,7 +553,7 @@ struct MPIDistMat
 
         using value_type = dg::get_value_type<ContainerType1>;
         m_recv_buffer.template set<value_type>( m_g.buffer_size());
-        m_comp_buffer.template set<value_type>( m_o.num_rows);
+        m_comp_buffer.template set<value_type>( m_o.num_rows());
         auto& recv_buffer = m_recv_buffer.template get<value_type>();
         auto& comp_buffer = m_comp_buffer.template get<value_type>();
 

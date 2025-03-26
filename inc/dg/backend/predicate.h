@@ -77,7 +77,7 @@ constexpr bool is_vector_v = is_vector<T, Tag>::value;
 template< class T, class Tag = AnyMatrixTag>
 constexpr bool is_matrix_v = is_matrix<T, Tag>::value;
 
-/// @brief Does a type have a execution_policy derived from \c Tag
+/// @brief Does a type have an execution_policy equal to \c Tag
 /// @sa dg::has_policy_v
 template< class T, class Tag = AnyPolicyTag>
 using has_policy = std::is_same<Tag, get_execution_policy<T>>;

@@ -1,8 +1,5 @@
 #pragma once
-#include <cusp/dia_matrix.h>
-#include <cusp/coo_matrix.h>
 
-//#include <cusp/print.h>
 #include "dg/algorithm.h"
 #include "tridiaginv.h"
 #include "matrixfunction.h"
@@ -37,9 +34,6 @@ class MCG
 {
   public:
     using value_type = dg::get_value_type<ContainerType>; //!< value type of the ContainerType class
-    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
-    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
-    using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
     MCG(){}
     /**
@@ -110,9 +104,9 @@ class MCG
         for ( unsigned i=0; i<y.size()-1; i++)
         {
             dg::blas2::symv( std::forward<MatrixType>(A), m_p, m_ap);
-            value_type alphainv = i==0 ? T.values( i,1) :
-                T.values(i,1) + T.values( i-1,2);
-            value_type beta = -T.values( i,2)/alphainv;
+            value_type alphainv = i==0 ? T.O[i] :
+                T.O[i] + T.P[i-1];
+            value_type beta = -T.P[i]/alphainv;
             dg::blas1::axpby( -1./alphainv, m_ap, 1., m_r);
             dg::blas1::axpby(1., m_r, beta, m_p );
             dg::blas1::axpby( y[i+1], m_r, 1., x); //Compute x= R y
@@ -143,7 +137,8 @@ class MCG
      * initialized with 0 if used for tridiagonalization.
       */
     template< class MatrixType, class ContainerType0, class ContainerType1>
-    const HDiaMatrix& operator()( MatrixType&& A, const ContainerType0& b,
+    const dg::TriDiagonal<thrust::host_vector<value_type>>& operator()(
+            MatrixType&& A, const ContainerType0& b,
             const ContainerType1& weights, value_type eps = 1e-12,
             value_type nrmb_correction = 1., value_type res_fac = 1.)
     {
@@ -183,15 +178,15 @@ class MCG
             }
             if( i == 0)
             {
-                m_TH.values(i,0) = 0.;
-                m_TH.values(i,1) = 1./alpha;
-                m_TH.values(i,2) = -beta/alpha;
+                m_TH.M[i] = 0.;
+                m_TH.O[i] = 1./alpha;
+                m_TH.P[i] = -beta/alpha;
             }
             else
             {
-                m_TH.values(i,0) = -1./alpha_old;
-                m_TH.values(i,1) =  1./alpha + beta_old/alpha_old;
-                m_TH.values(i,2) = -beta/alpha;
+                m_TH.M[i] = -1./alpha_old;
+                m_TH.O[i] =  1./alpha + beta_old/alpha_old;
+                m_TH.P[i] = -beta/alpha;
             }
             if( res_fac*sqrt( nrmzr_new)
                     < eps*(nrmb + nrmb_correction))
@@ -210,8 +205,8 @@ class MCG
      *
      * @return e_1
      */
-    HVec make_e1( ) {
-        HVec e1H(m_iter, 0.);
+    thrust::host_vector<value_type> make_e1( ) {
+        thrust::host_vector<value_type> e1H(m_iter, 0.);
         e1H[0] = 1.;
         return e1H;
     }
@@ -221,15 +216,12 @@ class MCG
     void set_iter( unsigned new_iter) {
         // The alignment (which is the pitch of the underlying values)
         // of m_max_iter preserves the existing elements
-        m_TH.resize(new_iter, new_iter, 3*new_iter-2, 3, m_max_iter);
-        m_TH.diagonal_offsets[0] = -1;
-        m_TH.diagonal_offsets[1] =  0;
-        m_TH.diagonal_offsets[2] =  1;
+        m_TH.resize(new_iter),
         m_iter = new_iter;
     }
     ContainerType m_r, m_ap, m_p;
     unsigned m_max_iter, m_iter;
-    HDiaMatrix m_TH;
+    dg::TriDiagonal<thrust::host_vector<value_type>> m_TH;
     bool m_verbose = false;
     value_type m_bnorm = 0.;
 };
@@ -257,10 +249,6 @@ class MCGFuncEigen
 {
   public:
     using value_type = dg::get_value_type<Container>;
-    using HDiaMatrix = cusp::dia_matrix<int, value_type, cusp::host_memory>;
-    using HCooMatrix = cusp::coo_matrix<int, value_type, cusp::host_memory>;
-    using HArray2d = cusp::array2d< value_type, cusp::host_memory>;
-    using HArray1d = cusp::array1d< value_type, cusp::host_memory>;
     using HVec = dg::HVec;
     ///@brief Allocate nothing, Call \c construct method before usage
     MCGFuncEigen(){}
@@ -319,32 +307,29 @@ class MCGFuncEigen
         m_alpha.resize(iter);
         m_delta.resize(iter,1.);
         m_beta.resize(iter-1);
-        m_evals.resize(iter);
-        m_evecs.resize(iter,iter);
+        m_EHt.resize(iter);
         m_e1H.resize(iter, 0.);
         m_e1H[0] = 1.;
         m_yH.resize(iter);
+        m_work.resize( 2*iter-2);
         //fill diagonal entries of similarity transformed T matrix (now symmetric)
         for(unsigned i = 0; i<iter; i++)
         {
-            m_alpha[i] = m_TH.values(i,1);
+            m_alpha[i] = m_TH.O[i];
             if (i<iter-1) {
-                if      (m_TH.values(i,2) > 0.) m_beta[i] =  sqrt(m_TH.values(i,2)*m_TH.values(i+1,0)); // sqrt(b_i * c_i)
-                else if (m_TH.values(i,2) < 0.) m_beta[i] = -sqrt(m_TH.values(i,2)*m_TH.values(i+1,0)); //-sqrt(b_i * c_i)
+                if      (m_TH.P[i] > 0.) m_beta[i] =  sqrt(m_TH.P[i]*m_TH.M[i+1]); // sqrt(b_i * c_i)
+                else if (m_TH.P[i] < 0.) m_beta[i] = -sqrt(m_TH.P[i]*m_TH.M[i+1]); //-sqrt(b_i * c_i)
                 else m_beta[i] = 0.;
             }
-            if (i>0) m_delta[i] = m_delta[i-1]*sqrt(m_TH.values(i,0)/m_TH.values(i-1,2));
+            if (i>0) m_delta[i] = m_delta[i-1]*sqrt(m_TH.M[i]/m_TH.P[i-1]);
         }
         //Compute Eigendecomposition
-        cusp::lapack::stev(m_alpha, m_beta, m_evals, m_evecs);
-        //convert to COO matrix format
-//         cusp::print(m_evals);
-        cusp::convert(m_evecs, m_EH);
-        cusp::transpose(m_EH, m_EHt);
+        lapack::stev(LAPACK_COL_MAJOR, 'V', m_alpha, m_beta, m_EHt.data(), m_work);
+        m_EH = m_EHt.transpose();
         //Compute f(T) e1 = D E f(Lambda) E^t D^{-1} e1
         dg::blas1::pointwiseDivide(m_e1H, m_delta, m_e1H);
         dg::blas2::symv(m_EHt, m_e1H, m_yH);
-        dg::blas1::transform(m_evals, m_e1H, [f] (double x){
+        dg::blas1::transform(m_alpha, m_e1H, [f] (double x){
             try{
                 return f(x);
             }
@@ -363,10 +348,9 @@ class MCGFuncEigen
     }
   private:
     HVec m_e1H, m_yH;
-    HDiaMatrix m_TH;
-    HCooMatrix m_EH, m_EHt;
-    HArray2d m_evecs;
-    HArray1d m_alpha, m_beta, m_delta, m_evals;
+    dg::TriDiagonal<thrust::host_vector<value_type>> m_TH;
+    dg::SquareMatrix<value_type> m_EH, m_EHt;
+    thrust::host_vector<value_type> m_alpha, m_beta, m_delta, m_work;
     dg::mat::MCG< Container > m_mcg;
 
 };

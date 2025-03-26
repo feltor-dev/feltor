@@ -9,11 +9,11 @@ static double function( double x, double y){return sin(x)*cos(y);}
 static double function( double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 
 using Vector = dg::DVec;
-using Matrix = cusp::coo_matrix<int,double,cusp::device_memory>;
+using HMatrix = dg::SparseMatrix<int,double,thrust::host_vector>;
+using DMatrix = dg::SparseMatrix<int,double,thrust::device_vector>;
 using MassMatrix = dg::KroneckerTriDiagonal2d<Vector>;
 using InvMassMatrix = dg::InverseKroneckerTriDiagonal2d<Vector>;
 
-// TODO This test fails! Fix it!
 TEST_CASE("FEM")
 {
     unsigned n = 3, Nx = 18, Ny = 24, mx = 3;
@@ -36,11 +36,12 @@ TEST_CASE("FEM")
         dg::FemRefinement fem_ref( mx);
         dg::CartesianRefinedGrid2d gDIR_f( fem_ref, fem_ref, gDIR.x0(),
                 gDIR.x1(), gDIR.y0(), gDIR.y1(), n, Nx,Ny, dg::DIR, dg::DIR);
+        const Vector wf2d = dg::create::volume( gDIR_f);
         dg::HVec Xf = dg::pullback( dg::cooX2d, gDIR_f);
         dg::HVec Yf = dg::pullback( dg::cooY2d, gDIR_f);
-        Matrix inter = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU,
-                dg::NEU, "linear");
-        const Vector wf2d = dg::create::volume( gDIR_f);
+        HMatrix interH = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU,
+                    dg::NEU, "linear");
+        DMatrix inter = interH;
         Vector func_f( gDIR_f.size());
         dg::blas2::symv( inter, func, func_f);
         SECTION( "Integral")
@@ -53,13 +54,8 @@ TEST_CASE("FEM")
         SECTION( "PCG with FEM")
         {
             const Vector v2d = dg::create::fem_inv_weights( gDIR);
-            Matrix interT;
-            cusp::transpose( inter, interT);
-            Matrix Wf = dg::create::diagonal( (dg::HVec)wf2d), project;
-            Matrix Vf = dg::create::diagonal( (dg::HVec)v2d), tmp;
-            cusp::multiply( interT, Wf, tmp);
-            cusp::multiply( Vf, tmp, project);
-            project.sort_by_row_and_column();
+            DMatrix project = dg::create::diagonal( (dg::HVec)v2d)*
+                interH.transpose()*dg::create::diagonal( (dg::HVec) wf2d);
 
             Vector barfunc(func);
             dg::blas2::symv( project, func_f, barfunc);
@@ -83,12 +79,9 @@ TEST_CASE("FEM")
             INFO("Thomas Distance to true solution: "<<norm/func_norm);
             CHECK( norm/ func_norm < 2e-14);
 
-            Matrix interC = dg::create::interpolation( Xf, Yf, gDIR, dg::NEU,
-                    dg::NEU, "nearest");
-            cusp::transpose( interC, interT);
-            cusp::multiply( interT, Wf, tmp);
-            cusp::multiply( Vf, tmp, project);
-            project.sort_by_row_and_column();
+            project = dg::create::diagonal( (dg::HVec)v2d)*
+                dg::create::interpolation( Xf, Yf, gDIR, dg::NEU, dg::NEU,
+                "nearest").transpose()*dg::create::diagonal( (dg::HVec) wf2d);
             dg::blas2::symv( project, func_f, barfunc);
             fem_mass = dg::create::fem_linear2const( gDIR);
 

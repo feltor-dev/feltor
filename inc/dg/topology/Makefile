@@ -65,13 +65,13 @@ mpi_average_t.$(device).o: average_t.cpp average.h
 	$(MPICC) $(OPT) $(MPICFLAGS) -c $< -o $@ -g $(INCLUDE) -DWITH_MPI
 
 %_t: $(CATCH).$(device).o %_t.$(device).o
-	$(CC) $(OPT) -o $@ $^ -lCatch2
+	$(CC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 mpi_%_t: $(CATCHMPI).$(device).o mpi_%_t.$(device).o
-	$(MPICC) $(OPT) -o $@ $^ -lCatch2
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 %_mpit: $(CATCHMPI).$(device).o %_mpit.$(device).o
-	$(MPICC) $(OPT) -o $@ $^ -lCatch2
+	$(MPICC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
@@ -80,10 +80,10 @@ $(CATCHMPI).$(device).o: $(CATCHMPI).cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $(INCLUDE) -g -c $< -o $@
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
-	$(CC) -o $@ $^ -lCatch2
+	$(CC) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 mpi-tests: $(CATCHMPI).$(device).o $(addsuffix .$(device).o,$(TARGETSMPI))
-	$(MPICC) -o $@ $^ -lCatch2
+	$(MPICC) -o $@ $^ -lCatch2 $(SPARSELIB)
 
 .PHONY: clean
 

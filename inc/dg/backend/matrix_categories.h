@@ -31,6 +31,8 @@ struct CuspMatrixTag: public AnyMatrixTag {};
 struct MPIMatrixTag: public AnyMatrixTag {};
 /// indicate our sparse block matrix format
 struct SparseBlockMatrixTag: public AnyMatrixTag {};
+/// indicate our sparse matrix format
+struct SparseMatrixTag: public SparseBlockMatrixTag {};
 /// indicate our dense matrix format
 struct DenseMatrixTag: public AnyMatrixTag {};
 

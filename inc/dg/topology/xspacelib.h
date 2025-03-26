@@ -3,7 +3,6 @@
 
 #include <thrust/host_vector.h>
 
-#include <cusp/coo_matrix.h>
 #include <cassert>
 
 #include "dg/backend/typedefs.h"
@@ -33,41 +32,42 @@ namespace dg{
 * @param lhs The left hand side matrix (duplicate entries lead to duplicate entries in result)
 * @param rhs The right hand side matrix (duplicate entries lead to duplicate entries in result)
 *
-* @return newly allocated cusp matrix containing the tensor product
-* @note use \c cusp::add and \c cusp::multiply to add and multiply matrices.
+* @return newly allocated matrix containing the tensor product
 */
 template< class T>
-cusp::csr_matrix< int, T, cusp::host_memory> tensorproduct(
-        const cusp::csr_matrix< int, T, cusp::host_memory>& lhs,
-        const cusp::csr_matrix< int, T, cusp::host_memory>& rhs)
+dg::SparseMatrix< int, T, thrust::host_vector> tensorproduct(
+        const dg::SparseMatrix< int, T, thrust::host_vector>& lhs,
+        const dg::SparseMatrix< int, T, thrust::host_vector>& rhs)
 {
     //dimensions of the matrix
-    int num_rows     = lhs.num_rows*rhs.num_rows;
-    int num_cols     = lhs.num_cols*rhs.num_cols;
-    int num_entries  = lhs.num_entries* rhs.num_entries;
+    size_t num_rows     = lhs.num_rows()*rhs.num_rows();
+    size_t num_cols     = lhs.num_cols()*rhs.num_cols();
+    size_t num_entries  = lhs.num_entries()* rhs.num_entries();
     // allocate output matrix
-    cusp::csr_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
+    thrust::host_vector<int> A_row_offsets(num_rows+1), A_column_indices( num_entries);
+    thrust::host_vector<T> A_values( num_entries);
     //LHS x RHS
-    A.row_offsets[0] = 0;
+    A_row_offsets[0] = 0;
     int counter = 0;
-    for( unsigned i=0; i<lhs.num_rows; i++)
-    for( unsigned j=0; j<rhs.num_rows; j++)
+    for( unsigned i=0; i<lhs.num_rows(); i++)
+    for( unsigned j=0; j<rhs.num_rows(); j++)
     {
         int num_entries_in_row =
-            (lhs.row_offsets[i+1] - lhs.row_offsets[i])*
-            (rhs.row_offsets[j+1] - rhs.row_offsets[j]);
-        A.row_offsets[i*rhs.num_rows+j+1] =
-            A.row_offsets[i*rhs.num_rows+j] + num_entries_in_row;
-        for( int k=lhs.row_offsets[i]; k<lhs.row_offsets[i+1]; k++)
-        for( int l=rhs.row_offsets[j]; l<rhs.row_offsets[j+1]; l++)
+            (lhs.row_offsets()[i+1] - lhs.row_offsets()[i])*
+            (rhs.row_offsets()[j+1] - rhs.row_offsets()[j]);
+        A_row_offsets[i*rhs.num_rows()+j+1] =
+            A_row_offsets[i*rhs.num_rows()+j] + num_entries_in_row;
+        for( int k=lhs.row_offsets()[i]; k<lhs.row_offsets()[i+1]; k++)
+        for( int l=rhs.row_offsets()[j]; l<rhs.row_offsets()[j+1]; l++)
         {
-            A.column_indices[counter] =
-                lhs.column_indices[k]*rhs.num_cols +  rhs.column_indices[l];
-            A.values[counter]  = lhs.values[k]*rhs.values[l];
+            A_column_indices[counter] =
+                lhs.column_indices()[k]*rhs.num_cols() +  rhs.column_indices()[l];
+            A_values[counter]  = lhs.values()[k]*rhs.values()[l];
             counter++;
         }
     }
-    return A;
+    // allocate output matrix
+    return { num_rows, num_cols, A_row_offsets, A_column_indices, A_values};
 }
 
 /**
@@ -83,78 +83,50 @@ cusp::csr_matrix< int, T, cusp::host_memory> tensorproduct(
 * @param lhs The left hand side matrix (duplicate entries lead to duplicate entries in result)
 * @param rhs The right hand side matrix (duplicate entries lead to duplicate entries in result)
 *
-* @return newly allocated cusp matrix containing the tensor product
-* @note use \c cusp::add and \c cusp::multiply to add and multiply matrices.
+* @return newly allocated sparse matrix containing the tensor product
 */
 template< class T>
-cusp::csr_matrix< int, T, cusp::host_memory> tensorproduct_cols(
-        const cusp::csr_matrix< int, T, cusp::host_memory>& lhs,
-        const cusp::csr_matrix< int, T, cusp::host_memory>& rhs)
+dg::SparseMatrix< int, T, thrust::host_vector> tensorproduct_cols(
+        const dg::SparseMatrix< int, T, thrust::host_vector>& lhs,
+        const dg::SparseMatrix< int, T, thrust::host_vector>& rhs)
 {
-    if( lhs.num_rows != rhs.num_rows)
-        throw Error( Message(_ping_)<<"lhs and rhs must have same number of rows: "<<lhs.num_rows<<" rhs "<<rhs.num_rows);
+    if( lhs.num_rows() != rhs.num_rows())
+        throw Error( Message(_ping_)<<"lhs and rhs must have same number of rows: "<<lhs.num_rows()<<" rhs "<<rhs.num_rows());
 
     //dimensions of the matrix
-    int num_rows     = lhs.num_rows;
-    int num_cols     = lhs.num_cols*rhs.num_cols;
-    int num_entries = 0;
-    for( unsigned i=0; i<lhs.num_rows; i++)
+    size_t num_rows     = lhs.num_rows();
+    size_t num_cols     = lhs.num_cols()*rhs.num_cols();
+    size_t num_entries = 0;
+    for( unsigned i=0; i<lhs.num_rows(); i++)
     {
         int num_entries_in_row =
-            (lhs.row_offsets[i+1] - lhs.row_offsets[i])*
-            (rhs.row_offsets[i+1] - rhs.row_offsets[i]);
+            (lhs.row_offsets()[i+1] - lhs.row_offsets()[i])*
+            (rhs.row_offsets()[i+1] - rhs.row_offsets()[i]);
         num_entries += num_entries_in_row;
     }
     // allocate output matrix
-    cusp::csr_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
+    thrust::host_vector<int> A_row_offsets(num_rows+1), A_column_indices( num_entries);
+    thrust::host_vector<T> A_values( num_entries);
     //LHS x RHS
-    A.row_offsets[0] = 0;
+    A_row_offsets[0] = 0;
     int counter = 0;
-    for( unsigned i=0; i<lhs.num_rows; i++)
+    for( unsigned i=0; i<lhs.num_rows(); i++)
     {
         int num_entries_in_row =
-            (lhs.row_offsets[i+1] - lhs.row_offsets[i])*
-            (rhs.row_offsets[i+1] - rhs.row_offsets[i]);
-        A.row_offsets[i+1] = A.row_offsets[i] + num_entries_in_row;
-        for( int k=lhs.row_offsets[i]; k<lhs.row_offsets[i+1]; k++)
-        for( int l=rhs.row_offsets[i]; l<rhs.row_offsets[i+1]; l++)
+            (lhs.row_offsets()[i+1] - lhs.row_offsets()[i])*
+            (rhs.row_offsets()[i+1] - rhs.row_offsets()[i]);
+        A_row_offsets[i+1] = A_row_offsets[i] + num_entries_in_row;
+        for( int k=lhs.row_offsets()[i]; k<lhs.row_offsets()[i+1]; k++)
+        for( int l=rhs.row_offsets()[i]; l<rhs.row_offsets()[i+1]; l++)
         {
-            A.column_indices[counter] =
-                lhs.column_indices[k]*rhs.num_cols +  rhs.column_indices[l];
-            A.values[counter]  = lhs.values[k]*rhs.values[l];
+            A_column_indices[counter] =
+                lhs.column_indices()[k]*rhs.num_cols() +  rhs.column_indices()[l];
+            A_values[counter]  = lhs.values()[k]*rhs.values()[l];
             counter++;
         }
     }
-    return A;
+    return { num_rows, num_cols, A_row_offsets, A_column_indices, A_values};
 }
-///@cond
-template< class T>
-cusp::coo_matrix< int, T, cusp::host_memory> tensorproduct(
-        const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
-        const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
-{
-    //dimensions of the matrix
-    int num_rows     = lhs.num_rows*rhs.num_rows;
-    int num_cols     = lhs.num_cols*rhs.num_cols;
-    int num_entries  = lhs.num_entries* rhs.num_entries;
-    // allocate output matrix
-    cusp::coo_matrix<int, T, cusp::host_memory> A(num_rows, num_cols, num_entries);
-    //LHS x RHS
-    int counter = 0;
-    for( int k=0; k<lhs.num_entries; k++)
-    for( int l=0; l<rhs.num_entries; l++)
-    {
-        A.row_indices[counter] =
-            lhs.row_indices[k]*rhs.num_rows + rhs.row_indices[l];
-        A.column_indices[counter] =
-            lhs.column_indices[k]*rhs.num_cols +  rhs.column_indices[l];
-        A.values[counter]  = lhs.values[k]*rhs.values[l];
-        counter++;
-    }
-    return A;
-}
-// tensorproduct_cols does not work for coo_matrix without converting to csr_matrix ...
-///@endcond
 
 
 namespace create{
