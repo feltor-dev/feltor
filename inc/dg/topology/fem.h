@@ -22,6 +22,7 @@ namespace dg{
       \end{pmatrix}\f]
  * @tparam Container One of the shared memory containers
  * @ingroup sparsematrix
+ * @sa dg::mat::TridiagInvDF dg::mat::compute_Tinv_y
  */
 template<class Container>
 struct TriDiagonal
@@ -123,12 +124,13 @@ struct TriDiagonal
     Container P; //!< Uper diagonal ["Plus" +1] <tt>P[0]</tt> maps to <tt>T_01</tt>
 };
 
-/*!@brief Fast inverse tridiagonal sparse matrix
+///@addtogroup fem
+///@{
+/*!@brief DEPRECATED/UNTESTED Fast inverse tridiagonal sparse matrix
  *
  * When applied to a vector, uses Thomas algorithm to compute \f$ T^{-1} v\f$
  * @attention Only for shared memory host vectors
- * @ingroup sparsematrix
- * @sa dg::mat::TridiagInvDF
+ * @sa dg::mat::TridiagInvDF dg::mat::compute_Tinv_y
  */
 template<class value_type>
 struct InverseTriDiagonal
@@ -161,8 +163,6 @@ struct InverseTriDiagonal
     private:
     thrust::host_vector<value_type> M, O, P;
 };
-///@addtogroup fem
-///@{
 
 /*!@brief Fast tridiagonal sparse matrix in 2d \f$ T_y\otimes T_x\f$
  *

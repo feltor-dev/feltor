@@ -31,6 +31,7 @@ far away from strictly following it really.
  - All dg functions/classes returning or depending on `cusp::array2d` now use `dg::SquareMatrix`
  - The inverse type of tridiagonal matrices in `dg/matrix/matrix.h` is `dg::SquareMatrix`
 ### Deprecated
+ - `dg::InverseTriDiagonal` because untested and unused over `dg::mat::compute_Tinv_y`
 ### Removed
  - All cusp header files are removed from `dg/algorithm.h`, `dg/geometries/geometries.h` and `dg/matrix/matrix.h` (The relevant tensor traits for cusp can still manually be included though)
 ### Fixed
