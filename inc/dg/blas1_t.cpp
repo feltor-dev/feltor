@@ -627,5 +627,85 @@ TEST_CASE( "Blas1 documentation")
         //! [construct]
     }
 }
+TEST_CASE( "Aliases and special numbers")
+{
+    SECTION( "copy")
+    {
+        dg::DVec two( 100,2);
+        dg::blas1::copy( two, two);
+        CHECK( two == dg::DVec( 100, 2));
+    }
+    SECTION( "scal")
+    {
+        dg::DVec two( 100,2);
+        dg::blas1::scal( two, 1.0);
+        CHECK( two == dg::DVec( 100, 2));
+    }
+    SECTION( "plus")
+    {
+        dg::DVec two( 100,2);
+        dg::blas1::plus( two, 0.);
+        CHECK( two == dg::DVec( 100, 2.));
+    }
+    SECTION( "axpby")
+    {
+        dg::DVec two( 100,2), three(100,3);
+        dg::blas1::axpby( 0, two, 3., three);
+        CHECK( three == dg::DVec( 100, 9.));
+        dg::blas1::axpby( 2, two, 0., three);
+        CHECK( three == dg::DVec( 100, 4.));
+        dg::blas1::axpby( 2, three, 0., three);
+        CHECK( three == dg::DVec( 100, 8.));
+        dg::blas1::axpby( 2, three, 1., three);
+        CHECK( three == dg::DVec( 100, 24.));
+    }
+    SECTION( "axpbypgz")
+    {
+        dg::DVec two(100,2), five(100,5), result(100, 3);
+        dg::blas1::axpbypgz( 0, two, 2., five, -3.,result);
+        CHECK( result == dg::DVec( 100, 1.)); // 2*5-3*3
+        dg::blas1::axpbypgz( 2, two, 0., five, 1.,result);
+        CHECK( result == dg::DVec( 100, 5.)); // 2*2+1*1
+        dg::blas1::axpbypgz( 2, two, 1., two, 0.,result);
+        CHECK( result == dg::DVec( 100, 6.)); // 2*2+1*2
+        dg::blas1::axpbypgz( 2, two, 1., result, 0.,result);
+        CHECK( result == dg::DVec( 100, 10.)); // 2*2+1*6
+        dg::blas1::axpbypgz( 2, result, 1., five, 0.,result);
+        CHECK( result == dg::DVec( 100, 25.)); // 2*10+1*5
+    }
+    SECTION( "pointwiseDot")
+    {
+        dg::DVec two( 100,2), three( 100,3), result(100,6);
+        dg::blas1::pointwiseDot(0., two,  three, -0.5, result );
+        CHECK( result == dg::DVec( 100, -3.)); // -0.5*6
+
+        dg::blas1::pointwiseDot(-1., result,  three, -0., result );
+        CHECK( result == dg::DVec( 100, 9.)); // 3*3
+        dg::blas1::pointwiseDot(0.25, two,  result, -0., result );
+        CHECK( result == dg::DVec( 100, 4.5)); // 2*3
+    }
+    SECTION( "pointwiseDot 2")
+    {
+        dg::DVec two(100,2), three(100,3), four(100,4), five(100,5), result(100,6);
+        dg::blas1::pointwiseDot(0., two,  three, -4., four, five, 2., result );
+        CHECK( result == dg::DVec( 100, -68.)); // 0*2*3-4*4*5+2*6
+        dg::blas1::pointwiseDot(2., two,  three, -0., four, five, 2., result );
+        CHECK( result == dg::DVec( 100, -124.)); // 2*2*3-0*4*5+2*6
+    }
+    SECTION( "pointwiseDot 3")
+    {
+        dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
+        dg::blas1::pointwiseDot(0., two,  three, four, -4., result );
+        CHECK( result == dg::DVec( 100, -24.)); // -4*6
+    }
+    SECTION( "pointwiseDivide")
+    {
+        dg::DVec two( 100,2), three( 100,3), result(100,1);
+        dg::blas1::pointwiseDivide( 0, two,  three, 6, result );
+        CHECK( result == dg::DVec( 100, 6.)); // 6*1
+        dg::blas1::pointwiseDivide( 1, result,  three, 0, result );
+        CHECK( result == dg::DVec( 100, 2.)); // 6/3
+    }
+}
 #endif
 

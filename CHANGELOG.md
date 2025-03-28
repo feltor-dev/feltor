@@ -36,6 +36,7 @@ far away from strictly following it really.
  - All cusp header files are removed from `dg/algorithm.h`, `dg/geometries/geometries.h` and `dg/matrix/matrix.h` (The relevant tensor traits for cusp can still manually be included though)
 ### Fixed
  - Thrust library can now be used at newest version
+ - HotFix-v8.1.1: Aliases in `dg::blas1::pointwiseDot` and `dg::blas1::pointwiseDivide` lead to wrong results
 
 ## [v8.0] Improved foundations
 ### Added
