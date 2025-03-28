@@ -280,8 +280,9 @@ struct AxyPby
     template<class T2, class T3>
 DG_DEVICE
     void operator()( T2 x, T3& y)const {
+        T3 tmp = y;
         y *= m_b;
-        y = DG_FMA( m_a*x, y, y);
+        y = DG_FMA( m_a*x, tmp, y);
     }
     private:
     T0 m_a;
@@ -366,8 +367,9 @@ struct PointwiseDivide
     template<class T3, class T4>
 DG_DEVICE
     void operator()( T3 y, T4& z)const{
+        T4 tmp = z;
         z *= m_b;
-        z = DG_FMA( m_a, z/y, z);
+        z = DG_FMA( m_a, tmp/y, z);
     }
     template<class T3, class T4, class T5>
 DG_DEVICE
