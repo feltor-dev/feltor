@@ -52,7 +52,7 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
 
     dg::file::NcFile file( file_name, dg::file::nc_nowrite);
     dg::file::WrappedJsonValue jsIN = dg::file::string2Json(
-        file.get_att_as<std::string>(".", "inputfile"),
+        file.get_att_as<std::string>("inputfile"),
         dg::file::comments::are_forbidden);
     feltor::Parameters pIN( jsIN);
     DG_RANK0 std::cout << "# RESTART from file "<<file_name<< std::endl;
