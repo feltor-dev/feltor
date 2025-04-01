@@ -209,7 +209,7 @@ int main( int argc, char* argv[])
         //create & output static 3d variables into file
         file.defput_dim( "x", {{"axis", "X"}, {"long_name", "R coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(0));
         file.defput_dim( "y", {{"axis", "Y"}, {"long_name", "Z coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(1));
-        file.defput_dim( "z", {{"axis", "Z"}, {"long_name", "Phi coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rho_s"}}, g3d_out.abscissas(2));
+        file.defput_dim( "z", {{"axis", "Z"}, {"long_name", "Phi coordinate in Cylindrical R,Z,Phi coordinate system"}, {"units", "rad"}}, g3d_out.abscissas(2));
         for( auto& record: feltor::diagnostics3d_static_list)
         {
             record.function( resultH_out, var.mag, g3d_out);
