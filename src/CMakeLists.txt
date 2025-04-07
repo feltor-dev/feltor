@@ -7,7 +7,6 @@ target_link_libraries(navier_stokes INTERFACE dg::dg)
 
 # ============================================
 # Set up FELTOR
-#
 # TODO: Other executables
 
 set(FELTOR_HEADERS
@@ -21,6 +20,11 @@ add_executable(feltor "feltor/feltor.cpp" ${FELTOR_HEADERS})
 add_executable(feltor::feltor ALIAS feltor)
 
 target_include_directories(feltor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(FELTOR_USE_MPI)
+    target_link_libraries(feltor PRIVATE MPI::MPI_CXX)
+    target_compile_definitions(feltor PRIVATE WITH_MPI)
+endif()
 
 # TODO: Replace following commands with portable alternatives.
 execute_process(

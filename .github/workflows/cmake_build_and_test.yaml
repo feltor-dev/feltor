@@ -1,4 +1,4 @@
-name: CMake build
+name: CMake build and test
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
     - name: Install dependencies
       run: |
        sudo apt-get update
-       sudo apt-get -y install libglfw3-dev libopenmpi-dev libjsoncpp-dev libnetcdf-dev
+       sudo apt-get -y install libglfw3-dev libopenmpi-dev libnetcdf-dev
 
     - name: Configure CMake
       run: >
@@ -61,3 +61,8 @@ jobs:
 
     - name: Build
       run: cmake --build ${{ steps.strings.outputs.build-dir }} --verbose
+
+    - name: Test
+      run: |
+        cd build
+        ctest

@@ -1,9 +1,7 @@
 # Sets the following variables
 # - DG_HEADERS
 # - DG_BENCHMARKS
-# - DG_MPI_BENCHMARKS
 # - DG_TESTS
-# - DG_DRAW_TESTS
 # - DG_MPI_TESTS
 
 set(DG_HEADERS
@@ -12,9 +10,6 @@ set(DG_HEADERS
   algorithm.h
   andersonacc.h
   arakawa.h
-  backend/average_cpu.h
-  backend/average_dispatch.h
-  backend/average_omp.h
   backend/blas1_dispatch_map.h
   backend/blas1_dispatch_mpi.h
   backend/blas1_dispatch_scalar.h
@@ -34,42 +29,52 @@ set(DG_HEADERS
   backend/blas2_stencil.h
   backend/config.h
   backend/densematrix.h
+  backend/exblas/ExSUM.FPE.hpp
   backend/exblas/accumulate.h
   backend/exblas/config.h
-  backend/exblas/exblas_doc.h
   backend/exblas/exblas.h
+  backend/exblas/exblas_doc.h
   backend/exblas/exdot_omp.h
   backend/exblas/exdot_serial.h
-  backend/exblas/ExSUM.FPE.hpp
+  backend/exblas/fpedot_omp.h
+  backend/exblas/fpedot_serial.h
   backend/exblas/mpi_accumulate.h
   backend/exblas/mylibm.hpp
   backend/exceptions.h
   backend/execution_policy.h
+  backend/fma.h
+  backend/index.h
   backend/matrix_categories.h
   backend/memory.h
-  backend/mpi_collective.h
-  backend/mpi_communicator.h
+  backend/mpi_datatype.h
+  backend/mpi_gather.h
+  backend/mpi_gather_kron.h
   backend/mpi_init.h
+  backend/mpi_kron.h
   backend/mpi_matrix.h
+  backend/mpi_permutation.h
   backend/mpi_vector.h
   backend/predicate.h
   backend/scalar_categories.h
   backend/sparseblockmat.h
+  backend/sparseblockmat_cpu_kernels.h
   backend/sparseblockmat_omp_kernels.h
-  backend/tensor_traits_cusp.h
+  backend/sparsematrix.h
+  backend/sparsematrix_cpu.h
+  backend/sparsematrix_omp.h
   backend/tensor_traits.h
+  backend/tensor_traits_cusp.h
   backend/tensor_traits_scalar.h
   backend/tensor_traits_std.h
   backend/tensor_traits_thrust.h
   backend/timer.h
-  backend/transpose.h
   backend/typedefs.h
   backend/vector_categories.h
   backend/view.h
   bicgstabl.h
+  blas.h
   blas1.h
   blas2.h
-  blas.h
   chebyshev.h
   dg_doc.h
   elliptic.h
@@ -93,17 +98,17 @@ set(DG_HEADERS
   ode.h
   pcg.h
   poisson.h
-  precond.h
   refined_elliptic.h
   runge_kutta.h
   simpsons.h
   subroutines.h
   tableau.h
   topology/average.h
-  topology/average_mpi.h
   topology/base_geometry.h
   topology/base_geometryX.h
   topology/derivatives.h
+  topology/derivativesA.h
+  topology/derivativesT.h
   topology/derivativesX.h
   topology/dlt.h
   topology/dx.h
@@ -120,23 +125,24 @@ set(DG_HEADERS
   topology/gridX.h
   topology/interpolation.h
   topology/interpolationX.h
-  topology/mpi_base.h
+  topology/mpi_base_geometry.h
   topology/mpi_derivatives.h
   topology/mpi_evaluation.h
   topology/mpi_grid.h
   topology/mpi_projection.h
+  topology/mpi_prolongation.h
   topology/mpi_weights.h
   topology/multiply.h
   topology/operator.h
   topology/operator_tensor.h
   topology/projection.h
   topology/projectionX.h
+  topology/prolongation.h
   topology/refined_grid.h
   topology/refined_gridX.h
   topology/split_and_join.h
   topology/stencil.h
   topology/tensor.h
-  topology/topological_traits.h
   topology/transform.h
   topology/weights.h
   topology/weightsX.h
@@ -145,119 +151,88 @@ set(DG_HEADERS
 
 if(FELTOR_USE_GPU)
   list(APPEND DG_HEADERS
-    backend/average_gpu.cuh
     backend/blas1_cuda.cuh
     backend/exblas/accumulate.cuh
     backend/exblas/exdot_cuda.cuh
+    backend/exblas/fpedot_cuda.cuh
     backend/exblas/mylibm.cuh
-    backend/sparseblockmat.cuh
+    backend/exblas/mylibm.cuh
     backend/sparseblockmat_gpu_kernels.cuh
-    topology/ell_interpolation.cuh
+    backend/sparseblockmat_gpu_kernels.cuh
+    backend/sparsematrix_gpu.cuh
   )
 endif()
 
 set(DG_BENCHMARKS
-  arakawa3d_b.cu
-  arakawa_b.cu
-  blas_b.cu
-  cg2d_b.cu
-  cg3d_b.cu
-  elliptic2d_b.cu
-  elliptic_b.cu
-  ellipticX2d_b.cu
-  helmholtz_b.cu
-  helmholtzg2_b.cu
-  multigrid_b.cu
-  poisson_b.cu
-  precond_b.cu
-  refined_elliptic2d_b.cu
-  topology/average_b.cu
-  topology/derivatives_b.cu
-  topology/fem_b.cu
-  topology/multiply_b.cu
-)
-
-if(FELTOR_USE_GPU)
-  list(APPEND DG_BENCHMARKS topology/ell_interpolation_b.cu)
-endif()
-
-set(DG_MPI_BENCHMARKS
-  arakawa3d_mpib.cu
-  arakawa_mpib.cu
-  blas_mpib.cu
-  cg2d_mpib.cu
-  cg3d_mpib.cu
-  cluster_mpib.cu
-  elliptic2d_mpib.cu
-  elliptic_mpib.cu
-  topology/average_mpib.cu
-  topology/derivatives_mpib.cu
+  arakawa_b.cpp
+  blas_b.cpp
+  cg2d_b.cpp
+  cluster_b.cpp
+  elliptic2d_b.cpp
+  ellipticX2d_b.cpp
+  elliptic_b.cpp
+  helmholtz_b.cpp
+  helmholtzg2_b.cpp
+  multigrid_b.cpp
+  poisson_b.cpp
+  refined_elliptic2d_b.cpp
 )
 
 set(DG_TESTS
-  adaptive_t.cu
-  andersonacc_t.cu
-  arakawa_t.cu
-  backend/memory_t.cu
-  backend/view_t.cu
-  blas1_t.cu
-  blas_t.cu
-  cg2d_t.cu
-  cg3d_t.cu
-  extrapolation_t.cu
-  helmholtzg2_t.cu
-  helmholtz_t.cu
-  implicit_t.cu
-  multistep_t.cu
-  poisson_t.cu
-  precond_t.cu
-  runge_kutta_t.cu
-  simpsons_t.cu
-  topology/average_t.cu
-  topology/derivatives_t.cu
-  topology/derivativesX_t.cu
-  topology/dlt_t.cu
-  topology/dx_t.cu
-  topology/evaluation_t.cu
-  topology/fem_t.cu
-  topology/filter_t.cu
-  topology/geometry_t.cu
-  topology/grid_t.cu
-  topology/interpolation_t.cu
-  topology/multiply_t.cu
-  topology/operator_t.cu
-  topology/operator_tensor_t.cu
-  topology/projection_t.cu
-  topology/refined_grid_t.cu
-  topology/stencil_t.cu
-  topology/tensor_t.cu
-  topology/transform_t.cu
-)
-
-if(FELTOR_USE_GPU)
-  list(APPEND DG_TESTS topology/ell_interpolation_t.cu)
-endif()
-
-set(DG_DRAW_TESTS
-  bathRZ_t.cu
-  topology/backscatter_t.cu
+  adaptive_t.cpp
+  arakawa_t.cpp
+  backend/fma_t.cpp
+  backend/index_t.cpp
+  backend/memory_t.cpp
+  backend/sparsematrix_t.cpp
+  backend/traits_t.cpp
+  backend/view_t.cpp
+  bicgstabl_t.cpp
+  blas1_t.cpp
+  blas_t.cpp
+  eve_t.cpp
+  extrapolation_t.cpp
+  helmholtz_t.cpp
+  implicit_t.cpp
+  multistep_t.cpp
+  nullstelle_t.cpp
+  pcg_t.cpp
+  poisson_t.cpp
+  runge_kutta_t.cpp
+  simpsons_t.cpp
+  topology/average_t.cpp
+  topology/base_geometry_t.cpp
+  topology/derivativesX_t.cpp
+  topology/derivatives_t.cpp
+  topology/dlt_t.cpp
+  topology/dx_t.cpp
+  topology/evaluation_t.cpp
+  topology/fem_t.cpp
+  topology/filter_t.cpp
+  topology/geometry_t.cpp
+  topology/grid_t.cpp
+  topology/interpolation_t.cpp
+  topology/multiply_t.cpp
+  topology/operator_t.cpp
+  topology/operator_tensor_t.cpp
+  topology/projection_t.cpp
+  topology/refined_grid_t.cpp
+  topology/stencil_t.cpp
+  topology/tensor_t.cpp
+  topology/transform_t.cpp
 )
 
 set(DG_MPI_TESTS
-  arakawa_mpit.cu
-  backend/mpi_collective_mpit.cu
-  blas1_mpit.cu
-  blas_mpit.cu
-  cg2d_mpit.cu
-  ping_mpit.cu
-  topology/average_mpit.cu
-  topology/derivatives_mpit.cu
-  topology/evaluation_mpit.cu
-  #topology/filter_mpit.cu #FIXME: Does not compile
-  topology/geometry_mpit.cu
-  topology/interpolation_mpit.cu
-  topology/projection_mpit.cu
-  topology/stencil_mpit.cu
+  backend/mpi_exblas_mpit.cpp
+  backend/mpi_gather_kron_mpit.cpp
+  backend/mpi_gather_mpit.cpp
+  backend/mpi_init_mpit.cpp
+  backend/mpi_kron_mpit.cpp
+  backend/mpi_permutation_mpit.cpp
+  topology/filter_mpit.cpp
+  topology/interpolation_mpit.cpp
+  topology/mpi_grid_mpit.cpp
+  topology/stencil_mpit.cpp
 )
 
 # Modify each to use absolute path
@@ -274,15 +249,25 @@ endfunction()
 
 absolutise(DG_HEADERS)
 absolutise(DG_BENCHMARKS)
-absolutise(DG_MPI_BENCHMARKS)
 absolutise(DG_TESTS)
-absolutise(DG_DRAW_TESTS)
 absolutise(DG_MPI_TESTS)
 
 # Expose the variables to the parent scope
 set(DG_HEADERS "${DG_HEADERS}" PARENT_SCOPE)
 set(DG_BENCHMARKS "${DG_BENCHMARKS}" PARENT_SCOPE)
-set(DG_MPI_BENCHMARKS "${DG_MPI_BENCHMARKS}" PARENT_SCOPE)
 set(DG_TESTS "${DG_TESTS}" PARENT_SCOPE)
-set(DG_DRAW_TESTS "${DG_DRAW_TESTS}" PARENT_SCOPE)
 set(DG_MPI_TESTS "${DG_MPI_TESTS}" PARENT_SCOPE)
+
+# Check if paths are valid
+function(check_paths PATH_LIST)
+  foreach(PATH IN LISTS ${PATH_LIST})
+    if(NOT EXISTS "${PATH}")
+      message(WARNING "Header file ${PATH} does not exist.")
+    endif()
+  endforeach()
+endfunction()
+
+check_paths(DG_HEADERS)
+check_paths(DG_BENCHMARKS)
+check_paths(DG_TESTS)
+check_paths(DG_MPI_TESTS)

@@ -1,35 +1,13 @@
-function(fetch_thrust)
-  message(STATUS "Fetching Thrust 1.9.3")
-  # Using old version of Thrust for compatibility with CUSP.
-  # The CMake support in this version is lacking, and can't be used
-  # to create an imported target via FetchContent_MakeAvailable.
+function(fetch_cccl)
+  message(STATUS "Fetching CCCL")
   include(FetchContent)
-  FetchContent_Declare(thrust)
-  FetchContent_Populate(
-    thrust
-    GIT_REPOSITORY https://github.com/NVIDIA/thrust.git
-    GIT_TAG 1.9.3
+  FetchContent_Declare(
+    cccl
+    GIT_REPOSITORY https://github.com/NVIDIA/cccl
+    GIT_TAG v2.8.0
     GIT_SHALLOW TRUE
   )
-  FetchContent_GetProperties(thrust)
-  add_library(thrust::thrust INTERFACE IMPORTED)
-  target_include_directories(thrust::thrust INTERFACE "${thrust_SOURCE_DIR}")
-endfunction()
-
-function(fetch_cusp)
-  message(STATUS "Fetching CUSP")
-  # CUSP is not a CMake project, can't use FetchContent_MakeAvailable.
-  include(FetchContent)
-  FetchContent_Declare(cusp)
-  FetchContent_Populate(
-    cusp
-    GIT_REPOSITORY https://github.com/cusplibrary/cusplibrary.git
-    GIT_TAG v0.5.1
-    GIT_SHALLOW TRUE
-  )
-  FetchContent_GetProperties(cusp)
-  add_library(cusp::cusp INTERFACE IMPORTED)
-  target_include_directories(cusp::cusp INTERFACE "${cusp_SOURCE_DIR}")
+  FetchContent_MakeAvailable(cccl)
 endfunction()
 
 function(fetch_vcl)
@@ -64,4 +42,28 @@ function(fetch_draw)
   )
   add_library(draw::draw INTERFACE IMPORTED)
   target_include_directories(draw::draw INTERFACE "${CMAKE_BINARY_DIR}")
+endfunction()
+
+function(fetch_catch2)
+  message(STATUS "Fetching Catch2")
+  include(FetchContent)
+  FetchContent_Declare(
+    catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.8.0
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_MakeAvailable(catch2)
+endfunction()
+
+function(fetch_json)
+  message(STATUS "Fetching nlohmann/json")
+  include(FetchContent)
+  FetchContent_Declare(
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG v3.11.3
+    GIT_SHALLOW TRUE
+  )
+  FetchContent_MakeAvailable(json)
 endfunction()

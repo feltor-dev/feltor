@@ -2,10 +2,6 @@ function(add_dg_benchmark benchmark_path)
   # Get a unique name for the benchmark
   cmake_path(GET benchmark_path STEM benchmark_stem)
   set(benchmark_name "dg_${benchmark_stem}")
-  # Optionally treat .cu files as .cpp files
-  if(NOT FELTOR_USE_GPU)
-      set_source_files_properties(${benchmark_path} PROPERTIES LANGUAGE CXX)
-  endif()
   # Create the benchmark executable and link dependencies
   add_executable(${benchmark_name} "${benchmark_path}")
   target_link_libraries(${benchmark_name} PRIVATE feltor::dg)

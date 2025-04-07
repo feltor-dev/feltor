@@ -16,8 +16,8 @@ project(feltor VERSION 1.0 LANGUAGES CXX)
 ##
 ## The location of dependencies can be specified with -DCMAKE_PREFIX_PATH. To
 ## automatically fetch dependencies from GitHub, set -DFELTOR_FETCH_DEPS=ON.
-## -DFELTOR_FETCH_THRUST=ON, -DFELTOR_FETCH_CUSP=ON, -DFELTOR_FETCH_VCL=ON,
-## and -DFELTOR_FETCH_DRAW=ON may also be set individually.
+## -DFELTOR_FETCH_CCCL=ON, -DFELTOR_FETCH_VCL=ON, and -DFELTOR_FETCH_DRAW=ON
+## may also be set individually.
 ##
 ## When building the FELTOR executable, the user may set -DFELTOR_WITH_GLFW=ON
 ## to enable plotting support, and -DFELTOR_WITH_NAVIER_STOKES=ON to build with
@@ -33,8 +33,8 @@ project(feltor VERSION 1.0 LANGUAGES CXX)
 ##   cmake --build build --target feltor         # Build the feltor executable
 ##   cmake --build build --target dg_benchmarks  # Build all dg benchmarks
 ##   cmake --build build --target dg_tests       # Build all dg tests
-##   cmake --build build --target dg_blas_b      # Build only inc/dg/blas_b.cu
-##   cmake --build build --target dg_blas_t      # Build only inc/dg/blas_t.cu
+##   cmake --build build --target dg_blas_b      # Build only inc/dg/blas_b.cpp
+##   cmake --build build --target dg_blas_t      # Build only inc/dg/blas_t.cpp
 ##
 ## Compilation can be sped up by supplying the `--parallel` flag, while the
 ## `--clean-first` flag will force a clean build. Compiled benchmarks may be
@@ -46,7 +46,9 @@ project(feltor VERSION 1.0 LANGUAGES CXX)
 ## However, some tests currently require user input, and will hang when run.
 ## Individual tests may be run using:
 ##
-##   ctest --test-dir=build -R dg_blas_t
+##   ctest --test-dir=build -R blas
+##
+## The test names are defined within the test files themselves.
 
 # Enable support for IDEs like Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -63,6 +65,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 option(FELTOR_USE_MPI "Switch on multiprocessing with MPI.")
 option(FELTOR_USE_OMP "Switch on OpenMP multithreading.")
 option(FELTOR_USE_GPU "Switch on GPU acceleration.")
+option(FELTOR_USE_JSONCPP "Use jsoncpp instead of nlohmann/json.")
 
 option(FELTOR_BUILD_EXE "Build Feltor executable." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
@@ -71,10 +74,11 @@ option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_WITH_GLFW "Build with plotting support")
 option(FELTOR_WITH_NAVIER_STOKES "Build with Navier-Stokes library.")
 
-option(FELTOR_FETCH_THRUST "Fetch Thrust library from GitHub.")
-option(FELTOR_FETCH_CUSP "Fetch CUSP library from GitHub.")
+option(FELTOR_FETCH_CCCL "Fetch NVIDIA's CUDA Core Compute Library (CCCL) from GitHub.")
 option(FELTOR_FETCH_VCL "Fetch Vector Class (version 1) library from GitHub.")
 option(FELTOR_FETCH_DRAW "Fetch DRAW from GitHub.")
+option(FELTOR_FETCH_CATCH2 "Fetch Catch2 from GitHub.")
+option(FELTOR_FETCH_JSON "Fetch nlohmann/json from GitHub.")
 option(FELTOR_FETCH_DEPS "Fetch dependencies from GitHub.")
 
 if(FELTOR_USE_OMP AND FELTOR_USE_GPU)
@@ -83,11 +87,20 @@ endif()
 
 if(FELTOR_FETCH_DEPS)
   # Toggle all FELTOR_FETCH_* options ON
-  # Note: Overrides -DFELTOR_FETCH_THRUST=OFF, etc.
-  set(FELTOR_FETCH_THRUST ON CACHE BOOL "Fetch Thrust library from GitHub." FORCE)
-  set(FELTOR_FETCH_CUSP ON CACHE BOOL "Fetch CUSP library from GitHub." FORCE)
+  # Note: Overrides -DFELTOR_FETCH_CCCL=OFF, etc.
+  set(FELTOR_FETCH_CCCL ON CACHE BOOL "Fetch NVIDIA's CUDA Core Compute Library (CCCL) from GitHub." FORCE)
   set(FELTOR_FETCH_VCL ON CACHE BOOL "Fetch Vector Class (version 1) library from GitHub." FORCE)
-  set(FELTOR_FETCH_DRAW ON CACHE BOOL "Fetch DRAW from GitHub." FORCE)
+  set(FELTOR_FETCH_CATCH2 ON CACHE BOOL "Fetch Catch2 from GitHub." FORCE)
+  set(FELTOR_FETCH_JSON ON CACHE BOOL "Fetch nlohmann/json from GitHub." FORCE)
+  if(FELTOR_WITH_GLFW)
+    set(FELTOR_FETCH_DRAW ON CACHE BOOL "Fetch DRAW from GitHub." FORCE)
+  else()
+    set(FELTOR_FETCH_DRAW OFF CACHE BOOL "Fetch DRAW from GitHub." FORCE)
+  endif()
+endif()
+
+if(FELTOR_USE_JSONCPP)
+  set(FELTOR_FETCH_JSON OFF CACHE BOOL "Fetch nlohmann/json from GitHub." FORCE)
 endif()
 
 if(FELTOR_USE_GPU)
@@ -100,7 +113,7 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   # TODO: Should also set -Wextra and -Wpedantic.
   # Currently raises too many warnings!
-  set(FELTOR_FLAGS_CXX 
+  set(FELTOR_FLAGS_CXX
     "-Wall"
     "-mfma"
     "-mavx"
@@ -112,7 +125,7 @@ else()
   set(FELTOR_FLAGS_CXX "")
 endif()
 
-set(FELTOR_FLAGS_CUDA 
+set(FELTOR_FLAGS_CUDA
   "-arch=sm_61"
   "--extended-lambda"
 )
@@ -132,11 +145,11 @@ add_library(dg INTERFACE ${DG_HEADERS})
 # Ensure that `#include "dg/..."` works
 target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
 # Set the minimum C++ standard
-target_compile_features(dg INTERFACE cxx_std_14)
+target_compile_features(dg INTERFACE cxx_std_17)
 # Set flags
 # CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
 # may be set even when compiling for CUDA.
-target_compile_options(dg INTERFACE 
+target_compile_options(dg INTERFACE
   "${FELTOR_FLAGS_CXX}"
   $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
 )
@@ -148,15 +161,14 @@ add_library(feltor::dg ALIAS dg)
 # Add dg dependencies
 include(FeltorFetchDeps)
 
-# Pinned to a specific version of Thrust for CUSP compatibility.
-# This doesn't include Thrust's modern CMake support, so a custom
-# FindThrust.cmake module is used instead.
-if(FELTOR_FETCH_THRUST)
-  fetch_thrust()
+if(FELTOR_FETCH_CCCL)
+  fetch_cccl()
 else()
-  find_package(Thrust REQUIRED 1.9.3)
+  find_package(cccl REQUIRED)
 endif()
-target_link_libraries(dg INTERFACE thrust::thrust)
+target_link_libraries(dg INTERFACE Thrust::Thrust)
+target_link_libraries(dg INTERFACE CUB::CUB)
+target_link_libraries(dg INTERFACE libcudacxx::libcudacxx)
 if(FELTOR_USE_OMP)
   target_compile_definitions(dg INTERFACE THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP)
 elseif(FELTOR_USE_GPU)
@@ -172,17 +184,8 @@ else()
 endif()
 target_link_libraries(dg INTERFACE vcl::vcl)
 
-if(FELTOR_FETCH_CUSP)
-  fetch_cusp()
-else()
-  find_package(CUSP REQUIRED)
-endif()
-target_link_libraries(dg INTERFACE cusp::cusp)
-
 if(FELTOR_USE_MPI)
   find_package(MPI REQUIRED)
-  target_link_libraries(dg INTERFACE MPI::MPI_CXX)
-  target_compile_definitions(dg INTERFACE WITH_MPI)
 endif()
 
 if(FELTOR_USE_OMP)
@@ -190,9 +193,19 @@ if(FELTOR_USE_OMP)
   target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
 endif()
 
-# Must install separately, e.g. `sudo apt install libjsoncpp-dev`
-find_package(jsoncpp REQUIRED)
-target_link_libraries(dg INTERFACE jsoncpp_lib)
+if(FELTOR_USE_JSONCPP)
+  # Must install separately, e.g. `sudo apt install libjsoncpp-dev`
+  find_package(jsoncpp REQUIRED)
+  target_link_libraries(dg INTERFACE jsoncpp_lib)
+else()
+  if(FELTOR_FETCH_JSON)
+    fetch_json()
+  else()
+    find_package(nlohmann_json REQUIRED)
+  endif()
+  target_link_libraries(dg INTERFACE nlohmann_json::nlohmann_json)
+  target_compile_definitions(dg INTERFACE DG_USE_JSONHPP)
+endif()
 
 # Must install separately, e.g. `sudo apt install libnetcdf-dev`
 find_package(netCDF REQUIRED)
@@ -212,7 +225,7 @@ if(FELTOR_WITH_GLFW)
   # Must be installed separately, e.g. `sudo apt install libglfw3-dev`
   find_package(glfw3 REQUIRED)
   target_link_libraries(draw::draw INTERFACE glfw)
-  
+
   find_package(OpenGL REQUIRED)
   target_link_libraries(draw::draw INTERFACE OpenGL::GL)
 endif()
@@ -234,43 +247,31 @@ if(FELTOR_BUILD_BENCHMARKS)
   foreach(benchmark_path IN LISTS DG_BENCHMARKS)
     add_dg_benchmark("${benchmark_path}")
   endforeach()
-
-  if(FELTOR_USE_MPI)
-    foreach(benchmark_path IN LISTS DG_MPI_BENCHMARKS)
-      add_dg_benchmark("${benchmark_path}")
-    endforeach()
-  endif()
 endif()
 
 # ============================================
 # Add dg tests
 
-# TODO Tests should be written to simply pass or fail, ideally using
-# a framework like GoogleTest. When running with CTest, some of these
-# tests hang as they require user input.
-
 if(FELTOR_BUILD_TESTS)
   include(CTest)
   include(FeltorTests)
   enable_testing()
-  add_custom_target(dg_tests)
+  if(FELTOR_FETCH_CATCH2)
+    fetch_catch2()
+    # Make Catch2 utilties available to include()
+    list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
+  else()
+    find_package(Catch2 3 REQUIRED)
+  endif()
+  include(Catch)
 
+  add_custom_target(dg_tests)
   foreach(test_path IN LISTS DG_TESTS)
     add_dg_test("${test_path}")
   endforeach()
-
   if(FELTOR_USE_MPI)
     foreach(test_path IN LISTS DG_MPI_TESTS)
-      add_dg_test("${test_path}")
-    endforeach()
-  endif()
-
-  if(FELTOR_WITH_GLFW)
-    # Draw tests require visual inspection, so they are built separately
-    # and not added to the dg_tests target, nor are they run by CTest.
-    add_custom_target(draw_tests)
-    foreach(test_path IN LISTS DG_DRAW_TESTS)
-      add_draw_test("${test_path}")
+      add_dg_mpi_test("${test_path}")
     endforeach()
   endif()
 endif()
