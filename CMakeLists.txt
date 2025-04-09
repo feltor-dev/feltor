@@ -75,7 +75,7 @@ option(FELTOR_WITH_GLFW "Build with plotting support")
 option(FELTOR_WITH_NAVIER_STOKES "Build with Navier-Stokes library.")
 
 option(FELTOR_FETCH_CCCL "Fetch NVIDIA's CUDA Core Compute Library (CCCL) from GitHub.")
-option(FELTOR_FETCH_VCL "Fetch Vector Class (version 1) library from GitHub.")
+option(FELTOR_FETCH_VCL "Fetch Vector Class (version 2) library from GitHub.")
 option(FELTOR_FETCH_DRAW "Fetch DRAW from GitHub.")
 option(FELTOR_FETCH_CATCH2 "Fetch Catch2 from GitHub.")
 option(FELTOR_FETCH_JSON "Fetch nlohmann/json from GitHub.")
@@ -89,7 +89,7 @@ if(FELTOR_FETCH_DEPS)
   # Toggle all FELTOR_FETCH_* options ON
   # Note: Overrides -DFELTOR_FETCH_CCCL=OFF, etc.
   set(FELTOR_FETCH_CCCL ON CACHE BOOL "Fetch NVIDIA's CUDA Core Compute Library (CCCL) from GitHub." FORCE)
-  set(FELTOR_FETCH_VCL ON CACHE BOOL "Fetch Vector Class (version 1) library from GitHub." FORCE)
+  set(FELTOR_FETCH_VCL ON CACHE BOOL "Fetch Vector Class (version 2) library from GitHub." FORCE)
   set(FELTOR_FETCH_CATCH2 ON CACHE BOOL "Fetch Catch2 from GitHub." FORCE)
   set(FELTOR_FETCH_JSON ON CACHE BOOL "Fetch nlohmann/json from GitHub." FORCE)
   if(FELTOR_WITH_GLFW)

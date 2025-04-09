@@ -1,7 +1,7 @@
 # FindVCL
 #
-# Finds C++ vector class library, version 1
-# https://github.com/vectorclass/vesion1
+# Finds C++ vector class library, version 2
+# https://github.com/vectorclass/vesion2
 # 
 # Sets the variable VCL_INCLUDE_DIR and creates an interface library target
 # vcl::vcl.

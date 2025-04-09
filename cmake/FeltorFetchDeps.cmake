@@ -19,7 +19,8 @@ function(fetch_vcl)
   FetchContent_Declare(vcl)
   FetchContent_Populate(
     vcl
-    GIT_REPOSITORY https://github.com/vectorclass/version1.git
+    GIT_REPOSITORY https://github.com/vectorclass/version2.git
+    GIT_TAG v2.02.01
     GIT_SHALLOW TRUE
     SOURCE_DIR "${CMAKE_BINARY_DIR}/vcl"
   )
