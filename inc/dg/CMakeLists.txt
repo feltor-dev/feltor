@@ -1,8 +1,4 @@
-# Sets the following variables
-# - DG_HEADERS
-# - DG_BENCHMARKS
-# - DG_TESTS
-# - DG_MPI_TESTS
+# inc/dg/CMakeLists.txt
 
 set(DG_HEADERS
   adaptive.h
@@ -82,9 +78,6 @@ set(DG_HEADERS
   eve.h
   exblas/exblas.h
   extrapolation.h
-  file/file.h
-  file/json_utilities.h
-  file/nc_utilities.h
   functors.h
   geometries/geometries.h
   helmholtz.h
@@ -235,39 +228,106 @@ set(DG_MPI_TESTS
   topology/stencil_mpit.cpp
 )
 
-# Modify each to use absolute path
+# ============================================
+# Create DG library target
 
-function(absolutise PATH_LIST)
-  # Pass in the variable name. Overwrites the variable.
-  set(ABSOLUTISED "")
-  foreach(REL_PATH IN LISTS ${PATH_LIST})
-    cmake_path(ABSOLUTE_PATH REL_PATH NORMALIZE OUTPUT_VARIABLE ABS_PATH)
-    list(APPEND ABSOLUTISED "${ABS_PATH}")
+# Create the dg target library.
+# As a header-only library, this must be an interface library.
+# This means it has no sources, but can link/be linked to other
+# libraries, have dependencies, etc. These properties are then
+# inherited by any target that links to it.
+add_library(dg INTERFACE ${DG_HEADERS})
+# Ensure that `#include "dg/..."` works
+# TODO remove this after other libs have their own CMakeLists.txt
+target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
+# Set the minimum C++ standard
+target_compile_features(dg INTERFACE cxx_std_17)
+# Set flags
+# CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
+# may be set even when compiling for CUDA.
+target_compile_options(dg INTERFACE
+  "${FELTOR_FLAGS_CXX}"
+  $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
+)
+
+# Create an alias: used to link to the library from external projects.
+add_library(dg::dg ALIAS dg)
+
+# ============================================
+# Add dg dependencies
+
+include(FeltorFetchDeps)
+
+if(FELTOR_FETCH_CCCL)
+  fetch_cccl()
+else()
+  find_package(cccl REQUIRED)
+endif()
+target_link_libraries(dg INTERFACE Thrust::Thrust)
+target_link_libraries(dg INTERFACE CUB::CUB)
+target_link_libraries(dg INTERFACE libcudacxx::libcudacxx)
+if(FELTOR_USE_OMP)
+  target_compile_definitions(dg INTERFACE THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP)
+elseif(FELTOR_USE_GPU)
+  target_compile_definitions(dg INTERFACE THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA)
+else()
+  target_compile_definitions(dg INTERFACE THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP)
+endif()
+
+if(FELTOR_FETCH_VCL)
+  fetch_vcl()
+else()
+  find_package(VCL REQUIRED)
+endif()
+target_link_libraries(dg INTERFACE vcl::vcl)
+
+if(FELTOR_USE_MPI)
+  find_package(MPI REQUIRED)
+  target_link_libraries(dg INTERFACE MPI::MPI_CXX)
+endif()
+
+if(FELTOR_USE_OMP)
+  find_package(OpenMP REQUIRED)
+  target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
+endif()
+
+# =============================================
+# Set up benchmark and test targets
+if(FELTOR_BUILD_BENCHMARKS)
+  add_custom_target(dg_benchmarks)
+endif()
+if(FELTOR_BUILD_TESTS)
+  add_custom_target(dg_tests)
+endif()
+
+# ============================================
+# Add file utilities
+# Defines the dg::file target
+
+add_subdirectory(file)
+
+# ============================================
+# Add dg benchmarks
+
+if(FELTOR_BUILD_BENCHMARKS)
+  include(FeltorBenchmarks)
+  foreach(benchmark_path IN LISTS DG_BENCHMARKS)
+    add_dg_benchmark("${benchmark_path}")
   endforeach()
-  set(${PATH_LIST} "${ABSOLUTISED}" PARENT_SCOPE)
-endfunction()
+endif()
 
-absolutise(DG_HEADERS)
-absolutise(DG_BENCHMARKS)
-absolutise(DG_TESTS)
-absolutise(DG_MPI_TESTS)
+# ============================================
+# Add dg tests
 
-# Expose the variables to the parent scope
-set(DG_HEADERS "${DG_HEADERS}" PARENT_SCOPE)
-set(DG_BENCHMARKS "${DG_BENCHMARKS}" PARENT_SCOPE)
-set(DG_TESTS "${DG_TESTS}" PARENT_SCOPE)
-set(DG_MPI_TESTS "${DG_MPI_TESTS}" PARENT_SCOPE)
-
-# Check if paths are valid
-function(check_paths PATH_LIST)
-  foreach(PATH IN LISTS ${PATH_LIST})
-    if(NOT EXISTS "${PATH}")
-      message(WARNING "Header file ${PATH} does not exist.")
-    endif()
+if(FELTOR_BUILD_TESTS)
+  include(FeltorTests)
+  foreach(test_path IN LISTS DG_TESTS)
+    add_dg_test("${test_path}")
   endforeach()
-endfunction()
+  if(FELTOR_USE_MPI)
+    foreach(test_path IN LISTS DG_MPI_TESTS)
+      add_dg_mpi_test("${test_path}")
+    endforeach()
+  endif()
+endif()
 
-check_paths(DG_HEADERS)
-check_paths(DG_BENCHMARKS)
-check_paths(DG_TESTS)
-check_paths(DG_MPI_TESTS)

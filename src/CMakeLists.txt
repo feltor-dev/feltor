@@ -22,44 +22,16 @@ add_executable(feltor::feltor ALIAS feltor)
 target_include_directories(feltor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(FELTOR_USE_MPI)
+    find_package(MPI REQUIRED)
     target_link_libraries(feltor PRIVATE MPI::MPI_CXX)
     target_compile_definitions(feltor PRIVATE WITH_MPI)
 endif()
 
-# TODO: Replace following commands with portable alternatives.
-execute_process(
-    COMMAND git rev-parse HEAD
-    OUTPUT_VARIABLE GIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
-message(STATUS "Git hash: ${GIT_HASH}")
-
-execute_process(
-    COMMAND git branch --show-current
-    OUTPUT_VARIABLE GIT_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
-message(STATUS "Git branch: ${GIT_BRANCH}")
-
-execute_process(
-    COMMAND "date" "+'%F %T %Z'"
-    OUTPUT_VARIABLE COMPILE_TIME
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-message(STATUS "Compile time: ${COMPILE_TIME}")
-
-target_compile_definitions(feltor PRIVATE 
-    GIT_HASH="${GIT_HASH}"
-    GIT_BRANCH="${GIT_BRANCH}"
-    COMPILE_TIME="${COMPILE_TIME}"
-)
-
 # ============================================
 # Add dependencies
 
-target_link_libraries(feltor PRIVATE feltor::dg)
+target_link_libraries(feltor PRIVATE dg::dg)
+target_link_libraries(feltor PRIVATE dg::file)
 
 if(FELTOR_WITH_NAVIER_STOKES)
     target_link_libraries(feltor PRIVATE feltor::navier_stokes)
@@ -71,6 +43,18 @@ if(FELTOR_WITH_GLFW)
     message(WARNING "GLFW is not compatible with MPI when building FELTOR")
     target_compile_definitions(feltor PRIVATE WITHOUT_GLFW)
   else()
+    if(FELTOR_FETCH_DRAW)
+      fetch_draw()
+    else()
+      find_package(DRAW REQUIRED)
+    endif()
+    # Link to GLFW and OpenGL
+    # Must be installed separately, e.g. `sudo apt install libglfw3-dev`
+    find_package(glfw3 REQUIRED)
+    target_link_libraries(draw::draw INTERFACE glfw)
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(draw::draw INTERFACE OpenGL::GL)
+
     target_link_libraries(feltor PRIVATE draw::draw)
   endif()   
 else()
