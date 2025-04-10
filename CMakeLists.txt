@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.26)
 
 # Project name and version
 project(feltor VERSION 8.1.1 LANGUAGES CXX)

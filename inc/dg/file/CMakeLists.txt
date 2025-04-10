@@ -94,12 +94,7 @@ execute_process(
 )
 message(STATUS "Git branch: ${GIT_BRANCH}")
 
-# FIXME this is not portable to Windows
-execute_process(
-    COMMAND "date" "+'%F %T %Z'"
-    OUTPUT_VARIABLE COMPILE_TIME
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+string(TIMESTAMP COMPILE_TIME "%Y-%m-%d %H:%M:%S %Z")
 message(STATUS "Compile time: ${COMPILE_TIME}")
 
 target_compile_definitions(file INTERFACE

@@ -6,6 +6,7 @@ set(DG_HEADERS
   algorithm.h
   andersonacc.h
   arakawa.h
+  backend/blas1_cuda.cuh
   backend/blas1_dispatch_map.h
   backend/blas1_dispatch_mpi.h
   backend/blas1_dispatch_scalar.h
@@ -26,15 +27,19 @@ set(DG_HEADERS
   backend/config.h
   backend/densematrix.h
   backend/exblas/ExSUM.FPE.hpp
+  backend/exblas/accumulate.cuh
   backend/exblas/accumulate.h
   backend/exblas/config.h
   backend/exblas/exblas.h
-  backend/exblas/exblas_doc.h
+  backend/exblas/exdot_cuda.cuh
   backend/exblas/exdot_omp.h
   backend/exblas/exdot_serial.h
+  backend/exblas/fpedot_cuda.cuh
   backend/exblas/fpedot_omp.h
   backend/exblas/fpedot_serial.h
   backend/exblas/mpi_accumulate.h
+  backend/exblas/mylibm.cuh
+  backend/exblas/mylibm.cuh
   backend/exblas/mylibm.hpp
   backend/exceptions.h
   backend/execution_policy.h
@@ -54,9 +59,12 @@ set(DG_HEADERS
   backend/scalar_categories.h
   backend/sparseblockmat.h
   backend/sparseblockmat_cpu_kernels.h
+  backend/sparseblockmat_gpu_kernels.cuh
+  backend/sparseblockmat_gpu_kernels.cuh
   backend/sparseblockmat_omp_kernels.h
   backend/sparsematrix.h
   backend/sparsematrix_cpu.h
+  backend/sparsematrix_gpu.cuh
   backend/sparsematrix_omp.h
   backend/tensor_traits.h
   backend/tensor_traits_cusp.h
@@ -72,7 +80,6 @@ set(DG_HEADERS
   blas1.h
   blas2.h
   chebyshev.h
-  dg_doc.h
   elliptic.h
   enums.h
   eve.h
@@ -141,20 +148,6 @@ set(DG_HEADERS
   topology/weightsX.h
   topology/xspacelib.h
 )
-
-if(FELTOR_USE_GPU)
-  list(APPEND DG_HEADERS
-    backend/blas1_cuda.cuh
-    backend/exblas/accumulate.cuh
-    backend/exblas/exdot_cuda.cuh
-    backend/exblas/fpedot_cuda.cuh
-    backend/exblas/mylibm.cuh
-    backend/exblas/mylibm.cuh
-    backend/sparseblockmat_gpu_kernels.cuh
-    backend/sparseblockmat_gpu_kernels.cuh
-    backend/sparsematrix_gpu.cuh
-  )
-endif()
 
 set(DG_BENCHMARKS
   arakawa_b.cpp

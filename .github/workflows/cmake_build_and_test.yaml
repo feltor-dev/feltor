@@ -65,4 +65,4 @@ jobs:
     - name: Test
       run: |
         cd build
-        ctest
+        ctest --verbose --output-on-failure
