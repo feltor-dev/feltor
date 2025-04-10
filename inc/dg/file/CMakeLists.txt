@@ -29,7 +29,7 @@ set(FILE_TESTS
   ../../file/json_wrapper_t.cpp
   ../../file/nc_file_t.cpp
   ../../file/nc_utilities_t.cpp
-  # ../../file/probes_parser_t.cpp # FIXME doesn't compiler for nlohmann_json
+  ../../file/probes_parser_t.cpp
   ../../file/probes_t.cpp
 )
 

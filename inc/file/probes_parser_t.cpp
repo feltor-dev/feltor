@@ -91,7 +91,7 @@ TEST_CASE( "Probes Parser")
         for( unsigned i=0; i<2; i++)
             CHECK( fromfile.coords_names[i] == names[i]);
         INFO( "Read probe format:\n"<<fromfile.format);
-        auto js_format = dg::file::string2Json( fromfile.format);
+        auto js_format = dg::file::WrappedJsonValue(dg::file::string2Json( fromfile.format));
         CHECK( js_format[0]["name"].asString() == "divertor");
         CHECK( js_format[0]["pos"][0].asInt() == 0);
         CHECK( js_format[0]["pos"][1].asInt() == 1);
