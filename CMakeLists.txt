@@ -105,6 +105,7 @@ endif()
 
 if(FELTOR_USE_GPU)
   enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
 endif()
 
 # ============================================

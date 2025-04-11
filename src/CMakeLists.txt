@@ -16,6 +16,10 @@ set(FELTOR_HEADERS
     "feltor/parameters.h"
 )
 
+if(FELTOR_USE_GPU)
+  set_source_files_properties("feltor/feltor.cpp" PROPERTIES LANGUAGE CUDA)
+endif()
+
 add_executable(feltor "feltor/feltor.cpp" ${FELTOR_HEADERS})
 add_executable(feltor::feltor ALIAS feltor)
 

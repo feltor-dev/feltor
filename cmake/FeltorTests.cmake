@@ -2,6 +2,9 @@ include(CTest)
 include(Catch)
 
 function(add_dg_test test_path)
+  if(FELTOR_USE_GPU)
+    set_source_files_properties("${test_path}" PROPERTIES LANGUAGE CUDA)
+  endif()
   # Get a unique name for the test
   cmake_path(GET test_path STEM test_stem)
   set(test_name "dg_${test_stem}")
@@ -22,6 +25,9 @@ function(add_dg_test test_path)
 endfunction()
 
 function(add_dg_mpi_test test_path)
+  if(FELTOR_USE_GPU)
+    set_source_files_properties("${test_path}" PROPERTIES LANGUAGE CUDA)
+  endif()
   # Get a unique name for the test
   cmake_path(GET test_path STEM test_stem)
   set(test_name "dg_${test_stem}")
@@ -44,6 +50,9 @@ function(add_dg_mpi_test test_path)
 endfunction()
 
 function(add_file_test test_path)
+  if(FELTOR_USE_GPU)
+    set_source_files_properties("${test_path}" PROPERTIES LANGUAGE CUDA)
+  endif()
   # Get a unique name for the test
   cmake_path(GET test_path STEM test_stem)
   set(test_name "dg_${test_stem}")

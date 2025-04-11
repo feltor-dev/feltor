@@ -1,4 +1,7 @@
 function(add_dg_benchmark benchmark_path)
+  if(FELTOR_USE_GPU)
+    set_source_files_properties("${benchmark_path}" PROPERTIES LANGUAGE CUDA)
+  endif()
   # Get a unique name for the benchmark
   cmake_path(GET benchmark_path STEM benchmark_stem)
   set(benchmark_name "dg_${benchmark_stem}")

@@ -2,7 +2,7 @@
 
 #include <cusparse.h>
 #include <exception>
-#include <complex.h>
+#include <complex>
 #include <thrust/complex.h>
 
 namespace dg
