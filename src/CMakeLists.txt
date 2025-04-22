@@ -16,7 +16,7 @@ set(FELTOR_HEADERS
     "feltor/parameters.h"
 )
 
-if(FELTOR_USE_GPU)
+if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
   set_source_files_properties("feltor/feltor.cpp" PROPERTIES LANGUAGE CUDA)
 endif()
 

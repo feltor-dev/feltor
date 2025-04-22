@@ -10,9 +10,13 @@ project(feltor VERSION 8.1.1 LANGUAGES CXX)
 ##   cmake -Bbuild .
 ##
 ## This will configure the project to build in the `build` directory, and will
-## build a plain C++ project. To enable MPI, OpenMP, or GPU support, set the
-## options -DFELTOR_USE_MPI=ON, -DFELTOR_USE_OMP=ON, or -DFELTOR_USE_GPU=ON.
-## Note that OpenMP and GPU support are mutually exclusive.
+## build a plain C++ project. It can be configured to run as a single-threaded
+## CPU program by setting -DCCCL_THRUST_DEVICE_SYSTEM=CPP, a multi-threaded CPU
+## program using -DCCCL_THRUST_DEVICE_SYSTEM=OMP, or as a CUDA-enabled GPU program
+## with -DCCCL_THRUST_DEVICE_SYSTEM=CUDA. By default, the project will be built
+## for GPU.
+##
+## To enable MPI, set the option -DFELTOR_USE_MPI=ON.
 ##
 ## The location of dependencies can be specified with -DCMAKE_PREFIX_PATH. To
 ## automatically fetch dependencies from GitHub, set -DFELTOR_FETCH_DEPS=ON.
@@ -63,8 +67,6 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # By default, compiles single threaded on a CPU.
 
 option(FELTOR_USE_MPI "Switch on multiprocessing with MPI.")
-option(FELTOR_USE_OMP "Switch on OpenMP multithreading.")
-option(FELTOR_USE_GPU "Switch on GPU acceleration.")
 option(FELTOR_USE_JSONCPP "Use jsoncpp instead of nlohmann/json.")
 
 option(FELTOR_BUILD_EXE "Build Feltor executable." ${PROJECT_IS_TOP_LEVEL})
@@ -80,10 +82,6 @@ option(FELTOR_FETCH_DRAW "Fetch DRAW from GitHub.")
 option(FELTOR_FETCH_CATCH2 "Fetch Catch2 from GitHub.")
 option(FELTOR_FETCH_JSON "Fetch nlohmann/json from GitHub.")
 option(FELTOR_FETCH_DEPS "Fetch dependencies from GitHub.")
-
-if(FELTOR_USE_OMP AND FELTOR_USE_GPU)
-  message(FATAL_ERROR "Cannot set both FELTOR_USE_OMP and FELTOR_USE_GPU")
-endif()
 
 if(FELTOR_FETCH_DEPS)
   # Toggle all FELTOR_FETCH_* options ON
@@ -103,7 +101,7 @@ if(FELTOR_USE_JSONCPP)
   set(FELTOR_FETCH_JSON OFF CACHE BOOL "Fetch nlohmann/json from GitHub." FORCE)
 endif()
 
-if(FELTOR_USE_GPU)
+if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
 endif()
