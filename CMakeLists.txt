@@ -134,7 +134,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GN
     "-march=native"
   )
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  set(FELTOR_FLAGS_CXX "/W4")
+  set(FELTOR_FLAGS_CXX
+    "/W4"
+    "/arch:AVX2"
+  )
 else()
   set(FELTOR_FLAGS_CXX "")
 endif()
