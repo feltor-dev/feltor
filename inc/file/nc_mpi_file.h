@@ -434,7 +434,6 @@ struct MPINcFile
         err = e;
 
         using value_type = dg::get_value_type<ContainerType>;
-        auto& receive = m_receive.template get<value_type>( );
         auto& data_ref = get_ref( data, dg::get_tensor_category<ContainerType>());
         set_comm( data, slab.communicator(), dg::get_tensor_category<ContainerType>());
         unsigned size = 1;
@@ -449,7 +448,11 @@ struct MPINcFile
                 err = detail::get_vara_T( grpid, varid,
                     slab.startp(), slab.countp(), buffer.data());
             else
+            {
+                m_receive.template set<value_type>( 0);
+                auto& receive = m_receive.template get<value_type>( );
                 detail::get_vara_detail( grpid, varid, slab, buffer, receive, m_comm);
+            }
             dg::assign ( buffer, data_ref);
         }
         else
@@ -460,7 +463,11 @@ struct MPINcFile
                     slab.startp(), slab.countp(),
                     thrust::raw_pointer_cast(data_ref.data()));
             else
+            {
+                m_receive.template set<value_type>( 0);
+                auto& receive = m_receive.template get<value_type>( );
                 detail::get_vara_detail( grpid, varid, slab, data_ref, receive, m_comm);
+            }
         }
     }
 
