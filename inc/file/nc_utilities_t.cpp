@@ -69,6 +69,7 @@ TEST_CASE( "Input Output test of the NcFile class")
     );
     //create NetCDF File
     dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    dg::file::NcFile read{}; // MW: Catch a bug in MPI when get_var does not set value_type before get on AnyVector
     REQUIRE( file.is_open());
     REQUIRE( std::filesystem::exists( "test.nc"));
     SECTION( "Dimensions from grid")
@@ -84,18 +85,18 @@ TEST_CASE( "Input Output test of the NcFile class")
             grid.abscissas(2));
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
-        file.open( "test.nc", mode);
+        read.open( "test.nc", mode);
         //! [check_dim]
         // This is how to fully check a dimension
         std::map<std::string, int> map {{"x",0}, {"y",1}, {"z", 2}};
         for( auto str : map)
         {
-            CHECK( file.dim_is_defined( str.first));
-            CHECK( file.var_is_defined( str.first));
-            CHECK( file.get_dim_size( str.first) == grid.shape(str.second));
+            CHECK( read.dim_is_defined( str.first));
+            CHECK( read.var_is_defined( str.first));
+            CHECK( read.get_dim_size( str.first) == grid.shape(str.second));
             auto abs = grid.abscissas(str.second) , test(abs);
             // In MPI when mode == nc_write only the group containing rank 0 in file comm reads
-            file.get_var( str.first, {grid.axis(str.second)}, test);
+            read.get_var( str.first, {grid.axis(str.second)}, test);
             dg::blas1::axpby( 1.,abs,-1., test);
             double result = sqrt(dg::blas1::dot( test, test));
             CHECK( result < 1e-15);
