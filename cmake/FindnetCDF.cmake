@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Repository: https://github.com/boutproject/BOUT-dev
 
-# Adapted from FindnetCDF.cmake in the BOUT++ project
+# Adapted from FindnetCDF.cmake in the BOUT++ project.
+
+# netCDF is often installed using autotools, so the necessary cmake
+# config files are not available. This module uses the nc-config
+# script to find the netCDF installation if cmake config files are not
+# available.
 
 # FindnetCDF
 # ----------
