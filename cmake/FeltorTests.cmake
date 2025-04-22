@@ -2,7 +2,7 @@ include(CTest)
 include(Catch)
 
 function(add_dg_test test_path)
-  if(FELTOR_USE_GPU)
+  if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
     set_source_files_properties("${test_path}" PROPERTIES LANGUAGE CUDA)
   endif()
   # Get a unique name for the test
@@ -25,7 +25,7 @@ function(add_dg_test test_path)
 endfunction()
 
 function(add_dg_mpi_test test_path)
-  if(FELTOR_USE_GPU)
+  if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
     set_source_files_properties("${test_path}" PROPERTIES LANGUAGE CUDA)
   endif()
   # Get a unique name for the test
@@ -50,7 +50,7 @@ function(add_dg_mpi_test test_path)
 endfunction()
 
 function(add_file_test test_path)
-  if(FELTOR_USE_GPU)
+  if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
     set_source_files_properties("${test_path}" PROPERTIES LANGUAGE CUDA)
   endif()
   # Get a unique name for the test
