@@ -1,10 +1,3 @@
-# ===========================================
-# Set up navier-stokes library
-
-add_library(navier_stokes INTERFACE "navier_stokes/navier_stokes.h")
-add_library(feltor::navier_stokes ALIAS navier_stokes)
-target_link_libraries(navier_stokes INTERFACE dg::dg)
-
 # ============================================
 # Set up FELTOR
 # TODO: Other executables
@@ -36,11 +29,6 @@ endif()
 
 target_link_libraries(feltor PRIVATE dg::dg)
 target_link_libraries(feltor PRIVATE dg::file)
-
-if(FELTOR_WITH_NAVIER_STOKES)
-    target_link_libraries(feltor PRIVATE feltor::navier_stokes)
-    target_compile_definitions(feltor PRIVATE WITH_NAVIER_STOKES)
-endif()
 
 if(FELTOR_WITH_GLFW)
   if(FELTOR_USE_MPI)

@@ -24,8 +24,7 @@ project(feltor VERSION 8.1.1 LANGUAGES CXX)
 ## may also be set individually.
 ##
 ## When building the FELTOR executable, the user may set -DFELTOR_WITH_GLFW=ON
-## to enable plotting support, and -DFELTOR_WITH_NAVIER_STOKES=ON to build with
-## the Navier-Stokes extension.
+## to enable plotting support.
 ##
 ## After configuring the project, build it using:
 ##
@@ -74,7 +73,6 @@ option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
 option(FELTOR_WITH_GLFW "Build with plotting support")
-option(FELTOR_WITH_NAVIER_STOKES "Build with Navier-Stokes library.")
 
 option(FELTOR_FETCH_CCCL "Fetch NVIDIA's CUDA Core Compute Library (CCCL) from GitHub.")
 option(FELTOR_FETCH_VCL "Fetch Vector Class (version 2) library from GitHub.")
