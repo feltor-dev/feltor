@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mpi.h>
-#include <complex.h>
+#include <complex>
 #include <thrust/complex.h>
 
 namespace dg
