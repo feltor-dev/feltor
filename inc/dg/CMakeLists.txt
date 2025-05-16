@@ -294,6 +294,12 @@ endif()
 add_subdirectory(file)
 
 # ============================================
+# Add geometries utilities
+# Defines the dg::geometries target
+
+add_subdirectory(geometries)
+
+# ============================================
 # Add dg benchmarks
 
 if(FELTOR_BUILD_BENCHMARKS)
