@@ -1,10 +1,10 @@
 #include <iostream>
+#include <thrust/extrema.h>
 
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
 #include "dg/geometries/geometries.h"
 
-//#include "taylor.h"
 #include "testfunctors.h"
 
 //const char* parameters = "geometry_params_Xpoint_taylor.json";

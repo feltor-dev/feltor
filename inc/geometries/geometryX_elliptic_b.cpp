@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <thrust/extrema.h>
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
 
