@@ -490,8 +490,8 @@ struct SerialNcFile
         err = nc_inq_dimids( m_grp, &ndims, NULL, include_parents);
         if( ndims == 0)
             return {};
-        int dimids[ndims];
-        err = nc_inq_dimids( m_grp, &ndims, dimids, include_parents);
+        std::vector<int> dimids(ndims);
+        err = nc_inq_dimids( m_grp, &ndims, &dimids[0], include_parents);
         // Globally dimension ids are 0, 1, 2, ... in the order in which the
         // dimensions were defined
         std::vector<std::string> dims;
@@ -520,10 +520,10 @@ struct SerialNcFile
         err = nc_inq_unlimdims( m_grp, &ndims, NULL);
         if( ndims == 0)
             return {};
-        int dimids[ndims];
+        std::vector<int> dimids(ndims);
         // Our tests indicate that this does not return the unlimited dimensions
         // of the parent group even though the documentation says so...
-        err = nc_inq_unlimdims( m_grp, &ndims, dimids);
+        err = nc_inq_unlimdims( m_grp, &ndims, &dimids[0]);
         std::vector<std::string> dims;
         for( int i=0; i<ndims; i++)
         {
@@ -959,8 +959,8 @@ struct SerialNcFile
         err = nc_inq_varndims( m_grp, varid, &ndims);
         if( ndims == 0)
             return {};
-        int dimids[ndims];
-        err = nc_inq_vardimid( m_grp, varid, dimids);
+        std::vector<int> dimids(ndims);
+        err = nc_inq_vardimid( m_grp, varid, &dimids[0]);
 
         std::vector<std::string> dims(ndims);
         for( int i=0; i<ndims; i++)
