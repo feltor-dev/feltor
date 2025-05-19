@@ -694,15 +694,18 @@ struct aRealMPITopology
     private:
     void check_periods( std::array<dg::bc, Nd> bc) const
     {
-        int rank, dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
-        MPI_Comm_rank( m_comm, &rank);
-        if( rank == 0)
+        if constexpr ( Nd > 0) // avoid zero sized array warnings
         {
-            for( unsigned u=0; u<Nd; u++)
+            int rank, dims[Nd], periods[Nd], coords[Nd];
+            MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+            MPI_Comm_rank( m_comm, &rank);
+            if( rank == 0)
             {
-                if( bc[u] == dg::PER) assert( periods[u] == true);
-                else assert( periods[u] == false);
+                for( unsigned u=0; u<Nd; u++)
+                {
+                    if( bc[u] == dg::PER) assert( periods[u] == true);
+                    else assert( periods[u] == false);
+                }
             }
         }
     }
@@ -737,31 +740,38 @@ struct aRealMPITopology
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std::array<unsigned,Nd> new_N)
 {
-    m_g.set(new_n, new_N);
-    int dims[Nd], periods[Nd], coords[Nd];
-    MPI_Cart_get( m_comm, Nd, dims, periods, coords);
-    std::array<unsigned, Nd> N;
-    for( unsigned u=0;u<Nd; u++)
+    if constexpr ( Nd > 0) // avoid zero sized array warnings
     {
-        auto idx = increment(partition( m_g.N(u), dims[u]));
-        N[u] = idx[coords[u]+1]-idx[coords[u]] ;
+        m_g.set(new_n, new_N);
+        int dims[Nd], periods[Nd], coords[Nd];
+        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        std::array<unsigned, Nd> N;
+        for( unsigned u=0;u<Nd; u++)
+        {
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            N[u] = idx[coords[u]+1]-idx[coords[u]] ;
+        }
+        m_l.set( new_n, N);
     }
-    m_l.set( new_n, N);
+
 }
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set_pq( std::array<real_type, Nd> x0, std::array<real_type,Nd> x1)
 {
-    m_g.set_pq( x0, x1);
-    int dims[Nd], periods[Nd], coords[Nd];
-    MPI_Cart_get( m_comm, Nd, dims, periods, coords);
-    std::array<real_type,Nd> p, q;
-    for( unsigned u=0;u<Nd; u++)
+    if constexpr ( Nd > 0) // avoid zero sized array warnings
     {
-        auto idx = increment(partition( m_g.N(u), dims[u]));
-        p[u] = m_g.p(u) + m_g.h(u)*idx[coords[u]];
-        q[u] = m_g.p(u) + m_g.h(u)*idx[coords[u] +1];
+        m_g.set_pq( x0, x1);
+        int dims[Nd], periods[Nd], coords[Nd];
+        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        std::array<real_type,Nd> p, q;
+        for( unsigned u=0;u<Nd; u++)
+        {
+            auto idx = increment(partition( m_g.N(u), dims[u]));
+            p[u] = m_g.p(u) + m_g.h(u)*idx[coords[u]];
+            q[u] = m_g.p(u) + m_g.h(u)*idx[coords[u] +1];
+        }
+        m_l.set_pq( p, q);
     }
-    m_l.set_pq( p, q);
 }
 template<class real_type,size_t Nd>
 void aRealMPITopology<real_type,Nd>::do_set( std::array<dg::bc, Nd> bcs)
