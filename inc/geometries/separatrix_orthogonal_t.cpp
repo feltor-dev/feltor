@@ -9,7 +9,7 @@
 
 #include "dg/backend/timer.h"
 #include "solovev.h"
-//#include "taylor.h"
+#include "taylor.h"
 //#include "guenter.h"
 #include "dg/topology/transform.h"
 #include "refined_curvilinearX.h"

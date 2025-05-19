@@ -7,7 +7,7 @@
 
 #include "solovev.h"
 #include "average.h"
-//#include "taylor.h"
+#include "taylor.h"
 #include "magnetic_field.h"
 
 int main( int argc, char* argv[])

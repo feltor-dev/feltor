@@ -4,7 +4,7 @@
 #include "dg/algorithm.h"
 
 #include "solovev.h"
-//#include "taylor.h"
+#include "taylor.h"
 #include "magnetic_field.h"
 
 struct JPhi
