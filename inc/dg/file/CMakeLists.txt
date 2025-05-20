@@ -1,5 +1,6 @@
 # inc/dg/file/CMakeLists.txt
 
+# find ../../file -name "*.h" -not -name "*doc.h" | sort
 set(FILE_HEADERS
   file.h
   json_utilities.h
@@ -12,16 +13,17 @@ set(FILE_HEADERS
   ../../file/json_probes.h
   ../../file/json_utilities.h
   ../../file/json_wrapper.h
-  ../../file/nc_error.h 
-  ../../file/nc_file.h 
-  ../../file/nc_hyperslab.h 
-  ../../file/nc_mpi_file.h 
-  ../../file/nc_utilities.h 
-  ../../file/probes.h 
+  ../../file/nc_error.h
+  ../../file/nc_file.h
+  ../../file/nc_hyperslab.h
+  ../../file/nc_mpi_file.h
+  ../../file/nc_utilities.h
+  ../../file/probes.h
   ../../file/probes_params.h
   ../../file/records.h
 )
 
+# find ../../file -name "*t.cpp" | sort
 set(FILE_TESTS
   ../../file/easy_atts_t.cpp
   ../../file/easy_dims_t.cpp

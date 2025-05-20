@@ -1,5 +1,7 @@
 # inc/dg/CMakeLists.txt
 
+# find . -type f \( -name "*.h" -or -name "*.cuh" -or -name "*.hpp" \) -not -path "./exblas/*" -not -path "./matrix/*" -not -path "./geometries/*" -not -path "./file/*" -not -name "*doc.h"| sort
+# Manually copy result here and replace ./ with 2 whitespaces
 set(DG_HEADERS
   adaptive.h
   advection.h
@@ -26,7 +28,6 @@ set(DG_HEADERS
   backend/blas2_stencil.h
   backend/config.h
   backend/densematrix.h
-  backend/exblas/ExSUM.FPE.hpp
   backend/exblas/accumulate.cuh
   backend/exblas/accumulate.h
   backend/exblas/config.h
@@ -34,11 +35,11 @@ set(DG_HEADERS
   backend/exblas/exdot_cuda.cuh
   backend/exblas/exdot_omp.h
   backend/exblas/exdot_serial.h
+  backend/exblas/ExSUM.FPE.hpp
   backend/exblas/fpedot_cuda.cuh
   backend/exblas/fpedot_omp.h
   backend/exblas/fpedot_serial.h
   backend/exblas/mpi_accumulate.h
-  backend/exblas/mylibm.cuh
   backend/exblas/mylibm.cuh
   backend/exblas/mylibm.hpp
   backend/exceptions.h
@@ -57,17 +58,16 @@ set(DG_HEADERS
   backend/mpi_vector.h
   backend/predicate.h
   backend/scalar_categories.h
-  backend/sparseblockmat.h
   backend/sparseblockmat_cpu_kernels.h
   backend/sparseblockmat_gpu_kernels.cuh
-  backend/sparseblockmat_gpu_kernels.cuh
+  backend/sparseblockmat.h
   backend/sparseblockmat_omp_kernels.h
-  backend/sparsematrix.h
   backend/sparsematrix_cpu.h
   backend/sparsematrix_gpu.cuh
+  backend/sparsematrix.h
   backend/sparsematrix_omp.h
-  backend/tensor_traits.h
   backend/tensor_traits_cusp.h
+  backend/tensor_traits.h
   backend/tensor_traits_scalar.h
   backend/tensor_traits_std.h
   backend/tensor_traits_thrust.h
@@ -76,21 +76,18 @@ set(DG_HEADERS
   backend/vector_categories.h
   backend/view.h
   bicgstabl.h
-  blas.h
   blas1.h
   blas2.h
+  blas.h
   chebyshev.h
   elliptic.h
   enums.h
   eve.h
-  exblas/exblas.h
   extrapolation.h
   functors.h
-  geometries/geometries.h
   helmholtz.h
   implicit.h
   lgmres.h
-  matrix/matrix.h
   multigrid.h
   multistep.h
   multistep_tableau.h
@@ -106,8 +103,8 @@ set(DG_HEADERS
   topology/average.h
   topology/base_geometry.h
   topology/base_geometryX.h
-  topology/derivatives.h
   topology/derivativesA.h
+  topology/derivatives.h
   topology/derivativesT.h
   topology/derivativesX.h
   topology/dlt.h
@@ -149,6 +146,8 @@ set(DG_HEADERS
   topology/xspacelib.h
 )
 
+# These can be compiled for mpi as well
+# find . -type f -name "*b.cpp" | sort
 set(DG_BENCHMARKS
   arakawa_b.cpp
   blas_b.cpp
@@ -164,6 +163,8 @@ set(DG_BENCHMARKS
   refined_elliptic2d_b.cpp
 )
 
+# These can be compiled from mpi as well
+# find . -type f -name "*_t.cpp" | sort
 set(DG_TESTS
   adaptive_t.cpp
   arakawa_t.cpp
@@ -188,8 +189,8 @@ set(DG_TESTS
   simpsons_t.cpp
   topology/average_t.cpp
   topology/base_geometry_t.cpp
-  topology/derivativesX_t.cpp
   topology/derivatives_t.cpp
+  topology/derivativesX_t.cpp
   topology/dlt_t.cpp
   topology/dx_t.cpp
   topology/evaluation_t.cpp
@@ -208,6 +209,8 @@ set(DG_TESTS
   topology/transform_t.cpp
 )
 
+# These are pure MPI tests
+# find . -type f -name "*mpit.cpp" | sort
 set(DG_MPI_TESTS
   backend/mpi_exblas_mpit.cpp
   backend/mpi_gather_kron_mpit.cpp

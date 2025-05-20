@@ -1,5 +1,8 @@
 # inc/dg/geometries/CMakeLists.txt
 
+# find ../../geometries -name "*.h" -not -name "*doc.h" | sort
+# testfunctors.h is not technically included in the library so its changes
+# don't technically matter but it does not block anything either
 set(GEOMETRIES_HEADERS
   geometries.h
   ../../geometries/adaption.h
@@ -39,6 +42,9 @@ set(GEOMETRIES_HEADERS
   ../../geometries/utilitiesX.h
 )
 
+# Not setup for catch2 yet
+# Some can be compiled for MPI
+# find ../../geometries -name "*t.cpp" | sort
 set(GEOMETRIES_TESTS
   ../../geometries/average_t.cpp
   ../../geometries/ds_curv_t.cpp
@@ -53,6 +59,7 @@ set(GEOMETRIES_TESTS
   ../../geometries/solovev_t.cpp
 )
 
+# find ../../geometries -name "*b.cpp" | sort
 set(GEOMETRIES_BENCHMARKS
   ../../geometries/conformal_elliptic_b.cpp
   ../../geometries/conformalX_elliptic_b.cpp
