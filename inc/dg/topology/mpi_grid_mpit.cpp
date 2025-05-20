@@ -56,10 +56,10 @@ TEST_CASE( "MPI Grid")
         {
             int lIdx = 0, pid = 0;
             g2d.global2localIdx( i, lIdx, pid);
-            int locals[size], localp[size];
+            std::vector<int> locals(size), localp(size);
             // Send everything to root
-            MPI_Gather( &lIdx, 1, MPI_INT, locals, 1, MPI_INT, 0, MPI_COMM_WORLD);
-            MPI_Gather(  &pid, 1, MPI_INT, localp, 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Gather( &lIdx, 1, MPI_INT, &locals[0], 1, MPI_INT, 0, MPI_COMM_WORLD);
+            MPI_Gather(  &pid, 1, MPI_INT, &localp[0], 1, MPI_INT, 0, MPI_COMM_WORLD);
             if(rank==0)
             {
                 for( int k=0; k<size; k++)

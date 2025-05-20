@@ -4,9 +4,10 @@
  *(R_0-1.1*triangularity*inverseaspectratio,-1.1*elongation*inverseaspectratio)
  *          ----------------------------------------------------------- */
 {
-    "equilibrium" : "taylor", //taylor state
-    "description"               : "standardX"
     //----------------------Taylor coefficients---------------
+    "A" : 0,
+    "PP": 1,
+    "PI": 1,
     "c" :[-0.730004529864617913443309878090712685057289011596696572774289301646,
     -0.013752279867251353918502943858642437963550235876487492144645446786828705,
     -1.043934755061476893780514356717827737689350282272451493765507415754555292,
@@ -23,7 +24,9 @@
     "R_0"                : 547.891714877869, //(in units of rhos)
     "inverseaspectratio" : 0.41071428571428575, //a/R_0
     "elongation"         : 1.75,
-    "triangularity"      : 0.25
+    "triangularity"      : 0.25,
+    "equilibrium"  : "taylor", //taylor state
+    "description" : "standardX"
 }
 //@ ----------------------------------------------------------
 

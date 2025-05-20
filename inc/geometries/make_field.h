@@ -3,6 +3,7 @@
 #include "guenter.h"
 #include "polynomial.h"
 #include "toroidal.h"
+#include "taylor.h"
 #include "sheath.h"
 #include "modified.h"
 #include <dg/file/json_utilities.h>
@@ -109,13 +110,11 @@ inline TokamakMagneticField createMagneticField( dg::file::WrappedJsonValue gs)
             double b = gs.get( "b", 1.0).asDouble();
             return createCircularField( R0, I0, a, b);
         }
-#ifdef BOOST_VERSION
         case equilibrium::taylor:
         {
             solovev::Parameters gp( gs);
             return createTaylorField( gp);
         }
-#endif
         default:
         {
             solovev::Parameters gp( gs);
@@ -291,7 +290,7 @@ inline void createModifiedField(
         {
             if( desc != description::doubleX)
                 throw Error( Message(_ping_) << "Description must be doubleX");
-            unsigned num = 4;
+            constexpr unsigned num = 4;
             std::vector<double> psi(num), alpha(num);
             for( unsigned u=0; u<num; u++)
             {

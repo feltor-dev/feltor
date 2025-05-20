@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <thrust/extrema.h> //thrust::max_element
+
 #include "dg/algorithm.h"
 #include "dg/file/json_utilities.h"
 
@@ -12,6 +14,7 @@
 #include "solovev.h"
 //#include "guenter.h"
 #include "testfunctors.h"
+
 
 const unsigned nIter=6;
 template<class Geometry>

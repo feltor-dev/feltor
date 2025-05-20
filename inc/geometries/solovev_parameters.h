@@ -18,7 +18,6 @@ namespace solovev
 // Solovev (and Taylor) geometry parameters
 {
     "equilibrium": "solovev",
-    // Note that for the taylor field you need to include boost before the geometries header!
     // "equilibrium" : "taylor",
     "A": 0,
     "R_0": 213.36,
@@ -56,7 +55,7 @@ struct Parameters
      * @brief Construct from Json dataset
      * @copydoc hide_solovev_json
      * @sa \c dg::geo::description to see valid values for the %description field
-     * @note the \c dg::geo::taylor field is chosen by setting "taylor" in the equilibrium field (but also note that you need to include boost for the taylor field)
+     * @note the \c dg::geo::taylor field is chosen by setting "taylor" in the equilibrium field
      * @param js valid Json object (see code above to see the valid key : value pairs)
      * @note the default values in brackets are taken if the variables are not found in the input file
      */

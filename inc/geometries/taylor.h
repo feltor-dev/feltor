@@ -4,7 +4,6 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
-#include <boost/math/special_functions.hpp>
 
 #include "dg/algorithm.h"
 #include "solovev_parameters.h"
@@ -14,17 +13,15 @@
 /*!@file
  *
  * MagneticField objects
- * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
 namespace dg
 {
 namespace geo
 {
 /**
- * @brief Contains the Cerfon Taylor state type flux functions (using boost)
+ * @brief Contains the Cerfon Taylor state type flux functions
  *
  * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
- * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
 namespace taylor
 {
@@ -36,7 +33,6 @@ typedef dg::geo::solovev::Parameters Parameters; //!< bring Parameters into the 
  * @brief \f[ \psi \f]
  *
  * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
- * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
 struct Psip : public aCylindricalFunctor<Psip>
 { /**
@@ -50,10 +46,10 @@ struct Psip : public aCylindricalFunctor<Psip>
     double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
-        double j1_c12 = boost::math::cyl_bessel_j( 1, c_[11]*Rn);
-        double y1_c12 = boost::math::cyl_neumann(  1, c_[11]*Rn);
-        double j1_cs = boost::math::cyl_bessel_j( 1, cs_*Rn);
-        double y1_cs = boost::math::cyl_neumann(  1, cs_*Rn);
+        double j1_c12 = std::cyl_bessel_j( 1, c_[11]*Rn);
+        double y1_c12 = std::cyl_neumann(  1, c_[11]*Rn);
+        double j1_cs = std::cyl_bessel_j( 1, cs_*Rn);
+        double y1_cs = std::cyl_neumann(  1, cs_*Rn);
         return R0_*(
                    1.0*Rn*j1_c12
                + c_[0]*Rn*y1_c12
@@ -75,7 +71,6 @@ struct Psip : public aCylindricalFunctor<Psip>
 
 /**
  * @brief \f[\psi_R\f]
- * @attention When the taylor field is used we need the boost library for special functions
  */
 struct PsipR: public aCylindricalFunctor<PsipR>
 {
@@ -87,14 +82,14 @@ struct PsipR: public aCylindricalFunctor<PsipR>
     double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
-        double j1_c12R = boost::math::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
-                boost::math::cyl_bessel_j(0, c_[11]*Rn) - boost::math::cyl_bessel_j(2,c_[11]*Rn));
-        double y1_c12R = boost::math::cyl_neumann(1, c_[11]*Rn) + c_[11]/2.*Rn*(
-                boost::math::cyl_neumann(0, c_[11]*Rn) - boost::math::cyl_neumann(2,c_[11]*Rn));
-        double j1_csR = boost::math::cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(
-                boost::math::cyl_bessel_j(0, cs_*Rn) - boost::math::cyl_bessel_j(2, cs_*Rn));
-        double y1_csR = boost::math::cyl_neumann(1, cs_*Rn) + cs_/2.*Rn*(
-                boost::math::cyl_neumann(0, cs_*Rn) - boost::math::cyl_neumann(2, cs_*Rn));
+        double j1_c12R = std::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                std::cyl_bessel_j(0, c_[11]*Rn) - std::cyl_bessel_j(2,c_[11]*Rn));
+        double y1_c12R = std::cyl_neumann(1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                std::cyl_neumann(0, c_[11]*Rn) - std::cyl_neumann(2,c_[11]*Rn));
+        double j1_csR = std::cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(
+                std::cyl_bessel_j(0, cs_*Rn) - std::cyl_bessel_j(2, cs_*Rn));
+        double y1_csR = std::cyl_neumann(1, cs_*Rn) + cs_/2.*Rn*(
+                std::cyl_neumann(0, cs_*Rn) - std::cyl_neumann(2, cs_*Rn));
         double RZbar = sqrt( Rn*Rn+Zn*Zn);
         double cosR = -c_[11]*Rn/RZbar*sin(c_[11]*RZbar);
         return  (
@@ -124,10 +119,10 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
     double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
-        double j1_c12R = c_[11]*(boost::math::cyl_bessel_j(0, c_[11]*Rn) - Rn*c_[11]*boost::math::cyl_bessel_j(1, c_[11]*Rn));
-        double y1_c12R = c_[11]*(boost::math::cyl_neumann( 0, c_[11]*Rn) - Rn*c_[11]*boost::math::cyl_neumann(1, c_[11]*Rn));
-        double j1_csR = cs_*(boost::math::cyl_bessel_j(0, cs_*Rn) - Rn*cs_*boost::math::cyl_bessel_j(1, cs_*Rn));
-        double y1_csR = cs_*(boost::math::cyl_neumann( 0, cs_*Rn) - Rn*cs_*boost::math::cyl_neumann( 1, cs_*Rn));
+        double j1_c12R = c_[11]*(std::cyl_bessel_j(0, c_[11]*Rn) - Rn*c_[11]*std::cyl_bessel_j(1, c_[11]*Rn));
+        double y1_c12R = c_[11]*(std::cyl_neumann( 0, c_[11]*Rn) - Rn*c_[11]*std::cyl_neumann(1, c_[11]*Rn));
+        double j1_csR = cs_*(std::cyl_bessel_j(0, cs_*Rn) - Rn*cs_*std::cyl_bessel_j(1, cs_*Rn));
+        double y1_csR = cs_*(std::cyl_neumann( 0, cs_*Rn) - Rn*cs_*std::cyl_neumann( 1, cs_*Rn));
         double RZbar = sqrt(Rn*Rn+Zn*Zn);
         double cosR = -c_[11]/(RZbar*RZbar)*(c_[11]*Rn*Rn*cos(c_[11]*RZbar) +Zn*Zn*sin(c_[11]*RZbar)/RZbar);
         return  1./R0_*(
@@ -157,10 +152,10 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
     double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
-        double j1_c12 = boost::math::cyl_bessel_j( 1, c_[11]*Rn);
-        double y1_c12 = boost::math::cyl_neumann(  1, c_[11]*Rn);
-        double j1_cs = boost::math::cyl_bessel_j( 1, cs_*Rn);
-        double y1_cs = boost::math::cyl_neumann(  1, cs_*Rn);
+        double j1_c12 = std::cyl_bessel_j( 1, c_[11]*Rn);
+        double y1_c12 = std::cyl_neumann(  1, c_[11]*Rn);
+        double j1_cs = std::cyl_bessel_j( 1, cs_*Rn);
+        double y1_cs = std::cyl_neumann(  1, cs_*Rn);
         return (
                - c_[1]*Rn*j1_cs*c_[10]*sin(c_[10]*Zn)
                - c_[2]*Rn*y1_cs*c_[10]*sin(c_[10]*Zn)
@@ -188,8 +183,8 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
     double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
-        double j1_cs = boost::math::cyl_bessel_j( 1, cs_*Rn);
-        double y1_cs = boost::math::cyl_neumann(  1, cs_*Rn);
+        double j1_cs = std::cyl_bessel_j( 1, cs_*Rn);
+        double y1_cs = std::cyl_neumann(  1, cs_*Rn);
         double RZbar = sqrt(Rn*Rn+Zn*Zn);
         double cosZ = -c_[11]/(RZbar*RZbar)*(c_[11]*Zn*Zn*cos(c_[11]*RZbar) +Rn*Rn*sin(c_[11]*RZbar)/RZbar);
         return 1./R0_*(
@@ -217,14 +212,14 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
     double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
-        double j1_c12R = boost::math::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
-                boost::math::cyl_bessel_j(0, c_[11]*Rn) - boost::math::cyl_bessel_j(2,c_[11]*Rn));
-        double y1_c12R = boost::math::cyl_neumann( 1, c_[11]*Rn) + c_[11]/2.*Rn*(
-                boost::math::cyl_neumann( 0, c_[11]*Rn) - boost::math::cyl_neumann( 2,c_[11]*Rn));
-        double j1_csR = boost::math::cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(
-                boost::math::cyl_bessel_j(0, cs_*Rn) - boost::math::cyl_bessel_j(2, cs_*Rn));
-        double y1_csR = boost::math::cyl_neumann( 1, cs_*Rn) + cs_/2.*Rn*(
-                boost::math::cyl_neumann( 0, cs_*Rn) - boost::math::cyl_neumann(2, cs_*Rn));
+        double j1_c12R = std::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                std::cyl_bessel_j(0, c_[11]*Rn) - std::cyl_bessel_j(2,c_[11]*Rn));
+        double y1_c12R = std::cyl_neumann( 1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                std::cyl_neumann( 0, c_[11]*Rn) - std::cyl_neumann( 2,c_[11]*Rn));
+        double j1_csR = std::cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(
+                std::cyl_bessel_j(0, cs_*Rn) - std::cyl_bessel_j(2, cs_*Rn));
+        double y1_csR = std::cyl_neumann( 1, cs_*Rn) + cs_/2.*Rn*(
+                std::cyl_neumann( 0, cs_*Rn) - std::cyl_neumann(2, cs_*Rn));
         double RZbar = sqrt(Rn*Rn+Zn*Zn);
         double cosRZ = -c_[11]*Rn*Zn/(RZbar*RZbar*RZbar)*( c_[11]*RZbar*cos(c_[11]*RZbar) -sin(c_[11]*RZbar) );
         return  1./R0_*(
@@ -309,7 +304,6 @@ inline CylindricalFunctorsLvl1 createIpol( solovev::Parameters gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
  * @ingroup taylor
- * @attention The header \c taylor.h needs to be included seperately and depends on <a href="http://www.boost.org">boost</a>
  */
 inline dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
 {

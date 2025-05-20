@@ -25,9 +25,7 @@
 #include "guenter.h"
 #include "toroidal.h"
 #include "polynomial.h"
-#ifdef BOOST_VERSION
 #include "taylor.h"
-#endif
 #include "make_field.h"
 
 #include "fluxfunctions.h"
