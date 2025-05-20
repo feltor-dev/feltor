@@ -24,8 +24,12 @@ TEST_CASE( "Easy attributes")
         INFO("history "<<history);
         std::istringstream ss( history);
         std::tm t = {};
-        ss >> std::get_time( &t, "%Y-%m-%d %H:%M:%S %Z");
+        ss >> std::get_time( &t, "%Y-%m-%d %H:%M:%S");
         CHECK( not ss.fail());
+        std::string timezone;
+        ss >> timezone;
+        INFO( "Timezone "<<timezone);
+        CHECK( timezone.size()); // Unsure how to test this reliably
         std::string program;
         ss >> program;
         INFO( "Program "<<program);

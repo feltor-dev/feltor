@@ -1,0 +1,68 @@
+name: CMake build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Ensure that feedback is delivered for all matrix combinations.
+      fail-fast: false
+
+      # Set up a matrix to run each combination of MPI and device.
+      # This could be expanded to also test on Mac/Windows and muliple compilers.
+      matrix:
+        device: [cpp, openmp, gpu]
+        mpi: [mpi_on, mpi_off]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: Jimver/cuda-toolkit@v0.2.21
+      if: matrix.device == 'gpu'
+      with:
+        cuda: '12.5.0'
+        log-file-suffix: '${{ matrix.mpi }}'
+
+    - name: Set configuration strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        if [[ ${{ matrix.device }} = "gpu" ]]; then
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CUDA" >> "$GITHUB_OUTPUT"
+        elif [[ ${{ matrix.device }} = "openmp" ]]; then
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=OMP" >> "$GITHUB_OUTPUT"
+        else
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CPP" >> "$GITHUB_OUTPUT"
+        fi
+        if [[ ${{ matrix.mpi }} = "mpi_on" ]]; then
+          echo "mpi=-DFELTOR_USE_MPI=ON" >> "$GITHUB_OUTPUT"
+        else
+          echo "mpi=-DFELTOR_USE_MPI=OFF" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Install dependencies
+      run: |
+       sudo apt-get update
+       sudo apt-get -y install libglfw3-dev libopenmpi-dev libnetcdf-dev libboost-dev
+
+    - name: Configure CMake
+      run: >
+        cmake -B${{ steps.strings.outputs.build-dir }} .
+        ${{ steps.strings.outputs.device }}
+        ${{ steps.strings.outputs.mpi }}
+        -DFELTOR_FETCH_DEPS=ON
+
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-dir }} --verbose
+
+    - name: Test
+      if: ${{ matrix.device != 'gpu' }}
+      run: |
+        cd build
+        ctest --verbose --output-on-failure

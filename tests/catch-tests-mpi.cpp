@@ -10,6 +10,18 @@
 #include <sstream>
 
 int main( int argc, char* argv[] ) {
+
+    Catch::Session session;
+
+    int err = session.applyCommandLine(argc, argv);
+    if (err != 0) return err;
+
+    // If only listing tests, don't initialize CUDA/MPI etc
+    auto& config_data = session.configData();
+    if (config_data.listTests || config_data.listTags || config_data.listReporters) {
+        return session.run();
+    }
+
     // a copy of dg::mpi_init
 #ifdef _OPENMP
     int provided, error;
@@ -42,7 +54,7 @@ int main( int argc, char* argv[] ) {
     /* save old buffer and redirect output to string stream */
     //auto cout_buf = std::cout.rdbuf( ss.rdbuf() );
 
-    int result = Catch::Session().run( argc, argv );
+    int result = session.run();
 
     /* reset buffer */
     //std::cout.rdbuf( cout_buf );
