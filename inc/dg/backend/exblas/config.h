@@ -28,7 +28,12 @@
 
 #define MAX_VECTOR_SIZE 512 //configuration of vcl
 #define VCL_NAMESPACE vcl
+// The vcl folder does not exist by default:
+#ifdef VCL_NO_INCLUDE_PREFIX // used by cmake
+#include "vectorclass.h"
+#else
 #include "vcl/vectorclass.h" //vcl by Agner Fog, may also include immintrin.h e.g.
+#endif
 #if INSTRSET <5
 #define _WITHOUT_VCL
 #pragma message("WARNING: Instruction set below SSE4.1! Deactivating vectorization!")
