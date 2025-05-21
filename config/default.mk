@@ -9,7 +9,7 @@ MPICC=mpic++  #mpi compiler
 CFLAGS=-Wall -std=c++17 -mavx -mfma #flags for CC | will be added to MPICC
 CFLAGS+= -pedantic
 NVCC=nvcc #CUDA compiler
-NVCCARCH=-arch sm_61 -Xcudafe "--diag_suppress=code_is_unreachable --diag_suppress=initialization_not_reachable" #nvcc gpu compute capability
+NVCCARCH=-arch native -Xcudafe "--diag_suppress=code_is_unreachable --diag_suppress=initialization_not_reachable" #nvcc gpu compute capability
 NVCCFLAGS= -std=c++17 -Xcompiler "-Wall -mavx -mfma" --extended-lambda#flags for NVCC
 OPT=-O2 # optimization flags for host code (it is O2 and not O3 because g++-7 up to g++-8.0 have a bug with fma in -O3, fixed in g++-8.1)
 OMPFLAG=-fopenmp #openmp flag for CC and MPICC
