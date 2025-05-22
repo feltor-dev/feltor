@@ -20,7 +20,7 @@ struct FieldRZYT
 {
     //x0 and y0 sould be O-point to define angle with respect to O-point
     FieldRZYT( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
-    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
+    void operator()(double, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double ipol=ipol_.f()(y[0], y[1]);
@@ -41,7 +41,7 @@ struct FieldRZYT
 struct FieldRZYZ
 {
     FieldRZYZ( const CylindricalFunctorsLvl1& psip, const CylindricalFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
-    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
+    void operator()(double, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double ipol=ipol_.f()(y[0], y[1]);
@@ -65,7 +65,7 @@ struct FieldRZY
 {
     FieldRZY( const CylindricalFunctorsLvl2& psip, const CylindricalFunctorsLvl1& ipol): f_(1.), psip_(psip), ipol_(ipol){}
     void set_f(double f){ f_ = f;}
-    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
+    void operator()(double, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double ipol=ipol_.f()(y[0], y[1]);
@@ -108,7 +108,7 @@ struct FieldRZYRYZY
         xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
-    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
+    void operator()(double, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
@@ -136,7 +136,7 @@ struct FieldRZYT
 {
     //x0 and y0 sould be O-point to define angle with respect to O-point
     FieldRZYT( const CylindricalFunctorsLvl1& psip, double R0, double Z0, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
-    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
+    void operator()(double, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -163,7 +163,7 @@ struct FieldRZYT
 struct FieldRZYZ
 {
     FieldRZYZ( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): psip_(psip), chi_(chi){}
-    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
+    void operator()(double, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -188,7 +188,7 @@ struct FieldRZY
 {
     FieldRZY( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
-    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
+    void operator()(double, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -226,7 +226,7 @@ struct FieldRZYRYZY
         xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
-    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
+    void operator()(double, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
@@ -251,7 +251,7 @@ struct FieldRZYT
 {
     //x0 and y0 sould be O-point to define angle with respect to O-point
     FieldRZYT( const CylindricalFunctorsLvl1& psip, double R0, double Z0, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
-    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
+    void operator()(double, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -278,7 +278,7 @@ struct FieldRZYT
 struct FieldRZYZ
 {
     FieldRZYZ( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): psip_(psip), chi_(chi){}
-    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
+    void operator()(double, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -303,7 +303,7 @@ struct FieldRZY
 {
     FieldRZY( const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
-    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
+    void operator()(double, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -343,7 +343,7 @@ struct FieldRZYRYZY
         xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
-    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
+    void operator()(double, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
@@ -366,7 +366,7 @@ struct FieldRZYRYZY
 struct FieldRZtau
 {
     FieldRZtau(const CylindricalFunctorsLvl1& psip, const CylindricalSymmTensorLvl1& chi = CylindricalSymmTensorLvl1()): psip_(psip), chi_(chi){}
-    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
+    void operator()(double, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double chiRR = chi_.xx()(y[0], y[1]),
@@ -387,7 +387,7 @@ struct HessianRZtau
     // if true goes into positive Z - direction and X else
     void set_quadrant( int quadrant) {quad_ = quadrant;}
     void set_norm( bool normed) {norm_ = normed;}
-    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
+    void operator()(double, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipRZ = psip_.dfxy()(y[0], y[1]);
         if( psipRZ == 0)
@@ -432,7 +432,7 @@ struct MinimalCurve
     MinimalCurve(const CylindricalFunctorsLvl1& psip): norm_(false),
         psip_(psip){}
     void set_norm( bool normed) {norm_ = normed;}
-    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
+    void operator()(double, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0], y[1]);
         yp[0] = y[2];
@@ -532,8 +532,8 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     std::array<double, 4> begin{ {0,0,0,0} }, end(begin), temp(begin);
     const double f_psi = fpsi.construct_f( psi, begin[0], begin[1]);
     fieldRZYRYZY.set_f(f_psi);
-    double fprime = fpsi.f_prime( psi);
-    fieldRZYRYZY.set_fp(fprime);
+    fp = fpsi.f_prime( psi);
+    fieldRZYRYZY.set_fp(fp);
     fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
     R_0 = begin[0], Z_0 = begin[1];
     if(verbose)std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";

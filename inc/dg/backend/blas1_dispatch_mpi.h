@@ -156,7 +156,7 @@ inline MPI_Comm do_get_comm( const T& v, MPIVectorTag)
     return v.communicator();
 }
 template<class T>
-inline MPI_Comm do_get_comm( const T& v, AnyScalarTag){
+inline MPI_Comm do_get_comm( const T&, AnyScalarTag){
     return MPI_COMM_NULL;
 }
 template<class ContainerType, class Functor, class ...ContainerTypes>

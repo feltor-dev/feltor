@@ -176,7 +176,7 @@ struct CSRMedianFilter
     template<class real_type>
     DG_DEVICE
     void operator()( unsigned i, const int* row_offsets,
-            const int* column_indices, const real_type* values,
+            const int* column_indices, const real_type* /*values*/,
             const real_type* x, real_type* y)
     {
         // http://ndevilla.free.fr/median/median/index.html

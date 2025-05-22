@@ -39,7 +39,7 @@ struct RealCylindricalFunctor
         return m_f(R,Z);
     }
     /// @return f(R,Z)
-    real_type operator()( real_type R, real_type Z, real_type phi) const{
+    real_type operator()( real_type R, real_type Z, real_type) const{
         return m_f(R,Z);
     }
     private:
@@ -86,7 +86,7 @@ struct aCylindricalFunctor
     *
     * @return f(R,Z)
     */
-    double operator()(double R, double Z, double phi)const
+    double operator()(double R, double Z, double)const
     {
         const Derived& underlying = static_cast<const Derived&>(*this);
         return underlying.do_compute(R,Z);
@@ -113,7 +113,7 @@ struct aCylindricalFunctor
 struct Constant: public aCylindricalFunctor<Constant>
 {
     Constant(double c):c_(c){}
-    double do_compute(double R,double Z)const{return c_;}
+    double do_compute(double,double)const{return c_;}
     private:
     double c_;
 };
@@ -129,7 +129,7 @@ struct Constant: public aCylindricalFunctor<Constant>
 struct ZCutter : public aCylindricalFunctor<ZCutter>
 {
     ZCutter(double ZX, int sign = +1): m_heavi( ZX, sign){}
-    double do_compute(double R, double Z) const {
+    double do_compute(double, double Z) const {
         return m_heavi(Z);
     }
     private:

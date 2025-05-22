@@ -69,7 +69,7 @@ static void parse_method( std::string method, std::string& i, std::string& p, st
 struct DSFieldCylindrical3
 {
     DSFieldCylindrical3( const dg::geo::CylindricalVectorLvl0& v): m_v(v){}
-    void operator()( double t, const std::array<double,3>& y,
+    void operator()( double, const std::array<double,3>& y,
             std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         double vz = m_v.z()(R, Z);
@@ -84,7 +84,7 @@ struct DSFieldCylindrical3
 struct DSFieldCylindrical4
 {
     DSFieldCylindrical4( const dg::geo::CylindricalVectorLvl1& v): m_v(v){}
-    void operator()( double t, const std::array<double,3>& y,
+    void operator()( double, const std::array<double,3>& y,
             std::array<double,3>& yp) const {
         double R = y[0], Z = y[1];
         double vx = m_v.x()(R,Z);
@@ -121,7 +121,7 @@ struct DSField
         dvdphi_     = dg::forward_transform( divvvz, g );
     }
     //interpolate the vectors given in the constructor on the given point
-    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
+    void operator()(double, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         // shift point into domain
         yp[0] = interpolate(dg::lspace, dzetadphi_, y[0], y[1], *m_g);

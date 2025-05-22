@@ -281,8 +281,8 @@ void put_vara_detail(int ncid, int varid, unsigned slice,
 * @copydoc hide_parallel_write
 */
 template<class host_vector, class Topology>
-void put_var( int ncid, int varid, const Topology& grid,
-    const host_vector& data, bool parallel = false)
+void put_var( int ncid, int varid, const Topology& /*grid*/,
+    const host_vector& data, bool /*parallel*/ = false)
 {
     file::NC_Error_Handle err;
     err = detail::put_var_T( ncid, varid, data.data());
@@ -314,7 +314,7 @@ void put_var( int ncid, int varid, const Topology& grid,
 */
 template<class host_vector, class Topology>
 void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
-    const host_vector& data, bool parallel = false)
+    const host_vector& data, bool /*parallel*/ = false)
 {
     file::NC_Error_Handle err;
     NcHyperslab slab( slice, grid);
@@ -361,8 +361,8 @@ void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @copydoc hide_master_comment
  */
 template<class T, class real_type>
-void put_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& grid,
-    T data, bool parallel = false)
+void put_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& /*grid*/,
+    T data, bool /*parallel*/ = false)
 {
     file::NC_Error_Handle err;
     size_t count = 1;
@@ -402,7 +402,7 @@ void put_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
         put_var( ncid, varid, dg::RealGrid0d<real_type>(), data, parallel);
 }
 template<class T, class real_type>
-void put_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& grid,
+void put_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& /*grid*/,
     T data, bool parallel = false)
 {
     int rank;

@@ -201,8 +201,8 @@ void get_vara_detail(int ncid, int varid, unsigned slice,
 * @copydoc hide_parallel_read
 */
 template<class host_vector, class Topology>
-void get_var( int ncid, int varid, const Topology& grid,
-    host_vector& data, bool parallel = true)
+void get_var( int ncid, int varid, const Topology& /*grid*/,
+    host_vector& data, bool /*parallel*/ = true)
 {
     file::NC_Error_Handle err;
     err = detail::get_var_T( ncid, varid, data.data());
@@ -231,7 +231,7 @@ void get_var( int ncid, int varid, const Topology& grid,
 */
 template<class host_vector, class Topology>
 void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
-    host_vector& data, bool parallel = true)
+    host_vector& data, bool /*parallel*/ = true)
 {
     file::NC_Error_Handle err;
     NcHyperslab slab( slice, grid);
@@ -278,8 +278,8 @@ void get_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @copydoc hide_parallel_read
  */
 template<class T, class real_type>
-void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& grid,
-    T& data, bool parallel = true)
+void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& /*grid*/,
+    T& data, bool /*parallel*/ = true)
 {
     file::NC_Error_Handle err;
     size_t count = 1;
@@ -317,7 +317,7 @@ void get_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
 }
 
 template<class T, class real_type>
-void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& grid,
+void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& /*grid*/,
     T& data, bool parallel = true)
 {
     get_vara( ncid, varid, slice, dg::RealGrid0d<real_type>(), data, parallel);

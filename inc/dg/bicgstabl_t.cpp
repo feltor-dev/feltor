@@ -20,7 +20,7 @@ const double ly = 2.*M_PI;
 
 double fct(double x, double y){ return sin(y)*sin(x);}
 double laplace_fct( double x, double y) { return 2*sin(y)*sin(x);}
-double initial( double x, double y) {return sin(0);}
+double initial( double, double) {return sin(0);}
 
 TEST_CASE( "Solvers")
 {

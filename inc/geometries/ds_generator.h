@@ -25,7 +25,7 @@ struct DSMetricCylindrical
         m_bZZ(mag),
         m_bPZ(mag)
     {}
-    void operator()( double t, const std::array<double,6>& y,
+    void operator()( double, const std::array<double,6>& y,
             std::array<double,6>& yp) const {
         double R = y[0], Z = y[1];
         double vx = m_bR(R,Z);

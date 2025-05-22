@@ -954,7 +954,7 @@ void ds_divCentered( const FieldAligned& fa, double alpha, const container& fm, 
     double delta = fa.deltaPhi();
     dg::blas1::subroutine( [alpha,beta,delta]DG_DEVICE( double& dsf, double fm,
         double fp, double Gm, double Gp, double G0,
-        double bPm, double bP0, double bPp)
+        double bPm, double /*bP0*/, double bPp)
         {
             dsf = alpha*( fp*Gp*bPp - fm*Gm*bPm )/G0/2./delta + beta*dsf;
         }, g, fm, fp, fa.sqrtGm(),
@@ -978,7 +978,7 @@ void ds_divCentered( const FieldAligned& fa, double alpha, const container& fm, 
  * @copydoc hide_ds_freestanding
  */
 template<class FieldAligned, class container>
-void ds_average( const FieldAligned& fa, double alpha,
+void ds_average( const FieldAligned&, double alpha,
         const container& fm, const container& fp, double beta, container& g)
 {
     dg::blas1::subroutine( [alpha,beta]DG_DEVICE( double& g, double fm, double fp

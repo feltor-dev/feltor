@@ -46,27 +46,27 @@ std::vector<dg::RealGrid1d<real_type> > grids( const aRealTopologyX3d<real_type>
 template<class real_type>
 std::vector<std::string> dim_names( const RealGrid0d<real_type>& ) { return {};}
 template<class real_type>
-std::vector<std::string> dim_names( const RealGrid1d<real_type>& g ) { return {"x"};}
+std::vector<std::string> dim_names( const RealGrid1d<real_type>& ) { return {"x"};}
 template<class real_type>
-std::vector<std::string> dim_names( const aRealTopology2d<real_type>& g ) { return {"y", "x"};}
+std::vector<std::string> dim_names( const aRealTopology2d<real_type>& ) { return {"y", "x"};}
 template<class real_type>
-std::vector<std::string> dim_names( const aRealTopology3d<real_type>& g ) { return {"z", "y", "x"};}
+std::vector<std::string> dim_names( const aRealTopology3d<real_type>& ) { return {"z", "y", "x"};}
 template<class real_type>
-std::vector<std::string> dim_names( const aRealTopologyX2d<real_type>& g ) { return {"y", "x"};}
+std::vector<std::string> dim_names( const aRealTopologyX2d<real_type>& ) { return {"y", "x"};}
 template<class real_type>
-std::vector<std::string> dim_names( const aRealTopologyX3d<real_type>& g ) { return {"z", "y", "x"};}
+std::vector<std::string> dim_names( const aRealTopologyX3d<real_type>& ) { return {"z", "y", "x"};}
 template<class real_type>
 std::vector<std::string> axis_names( const RealGrid0d<real_type>& ) { return {};}
 template<class real_type>
-std::vector<std::string> axis_names( const RealGrid1d<real_type>& g ) { return {"X"};}
+std::vector<std::string> axis_names( const RealGrid1d<real_type>& ) { return {"X"};}
 template<class real_type>
-std::vector<std::string> axis_names( const aRealTopology2d<real_type>& g ) { return {"Y", "X"};}
+std::vector<std::string> axis_names( const aRealTopology2d<real_type>& ) { return {"Y", "X"};}
 template<class real_type>
-std::vector<std::string> axis_names( const aRealTopology3d<real_type>& g ) { return {"Z", "Y", "X"};}
+std::vector<std::string> axis_names( const aRealTopology3d<real_type>& ) { return {"Z", "Y", "X"};}
 template<class real_type>
-std::vector<std::string> axis_names( const aRealTopologyX2d<real_type>& g ) { return {"Y", "X"};}
+std::vector<std::string> axis_names( const aRealTopologyX2d<real_type>& ) { return {"Y", "X"};}
 template<class real_type>
-std::vector<std::string> axis_names( const aRealTopologyX3d<real_type>& g ) { return {"Z", "Y", "X"};}
+std::vector<std::string> axis_names( const aRealTopologyX3d<real_type>& ) { return {"Z", "Y", "X"};}
 
 
 inline void assign_defaults( std::vector<std::string>& name_dims, const std::vector<std::string>& default_names)
@@ -230,7 +230,7 @@ inline int define_limited_time( int ncid, const char* name, int size, int* dimID
  * @return False if dimension with given name does not exist, if no errors are thrown True
  */
 template<class T>
-bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::string name_dim = "x", std::string axis = "X")
+bool check_dimension( int ncid, int* dimID, const dg::RealGrid1d<T>& g, std::string name_dim = "x", std::string = "X")
 {
     // TODO Axis attribute check is still missing
     file::NC_Error_Handle err;

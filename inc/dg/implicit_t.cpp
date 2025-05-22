@@ -24,7 +24,7 @@ struct Diffusion
         m_nu = nu;
         m_order = order;
     }
-    void operator()(double t, const Container& x, Container& y)
+    void operator()(double, const Container& x, Container& y)
     {
         if( m_nu != 0)
         {

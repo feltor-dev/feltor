@@ -131,7 +131,7 @@ inline T doReduce( SharedVectorTag, const ContainerType& x, T init, BinaryOp op,
 template<class T>
 size_t do_get_size( const T& x, dg::SharedVectorTag){ return x.size();}
 template<class T>
-size_t do_get_size( const T& x, dg::AnyScalarTag){ return 1;}
+size_t do_get_size( const T&, dg::AnyScalarTag){ return 1;}
 
 template<class T>
 size_t get_size( const T& x)

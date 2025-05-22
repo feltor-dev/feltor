@@ -213,7 +213,7 @@ struct Probes
     private:
     template<class T=Topology, std::enable_if_t<dg::is_vector_v<typename
     T::host_vector, dg::SharedVectorTag>, bool> = true>
-    auto create_probes_vec( const dg::HVec& coord, const T& grid)
+    auto create_probes_vec( const dg::HVec& coord, const T&)
     {
         return typename Topology::host_vector(coord);
     }

@@ -243,7 +243,7 @@ unsigned max_iter = 1e4, double eps = 1e-6)
     }
     else if( name == "invCenteredLap"){
         //dg::LGMRES<container> invert( in, 30,3,10000);
-        dg::BICGSTABl<container> invert( in, 30000,3);
+        dg::BICGSTABl<container> invert( in, max_iter, 3);
         dg::Timer t;
         t.tic();
         double precond = 1.;
@@ -280,7 +280,7 @@ struct FuncDirPer
         double result = (psip-psi0_)*(psip-psi1_)*cos(k_*theta(R,Z));
         return 0.1*result;
     }
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return operator()(R,Z);
     }
     double dR( double R, double Z)const
@@ -345,7 +345,7 @@ struct FuncDirPer
 struct VariationDirPer
 {
     VariationDirPer( dg::geo::TokamakMagneticField mag, double psi_0, double psi_1): m_f(mag, psi_0, psi_1,4. ){}
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return this->operator()(R,Z);}
 
     double operator()(double R, double Z) const {
@@ -360,7 +360,7 @@ struct VariationDirPer
 struct EllipticDirPerM
 {
     EllipticDirPerM( const TokamakMagneticField& c, double psi_0, double psi_1, double k): func_(c, psi_0, psi_1, k), bmod_(c), br_(c), bz_(c) {}
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return operator()(R,Z);}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
@@ -377,11 +377,11 @@ struct EllipticDirPerM
 //Blob function
 struct FuncDirNeu
 {
-    FuncDirNeu( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
+    FuncDirNeu( const TokamakMagneticField&, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
         psi0_(psi_0), psi1_(psi_1),
         cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob){}
 
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return operator()(R,Z);}
     double operator()(double R, double Z) const {
         return cauchy_(R,Z);
@@ -430,7 +430,7 @@ struct FuncDirNeu
 struct BmodTheta
 {
     BmodTheta( const TokamakMagneticField& c): R_0_(c.R0()), bmod_(c){}
-    double operator()(double R,double Z, double phi) const{
+    double operator()(double R,double Z, double) const{
         return operator()(R,Z);}
     double operator()(double R,double Z) const{
         return bmod_(R,Z)*(1.+0.5*sin(theta(R,Z)));
@@ -461,7 +461,7 @@ struct EllipticDirNeuM
         return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return operator()(R,Z);
     }
     private:
@@ -493,7 +493,7 @@ struct FuncXDirNeu
     FuncXDirNeu( const TokamakMagneticField& c, double psi_0, double psi_1):
         c_(c), psi0_(psi_0), psi1_(psi_1){}
 
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return operator()(R,Z);}
     double operator()(double R, double Z) const {
         double psip = c_.psip()(R,Z);
@@ -542,7 +542,7 @@ struct EllipticXDirNeuM
         //return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
 
     }
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return operator()(R,Z);
     }
     private:
@@ -561,7 +561,7 @@ struct EllipticBlobDirNeuM
     double operator()(double R, double Z) const {
         return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
     }
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return operator()(R,Z);
     }
     private:
@@ -572,7 +572,7 @@ struct EllipticBlobDirNeuM
 struct EllipticDirSimpleM
 {
     EllipticDirSimpleM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return -(( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }

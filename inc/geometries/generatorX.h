@@ -67,8 +67,8 @@ struct aRealGeneratorX2d
 
     protected:
     aRealGeneratorX2d(){}
-    aRealGeneratorX2d(const aRealGeneratorX2d& src){}
-    aRealGeneratorX2d& operator=(const aRealGeneratorX2d& src){
+    aRealGeneratorX2d(const aRealGeneratorX2d&){}
+    aRealGeneratorX2d& operator=(const aRealGeneratorX2d&){
         return *this;
     }
     private:

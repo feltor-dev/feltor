@@ -178,7 +178,7 @@ TEST_CASE( "vdot test")
         const dg::x::DVec v = dg::construct<dg::x::DVec>( dg::evaluate( function3d,
                     g3d));
 
-        unsigned size = dg::blas1::vdot( []DG_DEVICE(double x){ return 1u;},
+        unsigned size = dg::blas1::vdot( []DG_DEVICE(double){ return 1u;},
                 v);
         INFO("Size of vector test       "<<size<<"\t"<<g3d.size());
         CHECK( int( size - g3d.size())  == 0);
