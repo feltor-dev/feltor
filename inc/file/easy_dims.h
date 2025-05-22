@@ -225,7 +225,7 @@ inline int define_limited_time( int ncid, const char* name, int size, int* dimID
  * @param dimID dimension ID (output)
  * @param g The 1d DG grid from which data points for coordinate variable are generated using \c g.abscissas()
  * @param name_dim Name of dimension and coordinate variable (input)
- * @param axis The axis attribute (input), ("X", "Y" or "Z")
+ * [unnamed string] axis The axis attribute (input) is ignored but kept for now as a future placeholder
  * @tparam T determines the datatype of the dimension variables
  * @return False if dimension with given name does not exist, if no errors are thrown True
  */

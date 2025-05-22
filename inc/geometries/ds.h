@@ -968,7 +968,9 @@ void ds_divCentered( const FieldAligned& fa, double alpha, const container& fm, 
  * @note The idea is to use this function on staggered grid implementations. There
  * it can be used to convert a function from one grid to the staggered grid and
  * back
- * @param fa this object will be used to get grid distances
+ *
+ * [un-named FieldAligned] this object is ignored in this function but it is
+ * kept to keep the interface consistent with the other ds-type functions
  * @param alpha Scalar
  * @copydoc hide_ds_fm
  * @copydoc hide_ds_fp

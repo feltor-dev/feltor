@@ -274,9 +274,11 @@ void put_vara_detail(int ncid, int varid, unsigned slice,
 * @copydoc hide_tparam_host_vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
-* @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
+*
+* [unnamed grid] Make serial and mpi interface equal
 * @param data data to be written to the NetCDF file
-* @copydoc hide_parallel_param
+*
+* [unnamed bool] This parameter is there to make serial and parallel interface equal.
 * @copydoc hide_master_comment
 * @copydoc hide_parallel_write
 */
@@ -308,7 +310,8 @@ void put_var( int ncid, int varid, const Topology& /*grid*/,
 * @copydoc hide_comment_slice
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
 * @param data data to be written to the NetCDF file
-* @copydoc hide_parallel_param
+*
+* [unnamed bool] This parameter is there to make serial and parallel interface equal.
 * @copydoc hide_master_comment
 * @copydoc hide_parallel_write
 */
@@ -354,9 +357,11 @@ void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @param varid Variable ID (Note that in NetCDF variables without dimensions are scalars)
  * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
  * @copydoc hide_comment_slice
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
+ *
+ * [unnamed RealGrid0d] a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
- * @param parallel This parameter is ignored in both serial and MPI versions.
+ *
+ * [unnamed bool] This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes can call this function but only the master thread writes.
  * @copydoc hide_master_comment
  */

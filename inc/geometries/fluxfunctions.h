@@ -82,7 +82,6 @@ struct aCylindricalFunctor
     *
     * @param R radius (cylindrical coordinate)
     * @param Z height (cylindrical coordinate)
-    * @param phi angle (cylindrical coordinate)
     *
     * @return f(R,Z)
     */

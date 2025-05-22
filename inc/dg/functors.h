@@ -626,7 +626,6 @@ struct Gaussian
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
-     * @param z z - coordinate
      *
      * @return gaussian
      */
@@ -892,7 +891,6 @@ struct GaussianY
      * \f[
        f(x,y) = Ae^{-\frac{(y-y_0)^2}{2\sigma_y^2}}
        \f]
-     * @param x x - coordinate
      * @param y y - coordinate
      *
      * @return gaussian
@@ -946,8 +944,6 @@ struct GaussianZ
      * \f[
        f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}}
        \f]
-     * @param x x - coordinate
-     * @param y y - coordinate
      * @param z z - coordinate
      *
      * @return gaussian
@@ -1428,7 +1424,8 @@ struct DPolynomialHeaviside {
      *
      * @param xb boundary value
      * @param a transition width ( must be !=0)
-     * @param sign either +1 (original) or -1 (the function is mirrored at \c x=x0)
+     *
+     * [unnamed-parameter] either +1 (original) or -1 (the function is mirrored at \c x=x0)
      * (since this function is symmetric this parameter is ignored, it's there to be
      * consistent with PolynomialHeaviside)
      */

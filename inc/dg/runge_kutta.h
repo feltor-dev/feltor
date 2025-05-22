@@ -121,7 +121,8 @@ struct IdentityFilter
      * @brief Do nothing
      *
      * @copydoc hide_ContainerType
-     * @param inout (input-output) remains unchanged
+     *
+     * unnamed parameter (usually inout) remains unchanged
      */
     template<class ContainerType1>
     void operator()( ContainerType1&) const{ }
