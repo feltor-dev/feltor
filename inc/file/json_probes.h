@@ -105,7 +105,7 @@ inline ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum err
         return out;
     else if( (probes_err == file::error::is_warning) && !js.isMember( "probes"))
     {
-        DG_RANK0 std::cerr << "WARNING: probes field not found.  No probes written to file!\n";
+        if(rank==0) std::cerr << "WARNING: probes field not found.  No probes written to file!\n";
         return out;
     }
     else if ( !js.isMember("probes"))
