@@ -1,0 +1,33 @@
+{
+    "version" : 6,
+    "configurePresets": [
+        {
+            "name" : "cpu",
+            "displayName" : "Single core",
+            "binaryDir" : "build/cpu",
+            "cacheVariables" : {
+                "CCCL_THRUST_DEVICE_SYSTEM" : "CPP",
+                "CMAKE_CXX_FLAGS" : "-mavx -mfma -O3"
+            }
+        },
+        {
+            "name" : "omp",
+            "displayName" : "OpenMP",
+            "binaryDir" : "build/omp",
+            "cacheVariables" : {
+                "CCCL_THRUST_DEVICE_SYSTEM" : "OMP",
+                "CMAKE_CXX_FLAGS" : "-mavx -mfma -O3"
+            }
+        },
+        {
+            "name" : "gpu",
+            "displayName" : "GPU",
+            "binaryDir" : "build/gpu",
+            "cacheVariables" : {
+                "CCCL_THRUST_DEVICE_SYSTEM" : "CUDA",
+                "CMAKE_CUDA_ARCHITECTURES" : "native",
+                "CMAKE_CXX_FLAGS" : "-mavx -mfma -O3"
+            }
+        }
+    ]
+}

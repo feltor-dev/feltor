@@ -73,29 +73,10 @@ set(GEOMETRIES_BENCHMARKS
 # ============================================
 # Create DG geometries library target
 
-# Requires Boost.
-# Using Boost::boost in place of Boost::math, as the latter requires linking
-# against precompiled Boost libraries, which are not always available.
-
-# Suppress warning due to new FindBoost policy
-if(POLICY CMP0167)
-  cmake_policy(SET CMP0167 NEW)
-endif()
-
-find_package(Boost 1.5 COMPONENTS math)
-
-if(NOT Boost_FOUND)
-  message(WARNING "Boost not found. The dg::geometries target will not be created.")
-  return()
-endif()
-
-message(STATUS "Boost version: ${Boost_VERSION}")
-
 add_library(geometries INTERFACE ${GEOMETRIES_HEADERS})
 add_library(dg::geometries ALIAS geometries)
 target_link_libraries(geometries INTERFACE dg::dg)
-target_link_libraries(geometries INTERFACE dg::file)
-target_link_libraries(geometries INTERFACE Boost::boost)
+target_link_libraries(geometries INTERFACE dg::file::json)
 
 # ============================================
 # Add geometries tests

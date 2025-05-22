@@ -146,7 +146,7 @@ set(DG_HEADERS
   topology/xspacelib.h
 )
 
-# These can be compiled for mpi as well
+# These can be compiled for MPI as well
 # find . -type f -name "*b.cpp" | sort
 set(DG_BENCHMARKS
   arakawa_b.cpp
@@ -163,7 +163,7 @@ set(DG_BENCHMARKS
   refined_elliptic2d_b.cpp
 )
 
-# These can be compiled from mpi as well
+# These can be compiled for MPI as well
 # find . -type f -name "*_t.cpp" | sort
 set(DG_TESTS
   adaptive_t.cpp
@@ -233,56 +233,75 @@ set(DG_MPI_TESTS
 # libraries, have dependencies, etc. These properties are then
 # inherited by any target that links to it.
 add_library(dg INTERFACE ${DG_HEADERS})
+# Create an alias: used to link to the library from external projects.
+add_library(dg::dg ALIAS dg)
+
 # Ensure that `#include "dg/..."` works
 # TODO remove this after other libs have their own CMakeLists.txt
 target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
 # Set the minimum C++ standard
 target_compile_features(dg INTERFACE cxx_std_17)
 # Set flags
+# MW I think compiler opimization flags should be set on executable since they are different on different machines
 # CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
 # may be set even when compiling for CUDA.
-target_compile_options(dg INTERFACE
-  "${FELTOR_FLAGS_CXX}"
-  $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
-)
+# target_compile_options(dg INTERFACE
+#  "${FELTOR_FLAGS_CXX}"
+#  $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
+#)
 
-# Create an alias: used to link to the library from external projects.
-add_library(dg::dg ALIAS dg)
 
 # ============================================
 # Add dg dependencies
 
-include(FeltorFetchDeps)
+# Through the exblas library we depend on vcl
+# VCL does not use cmake so we have to configure manually
+CPMAddPackage(
+ NAME vcl
+ GITHUB_REPOSITORY vectorclass/version2
+ GIT_TAG v2.02.01
+)
 
-if(FELTOR_FETCH_CCCL)
-  fetch_cccl()
-else()
-  find_package(cccl REQUIRED)
-endif()
-target_link_libraries(dg INTERFACE CCCL::CCCL)
-if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
-  target_link_libraries(dg INTERFACE CUDA::cusparse)
+if( vcl_ADDED)
+    # with vcl it is recommended to activate and optimize instruction set flags
+    message( STATUS "Found Vectorclass in ${vcl_SOURCE_DIR}")
+    add_library( vcl::vcl INTERFACE IMPORTED) # imported is visible only in current dir and below
+    target_include_directories( vcl::vcl INTERFACE ${vcl_SOURCE_DIR})
+    # Per default the dg library includes "vcl/vectorclass.h" but the vcl folder
+    # does not exist in the vectorclass github, so tell dg to directly include "vectorclass.h"
+    target_compile_definitions( vcl::vcl INTERFACE VCL_NO_INCLUDE_PREFIX)
 endif()
 
-if(FELTOR_FETCH_VCL)
-  fetch_vcl()
-else()
-  find_package(VCL REQUIRED)
-endif()
 target_link_libraries(dg INTERFACE vcl::vcl)
 
-if(FELTOR_USE_MPI)
-  find_package(MPI REQUIRED)
-  target_link_libraries(dg INTERFACE MPI::MPI_CXX)
+# Add cccl
+CPMAddPackage( "gh:NVIDIA/cccl#v2.8.0")
+
+target_link_libraries(dg INTERFACE CCCL::CCCL)
+
+if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
+  # CUDA language must be enabled if device is CUDA
+  target_link_libraries(dg INTERFACE CUDA::cusparse)
+  target_compile_features(dg INTERFACE cuda_std_17)
+  target_compile_options(dg INTERFACE "--extended-lambda")
 endif()
 
-if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
-  find_package(OpenMP REQUIRED)
-  target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
-endif()
+
+# MW I don't think this is needed
+#if(FELTOR_WITH_MPI)
+#  find_package(MPI REQUIRED)
+#  target_link_libraries(dg INTERFACE MPI::MPI_CXX)
+#endif()
+
+# MW: I think cccl already links OpenMP in this case
+# if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
+#   find_package(OpenMP REQUIRED)
+#   target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
+# endif()
 
 # =============================================
 # Set up benchmark and test targets
+# MW a custom target is always out of date and has no output file
 if(FELTOR_BUILD_BENCHMARKS)
   add_custom_target(dg_benchmarks)
 endif()
@@ -303,6 +322,12 @@ add_subdirectory(file)
 add_subdirectory(geometries)
 
 # ============================================
+# Add matrix utilities
+# Defines the dg::matrix target
+
+add_subdirectory(matrix)
+
+# ============================================
 # Add dg benchmarks
 
 if(FELTOR_BUILD_BENCHMARKS)
@@ -320,7 +345,7 @@ if(FELTOR_BUILD_TESTS)
   foreach(test_path IN LISTS DG_TESTS)
     add_dg_test("${test_path}")
   endforeach()
-  if(FELTOR_USE_MPI)
+  if(FELTOR_WITH_MPI)
     foreach(test_path IN LISTS DG_MPI_TESTS)
       add_dg_mpi_test("${test_path}")
     endforeach()

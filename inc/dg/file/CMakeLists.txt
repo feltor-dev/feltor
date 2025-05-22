@@ -1,26 +1,30 @@
 # inc/dg/file/CMakeLists.txt
 
-# find ../../file -name "*.h" -not -name "*doc.h" | sort
-set(FILE_HEADERS
-  file.h
+# Files depending on json but not netcdf:
+set( JSON_HEADERS
   json_utilities.h
+  ../../json_wrapper.h
+  ../../json_probes.h
+  ../../probes_params.h
+)
+
+# Files depending on netcdf (and dg) but not json:
+set( NETCDF_HEADERS
   nc_utilities.h
   ../../file/easy_atts.h
   ../../file/easy_dims.h
   ../../file/easy_input.h
   ../../file/easy_output.h
-  ../../file/file.h
-  ../../file/json_probes.h
-  ../../file/json_utilities.h
-  ../../file/json_wrapper.h
   ../../file/nc_error.h
   ../../file/nc_file.h
   ../../file/nc_hyperslab.h
   ../../file/nc_mpi_file.h
-  ../../file/nc_utilities.h
-  ../../file/probes.h
-  ../../file/probes_params.h
   ../../file/records.h
+)
+# Files depending on both json and netcdf:
+set(FILE_HEADERS
+  file.h
+  ../../file/probes.h
 )
 
 # find ../../file -name "*t.cpp" | sort
@@ -38,43 +42,40 @@ set(FILE_TESTS
 # ============================================
 # Create DG file library target
 
-add_library(file INTERFACE ${FILE_HEADERS})
+add_library(file INTERFACE ${FILE_HEADERS} ${NETCDF_HEADERS} ${JSON_HEADERS})
+add_library(file::json INTERFACE ${JSON_HEADERS})
+add_library(file::netcdf INTERFACE ${NETCDF_HEADERS})
 add_library(dg::file ALIAS file)
-target_link_libraries(file INTERFACE dg::dg)
+add_library(dg::file::json ALIAS file::json)
+add_library(dg::file::netcdf ALIAS file::netcdf)
+
+target_link_libraries(file::netcdf INTERFACE dg::dg)
+target_link_libraries(file INTERFACE file::netcdf file::json)
 
 # ============================================
 # Add dependencies
 
-include(FeltorFetchDeps)
-
 if(FELTOR_USE_JSONCPP)
   # Must install separately, e.g. `sudo apt install libjsoncpp-dev`
-  find_package(jsoncpp)
-  if(jsoncpp_FOUND)
-    target_link_libraries(file INTERFACE jsoncpp_lib)
-  else()
-    message(WARNING "Failed to find jsoncpp, the target dg::file is incomplete")
-  endif()
+  CPMAddPackage( NAME jsoncpp
+    GITHUB_REPOSITORY open-source-parsers/jsoncpp
+    GIT_TAG master
+  )
+  get_target_property(JSON_INC_PATH jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
+  target_include_directories(file::json INTERFACE ${JSON_INC_PATH})
+  target_link_libraries( file::json INTERFACE jsoncpp_lib)
 else()
-  if(FELTOR_FETCH_JSON)
-    fetch_json()
-  else()
-    find_package(nlohmann_json REQUIRED)
-  endif()
-  if(TARGET nlohmann_json::nlohmann_json)
-    target_link_libraries(file INTERFACE nlohmann_json::nlohmann_json)
-  else()
-    message(WARNING "Failed to find nlohmann_json, the target dg::file is incomplete")
-  endif()
-  target_compile_definitions(file INTERFACE DG_USE_JSONHPP)
+  CPMAddPackage( "gh:nlohmann/json@3.12.0")
+  target_compile_definitions(file::json INTERFACE DG_USE_JSONHPP)
+  target_link_libraries( file::json INTERFACE nlohmann_json::nlohmann_json)
 endif()
 
 # Must install separately, e.g. `sudo apt install libnetcdf-dev`
 find_package(netCDF)
 if(TARGET netCDF::netcdf)
-  target_link_libraries(file INTERFACE netCDF::netcdf)
+  target_link_libraries(file::netcdf INTERFACE netCDF::netcdf)
 else()
-  message(WARNING "Failed to find netCDF, the target dg::file is incomplete")
+  message(WARNING "Failed to find netCDF, the target dg::file::netcdf is incomplete")
 endif()
 
 # ============================================

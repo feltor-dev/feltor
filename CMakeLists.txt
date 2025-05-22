@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26)
 
 # Project name and version
-project(feltor VERSION 8.1.1 LANGUAGES CXX)
+project(feltor VERSION 8.2.0 LANGUAGES CXX)
 
 ## Usage:
 ##
@@ -16,7 +16,7 @@ project(feltor VERSION 8.1.1 LANGUAGES CXX)
 ## with -DCCCL_THRUST_DEVICE_SYSTEM=CUDA. By default, the project will be built
 ## for GPU.
 ##
-## To enable MPI, set the option -DFELTOR_USE_MPI=ON.
+## To enable MPI, set the option -DFELTOR_WITH_MPI=ON.
 ##
 ## The location of dependencies can be specified with -DCMAKE_PREFIX_PATH. To
 ## automatically fetch dependencies from GitHub, set -DFELTOR_FETCH_DEPS=ON.
@@ -62,10 +62,10 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # ============================================
 # User Options
 
-# Set these using -DFELTOR_USE_MPI=ON, etc.
+# Set these using -DFELTOR_WITH_MPI=ON, etc.
 # By default, compiles single threaded on a CPU.
 
-option(FELTOR_USE_MPI "Switch on multiprocessing with MPI.")
+option(FELTOR_WITH_MPI "Switch on multiprocessing with MPI.")
 option(FELTOR_USE_JSONCPP "Use jsoncpp instead of nlohmann/json.")
 
 option(FELTOR_BUILD_EXE "Build Feltor executable." ${PROJECT_IS_TOP_LEVEL})
@@ -74,76 +74,45 @@ option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
 option(FELTOR_WITH_GLFW "Build with plotting support")
 
-option(FELTOR_FETCH_CCCL "Fetch NVIDIA's CUDA Core Compute Library (CCCL) from GitHub.")
-option(FELTOR_FETCH_VCL "Fetch Vector Class (version 2) library from GitHub.")
-option(FELTOR_FETCH_DRAW "Fetch DRAW from GitHub.")
-option(FELTOR_FETCH_CATCH2 "Fetch Catch2 from GitHub.")
-option(FELTOR_FETCH_JSON "Fetch nlohmann/json from GitHub.")
-option(FELTOR_FETCH_DEPS "Fetch dependencies from GitHub.")
-
-if(FELTOR_FETCH_DEPS)
-  # Toggle all FELTOR_FETCH_* options ON
-  # Note: Overrides -DFELTOR_FETCH_CCCL=OFF, etc.
-  set(FELTOR_FETCH_CCCL ON CACHE BOOL "Fetch NVIDIA's CUDA Core Compute Library (CCCL) from GitHub." FORCE)
-  set(FELTOR_FETCH_VCL ON CACHE BOOL "Fetch Vector Class (version 2) library from GitHub." FORCE)
-  set(FELTOR_FETCH_CATCH2 ON CACHE BOOL "Fetch Catch2 from GitHub." FORCE)
-  set(FELTOR_FETCH_JSON ON CACHE BOOL "Fetch nlohmann/json from GitHub." FORCE)
-  if(FELTOR_WITH_GLFW)
-    set(FELTOR_FETCH_DRAW ON CACHE BOOL "Fetch DRAW from GitHub." FORCE)
-  else()
-    set(FELTOR_FETCH_DRAW OFF CACHE BOOL "Fetch DRAW from GitHub." FORCE)
-  endif()
-endif()
-
-if(FELTOR_USE_JSONCPP)
-  set(FELTOR_FETCH_JSON OFF CACHE BOOL "Fetch nlohmann/json from GitHub." FORCE)
-endif()
-
-if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
-  enable_language(CUDA)
-  find_package(CUDAToolkit REQUIRED)
-endif()
+# ============================================
+# Make cpm package manager visible here and in subdirectories
+include( CPM)
 
 # ============================================
 # Set up testing dependencies
 
 if(FELTOR_BUILD_TESTS)
   enable_testing()
-  if(FELTOR_FETCH_CATCH2)
-    include(FeltorFetchDeps)
-    fetch_catch2()
-    # Make Catch2 utilties available to include()
-    list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
-  else()
-    find_package(Catch2 3 REQUIRED)
-  endif()
+  CPMAddPackage(
+    NAME Catch2
+    GITHUB_REPOSITORY catchorg/Catch2
+    VERSION 3.8.0
+  )
+  # Make Catch2 utilties available to include()
+  list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
 endif()
 
 # ============================================
 # Set up compiler-specific flags
 
 if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  # TODO: Should also set -Wextra and -Wpedantic.
   # Currently raises too many warnings!
   set(FELTOR_FLAGS_CXX
     "-Wall"
-    "-mfma"
-    "-mavx"
-    "-march=native"
+    "-Wextra"
+    "-Wpedantic"
+    #"-mfma"
+    #"-mavx"
+    #"-march=native"
   )
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   set(FELTOR_FLAGS_CXX
     "/W4"
-    "/arch:AVX2"
+    #"/arch:AVX2"
   )
 else()
   set(FELTOR_FLAGS_CXX "")
 endif()
-
-set(FELTOR_FLAGS_CUDA
-  "-arch=sm_61"
-  "--extended-lambda"
-)
 
 # =============================================
 # Set up DG header-only library
@@ -154,9 +123,20 @@ set(FELTOR_FLAGS_CUDA
 # - dg_tests
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
+if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
+  enable_language(CUDA)
+  find_package(CUDAToolkit REQUIRED)
+endif()
+#set(FELTOR_FLAGS_CUDA
+#  "-arch=sm_61"
+#  "--extended-lambda"
+#)
+
+
 
 # ============================================
 # Add FELTOR executable
+# TODO Add all other executables
 
 if(FELTOR_BUILD_EXE)
   add_subdirectory("${PROJECT_SOURCE_DIR}/src")
