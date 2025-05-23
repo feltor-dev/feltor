@@ -7,7 +7,7 @@ project(feltor VERSION 8.2.0 LANGUAGES CXX)
 ##
 ## Configure the project using:
 ##
-##   cmake --preset cpu
+##   cmake --preset cpu ## or gpu or omp or mpi-gpu or mpi-cpu or mpi-omp
 ##
 ## This will configure the project to build in the `build` directory, and will
 ## build a plain C++ project. It can be configured to run as a single-threaded
@@ -114,6 +114,12 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 else()
   set(FELTOR_FLAGS_CXX "")
 endif()
+
+if(FELTOR_WITH_MPI)
+  find_package(MPI REQUIRED)
+  # target_link_libraries(dg INTERFACE MPI::MPI_CXX)
+endif()
+
 
 # =============================================
 # Set up DG header-only library

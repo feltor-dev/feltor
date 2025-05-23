@@ -28,6 +28,15 @@
                 "CMAKE_CUDA_ARCHITECTURES" : "native",
                 "CMAKE_CUDA_FLAGS" : "-mavx -mfma -O3"
             }
+        },
+        {
+            "name" : "mpi-cpu",
+            "displayName" : "Multi core pure MPI",
+            "binaryDir" : "build/mpi-cpu",
+            "inherits" : "cpu",
+            "cacheVariables" : {
+                "FELTOR_WITH_MPI" : "ON"
+            }
         }
     ]
 }

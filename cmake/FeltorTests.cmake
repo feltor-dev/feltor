@@ -50,6 +50,7 @@ function(add_dg_mpi_test test_path)
   catch_discover_tests(${test_name})
 endfunction()
 
+## TODO file MPI tests
 function(add_file_test test_path)
   if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
     set_source_files_properties("${test_path}" PROPERTIES LANGUAGE CUDA)

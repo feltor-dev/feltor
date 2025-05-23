@@ -38,6 +38,7 @@ set(FILE_TESTS
   ../../file/probes_parser_t.cpp
   ../../file/probes_t.cpp
 )
+## TODO MPI tests are missing (see Makefile MPITargets!)
 
 # ============================================
 # Create DG file library target

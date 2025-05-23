@@ -211,6 +211,7 @@ set(DG_TESTS
 
 # These are pure MPI tests
 # find . -type f -name "*mpit.cpp" | sort
+## TODO some mpi tests are missing (see Makefile MPITargets!)
 set(DG_MPI_TESTS
   backend/mpi_exblas_mpit.cpp
   backend/mpi_gather_kron_mpit.cpp
@@ -288,13 +289,7 @@ endif()
 target_compile_options(dg INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
 
 
-# MW I don't think this is needed
-#if(FELTOR_WITH_MPI)
-#  find_package(MPI REQUIRED)
-#  target_link_libraries(dg INTERFACE MPI::MPI_CXX)
-#endif()
-
-# MW: I think cccl already links OpenMP in this case
+# MW: cccl already links OpenMP
 # if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
 #   find_package(OpenMP REQUIRED)
 #   target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)

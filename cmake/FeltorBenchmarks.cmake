@@ -1,3 +1,4 @@
+# TODO mpi benchmarks missing
 function(add_dg_benchmark benchmark_path)
   if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
     set_source_files_properties("${benchmark_path}" PROPERTIES LANGUAGE CUDA)
