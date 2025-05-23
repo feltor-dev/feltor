@@ -7,7 +7,7 @@ project(feltor VERSION 8.2.0 LANGUAGES CXX)
 ##
 ## Configure the project using:
 ##
-##   cmake -Bbuild .
+##   cmake --preset cpu
 ##
 ## This will configure the project to build in the `build` directory, and will
 ## build a plain C++ project. It can be configured to run as a single-threaded
@@ -123,11 +123,15 @@ endif()
 # - dg_benchmarks
 # - dg_tests
 
-add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
+# This is a somewhat chicken-egg problem: The cuda language can only be enabled
+# once in the project. But before including the cccl package the device macro
+# is not defined. So we must assume the user defines CCCL_THRUST_DEVICE_SYSTEM
+# and/or if they do not, then the default is also CUDA
 if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
   enable_language(CUDA)
   find_package(CUDAToolkit REQUIRED)
 endif()
+add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
 #set(FELTOR_FLAGS_CUDA
 #  "-arch=sm_61"
 #  "--extended-lambda"

@@ -8,7 +8,6 @@ function(add_dg_benchmark benchmark_path)
   # Create the benchmark executable and link dependencies
   add_executable(${benchmark_name} "${benchmark_path}")
   target_link_libraries(${benchmark_name} PRIVATE dg::dg)
-  target_link_libraries(${benchmark_name} PRIVATE dg::file)
   # Add as dependency to the dg_benchmarks target
   add_dependencies(dg_benchmarks ${benchmark_name})
   # Ensure benchmarks are built in their own directory

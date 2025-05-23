@@ -26,7 +26,7 @@
             "cacheVariables" : {
                 "CCCL_THRUST_DEVICE_SYSTEM" : "CUDA",
                 "CMAKE_CUDA_ARCHITECTURES" : "native",
-                "CMAKE_CXX_FLAGS" : "-mavx -mfma -O3"
+                "CMAKE_CUDA_FLAGS" : "-mavx -mfma -O3"
             }
         }
     ]

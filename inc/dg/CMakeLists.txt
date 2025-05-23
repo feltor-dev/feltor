@@ -283,8 +283,9 @@ if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQU
   # CUDA language must be enabled if device is CUDA
   target_link_libraries(dg INTERFACE CUDA::cusparse)
   target_compile_features(dg INTERFACE cuda_std_17)
-  target_compile_options(dg INTERFACE "--extended-lambda")
 endif()
+# https://stackoverflow.com/questions/53256405/howto-pass-flag-to-nvcc-compiler-in-cmake
+target_compile_options(dg INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
 
 
 # MW I don't think this is needed
