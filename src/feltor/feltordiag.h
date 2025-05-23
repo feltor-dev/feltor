@@ -7,10 +7,10 @@
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
 
-#include "feltor/feltor.h"
-#include "feltor/parameters.h"
+#include "feltor.h"
+#include "parameters.h"
 
-#include "feltor/init.h"
+#include "init.h"
 #include "common.h"
 
 namespace feltor{

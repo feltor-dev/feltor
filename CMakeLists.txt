@@ -46,7 +46,6 @@ project(feltor VERSION 8.2.0 LANGUAGES CXX)
 ##
 ##   ctest --test-dir=build
 ##
-## However, some tests currently require user input, and will hang when run.
 ## Individual tests may be run using:
 ##
 ##   ctest --test-dir=build -R blas
@@ -66,6 +65,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # By default, compiles single threaded on a CPU.
 
 option(FELTOR_WITH_MPI "Switch on multiprocessing with MPI.")
+# TODO Shouldn't the file library expose this option?
 option(FELTOR_USE_JSONCPP "Use jsoncpp instead of nlohmann/json.")
 
 option(FELTOR_BUILD_EXE "Build Feltor executable." ${PROJECT_IS_TOP_LEVEL})
@@ -88,7 +88,8 @@ if(FELTOR_BUILD_TESTS)
     GITHUB_REPOSITORY catchorg/Catch2
     VERSION 3.8.0
   )
-  # Make Catch2 utilties available to include()
+  # Make include(Catch2) available according to
+  # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md
   list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
 endif()
 
@@ -139,6 +140,6 @@ endif()
 # TODO Add all other executables
 
 if(FELTOR_BUILD_EXE)
-  add_subdirectory("${PROJECT_SOURCE_DIR}/src")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
 endif()
 

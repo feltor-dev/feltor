@@ -3,9 +3,9 @@
 # Files depending on json but not netcdf:
 set( JSON_HEADERS
   json_utilities.h
-  ../../json_wrapper.h
-  ../../json_probes.h
-  ../../probes_params.h
+  ../../file/json_wrapper.h
+  ../../file/json_probes.h
+  ../../file/probes_params.h
 )
 
 # Files depending on netcdf (and dg) but not json:
@@ -43,39 +43,37 @@ set(FILE_TESTS
 # Create DG file library target
 
 add_library(file INTERFACE ${FILE_HEADERS} ${NETCDF_HEADERS} ${JSON_HEADERS})
-add_library(file::json INTERFACE ${JSON_HEADERS})
-add_library(file::netcdf INTERFACE ${NETCDF_HEADERS})
+add_library(json INTERFACE ${JSON_HEADERS})
+add_library(netcdf INTERFACE ${NETCDF_HEADERS})
 add_library(dg::file ALIAS file)
-add_library(dg::file::json ALIAS file::json)
-add_library(dg::file::netcdf ALIAS file::netcdf)
+add_library(dg::file::json ALIAS json)
+add_library(dg::file::netcdf ALIAS netcdf)
 
-target_link_libraries(file::netcdf INTERFACE dg::dg)
-target_link_libraries(file INTERFACE file::netcdf file::json)
+target_link_libraries(netcdf INTERFACE dg::dg)
+target_link_libraries(file INTERFACE netcdf json)
 
 # ============================================
 # Add dependencies
 
 if(FELTOR_USE_JSONCPP)
-  # Must install separately, e.g. `sudo apt install libjsoncpp-dev`
   CPMAddPackage( NAME jsoncpp
     GITHUB_REPOSITORY open-source-parsers/jsoncpp
-    GIT_TAG master
+    GIT_TAG 1.9.6
+    OPTIONS "JSONCPP_WITH_TESTS OFF"
   )
-  get_target_property(JSON_INC_PATH jsoncpp_lib INTERFACE_INCLUDE_DIRECTORIES)
-  target_include_directories(file::json INTERFACE ${JSON_INC_PATH})
-  target_link_libraries( file::json INTERFACE jsoncpp_lib)
+  target_link_libraries( json INTERFACE jsoncpp_lib)
 else()
   CPMAddPackage( "gh:nlohmann/json@3.12.0")
-  target_compile_definitions(file::json INTERFACE DG_USE_JSONHPP)
-  target_link_libraries( file::json INTERFACE nlohmann_json::nlohmann_json)
+  target_compile_definitions(json INTERFACE DG_USE_JSONHPP)
+  target_link_libraries( json INTERFACE nlohmann_json::nlohmann_json)
 endif()
 
 # Must install separately, e.g. `sudo apt install libnetcdf-dev`
 find_package(netCDF)
 if(TARGET netCDF::netcdf)
-  target_link_libraries(file::netcdf INTERFACE netCDF::netcdf)
+  target_link_libraries(netcdf INTERFACE netCDF::netcdf)
 else()
-  message(WARNING "Failed to find netCDF, the target dg::file::netcdf is incomplete")
+  message(WARNING "Failed to find netCDF, the target dg::netcdf is incomplete")
 endif()
 
 # ============================================

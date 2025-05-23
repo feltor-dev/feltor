@@ -1,3 +1,4 @@
+# https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md
 include(CTest)
 include(Catch)
 
