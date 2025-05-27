@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/math/special_functions.hpp> // has to be included before lapack in certain versions
-#include "lapacke.h"
 #include "dg/algorithm.h"
 
 #include "functors.h"
@@ -14,21 +13,32 @@ namespace mat{
 ///@cond
 namespace lapack
 {
-// Resources:
-// FORTRAN     https://www.netlib.org/lapack/explore-html/index.html
-// C-Bindings  https://www.netlib.org/lapack/lapacke.html
-// How to convert the fortran binding to our interface:
-// 1. Go to relevant Fortran routine ( usually there are separate routine for
-// each value type; single, double  ,complex )
-// 2.0 The C-bindings return a lapack_int "info": throw an error if it is not 0
-// 2.1 When matrices are involved they take as first parameter a lapack_int "order"  LAPACK_COL_MAJOR or LAPACK_ROW_MAJOR (Using the latter is slower because it needs to transpose, but is how e.g. our SquareMatrix is ordered)
-// 3. Replace all arrays with a ContainerType in our interface
-// 4. Use C++-17 if constexpr to dispatch value type
+// MW: Update 27.5.2025
+// Unfortunately, the CMake support for LAPACKE is rather not straightforward
+// while LAPACK is supported out of the box with find_package( LAPACK)
+// so we rather call the fortran functions from C directly ourselves.
 //
+// This is how you add new routines:
+// 1. Go find relevant Fortran routine ( usually there are separate routine for
+// each value type; single, double  ,complex )
+// FORTRAN     https://www.netlib.org/lapack/explore-html/index.html
+//
+// 2. Call the fortran function from C packaged in a nice C++ interface!
+// We here follow
+// https://scicomp.stackexchange.com/questions/26395/how-to-start-using-lapack-in-c
+// 2.1 Add the extern "C" binding below, where all parameters are pointers
+// 2.2 When matrices are involved note that the Fortran ordering is "column
+// major", which is the transpose of how e.g. our SquareMatrix is ordered)
+// 2.3. Replace all arrays with a ContainerType in our interface
+// 2.4. Use C++-17 if constexpr to dispatch value type
+//
+extern "C" {
+extern void dstev_(char*,int*,double*,double*,double*,int*,double*,int*);
+extern void sstev_(char*,int*,float*,float*,float*,int*,float*,int*);
+}
 // Compute Eigenvalues and, optionally, Eigenvectors of a real symmetric tridiagonal matrix A
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3>
 void stev(
-    lapack_int order,  // LAPACK_ROW_MAJOR or LAPACK_COL_MAJOR
     char job,          // 'N' Compute Eigenvalues only, 'V' Compute Eigenvalues and Eigenvectors
     ContainerType0& D, // diagonal of T on input, Eigenvalues on output
     ContainerType1& E, // subdiagonal of T on input |size D.size()-1 ; in E[0] - E[D.size()-2]|; destroyed on output
@@ -51,11 +61,11 @@ void stev(
 
     // job = 'N' Compute Eigenvalues only
     // job = 'V' Compute Eigenvalues and Eigenvectors
-    lapack_int N = D.size();
+    int N = D.size();
     value_type * D_ptr = thrust::raw_pointer_cast( &D[0]);
     value_type * E_ptr = thrust::raw_pointer_cast( &E[0]);
     value_type * Z_ptr = nullptr;
-    lapack_int ldz = N;
+    int ldz = N;
     value_type * work_ptr = nullptr;
     if( job == 'V')
     {
@@ -63,11 +73,11 @@ void stev(
         work_ptr = thrust::raw_pointer_cast( &work[0]);
     }
 
-    lapack_int info;
+    int info;
     if constexpr ( std::is_same_v<value_type, double>)
-        info = LAPACKE_dstev_work( order, job, N, D_ptr, E_ptr, Z_ptr, ldz, work_ptr);
+        dstev_( &job, &N, D_ptr, E_ptr, Z_ptr, &ldz, work_ptr, &info);
     else if constexpr ( std::is_same_v<value_type, float>)
-        info = LAPACKE_sstev_work( order, job, N, D_ptr, E_ptr, Z_ptr, ldz, work_ptr);
+        sstev_( &job, &N, D_ptr, E_ptr, Z_ptr, ldz, work_ptr, &info);
     if( info != 0)
     {
         throw dg::Error( dg::Message(_ping_) << "stev failed with error code "<<info<<"\n");
@@ -667,7 +677,7 @@ std::array<value_type, 2> compute_extreme_EV( const dg::TriDiagonal<thrust::host
     dg::SquareMatrix<value_type> evecs;
     // We use P as "subdiagonal" because it is symmetric and the first element must be on 0 index
     thrust::host_vector<value_type> evals( T.O), subdiagonal( T.P), Z, work;
-    lapack::stev(LAPACK_COL_MAJOR, 'N', evals,  subdiagonal, Z, work);
+    lapack::stev('N', evals,  subdiagonal, Z, work);
     value_type EVmax = dg::blas1::reduce( evals, 0., dg::AbsMax<value_type>());
     value_type EVmin = dg::blas1::reduce( evals, EVmax, dg::AbsMin<value_type>());
     return std::array<value_type, 2>{EVmin, EVmax};

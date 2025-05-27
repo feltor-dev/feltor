@@ -2,7 +2,6 @@
 #include <iomanip>
 
 #include <thrust/device_vector.h>
-#include "dg/file/file.h"
 #include "dg/algorithm.h"
 
 #include "tensorelliptic.h"
