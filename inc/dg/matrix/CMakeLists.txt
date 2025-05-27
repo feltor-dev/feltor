@@ -25,15 +25,39 @@ set(MATRIX_HEADERS
 # Some can be compiled for MPI
 # find ../../matrix -name "*t.cpp" | sort
 set(MATRIX_TESTS
+  ../../matrix/exp_runge_kutta_t.cu
+  ../../matrix/functors_t.cu
+  ../../matrix/invtridiag_t.cu
+  ../../matrix/polarization_init_t.cu
 )
 
 # find ../../matrix -name "*b.cpp" | sort
 set(MATRIX_BENCHMARKS
+  ../../matrix/lanczos_b.cu
+  #../../matrix/lanczos_mpib.cu
+  ../../matrix/matrixfunction_b.cu
+  ../../matrix/matrixsqrt_b.cu
+  ../../matrix/polarization_b.cu
+  ../../matrix/tensorelliptic2d_b.cu
+  ../../matrix/tridiaginv_b.cu
+)
+# These targets need to link to netcdf
+# Test grep "file.h" * in matrix
+set( MATRIX_BENCHMARKS_WITH_FILE
+  ../../matrix/polarization_b.cu
+  ../../matrix/polarization_init_t.cu
 )
 
 
 # ============================================
 # Create DG matrix library target
+
+add_library(dg_matrix INTERFACE ${MATRIX_HEADERS})
+set_property(TARGET dg_geometries PROPERTY EXPORT_NAME geometries)
+add_library(feltor::dg::matrix ALIAS dg_matrix)
+target_link_libraries(dg_matrix INTERFACE dg_dg)
+target_link_libraries(dg_matrix INTERFACE Boost::math) # Boost::math builds container and random
+
 
 # Requires Boost.
 
@@ -49,41 +73,42 @@ CPMAddPackage(
 
 message(STATUS "Boost version: ${Boost_VERSION}")
 
-add_library(matrix INTERFACE ${MATRIX_HEADERS})
-add_library(dg::matrix ALIAS matrix)
-target_link_libraries(matrix INTERFACE dg::dg)
-target_link_libraries(matrix INTERFACE Boost::math) # Boost::math builds container and random
-
-# Requires lapacke.
-# https://stackoverflow.com/questions/75835663/how-to-link-lapacke-to-a-c-project-using-cmake
-include( ../../../cmake/LAPACKE.cmake)
+# Requires LAPACK
 find_package( LAPACK REQUIRED)
-find_package( LAPACKE REQUIRED)
 if(NOT LAPACK_FOUND)
-  message(WARNING "LAPACK not found. The dg::matrix target will not be created.")
+  message(WARNING "LAPACK not found. The dg_matrix target will not be created.")
   return()
 endif()
-target_link_libraries(matrix INTERFACE LAPACKE)
+target_link_libraries(dg_matrix INTERFACE ${LAPACK_LIBRARIES})
 
 
 # ============================================
 # Add matrix tests
-# TODO Disabled for now, tests are not using Catch2
+# TODO Disabled for now, tests are not using Catch2 so compiled as benchmarks
 
 # if(FELTOR_BUILD_TESTS)
 #   include(FeltorTests)
-#   foreach(test_path IN LISTS GEOMETRIES_TESTS)
-#     add_matrix_test("${test_path}")
+#   foreach(test_path IN LISTS MATRIX_TESTS)
+#     add_dg_test("${test_path}")
 #   endforeach()
 # endif()
 
 # ============================================
 # Add matrix benchmarks
-# TODO Disabled for now, benchmark are using cu file endings
 
-# if(FELTOR_BUILD_BENCHMARKS)
-#   include(FeltorBenchmarks)
-#   foreach(benchmark_path IN LISTS GEOMETRIES_BENCHMARKS)
-#     add_dg_matrix_benchmark("${benchmark_path}")
-#   endforeach()
-# endif()
+if(FELTOR_BUILD_BENCHMARKS)
+  include(FeltorBenchmarks)
+  if( FELTOR_WITH_MPI)
+  else()
+    foreach(benchmark_path IN LISTS MATRIX_BENCHMARKS MATRIX_TESTS)
+        if( "${benchmark_path}" IN_LIST MATRIX_BENCHMARKS_WITH_FILE AND FELTOR_FILE_WITH_NETCDF)
+            add_dg_benchmark("${benchmark_path}" "matrix" OFF target_name)
+            target_link_libraries( ${target_name} PRIVATE dg_matrix)
+            target_link_libraries( ${target_name} PRIVATE dg_file)
+        elseif( NOT "${benchmark_path}" IN_LIST MATRIX_BENCHMARKS_WITH_FILE )
+            add_dg_benchmark("${benchmark_path}" "matrix" OFF target_name)
+            target_link_libraries( ${target_name} PRIVATE dg_matrix)
+        endif()
+    endforeach()
+  endif()
+endif()

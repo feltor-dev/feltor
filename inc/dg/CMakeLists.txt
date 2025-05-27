@@ -225,6 +225,20 @@ set(DG_MPI_TESTS
   topology/stencil_mpit.cpp
 )
 
+# Manually list tests that can be compiled for MPI
+# Cf Makefile, backend/Makefile and topology/Makefile
+list( APPEND DG_MPI_TESTS
+    topology/evaluation_t.cpp
+    topology/dx_t.cpp
+    topology/derivatives_t.cpp
+    topology/projection_t.cpp
+    arakawa_t.cpp
+    poisson_t.cpp
+    bicgstabl_t.cpp
+    blas_t.cpp
+    blas1_t.cpp
+)
+
 # ============================================
 # Create DG library target
 
@@ -233,24 +247,21 @@ set(DG_MPI_TESTS
 # This means it has no sources, but can link/be linked to other
 # libraries, have dependencies, etc. These properties are then
 # inherited by any target that links to it.
-add_library(dg INTERFACE ${DG_HEADERS})
+add_library(dg_dg INTERFACE ${DG_HEADERS})
+# When installing the target we prepend the namespace dg::
+set_property(TARGET dg_dg PROPERTY EXPORT_NAME dg)
 # Create an alias: used to link to the library from external projects.
-add_library(dg::dg ALIAS dg)
+# consistently with either subdirectory'd and installed library
+add_library(feltor::dg::dg ALIAS dg_dg)
+
+# Set the minimum C++ standard
+target_compile_features(dg_dg INTERFACE cxx_std_17)
 
 # Ensure that `#include "dg/..."` works
-# TODO remove this after other libs have their own CMakeLists.txt
-target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
-# Set the minimum C++ standard
-target_compile_features(dg INTERFACE cxx_std_17)
-# Set flags
-# MW I think compiler opimization flags should be set on executable since they are different on different machines
-# CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
-# may be set even when compiling for CUDA.
-# target_compile_options(dg INTERFACE
-#  "${FELTOR_FLAGS_CXX}"
-#  $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
-#)
-
+# for both build and install phases (cf "Professional CMake, Ch Install")
+target_include_directories(dg_dg INTERFACE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc>
+)
 
 # ============================================
 # Add dg dependencies
@@ -273,26 +284,26 @@ if( vcl_ADDED)
     target_compile_definitions( vcl::vcl INTERFACE VCL_NO_INCLUDE_PREFIX)
 endif()
 
-target_link_libraries(dg INTERFACE vcl::vcl)
+target_link_libraries(dg_dg INTERFACE vcl::vcl)
 
 # Add cccl
 CPMAddPackage( "gh:NVIDIA/cccl#v2.8.0")
 
-target_link_libraries(dg INTERFACE CCCL::CCCL)
+target_link_libraries(dg_dg INTERFACE CCCL::CCCL)
 
 if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
   # CUDA language must be enabled if device is CUDA
-  target_link_libraries(dg INTERFACE CUDA::cusparse)
-  target_compile_features(dg INTERFACE cuda_std_17)
+  target_link_libraries(dg_dg INTERFACE CUDA::cusparse)
+  target_compile_features(dg_dg INTERFACE cuda_std_17)
 endif()
 # https://stackoverflow.com/questions/53256405/howto-pass-flag-to-nvcc-compiler-in-cmake
-target_compile_options(dg INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
+target_compile_options(dg_dg INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
 
 
 # MW: cccl already links OpenMP
 # if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
 #   find_package(OpenMP REQUIRED)
-#   target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
+#   target_link_libraries(dg_dg INTERFACE OpenMP::OpenMP_CXX)
 # endif()
 
 # =============================================
@@ -307,44 +318,66 @@ endif()
 
 # ============================================
 # Add file utilities
-# Defines the dg::file target
+# Defines the dg_file target
 
 add_subdirectory(file)
 
 # ============================================
 # Add geometries utilities
-# Defines the dg::geometries target
+# Defines the dg_geometries target
 
 add_subdirectory(geometries)
 
 # ============================================
 # Add matrix utilities
-# Defines the dg::matrix target
+# Defines the dg_matrix target
 
-add_subdirectory(matrix)
+option(FELTOR_DG_WITH_MATRIX "Configure dg_matrix target. Depends on Boost and Lapack." ON)
+if(FELTOR_DG_WITH_MATRIX)
+    add_subdirectory(matrix)
+endif()
+
 
 # ============================================
 # Add dg benchmarks
 
 if(FELTOR_BUILD_BENCHMARKS)
-  include(FeltorBenchmarks)
-  foreach(benchmark_path IN LISTS DG_BENCHMARKS)
-    add_dg_benchmark("${benchmark_path}")
-  endforeach()
+    include(FeltorBenchmarks)
+    # There are no backend and topology benchmarks
+    # All benchmarks can be compiled for MPI
+    foreach(benchmark_path IN LISTS DG_BENCHMARKS)
+        add_dg_benchmark("${benchmark_path}" "" ${FELTOR_WITH_MPI} target_name )
+    endforeach()
 endif()
 
 # ============================================
 # Add dg tests
+# We need to parse the paths to be sure to put topology and backend tests in the right folder
 
 if(FELTOR_BUILD_TESTS)
-  include(FeltorTests)
-  foreach(test_path IN LISTS DG_TESTS)
-    add_dg_test("${test_path}")
-  endforeach()
-  if(FELTOR_WITH_MPI)
-    foreach(test_path IN LISTS DG_MPI_TESTS)
-      add_dg_mpi_test("${test_path}")
-    endforeach()
-  endif()
+    include(FeltorTests)
+    if(FELTOR_WITH_MPI)
+        foreach(test_path IN LISTS DG_MPI_TESTS)
+            cmake_path( REMOVE_FILENAME test_path OUTPUT_VARIABLE outvar)
+            if( outvar STREQUAL "topology/")
+                add_dg_test("${test_path}" "topology" ON target_name )
+            elseif( outvar STREQUAL "backend/")
+                add_dg_test("${test_path}" "backend" ON target_name )
+            else()
+                add_dg_test("${test_path}" "" ON target_name )
+            endif()
+        endforeach()
+    else()
+        foreach(test_path IN LISTS DG_TESTS)
+            cmake_path( REMOVE_FILENAME test_path OUTPUT_VARIABLE outvar)
+            if( outvar STREQUAL "topology/")
+                add_dg_test("${test_path}" "topology" OFF target_name )
+            elseif( outvar STREQUAL "backend/")
+                add_dg_test("${test_path}" "backend" OFF target_name )
+            else()
+                add_dg_test("${test_path}" "" OFF target_name )
+            endif()
+        endforeach()
+    endif()
 endif()
 

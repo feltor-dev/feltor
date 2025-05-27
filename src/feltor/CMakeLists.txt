@@ -1,56 +1,74 @@
 # ============================================
 # Set up FELTOR
-# TODO Add other executables like feltordiag interpolate_in_3d feltor_pol multigrid_b and convert_b
 # TODO Should pdf documentation also be generated in cmake?
 
 set(FELTOR_HEADERS
-    "feltor.h"
-    "common.h"
-    "feltordiag.h"
-    "init_from_file.h"
-    "init.h"
-    "parameters.h"
+    feltor.h
+    common.h
+    feltordiag.h
+    init_from_file.h
+    init.h
+    parameters.h
+)
+set( FELTOR_TARGETS
+    feltor
+    feltor_pol
+    feltordiag
+    interpolate_in_3d
+    multigrid_b
+    convert_b
 )
 
-
-add_executable(feltor "feltor.cpp" ${FELTOR_HEADERS})
-add_executable(feltor::feltor ALIAS feltor)
-
-if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
-  set_source_files_properties("feltor.cpp" PROPERTIES LANGUAGE CUDA)
-endif()
-
-target_include_directories(feltor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+set( FELTOR_MPI_TARGETS
+    feltor
+    feltor_pol
+)
 
 if(FELTOR_WITH_MPI)
-    find_package(MPI REQUIRED)
-    target_link_libraries(feltor PRIVATE MPI::MPI_CXX)
-    target_compile_definitions(feltor PRIVATE WITH_MPI)
+    foreach ( target IN LISTS FELTOR_MPI_TARGETS)
+        if( ${target} STREQUAL feltor_pol)
+            add_executable(feltor_feltor_pol "feltor.cpp" ${FELTOR_HEADERS})
+        else()
+            add_executable(feltor_${target} "${target}.cpp" ${FELTOR_HEADERS})
+        endif()
+        add_executable(feltor::feltor::${target} ALIAS feltor_${target})
+        # Change name of executable
+        set_target_properties( feltor_${target} PROPERTIES OUTPUT_NAME ${target})
+
+        target_link_libraries(feltor_${target} PRIVATE feltor::dg::dg)
+        target_link_libraries(feltor_${target} PRIVATE feltor::dg::geometries)
+        target_link_libraries(feltor_${target} PRIVATE feltor::dg::file)
+
+        target_link_libraries(feltor_${target} PRIVATE MPI::MPI_CXX)
+        target_compile_definitions(feltor_${target} PRIVATE WITH_MPI)
+    endforeach()
+else()
+    foreach( target IN LISTS FELTOR_TARGETS)
+        # The executable will live in the current folder i.e. build/src/feltor/
+        if( ${target} STREQUAL feltor_pol)
+            add_executable(feltor_feltor_pol "feltor.cpp" ${FELTOR_HEADERS})
+        else()
+            add_executable(feltor_${target} "${target}.cpp" ${FELTOR_HEADERS})
+        endif()
+        add_executable(feltor::feltor::${target} ALIAS feltor_${target})
+        # Change name of executable
+        set_target_properties( feltor_${target} PROPERTIES OUTPUT_NAME ${target})
+
+        # target_include_directories(feltor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+        # ============================================
+        # Add dependencies
+
+        target_link_libraries(feltor_${target} PRIVATE feltor::dg::dg)
+        target_link_libraries(feltor_${target} PRIVATE feltor::dg::geometries)
+        target_link_libraries(feltor_${target} PRIVATE feltor::dg::file)
+    endforeach()
 endif()
 
-# ============================================
-# Add dependencies
-
-target_link_libraries(feltor PRIVATE dg::dg)
-target_link_libraries(feltor PRIVATE dg::geometries)
-target_link_libraries(feltor PRIVATE dg::file)
 
 if(FELTOR_WITH_GLFW)
-  if(FELTOR_WITH_MPI)
-    message(WARNING "GLFW is not compatible with MPI when building FELTOR")
-    target_compile_definitions(feltor PRIVATE WITHOUT_GLFW)
-  else()
-    CPMAddPackage( NAME draw
-        GIT_REPOSITORY https://github.com/feltor-dev/draw.git
-        GIT_TAG master
-    )
-    if( draw_ADDED)
-        message( STATUS "Found Draw library in ${draw_SOURCE_DIR}")
-    endif()
-    # Draw Links to GLFW and OpenGL
-    # Must be installed separately, e.g. `sudo apt install libglfw3-dev`
-    target_link_libraries(feltor PRIVATE draw::draw)
-  endif()
+    target_link_libraries(feltor_feltor PRIVATE draw::draw)
 else()
-    target_compile_definitions(feltor PRIVATE WITHOUT_GLFW)
+    target_compile_definitions(feltor_feltor PRIVATE WITHOUT_GLFW)
 endif()
+target_compile_definitions(feltor_feltor_pol PRIVATE WITHOUT_GLFW)

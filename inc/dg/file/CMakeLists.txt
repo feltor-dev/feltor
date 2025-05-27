@@ -28,35 +28,61 @@ set(FILE_HEADERS
 )
 
 # find ../../file -name "*t.cpp" | sort
+# Split out json tests
 set(FILE_TESTS
   ../../file/easy_atts_t.cpp
   ../../file/easy_dims_t.cpp
   ../../file/easy_output_t.cpp
-  ../../file/json_wrapper_t.cpp
   ../../file/nc_file_t.cpp
   ../../file/nc_utilities_t.cpp
-  ../../file/probes_parser_t.cpp
   ../../file/probes_t.cpp
 )
-## TODO MPI tests are missing (see Makefile MPITargets!)
+
+set( JSON_TESTS
+  ../../file/json_wrapper_t.cpp
+  ../../file/probes_parser_t.cpp
+)
+
+# Find out with grep WITH_MPI *
+set( JSON_MPI_TESTS
+  ../../file/probes_parser_t.cpp
+)
+# Only easy_atts_t cannot be compiled for MPI
+set(FILE_MPI_TESTS
+  ../../file/easy_dims_t.cpp
+  ../../file/easy_output_t.cpp
+  ../../file/nc_file_t.cpp
+  ../../file/nc_utilities_t.cpp
+  ../../file/probes_t.cpp
+)
+
+# ============================================
+# User Options
+option(FELTOR_FILE_WITH_JSONCPP "Use jsoncpp instead of nlohmann/json." OFF)
+option(FELTOR_FILE_WITH_NETCDF "Configure dg_file_netcdf and dg_file_file targets. Depends on NetCDF." ON)
 
 # ============================================
 # Create DG file library target
+add_library(dg_file_json INTERFACE ${JSON_HEADERS})
+set_property(TARGET dg_file_json PROPERTY EXPORT_NAME json)
+add_library(feltor::dg::file::json ALIAS dg_file_json)
 
-add_library(file INTERFACE ${FILE_HEADERS} ${NETCDF_HEADERS} ${JSON_HEADERS})
-add_library(json INTERFACE ${JSON_HEADERS})
-add_library(netcdf INTERFACE ${NETCDF_HEADERS})
-add_library(dg::file ALIAS file)
-add_library(dg::file::json ALIAS json)
-add_library(dg::file::netcdf ALIAS netcdf)
+if( FELTOR_FILE_WITH_NETCDF)
+    add_library(dg_file INTERFACE ${FILE_HEADERS} ${NETCDF_HEADERS} ${JSON_HEADERS})
+    add_library(dg_file_netcdf INTERFACE ${NETCDF_HEADERS})
+    set_property(TARGET dg_file PROPERTY EXPORT_NAME file)
+    set_property(TARGET dg_file_netcdf PROPERTY EXPORT_NAME netcdf)
+    add_library(feltor::dg::file ALIAS dg_file)
+    add_library(feltor::dg::file::netcdf ALIAS dg_file_netcdf)
 
-target_link_libraries(netcdf INTERFACE dg::dg)
-target_link_libraries(file INTERFACE netcdf json)
+    target_link_libraries(dg_file_netcdf INTERFACE dg_dg)
+    target_link_libraries(dg_file INTERFACE dg_file_netcdf dg_file_json)
+endif()
 
 # ============================================
 # Add dependencies
 
-if(FELTOR_USE_JSONCPP)
+if(FELTOR_FILE_WITH_JSONCPP)
   CPMAddPackage( NAME jsoncpp
     GITHUB_REPOSITORY open-source-parsers/jsoncpp
     GIT_TAG 1.9.6
@@ -65,52 +91,75 @@ if(FELTOR_USE_JSONCPP)
   target_link_libraries( json INTERFACE jsoncpp_lib)
 else()
   CPMAddPackage( "gh:nlohmann/json@3.12.0")
-  target_compile_definitions(json INTERFACE DG_USE_JSONHPP)
-  target_link_libraries( json INTERFACE nlohmann_json::nlohmann_json)
+  target_compile_definitions(dg_file_json INTERFACE DG_USE_JSONHPP)
+  target_link_libraries( dg_file_json INTERFACE nlohmann_json::nlohmann_json)
 endif()
 
-# Must install separately, e.g. `sudo apt install libnetcdf-dev`
-find_package(netCDF)
-if(TARGET netCDF::netcdf)
-  target_link_libraries(netcdf INTERFACE netCDF::netcdf)
-else()
-  message(WARNING "Failed to find netCDF, the target dg::netcdf is incomplete")
+if( FELTOR_FILE_WITH_NETCDF)
+    # Must install separately, e.g. `sudo apt install libnetcdf-dev`
+    find_package(netCDF)
+    if(TARGET netCDF::netcdf)
+      target_link_libraries(dg_file_netcdf INTERFACE netCDF::netcdf)
+    else()
+      message(WARNING "Failed to find netCDF, the target dg_netcdf is incomplete")
+    endif()
+
+    # ============================================
+    # Add compile definitions
+
+    execute_process(
+        COMMAND git rev-parse HEAD
+        OUTPUT_VARIABLE GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
+    message(STATUS "Git hash: ${GIT_HASH}")
+
+    execute_process(
+        COMMAND git branch --show-current
+        OUTPUT_VARIABLE GIT_BRANCH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
+    message(STATUS "Git branch: ${GIT_BRANCH}")
+
+    string(TIMESTAMP COMPILE_TIME "%Y-%m-%d %H:%M:%S %Z")
+    message(STATUS "Compile time: ${COMPILE_TIME}")
+
+    target_compile_definitions(dg_file INTERFACE
+        GIT_HASH="${GIT_HASH}"
+        GIT_BRANCH="${GIT_BRANCH}"
+        COMPILE_TIME="${COMPILE_TIME}"
+    )
 endif()
 
 # ============================================
-# Add compile definitions
-
-execute_process(
-    COMMAND git rev-parse HEAD
-    OUTPUT_VARIABLE GIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
-message(STATUS "Git hash: ${GIT_HASH}")
-
-execute_process(
-    COMMAND git branch --show-current
-    OUTPUT_VARIABLE GIT_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-)
-message(STATUS "Git branch: ${GIT_BRANCH}")
-
-string(TIMESTAMP COMPILE_TIME "%Y-%m-%d %H:%M:%S %Z")
-message(STATUS "Compile time: ${COMPILE_TIME}")
-
-target_compile_definitions(file INTERFACE
-    GIT_HASH="${GIT_HASH}"
-    GIT_BRANCH="${GIT_BRANCH}"
-    COMPILE_TIME="${COMPILE_TIME}"
-)
-
-# ============================================
-# Add file tests
+# Add file tests (there are no file benchmarks)
 
 if(FELTOR_BUILD_TESTS)
-  include(FeltorTests)
-  foreach(test_path IN LISTS FILE_TESTS)
-    add_file_test("${test_path}")
-  endforeach()
+    include(FeltorTests)
+    if( FELTOR_WITH_MPI)
+        foreach(test_path IN LISTS JSON_MPI_TESTS)
+            add_dg_test("${test_path}" "file" ON target_name)
+            target_link_libraries( ${target_name} PRIVATE dg_file_json)
+        endforeach()
+    else()
+        foreach(test_path IN LISTS JSON_TESTS)
+            add_dg_test("${test_path}" "file" OFF target_name)
+            target_link_libraries( ${target_name} PRIVATE dg_file_json)
+        endforeach()
+    endif()
+    if(FELTOR_FILE_WITH_NETCDF)
+        if( FELTOR_WITH_MPI)
+            foreach(test_path IN LISTS FILE_MPI_TESTS)
+                add_dg_test("${test_path}" "file" ON target_name)
+                target_link_libraries( ${target_name} PRIVATE dg_file)
+            endforeach()
+        else()
+            foreach(test_path IN LISTS FILE_TESTS)
+                add_dg_test("${test_path}" "file" OFF target_name)
+                target_link_libraries( ${target_name} PRIVATE dg_file)
+            endforeach()
+        endif()
+    endif()
 endif()

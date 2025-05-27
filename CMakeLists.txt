@@ -64,15 +64,13 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # Set these using -DFELTOR_WITH_MPI=ON, etc.
 # By default, compiles single threaded on a CPU.
 
-option(FELTOR_WITH_MPI "Switch on multiprocessing with MPI.")
-# TODO Shouldn't the file library expose this option?
-option(FELTOR_USE_JSONCPP "Use jsoncpp instead of nlohmann/json.")
+option(FELTOR_WITH_MPI "Build all executables with MPI." OFF)
 
 option(FELTOR_BUILD_EXE "Build Feltor executable." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
-option(FELTOR_WITH_GLFW "Build with plotting support")
+option(FELTOR_WITH_GLFW "Build with plotting support." OFF)
 
 # ============================================
 # Make cpm package manager visible here and in subdirectories
@@ -93,32 +91,15 @@ if(FELTOR_BUILD_TESTS)
   list(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
 endif()
 
-# ============================================
-# Set up compiler-specific flags
-
-if(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  # Currently raises too many warnings!
-  set(FELTOR_FLAGS_CXX
-    "-Wall"
-    "-Wextra"
-    "-Wpedantic"
-    #"-mfma"
-    #"-mavx"
-    #"-march=native"
-  )
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  set(FELTOR_FLAGS_CXX
-    "/W4"
-    #"/arch:AVX2"
-  )
-else()
-  set(FELTOR_FLAGS_CXX "")
-endif()
 
 if(FELTOR_WITH_MPI)
   find_package(MPI REQUIRED)
   # target_link_libraries(dg INTERFACE MPI::MPI_CXX)
 endif()
+
+# =============================================
+# TODO On naming targets:
+#https://stackoverflow.com/questions/67757157/change-exported-target-name-in-cmake-install-alias-to-a-target
 
 
 # =============================================
@@ -138,10 +119,26 @@ if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQU
   find_package(CUDAToolkit REQUIRED)
 endif()
 add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
-#set(FELTOR_FLAGS_CUDA
-#  "-arch=sm_61"
-#  "--extended-lambda"
-#)
+
+# ============================================
+# MW: CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
+# may be set even when compiling for CUDA.
+
+# We set warnings globally for this folder and below
+# https://cmake.org/cmake/help/latest/command/add_compile_options.html
+# Set up compiler-specific flags
+if (MSVC)
+    # warning level 4
+    add_compile_options(/W4)
+else()
+    # additional warnings
+    if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
+        # For CUDA pedantic spits out too many warnings
+        add_compile_options(-Wall -Wextra)
+    else()
+        add_compile_options(-Wall -Wextra -Wpedantic)
+    endif()
+endif()
 
 
 
@@ -150,6 +147,58 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
 # TODO Add all other executables
 
 if(FELTOR_BUILD_EXE)
+  if(FELTOR_WITH_GLFW)
+    if(FELTOR_WITH_MPI)
+      message(WARNING "GLFW is not compatible with MPI when building FELTOR")
+      target_compile_definitions(feltor PRIVATE WITHOUT_GLFW)
+    else()
+      # Draw Links to GLFW and OpenGL
+      # Must be installed separately, e.g. `sudo apt install libglfw3-dev`
+      CPMAddPackage( NAME draw
+          GIT_REPOSITORY https://github.com/feltor-dev/draw.git
+          GIT_TAG master
+      )
+      if( draw_ADDED)
+          message( STATUS "Found Draw library in ${draw_SOURCE_DIR}")
+      endif()
+    endif()
+  endif()
+
   add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/toefl")
 endif()
+
+
+
+# ============================================
+# INSTALL
+# We want to install the library targets dg::dg, dg::file, etc
+# as well as potentially benchmark targets and src targets to be used
+# from external projects
+# include(GNUInstallDirs)
+# install( TARGETS dg_dg
+#     EXPORT dgTargets # Creates a cmake file
+#     RUNTIME
+#         DESTINATION ${CMAKE_INSTALL_BINDIR}
+#         COMPONENT dg_Runtime
+#     LIBRARY
+#         DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#         COMPONENT dg_Runtime
+#     ARCHIVE
+#         DESTINATION ${CMAKE_INSTALL_LIBDIR}
+#         COMPONENT dg_Development
+#     INCLUDES
+#         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#         COMPONENT dg_Development
+#     PUBLIC_HEADER
+#         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+#         COMPONENT dg_Development
+# )
+#
+# install( EXPORT dgTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/dg
+#          NAMESPACE dg::
+#          FILE feltorConfig.cmake)
+
+# PROVIDING A PACKAGE CONFIG FILE
+
 
