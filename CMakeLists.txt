@@ -98,8 +98,30 @@ if(FELTOR_WITH_MPI)
 endif()
 
 # =============================================
-# TODO On naming targets:
+# On naming targets:
 #https://stackoverflow.com/questions/67757157/change-exported-target-name-in-cmake-install-alias-to-a-target
+
+# ============================================
+# MW: CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
+# may be set even when compiling for CUDA.
+
+# We set warnings globally for this folder and below
+# https://cmake.org/cmake/help/latest/command/add_compile_options.html
+# Also note that "add_compile_options" only applies to targets defined after
+# Set up compiler-specific flags
+if (MSVC)
+    # warning level 4
+    add_compile_options(/W4 /permissive-)
+else()
+    # additional warnings
+    if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
+        # For CUDA pedantic spits out too many warnings
+        add_compile_options(-Wall -Wextra)
+    else()
+        add_compile_options(-Wall -Wextra -Wpedantic)
+    endif()
+endif()
+
 
 
 # =============================================
@@ -119,26 +141,6 @@ if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQU
   find_package(CUDAToolkit REQUIRED)
 endif()
 add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
-
-# ============================================
-# MW: CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
-# may be set even when compiling for CUDA.
-
-# We set warnings globally for this folder and below
-# https://cmake.org/cmake/help/latest/command/add_compile_options.html
-# Set up compiler-specific flags
-if (MSVC)
-    # warning level 4
-    add_compile_options(/W4)
-else()
-    # additional warnings
-    if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
-        # For CUDA pedantic spits out too many warnings
-        add_compile_options(-Wall -Wextra)
-    else()
-        add_compile_options(-Wall -Wextra -Wpedantic)
-    endif()
-endif()
 
 
 
