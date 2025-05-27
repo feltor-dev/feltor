@@ -30,8 +30,6 @@ static value_t cosx( value_t x, value_t y, value_t z) { return cos(x)*sin(y)*sin
 static value_t cosy( value_t x, value_t y, value_t z) { return cos(y)*sin(x)*sin(z);}
 static value_t cosz( value_t x, value_t y, value_t z) { return cos(z)*sin(x)*sin(y);}
 
-// It seems going from g++-11 to g++-13 changes the implementation of sin and cos
-
 TEST_CASE( "Derivatives")
 {
 #ifdef WITH_MPI
@@ -74,11 +72,7 @@ TEST_CASE( "Derivatives")
         const Vector dy2d = dg::evaluate( cosy, g2d);
         const Vector null2 = dg::evaluate( dg::zero, g2d);
         Vector sol2[] = {dx2d, dy2d, null2, null2};
-#if __GNUC__ >= 13
-        int64_t binary2[] = {4562611930300282861,4553674328256673277,4567083257206217158,4574111364446550181};
-#else
         int64_t binary2[] = {4562611930300281864,4553674328256556132,4567083257206218817,4574111364446550002};
-#endif
 
         dg::exblas::udouble res;
         INFO("TEST 2D: DX, DY, JX, JY");
@@ -113,11 +107,7 @@ TEST_CASE( "Derivatives")
         const Vector dz3d = dg::evaluate( cosz, g3d);
         const Vector null3 = dg::evaluate( dg::zero, g3d);
         Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
-#if __GNUC__ >= 13
-        int64_t binary3[] = {4561946736820640320,4553062895410783769,4594213495911299616,4566393134538622288,4573262464593641524,4594304523193682043};
-#else
         int64_t binary3[] = {4561946736820639666,4553062895410573431,4594213495911299616,4566393134538626348,4573262464593641240,4594304523193682043};
-#endif
 
         INFO("TEST 3D: DX, DY, DZ, JX, JY, JZ");
         auto i = GENERATE( 0,1,2,3,4,5);
@@ -196,11 +186,7 @@ TEST_CASE( "Derivatives")
         dg::blas1::transform( csol2,csol2, []DG_DEVICE( thrust::complex<double>
             x){ return thrust::complex{x.real(), x.real()};});
         cVector cerror = csol2;
-#if __GNUC__ >= 13
-        int64_t binary2 = {4562611930300282861};
-#else
         int64_t binary2 = {4562611930300281864};
-#endif
         dg::exblas::udouble res;
         INFO("TEST 2D: DX");
         dg::blas2::symv( -1., dx2, cf2d, 1., cerror);
