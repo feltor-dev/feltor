@@ -62,15 +62,15 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # User Options
 
 # Set these using -DFELTOR_WITH_MPI=ON, etc.
-# By default, compiles single threaded on a CPU.
+# By default, compiles single threaded on a CUDA.
 
-option(FELTOR_WITH_MPI "Build all executables with MPI." OFF)
+option(FELTOR_BUILD_PROJECTS "Configure feltor project target feltor_projects." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_TESTS "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_BENCHMARKS "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
-option(FELTOR_BUILD_EXE "Build Feltor executable." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_TESTS "Build tests." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_BENCHMARKS "Build benchmarks." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_WITH_GLFW "Configure executables that allow it with plotting support." OFF)
+option(FELTOR_WITH_MPI "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
 
-option(FELTOR_WITH_GLFW "Build with plotting support." OFF)
 
 # ============================================
 # Make cpm package manager visible here and in subdirectories
@@ -146,9 +146,8 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
 
 # ============================================
 # Add FELTOR executable
-# TODO Add all other executables
 
-if(FELTOR_BUILD_EXE)
+if(FELTOR_BUILD_PROJECTS)
   if(FELTOR_WITH_GLFW)
     if(FELTOR_WITH_MPI)
       message(WARNING "GLFW is not compatible with MPI when building FELTOR")
@@ -167,6 +166,7 @@ if(FELTOR_BUILD_EXE)
   endif()
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/src")
+  # TODO The diag subdirectory is I guess deprecated but maybe we need it to make some papers reproducible?)
 endif()
 
 
