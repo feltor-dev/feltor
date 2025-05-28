@@ -4,6 +4,7 @@
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/geometry_diag")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/hasegawa")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/heat")
 
 # =========================================
 # Second loop over toefl like projects
@@ -16,13 +17,16 @@ set( TOEFL_LIKE_SRC_PROJECTS
     feltorShw
     reco2D
 )
-# esol depends on matrix
+# esol and poet depends on matrix
 if( FELTOR_DG_WITH_MATRIX)
-    list( APPEND TOEFL_LIKE_SRC_PROJECTS esol)
+    list( APPEND TOEFL_LIKE_SRC_PROJECTS
+        esol
+        poet
+    )
 endif()
 
 foreach( project IN LISTS TOEFL_LIKE_SRC_PROJECTS)
-    # Good for toefl and esol
+    # Good for toefl and esol and poet
     set( target ${project})
     set( executable "${project}.cpp")
     set( header "${project}.h")
@@ -54,6 +58,9 @@ foreach( project IN LISTS TOEFL_LIKE_SRC_PROJECTS)
         ${project}/parameters.h
         ${project}/${header}
     )
+    if( "${project}" STREQUAL poet)
+        list( APPEND PROJECT_HEADERS ${project}/init.h ${project}/init_from_file.h)
+    endif()
     add_executable(${project}_${target} "${project}/${executable}" ${PROJECT_HEADERS})
     # Change name and directory of executable
     set_target_properties( ${project}_${target} PROPERTIES OUTPUT_NAME ${target})
@@ -76,7 +83,7 @@ foreach( project IN LISTS TOEFL_LIKE_SRC_PROJECTS)
         target_link_libraries(${project}_${target} PRIVATE draw::draw)
         target_compile_definitions(${project}_${target} PRIVATE WITH_GLFW)
     else()
-        # This is for the reconnection project
+        # This is for the reconnection and poet project
         target_compile_definitions(${project}_${target} PRIVATE WITHOUT_GLFW)
     endif()
 
