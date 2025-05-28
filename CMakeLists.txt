@@ -166,7 +166,6 @@ if(FELTOR_BUILD_EXE)
     endif()
   endif()
 
-  add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
   add_subdirectory("${PROJECT_SOURCE_DIR}/src")
 endif()
 

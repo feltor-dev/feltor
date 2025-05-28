@@ -1,3 +1,12 @@
+# =========================================
+# First include all individual src projects
+
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/geometry_diag")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/hasegawa")
+
+# =========================================
+# Second loop over toefl like projects
 # Src pojects that are structured like the 2d toefl code
 set( TOEFL_LIKE_SRC_PROJECTS
     toefl
