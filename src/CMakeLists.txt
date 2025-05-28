@@ -1,3 +1,4 @@
+add_custom_target( feltor_projects)
 # =========================================
 # First include all individual src projects
 
@@ -66,7 +67,9 @@ foreach( project IN LISTS TOEFL_LIKE_SRC_PROJECTS)
     set_target_properties( ${project}_${target} PROPERTIES OUTPUT_NAME ${target})
     set_target_properties( ${project}_${target} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/src/${project}")
+    # Add project ALIAS and add to feltor_projects custom target
     add_executable(feltor::${project}::${target} ALIAS ${project}_${target})
+    add_dependencies( feltor_projects ${project}_${target})
     if(FELTOR_WITH_MPI)
         target_link_libraries(${project}_${target} PRIVATE MPI::MPI_CXX)
         target_compile_definitions(${project}_${target} PRIVATE WITH_MPI)
@@ -75,7 +78,7 @@ foreach( project IN LISTS TOEFL_LIKE_SRC_PROJECTS)
     target_link_libraries(${project}_${target} PRIVATE feltor::dg::dg)
     target_link_libraries(${project}_${target} PRIVATE feltor::dg::geometries)
     target_link_libraries(${project}_${target} PRIVATE feltor::dg::file)
-    if( "${project}" STREQUAL esol)
+    if( "${project}" STREQUAL esol OR "${project}" STREQUAL poet)
         target_link_libraries(${project}_${target} PRIVATE feltor::dg::matrix)
     endif()
 

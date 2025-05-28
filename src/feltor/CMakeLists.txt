@@ -31,7 +31,9 @@ if(FELTOR_WITH_MPI)
         else()
             add_executable(feltor_${target} "${target}.cpp" ${FELTOR_HEADERS})
         endif()
+        # Add project ALIAS and add to feltor_projects custom target
         add_executable(feltor::feltor::${target} ALIAS feltor_${target})
+        add_dependencies( feltor_projects feltor_${target})
         # Change name of executable
         set_target_properties( feltor_${target} PROPERTIES OUTPUT_NAME ${target})
 
@@ -50,7 +52,9 @@ else()
         else()
             add_executable(feltor_${target} "${target}.cpp" ${FELTOR_HEADERS})
         endif()
+        # Add project ALIAS and add to feltor_projects custom target
         add_executable(feltor::feltor::${target} ALIAS feltor_${target})
+        add_dependencies( feltor_projects feltor_${target})
         # Change name of executable
         set_target_properties( feltor_${target} PROPERTIES OUTPUT_NAME ${target})
 
