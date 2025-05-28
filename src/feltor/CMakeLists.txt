@@ -25,7 +25,7 @@ set( FELTOR_MPI_TARGETS
 )
 # Enable CUDA
 if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
-    foreach ( exe feltor.cpp feltordiag.cpp interpolat_in_3d.cpp multigrid_b.cpp convert_b.cpp)
+    foreach ( exe feltor.cpp feltordiag.cpp interpolate_in_3d.cpp multigrid_b.cpp convert_b.cpp)
         set_source_files_properties("${exe}" PROPERTIES LANGUAGE CUDA)
     endforeach()
 endif()
