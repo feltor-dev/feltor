@@ -1,6 +1,7 @@
 add_custom_target( feltor_projects)
 # =========================================
 # First include all individual src projects
+# TODO I think these could benefit from a common function
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/geometry_diag")
@@ -64,6 +65,9 @@ foreach( project IN LISTS TOEFL_LIKE_SRC_PROJECTS)
     )
     if( "${project}" STREQUAL poet)
         list( APPEND PROJECT_HEADERS ${project}/init.h ${project}/init_from_file.h)
+    endif()
+    if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
+        set_source_files_properties("${project}/${executable}" PROPERTIES LANGUAGE CUDA)
     endif()
     add_executable(${project}_${target} "${project}/${executable}" ${PROJECT_HEADERS})
     # Change name and directory of executable
