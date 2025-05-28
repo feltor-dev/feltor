@@ -1,5 +1,5 @@
 
-if(NOT FELTOR_WITH_MPI AND FELTOR_WITH_GLFW)
+if((NOT FELTOR_WITH_MPI) AND FELTOR_WITH_GLFW)
     foreach ( target mima hw)
         set( project hasegawa)
         set( executable "${target}.cpp")
@@ -11,6 +11,7 @@ if(NOT FELTOR_WITH_MPI AND FELTOR_WITH_GLFW)
 
         target_link_libraries(${project}_${target} PRIVATE feltor::dg::dg)
         target_link_libraries(${project}_${target} PRIVATE feltor::dg::file)
+        message ( "Link hw with draw")
         target_link_libraries(${project}_${target} PRIVATE draw::draw)
     endforeach()
 endif()

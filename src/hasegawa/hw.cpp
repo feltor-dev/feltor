@@ -6,7 +6,7 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 
-#include "hw.cuh"
+#include "hw.h"
 #include "../toefl/parameters.h"
 #include "dg/file/json_utilities.h"
 
