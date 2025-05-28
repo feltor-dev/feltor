@@ -4,9 +4,6 @@
 #include <sstream>
 #include <cmath>
 
-#include <cusp/coo_matrix.h>
-#include <cusp/print.h>
-
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
 #include "dg/geometries/geometries.h"
