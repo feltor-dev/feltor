@@ -3,7 +3,7 @@ if((NOT FELTOR_WITH_MPI) AND FELTOR_WITH_GLFW)
     foreach ( target mima hw)
         set( project hasegawa)
         set( executable "${target}.cpp")
-        add_executable(${project}_${target} "${executable}" ${PROJECT_HEADERS})
+        add_executable(${project}_${target} "${executable}" "${target}.h")
         set_target_properties( ${project}_${target} PROPERTIES OUTPUT_NAME ${target})
         set_target_properties( ${project}_${target} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/src/${project}")

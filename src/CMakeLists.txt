@@ -6,6 +6,9 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/geometry_diag")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/hasegawa")
 add_subdirectory("${PROJECT_SOURCE_DIR}/src/heat")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/lamb_dipole")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/navier_stokes")
+add_subdirectory("${PROJECT_SOURCE_DIR}/src/ping")
 
 # =========================================
 # Second loop over toefl like projects

@@ -1,6 +1,7 @@
 
 if(NOT FELTOR_WITH_MPI)
     set( project heat)
+    set( PROJECT_HEADERS heat.h parameters.h)
     if( FELTOR_WITH_GLFW)
         set( target heat)
         set( executable "heat.cpp")
