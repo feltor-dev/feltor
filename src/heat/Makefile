@@ -13,7 +13,7 @@ all: heat heat_hpc heat_hpc
 heat: heat.cu heat.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) $(GLFLAGS) -DDG_BENCHMARK  -g
 
-heat_hpc: heat_hpc.cu heat.h
+heat_hpc: heat_hpc.cpp heat.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(JSONLIB) $(LIBS) -DDG_BENCHMARK
 
 .PHONY: clean
