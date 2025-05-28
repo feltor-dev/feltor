@@ -167,7 +167,7 @@ if(FELTOR_BUILD_EXE)
   endif()
 
   add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
-  add_subdirectory("${PROJECT_SOURCE_DIR}/src/toefl")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src")
 endif()
 
 
