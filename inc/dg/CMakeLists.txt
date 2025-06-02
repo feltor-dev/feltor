@@ -243,11 +243,7 @@ list( APPEND DG_MPI_TESTS
 # Create DG library target
 
 # Create the dg target library.
-# As a header-only library, this must be an interface library.
-# This means it has no sources, but can link/be linked to other
-# libraries, have dependencies, etc. These properties are then
-# inherited by any target that links to it.
-add_library(dg_dg INTERFACE ${DG_HEADERS})
+add_library(dg_dg INTERFACE)
 # When installing the target we prepend the namespace dg::
 set_property(TARGET dg_dg PROPERTY EXPORT_NAME dg)
 # Create an alias: used to link to the library from external projects.
@@ -257,11 +253,22 @@ add_library(feltor::dg::dg ALIAS dg_dg)
 # Set the minimum C++ standard
 target_compile_features(dg_dg INTERFACE cxx_std_17)
 
-# Ensure that `#include "dg/..."` works
-# for both build and install phases (cf "Professional CMake, Ch Install")
-target_include_directories(dg_dg INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc>
+# As a header-only library, this must be an interface library.
+# This means it has no sources, but can link/be linked to other
+# libraries, have dependencies, etc. These properties are then
+# inherited by any target that links to it.
+target_sources( dg_dg INTERFACE
+    FILE_SET dg_headers TYPE HEADERS # Create a file set for easier install
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
+    FILES ${DG_HEADERS}
 )
+
+
+# # Ensure that `#include "dg/..."` works
+# # for both build and install phases (cf "Professional CMake, Ch Install")
+# target_include_directories(dg_dg INTERFACE
+#     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc>
+# )
 
 # ============================================
 # Add dg dependencies
@@ -269,9 +276,9 @@ target_include_directories(dg_dg INTERFACE
 # Through the exblas library we depend on vcl
 # VCL does not use cmake so we have to configure manually
 CPMAddPackage(
- NAME vcl
- GITHUB_REPOSITORY vectorclass/version2
- GIT_TAG v2.02.01
+    NAME vcl
+    GITHUB_REPOSITORY vectorclass/version2
+    GIT_TAG v2.02.01
 )
 
 if( vcl_ADDED)
@@ -381,3 +388,28 @@ if(FELTOR_BUILD_TESTS)
     endif()
 endif()
 
+# ============================================
+# Add Install rules
+if(FELTOR_INSTALL)
+
+    # cmake --install build --prefix install-dir
+
+    # This install rule copies the FILE_SET "dg_headers" to install-dir/include/ (i.e. results in include/dg/...)
+    # and associates the target to an export set and a install component set
+    install(
+        TARGETS dg_dg COMPONENT feltor_dg
+        EXPORT feltor_dg # associate installed target files with an export called "feltor_dg"
+        FILE_SET dg_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+
+    # This install rule creates a file ("feltor_dg-targets.cmake") at the specified destination
+    # that can (theoretically) be included by other projects and they have all targets (in feltor_dg) available
+    # Usually, this is an intermediate step towards making "find_package" work for our project
+    install(
+        EXPORT feltor_dg # all targets within this set
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/feltor"
+        NAMESPACE feltor::dg::
+        FILE feltor_dg-targets.cmake
+        COMPONENT feltor_dg
+    )
+endif()

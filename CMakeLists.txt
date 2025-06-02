@@ -1,7 +1,13 @@
 cmake_minimum_required(VERSION 3.26)
 
 # Project name and version
-project(feltor VERSION 8.2.0 LANGUAGES CXX)
+project(
+    feltor
+    VERSION         8.2.0
+    DESCRIPTION     "Numerical methods for fluid simulations of magnetized plasmas"
+    HOMEPAGE_URL    "https://feltor-dev.github.io"
+    LANGUAGES       CXX
+)
 
 ## Usage:
 ##
@@ -64,17 +70,21 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # Set these using -DFELTOR_WITH_MPI=ON, etc.
 # By default, compiles single threaded on a CUDA.
 
-option(FELTOR_BUILD_PROJECTS "Configure feltor project target feltor_projects." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_TESTS "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_BENCHMARKS "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_PROJECTS    "Configure feltor project target feltor_projects." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_TESTS       "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
-option(FELTOR_WITH_GLFW "Configure executables that allow it with plotting support." OFF)
-option(FELTOR_WITH_MPI "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
+option(FELTOR_WITH_GLFW         "Configure executables that allow it with plotting support." OFF)
+option(FELTOR_WITH_MPI          "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
+
+option(FELTOR_INSTALL           "Create install rules" ${PROJECT_IS_TOP_LEVEL})
 
 
 # ============================================
 # Make cpm package manager visible here and in subdirectories
-include( CPM)
+include(CPM)
+# Make installation dirs available here and in subdirectories
+include(GNUInstallDirs)
 
 # ============================================
 # Set up testing dependencies
@@ -173,33 +183,40 @@ endif()
 
 # ============================================
 # INSTALL
-# We want to install the library targets dg::dg, dg::file, etc
-# as well as potentially benchmark targets and src targets to be used
-# from external projects
-# include(GNUInstallDirs)
-# install( TARGETS dg_dg
-#     EXPORT dgTargets # Creates a cmake file
-#     RUNTIME
-#         DESTINATION ${CMAKE_INSTALL_BINDIR}
-#         COMPONENT dg_Runtime
-#     LIBRARY
-#         DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#         COMPONENT dg_Runtime
-#     ARCHIVE
-#         DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#         COMPONENT dg_Development
-#     INCLUDES
-#         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#         COMPONENT dg_Development
-#     PUBLIC_HEADER
-#         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-#         COMPONENT dg_Development
-# )
-#
-# install( EXPORT dgTargets DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/dg
-#          NAMESPACE dg::
-#          FILE feltorConfig.cmake)
 
 # PROVIDING A PACKAGE CONFIG FILE
+# A config file is the preferred way for an installed project to make itself
+# available for other CMake projects via find_package
+# First, we generate the config files via the helper utilities in the current build directory
+include(CMakePackageConfigHelpers)
 
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/feltor-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/feltor-config.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/feltor"
+    PATH_VARS PROJECT_NAME PROJECT_VERSION
+)
 
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/feltor-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+if(FELTOR_INSTALL)
+    # Second, we need an install rule that copies the above two generated files
+    # to the cmake install libdir
+    install(
+        FILES
+            "${CMAKE_CURRENT_BINARY_DIR}/feltor-config.cmake"
+            "${CMAKE_CURRENT_BINARY_DIR}/feltor-version.cmake"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/feltor"
+        COMPONENT feltor_dg
+    )
+
+    # ============================================
+    # PACKAGING
+
+    # Simply include CPack will generate CPack...cmake files
+    include(CPack)
+endif()

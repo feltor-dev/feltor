@@ -97,9 +97,14 @@ set( GEOMETRIES_BENCHMARKS_WITH_FILE
 # ============================================
 # Create DG geometries library target
 
-add_library(dg_geometries INTERFACE ${GEOMETRIES_HEADERS})
+add_library(dg_geometries INTERFACE)
 set_property(TARGET dg_geometries PROPERTY EXPORT_NAME geometries)
 add_library(feltor::dg::geometries ALIAS dg_geometries)
+target_sources( dg_geometries INTERFACE
+    FILE_SET dg_geometries_headers TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
+    FILES ${GEOMETRIES_HEADERS}
+)
 target_link_libraries(dg_geometries INTERFACE dg_dg)
 target_link_libraries(dg_geometries INTERFACE dg_file_json)
 
@@ -142,4 +147,14 @@ if(FELTOR_BUILD_BENCHMARKS)
             endif()
         endforeach()
     endif()
+endif()
+# ============================================
+# Add Install rules
+
+if(FELTOR_INSTALL)
+    install(
+        TARGETS dg_geometries COMPONENT feltor_dg
+        EXPORT feltor_dg
+        FILE_SET dg_geometries_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 endif()

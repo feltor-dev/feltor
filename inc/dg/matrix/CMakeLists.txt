@@ -52,9 +52,14 @@ set( MATRIX_BENCHMARKS_WITH_FILE
 # ============================================
 # Create DG matrix library target
 
-add_library(dg_matrix INTERFACE ${MATRIX_HEADERS})
+add_library(dg_matrix INTERFACE)
 set_property(TARGET dg_geometries PROPERTY EXPORT_NAME geometries)
 add_library(feltor::dg::matrix ALIAS dg_matrix)
+target_sources( dg_matrix INTERFACE
+    FILE_SET dg_matrix_headers TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
+    FILES ${MATRIX_HEADERS}
+)
 target_link_libraries(dg_matrix INTERFACE dg_dg)
 target_link_libraries(dg_matrix INTERFACE Boost::math) # Boost::math builds container and random
 
@@ -111,4 +116,14 @@ if(FELTOR_BUILD_BENCHMARKS)
         endif()
     endforeach()
   endif()
+endif()
+# ============================================
+# Add Install rules
+
+if(FELTOR_INSTALL)
+    install(
+        TARGETS dg_matrix COMPONENT feltor_dg
+        EXPORT feltor_dg
+        FILE_SET dg_matrix_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 endif()

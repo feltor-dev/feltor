@@ -63,17 +63,32 @@ option(FELTOR_FILE_WITH_NETCDF "Configure dg_file_netcdf and dg_file_file target
 
 # ============================================
 # Create DG file library target
-add_library(dg_file_json INTERFACE ${JSON_HEADERS})
+add_library(dg_file_json INTERFACE)
 set_property(TARGET dg_file_json PROPERTY EXPORT_NAME json)
 add_library(feltor::dg::file::json ALIAS dg_file_json)
+target_sources( dg_file_json INTERFACE
+    FILE_SET dg_file_json_headers TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
+    FILES ${JSON_HEADERS}
+)
 
 if( FELTOR_FILE_WITH_NETCDF)
-    add_library(dg_file INTERFACE ${FILE_HEADERS} ${NETCDF_HEADERS} ${JSON_HEADERS})
-    add_library(dg_file_netcdf INTERFACE ${NETCDF_HEADERS})
+    add_library(dg_file INTERFACE)
+    add_library(dg_file_netcdf INTERFACE)
     set_property(TARGET dg_file PROPERTY EXPORT_NAME file)
     set_property(TARGET dg_file_netcdf PROPERTY EXPORT_NAME netcdf)
     add_library(feltor::dg::file ALIAS dg_file)
     add_library(feltor::dg::file::netcdf ALIAS dg_file_netcdf)
+    target_sources( dg_file INTERFACE
+        FILE_SET dg_file_headers TYPE HEADERS
+        BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
+        FILES ${FILE_HEADERS} ${NETCDF_HEADERS} ${JSON_HEADERS}
+    )
+    target_sources( dg_file_netcdf INTERFACE
+        FILE_SET dg_file_netcdf_headers TYPE HEADERS
+        BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
+        FILES ${NETCDF_HEADERS}
+    )
 
     target_link_libraries(dg_file_netcdf INTERFACE dg_dg)
     target_link_libraries(dg_file INTERFACE dg_file_netcdf dg_file_json)
@@ -161,5 +176,28 @@ if(FELTOR_BUILD_TESTS)
                 target_link_libraries( ${target_name} PRIVATE dg_file)
             endforeach()
         endif()
+    endif()
+endif()
+
+# ============================================
+# Add Install rules
+
+if(FELTOR_INSTALL)
+    install(
+        TARGETS dg_file_json COMPONENT feltor_dg
+        EXPORT feltor_dg
+        FILE_SET dg_file_json_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    if( FELTOR_FILE_WITH_NETCDF)
+        install(
+            TARGETS dg_file COMPONENT feltor_dg
+            EXPORT feltor_dg
+            FILE_SET dg_file_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
+        install(
+            TARGETS dg_file_netcdf COMPONENT feltor_dg
+            EXPORT feltor_dg
+            FILE_SET dg_file_netcdf_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        )
     endif()
 endif()
