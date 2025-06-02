@@ -77,7 +77,9 @@ option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PR
 option(FELTOR_WITH_GLFW         "Configure executables that allow it with plotting support." OFF)
 option(FELTOR_WITH_MPI          "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
 
-option(FELTOR_INSTALL           "Create install rules" ${PROJECT_IS_TOP_LEVEL})
+# option(FELTOR_INSTALL           "Create install rules" ${PROJECT_IS_TOP_LEVEL})
+# Currently our install rules do not quite work because of how to install dependencies?
+set( FELTOR_INSTALL OFF)
 
 
 # ============================================
