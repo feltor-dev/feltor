@@ -2,6 +2,6 @@ set(FELTOR_VERSION @PROJECT_VERSION@)
 
 @PACKAGE_INIT@
 
-include(${CMAKE_CURRENT_LIST_DIR}/feltor_dg-targets-cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/feltor_dg-targets.cmake)
 
-check_required_component(@PROJECT_NAME@)
+check_required_components(feltor_dg)
