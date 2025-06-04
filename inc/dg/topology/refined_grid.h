@@ -101,7 +101,7 @@ struct RealIdentityRefinement : public aRealRefinement1d<real_type>
         weights=dg::create::weights(g);
         abscissas=g.abscissas(0);
     }
-    virtual unsigned do_N_new( unsigned N_old, bc bcx) const override final{
+    virtual unsigned do_N_new( unsigned N_old, bc) const override final{
         return N_old;
     }
 };

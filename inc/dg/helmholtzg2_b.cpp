@@ -12,14 +12,14 @@
 const double eps = 1e-4;
 const double tau=1.0;
 const double alpha = -0.5*tau;
-double lhs( double x,double y){ return sin(x);}
-double rhs( double x,double y){
+double lhs( double x,double){ return sin(x);}
+double rhs( double x,double){
     return  (-2.-2.*x+2.*cos(x)+2*x*cos(x)+sin(x)+2*x*sin(x)+x*x*sin(x)
     -2*alpha*sin(x)-2*x*alpha*sin(x)+alpha*alpha*sin(x))/(1.0+x)/alpha;
 
 }
 // double dxrhs( double x,double y){ return (1.0 - 2.*alpha + alpha*alpha)*sin(x);} //// chi=1
-double dxrhs( double x,double y){ return (1.+x)*sin(x)-2*alpha*sin(x)+alpha*alpha*(2*cos(x)/(1.+x)/(1.+x)-2*sin(x)/(1.+x)/(1.+x)/(1.+x)+sin(x)/(1.+x));} // chi=x
+double dxrhs( double x,double){ return (1.+x)*sin(x)-2*alpha*sin(x)+alpha*alpha*(2*cos(x)/(1.+x)/(1.+x)-2*sin(x)/(1.+x)/(1.+x)/(1.+x)+sin(x)/(1.+x));} // chi=x
 
 
 int main()

@@ -18,7 +18,7 @@ double rhs( double x, double y){ return (1.-(m*m+n*n)*alpha)*sin(m*x)*sin(n*y);}
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
 
-int main(int argc, char * argv[])
+int main()
 {
     dg::Timer t;
     unsigned n, Nx, Ny;

@@ -111,7 +111,7 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << "Done!\n";
 
     /// ////////////Init diagnostics ////////////////////
-    esol::Variables var = {esol, p, y0};
+    esol::Variables var = {esol, p, y0, 0.0};
     dg::Timer t;
     t.tic();
     {

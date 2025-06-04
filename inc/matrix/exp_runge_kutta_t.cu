@@ -5,7 +5,7 @@
 // integrate Dot y = -100 y +sin(t)
 const double matrix = -1;
 
-void rhs( double t, double y, double& yp)
+void rhs( double t, double, double& yp)
 {
     //yp = 0.;
     yp = sin(t);

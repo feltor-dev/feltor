@@ -200,7 +200,7 @@ void Asela<Geometry, Matrix, Container>::compute_apar(
 }
 
 template<class G, class M, class Container>
-void Asela<G, M, Container>::compute_perp( double time, const std::array<std::array<Container,2>,2>& y, std::array<std::array<Container,2>,2>& yp)
+void Asela<G, M, Container>::compute_perp( double, const std::array<std::array<Container,2>,2>& y, std::array<std::array<Container,2>,2>& yp)
 {
     if( m_p.advection == "arakawa")
     {

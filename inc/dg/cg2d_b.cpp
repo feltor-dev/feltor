@@ -25,10 +25,14 @@ dg::bc bcx = dg::NEU;
 //double fct(double x, double y){ return sin(y)*sin(3.*x/4.);}
 //double laplace_fct( double x, double y) { return 25./16.*sin(y)*sin(3.*x/4.);}
 //dg::bc bcx = dg::DIR_NEU;
-double initial( double x, double y) {return sin(0);}
+double initial( double, double) {return sin(0);}
 
 
-int main( int argc, char* argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char* argv[]
+#endif
+)
 {
     dg::Timer t;
     unsigned n, Nx, Ny;

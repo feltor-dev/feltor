@@ -21,7 +21,7 @@ struct TorpexSource
               +0.5*exp( - (R-m_R0)*(R-m_R0)/m_a/m_a +2.*m_c*(R-m_R0)*(Z-m_Z0)- (Z-m_Z0)*(Z-m_Z0)/m_b/m_b );
     }
     DG_DEVICE
-    double operator()( double R, double Z, double p) const{
+    double operator()( double R, double Z, double) const{
         return this->operator()(R,Z);
     }
     private:
@@ -282,7 +282,7 @@ dg::x::HVec make_ntilde(
                 std::function<double(double,double,double)> initT = dg::Gaussian(
                         x0, y0, sigma, sigma, amp);
                 if( type == "circle")
-                    initT = [amp, sigma, sigma_z, x0, y0]( double x, double y, double z) {
+                    initT = [amp, sigma, sigma_z, x0, y0]( double x, double y, double) {
                         if( (x-x0)*(x-x0) + (y-y0)*(y-y0) < sigma*sigma)
                             return amp;
                         return 0.;

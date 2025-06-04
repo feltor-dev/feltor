@@ -110,7 +110,7 @@ int main( int argc, char* argv[])
     DG_RANK0 std::cout << "Done!\n";
 
     /// ////////////Init diagnostics ////////////////////
-    poet::Variables var = {poet, p, y0};
+    poet::Variables var = {poet, p, y0, 0.0};
     dg::Timer t;
     t.tic();
     {

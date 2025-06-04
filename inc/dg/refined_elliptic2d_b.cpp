@@ -17,7 +17,7 @@ const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
-double initial( double x, double y) {return 0.;}
+double initial( double, double) {return 0.;}
 double amp = 0.5;
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
