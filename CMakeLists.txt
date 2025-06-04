@@ -74,7 +74,7 @@ option(FELTOR_BUILD_PROJECTS    "Configure feltor project target feltor_projects
 option(FELTOR_BUILD_TESTS       "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
-option(FELTOR_WITH_GLFW         "Configure executables that allow it with plotting support." OFF)
+option(FELTOR_WITH_GLFW         "Configure executables, which allow it, with plotting support." OFF)
 option(FELTOR_WITH_MPI          "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
 
 # option(FELTOR_INSTALL           "Create install rules" ${PROJECT_IS_TOP_LEVEL})
@@ -130,7 +130,7 @@ else()
         # For CUDA pedantic spits out too many warnings
         add_compile_options(-Wall -Wextra)
     else()
-        add_compile_options(-Wall -Wextra -Wpedantic)
+        add_compile_options(-Wall -Wextra -Wpedantic -Werror)
     endif()
 endif()
 
@@ -157,13 +157,13 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
 
 
 # ============================================
-# Add FELTOR executable
+# Add FELTOR executables
 
 if(FELTOR_BUILD_PROJECTS)
+  include(feltor-add-executable)
   if(FELTOR_WITH_GLFW)
     if(FELTOR_WITH_MPI)
-      message(WARNING "GLFW is not compatible with MPI when building FELTOR")
-      target_compile_definitions(feltor PRIVATE WITHOUT_GLFW)
+      message(WARNING "GLFW is not compatible with MPI when building FELTOR and will be ignored")
     else()
       # Draw Links to GLFW and OpenGL
       # Must be installed separately, e.g. `sudo apt install libglfw3-dev`
@@ -176,11 +176,27 @@ if(FELTOR_BUILD_PROJECTS)
       endif()
     endif()
   endif()
+  add_custom_target( feltor_projects)
+  # =========================================
+  # Include all individual src projects
 
-  add_subdirectory("${PROJECT_SOURCE_DIR}/src")
-  # TODO The diag subdirectory is I guess deprecated but maybe we need it to make some papers reproducible?)
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/esol")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltor")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltorSesol")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltorSH")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltorSHp")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/feltorShw")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/geometry_diag")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/hasegawa")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/heat")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/lamb_dipole")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/navier_stokes")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/ping")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/poet")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/reco2D")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/src/toefl")
+
 endif()
-
 
 
 # ============================================

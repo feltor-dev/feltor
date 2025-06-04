@@ -7,8 +7,8 @@
 #include <math.h>
 
 #include "dg/algorithm.h"
-#include "feltorSH/parameters.h"
 #include "dg/file/file.h"
+#include "parameters.h"
 
 //scan all imputfiles for maximum radial velocity and write to std::out
 int main( int argc, char* argv[])

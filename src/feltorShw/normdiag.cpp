@@ -5,6 +5,7 @@
 #include <string>
 #include <cmath>
 #include <complex>
+#include <thrust/extrema.h>
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
@@ -12,7 +13,7 @@
 #include "dg/functors.h"
 
 #include "dg/file/file.h"
-#include "feltorShw/parameters.h"
+#include "parameters.h"
 int main( int argc, char* argv[])
 {
     if( argc != 2)

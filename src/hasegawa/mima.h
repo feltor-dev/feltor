@@ -62,7 +62,7 @@ struct Mima
 
 template< class G, class M, class Container>
 Mima< G, M, Container>::Mima( const G& grid, double kappa, double alpha, double eps, double nu, bool global ):
-    kappa( kappa), global(global),
+    kappa( kappa), alpha(alpha), global(global),
     phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi), lambda(phi),
     chi(phi), nGinv(dg::evaluate(dg::ExpProfX(1.0, 0.0,kappa),grid)),
     dxxphi( phi), dxyphi(phi),

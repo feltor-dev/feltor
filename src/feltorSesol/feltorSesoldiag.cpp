@@ -8,7 +8,7 @@
 #include "dg/algorithm.h"
 
 #include "dg/file/file.h"
-#include "feltorSesol/parameters.h"
+#include "parameters.h"
 // #include "probes.h"
 
 int main( int argc, char* argv[])
@@ -101,7 +101,7 @@ int main( int argc, char* argv[])
     time = imin*p.itstp;
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
 
-    unsigned num_probes = 5;
+    constexpr unsigned num_probes = 5;
     dg::HVec xprobecoords(num_probes,1.);
     for (unsigned i=0;i<num_probes; i++) {
         xprobecoords[i] = (1+i)*p.lx/((double)(num_probes+1));

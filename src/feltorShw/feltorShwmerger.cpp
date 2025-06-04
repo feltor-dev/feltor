@@ -8,7 +8,7 @@
 #include "dg/algorithm.h"
 
 #include "dg/file/file.h"
-#include "feltorShw/parameters.h"
+#include "parameters.h"
 
 //MW: the command line argument ncrcat should do the same doesn't it?
 //merge inputfiles together to a new output file

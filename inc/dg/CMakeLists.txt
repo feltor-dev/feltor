@@ -243,6 +243,10 @@ list( APPEND DG_MPI_TESTS
 # Create DG library target
 
 # Create the dg target library.
+# As a header-only library, this must be an interface library.
+# This means it has no sources, but can link/be linked to other
+# libraries, have dependencies, etc. These properties are then
+# inherited by any target that links to it.
 add_library(dg_dg INTERFACE)
 # When installing the target we prepend the namespace dg::
 set_property(TARGET dg_dg PROPERTY EXPORT_NAME dg)
@@ -253,22 +257,14 @@ add_library(feltor::dg::dg ALIAS dg_dg)
 # Set the minimum C++ standard
 target_compile_features(dg_dg INTERFACE cxx_std_17)
 
-# As a header-only library, this must be an interface library.
-# This means it has no sources, but can link/be linked to other
-# libraries, have dependencies, etc. These properties are then
-# inherited by any target that links to it.
+# Create a file set (that can be easily installed)
+# This also provides the correct include directory to the target
 target_sources( dg_dg INTERFACE
-    FILE_SET dg_headers TYPE HEADERS # Create a file set for easier install
+    FILE_SET dg_headers TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
     FILES ${DG_HEADERS}
 )
 
-
-# # Ensure that `#include "dg/..."` works
-# # for both build and install phases (cf "Professional CMake, Ch Install")
-# target_include_directories(dg_dg INTERFACE
-#     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/inc>
-# )
 
 # ============================================
 # Add dg dependencies
@@ -405,6 +401,16 @@ if(FELTOR_INSTALL)
     # This install rule creates a file ("feltor_dg-targets.cmake") at the specified destination
     # that can (theoretically) be included by other projects and they have all targets (in feltor_dg) available
     # Usually, this is an intermediate step towards making "find_package" work for our project
+
+# ATTENTION: This export currently (3.6.25) does not work because our external
+# dependencies are handled by CPM which is just a wrapper around FetchContent,
+# which itself is as if we add_subdirectorie'd the external packages. This
+# means e.g. the target nlohman_json::nlohmann_json is not an IMPORTED target
+# in the same way that find_package makes it. Cmake will thus complain that the
+# target is "not in any export set".  In order for this to work every
+# dependency has to be find_package'd and an external package manager has to be
+# used to install these dependencies on the system Now, find_package has its
+# own nuances and currently does not work e.g. for VCL
     install(
         EXPORT feltor_dg # all targets within this set
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/feltor"

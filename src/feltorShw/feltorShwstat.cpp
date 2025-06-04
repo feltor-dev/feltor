@@ -9,7 +9,7 @@
 #include "dg/algorithm.h"
 
 #include "dg/file/file.h"
-#include "feltorShw/parameters.h"
+#include "parameters.h"
 
 double Mean(std::vector<double> v, unsigned imin, unsigned imax)
 {     
