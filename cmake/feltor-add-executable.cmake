@@ -7,8 +7,12 @@
 # @param executable Full path to the executable
 # @param target Target to create
 # @param PROJECT_HEADERS the list of headers the executable depends on (surround with "" when calling)
-# @param If with_MPI is false then the target will not be created if FELTOR_WITH_MPI is true
-# @param If with_geometries is true then the target will be linked to feltor::dg::geometries
+# @param with_MPI If with_MPI and FELTOR_WITH_MPI are unequal then the target will not be created. 
+# Otherwise if with_MPI the target links to MPI
+# @param with_geometries If with_geometries is true then the target will be linked to feltor::dg::geometries
+# @param with_file If with_file is true but FELTOR_FILE_WITH_NETCDF is false the target will not be created
+# @param with_matrix If with_matrix is true but FELTOR_DG_WITH_MATRIX is false the target will not be created
+# @param with GLFW If with_GLFW is true but either FELTOR_WITH_GLFW or FELTOR_WITH_MPI is true then the target will not be created
 function(feltor_add_executable
     project
     executable
@@ -28,6 +32,12 @@ function(feltor_add_executable
         return()
     endif()
     if(with_GLFW AND NOT FELTOR_WITH_GLFW)
+        return()
+    endif()
+    if(with_file AND NOT FELTOR_FILE_WITH_NETCDF)
+        return()
+    endif()
+    if(with_matrix AND NOT FELTOR_DG_WITH_MATRIX)
         return()
     endif()
     #ignore GLFW when MPI is set
