@@ -62,9 +62,10 @@
             "binaryDir": "build/cpu",
             "cacheVariables": {
                 "CCCL_THRUST_DEVICE_SYSTEM": "CPP",
-                "CMAKE_CXX_FLAGS": "/arch:AVX2 /O2 -DFP_FAST_FMA",
+                "CMAKE_TOOLCHAIN_FILE": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_CXX_FLAGS": "/arch:AVX2 /O2 /EHsc -DFP_FAST_FMA -D_USE_MATH_DEFINES",
                 "FELTOR_DG_WITH_MATRIX": false,
-                "CMAKE_BUILD_TYPE":  "Release"
+                "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {

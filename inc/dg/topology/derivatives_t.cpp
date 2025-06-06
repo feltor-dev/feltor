@@ -72,11 +72,14 @@ TEST_CASE( "Derivatives")
         const Vector dy2d = dg::evaluate( cosy, g2d);
         const Vector null2 = dg::evaluate( dg::zero, g2d);
         Vector sol2[] = {dx2d, dy2d, null2, null2};
+
         // on github there is a slightly different result
-        int64_t binary_gh[] = {4562611930300282861,4553674328256673277,4567083257206217158,4574111364446550181};
-        int64_t binary[] = {4562611930300281864,4553674328256556132,4567083257206218817,4574111364446550002};
-
-
+        int64_t binary_gh[] = { 4562611930300282861,4553674328256673277,4567083257206217158,4574111364446550181 };
+#ifdef _MSC_VER
+        int64_t binary[] = { 4562611930300284162,4553674328256669894,4567083257206216601,4574111364446549876};
+#else
+        int64_t binary[] = { 4562611930300281864,4553674328256556132,4567083257206218817,4574111364446550002 };
+#endif //_MSC_VER
         dg::exblas::udouble res;
         INFO("TEST 2D: DX, DY, JX, JY");
         auto i = GENERATE( 0,1,2,3);
@@ -110,9 +113,12 @@ TEST_CASE( "Derivatives")
         const Vector dz3d = dg::evaluate( cosz, g3d);
         const Vector null3 = dg::evaluate( dg::zero, g3d);
         Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
-        int64_t binary_gh[] = {4561946736820640320,4553062895410783769,4594213495911299616,4566393134538622288,4573262464593641524,4594304523193682043};
+        int64_t binary_gh[] = { 4561946736820640320,4553062895410783769,4594213495911299616,4566393134538622288,4573262464593641524,4594304523193682043 };
+#ifdef _MSC_VER
+        int64_t binary[] = { 4561946736820642285,4553062895410778470,4594213495911299616,4566393134538621435,4573262464593641255,4594304523193682043 };
+#else
         int64_t binary[] = {4561946736820639666,4553062895410573431,4594213495911299616,4566393134538626348,4573262464593641240,4594304523193682043};
-
+#endif //_MSC_VER
         INFO("TEST 3D: DX, DY, DZ, JX, JY, JZ");
         auto i = GENERATE( 0,1,2,3,4,5);
         dg::exblas::udouble res;
@@ -191,7 +197,11 @@ TEST_CASE( "Derivatives")
             x){ return thrust::complex{x.real(), x.real()};});
         cVector cerror = csol2;
         int64_t binary_gh = {4562611930300282861};
+#ifdef _MSC_VER
+        int64_t binary = { 4562611930300284162 };
+#else
         int64_t binary = {4562611930300281864};
+#endif
         dg::exblas::udouble res;
         INFO("TEST 2D: DX");
         dg::blas2::symv( -1., dx2, cf2d, 1., cerror);

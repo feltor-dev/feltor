@@ -107,7 +107,7 @@ TEST_CASE("blas1")
 #else
         Vector v1(v1p), v2(v2p), v3(v3p), v4(v4p);
         Vector nanvec( v3p);
-        nanvec[0] = 1./0.;
+        nanvec[0] = NAN;
 #endif
 
         Vector res = nanvec;

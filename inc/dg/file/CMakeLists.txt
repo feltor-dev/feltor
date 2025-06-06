@@ -112,12 +112,9 @@ endif()
 
 if( FELTOR_FILE_WITH_NETCDF)
     # Must install separately, e.g. `sudo apt install libnetcdf-dev`
-    find_package(netCDF)
-    if(TARGET netCDF::netcdf)
-      target_link_libraries(dg_file_netcdf INTERFACE netCDF::netcdf)
-    else()
-      message(WARNING "Failed to find netCDF, the target dg_netcdf is incomplete")
-    endif()
+    find_package(netCDF REQUIRED)
+    target_link_libraries(dg_file_netcdf INTERFACE netCDF::netcdf)
+
 
     # ============================================
     # Add compile definitions
