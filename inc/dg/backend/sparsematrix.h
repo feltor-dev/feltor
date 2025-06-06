@@ -131,7 +131,7 @@ struct SparseMatrix
 
     /// Enable copy constructor from foreign types
     template< class I, class V, template<class> class Vec>
-    friend class SparseMatrix; // enable copy
+    friend struct SparseMatrix; // enable copy
 
     /*! @brief Copy construct from differen type
      *

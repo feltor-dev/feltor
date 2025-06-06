@@ -25,7 +25,7 @@ namespace detail
 {
 
 template<class T>
-inline int get_var_T( int ncid, int varID, T* data)
+inline int get_var_T( int /*ncid*/, int /*varID*/, T* /*data*/)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;
@@ -47,7 +47,7 @@ inline int get_var_T<unsigned>( int ncid, int varID, unsigned* data){
     return nc_get_var_uint( ncid, varID, data);
 }
 template<class T>
-inline int get_vara_T( int ncid, int varID, const size_t* startp, const size_t* countp, T* data)
+inline int get_vara_T( int /*ncid*/, int /*varID*/, const size_t* /*startp*/, const size_t* /*countp*/, T* /*data*/)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;

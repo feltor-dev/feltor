@@ -49,6 +49,8 @@
 
 #ifdef __APPLE__ //MAC does not know "unroll-loops"
 #define UNROLL_ATTRIBUTE
+#elif defined __clang__
+#define UNROLL_ATTRIBUTE
 #else
 #define UNROLL_ATTRIBUTE __attribute__((optimize("unroll-loops")))
 #endif // __APPLE__

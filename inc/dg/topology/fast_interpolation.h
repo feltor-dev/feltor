@@ -52,7 +52,7 @@ struct MultiMatrix
 
     //https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
     template< class OtherMatrix, class OtherContainer>
-    friend class MultiMatrix; // enable copy
+    friend struct MultiMatrix; // enable copy
     template<class OtherMatrix, class OtherContainer, class ... Params>
     MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ... ps)
     {

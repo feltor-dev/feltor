@@ -282,7 +282,7 @@ dg::x::HVec make_ntilde(
                 std::function<double(double,double,double)> initT = dg::Gaussian(
                         x0, y0, sigma, sigma, amp);
                 if( type == "circle")
-                    initT = [amp, sigma, sigma_z, x0, y0]( double x, double y, double) {
+                    initT = [amp, sigma, x0, y0]( double x, double y, double) {
                         if( (x-x0)*(x-x0) + (y-y0)*(y-y0) < sigma*sigma)
                             return amp;
                         return 0.;

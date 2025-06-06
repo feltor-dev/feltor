@@ -467,7 +467,7 @@ struct EntireDomain
 {
     ///@brief always true
     template<class T>
-    bool contains( T& t) const { return true;}
+    bool contains( T&) const { return true;}
 };
 
 ///@addtogroup time

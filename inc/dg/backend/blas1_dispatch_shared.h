@@ -23,22 +23,22 @@ namespace dg
 namespace detail
 {
 template< class To, class From, class ...Params>
-To doConstruct( const From& from, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+To doConstruct( const From& from, ThrustVectorTag, ThrustVectorTag, Params&& ...)
 {
     return To( from.begin(), from.end());
 }
 template< class From, class To, class ...Params>
-void doAssign( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+void doAssign( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Params&& ...)
 {
     to.assign( from.begin(), from.end());
 }
 template< class To, class From, class ...Params>
-To doConstruct( const From& from, ArrayScalarTag, ArrayScalarTag, Params&& ...ps)
+To doConstruct( const From& from, ArrayScalarTag, ArrayScalarTag, Params&& ...)
 {
     return from;
 }
 template< class From, class To, class ...Params>
-void doAssign( const From& from, To& to, ArrayScalarTag, ArrayScalarTag, Params&& ...ps)
+void doAssign( const From& from, To& to, ArrayScalarTag, ArrayScalarTag, Params&& ...)
 {
     to = from;
 }
