@@ -35,11 +35,11 @@ jobs:
         # Copy the parameters from the default presets
         echo "build-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         if [[ ${{ matrix.device }} = "gpu" ]]; then
-          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CUDA -DCMAKE_CUDA_FLAGS='-mavx -mfma -O2'" >> "$GITHUB_OUTPUT"
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CUDA -DCMAKE_CUDA_FLAGS='-march=native -O3'" >> "$GITHUB_OUTPUT"
         elif [[ ${{ matrix.device }} = "openmp" ]]; then
-          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=OMP -DCMAKE_CXX_FLAGS='-mavx -mfma -O2'" >> "$GITHUB_OUTPUT"
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=OMP -DCMAKE_CXX_FLAGS='-march=native -O3'" >> "$GITHUB_OUTPUT"
         else
-          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CPP -DCMAKE_CXX_FLAGS='-mavx -mfma -O2'" >> "$GITHUB_OUTPUT"
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CPP -DCMAKE_CXX_FLAGS='-march=native -O3'" >> "$GITHUB_OUTPUT"
         fi
         if [[ ${{ matrix.mpi }} = "mpi_on" ]]; then
           echo "mpi=-DFELTOR_WITH_MPI=ON" >> "$GITHUB_OUTPUT"

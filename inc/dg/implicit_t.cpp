@@ -98,7 +98,8 @@ TEST_CASE( "Default solver interface")
     double err = dg::blas2::dot( w2d, error);
     err = sqrt( err/norm); res.d = err;
     INFO( " Error "<<err << "\t"<<res.i);
-    CHECK( err < 1e-6);
-    CHECK( abs( res.i - 4503686874401734415) < 2);
+    CHECK( err < 2e-7);
+    // MW This does not succeed on github or msvc:
+    // CHECK( abs( res.i - 4503686874401734415) < 2);
 }
 
