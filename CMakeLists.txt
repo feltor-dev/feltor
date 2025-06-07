@@ -1,5 +1,27 @@
 cmake_minimum_required(VERSION 3.26)
 
+# ============================================
+# User Options
+option(FELTOR_FILE_WITH_JSONCPP "Use jsoncpp instead of nlohmann/json." OFF)
+option(FELTOR_FILE_WITH_NETCDF "Configure dg_file_netcdf and dg_file_file targets. Depends on NetCDF." ON)
+option(FELTOR_DG_WITH_MATRIX "Configure dg_matrix target. Depends on Boost and Lapack." ON)
+
+# If using vcpkg to install dependencies
+# this is a bit of a hack until a better solution
+# reveals itself,
+# because the options need to be defined here
+# because vcpkg needs to called before project
+# Or use e.g. vcpkg install --x-feature=netcdf 
+if(FELTOR_FILE_WITH_NETCDF)
+    # Installing netcdf from scratch on windows takes about 20 min
+    list(APPEND VCPKG_MANIFEST_FEATURES "netcdf")
+endif()
+if(FELTOR_DG_WITH_MATRIX)
+    # Installing lapack from scratch on windows takes about 1.5 hours
+    list( APPEND VCPKG_MANIFEST_FEATURES "lapack")
+endif()
+
+
 # Project name and version
 project(
     feltor

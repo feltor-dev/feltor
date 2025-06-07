@@ -335,7 +335,6 @@ add_subdirectory(geometries)
 # Add matrix utilities
 # Defines the dg_matrix target
 
-option(FELTOR_DG_WITH_MATRIX "Configure dg_matrix target. Depends on Boost and Lapack." ON)
 if(FELTOR_DG_WITH_MATRIX)
     add_subdirectory(matrix)
 endif()

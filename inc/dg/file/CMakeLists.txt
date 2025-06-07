@@ -56,10 +56,6 @@ set(FILE_MPI_TESTS
   ../../file/probes_t.cpp
 )
 
-# ============================================
-# User Options
-option(FELTOR_FILE_WITH_JSONCPP "Use jsoncpp instead of nlohmann/json." OFF)
-option(FELTOR_FILE_WITH_NETCDF "Configure dg_file_netcdf and dg_file_file targets. Depends on NetCDF." ON)
 
 # ============================================
 # Create DG file library target
