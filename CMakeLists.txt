@@ -6,10 +6,6 @@ cmake_minimum_required(VERSION 3.26)
 # Set these using -DFELTOR_WITH_MPI=ON, etc.
 # By default, compiles single threaded on a CUDA.
 
-option(FELTOR_BUILD_PROJECTS    "Configure feltor project target feltor_projects." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_TESTS       "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
-
 
 option(FELTOR_WITH_MPI          "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
 
@@ -50,6 +46,10 @@ project(
     HOMEPAGE_URL    "https://feltor-dev.github.io"
     LANGUAGES       CXX
 )
+
+option(FELTOR_BUILD_PROJECTS    "Configure feltor project target feltor_projects." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_TESTS       "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
 ## Usage:
 ##
