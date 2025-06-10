@@ -34,12 +34,12 @@ git clone https://www.github.com/feltor-dev/feltor
 cd feltor
 cmake --preset cpu # or gpu, omp, mpi-cpu, mpi-gpu, mpi-omp
 ----
-You may need to install the external dependencies `libnetcdf-dev` and `liblapack-dev` from your system package manager.  
+You may need to install the external dependencies `libnetcdf-dev`, `libglfw3-dev` and `liblapack-dev` (and `libopenmpi-dev` for MPI support) from your system package manager.
 ____
-On Windows you can use the built-in git client and cmake integration of Visual Studio. It is easiest to use the built-in vcpkg manager to install the `netcdf-c` and `lapack` dependencies.
+On Windows you can use the built-in git client and cmake integration of Visual Studio. It is easiest to use the built-in vcpkg manager to install the `netcdf-c`, `glfw3` and `lapack` dependencies.
 ____
 
-There are 6 presets targeting 6 different hardware architectures. All require the C{plus}{plus}-17 standard. Each preset `X` creates its binary directory `build/X`. 
+There are 6 presets targeting 6 different hardware architectures. All require the C{plus}{plus}-17 standard. Each preset `X` creates its binary directory `build/X`.
 
 .System requirements [[tab_requirements]]
 
@@ -47,11 +47,11 @@ There are 6 presets targeting 6 different hardware architectures. All require th
 |=======================================================================
 | CMake Preset  | Requirements | Descriptions
 | *cpu*     | gcc >= 9 or msvc >= 19 or icc >= 19.0        |Single core CPU, no parallelization; support for AVX and FMA instruction set is recommended
-| *omp* | OpenMP-4 support| Multi-core CPU parallelisation, set OMP_NUM_THREADS to set number of OpenMP threads to run (not currently available on Windows with MSVC)
+| *omp* | OpenMP-4 support| Multi-core CPU parallelisation, set OMP_NUM_THREADS environment variable to set number of OpenMP threads to run. Not currently available on Windows with MSVC!
 | *gpu*    |   nvcc >= 11.0 | Parallel computation on a single NVidia GPU
 | *mpi-cpu*     | MPI version 3 | Distributed memory system for pure MPI parallelisation
-| *mpi-omp*| MPI version 3 | Hybrid MPI + OpenMP parallelisation. In this configuration you may want to investigate how OpenMP threads map to CPU cores.
-| *mpi-gpu*| MPI version 3, ideally CUDA aware| Hybrid MPI + GPU parallelisation. Each MPI thread targets one GPU. 
+| *mpi-omp*| MPI version 3 | Hybrid MPI + OpenMP parallelisation. In this configuration you may want to investigate how OpenMP threads map to CPU cores. Not currently available on Windows with MSVC!
+| *mpi-gpu*| MPI version 3, ideally CUDA aware| Hybrid MPI + GPU parallelisation. Each MPI thread targets one GPU.
 |=======================================================================
 
 ____
@@ -66,31 +66,31 @@ the same functionality. Analogously, an MPI installation is only required if the
 a distributed memory system.
 ____
 === Available targets
-The Feltor projects defines a host of CMake targets that can be 
+The Feltor projects defines a host of CMake targets that can be
 built after configuration. To build everything run
 [source,sh]
 ----
 cmake --build build/cpu -j 4
- # Replace "cpu" with the preset of your choice; here and in the following. 
+ # Replace "cpu" with the preset of your choice; here and in the following.
  # -j 4 activates parallel compilation with 4 threads.
 ----
-Largely, the Feltor CMake targets are organised into three categories, tests, benchmarks and production projects. These
+The Feltor CMake targets are organised into three categories: tests, benchmarks and production projects. These
 can be targeted individually using
 [source,sh]
 ----
 cmake --build build/cpu --target dg_tests -j 4
 # Compile all tests of the dg library
-cmake --build build/cpu --target dg_becnhmarks -j 4
+cmake --build build/cpu --target dg_benchmarks -j 4
 # Compile all benchmarks of the dg library
 cmake --build build/cpu --target feltor_projects -j 4
 # Compile all production projects of feltor
 ----
 The tests will be built in the `build/X/tests` the benchmarks
-in `build/X/benchmarks` and the projects in `build/X/src`.
+in `build/X/benchmarks` and the projects in `build/X/src`, where `X` is the preset in use.
 The tests can be run using
 [source,sh]
 ----
-ctest --test-dir build/cpu/
+ctest --test-dir build/cpu
 ----
 
 Lastly, one can also target individual programs. All programs in the dg library start with the prefix `dg_` followed by the component name `backend`, `topology`, `geometries`, `file` or `matrix` followed by the program name without suffix. The feltor project targets follow the naming scheme `project_target` where `project` is the name of the folder in the `src` directory and `target` is the program name without suffix. The output name in the binary directory follows the original folder structure and program name. For example:
@@ -106,15 +106,22 @@ cmake --build build/cpu --target feltor_feltor
 ./build/cpu/src/feltor/feltor
 # Compile and run the 3d feltor code in feltor/src/feltor/feltor.cpp
 ----
-Again, remember to replace `cpu` with the preset of your choice, e.g.
+Again, remember to replace `cpu` with the preset of your choice and mind the various options when running parallel programs, e.g.
 [source,sh]
 ----
+cmake --preset gpu
 cmake --build build/gpu --target dg_blas_b
 ./build/gpu/benchmarks/blas_b
 # Compile and run the benchmark program feltor/inc/dg/blas_b.cpp for GPU
-cmake --build build/mpi-gpu --target feltor_feltor
-./build/mpi-gpu/src/feltor/feltor
-# Compile and run the 3d feltor code in feltor/src/feltor/feltor.cpp for hybrid MPI + GPU
+cmake --preset omp
+cmake --build build/omp --target dg_blas_b
+export OMP_NUM_THREADS=4
+./build/gpu/benchmarks/blas_b
+# Compile and run the benchmark program feltor/inc/dg/blas_b.cpp for OpenMP
+cmake --preset mpi-cpu
+cmake --build build/mpi-cpu --target feltor_feltor
+mpirun -n 4 ./build/mpi-cpu/src/feltor/feltor
+# Compile and run the 3d feltor code in feltor/src/feltor/feltor.cpp for pure MPI using 4 MPI threads
 ----
 === Using FELTOR's dg library
 
