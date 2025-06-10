@@ -2,9 +2,25 @@ cmake_minimum_required(VERSION 3.26)
 
 # ============================================
 # User Options
+
+# Set these using -DFELTOR_WITH_MPI=ON, etc.
+# By default, compiles single threaded on a CUDA.
+
+option(FELTOR_BUILD_PROJECTS    "Configure feltor project target feltor_projects." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_TESTS       "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
+option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
+
+
+option(FELTOR_WITH_MPI          "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
+
+# option(FELTOR_INSTALL           "Create install rules" ${PROJECT_IS_TOP_LEVEL})
+# Currently our install rules do not quite work because of how to install dependencies?
+set( FELTOR_INSTALL OFF)
+
 option(FELTOR_FILE_WITH_JSONCPP "Use jsoncpp instead of nlohmann/json." OFF)
-option(FELTOR_FILE_WITH_NETCDF "Configure dg_file_netcdf and dg_file_file targets. Depends on NetCDF." ON)
-option(FELTOR_DG_WITH_MATRIX "Configure dg_matrix target. Depends on Boost and Lapack." ON)
+option(FELTOR_FILE_WITH_NETCDF  "Configure dg_file_netcdf and dg_file_file targets. Depends on NetCDF." ON)
+option(FELTOR_DG_WITH_MATRIX    "Configure dg_matrix target. Depends on Boost and Lapack." ON)
+option(FELTOR_WITH_GLFW         "Configure executables, which allow it, with plotting support. Ignored if MPI is used." ON)
 
 # If using vcpkg to install dependencies
 # this is a bit of a hack until a better solution
@@ -19,6 +35,10 @@ endif()
 if(FELTOR_DG_WITH_MATRIX)
     # Installing lapack from scratch on windows takes about 1.5 hours
     list( APPEND VCPKG_MANIFEST_FEATURES "lapack")
+endif()
+if(FELTOR_WITH_GLFW)
+    # Installing glfw from scratch on windows takes about a minute
+    list( APPEND VCPKG_MANIFEST_FEATURES "glfw")
 endif()
 
 
@@ -86,22 +106,6 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Add cmake modules (e.g. FindThrust.cmake)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-# ============================================
-# User Options
-
-# Set these using -DFELTOR_WITH_MPI=ON, etc.
-# By default, compiles single threaded on a CUDA.
-
-option(FELTOR_BUILD_PROJECTS    "Configure feltor project target feltor_projects." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_TESTS       "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
-option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
-
-option(FELTOR_WITH_GLFW         "Configure executables, which allow it, with plotting support." OFF)
-option(FELTOR_WITH_MPI          "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
-
-# option(FELTOR_INSTALL           "Create install rules" ${PROJECT_IS_TOP_LEVEL})
-# Currently our install rules do not quite work because of how to install dependencies?
-set( FELTOR_INSTALL OFF)
 
 
 # ============================================
