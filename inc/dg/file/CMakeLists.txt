@@ -99,7 +99,7 @@ if(FELTOR_FILE_WITH_JSONCPP)
     GIT_TAG 1.9.6
     OPTIONS "JSONCPP_WITH_TESTS OFF"
   )
-  target_link_libraries( json INTERFACE jsoncpp_lib)
+  target_link_libraries( dg_file_json INTERFACE jsoncpp_lib)
 else()
   CPMAddPackage( "gh:nlohmann/json@3.12.0")
   target_compile_definitions(dg_file_json INTERFACE DG_USE_JSONHPP)
