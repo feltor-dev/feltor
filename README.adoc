@@ -42,10 +42,9 @@ ____
 There are 6 presets targeting 6 different hardware architectures. All require the C{plus}{plus}-17 standard. Each preset `X` creates its binary directory `build/X`.
 
 .System requirements [[tab_requirements]]
-
 [cols='3,10,14',options="header"]
 |=======================================================================
-| CMake Preset  | Requirements | Descriptions
+| CMake Preset  | Requirements | Description
 | *cpu*     | gcc >= 9 or msvc >= 19 or icc >= 19.0        |Single core CPU, no parallelization; support for AVX and FMA instruction set is recommended
 | *omp* | OpenMP-4 support| Multi-core CPU parallelisation, set OMP_NUM_THREADS environment variable to set number of OpenMP threads to run. Not currently available on Windows with MSVC!
 | *gpu*    |   nvcc >= 11.0 | Parallel computation on a single NVidia GPU
@@ -123,15 +122,61 @@ cmake --build build/mpi-cpu --target feltor_feltor
 mpirun -n 4 ./build/mpi-cpu/src/feltor/feltor
 # Compile and run the 3d feltor code in feltor/src/feltor/feltor.cpp for pure MPI using 4 MPI threads
 ----
-=== Using FELTOR's dg library
+=== Using FELTOR's dg library in CMake
 
-FELTOR contains a library called the *dg-library* (from discontinuous Galerkin). Note
-that the library is **header-only**, which means that you just have to
+FELTOR contains a library called the *dg-library* (from discontinuous Galerkin). To integrate FELTOR's dg library in your own project via cmake currently the only option is to add it as a submodule i.e. either (i) use https://cmake.org/cmake/help/latest/module/FetchContent.html[FetchContent] directly or (ii) use the cmake package manager https://github.com/cpm-cmake/CPM.cmake[CPM] (our recommendation) or (iii) add feltor as a git submodule and use `add_subdirectory` in your `CMakeLists.txt`. We here show the CPM version. To get started follow the CPM quick start guide to setup the file `cmake/CPM.cmake`. It is also highly recommended to set the `CPM_SOURCE_CACHE` environment variable.
+____
+CMake's install rules and `find_package` currently does not work well with targets that can be compiled for various languages (see https://github.com/feltor-dev/feltor/issues/59[this issue])
+____
+The available library targets in cmake are of the format `feltor::dg::component`, where `component` is one of the following:
+
+.Feltor's dg library targets `feltor::dg::component`
+[cols='3,10,14',options="header"]
+|=======================================================================
+| component  | Corresponding Header | Description
+| `dg`    | `dg/algorithm.h`        |Depends on https://github.com/NVIDIA/cccl[cccl] and https://github.com/vectorclass/version2[vectorclass]
+| `geometries` | `dg/geometries/geometries.h`| Depends on `feltor::dg::file::json`
+| `matrix`   |  `dg/matrix/matrix.h` | Depends on `liblapack-dev` and `Boost::math`
+| `file`    | `dg/file/file.h` | Depends on `feltor::dg::file::json` and `feltor::dg::file::netcdf`
+| `file::json`| `dg/file/json_utilities.h` | Depends on either nlohmann json (default) or jsoncpp (via `FELTOR_FILE_WITH_JSONCPP`)
+| `file::netcdf`| `dg/file/nc_utilities.h`| Depends on `libnetcdf-dev`.
+|=======================================================================
+
+____
+As noted before you may need to install the external dependencies `libnetcdf-dev` and `liblapack-dev` from your system package manager (or use e.g. the vcpkg manager to install  `netcdf-c` and `lapack`). Note that you can set the options `FELTOR_DG_WITH_MATRIX OFF` and `FELTOR_FILE_WITH_NETCDF OFF` to avoid having to install netcdf or lapack. 
+____
+
+Furthermore, since feltor's dg library depends on cccl, we inherit their option `CCCL_THRUST_DEVICE_SYSTEM`, which can be either `CPP`, `OMP` or `CUDA`. Since with CUDA a new language must be enabled (which can only be done once in a cmake project) we must add this to the cmake file:
+
+.CMakeLists.txt
+[source,cmake]
+----
+cmake_minimum_required(VERSION 3.26)
+project( myProject
+    VERSION         1.0.0
+    LANGUAGES       CXX
+)
+# We need to enable CUDA language if the user wants it 
+if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
+    enable_language(CUDA)
+    set_source_files_properties(main.cpp PROPERTIES LANGUAGE CUDA)
+endif()
+
+include(cmake/CPM)
+
+CPMAddPackage("gh:feltor-dev/feltor@8.2")
+add_executable(main main.cpp)
+# The base dg library header "dg/algorithm.h"
+target_link_libraries( main PRIVATE feltor::dg::dg)
+----
+
+Note
+that the dg library is **header-only**, which means that you just have to
 include the relevant header(s) and you're good to go. For example in the
 following program we compute the square L2 norm of a
 function:
 
-.test.cpp [[test_cpp]]
+.main.cpp [[main_cpp]]
 [source,c++]
 ----
 #include <iostream>
@@ -155,12 +200,13 @@ int main()
 }
 ----
 
-To compile and run this code for a GPU use (assuming the external libraries are linked in the `include` folder as described above)
+To compile and run this code for a GPU use
 
 [source,sh]
 ----
-nvcc -x cu -std=c++17 --extended-lambda -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
-./test
+cmake -Bbuild/gpu -DCCCL_THRUST_DEVICE_SYTEM="CUDA" -DCMAKE_CUDA_ARCHITECTURES="native" -DCMAKE_CUDA_FLAGS="-march=native -O3"
+cmake --build build/gpu
+./build/gpu/main
 ----
 
 Or if you want to use OpenMP and gcc instead of CUDA for the device
@@ -168,64 +214,88 @@ functions you can also use
 
 [source,sh]
 ----
-g++ -std=c++17 -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
+cmake -Bbuild/omp -DCCCL_THRUST_DEVICE_SYTEM="OMP" -DCMAKE_CXX_FLAGS="-march=native -O3"
+cmake --build build/omp
 export OMP_NUM_THREADS=4
-./test
+./build/omp/main
 ----
 If you do not want any parallelization, you can use a single thread version
 [source,sh]
 ----
-g++ -std=c++17 -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP -Ipath/to/feltor/inc -Ipath/to/include test.cpp -o test
-./test
+cmake -Bbuild/omp -DCCCL_THRUST_DEVICE_SYTEM="CPP" -DCMAKE_CXX_FLAGS="-march=native -O3"
+cmake --build build/cpu
+./build/cpu/main
 ----
 
 If you want to use mpi, just include the MPI header before any other
 FELTOR header and use our convenient typedefs like so:
 
-.test_mpi.cpp
+.main.cpp
 [source,c++]
 ----
 #include <iostream>
+#ifdef WITH_MPI
 //activate MPI in FELTOR
 #include "mpi.h"
+#endif
 #include "dg/algorithm.h"
 
 double function(double x, double y){return exp(x)*exp(y);}
 int main(int argc, char* argv[])
 {
+#ifdef WITH_MPI
     //init MPI and create a 2d Cartesian Communicator assuming 4 MPI threads
     MPI_Init( &argc, &argv);
     int periods[2] = {true, true}, np[2] = {2,2};
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+#endif
     //create a 2d discretization of [0,2]x[0,2] with 3 polynomial coefficients
-    dg::CartesianMPIGrid2d g2d( 0, 2, 0, 2, 3, 20, 20, comm);
+    dg::CartesianMPIGrid2d g2d( 0, 2, 0, 2, 3, 20, 20
+#ifdef WITH_MPI
+    , comm
+#endif
+    );
     //discretize a function on this grid
-    const dg::MDVec x = dg::evaluate( function, g2d);
+    const dg::x::DVec x = dg::evaluate( function, g2d);
     //create the volume element
-    const dg::MDVec vol2d = dg::create::volume( g2d);
+    const dg::x::DVec vol2d = dg::create::volume( g2d);
     //compute the square L2 norm
     double norm = dg::blas2::dot( x, vol2d, x);
     //on every thread norm is now: (exp(4)-exp(0))^2/4
+#ifdef WITH_MPI
     //be a good MPI citizen and clean up
     MPI_Finalize();
+#endif
     return 0;
 }
+----
+The CMake file needs to be modified like
+
+.CMakeLists.txt
+[source,cmake]
+----
+option(MAIN_WITH_MPI "Compile main with MPI parallelisation" OFF)
+if(MAIN_WITH_MPI)
+    target_link_libraries(main PRIVATE MPI::MPI_CXX)
+    target_compile_definitions(main PRIVATE WITH_MPI)
+endif()
 ----
 
 Compile e.g. for a hybrid MPI {plus} OpenMP hardware platform with
 
 [source,sh]
 ----
-mpic++ -std=c++17 -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/include test_mpi.cpp -o test_mpi
+cmake -Bbuild/mpi-omp -DCCCL_THRUST_DEVICE_SYTEM="OMP" -DCMAKE_CXX_FLAGS="-march=native -O3" -DMAIN_WITH_MPI=ON
+cmake --build build/mpi-omp
 export OMP_NUM_THREADS=2
-mpirun -n 4 ./test_mpi
+mpirun -n 4 ./build/mpi-omp/main
 ----
+This will run 4 MPI threads with 2 OPenMP threads each.
 
 Note the striking similarity to the previous program. Especially the
 line calling the dot function did not change at all. The compiler
-chooses the correct implementation for you! This is a first example of a
-__container free numerical algorithm__.
+chooses the correct implementation for you! This is a first example of __platform independent code__.
 
 
 === Using Makefiles (Deprecated)
