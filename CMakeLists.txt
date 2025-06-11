@@ -175,7 +175,15 @@ endif()
 # is not defined. So we must assume the user defines CCCL_THRUST_DEVICE_SYSTEM
 # and/or if they do not, then the default is also CUDA
 if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
-  enable_language(CUDA)
+  #MW: For some reason enable_language should not be called in subprojects
+  #https://gitlab.kitware.com/cmake/cmake/-/issues/26751
+  if(${PROJECT_IS_TOP_LEVEL})
+    enable_language(CUDA)
+  endif()
+  get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+  if( NOT "CUDA" IN_LIST languages)
+      message( FATAL_ERROR "You have to use enable_language(CUDA) before fetching the feltor package with CCCL_THRUST_DEVICE_SYSTEM = CUDA.")
+  endif()
   find_package(CUDAToolkit REQUIRED)
 endif()
 add_subdirectory("${PROJECT_SOURCE_DIR}/inc/dg")
