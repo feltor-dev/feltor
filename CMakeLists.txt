@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.26)
 option(FELTOR_WITH_MPI          "Configure all executables that allow MPI parallelization with MPI. Do not configure executables that do not allow MPI." OFF)
 
 # option(FELTOR_INSTALL           "Create install rules" ${PROJECT_IS_TOP_LEVEL})
-# Currently our install rules do not quite work because of how to install dependencies?
+# Currently our install rules do not quite work (see related issue on github page)
 set( FELTOR_INSTALL OFF)
 
 option(FELTOR_FILE_WITH_JSONCPP "Use jsoncpp instead of nlohmann/json." OFF)
@@ -23,14 +23,14 @@ option(FELTOR_WITH_GLFW         "Configure executables, which allow it, with plo
 # reveals itself,
 # because the options need to be defined here
 # because vcpkg needs to called before project
-# Or use e.g. vcpkg install --x-feature=netcdf 
+# Or use e.g. vcpkg install --x-feature=netcdf
 if(FELTOR_FILE_WITH_NETCDF)
     # Installing netcdf from scratch on windows takes about 20 min
     list(APPEND VCPKG_MANIFEST_FEATURES "netcdf")
 endif()
 if(FELTOR_DG_WITH_MATRIX)
     # Installing lapack from scratch on windows takes about 1.5 hours
-    list( APPEND VCPKG_MANIFEST_FEATURES "lapack")
+    list( APPEND VCPKG_MANIFEST_FEATURES "matrix")
 endif()
 if(FELTOR_WITH_GLFW)
     # Installing glfw from scratch on windows takes about a minute
@@ -123,6 +123,8 @@ if(FELTOR_BUILD_TESTS)
     NAME Catch2
     GITHUB_REPOSITORY catchorg/Catch2
     VERSION 3.8.0
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
   )
   # Make include(Catch2) available according to
   # https://github.com/catchorg/Catch2/blob/devel/docs/cmake-integration.md
@@ -201,9 +203,12 @@ if(FELTOR_BUILD_PROJECTS)
     else()
       # Draw Links to GLFW and OpenGL
       # Must be installed separately, e.g. `sudo apt install libglfw3-dev`
-      CPMAddPackage( NAME draw
+      CPMAddPackage(
+          NAME draw
           GIT_REPOSITORY https://github.com/feltor-dev/draw.git
           GIT_TAG master
+          SYSTEM ON
+          EXCLUDE_FROM_ALL ON
       )
       if( draw_ADDED)
           message( STATUS "Found Draw library in ${draw_SOURCE_DIR}")

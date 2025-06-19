@@ -61,29 +61,29 @@ target_sources( dg_matrix INTERFACE
     FILES ${MATRIX_HEADERS}
 )
 target_link_libraries(dg_matrix INTERFACE dg_dg)
-target_link_libraries(dg_matrix INTERFACE Boost::math) # Boost::math builds container and random
 
 
-# Requires Boost.
+# Requires Boost. Install libboost-dev
+# Let's not use CPM here as Boost recommends using find_package and we can
+# expect Boost headers to be installed globally on a system
+# This also avoids problems if another project uses feltor and includes boost
+# before feltor. In such a case CPM complains that Boost::headers target is
+# already defined
 
-# From https://github.com/cpm-cmake/CPM.cmake/blob/master/examples/boost/CMakeLists.txt
-CPMAddPackage(
-  NAME Boost
-  VERSION 1.86.0 # Versions less than 1.85.0 may need patches for installation targets.
-  URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.tar.xz
-  URL_HASH SHA256=2c5ec5edcdff47ff55e27ed9560b0a0b94b07bd07ed9928b476150e16b0efc57
-  OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
-          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES math" # Note the escapes!
-)
+# # From https://github.com/cpm-cmake/CPM.cmake/blob/master/examples/boost/CMakeLists.txt
+# CPMAddPackage(
+#   NAME Boost
+#   VERSION 1.86.0 # Versions less than 1.85.0 may need patches for installation targets.
+#   URL https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.tar.xz
+#   URL_HASH SHA256=2c5ec5edcdff47ff55e27ed9560b0a0b94b07bd07ed9928b476150e16b0efc57
+#   OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON" # Set `OFF` for installation
+#           "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES math"
+# )
+find_package(Boost REQUIRED)
+target_link_libraries(dg_matrix INTERFACE Boost::headers) # We use header only version
 
-message(STATUS "Boost version: ${Boost_VERSION}")
-
-# Requires LAPACK
-find_package( LAPACK REQUIRED)
-if(NOT LAPACK_FOUND)
-  message(WARNING "LAPACK not found. The dg_matrix target will not be created.")
-  return()
-endif()
+# Requires LAPACK. Install liblapack-dev
+find_package(LAPACK REQUIRED)
 target_link_libraries(dg_matrix INTERFACE ${LAPACK_LIBRARIES})
 
 

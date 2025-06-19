@@ -34,9 +34,9 @@ git clone https://www.github.com/feltor-dev/feltor
 cd feltor
 cmake --preset cpu # or gpu, omp, mpi-cpu, mpi-gpu, mpi-omp
 ----
-You may need to install the external dependencies `libnetcdf-dev`, `libglfw3-dev` and `liblapack-dev` (and `libopenmpi-dev` for MPI support) from your system package manager.
+You may need to install the external dependencies `libnetcdf-dev`, `liblapack-dev` and `libboost-dev` (and `libglfw3-dev` for OpenGL output and `libopenmpi-dev` for MPI support) from your system package manager.
 ____
-On Windows you can use the built-in git client and cmake integration of Visual Studio. It is easiest to use the built-in vcpkg manager to install the `netcdf-c`, `glfw3` and `lapack` dependencies.
+On Windows you can use the built-in git client and cmake integration of Visual Studio. It is easiest to use the built-in vcpkg manager to install the `netcdf-c`, `glfw3`, `lapack` and `boost-headers` dependencies.
 ____
 
 There are 6 presets targeting 6 different hardware architectures. All require the C{plus}{plus}-17 standard. Each preset `X` creates its binary directory `build/X`.
@@ -134,16 +134,16 @@ The available library targets in cmake are of the format `feltor::dg::component`
 [cols='3,10,14',options="header"]
 |=======================================================================
 | component  | Corresponding Header | Description
-| `dg`    | `dg/algorithm.h`        |Depends on https://github.com/NVIDIA/cccl[cccl] and https://github.com/vectorclass/version2[vectorclass]
+| `dg`    | `dg/algorithm.h`        |Depends on https://github.com/NVIDIA/cccl[cccl] and https://github.com/vectorclass/version2[vectorclass] (loaded via `CPMAddPackage`)
 | `geometries` | `dg/geometries/geometries.h`| Depends on `feltor::dg::file::json`
-| `matrix`   |  `dg/matrix/matrix.h` | Depends on `liblapack-dev` and `Boost::math`
+| `matrix`   |  `dg/matrix/matrix.h` | Depends on `liblapack-dev` and `libboost-dev`
 | `file`    | `dg/file/file.h` | Depends on `feltor::dg::file::json` and `feltor::dg::file::netcdf`
-| `file::json`| `dg/file/json_utilities.h` | Depends on either nlohmann json (default) or jsoncpp (via `FELTOR_FILE_WITH_JSONCPP`)
+| `file::json`| `dg/file/json_utilities.h` | Depends on either `nlohmann_json >= 3.11` (default) or `jsoncpp >= 1.9.5` (setting `FELTOR_FILE_WITH_JSONCPP ON`) via `CPMAddPackage`
 | `file::netcdf`| `dg/file/nc_utilities.h`| Depends on `libnetcdf-dev`.
 |=======================================================================
 
 ____
-As noted before you may need to install the external dependencies `libnetcdf-dev` and `liblapack-dev` from your system package manager (or use e.g. the vcpkg manager to install  `netcdf-c` and `lapack`). Note that you can set the options `FELTOR_DG_WITH_MATRIX OFF` and `FELTOR_FILE_WITH_NETCDF OFF` to avoid having to install netcdf or lapack. 
+As noted before you may need to install the external dependencies `libnetcdf-dev`, `liblapack-dev` and `libboost-dev` from your system package manager (or use e.g. the vcpkg manager to install  `netcdf-c`, `lapack` and `boost-headers`). Note that you can set the options `FELTOR_DG_WITH_MATRIX OFF` and `FELTOR_FILE_WITH_NETCDF OFF` to avoid having to install netcdf, lapack or boost.
 ____
 
 Furthermore, since feltor's dg library depends on cccl, we inherit their option `CCCL_THRUST_DEVICE_SYSTEM`, which can be either `CPP`, `OMP` or `CUDA`. Since with CUDA a new language must be enabled (which can only be done once in a cmake project) we must add this to the cmake file:
@@ -156,7 +156,7 @@ project( myProject
     VERSION         1.0.0
     LANGUAGES       CXX
 )
-# We need to enable CUDA language if the user wants it 
+# We need to enable CUDA language if the user wants it
 if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
     enable_language(CUDA)
     set_source_files_properties(main.cpp PROPERTIES LANGUAGE CUDA)
@@ -164,7 +164,14 @@ endif()
 
 include(cmake/CPM)
 
-CPMAddPackage("gh:feltor-dev/feltor@8.2")
+CPMAddPackage(
+    NAME feltor
+    GITHUB_REPOSITORY "feltor-dev/feltor"
+    VERSION 8.2
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
+    OPTIONS "FELTOR_DG_WITH_MATRIX OFF" "FELTOR_FILE_WITH_NETCDF OFF"
+)
 add_executable(main main.cpp)
 # The base dg library header "dg/algorithm.h"
 target_link_libraries( main PRIVATE feltor::dg::dg)
@@ -291,7 +298,7 @@ cmake --build build/mpi-omp
 export OMP_NUM_THREADS=2
 mpirun -n 4 ./build/mpi-omp/main
 ----
-This will run 4 MPI threads with 2 OPenMP threads each.
+This will run 4 MPI threads with 2 OpenMP threads each.
 
 Note the striking similarity to the previous program. Especially the
 line calling the dot function did not change at all. The compiler

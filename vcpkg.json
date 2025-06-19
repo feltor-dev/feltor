@@ -9,9 +9,9 @@
             "description": "dg::file library with netCDF-4 support",
             "dependencies": [ "netcdf-c" ]
         },
-        "lapack": {
-            "description": "dg::matrix depends on lapack",
-            "dependencies": [ "lapack" ]
+        "matrix": {
+            "description": "dg::matrix depends on lapack and boost",
+            "dependencies": [ "lapack", "boost-headers" ]
         },
         "glfw": {
             "description": "feltor projects with OpenGL output",

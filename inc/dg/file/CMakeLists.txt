@@ -94,14 +94,23 @@ endif()
 # Add dependencies
 
 if(FELTOR_FILE_WITH_JSONCPP)
-  CPMAddPackage( NAME jsoncpp
+  CPMAddPackage(
+    NAME jsoncpp
     GITHUB_REPOSITORY open-source-parsers/jsoncpp
-    GIT_TAG 1.9.6
+    VERSION 1.9.5
     OPTIONS "JSONCPP_WITH_TESTS OFF"
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
   )
   target_link_libraries( dg_file_json INTERFACE jsoncpp_lib)
 else()
-  CPMAddPackage( "gh:nlohmann/json@3.12.0")
+  CPMAddPackage(
+    NAME nlohmann_json # Use name of the package that appears in "find_package"
+    GITHUB_REPOSITORY "nlohmann/json"
+    VERSION 3.11.0 # Update in sync with local package manager
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
+  )
   target_compile_definitions(dg_file_json INTERFACE DG_USE_JSONHPP)
   target_link_libraries( dg_file_json INTERFACE nlohmann_json::nlohmann_json)
 endif()

@@ -275,6 +275,8 @@ CPMAddPackage(
     NAME vcl
     GITHUB_REPOSITORY vectorclass/version2
     GIT_TAG v2.02.01
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
 )
 
 if( vcl_ADDED)
@@ -290,7 +292,14 @@ endif()
 target_link_libraries(dg_dg INTERFACE vcl::vcl)
 
 # Add cccl
-CPMAddPackage( "gh:NVIDIA/cccl#v2.8.0")
+
+CPMAddPackage(
+    NAME CCCL
+    GITHUB_REPOSITORY "NVIDIA/cccl"
+    VERSION 2.8.0
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
+)
 
 target_link_libraries(dg_dg INTERFACE CCCL::CCCL)
 
