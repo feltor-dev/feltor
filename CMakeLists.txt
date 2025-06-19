@@ -51,55 +51,6 @@ option(FELTOR_BUILD_PROJECTS    "Configure feltor project target feltor_projects
 option(FELTOR_BUILD_TESTS       "Configure test target dg_tests." ${PROJECT_IS_TOP_LEVEL})
 option(FELTOR_BUILD_BENCHMARKS  "Configure benchmark target dg_benchmarks." ${PROJECT_IS_TOP_LEVEL})
 
-## Usage:
-##
-## Configure the project using:
-##
-##   cmake --preset cpu ## or gpu or omp or mpi-gpu or mpi-cpu or mpi-omp
-##
-## This will configure the project to build in the `build` directory, and will
-## build a plain C++ project. It can be configured to run as a single-threaded
-## CPU program by setting -DCCCL_THRUST_DEVICE_SYSTEM=CPP, a multi-threaded CPU
-## program using -DCCCL_THRUST_DEVICE_SYSTEM=OMP, or as a CUDA-enabled GPU program
-## with -DCCCL_THRUST_DEVICE_SYSTEM=CUDA. By default, the project will be built
-## for GPU.
-##
-## To enable MPI, set the option -DFELTOR_WITH_MPI=ON.
-##
-## The location of dependencies can be specified with -DCMAKE_PREFIX_PATH. To
-## automatically fetch dependencies from GitHub, set -DFELTOR_FETCH_DEPS=ON.
-## -DFELTOR_FETCH_CCCL=ON, -DFELTOR_FETCH_VCL=ON, and -DFELTOR_FETCH_DRAW=ON
-## may also be set individually.
-##
-## When building the FELTOR executable, the user may set -DFELTOR_WITH_GLFW=ON
-## to enable plotting support.
-##
-## After configuring the project, build it using:
-##
-##   cmake --build build
-##
-## This will compile all targets in the project, including all benchmarks and
-## tests. A smaller subset of targets can be built using the `--target` flag:
-##
-##   cmake --build build --target feltor         # Build the feltor executable
-##   cmake --build build --target dg_benchmarks  # Build all dg benchmarks
-##   cmake --build build --target dg_tests       # Build all dg tests
-##   cmake --build build --target dg_blas_b      # Build only inc/dg/blas_b.cpp
-##   cmake --build build --target dg_blas_t      # Build only inc/dg/blas_t.cpp
-##
-## Compilation can be sped up by supplying the `--parallel` flag, while the
-## `--clean-first` flag will force a clean build. Compiled benchmarks may be
-## found in `build/benchmarks`, and compiled tests can be found in
-## `build/tests`. To run the tests, use the `ctest` command:
-##
-##   ctest --test-dir=build
-##
-## Individual tests may be run using:
-##
-##   ctest --test-dir=build -R blas
-##
-## The test names are defined within the test files themselves.
-
 # Enable support for IDEs like Visual Studio
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
