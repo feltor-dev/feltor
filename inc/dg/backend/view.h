@@ -43,14 +43,16 @@ dg::blas1::copy( 7., view); //elements of vector now equal 7 instead of 20
 template<class ThrustVector >
 struct View
 {
-    using iterator = std::conditional_t<std::is_const<ThrustVector>::value,
-          typename ThrustVector::const_iterator,
-          typename ThrustVector::iterator>;
-    using const_iterator = typename ThrustVector::const_iterator;
+    //using iterator = std::conditional_t<std::is_const<ThrustVector>::value,
+    //      typename ThrustVector::const_iterator,
+    //      typename ThrustVector::iterator>;
+    //using const_iterator = typename ThrustVector::const_iterator;
     using pointer = std::conditional_t<std::is_const<ThrustVector>::value,
           typename ThrustVector::const_pointer,
           typename ThrustVector::pointer>;
     using const_pointer = typename ThrustVector::const_pointer;
+    using iterator = pointer;
+    using const_iterator = const_pointer;
     ///@brief Initialize empty view
     View( void): m_ptr(), m_size(0){}
 

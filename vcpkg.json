@@ -1,0 +1,22 @@
+{
+    "name": "feltor",
+    "version": "8.2.0",
+    "homepage": "https://feltor-dev/github.io",
+    "license": "MIT",
+    "description": "Numerical methods for fluid simulations of magnetised plasmas",
+    "features": {
+        "netcdf": {
+            "description": "dg::file library with netCDF-4 support",
+            "dependencies": [ "netcdf-c" ]
+        },
+        "matrix": {
+            "description": "dg::matrix depends on lapack and boost",
+            "dependencies": [ "lapack", "boost-headers" ]
+        },
+        "glfw": {
+            "description": "feltor projects with OpenGL output",
+            "dependencies": ["glfw3"]
+        }
+    },
+    "builtin-baseline": "984f9232b2fe0eb94f5e9f161d6c632c581fff0c"
+}

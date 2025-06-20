@@ -12,14 +12,14 @@
 // 2d
 static double function( double x, double y) {return cos(x)*sin(y);}
 static double pol_average( double x) {return cos(x)*2./M_PI;}
-static double pol_average( double x, double y) {return cos(x)*2./M_PI;}
+static double pol_average( double x, double) {return cos(x)*2./M_PI;}
 static double tor_average( double y) {return sin(y)*2./M_PI;}
-static double tor_average( double x, double y) {return sin(y)*2./M_PI;}
+static double tor_average( double, double y) {return sin(y)*2./M_PI;}
 
 // 3d
-static double function( double x, double y, double z) {return cos(x)*sin(z);}
-static double z_average( double x, double y) {return cos(x)*2./M_PI;}
-static double x_average( double x, double y, double z) {return sin(z)*2./M_PI;}
+static double function( double x, double, double z) {return cos(x)*sin(z);}
+static double z_average( double x, double) {return cos(x)*2./M_PI;}
+static double x_average( double, double, double z) {return sin(z)*2./M_PI;}
 
 TEST_CASE( "2d Average in x and y direction")
 {

@@ -78,7 +78,7 @@ inline get_mapped_type<T> do_get_vector_element( T&& v, const Key& key, StdMapTa
     return v.at(key);
 }
 template<class T, class Key>
-inline T&& do_get_vector_element( T&& v, const Key& i, AnyScalarTag){
+inline T&& do_get_vector_element( T&& v, const Key&, AnyScalarTag){
     return std::forward<T>(v);
 }
 

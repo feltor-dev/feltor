@@ -34,7 +34,7 @@ double laplace3d_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*si
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::PER;
-double initial( double x, double y, double z) {return sin(0);}
+double initial( double, double, double) {return sin(0);}
 double variation3d( double x, double y, double z) {
     return (fctX(x,y,z)*fctX(x,y,z)
         + fctY(x,y,z)*fctY(x,y,z)
@@ -42,7 +42,11 @@ double variation3d( double x, double y, double z) {
 }
 
 
-int main( int argc, char* argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char* argv[]
+#endif
+)
 {
     unsigned n, Nx, Ny, Nz;
     double eps=1e-6;

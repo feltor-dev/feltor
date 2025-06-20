@@ -428,8 +428,9 @@ std::map<int, IntVec> gIdx2unique_idx(
     IntVec& bufferIdx, // may alias globalIndexMap
     const ConversionPolicy& p)
 {
+    // TODO I think this overload is currently not used anywhere...
     // TODO update docu on local_size() ( if we don't scatter we don't need it)
-    return gIdx2unique_idx( gIdx2gIdx(globalIndexMap), bufferIdx);
+    return gIdx2unique_idx( gIdx2gIdx(globalIndexMap, p), bufferIdx);
 }
 ///@endcond
 } // namespace dg

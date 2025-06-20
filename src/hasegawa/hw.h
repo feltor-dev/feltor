@@ -121,7 +121,7 @@ const Container& HW<G, IM, M, Container>::polarisation( const std::vector<Contai
 }
 
 template< class G, class IM, class M, class Container>
-void HW< G, IM, M, Container>::operator()( double t, const std::vector<Container>& y, std::vector<Container>& yp)
+void HW< G, IM, M, Container>::operator()( double, const std::vector<Container>& y, std::vector<Container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

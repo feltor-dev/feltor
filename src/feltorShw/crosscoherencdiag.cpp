@@ -7,7 +7,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/file/file.h"
-#include "feltorShw/parameters.h"
+#include "parameters.h"
 
 /**
  * @brief normalizes input vector 

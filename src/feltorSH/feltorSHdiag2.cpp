@@ -4,17 +4,15 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <thrust/extrema.h>
 
 #include "dg/algorithm.h"
-#include "dg/geometries/geometries.h"
-
 
 #include "dg/file/file.h"
-#include "feltorSH/parameters.h"
-// #include "probes.h"
+#include "parameters.h"
 
-double X( double x, double y) {return x;}
-double Y( double x, double y) {return y;}
+double X( double x, double) {return x;}
+double Y( double, double y) {return y;}
 
 struct Heaviside2d
 {

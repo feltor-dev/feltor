@@ -6,10 +6,9 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 
-#include "hw.cuh"
+#include "mima.h"
 #include "../toefl/parameters.h"
 #include "dg/file/json_utilities.h"
-
 
 int main( int argc, char* argv[])
 {
@@ -34,24 +33,26 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bcx, p.bcy);
     //create RHS
-    bool mhw = (p.model == "modified");
-    hw::HW<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec > rhs( grid, p.kappa,
-            p.tau, p.nu, p.eps_pol[0], mhw);
+    bool mhw = ( p.model == "fullF");
+    mima::Mima< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.tau, p.eps_pol[0], p.nu, mhw);
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.amp);
-    std::vector<dg::DVec> y0(2, dg::evaluate( vortex, grid)), y1(y0); // n_e' = gaussian
-    dg::DVec w2d( dg::create::weights( grid));
 
+//     dg::DVec phi = dg::evaluate( vortex, grid), omega( phi), y0(phi), y1(phi);
+    dg::DVec phi = dg::evaluate( gaussian, grid), omega( phi), y0(phi), y1(phi);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM( grid,  dg::centered);
+    dg::blas2::gemv( laplaceM, phi, omega);
+    dg::blas1::axpby( 1., phi, 1., omega, y0);
+
+    dg::DVec w2d( dg::create::weights( grid));
     if( p.bcx == dg::PER && p.bcy == dg::PER)
     {
-        double meanMass = dg::blas2::dot( y0[0], w2d, one)/(double)(p.lx*p.ly);
+        double meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
         std::cout << "Mean Mass is "<<meanMass<<"\n";
-        dg::blas1::axpby( -meanMass, one, 1., y0[0]);
-        y0[1] = y0[0];
+        dg::blas1::axpby( -meanMass, one, 1., y0);
     }
-
     std::string tableau;
     double rtol, atol, time = 0.;
     try{
@@ -65,7 +66,7 @@ int main( int argc, char* argv[])
         dg::abort_program();
     }
     DG_RANK0 std::cout<< "Construct timeloop ...\n";
-    dg::Adaptive< dg::ERKStep< std::vector<dg::DVec>>> adapt(tableau, y0);
+    dg::Adaptive< dg::ERKStep< dg::DVec>> adapt(tableau, y0);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -73,23 +74,20 @@ int main( int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
-    double E0 = rhs.energy(), E1 = 0, diff = 0; //energy0 = E0;
-    double Ezf0 = rhs.zonal_flow_energy(), Ezf1 = 0, diffzf = 0; //energyzf0 = Ezf0;
+    double dt = 1e-5;
+    unsigned itstp = js["output"]["itstp"].asUInt();
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM(grid,  dg::centered);
-    unsigned itstp = js["output"]["itstp"].asUInt();
-    double dt = 1e-5;
     while ( !glfwWindowShouldClose( w ))
     {
         if( p.bcx == dg::PER && p.bcy == dg::PER)
         {
-            double meanMass = dg::blas2::dot( y0[0], w2d, one)/(double)(p.lx*p.ly);
+            double meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
             std::cout << "Mean Mass is "<<meanMass<<"\n";
         }
         //transform field to an equidistant grid
-        dvisual = y0[0];
+        dvisual = mima.potential();
 
         dg::assign( dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
@@ -101,15 +99,14 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //transform phi
-
-        dg::blas2::gemv( laplacianM, rhs.potential(), y1[1]);
-        dg::assign( y1[1], hvisual);
+        dg::blas2::gemv( laplaceM, mima.potential(), y1);
+        dg::assign( y1, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw phi and swap buffers
         title <<"omega / "<<colors.scale()<<"\t";
-        title << std::fixed; 
+        title << std::fixed;
         title << " &&   time = "<<time;
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         glfwSetWindowTitle(w,title.str().c_str());
@@ -124,27 +121,16 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<itstp; i++)
         {
             step++;
+            if( p.bcx == dg::PER && p.bcy == dg::PER)
             {
-                if( p.bcx == dg::PER && p.bcy == dg::PER)
-                {
-                    double meanMass = dg::blas2::dot( y0[0], w2d, one)/(double)(p.lx*p.ly);
-                    dg::blas1::axpby( -meanMass, one, 1., y0[0]);
-                    meanMass = dg::blas2::dot( y0[1], w2d, one)/(double)(p.lx*p.ly);
-                    dg::blas1::axpby( -meanMass, one, 1., y0[1]);
-                }
-                E0 = E1; Ezf0 = Ezf1;
-                E1 = rhs.energy(); Ezf1 = rhs.zonal_flow_energy();
-                diff = (E1 - E0)/dt; diffzf = (Ezf1-Ezf0)/dt;
-                double diss = rhs.energy_diffusion( ) + rhs.flux() + rhs.capital_jot(); double disszf = rhs.zonal_flow_diffusion() + rhs.capital_r();
-                //std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-                std::cout << "Accuracy:   "<< 2.*(diff-diss)/(diff+diss)<<"\n";
-                std::cout << "AccuracyZF: "<< 2.*(diffzf-disszf)/(diffzf+disszf)<<"\n";
-                std::cout << diff << " "<< rhs.energy_diffusion() << " " <<rhs.flux()<<" "<<rhs.capital_jot()<<"\n";
-                std::cout << diffzf << " "<< rhs.zonal_flow_diffusion() << " " <<rhs.capital_r()<<"\n";
-
+                double meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
+                dg::blas1::axpby( -meanMass, one, 1., y0);
+                meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
+                dg::blas1::axpby( -meanMass, one, 1., y0);
             }
+
             try{
-                adapt.step( rhs, time, y0, time, y0, dt, dg::pid_control,
+                adapt.step( mima, time, y0, time, y0, dt, dg::pid_control,
                         dg::l2norm, rtol, atol);
             }
             catch( std::exception& fail) {

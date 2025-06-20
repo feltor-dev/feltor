@@ -4,19 +4,17 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include <cusp/elementwise.h>
 
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
 #include "dg/file/file.h"
-#include "feltordiag.h"
+#include "parameters.h"
 #include "common.h"
 
 using Geometry =  dg::x::CylindricalGrid3d;
 using Matrix = dg::x::HMatrix;
 using Container = dg::x::HVec;
 
-//using IHMatrix = cusp::coo_matrix<int, double, cusp::host_memory>;
 using IHMatrix = dg::IHMatrix;
 
 int main( int argc, char* argv[])
@@ -89,10 +87,10 @@ int main( int argc, char* argv[])
     // Create and write matrix to file
     std::cout << "Create 1. matrices\n";
     IHMatrix leftx = dg::create::dx( g3d, dg::inverse( p.bcxP), dg::inverse(p.pol_dir)).asCuspMatrix();
-    dg::blas1::scal( leftx.values, -1.);
+    leftx *= -1.;
     std::cout << "Create 2. matrices\n";
     IHMatrix lefty =  dg::create::dy( g3d, dg::inverse( p.bcyP), dg::inverse(p.pol_dir)).asCuspMatrix();
-    dg::blas1::scal( lefty.values, -1.);
+    lefty *= -1.;
     std::cout << "Create 3. matrices\n";
     IHMatrix rightx =  dg::create::dx( g3d, p.bcxP, p.pol_dir).asCuspMatrix();
     IHMatrix righty =  dg::create::dy( g3d, p.bcyP, p.pol_dir).asCuspMatrix();
@@ -106,26 +104,10 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( vol3d, multi_chi[STAGE], vol3d);
     IHMatrix chi_diag = dg::create::diagonal( vol3d);
     IHMatrix inv_vol = dg::create::diagonal( inv_vol3d);
-    IHMatrix CX, XX, CY, YY, JJ, result;
+    IHMatrix result;
 
-    std::cout << "Multiply 1. matrices\n";
-    cusp::multiply( chi_diag, rightx, CX);
-    std::cout << "Multiply 2. matrices\n";
-    cusp::multiply( leftx, CX, XX );
-    std::cout << "Multiply 3. matrices\n";
-    cusp::multiply( chi_diag, righty, CY);
-    std::cout << "Multiply 4. matrices\n";
-    cusp::multiply( lefty, CY, YY );
-    std::cout << "Add 1. matrices\n";
-    cusp::add( jumpx, jumpy, JJ);
-    std::cout << "Add 2. matrices\n";
-    cusp::add( XX, YY, CX);
-    std::cout << "Add 3. matrices\n";
-    cusp::add( CX, JJ, XX);
-    std::cout << "Multiply 5. matrices\n";
-    cusp::multiply( inv_vol, XX, result);
-    //std::cout << "Sort\n";
-    //result.sort_by_row();
+    std::cout << "Building matrices\n";
+    result = inv_vol * (leftx*chi_diag*rightx + lefty*chi_diag*righty + jumpx + jumpy);
     std::cout << "Done\n";
 
     //int dim_ids[3];
@@ -156,7 +138,7 @@ int main( int argc, char* argv[])
     double error = dg::blas2::dot( rhs1, w3d, rhs1);
     std::cout<< "Norm rhs "<<sqrt(dg::blas1::dot( multi_rhs[STAGE], multi_rhs[STAGE]))<<"\n";
     std::cout<< "Norm guess "<<sqrt(dg::blas1::dot( multi_phi[STAGE], multi_phi[STAGE]))<<"\n";
-    std::cout<< "Norm matrix "<<sqrt(dg::blas1::dot( result.values, result.values))<<"\n";
+    std::cout<< "Norm matrix "<<sqrt(dg::blas1::dot( result.values(), result.values()))<<"\n";
     std::cout << "Compare solution with elliptic matrix "<<error <<"\n";
     dg::PCG<Container> cg( w3d, 2000);
     rhs0 = multi_rhs[STAGE];
@@ -165,11 +147,11 @@ int main( int argc, char* argv[])
     unsigned number = cg.solve( result, phi0, rhs0, multi_pol[STAGE].precond(), w3d, p.eps_pol[STAGE], 1, 10);
     std::cout << "CG solver takes "<<number<<" iterations\n";
     // Write out matrix
-    file.put_att( {"ndim", unsigned(result.num_rows)});
-    file.put_att( {"ncol", unsigned(result.num_cols)});
-    file.defput_dim( "i", {}, result.row_offsets);
-    file.defput_dim( "j", {}, result.column_indices);
-    file.defput_var( "vals", {"j"}, {}, {result.values}, result.values);
+    file.put_att( {"ndim", unsigned(result.num_rows())});
+    file.put_att( {"ncol", unsigned(result.num_cols())});
+    file.defput_dim( "i", {}, result.row_offsets());
+    file.defput_dim( "j", {}, result.column_indices());
+    file.defput_var( "vals", {"j"}, {}, {result.values()}, result.values());
 
     file.close();
 

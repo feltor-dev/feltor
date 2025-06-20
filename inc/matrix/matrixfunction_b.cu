@@ -21,7 +21,7 @@ double lhs( double x, double y){ return sin(x*m)*sin(y*n);}
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
 
-int main(int argc, char * argv[])
+int main()
 {
     dg::Timer t;
 

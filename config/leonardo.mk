@@ -10,7 +10,7 @@ INCLUDE += -I$(BOOST_INC) #-I$(LAPACK_INC)
 JSONLIB= -ljsoncpp # json library for input parameters
 LIBS    =-L$(HDF5_LIB) -lhdf5 -lhdf5_hl
 LIBS    +=-L$(NETCDF_C_LIB) -lnetcdf -lcurl
-#LAPACKLIB = -L$(LAPACK_LIB) -llapacke
+#LAPACKLIB = -L$(LAPACK_LIB) -llapack
 endif
 #########################Modules to load ##################
 # module load gcc/12.2

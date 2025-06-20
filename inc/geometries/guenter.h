@@ -111,7 +111,7 @@ struct PsipRZ : public aCylindricalFunctor<PsipRZ>
 struct Ipol : public aCylindricalFunctor<Ipol>
 {
     Ipol( double I_0):   I_0(I_0) {}
-    double do_compute(double R, double Z) const { return I_0; }
+    double do_compute(double, double) const { return I_0; }
     private:
     double I_0;
 };
@@ -121,7 +121,7 @@ struct Ipol : public aCylindricalFunctor<Ipol>
 struct IpolR : public aCylindricalFunctor<IpolR>
 {
     IpolR(  ) {}
-    double do_compute(double R, double Z) const { return 0; }
+    double do_compute(double, double) const { return 0; }
     private:
 };
 /**
@@ -130,7 +130,7 @@ struct IpolR : public aCylindricalFunctor<IpolR>
 struct IpolZ : public aCylindricalFunctor<IpolZ>
 {
     IpolZ(  ) {}
-    double do_compute(double R, double Z) const { return 0; }
+    double do_compute(double, double) const { return 0; }
     private:
 };
 

@@ -29,25 +29,25 @@ namespace cpu {
 //********* Here, the change from float to double happens ***************//
 ///////////////////////////////////////////////////////////////////////////
 #ifndef _WITHOUT_VCL
-inline vcl::Vec8d make_vcl_vec8d( double x, int i){
+inline vcl::Vec8d make_vcl_vec8d( double x, int){
     return vcl::Vec8d(x);
 }
 inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){
     return vcl::Vec8d().load( x+i);
 }
-inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( double x, int, int){
     return vcl::Vec8d(x);
 }
 inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){
     return vcl::Vec8d().load_partial( num, x+i);
 }
-inline vcl::Vec8d make_vcl_vec8d( float x, int i){
+inline vcl::Vec8d make_vcl_vec8d( float x, int){
     return vcl::Vec8d((double)x);
 }
 inline vcl::Vec8d make_vcl_vec8d( const float* x, int i){
     return vcl::Vec8d( x[i], x[i+1], x[i+2], x[i+3], x[i+4], x[i+5], x[i+6], x[i+7]);
 }
-inline vcl::Vec8d make_vcl_vec8d( float x, int i, int num){
+inline vcl::Vec8d make_vcl_vec8d( float x, int, int){
     return vcl::Vec8d((double)x);
 }
 inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
@@ -58,7 +58,7 @@ inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
 }
 #endif//_WITHOUT_VCL
 template<class T>
-inline T get_element( T x, int i){
+inline T get_element( T x, int){
 	return x;
 }
 template<class T>

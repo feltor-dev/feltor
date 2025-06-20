@@ -421,7 +421,7 @@ struct Diffusion
         //m_weights = shu.m_temp[0];
         //dg::blas1::copy( 1., m_weights);
     }
-    void operator()(double t, const Container& x, Container& y)
+    void operator()(double, const Container& x, Container& y)
     {
         m_shu->add_implicit( 1., x, 0., y);
     }

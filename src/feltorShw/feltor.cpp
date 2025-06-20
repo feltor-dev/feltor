@@ -362,12 +362,12 @@ int main( int argc, char* argv[])
             file.put_var( record.name, {0}, data);
         }
 
-        dg::HVec xprobecoords(7,1.);
+        std::vector<double> xprobecoords(7,1.);
         for (unsigned i=0;i<7; i++) {
             xprobecoords[i] = p.lx/8.*(1+i) ;
         }
-        const dg::HVec yprobecoords(7,p.ly/2.);
-        std::vector<dg::HVec> coords = {xprobecoords, yprobecoords};
+        const std::vector<double> yprobecoords(7,p.ly/2.);
+        std::vector<std::vector<double>> coords = {xprobecoords, yprobecoords};
         dg::file::ProbesParams probes_params = {
             coords, {"xprobe", "yprobe"}, "none", true
         };

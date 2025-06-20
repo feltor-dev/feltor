@@ -79,7 +79,7 @@ struct EllSparseBlockMat
         }
 
     template< class other_real_type, template<class> class Other_Vector>
-    friend class EllSparseBlockMat; // enable copy
+    friend struct EllSparseBlockMat; // enable copy
 
     template< class other_real_type, template<class> class Other_Vector>
     EllSparseBlockMat( const EllSparseBlockMat<other_real_type, Other_Vector>& src)
@@ -242,7 +242,7 @@ struct CooSparseBlockMat
         n(n),left_size(left_size), right_size(right_size){}
 
     template< class other_real_type, template<class> class Other_Vector>
-    friend class CooSparseBlockMat; // enable copy
+    friend struct CooSparseBlockMat; // enable copy
 
     template< class other_real_type, template<class> class Other_Vector>
     CooSparseBlockMat( const CooSparseBlockMat<other_real_type, Other_Vector>& src)

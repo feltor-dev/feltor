@@ -6,8 +6,8 @@
 
 #include "catch2/catch_all.hpp"
 
-static double zero( double x, double y) { return 0;}
-static double zero( double x, double y, double z) { return 0;}
+static double zero( double, double) { return 0;}
+static double zero( double, double, double) { return 0;}
 static double sin( double x, double y ) {
     if( x < 0)
     {

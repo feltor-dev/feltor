@@ -130,7 +130,7 @@ TEST_CASE( "Adaptive")
             double t_start = 0;
             double t_end = 10;
             double u_start = 1.0, u_end;
-            auto rhs = [](double t, double y, double& yp){
+            auto rhs = [](double, double y, double& yp){
                     yp = y;
             };
             dg::Adaptive<dg::ERKStep<double>> adapt( name,u_start);

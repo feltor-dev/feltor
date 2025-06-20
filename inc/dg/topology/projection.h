@@ -173,7 +173,7 @@ dg::SparseMatrix< int, real_type, thrust::host_vector> transformation(
     const aRealTopology<real_type,Nd>& g_new,
     const aRealTopology<real_type,Nd>& g_old)
 {
-    std::array<unsigned, Nd> n_lcm, N_lcm;
+    std::array<unsigned, Nd> n_lcm{}, N_lcm{};
     for( unsigned u=0; u<Nd; u++)
     {
         n_lcm [u] = lcm( g_new.n(u), g_old.n(u));

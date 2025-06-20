@@ -8,8 +8,7 @@
 #include "dg/algorithm.h"
 
 #include "dg/file/file.h"
-#include "feltorSH/parameters.h"
-// #include "probes.h"
+#include "parameters.h"
 
 int main( int argc, char* argv[])
 {

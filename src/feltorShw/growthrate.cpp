@@ -5,6 +5,7 @@
 #include <string>
 #include <cmath>
 #include <complex>
+#include <thrust/extrema.h>
 #include "spectral/drt_dft.h"
 // #include "spectral/drt_drt.h"
 

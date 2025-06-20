@@ -535,9 +535,9 @@ struct LinearX
     DG_DEVICE
     double operator()(double x)const{ return a_*x+b_;}
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
    private:
     double a_,b_;
 };
@@ -555,9 +555,9 @@ struct LinearY
      */
     LinearY( double a, double b):a_(a), b_(b){}
     DG_DEVICE
-    double operator()( double x, double y, double z)const { return a_*y+b_;}
+    double operator()( double, double y, double)const { return a_*y+b_;}
     DG_DEVICE
-    double operator()( double x, double y)const{ return a_*y+b_;}
+    double operator()( double, double y)const{ return a_*y+b_;}
   private:
     double a_,b_;
 };
@@ -575,7 +575,7 @@ struct LinearZ
      */
     LinearZ( double a, double b):a_(a), b_(b){}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return a_*z+b_;}
+    double operator()( double, double, double z)const{ return a_*z+b_;}
   private:
     double a_,b_;
 };
@@ -626,12 +626,11 @@ struct Gaussian
        \f]
      * @param x x - coordinate
      * @param y y - coordinate
-     * @param z z - coordinate
      *
      * @return gaussian
      */
     DG_DEVICE
-    double operator()(double x, double y, double z) const
+    double operator()(double x, double y, double) const
     {
         return  this->operator()(x,y);
     }
@@ -745,13 +744,13 @@ struct CauchyX
         assert( sigma_x != 0  &&  "sigma_x must be !=0 in Cauchy");
     }
     DG_DEVICE
-    double operator()(double x, double y )const{
+    double operator()(double x, double )const{
         double xbar = (x-x0_)/sigmaX_;
         if( xbar*xbar  < 1.)
             return amp_*exp( 1. +  1./( xbar*xbar -1.) );
         return 0.;
     }
-    bool inside( double x, double y)const
+    bool inside( double x, double)const
     {
         double xbar = (x-x0_)/sigmaX_;
         if( xbar*xbar < 1.)
@@ -854,12 +853,12 @@ struct GaussianX
         return  m_amp* exp( -((x-m_x0)*(x-m_x0)/2./m_sigma_x/m_sigma_x ));
     }
     DG_DEVICE
-    double operator()(double x, double y) const
+    double operator()(double x, double) const
     {
         return this->operator()(x);
     }
     DG_DEVICE
-    double operator()(double x, double y, double z) const
+    double operator()(double x, double, double) const
     {
         return this->operator()(x);
     }
@@ -892,13 +891,12 @@ struct GaussianY
      * \f[
        f(x,y) = Ae^{-\frac{(y-y_0)^2}{2\sigma_y^2}}
        \f]
-     * @param x x - coordinate
      * @param y y - coordinate
      *
      * @return gaussian
      */
     DG_DEVICE
-    double operator()(double x, double y) const
+    double operator()(double, double y) const
     {
         return  m_amp*exp( -((y-m_y0)*(y-m_y0)/2./m_sigma_y/m_sigma_y) );
     }
@@ -946,14 +944,12 @@ struct GaussianZ
      * \f[
        f(x,y,z) = Ae^{-\frac{(z-z_0)^2}{2\sigma_z^2}}
        \f]
-     * @param x x - coordinate
-     * @param y y - coordinate
      * @param z z - coordinate
      *
      * @return gaussian
      */
     DG_DEVICE
-    double operator()(double x, double y, double z) const
+    double operator()(double, double, double z) const
     {
         return  m_amp*exp( -((z-m_z0)*(z-m_z0)/2./m_sigma_z/m_sigma_z) );
     }
@@ -1088,9 +1084,9 @@ struct SinX
     DG_DEVICE
     double operator()( double x)const{ return bamp_+amp_*sin(x*kx_);}
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
   private:
     double amp_,bamp_,kx_;
 };
@@ -1109,7 +1105,7 @@ struct SinY
      */
     SinY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
     DG_DEVICE
-    double operator()( double x, double y)const{ return bamp_+amp_*sin(y*ky_);}
+    double operator()( double, double y)const{ return bamp_+amp_*sin(y*ky_);}
   private:
     double amp_,bamp_,ky_;
 };
@@ -1128,7 +1124,7 @@ struct CosY
      */
     CosY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
     DG_DEVICE
-    double operator()( double x, double y)const{ return bamp_+amp_*cos(y*ky_);}
+    double operator()( double, double y)const{ return bamp_+amp_*cos(y*ky_);}
   private:
     double amp_,bamp_,ky_;
 };
@@ -1148,9 +1144,9 @@ struct InvCoshXsq
     DG_DEVICE
     double operator()( double x)const{ return m_amp/cosh(x*m_kx)/cosh(x*m_kx);}
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
   private:
     double m_amp, m_kx;
 };
@@ -1171,9 +1167,9 @@ struct SinProfX
     DG_DEVICE
     double operator()( double x)const{ return m_bamp+m_amp*(1.-sin(x*m_kx));}
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
   private:
     double m_amp, m_bamp, m_kx;
 };
@@ -1196,9 +1192,9 @@ struct ExpProfX
     DG_DEVICE
     double operator()( double x)const{ return m_bamp+m_amp*exp(-x/m_ln);}
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
   private:
     double m_amp, m_bamp, m_ln;
 };
@@ -1259,9 +1255,9 @@ struct TanhProfX {
         return profa_*0.5*(1.+s_*tanh((x-xb_)/w_))+bga_;
     }
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
     private:
     double xb_;
     double w_;
@@ -1308,9 +1304,9 @@ struct PolynomialHeaviside {
                *(a + x - x0)*(a + x - x0))/(32.*a*a*a * a*a*a*a);
     }
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
     private:
     double x0, a;
     int m_s;
@@ -1353,9 +1349,9 @@ struct PolynomialRectangle {
         return m_hl(x)*m_hr(x);
     }
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
     private:
     PolynomialHeaviside m_hl, m_hr;
 };
@@ -1402,9 +1398,9 @@ struct IPolynomialHeaviside {
 
     }
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
     private:
     double x0, a;
     int m_s;
@@ -1428,11 +1424,12 @@ struct DPolynomialHeaviside {
      *
      * @param xb boundary value
      * @param a transition width ( must be !=0)
-     * @param sign either +1 (original) or -1 (the function is mirrored at \c x=x0)
+     *
+     * [unnamed-parameter] either +1 (original) or -1 (the function is mirrored at \c x=x0)
      * (since this function is symmetric this parameter is ignored, it's there to be
      * consistent with PolynomialHeaviside)
      */
-    DPolynomialHeaviside(double xb, double a, int sign = +1) :
+    DPolynomialHeaviside(double xb, double a, int = +1) :
         x0(xb), a(a){
             assert( a!=0 && "DPolynomialHeaviside width must not be zero");
     }
@@ -1444,9 +1441,9 @@ struct DPolynomialHeaviside {
             /(32.*a*a*a * a*a*a*a);
     }
     DG_DEVICE
-    double operator()( double x, double y)const{ return this->operator()(x);}
+    double operator()( double x, double)const{ return this->operator()(x);}
     DG_DEVICE
-    double operator()( double x, double y, double z)const{ return this->operator()(x);}
+    double operator()( double x, double, double)const{ return this->operator()(x);}
     private:
     double x0, a;
 };
@@ -1650,6 +1647,7 @@ struct Vortex
 #endif
                     )*cos(theta)/norm;
         return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
+        // TODO Can these be replaced by std::cyl_bessel_k? Not sure what to do on device though
     }
     /**
      * @brief \f$f(x,y,z) =\cos(k_z z)\begin{cases}
@@ -1855,11 +1853,10 @@ struct BathRZ{
      *
      * @param R R - coordinate
      * @param Z Z - coordinate
-     * @param phi phi - coordinate
      *
      * @return the above function value
      */
-    double operator()(double R, double Z, double phi)const {
+    double operator()(double R, double Z, double)const {
         double f, kappa;
         double  RR, ZZ;
         RR=R-R_min_;

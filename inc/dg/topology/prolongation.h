@@ -35,7 +35,7 @@ auto do_full_abscissas( const Topology& g, std::array<unsigned, M> map,
 }
 
 template<class Topology, size_t Md>
-std::array<bool,Topology::ndim()> axes2bools( const Topology& g, std::array<unsigned,Md> axes)
+std::array<bool,Topology::ndim()> axes2bools( const Topology&, std::array<unsigned,Md> axes)
 {
     // The axes that are averaged
     std::array<bool,Topology::ndim()> bools;

@@ -8,7 +8,8 @@
 #endif//_OPENMP
 #endif
 #include "algorithm.h"
-#include "geometries/geometries.h"
+#include "../geometries/ds.h"
+#include "../geometries/guenter.h"
 
 
 const double lx = 2*M_PI;
@@ -27,9 +28,9 @@ double jacobian( double x, double y, double z)
 }
 
 const double R_0 = 1000;
-double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
-double initial( double x, double y, double z) {return sin(0);}
+double fct(double x, double y, double){ return sin(x-R_0)*sin(y);}
+double laplace_fct( double x, double y, double) { return -1./x*cos(x-R_0)*sin(y) + 2.*sin(y)*sin(x-R_0);}
+double initial( double, double, double) {return sin(0);}
 
 double fct3d(double x, double y, double z){ return sin(x-R_0)*sin(y)*sin(z);}
 double laplace_fct3d( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(y)*sin(z) + 2.*fct3d(x,y,z) + 1./x/x*fct3d(x,y,z);}
@@ -50,7 +51,11 @@ Run with:
 
  *******************************************************************************/
 
-int main(int argc, char* argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char* argv[]
+#endif
+)
 {
     unsigned n, Nx, Ny, Nz;
     int dims[3] = {1,1,1};

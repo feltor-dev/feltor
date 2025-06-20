@@ -25,7 +25,7 @@ namespace detail
 {
 
 template<class T>
-inline int get_var_T( int ncid, int varID, T* data)
+inline int get_var_T( int /*ncid*/, int /*varID*/, T* /*data*/)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;
@@ -47,7 +47,7 @@ inline int get_var_T<unsigned>( int ncid, int varID, unsigned* data){
     return nc_get_var_uint( ncid, varID, data);
 }
 template<class T>
-inline int get_vara_T( int ncid, int varID, const size_t* startp, const size_t* countp, T* data)
+inline int get_vara_T( int /*ncid*/, int /*varID*/, const size_t* /*startp*/, const size_t* /*countp*/, T* /*data*/)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;
@@ -183,26 +183,26 @@ void get_vara_detail(int ncid, int varid, unsigned slice,
 /**
 * @brief DEPRECATED Convenience wrapper around \c nc_get_var
 *
-* The purpose of this function is mainly to simplify input in an MPI environment and to provide
-* the same interface also in a shared memory system for uniform programming.
-* This version is for a time-independent variable,
-* i.e. reads a single variable in one go and is actually equivalent
-* to \c nc_get_var. The dimensionality is given by the grid.
+* The purpose of this function is mainly to simplify input in an MPI
+* environment and to provide the same interface also in a shared memory system
+* for uniform programming.  This version is for a time-independent variable,
+* i.e. reads a single variable in one go and is actually equivalent to \c
+* nc_get_var. The dimensionality is given by the grid.
 * @note This function throws a \c dg::file::NC_Error if an error occurs
 * @tparam Topology One of the dG defined grids (e.g. \c dg::RealGrid2d)
 * Determines if shared memory or MPI version is called
 * @copydoc hide_tparam_host_vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
-* @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_get_vara
+* [unnamed Topology] The grid from which to construct \c start and \c count variables to forward to \c nc_get_vara
 * @param data contains the read data on return (must be of size \c grid.size() )
-* @copydoc hide_parallel_param
+* [unnamed bool] This parameter is there to make serial and parallel interface equal.
 * @copydoc hide_master_comment
 * @copydoc hide_parallel_read
 */
 template<class host_vector, class Topology>
-void get_var( int ncid, int varid, const Topology& grid,
-    host_vector& data, bool parallel = true)
+void get_var( int ncid, int varid, const Topology& /*grid*/,
+    host_vector& data, bool /*parallel*/ = true)
 {
     file::NC_Error_Handle err;
     err = detail::get_var_T( ncid, varid, data.data());
@@ -225,13 +225,14 @@ void get_var( int ncid, int varid, const Topology& grid,
 * @param slice The number of the time-slice to read (first element of the \c startp array in \c nc_get_vara)
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_get_vara
 * @param data contains the read data on return (must be of size \c grid.size() )
-* @copydoc hide_parallel_param
+*
+* [unnamed bool] This parameter is there to make serial and parallel interface equal.
 * @copydoc hide_master_comment
 * @copydoc hide_parallel_read
 */
 template<class host_vector, class Topology>
 void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
-    host_vector& data, bool parallel = true)
+    host_vector& data, bool /*parallel*/ = true)
 {
     file::NC_Error_Handle err;
     NcHyperslab slab( slice, grid);
@@ -248,15 +249,17 @@ void get_vara( int ncid, int varid, unsigned slice, const Topology& grid,
  * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array input function). Can be of type <tt> dg::RealMPIGrid0d<real_type> </tt>
+ *
+ * [unnamed RealGrid0d] a Tag to signify scalar ouput (and help the compiler choose this function over the array input function). Can be of type <tt> dg::RealMPIGrid0d<real_type> </tt>
  * @param data The (single) datum read from file.
- * @param parallel This parameter is ignored in both serial and MPI versions.
+ *
+ * [unnamed bool] This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes call this function and all processes read.
  * @copydoc hide_parallel_read
  */
 template<class T, class real_type>
-void get_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
-    T& data, bool parallel = true)
+void get_var( int ncid, int varid, const RealGrid0d<real_type>& /*grid*/,
+    T& data, bool /*parallel*/ = true)
 {
     file::NC_Error_Handle err;
     err = detail::get_var_T( ncid, varid, &data);
@@ -270,16 +273,18 @@ void get_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID
  * @param slice The number of the time-slice to read (first element of the \c startp array in \c nc_get_vara)
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array input function). Can be of type <tt> dg::RealMPIGrid0d<real_type> </tt>
+ *
+ * [unnamed RealGrid0d] a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to read.
- * @param parallel This parameter is ignored in both serial and MPI versions.
+ *
+ * [unnamed bool] This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes call this function and all processes read.
  * @copydoc hide_master_comment
  * @copydoc hide_parallel_read
  */
 template<class T, class real_type>
-void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& grid,
-    T& data, bool parallel = true)
+void get_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& /*grid*/,
+    T& data, bool /*parallel*/ = true)
 {
     file::NC_Error_Handle err;
     size_t count = 1;
@@ -317,7 +322,7 @@ void get_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
 }
 
 template<class T, class real_type>
-void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& grid,
+void get_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& /*grid*/,
     T& data, bool parallel = true)
 {
     get_vara( ncid, varid, slice, dg::RealGrid0d<real_type>(), data, parallel);

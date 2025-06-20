@@ -19,7 +19,7 @@ double rhsHelmholtzsqrt( double x, double y){ return sqrt(1.-(m*m+n*n)*alpha)*si
 using Matrix = dg::DMatrix;
 using Container = dg::DVec;
 
-int main(int argc, char * argv[])
+int main()
 {
     dg::Timer t;
 

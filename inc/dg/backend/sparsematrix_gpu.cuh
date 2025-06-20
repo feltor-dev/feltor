@@ -95,7 +95,7 @@ struct CSRCache_gpu
     {
         update( num_rows, num_cols, nnz, pos, idx, val);
     }
-    CSRCache_gpu( const CSRCache_gpu& src)
+    CSRCache_gpu( const CSRCache_gpu&)
     {
         // Copying makes the cache inactive
     }

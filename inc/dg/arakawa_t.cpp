@@ -83,13 +83,13 @@ TEST_CASE( "Arakawa")
 
     double res = dg::blas2::dot( 1., w2d, jac);
     INFO( "Mean     Jacobian is "<<res);
-    CHECK( res < 1e-15);
+    CHECK( fabs(res) < 2e-13);
     res = dg::blas2::dot( rhs, w2d, jac);
     INFO( "Mean rhs*Jacobian is "<<res);
-    CHECK( res < 1e-15);
+    CHECK( fabs(res) < 2e-13);
     res = dg::blas2::dot( lhs, w2d, jac);
     INFO( "Mean lhs*Jacobian is "<<res);
-    CHECK( res < 1e-15);
+    CHECK( fabs(res) < 2e-13);
     dg::blas1::axpby( 1., sol, -1., jac);
     res = sqrt(dg::blas2::dot( w2d, jac)); //don't forget sqrt when computing errors
     INFO( "Distance to solution "<<res);

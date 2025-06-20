@@ -13,12 +13,12 @@ namespace dg
 namespace detail
 {
 template< class To, class From, class ...Params>
-To doConstruct( const From& from, AnyScalarTag, AnyScalarTag, Params&& ...ps)
+To doConstruct( const From& from, AnyScalarTag, AnyScalarTag, Params&& ...)
 {
     return To( from);
 }
 template< class From, class To, class ...Params>
-void doAssign( const From& from, To& to, AnyScalarTag, AnyScalarTag, Params&& ...ps)
+void doAssign( const From& from, To& to, AnyScalarTag, AnyScalarTag, Params&& ...)
 {
     to = from;
 }
@@ -28,7 +28,7 @@ namespace blas1
 namespace detail
 {
 template< class T, size_t N, class Functor, class ContainerType, class ...ContainerTypes>
-inline void doDot_fpe( AnyScalarTag, int* status, std::array<T,N>& fpe, Functor f,
+inline void doDot_fpe( AnyScalarTag, int* , std::array<T,N>& fpe, Functor f,
     const ContainerType& x, const ContainerTypes& ...xs)
 {
     fpe[0] = f(x,xs...);

@@ -25,8 +25,8 @@ const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
-double initial( double x) {return 0.;}
-double initial( double x, double y) {return 0.;}
+double initial( double) {return 0.;}
+double initial( double, double) {return 0.;}
 //double amp = 0.9999; // LGMRES has problems here
 double amp = 0.9;
 double pol( double x) {return 1. + amp*sin(x); } //must be strictly positive
@@ -45,7 +45,11 @@ double derY(double x, double y)  { return sin( x)*cos(y);}
 double vari(double x, double y)  { return pol(x,y)*pol(x,y)*(derX(x,y)*derX(x,y) + derY(x,y)*derY(x,y));}
 
 
-int main( int argc, char* argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char* argv[]
+#endif
+)
 {
 #ifdef WITH_MPI
     dg::mpi_init( argc, argv);

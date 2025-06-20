@@ -1,0 +1,81 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "cpu",
+            "displayName": "Single core CPU",
+            "binaryDir": "build/cpu",
+            "cacheVariables": {
+                "CCCL_THRUST_DEVICE_SYSTEM": "CPP",
+                "CMAKE_CXX_FLAGS": "-march=native -O3"
+            }
+        },
+        {
+            "name": "gpu",
+            "displayName": "Single GPU",
+            "binaryDir": "build/gpu",
+            "cacheVariables": {
+                "CCCL_THRUST_DEVICE_SYSTEM": "CUDA",
+                "CMAKE_CUDA_ARCHITECTURES": "native",
+                "CMAKE_CUDA_FLAGS": "-march=native -O3"
+            }
+        },
+        {
+            "name": "omp",
+            "displayName": "Shared Memory OpenMP",
+            "binaryDir": "build/omp",
+            "cacheVariables": {
+                "CCCL_THRUST_DEVICE_SYSTEM": "OMP",
+                "CMAKE_CXX_FLAGS": "-march=native -O3"
+            }
+        },
+        {
+            "name": "mpi-cpu",
+            "displayName": "Multi core MPI",
+            "binaryDir": "build/mpi-cpu",
+            "inherits": "cpu",
+            "cacheVariables": {
+                "FELTOR_WITH_MPI": "ON"
+            }
+        },
+        {
+            "name": "mpi-gpu",
+            "displayName": "Multi core MPI with GPU",
+            "binaryDir": "build/mpi-gpu",
+            "inherits": "gpu",
+            "cacheVariables": {
+                "FELTOR_WITH_MPI": "ON"
+            }
+        },
+        {
+            "name": "mpi-omp",
+            "displayName": "Multi core MPI with OpenMP",
+            "binaryDir": "build/mpi-gpu",
+            "inherits": "gpu",
+            "cacheVariables": {
+                "FELTOR_WITH_MPI": "ON"
+            }
+        },
+        {
+            "name": "msvc-cpu",
+            "displayName": "Single core CPU on Windows",
+            "binaryDir": "build/cpu",
+            "cacheVariables": {
+                "CCCL_THRUST_DEVICE_SYSTEM": "CPP",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_CXX_FLAGS": "/arch:AVX2 /O2 /EHsc -DFP_FAST_FMA -D_USE_MATH_DEFINES",
+                "FELTOR_DG_WITH_MATRIX": false,
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "msvc-mpi-cpu",
+            "displayName": "Multi core MPI on Windows",
+            "binaryDir": "build/mpi-cpu",
+            "inherits": "msvc-cpu",
+            "cacheVariables": {
+                "FELTOR_WITH_MPI": "ON"
+            }
+        }
+    ]
+}

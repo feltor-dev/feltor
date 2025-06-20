@@ -63,7 +63,11 @@ struct test_inplace{
     }
 };
 
-int main( int argc, char* argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char* argv[]
+#endif
+)
 {
 #ifdef WITH_MPI
     dg::mpi_init( argc, argv);

@@ -1,5 +1,5 @@
 #pragma once
-#include "../dg/backend/typedefs.h"
+#include <vector>
 
 namespace dg
 {
@@ -28,8 +28,8 @@ struct ProbesParams
      * to file. Also note that \c parse_probes only reads coords on the master
      * thread the other ranks remain empty
      */
-    std::vector< dg::HVec> coords;
-    std::vector<std::string> coords_names; //!< Name of coordinates (must have same size as \c coords)
+    std::vector< std::vector<double>> coords;
+    std::vector< std::string> coords_names; //!< Name of coordinates (must have same size as \c coords)
     /**
      * @brief Optional format string for \c coords.
      *

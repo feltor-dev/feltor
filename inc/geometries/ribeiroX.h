@@ -140,7 +140,7 @@ struct FpsiX
         double fofpsi[4];
         fofpsi[1] = operator()(psi-deltaPsi);
         fofpsi[2] = operator()(psi+deltaPsi);
-        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
+        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old = fprime;
         double eps = 1e10, eps_old=2e10;
         while( eps < eps_old || eps > 1e-7)
         {
@@ -174,7 +174,7 @@ struct XFieldFinv
     XFieldFinv( const CylindricalFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500):
         fpsi_(psi, xX, yX, x0, y0), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi) , N_steps(N_steps)
             { xAtOne_ = fpsi_.find_x(0.1); }
-    void operator()(double ttt, double psi, double& fpsiM)
+    void operator()(double, double psi, double& fpsiM)
     {
         std::array<double, 3> begin{ {0,0,0} }, end(begin);
         double R_i[2], Z_i[2];
@@ -305,8 +305,8 @@ struct RibeiroX : public aGeneratorX2d
         }
     }
 
-    virtual double do_zeta0(double fx) const override final { return zeta0_; }
-    virtual double do_zeta1(double fx) const override final { return zeta1_;}
+    virtual double do_zeta0(double) const override final { return zeta0_; }
+    virtual double do_zeta1(double) const override final { return zeta1_;}
     virtual double do_eta0(double fy) const override final { return -2.*M_PI*fy/(1.-2.*fy); }
     virtual double do_eta1(double fy) const override final { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:

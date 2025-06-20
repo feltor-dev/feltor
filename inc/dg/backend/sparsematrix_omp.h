@@ -15,8 +15,8 @@ struct CSRCache_omp
 //y = alpha A*x + beta y
 template<class I, class V, class value_type, class C1, class C2>
 void spmv_omp_kernel(
-    CSRCache_omp& cache,
-    size_t A_num_rows, size_t A_num_cols, size_t A_nnz,
+    CSRCache_omp& /*cache*/,
+    size_t A_num_rows, size_t /*A_num_cols*/, size_t /*A_nnz*/,
     const I* RESTRICT A_pos , const I* RESTRICT A_idx, const V* RESTRICT  A_val,
     value_type alpha, value_type beta, const C1* RESTRICT x_ptr, C2* RESTRICT y_ptr
 )

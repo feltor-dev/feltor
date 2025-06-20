@@ -18,7 +18,7 @@ namespace detail
 // Entries in A are sorted (even if B and/or C are not)
 template<class I, class V>
 void spgemm_cpu_kernel(
-    size_t B_num_rows, size_t B_num_cols, size_t C_num_cols,
+    size_t B_num_rows, size_t /*B_num_cols*/, size_t C_num_cols,
     const I& B_pos , const I& B_idx, const V& B_val,
     const I& C_pos , const I& C_idx, const V& C_val,
           I& A_pos ,       I& A_idx,       V& A_val
@@ -182,8 +182,8 @@ struct CSRCache_cpu
 //y = alpha A*x + beta y
 template<class I, class V, class value_type, class C1, class C2>
 void spmv_cpu_kernel(
-    CSRCache_cpu& cache,
-    size_t A_num_rows, size_t A_num_cols, size_t A_nnz,
+    CSRCache_cpu& /*cache*/,
+    size_t A_num_rows, size_t /*A_num_cols*/, size_t /*A_nnz*/,
     const I* RESTRICT A_pos , const I* RESTRICT A_idx, const V* RESTRICT  A_val,
     value_type alpha, value_type beta, const C1* RESTRICT x_ptr, C2* RESTRICT y_ptr
 )

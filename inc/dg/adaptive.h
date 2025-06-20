@@ -34,7 +34,7 @@ static auto fast_l2norm  = []( const auto& x){ return sqrt( dg::blas1::reduce(
             x, (double)0, dg::Sum(), dg::Square()));};
 
 ///\f$ h_{n+1}= h_n \epsilon_n^{-1/p}\f$
-static auto i_control = []( auto dt, auto eps, unsigned embedded_order, unsigned order)
+static auto i_control = []( auto dt, auto eps, unsigned embedded_order, unsigned)
 {
     using value_type = std::decay_t<decltype(dt[0])>;
     return dt[0]*pow( eps[0], -1./(value_type)embedded_order);
@@ -467,7 +467,7 @@ struct EntireDomain
 {
     ///@brief always true
     template<class T>
-    bool contains( T& t) const { return true;}
+    bool contains( T&) const { return true;}
 };
 
 ///@addtogroup time

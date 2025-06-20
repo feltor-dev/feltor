@@ -141,21 +141,6 @@ class PolChargeN
      */
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y){
-        symv( 1., x, 0., y);
-    }
-    /**
-     * @brief Compute elliptic term and add to output
-     *
-     * i.e.  \f$ y=alpha*M(phi) x +beta*y \f$
-     * @param alpha a scalar
-     * @param x the chi term
-     * @param beta a scalar
-     * @param y result
-     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
-     */
-    template<class ContainerType0, class ContainerType1>
-    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
-    {
         //non-symmetric via analytical dx phi, dy phi and lap phi
         dg::blas1::copy(x, m_temp);
         dg::blas1::plus( m_temp, -1.);

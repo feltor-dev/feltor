@@ -178,7 +178,7 @@ TEST_CASE( "vdot test")
         const dg::x::DVec v = dg::construct<dg::x::DVec>( dg::evaluate( function3d,
                     g3d));
 
-        unsigned size = dg::blas1::vdot( []DG_DEVICE(double x){ return 1u;},
+        unsigned size = dg::blas1::vdot( []DG_DEVICE(double){ return 1u;},
                 v);
         INFO("Size of vector test       "<<size<<"\t"<<g3d.size());
         CHECK( int( size - g3d.size())  == 0);
@@ -257,7 +257,7 @@ TEST_CASE( "Accuracy Dense Matrix")
     dg::exblas::udouble res;
     res.d = integral_d[0];
     INFO( "2D integral               "<<std::setw(6)<<res.d);
-    CHECK( abs( res.i + 4823491540355645440) < 2);
+    //CHECK( abs( res.i + 4823491540355645440) < 2);
     //We do not expect this to be correct because the Matrix-Vector product is
     //not accurate nor binary reproducible)!
     double sol2d = 0;

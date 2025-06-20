@@ -322,7 +322,8 @@ struct WrappedJsonValue
         else if ( error::is_warning == m_mode)
             std::cerr <<"WARNING "<< message<<" Using default "<<default_str<<"\n";
         else
-            ;
+        {
+        }
     }
     JsonType m_js;
     error m_mode;
@@ -357,7 +358,8 @@ inline JsonType file2Json(std::string filename, enum comments comm =
         else if (err == error::is_warning)
             std::cerr << "WARNING: "<<message<<std::endl;
         else
-            ;
+        {
+        }
         return JsonType();
     }
     JsonType js;
@@ -399,7 +401,8 @@ inline JsonType file2Json(std::string filename, enum comments comm =
         else if (err == error::is_warning)
             std::cerr << "WARNING: "<<message<<std::endl;
         else
-            ;
+        {
+        }
     }
 #endif
     return js;
@@ -468,7 +471,8 @@ inline JsonType string2Json(std::string input, enum comments comm = file::commen
         else if (err == error::is_warning)
             std::cerr << "WARNING: "<<errs<<std::endl;
         else
-            ;
+        {
+        }
     }
 #endif
     return js;

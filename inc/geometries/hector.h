@@ -28,14 +28,14 @@ struct Interpolate
         iter0_( dg::forward_transform( fZeta, g2d) ),
         iter1_( dg::forward_transform(  fEta, g2d) ),
         g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
-    void operator()(real_type t, const std::array<real_type,2>& zeta, std::array<real_type,2>& fZeta)
+    void operator()(real_type, const std::array<real_type,2>& zeta, std::array<real_type,2>& fZeta)
     {
         fZeta[0] = interpolate( dg::lspace, iter0_, fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), g_);
         fZeta[1] = interpolate( dg::lspace, iter1_, fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), g_);
         //fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
         //fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
     }
-    void operator()(real_type t, const std::array<thrust::host_vector<real_type>,2 >& zeta, std::array< thrust::host_vector<real_type>,2 >& fZeta)
+    void operator()(real_type, const std::array<thrust::host_vector<real_type>,2 >& zeta, std::array< thrust::host_vector<real_type>,2 >& fZeta)
     {
         for( unsigned i=0; i<zeta[0].size(); i++)
         {
@@ -237,7 +237,7 @@ struct Hector : public aGenerator2d
         m_g2d(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct m_u
-        container u = construct_grid_and_u( dg::geo::Constant(1), dg::geo::detail::LaplacePsi(psi), psi0, psi1, X0, Y0, eps_u , verbose);
+        container u = construct_grid_and_u( dg::geo::Constant(1), dg::geo::detail::LaplacePsi(psi), eps_u , verbose);
         construct( u, psi0, psi1, dg::geo::Constant(1.), dg::geo::Constant(0.), dg::geo::Constant(1.), verbose);
         m_conformal=m_orthogonal=true;
         ////we actually don't need m_u but it makes a good testcase
@@ -269,7 +269,7 @@ struct Hector : public aGenerator2d
     {
         dg::geo::detail::LaplaceAdaptPsi lapAdaPsi( psi, chi);
         //first construct m_u
-        container u = construct_grid_and_u( chi.f(), lapAdaPsi, psi0, psi1, X0, Y0, eps_u , verbose);
+        container u = construct_grid_and_u( chi.f(), lapAdaPsi, eps_u , verbose);
         construct( u, psi0, psi1, chi.f(),dg::geo::Constant(0), chi.f(), verbose );
         m_orthogonal=true;
         m_conformal=false;
@@ -302,8 +302,7 @@ struct Hector : public aGenerator2d
         m_g2d(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct m_u
-        container u = construct_grid_and_u( psi, chi,
-                psi0, psi1, X0, Y0, eps_u , verbose);
+        container u = construct_grid_and_u( psi, chi, eps_u , verbose);
         construct( u, psi0, psi1, chi.xx(), chi.xy(), chi.yy(), verbose);
         m_orthogonal=m_conformal=false;
         ////we actually don't need m_u but it makes a good testcase
@@ -369,7 +368,7 @@ struct Hector : public aGenerator2d
         //std::cout << "Error in u is "<<eps<<std::endl;
     }
 
-    container construct_grid_and_u( const CylindricalFunctor& chi, const CylindricalFunctor& lapChiPsi, double psi0, double psi1, double X0, double Y0, double eps_u , bool verbose)
+    container construct_grid_and_u( const CylindricalFunctor& chi, const CylindricalFunctor& lapChiPsi, double eps_u , bool verbose)
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
@@ -412,7 +411,7 @@ struct Hector : public aGenerator2d
     }
 
     container construct_grid_and_u( const CylindricalFunctorsLvl2& psi,
-            const CylindricalSymmTensorLvl1& chi, double psi0, double psi1, double X0, double Y0, double eps_u, bool verbose )
+            const CylindricalSymmTensorLvl1& chi, double eps_u, bool verbose )
     {
         dg::geo::detail::LaplaceChiPsi lapChiPsi( psi, chi);
         //first find u( \zeta, \eta)

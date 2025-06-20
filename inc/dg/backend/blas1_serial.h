@@ -36,7 +36,7 @@ inline std::vector<int64_t> doDot_dispatch( SerialTag, int* status, unsigned siz
 }
 
 template<class T>
-inline T get_element( T x, int i){
+inline T get_element( T x, int){
 	return x;
 }
 template<class T>

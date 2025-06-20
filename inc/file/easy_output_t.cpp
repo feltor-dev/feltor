@@ -100,7 +100,7 @@ TEST_CASE( "Easy output")
     MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {1,1,1});
 #endif
     INFO( "Write/Read a time-dependent scalar, scalar field "
-            <<"and sub-fields to netcdf4 file \"test.nc\"");
+            <<"and sub-fields to netcdf4 file \"output.nc\"");
     double Tmax=2.*M_PI;
     double NT = 10;
     double h = Tmax/NT;
@@ -119,7 +119,7 @@ TEST_CASE( "Easy output")
     //create NetCDF File
     int ncid;
     dg::file::NC_Error_Handle err;
-    DG_RANK0 err = nc_create( "test.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
+    DG_RANK0 err = nc_create( "output.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
     int dim_ids[4], tvarID;
     DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
 
@@ -155,7 +155,7 @@ TEST_CASE( "Easy output")
     DG_RANK0 err = nc_close(ncid);
 
     // Every rank can open a NetCDF file
-    err = nc_open( "test.nc", 0, &ncid);
+    err = nc_open( "output.nc", 0, &ncid);
 
     bool exists = dg::file::check_dimensions( ncid, dim_ids, &tvarID, grid);
     INFO("Do dimensions exist?\n");
@@ -206,5 +206,5 @@ TEST_CASE( "Easy output")
     }
 
     DG_RANK0 err = nc_close(ncid);
-    DG_RANK0 std::filesystem::remove( "test.nc");
+    DG_RANK0 std::filesystem::remove( "output.nc");
 }

@@ -19,7 +19,11 @@ doc/geometries
 doc/matrix
 doc/index.html
 
-*/_minted-* # Latex docu
+# ignore visual studio .vs table
+/.vs
+
+# Ignore Latex docu
+*/_minted-*
 
 # Ignore files with certain extension
 *.o
@@ -65,3 +69,4 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 build
+vcpkg_installed

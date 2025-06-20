@@ -30,7 +30,7 @@ struct Implicit
         LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(),  dg::centered)
     {
     }
-    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
+    void operator()(double, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -340,7 +340,7 @@ void Explicit<Grid, IM, Matrix, container>::initializene(const container& src, c
 }
 
 template<class Grid, class IM, class Matrix, class container>
-void Explicit<Grid, IM, Matrix, container>::operator()(double ttt, const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<Grid, IM, Matrix, container>::operator()(double, const std::vector<container>& y, std::vector<container>& yp)
 {
 
     dg::Timer t;

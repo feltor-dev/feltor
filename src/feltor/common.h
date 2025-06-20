@@ -540,6 +540,7 @@ std::unique_ptr<dg::aTimeloop<Vector>> init_timestepper(
                 nfailed ++;
         };
         odeint = std::make_unique<dg::AdaptiveTimeloop<Vector>>(step);
+        adaptive = true;
     }
     else
     {

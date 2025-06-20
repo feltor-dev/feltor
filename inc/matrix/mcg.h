@@ -324,7 +324,7 @@ class MCGFuncEigen
             if (i>0) m_delta[i] = m_delta[i-1]*sqrt(m_TH.M[i]/m_TH.P[i-1]);
         }
         //Compute Eigendecomposition
-        lapack::stev(LAPACK_COL_MAJOR, 'V', m_alpha, m_beta, m_EHt.data(), m_work);
+        lapack::stev('V', m_alpha, m_beta, m_EHt.data(), m_work);
         m_EH = m_EHt.transpose();
         //Compute f(T) e1 = D E f(Lambda) E^t D^{-1} e1
         dg::blas1::pointwiseDivide(m_e1H, m_delta, m_e1H);

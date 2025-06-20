@@ -60,7 +60,11 @@ double jacobian( double x, double y, double z)
 using Vector = dg::x::DVec;
 using Matrix = dg::x::DMatrix;
 
-int main(int argc, char* argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char* argv[]
+#endif
+)
 {
     unsigned n, Nx, Ny;
 #ifdef WITH_MPI

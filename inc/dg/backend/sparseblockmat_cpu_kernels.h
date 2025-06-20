@@ -350,7 +350,7 @@ void EllSparseBlockMat<real_type, Vector>::launch_multiply_kernel( SerialTag, va
 }
 
 template<class real_type, class value_type, template<class> class Vector>
-void coo_cpu_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
+void coo_cpu_multiply_kernel( value_type alpha, const value_type** x, value_type /*beta*/, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
 {
 	for (int skj = 0; skj < m.left_size*m.n*m.right_size; skj++)
 	{
@@ -371,7 +371,7 @@ void coo_cpu_multiply_kernel( value_type alpha, const value_type** x, value_type
 	}
 }
 template<class real_type, class value_type, int n, template<class > class Vector>
-void coo_cpu_multiply_kernel( value_type alpha, const value_type** x, value_type beta, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
+void coo_cpu_multiply_kernel( value_type alpha, const value_type** x, value_type /*beta*/, value_type* RESTRICT y, const CooSparseBlockMat<real_type, Vector>& m )
 {
     bool trivial = true;
     int CC = m.cols_idx[0], DD = m.data_idx[0];

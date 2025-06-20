@@ -23,22 +23,22 @@ namespace dg
 namespace detail
 {
 template< class To, class From, class ...Params>
-To doConstruct( const From& from, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+To doConstruct( const From& from, ThrustVectorTag, ThrustVectorTag, Params&& ...)
 {
     return To( from.begin(), from.end());
 }
 template< class From, class To, class ...Params>
-void doAssign( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Params&& ...ps)
+void doAssign( const From& from, To& to, ThrustVectorTag, ThrustVectorTag, Params&& ...)
 {
     to.assign( from.begin(), from.end());
 }
 template< class To, class From, class ...Params>
-To doConstruct( const From& from, ArrayScalarTag, ArrayScalarTag, Params&& ...ps)
+To doConstruct( const From& from, ArrayScalarTag, ArrayScalarTag, Params&& ...)
 {
     return from;
 }
 template< class From, class To, class ...Params>
-void doAssign( const From& from, To& to, ArrayScalarTag, ArrayScalarTag, Params&& ...ps)
+void doAssign( const From& from, To& to, ArrayScalarTag, ArrayScalarTag, Params&& ...)
 {
     to = from;
 }
@@ -131,7 +131,7 @@ inline T doReduce( SharedVectorTag, const ContainerType& x, T init, BinaryOp op,
 template<class T>
 size_t do_get_size( const T& x, dg::SharedVectorTag){ return x.size();}
 template<class T>
-size_t do_get_size( const T& x, dg::AnyScalarTag){ return 1;}
+size_t do_get_size( const T&, dg::AnyScalarTag){ return 1;}
 
 template<class T>
 size_t get_size( const T& x)

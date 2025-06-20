@@ -61,7 +61,7 @@ struct PsipR : public aCylindricalFunctor<PsipR>
      * @param a the length of R semi-axis
      */
     PsipR( double R0, double a): m_R0(R0), m_a(a) { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double) const
     {
         return -2*(R-m_R0)/m_a/m_a;
     }
@@ -72,7 +72,7 @@ struct PsipR : public aCylindricalFunctor<PsipR>
 struct PsipZ : public aCylindricalFunctor<PsipZ>
 {
     PsipZ( double b): m_b(b) { }
-    double do_compute(double R, double Z) const
+    double do_compute(double, double Z) const
     {
         return -2*Z/m_b/m_b;
     }

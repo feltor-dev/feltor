@@ -36,7 +36,7 @@ auto make_FuncEigen_Te1( UnaryOp f)
         thrust::host_vector<value_type> work (2*iter-2);
         dg::SquareMatrix<value_type> EHt(iter);
         //Compute Eigendecomposition
-        lapack::stev(LAPACK_COL_MAJOR, 'V', evals, plus, EHt.data(), work);
+        lapack::stev('V', evals, plus, EHt.data(), work);
         auto EH = EHt.transpose();
         //for( unsigned u=0; u<iter; u++)
         //    std::cout << u << " "<<evals[u]<<std::endl;

@@ -2,7 +2,6 @@
 #include <iomanip>
 
 #include <thrust/device_vector.h>
-#include "dg/file/file.h"
 #include "dg/algorithm.h"
 
 #include "tensorelliptic.h"
@@ -12,7 +11,7 @@ const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
-double initial( double x, double y) {return 0.;}
+double initial( double, double) {return 0.;}
 double amp = 0.999;
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive //chi
 
@@ -26,7 +25,7 @@ double rhs( double x, double y) { return 2.0*(-amp*cos(2.*y) + amp* cos(2.*x) *(
 double sol(double x, double y)  { return sin( x)*sin(y);} //phi
 
 
-int main(int argc, char * argv[])
+int main()
 {
     unsigned n, Nx, Ny;
     double eps;

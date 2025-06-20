@@ -40,7 +40,7 @@ inline void mpi_cart_registry_display( std::ostream& out = std::cout)
         auto& re = pair.second.remain_dims;
         out << "Comm "<<pair.first<<" Root "<<pair.second.root<<" Remains size "<<re.size();
         out << " r:";
-        for( uint i=0; i<re.size(); i++)
+        for( unsigned i=0; i<re.size(); i++)
             out << " "<<re[i];
         out << std::endl;
     }

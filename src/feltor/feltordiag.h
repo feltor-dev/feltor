@@ -7,10 +7,10 @@
 #include "dg/algorithm.h"
 #include "dg/geometries/geometries.h"
 
-#include "feltor/feltor.h"
-#include "feltor/parameters.h"
+#include "feltor.h"
+#include "parameters.h"
 
-#include "feltor/init.h"
+#include "init.h"
 #include "common.h"
 
 namespace feltor{
@@ -142,22 +142,22 @@ std::vector<dg::file::Record<void( dg::x::HVec&, const dg::geo::TokamakMagneticF
         }
     },
     { "vol3d", "Volume form in 3d",
-        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField&, const dg::x::CylindricalGrid3d& grid){
              result = dg::create::volume( grid);
         }
     },
     { "xc", "x-coordinate in Cartesian coordinate system",
-        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField&, const dg::x::CylindricalGrid3d& grid ){
             result = dg::evaluate( dg::cooRZP2X, grid);
         }
     },
     { "yc", "y-coordinate in Cartesian coordinate system",
-        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField&, const dg::x::CylindricalGrid3d& grid ){
             result = dg::evaluate( dg::cooRZP2Y, grid);
         }
     },
     { "zc", "z-coordinate in Cartesian coordinate system",
-        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField& mag, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, const dg::geo::TokamakMagneticField&, const dg::x::CylindricalGrid3d& grid ){
             result = dg::evaluate( dg::cooRZP2Z, grid);
         }
     },
@@ -258,52 +258,52 @@ std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::Cylindr
         }
     },
     { "Divb", "The divergence of the magnetic unit vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.divb(), result);
         }
     },
     { "InvB", "Inverse of Bmodule",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.binv(), result);
         }
     },
     { "CurvatureKappaR", "R-component of the Kappa B curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.curvKappa()[0], result);
         }
     },
     { "CurvatureKappaZ", "Z-component of the Kappa B curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d&){
             dg::assign( v.f.curvKappa()[1], result);
         }
     },
     { "CurvatureKappaP", "Contravariant Phi-component of the Kappa B curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d&){
             dg::assign( v.f.curvKappa()[2], result);
         }
     },
     { "DivCurvatureKappa", "Divergence of the Kappa B curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d&){
             dg::assign( v.f.divCurvKappa(), result);
         }
     },
     { "CurvatureR", "R-component of the curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d&){
             dg::assign( v.f.curv()[0], result);
         }
     },
     { "CurvatureZ", "Z-component of the full curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d&){
             dg::assign( v.f.curv()[1], result);
         }
     },
     { "CurvatureP", "Contravariant Phi-component of the full curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d&){
             dg::assign( v.f.curv()[2], result);
         }
     },
     { "bphi", "Covariant Phi-component of the magnetic unit vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d&){
             dg::assign( v.f.bphi(), result);
         }
     },
@@ -330,52 +330,52 @@ std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::Cylindr
         }
     },
     { "Wall", "Wall Region",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.get_wall(), result);
         }
     },
     { "Sheath", "Sheath Region",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.get_sheath(), result);
         }
     },
     { "SheathCoordinate", "Sheath Coordinate of field lines",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.get_sheath_coordinate(), result);
         }
     },
     { "Nprof", "Density profile (that the source may force)",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.get_source_prof(), result);
         }
     },
     { "Source", "Source region",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.get_source(), result);
         }
     },
     { "neinit", "Initial condition for electrons",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.y0[0][0], result);
         }
     },
     { "niinit", "Initial condition for ions",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.y0[0][1], result);
         }
     },
     { "weinit", "Initial condition for electron canonical velocity",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.y0[1][0], result);
         }
     },
     { "wiinit", "Initial condition for ion canonical velocity",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.y0[1][1], result);
         }
     },
     { "vol2d", "Volume form (including R) in 2d",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
+        []( dg::x::HVec& result, Variables&, const dg::x::CylindricalGrid3d& grid ){
             result = dg::create::volume(grid);
         }
     },

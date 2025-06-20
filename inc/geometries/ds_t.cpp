@@ -15,7 +15,11 @@ const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
 const double a  = 1; //small radius
 
-int main(int argc, char * argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char * argv[]
+#endif
+)
 {
 #ifdef WITH_MPI
     MPI_Init( &argc, &argv);

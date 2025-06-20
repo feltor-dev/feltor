@@ -25,7 +25,7 @@ double rho_ana_df( double x,double y){ return (m*m+n*n)/(-1.+(m*m+n*n)*alpha)*si
 // full_f  TODO: calculate boundary consistent analytical rho
 double amp = 0.1;
 // double chi_ana( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
-double chi_ana( double x, double y) {return 1. + amp*sin(y); } //must be strictly positive
+double chi_ana( double, double y) {return 1. + amp*sin(y); } //must be strictly positive
 // double rho_ana_FF( double x, double y) { return (amp*cos(2.*x)*(1./sqrt(1.-4.*alpha) - 2.*cos(2.*y)/sqrt(1.-8.*alpha)) + amp* cos(2.*y)/sqrt(1.-4.*alpha)-(4.*sin(x)*sin(y))/sqrt(1.-2.*alpha))/2.; }
 // double phi_ana_FF(double x, double y)  { return (sin(x)*sin(y))*sqrt(1.-(1.+1.)*alpha);}
 // double rho_ana_FF( double x, double y) { return (

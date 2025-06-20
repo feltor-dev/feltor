@@ -27,7 +27,7 @@ struct Implicit
         LaplacianM_perp ( g,g.bcx(),g.bcy(),  dg::centered)
     {
     }
-    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
+    void operator()(double, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -88,12 +88,12 @@ struct Explicit
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
     container chi, omega, lambda,iota; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
-    container chii,uE2; //dont use them as helper
     const container binv;
     const container one;
     container B2;
     const container w2d;
     std::vector<container> phi; // =(phi,psi_i), (0,chi_i)
+    container chii,uE2; //dont use them as helper
     std::vector<container> ype, logype; 
 
     //matrices and solvers
@@ -480,7 +480,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
 }
 
 template<class G, class Matrix, class container>
-void Explicit<G, Matrix, container>::operator()( double ttt, const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<G, Matrix, container>::operator()( double, const std::vector<container>& y, std::vector<container>& yp)
 {
  /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
        y[1] := N_i - (p.bgprofamp + p.nprofileamp)

@@ -29,9 +29,7 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
 /*! @brief Generate one line entry for the history global attribute
  *
  * This will generate a string containing a whitespace seperated list of
- *  -# the current day in  <tt>"%Y-%m-%d" (the ISO 8601 date format)</tt>
- *  -# the current time in <tt>"%H:%M:%S" (the ISO 8601 time format)</tt>
- *  -# locale-dependent time zone name or abbreviation <tt>"%Z%"</tt>
+ *  -# the current *UTC* time in ISO 8601 format: <tt>%Y-%m-%dT%H:%M:%SZ</tt>
  *  -# all given argv (whitespace separated)
  *  -# A newline
  *  .
@@ -45,11 +43,12 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
  */
 inline std::string timestamp( int argc, char* argv[])
 {
+    // TODO: once we're using C++20 this should be implemented using chrono
     // Get local time
     auto ttt = std::time(nullptr);
     std::ostringstream oss;
     // time string  + program-name + args
-    oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
+    oss << std::put_time(std::gmtime(&ttt), "%FT%TZ");
     for( int i=0; i<argc; i++) oss << " "<<argv[i];
     oss << std::endl;
     return oss.str();
@@ -67,7 +66,7 @@ inline std::string timestamp( int argc, char* argv[])
  * This is the corresponding entry in \c feltor/config/version.mk
  * @code{.sh}
  * GIT_HASH=$(git rev-parse HEAD)
- * COMPILE_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+ * COMPILE_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
  * GIT_BRANCH=$(git branch --show-current)
  * @endcode
  * @sa This approach follows
@@ -204,16 +203,21 @@ template<class T>
 std::vector<T> get_att_v( int ncid, int varid, std::string att)
 {
     auto name = att.c_str();
-    size_t size;
+    size_t size, str_len = 0;
     NC_Error_Handle err;
     err = nc_inq_attlen( ncid, varid, name, &size);
     nc_type xtype;
     err = nc_inq_atttype( ncid, varid, name, &xtype);
+    if ( xtype == NC_STRING or xtype == NC_CHAR)
+    {
+        str_len = size;
+        size = 1;
+    }
     std::vector<T> data(size);
     if ( xtype == NC_STRING or xtype == NC_CHAR)
     {
-        std::string str( size, 'x');
-        err = nc_get_att_text( ncid, varid, name, &str[0]);
+        std::string str( str_len, 'x');
+        err = nc_get_att_text( ncid, varid, name, str_len == 0 ? NULL : &str[0]);
         if constexpr ( std::is_convertible_v<std::string,T>)
             data[0] = str;
         else
@@ -224,7 +228,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<int> tmp( size);
         err = nc_get_att_int( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<int,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](int val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_INT to given type");
     }
@@ -233,7 +237,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<unsigned> tmp( size);
         err = nc_get_att_uint( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<unsigned,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](unsigned val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_UINT to given type");
     }
@@ -242,7 +246,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<float> tmp( size);
         err = nc_get_att_float( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<float,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](float val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_FLOAT to given type");
     }
@@ -251,7 +255,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<double> tmp( size);
         err = nc_get_att_double( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<double,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](double val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_DOUBLE to given type");
     }
@@ -260,7 +264,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<signed char> tmp(size);
         err = nc_get_att_schar( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<bool,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](signed char val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_BYTE to given type");
     }
@@ -271,7 +275,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         {
             std::vector<signed char> tmp(size);
             err = nc_get_att( ncid, varid, name, &tmp[0]);
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](signed char val) { return T(val);});
         }
         else
             err = nc_get_att( ncid, varid, name, &data[0]);

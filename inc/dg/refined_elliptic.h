@@ -51,7 +51,7 @@ class RefinedElliptic
     RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, bc bcx, bc bcy, direction dir = forward):
         elliptic_( g_fine, bcx, bcy, dir)
     {
-        construct( g_coarse, g_fine, bcx, bcy, dir);
+        construct( g_coarse, g_fine);
     }
 
     /**
@@ -92,7 +92,7 @@ class RefinedElliptic
     }
 
     private:
-    void construct( const Geometry& g_coarse, const Geometry& g_fine, bc bcx, bc bcy, direction dir)
+    void construct( const Geometry& g_coarse, const Geometry& g_fine)
     {
         dg::blas2::transfer( dg::create::interpolation( g_fine, g_coarse), Q_);
         dg::blas2::transfer( dg::create::projection( g_coarse, g_fine), P_);

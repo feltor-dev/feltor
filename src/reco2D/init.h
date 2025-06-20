@@ -6,7 +6,7 @@ namespace asela{
 ///conditions and /source profiles.  Just add your own to the function
 ///below.
 std::array<std::array<dg::x::DVec,2>,2> initial_conditions(
-    Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>& f,
+    Asela<dg::x::CartesianGrid2d, dg::x::DMatrix, dg::x::DVec>&,
     const dg::x::CartesianGrid2d& grid, const asela::Parameters& p,
     dg::file::WrappedJsonValue js)
 {

@@ -59,7 +59,7 @@ TEST_CASE( "Input Output test of the NcFile class")
     MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, dims, {1, 1, 1});
 #endif
     INFO( "Write a timedependent scalar, scalar field, and vector field to NetCDF4 file "
-                   << "test.nc");
+                   << "inout.nc");
     double Tmax=2.*M_PI;
     double x0 = 0., x1 = 2.*M_PI;
     dg::x::CartesianGrid3d grid( x0,x1,x0,x1,x0,x1,3,4,4,3
@@ -68,10 +68,10 @@ TEST_CASE( "Input Output test of the NcFile class")
 #endif
     );
     //create NetCDF File
-    dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    dg::file::NcFile file("inout.nc", dg::file::nc_clobber);
     dg::file::NcFile read{}; // MW: Catch a bug in MPI when get_var does not set value_type before get on AnyVector
     REQUIRE( file.is_open());
-    REQUIRE( std::filesystem::exists( "test.nc"));
+    REQUIRE( std::filesystem::exists( "inout.nc"));
     SECTION( "Dimensions from grid")
     {
         file.defput_dim( "x", {{"axis", "X"},
@@ -85,7 +85,7 @@ TEST_CASE( "Input Output test of the NcFile class")
             grid.abscissas(2));
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
-        read.open( "test.nc", mode);
+        read.open( "inout.nc", mode);
         //! [check_dim]
         // This is how to fully check a dimension
         std::map<std::string, int> map {{"x",0}, {"y",1}, {"z", 2}};
@@ -101,6 +101,7 @@ TEST_CASE( "Input Output test of the NcFile class")
             double result = sqrt(dg::blas1::dot( test, test));
             CHECK( result < 1e-15);
         }
+        read.close();
         //! [check_dim]
     }
     SECTION( "Test record variables")
@@ -134,7 +135,7 @@ TEST_CASE( "Input Output test of the NcFile class")
         // ! [def_dimvar]
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
-        file.open( "test.nc", mode);
+        file.open( "inout.nc", mode);
         double time, energy;
         for( unsigned i=0; i<=6; i++)
         {
@@ -190,7 +191,7 @@ TEST_CASE( "Input Output test of the NcFile class")
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n");
-        file.open( "test.nc", mode);
+        file.open( "inout.nc", mode);
 
         file.set_grp( "projected");
         unsigned num_slices = file.get_dim_size("ptime");
@@ -243,7 +244,7 @@ TEST_CASE( "Input Output test of the NcFile class")
 
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n");
-        file.open( "test.nc", mode);
+        file.open( "inout.nc", mode);
         dg::x::HVec result = dg::evaluate( dg::zero, grid2d), ana(result);
         // ATTENTION sliced_data[0] is not the same on all ranks
         //dg::blas1::copy( sliced_data[0], ana);
@@ -266,7 +267,7 @@ TEST_CASE( "Input Output test of the NcFile class")
         }
     }
     file.close();
-    DG_RANK0 std::filesystem::remove( "test.nc");
+    DG_RANK0 std::filesystem::remove( "inout.nc");
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
 #endif
@@ -279,7 +280,7 @@ TEST_CASE( "Documentation")
     MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0}, {1, 1});
 #endif
     // Open file and put some attributes
-    dg::file::NcFile file( "test.nc", dg::file::nc_clobber);
+    dg::file::NcFile file( "inout-test.nc", dg::file::nc_clobber);
     file.put_att( {"title", "Hello world"});
     file.put_att( {"truth", 42});
 
@@ -325,7 +326,7 @@ TEST_CASE( "Documentation")
     file.close();
 
     // Open file for reading
-    file.open( "test.nc", dg::file::nc_nowrite);
+    file.open( "inout-test.nc", dg::file::nc_nowrite);
     std::string title = file.get_att_as<std::string>( "title");
     //![get_var]
     // In MPI all ranks automatically get the right chunk of data
@@ -344,5 +345,5 @@ TEST_CASE( "Documentation")
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Barrier( MPI_COMM_WORLD);
 #endif
-    DG_RANK0 std::filesystem::remove( "test.nc");
+    DG_RANK0 std::filesystem::remove( "inout-test.nc");
 }

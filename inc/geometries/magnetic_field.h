@@ -414,8 +414,8 @@ struct CurvatureNablaBZ: public aCylindricalFunctor<CurvatureNablaBZ>
 struct CurvatureKappaR: public aCylindricalFunctor<CurvatureKappaR>
 {
     CurvatureKappaR( ){ }
-    CurvatureKappaR( const TokamakMagneticField& mag, int sign = +1){ }
-    double do_compute( double R, double Z) const
+    CurvatureKappaR( const TokamakMagneticField& , int = +1){ }
+    double do_compute( double, double) const
     {
         return  0.;
     }
@@ -747,8 +747,8 @@ struct BHatP: public aCylindricalFunctor<BHatP>
  */
 inline CylindricalVectorLvl1 createEPhi( int sign ){
     if( sign > 0)
-        return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double y){ return 1./x;}, Constant(0), Constant(0));
-    return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double y){ return -1./x;}, Constant(0), Constant(0));
+        return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double){ return 1./x;}, Constant(0), Constant(0));
+    return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double){ return -1./x;}, Constant(0), Constant(0));
 }
 /**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))

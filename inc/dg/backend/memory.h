@@ -20,7 +20,9 @@ template<class Cloneable>
 struct ClonePtr
 {
     ///init an empty ClonePtr
-    ClonePtr( std::nullptr_t value = nullptr):m_ptr(nullptr){}
+    ClonePtr() : m_ptr() {}
+    ///init an empty ClonePtr
+    ClonePtr( std::nullptr_t):m_ptr(nullptr){}
     /**
     * @brief take ownership of the pointer
     * @param ptr a pointer to object to manage

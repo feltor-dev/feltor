@@ -15,7 +15,7 @@ const dg::bc bcx = dg::DIR;
 const dg::bc bcy = dg::NEU;
 
 
-double initial( double x, double y) {return 0.;}
+double initial( double, double) {return 0.;}
 double sol( double x, double y ) {
     //if( x < 0)
     //{
@@ -49,7 +49,7 @@ double amp = 0.5;
 //double pol( double x, double y) {return 1. + amp*sol(x,y); }
 //double rhs( double x, double y) {
 //    return -(1.+amp*sol(x,y))*lap(x,y) - amp*(derX(x,y)*derX(x,y) + derY(x,y)*derY(x,y));}
-double pol( double x, double y) {return 1.; }
+double pol( double, double) {return 1.; }
 double rhs( double x, double y) { return -lap(x,y);}
 
 typedef dg::DVec Vector;
