@@ -7,7 +7,7 @@
 
 TEST_CASE( "Easy attributes")
 {
-    dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    dg::file::NcFile file("atts.nc", dg::file::nc_clobber);
     SECTION( "Special history attribute")
     {
         // history can be parsed
@@ -53,5 +53,5 @@ TEST_CASE( "Easy attributes")
         // ! [version_flags]
     }
     file.close();
-    DG_RANK0 std::filesystem::remove( "test.nc");
+    DG_RANK0 std::filesystem::remove( "atts.nc");
 }

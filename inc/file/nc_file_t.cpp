@@ -9,7 +9,8 @@
 #endif
 #include "dg/backend/timer.h"
 
-
+// Note that filenames between TEST_CASE(s) should be different so that tests
+// can be run in parallel
 TEST_CASE( "Test the NcFile class")
 {
 #ifdef WITH_MPI
@@ -70,24 +71,24 @@ TEST_CASE( "Open, groups, dims, atts")
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     //create a grid and some data
 #endif
-    dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    dg::file::NcFile file("groups.nc", dg::file::nc_clobber);
     REQUIRE( file.is_open());
-    REQUIRE( std::filesystem::exists( "test.nc"));
+    REQUIRE( std::filesystem::exists( "groups.nc"));
     SECTION( "Opening modes save or remove data")
     {
         file.put_att({"title", "Hello"} );
         CHECK( file.att_is_defined( "title"));
         file.close();
-        file.open("test.nc", dg::file::nc_nowrite);
+        file.open("groups.nc", dg::file::nc_nowrite);
         CHECK( file.is_open());
         CHECK( file.att_is_defined( "title"));
         file.close();
-        file.open("test.nc", dg::file::nc_write);
+        file.open("groups.nc", dg::file::nc_write);
         CHECK( file.is_open());
         CHECK( file.att_is_defined( "title"));
         file.close();
         // clobber deletes file content
-        file.open("test.nc", dg::file::nc_clobber);
+        file.open("groups.nc", dg::file::nc_clobber);
         CHECK( file.is_open());
         CHECK( not file.att_is_defined( "title"));
     }
@@ -220,7 +221,7 @@ TEST_CASE( "Open, groups, dims, atts")
         file.set_grp( "..");
     }
     file.close();
-    DG_RANK0 std::filesystem::remove( "test.nc");
+    DG_RANK0 std::filesystem::remove( "groups.nc");
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
 #endif
@@ -234,7 +235,7 @@ TEST_CASE( "Attributes")
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     //create a grid and some data
 #endif
-    dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    dg::file::NcFile file("attributes.nc", dg::file::nc_clobber);
     ///////////////////////   Attributes
     SECTION( "Read/ write individual Attributes")
     {
@@ -258,7 +259,7 @@ TEST_CASE( "Attributes")
 
         for( auto mode : {dg::file::nc_nowrite, dg::file::nc_write})
         {
-            file.open( "test.nc", mode);
+            file.open( "attributes.nc", mode);
             // What if Attribute does not exist?
             CHECK_THROWS_AS( file.get_att_as<double>( "Does not exist"),
                 dg::file::NC_Error);
@@ -294,7 +295,7 @@ TEST_CASE( "Attributes")
         file.put_atts(att);
         file.close();
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
-        file.open( "test.nc", mode);
+        file.open( "attributes.nc", mode);
         auto read = file.get_atts();
         CHECK( read == att);
         //! [put_atts]
@@ -320,7 +321,7 @@ TEST_CASE( "Attributes")
         CHECK( truth == 42);
     }
     file.close();
-    DG_RANK0 std::filesystem::remove( "test.nc");
+    DG_RANK0 std::filesystem::remove( "attributes.nc");
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
 #endif
@@ -333,7 +334,7 @@ TEST_CASE( "Test variables in the NcFile class")
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
 #endif
-    dg::file::NcFile file("test.nc", dg::file::nc_clobber);
+    dg::file::NcFile file("variables.nc", dg::file::nc_clobber);
     // Writing tests in netcdf_t.cpp
     SECTION("Variable def is seen")
     {
@@ -381,7 +382,7 @@ TEST_CASE( "Test variables in the NcFile class")
         file.close();
         double test;
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
-        file.open( "test.nc", mode);
+        file.open( "variables.nc", mode);
         CHECK( file.var_is_defined( "time"));
         CHECK( file.att_is_defined( "axis", "time"));
         CHECK( file.get_att_as<std::string>( "axis", "time") == "T");
@@ -415,7 +416,7 @@ TEST_CASE( "Test variables in the NcFile class")
         //! [get_var_names]
     }
     file.close();
-    DG_RANK0 std::filesystem::remove( "test.nc");
+    DG_RANK0 std::filesystem::remove( "variables.nc");
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
 #endif

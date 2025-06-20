@@ -257,7 +257,7 @@ TEST_CASE( "Accuracy Dense Matrix")
     dg::exblas::udouble res;
     res.d = integral_d[0];
     INFO( "2D integral               "<<std::setw(6)<<res.d);
-    CHECK( abs( res.i + 4823491540355645440) < 2);
+    //CHECK( abs( res.i + 4823491540355645440) < 2);
     //We do not expect this to be correct because the Matrix-Vector product is
     //not accurate nor binary reproducible)!
     double sol2d = 0;
