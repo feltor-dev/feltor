@@ -29,9 +29,7 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
 /*! @brief Generate one line entry for the history global attribute
  *
  * This will generate a string containing a whitespace seperated list of
- *  -# the current day in  <tt>"%Y-%m-%d" (the ISO 8601 date format)</tt>
- *  -# the current time in <tt>"%H:%M:%S" (the ISO 8601 time format)</tt>
- *  -# locale-dependent time zone name or abbreviation <tt>"%Z%"</tt>
+ *  -# the current *UTC* time in ISO 8601 format: <tt>%Y-%m-%dT%H:%M:%SZ</tt>
  *  -# all given argv (whitespace separated)
  *  -# A newline
  *  .
@@ -45,11 +43,12 @@ using nc_att_t = std::variant<int, unsigned, float, double, bool, std::string,
  */
 inline std::string timestamp( int argc, char* argv[])
 {
+    // TODO: once we're using C++20 this should be implemented using chrono
     // Get local time
     auto ttt = std::time(nullptr);
     std::ostringstream oss;
     // time string  + program-name + args
-    oss << std::put_time(std::localtime(&ttt), "%F %T %Z");
+    oss << std::put_time(std::gmtime(&ttt), "%FT%TZ");
     for( int i=0; i<argc; i++) oss << " "<<argv[i];
     oss << std::endl;
     return oss.str();
@@ -67,7 +66,7 @@ inline std::string timestamp( int argc, char* argv[])
  * This is the corresponding entry in \c feltor/config/version.mk
  * @code{.sh}
  * GIT_HASH=$(git rev-parse HEAD)
- * COMPILE_TIME=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
+ * COMPILE_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
  * GIT_BRANCH=$(git branch --show-current)
  * @endcode
  * @sa This approach follows

@@ -140,7 +140,7 @@ if( FELTOR_FILE_WITH_NETCDF)
     )
     message(STATUS "Git branch: ${GIT_BRANCH}")
 
-    string(TIMESTAMP COMPILE_TIME "%Y-%m-%d %H:%M:%S %Z")
+    string(TIMESTAMP COMPILE_TIME "%Y-%m-%dT%H:%M:%SZ" UTC)
     message(STATUS "Compile time: ${COMPILE_TIME}")
 
     target_compile_definitions(dg_file INTERFACE
