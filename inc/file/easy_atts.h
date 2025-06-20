@@ -203,16 +203,21 @@ template<class T>
 std::vector<T> get_att_v( int ncid, int varid, std::string att)
 {
     auto name = att.c_str();
-    size_t size;
+    size_t size, str_len = 0;
     NC_Error_Handle err;
     err = nc_inq_attlen( ncid, varid, name, &size);
     nc_type xtype;
     err = nc_inq_atttype( ncid, varid, name, &xtype);
+    if ( xtype == NC_STRING or xtype == NC_CHAR)
+    {
+        str_len = size;
+        size = 1;
+    }
     std::vector<T> data(size);
     if ( xtype == NC_STRING or xtype == NC_CHAR)
     {
-        std::string str( size, 'x');
-        err = nc_get_att_text( ncid, varid, name, &str[0]);
+        std::string str( str_len, 'x');
+        err = nc_get_att_text( ncid, varid, name, str_len == 0 ? NULL : &str[0]);
         if constexpr ( std::is_convertible_v<std::string,T>)
             data[0] = str;
         else
