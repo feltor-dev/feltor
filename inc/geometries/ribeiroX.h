@@ -140,7 +140,7 @@ struct FpsiX
         double fofpsi[4];
         fofpsi[1] = operator()(psi-deltaPsi);
         fofpsi[2] = operator()(psi+deltaPsi);
-        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
+        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old = fprime;
         double eps = 1e10, eps_old=2e10;
         while( eps < eps_old || eps > 1e-7)
         {

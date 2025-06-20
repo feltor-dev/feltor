@@ -223,7 +223,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<int> tmp( size);
         err = nc_get_att_int( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<int,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](int val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_INT to given type");
     }
@@ -232,7 +232,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<unsigned> tmp( size);
         err = nc_get_att_uint( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<unsigned,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](unsigned val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_UINT to given type");
     }
@@ -241,7 +241,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<float> tmp( size);
         err = nc_get_att_float( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<float,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](float val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_FLOAT to given type");
     }
@@ -250,7 +250,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<double> tmp( size);
         err = nc_get_att_double( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<double,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](double val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_DOUBLE to given type");
     }
@@ -259,7 +259,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         std::vector<signed char> tmp(size);
         err = nc_get_att_schar( ncid, varid, name, &tmp[0]);
         if constexpr ( std::is_convertible_v<bool,T>)
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](signed char val) { return T(val);});
         else
             throw std::runtime_error("Cannot convert NC_BYTE to given type");
     }
@@ -270,7 +270,7 @@ std::vector<T> get_att_v( int ncid, int varid, std::string att)
         {
             std::vector<signed char> tmp(size);
             err = nc_get_att( ncid, varid, name, &tmp[0]);
-            std::copy( tmp.begin(), tmp.end(), data.begin());
+            std::transform(tmp.begin(), tmp.end(), data.begin(), [](signed char val) { return T(val);});
         }
         else
             err = nc_get_att( ncid, varid, name, &data[0]);

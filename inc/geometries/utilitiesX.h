@@ -144,7 +144,7 @@ struct XCross
     void set_quadrant( int quad){quad_ = quad;}
     double operator()( double x) const
     {
-        std::array<double,2> begin, end, end_old;
+        std::array<double,2> begin, end = {0}, end_old = end;
         begin[0] = R_i[quad_], begin[1] = Z_i[quad_];
         double eps = 1e10, eps_old = 2e10;
         unsigned N=10;
@@ -603,7 +603,7 @@ struct InitialX
             dg::bisection1d( xpointer_, x_min, x_max, eps[i]);
             xpointer_.point( R_i_[i], Z_i_[i], (x_min+x_max)/2.);
             //std::cout << "Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
-            std::array<double,2> begin, end, end_old;
+            std::array<double,2> begin, end = {0}, end_old = end;
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             double eps = 1e10, eps_old = 2e10;
             unsigned N=10;

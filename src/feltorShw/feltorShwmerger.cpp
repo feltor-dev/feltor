@@ -26,7 +26,7 @@ int main( int argc, char* argv[])
     
     //nc defs
     dg::file::NC_Error_Handle err, err_out;
-    int ncid, ncid_out, tvarIDout,EtimeID, EtimevarID;
+    int ncid, ncid_out, tvarIDout = 0,EtimeID, EtimevarID = 0;
     int dim_ids2d[3];
     size_t start2d_out[3]  = {0, 0, 0};
     int dataIDs[4],dataIDs_out[4];     
