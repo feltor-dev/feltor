@@ -13,19 +13,19 @@ CUFILES=$(wildcard *.cu)
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-%_t: %_t.cu
+%_t: %_t.cpp
 	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB)  -g
 
-%_b: %_b.cu
+%_b: %_b.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
 
-%_mpib: %_mpib.cu
+%_mpib: %_mpib.cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
 
-polarization_init_t: polarization_init_t.cu polarization_init.h
+polarization_init_t: polarization_init_t.cpp polarization_init.h
 	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
 
-matrixprodexp_t: matrixprodexp_t.cu 
+matrixprodexp_t: matrixprodexp_t.cpp
 	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
 .PHONY: clean doc
 

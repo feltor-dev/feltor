@@ -14,8 +14,6 @@
 function(add_dg_benchmark benchmark_path benchmark_folder with_MPI target_name)
     if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
         set_source_files_properties("${benchmark_path}" PROPERTIES LANGUAGE CUDA)
-    else() # Necessary for matrix benchmarks
-        set_source_files_properties("${benchmark_path}" PROPERTIES LANGUAGE CXX)
     endif()
     # Get a unique name for the benchmark
     cmake_path(GET benchmark_path STEM benchmark_stem)
