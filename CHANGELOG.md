@@ -2,19 +2,42 @@
 All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-We agreed to updating the master branch on feltor-dev/feltor very seldomnly and only when significant changes merit the effort to brush everything up, document and make
-everyone update their codes as well. We mark those updates with a (pre-)release tag on
+We mark updates with a (pre-)release tag on
 github.
 > Creating a release on github will create an associated archived version
-  on zenodo, so **we reserve releases for when we publish an article**.
+  on zenodo.
 
-We kind of make up our own version numbers right now. A new major version number is often associated with a journal publication, but other than that there is no defined mapping from the amount or kind of change to a version number.
-[Semantiv versioning](https://semver.org/) might serve as a guideline  but we are
-far away from strictly following it really.
+As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. major version number changes break backwards compatibility and minor version number changes indicate new features. Before that we kind of made up our own version numbers. A new major version number is often associated with a journal publication, but other than that there is no defined mapping from the amount or kind of change to a version number.
 
 > Only changes in code are reported here, we do not track changes in the
 > doxygen documentation, READMEs or tex writeups.
 > As of v7.0 we also stop reporting changes in test and benchmark programs.
+## [v8.2] CMake integration
+### Added
+ - Complete cmake build system for all programs and libraries
+ - Macro `VCL_NO_INCLUDE_PREFIX` can be used to include `vectorclass.h` directly
+### Changed
+ - matrix now depends on `lapack` directly, not `lapacke`
+ - The timestamp in the file history now follows ISO8601 formatting in UTC
+ - probes_params uses `std::vector` instead of `thrust::host_vector`
+ - All remaining `*.cu` files are renamed to `*.cpp` 
+ - Moved all diag programs to their respective src project
+### Fixed
+ - everything compiles without warnings from `-Wextra -Wpedantic` and `\W4` on Windows
+ - Remove the use of variable length arrays (VLAs)
+ - Change `uint` to `unsigned` in `mpi_kron.h`
+ - Change iterator type in `dg::View` to given pointer type (else undefined construction of unkown iterator type from pointer)
+ - `dg::is_divisable` ignored `eps` parameter
+ - Avoid zero sized array warnings in `aRealMPITopology` for `Nd=0`
+ - filesystem paths are given in `wchar` on windows; fix ability to read wchar
+ - Fixed MPI file write error when get does not set value type 
+ - Fix probes parser when using nlohmann-json
+### Removed
+ - `diag/compare.cpp` Removed because it can be trivially implemented in python
+ - Boost dependency of geometries header completely removed using C++17 special functions, in particular in `taylor.h`
+## [v8.1.1] Hotfix aliases
+### Fixed
+ -  Aliases in `dg::blas1::pointwiseDot` and `dg::blas1::pointwiseDivide` lead to wrong results
 ## [v8.1] Remove cusp dependency
 ### Added
  - New `dg::SparseMatrix` class to replace our previous `cusp::csr_matrix` and `cusp::coo_matrix`
@@ -36,7 +59,6 @@ far away from strictly following it really.
  - All cusp header files are removed from `dg/algorithm.h`, `dg/geometries/geometries.h` and `dg/matrix/matrix.h` (The relevant tensor traits for cusp can still manually be included though)
 ### Fixed
  - Thrust library can now be used at newest version
- - HotFix-v8.1.1: Aliases in `dg::blas1::pointwiseDot` and `dg::blas1::pointwiseDivide` lead to wrong results
 
 ## [v8.0] Improved foundations
 ### Added

@@ -3,6 +3,12 @@
 #include <filesystem>
 #include <functional>
 #include <list>
+#ifdef _MSC_VER
+// On windows the filesystem::path is in wchar
+// https://stackoverflow.com/questions/4804298/how-to-convert-wstring-into-string
+#include <locale>
+#include <codecvt>
+#endif // _MSC_VER
 #include "../dg/blas.h"
 #include "../dg/backend/memory.h"
 #include "nc_error.h"
@@ -299,7 +305,19 @@ struct SerialNcFile
         NC_Error_Handle err;
         for( auto it = rel_path.begin(); it != rel_path.end(); it++)
         {
+#ifdef _MSC_VER
+            // https://stackoverflow.com/questions/4804298/how-to-convert-wstring-into-string
+            std::wstring string_to_convert = *it;
+            //setup converter
+            using convert_type = std::codecvt_utf8<wchar_t>;
+            std::wstring_convert<convert_type, wchar_t> converter;
+
+            //use converter (.to_bytes: wstr->str, .from_bytes: str->wstr)
+            std::string grp = converter.to_bytes(string_to_convert);
+
+#else
             std::string grp = *it;
+#endif // MSVC
             int new_grpid;
             int retval = nc_inq_ncid( groupid, grp.c_str(), &new_grpid);
             if( retval != NC_NOERR)

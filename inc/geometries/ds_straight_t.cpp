@@ -6,8 +6,8 @@
 #include "dg/algorithm.h"
 #include "ds.h"
 
-double sine(double x, double y, double z){return sin(z);}
-double cosine(double x, double y, double z){return cos(z);}
+double sine(double, double, double z){return sin(z);}
+double cosine(double, double, double z){return cos(z);}
 
 double func(double x, double y, double z)
 {
@@ -23,7 +23,11 @@ double r2( double x, double y) {return x*x+y*y;}
 double r2z( double x, double y, double z) {return (x*x+y*y)*z;}
 
 
-int main(int argc, char * argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char * argv[]
+#endif
+)
 {
 #ifdef WITH_MPI
     MPI_Init( &argc, &argv);

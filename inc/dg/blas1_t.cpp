@@ -107,7 +107,7 @@ TEST_CASE("blas1")
 #else
         Vector v1(v1p), v2(v2p), v3(v3p), v4(v4p);
         Vector nanvec( v3p);
-        nanvec[0] = 1./0.;
+        nanvec[0] = NAN;
 #endif
 
         Vector res = nanvec;
@@ -361,7 +361,7 @@ TEST_CASE( "Blas1 documentation")
         //! [vdot]
         // A fun way to compute the size of a vector
         dg::DVec v( 100,2);
-        unsigned size = dg::blas1::vdot( []DG_DEVICE(double x){ return 1u;},
+        unsigned size = dg::blas1::vdot( []DG_DEVICE(double){ return 1u;},
                 v);
         CHECK( size == 100u); //100*1
         //! [vdot]
@@ -566,8 +566,8 @@ TEST_CASE( "Blas1 documentation")
         CHECK( y == result);
 
         // Finally, we could also write
-        dg::blas1::kronecker( XS, dg::equals(), []( double x, double y){ return x;}, xs, ys);
-        dg::blas1::kronecker( YS, dg::equals(), []( double x, double y){ return y;}, xs, ys);
+        dg::blas1::kronecker( XS, dg::equals(), []( double x, double){ return x;}, xs, ys);
+        dg::blas1::kronecker( YS, dg::equals(), []( double, double y){ return y;}, xs, ys);
         dg::blas1::evaluate( y, dg::equals(), function, XS, YS);
         CHECK( y == result);
         //! [kronecker]

@@ -82,7 +82,7 @@ int main( int argc, char* argv[])
                     wall, grid)), p.nwall, p.uwall );
 
     dg::geo::CylindricalFunctor sheath, sheath_coordinate =
-        [](double x, double y){return 0.;};
+        [](double, double){return 0.;};
     if( p.sheath_bc != "none")
     {
         common::create_and_set_sheath( argv[1], js, mag, wall, sheath,

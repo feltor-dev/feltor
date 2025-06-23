@@ -176,7 +176,7 @@ struct CSRMedianFilter
     template<class real_type>
     DG_DEVICE
     void operator()( unsigned i, const int* row_offsets,
-            const int* column_indices, const real_type* values,
+            const int* column_indices, const real_type* /*values*/,
             const real_type* x, real_type* y)
     {
         // http://ndevilla.free.fr/median/median/index.html
@@ -210,7 +210,7 @@ struct CSRSWMFilter
     CSRSWMFilter( real_type alpha) : m_alpha( alpha) {}
     DG_DEVICE
     void operator()( unsigned i, const int* row_offsets,
-            const int* column_indices, const real_type* values,
+            const int* column_indices, const real_type* /*values*/,
             const real_type* x, real_type* y)
     {
         real_type median = detail::median( i, row_offsets, column_indices,
@@ -238,7 +238,7 @@ struct CSRAverageFilter
     template<class real_type>
     DG_DEVICE
     void operator()( unsigned i, const int* row_offsets,
-            const int* column_indices, const real_type* values,
+            const int* column_indices, const real_type* /*values*/,
             const real_type* x, real_type* y)
     {
         y[i] = 0;

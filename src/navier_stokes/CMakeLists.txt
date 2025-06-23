@@ -1,0 +1,5 @@
+set( project navier_stokes)
+set( target navier_stokes)
+set( executable "../feltor/feltor.cpp")
+set( PROJECT_HEADERS ../feltor/init.h navier_stokes.h)
+feltor_add_executable( ${project} "${executable}" ${target} "${PROJECT_HEADERS}" OFF ON ON OFF ${FELTOR_WITH_GLFW})

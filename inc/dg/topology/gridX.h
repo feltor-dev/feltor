@@ -94,9 +94,9 @@ struct RealGridX1d
         assert( n != 0 );
         assert( bcx != PER);
     }
-    host_vector abscissas(unsigned u=0) const { return grid().abscissas(0);}
-    host_vector weights(unsigned u=0) const { return grid().weights(0);}
-    unsigned shape(unsigned u=0) const { return grid().shape(0);}
+    host_vector abscissas(unsigned =0) const { return grid().abscissas(0);}
+    host_vector weights(unsigned =0) const { return grid().weights(0);}
+    unsigned shape(unsigned =0) const { return grid().shape(0);}
     auto get_shape() const { return grid().get_shape();}
     /**
      * @brief left boundary

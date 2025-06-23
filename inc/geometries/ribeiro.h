@@ -134,7 +134,7 @@ struct Fpsi
         double fofpsi[4];
         fofpsi[1] = operator()(psi-deltaPsi);
         fofpsi[2] = operator()(psi+deltaPsi);
-        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
+        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old = fprime;
         double eps = 1e10, eps_old=2e10;
         while( eps < eps_old)
         {
@@ -171,7 +171,7 @@ struct FieldFinv
 {
     FieldFinv( const CylindricalFunctorsLvl1& psi, double x0, double y0, unsigned N_steps, int mode):
         fpsi_(psi, x0, y0, mode), fieldRZYTribeiro_(psi, x0, y0), fieldRZYTequalarc_(psi, x0, y0), N_steps(N_steps), mode_(mode) { }
-    void operator()(double t, double psi, double& fpsiM)
+    void operator()(double, double psi, double& fpsiM)
     {
         std::array<double, 3> begin{ {0,0,0} }, end(begin);
         fpsi_.find_initial( psi, begin[0], begin[1]);

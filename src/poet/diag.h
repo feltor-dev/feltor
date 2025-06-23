@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
+#include "thrust/extrema.h"
 
 namespace poet
 {

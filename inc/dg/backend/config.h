@@ -15,6 +15,9 @@
 #endif
 
 //%%%%%%%%%%%%%%%%check for fast FMAs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// It appears that msvc does not pre-define FP_FAST_FMA so a user must manually 
+// define it
+// https://stackoverflow.com/questions/16348909/how-do-i-know-if-i-can-compile-with-fma-instruction-sets
 #include <cmath>
 #ifndef FP_FAST_FMA
 #pragma message( "NOTE: Fast std::fma(a,b,c) not activated! Using a*b+c instead!")

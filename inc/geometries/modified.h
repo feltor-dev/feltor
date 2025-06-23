@@ -224,13 +224,13 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
     std::function<bool(double,double)> m_pred;
 };
 //some possible predicates
-inline constexpr bool nowhere( double R, double Z){return false;}
-inline constexpr bool everywhere( double R, double Z){return true;}
+inline constexpr bool nowhere( double, double){return false;}
+inline constexpr bool everywhere( double, double){return true;}
 // positive above certain Z value ( deprecated in favor of Above)
 struct HeavisideZ
 {
     HeavisideZ( double Z_X, int side): m_ZX( Z_X), m_side(side) {}
-    bool operator()(double R, double Z)const{
+    bool operator()(double, double Z)const{
         if( Z < m_ZX && m_side <= 0) return true;
         if( Z >= m_ZX && m_side > 0) return true;
         return false;

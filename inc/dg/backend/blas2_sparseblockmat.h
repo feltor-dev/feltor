@@ -179,28 +179,6 @@ inline void doStencil(
     }
     dg::blas2::parallel_for( f, m.num_rows(), m.row_offsets(), m.column_indices(), m.values(), x, y);
 }
-template< class Functor, class Matrix, class Vector1, class Vector2>
-inline void doStencil( get_value_type<Vector1> alpha,
-                    Functor f,
-                    Matrix&& m,
-                    const Vector1&x,
-                    get_value_type<Vector1> beta,
-                    Vector2& y,
-                    SparseMatrixTag,
-                    RecursiveVectorTag  )
-{
-    static_assert( std::is_base_of<RecursiveVectorTag, get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
-    if( x.size() != m.num_cols()) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" Number of columns is "<<m.num_cols());
-    }
-    if( y.size() != m.num_rows()) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" Number of rows is "<<m.num_rows());
-    }
-    using inner_container = typename std::decay_t<Vector1>::value_type;
-    for ( unsigned i=0; i<x.size(); i++)
-        doStencil( f,std::forward<Matrix>(m),x[i],y[i], SparseMatrixTag(), get_tensor_category<inner_container>());
-}
 
 } //namespace detail
 } //namespace blas2

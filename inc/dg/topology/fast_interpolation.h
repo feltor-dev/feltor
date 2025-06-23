@@ -52,7 +52,7 @@ struct MultiMatrix
 
     //https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
     template< class OtherMatrix, class OtherContainer>
-    friend class MultiMatrix; // enable copy
+    friend struct MultiMatrix; // enable copy
     template<class OtherMatrix, class OtherContainer, class ... Params>
     MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src, Params&& ... ps)
     {
@@ -102,7 +102,7 @@ namespace detail
 {
 //pay attention that left and right must have correct sizes
 template<class real_type, class Topology>
-MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const dg::HMatrix_t<real_type>& left, const dg::HMatrix_t<real_type>& right, const Topology& t)
+MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > multiply( const dg::HMatrix_t<real_type>& left, const dg::HMatrix_t<real_type>& right, const Topology&)
 {
     MultiMatrix< dg::HMatrix_t<real_type>, dg::HVec_t<real_type> > matrix(2);
     if( right.total_num_rows() != left.total_num_cols())

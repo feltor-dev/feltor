@@ -17,7 +17,7 @@
 #include <catch2/catch_all.hpp>
 
 static double sine( double x){ return sin(x);}
-static double sine( double x, double y, double z){return sin(x)*sin(y);}
+static double sine( double x, double y, double){return sin(x)*sin(y);}
 #ifndef WITH_MPI
 static double sine( double x, double y){return sin(x)*sin(y);}
 #endif

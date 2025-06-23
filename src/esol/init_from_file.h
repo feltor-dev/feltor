@@ -8,7 +8,7 @@ namespace esol
 {//We use the typedefs and DG_RANK0
 //
 //everyone reads their portion of the input data
-std::array<dg::x::DVec,2> init_from_file( std::string file_name, const dg::x::CartesianGrid2d& grid, const Parameters& p, double& time){
+std::array<dg::x::DVec,2> init_from_file( std::string file_name, const dg::x::CartesianGrid2d& grid, const Parameters&, double& time){
 
 #ifdef WITH_MPI
     int rank;

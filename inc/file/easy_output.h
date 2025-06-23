@@ -103,7 +103,7 @@ namespace detail
 {
 
 template<class T>
-inline int put_var_T( int ncid, int varid, const T* data)
+inline int put_var_T( int /*ncid*/, int /*varid*/, const T* /*data*/)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;
@@ -125,7 +125,7 @@ inline int put_var_T<unsigned>( int ncid, int varid, const unsigned* data){
     return nc_put_var_uint( ncid, varid, data);
 }
 template<class T>
-inline int put_vara_T( int ncid, int varid, const size_t* startp, const size_t* countp, const T* data)
+inline int put_vara_T( int /*ncid*/, int /*varid*/, const size_t* /*startp*/, const size_t* /*countp*/, const T* /*data*/)
 {
     assert( false && "Type not supported!\n" );
     return NC_EBADTYPE;
@@ -274,15 +274,17 @@ void put_vara_detail(int ncid, int varid, unsigned slice,
 * @copydoc hide_tparam_host_vector
 * @param ncid NetCDF file or group ID
 * @param varid Variable ID
-* @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
+*
+* [unnamed grid] Make serial and mpi interface equal
 * @param data data to be written to the NetCDF file
-* @copydoc hide_parallel_param
+*
+* [unnamed bool] This parameter is there to make serial and parallel interface equal.
 * @copydoc hide_master_comment
 * @copydoc hide_parallel_write
 */
 template<class host_vector, class Topology>
-void put_var( int ncid, int varid, const Topology& grid,
-    const host_vector& data, bool parallel = false)
+void put_var( int ncid, int varid, const Topology& /*grid*/,
+    const host_vector& data, bool /*parallel*/ = false)
 {
     file::NC_Error_Handle err;
     err = detail::put_var_T( ncid, varid, data.data());
@@ -308,13 +310,14 @@ void put_var( int ncid, int varid, const Topology& grid,
 * @copydoc hide_comment_slice
 * @param grid The grid from which to construct \c start and \c count variables to forward to \c nc_put_vara
 * @param data data to be written to the NetCDF file
-* @copydoc hide_parallel_param
+*
+* [unnamed bool] This parameter is there to make serial and parallel interface equal.
 * @copydoc hide_master_comment
 * @copydoc hide_parallel_write
 */
 template<class host_vector, class Topology>
 void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
-    const host_vector& data, bool parallel = false)
+    const host_vector& data, bool /*parallel*/ = false)
 {
     file::NC_Error_Handle err;
     NcHyperslab slab( slice, grid);
@@ -331,15 +334,17 @@ void put_vara( int ncid, int varid, unsigned slice, const Topology& grid,
  * @tparam real_type ignored
  * @param ncid NetCDF file or group ID
  * @param varid Variable ID (Note that in NetCDF variables without dimensions are scalars)
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
+ *
+ * [unnamed RealGrid0d] a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
- * @param parallel This parameter is ignored in both serial and MPI versions.
+ *
+ * [unnamed bool] This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes can call this function but only the master thread writes.
  * @copydoc hide_master_comment
  */
 template<class T, class real_type>
-void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
-    T data, bool parallel = false)
+void put_var( int ncid, int varid, const RealGrid0d<real_type>& /*grid*/,
+    T data, bool /*parallel*/ = false)
 {
     file::NC_Error_Handle err;
     err = detail::put_var_T( ncid, varid, &data);
@@ -354,15 +359,17 @@ void put_var( int ncid, int varid, const RealGrid0d<real_type>& grid,
  * @param varid Variable ID (Note that in NetCDF variables without dimensions are scalars)
  * @param slice The number of the time-slice to write (first element of the \c startp array in \c nc_put_vara)
  * @copydoc hide_comment_slice
- * @param grid a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
+ *
+ * [unnamed RealGrid0d] a Tag to signify scalar ouput (and help the compiler choose this function over the array output function). Can be of type <tt> dg::RealMPIGrid<real_type> </tt>
  * @param data The (single) datum to write.
- * @param parallel This parameter is ignored in both serial and MPI versions.
+ *
+ * [unnamed bool] This parameter is ignored in both serial and MPI versions.
  * In an MPI program all processes can call this function but only the master thread writes.
  * @copydoc hide_master_comment
  */
 template<class T, class real_type>
-void put_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& grid,
-    T data, bool parallel = false)
+void put_vara( int ncid, int varid, unsigned slice, const RealGrid0d<real_type>& /*grid*/,
+    T data, bool /*parallel*/ = false)
 {
     file::NC_Error_Handle err;
     size_t count = 1;
@@ -402,7 +409,7 @@ void put_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
         put_var( ncid, varid, dg::RealGrid0d<real_type>(), data, parallel);
 }
 template<class T, class real_type>
-void put_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& grid,
+void put_vara( int ncid, int varid, unsigned slice, const RealMPIGrid0d<real_type>& /*grid*/,
     T data, bool parallel = false)
 {
     int rank;

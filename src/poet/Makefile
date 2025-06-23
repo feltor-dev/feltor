@@ -10,13 +10,13 @@ INCLUDE+= -I../../inc   # other project libraries
 
 all: poet poet_hpc poet_mpi
 
-poet: poet.cu poet.h init.h diag.h parameters.h
+poet: poet.cpp poet.h init.h diag.h parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK  -g
 
-poet_hpc: poet.cu poet.h init.h diag.h parameters.h
+poet_hpc: poet.cpp poet.h init.h diag.h parameters.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DDG_BENCHMARK -DWITHOUT_GLFW
 
-poet_mpi: poet.cu poet.h init.h diag.h parameters.h
+poet_mpi: poet.cpp poet.h init.h diag.h parameters.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) $(LAPACKLIB) -DWITH_MPI -DDG_BENCHMARK -DWITHOUT_GLFW
 
 doc:

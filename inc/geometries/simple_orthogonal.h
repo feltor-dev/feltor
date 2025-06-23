@@ -191,7 +191,7 @@ struct Nemov
         }
     }
 
-    void operator()(double t, const std::array<thrust::host_vector<double>,3 >& y, std::array<thrust::host_vector<double>,3>& yp)
+    void operator()(double, const std::array<thrust::host_vector<double>,3 >& y, std::array<thrust::host_vector<double>,3>& yp)
     {
         //y[0] = R, y[1] = Z, y[2] = h, y[3] = hr, y[4] = hz
         unsigned size = y[0].size();

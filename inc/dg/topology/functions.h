@@ -16,19 +16,19 @@ namespace dg{
 ///@brief \f$ f(x, ...) = 0\f$
 template<class T, class ...Ts>
 DG_DEVICE
-T zero(T x, Ts ...xs){return T(0);}
+T zero(T, Ts ...){return T(0);}
 
 ///@brief \f$ f(x, ...) = 1\f$
 template<class T, class ...Ts>
 DG_DEVICE
-T one(T x, Ts ...xs){return T(1);}
+T one(T, Ts ...){return T(1);}
 
 ///@brief \f$ f(x, ...) = 0\f$
 struct ZERO
 {
     template<class T, class ...Ts>
     DG_DEVICE
-    T operator()(T x, Ts ...xs)const{return T(0);}
+    T operator()(T, Ts ...)const{return T(0);}
 };
 
 ///@brief \f$ f(x,...) = 1\f$
@@ -36,7 +36,7 @@ struct ONE
 {
     template<class T, class ...Ts>
     DG_DEVICE
-    T operator()(T x, Ts ...xs)const{return T(1);}
+    T operator()(T, Ts ...)const{return T(1);}
 };
 
 ///@brief \f$ f(x,...) = c\f$
@@ -51,7 +51,7 @@ struct CONSTANT
 
     template<class T, class ...Ts>
     DG_DEVICE
-    T operator()(T x, Ts ...xs)const{return T(m_value);}
+    T operator()(T, Ts ...)const{return T(m_value);}
     private:
     double m_value;
 };
@@ -59,24 +59,24 @@ struct CONSTANT
 ///@brief \f$ f(x) = x\f$
 DG_DEVICE inline double cooX1d( double x) {return x;}
 ///@brief \f$ f(x,y) = x\f$
-DG_DEVICE inline double cooX2d( double x, double y) {return x;}
+DG_DEVICE inline double cooX2d( double x, double) {return x;}
 ///@brief \f$ f(x,y,z) = x\f$
-DG_DEVICE inline double cooX3d( double x, double y, double z) {return x;}
+DG_DEVICE inline double cooX3d( double x, double, double) {return x;}
 
 ///@brief \f$ f(x,y) = y\f$
-DG_DEVICE inline double cooY2d( double x, double y) {return y;}
+DG_DEVICE inline double cooY2d( double, double y) {return y;}
 ///@brief \f$ f(x,y,z) = y\f$
-DG_DEVICE inline double cooY3d( double x, double y, double z) {return y;}
+DG_DEVICE inline double cooY3d( double, double y, double) {return y;}
 ///@brief \f$ f(x,y,z) = z\f$
-DG_DEVICE inline double cooZ3d( double x, double y, double z) {return z;}
+DG_DEVICE inline double cooZ3d( double, double, double z) {return z;}
 
 
 ///@brief \f$ x = R\sin(\varphi)\f$
-DG_DEVICE inline double cooRZP2X( double R, double Z, double P){ return R*sin(P);}
+DG_DEVICE inline double cooRZP2X( double R, double, double P){ return R*sin(P);}
 ///@brief \f$ y = R\cos(\varphi)\f$
-DG_DEVICE inline double cooRZP2Y( double R, double Z, double P){ return R*cos(P);}
+DG_DEVICE inline double cooRZP2Y( double R, double, double P){ return R*cos(P);}
 ///@brief \f$ z = Z\f$
-DG_DEVICE inline double cooRZP2Z( double R, double Z, double P){ return Z;}
+DG_DEVICE inline double cooRZP2Z( double, double Z, double){ return Z;}
 
 
 ///@}

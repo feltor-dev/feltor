@@ -27,7 +27,7 @@ struct Implicit
         hh = dg::geo::createProjectionTensor( bhat, g);
         m_ellipticPerp.set_chi( hh);
     }
-    void operator()( double t, const container& x, container& y)
+    void operator()( double, const container& x, container& y)
     {
         if (m_p.p_diff == "adjoint")    {
             m_ds.symv( m_p.nu_parallel, x, 0., y);
@@ -124,9 +124,6 @@ struct Explicit
 //     ,pupil;
     const container  one;
     const container w3d, v3d;
-#ifdef DG_MANUFACTURED
-    const container m_R, m_Z, m_P;//coordinates
-#endif //DG_MANUFACTURED
 
     //matrices and solvers
     dg::geo::DS<Geometry,IMatrix,container> m_ds;
@@ -143,11 +140,6 @@ Explicit<Geometry,IMatrix,Matrix,container>::Explicit( const Geometry& g,
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi),
     one( dg::evaluate( dg::one, g)),
     w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),
-#ifdef DG_MANUFACTURED
-    m_R( dg::pullback( dg::cooX3d, g)),
-    m_Z( dg::pullback( dg::cooY3d, g)),
-    m_P( dg::pullback( dg::cooZ3d, g)),
-#endif //DG_MANUFACTURED
     m_ds( mag, g, p.bcx, p.bcy, dg::geo::NoLimiter(),
           p.rk4eps, p.mx, p.my, -1, p.interpolation_method),
     m_p(p),
@@ -198,7 +190,7 @@ void Explicit<G,I,M,V>::energies( const V& y)
 }
 
 template<class G, class I, class Matrix, class container>
-void Explicit<G,I,Matrix,container>::operator()( double tt, const container& y, container& yp)
+void Explicit<G,I,Matrix,container>::operator()( double, const container& y, container& yp)
 {
     // y := T - 1 or T
     dg::Timer t;
@@ -210,10 +202,6 @@ void Explicit<G,I,Matrix,container>::operator()( double tt, const container& y, 
         m_ds.ds( dg::centered, y, lambda);   // (Div b) ds T
         dg::blas1::pointwiseDot( m_p.nu_parallel, m_divb, lambda, 1., yp);
     }
-#ifdef DG_MANUFACTURED
-    dg::blas1::evaluate( yp, dg::plus_equals(),
-        Source( m_p.nu_perp, m_p.nu_parallel), m_R, m_Z, m_P, tt)
-#endif //DG_MANUFACTURED
     t.toc();
 #ifdef MPI_VERSION
     int rank;

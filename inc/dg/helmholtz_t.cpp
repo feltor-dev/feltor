@@ -22,24 +22,24 @@ inline dg::bc bcx = dg::DIR;
 static double lhs( double x, double y){ return sin(x)*sin(y);}
 static double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
 // 3d Cylindrical grid
-static double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
-static double laplace_fct( double x, double y, double z) {
+static double fct(double x, double y, double){ return sin(x-R_0)*sin(y);}
+static double laplace_fct( double x, double y, double) {
     return -1./x*cos(x-R_0)*sin(y) + 2.*sin(x-R_0)*sin(y);}
 static double helmholtz_fct( double x, double y, double z) {
     return fct(x,y,z) - alpha*laplace_fct(x,y,z);}
 
 // Gamma 2
-static double lhs2( double x,double y){ return sin(x);}
+static double lhs2( double x,double){ return sin(x);}
 // double lhs1( double x,double y){ return sin(x)*sin(y);}
-static double lhs1( double x,double y){ return sin(x);}
-static double rhs2( double x,double y){
+static double lhs1( double x,double){ return sin(x);}
+static double rhs2( double x,double){
     return  (-2.-2.*x+2.*cos(x)+2*x*cos(x)+sin(x)+2*x*sin(x)+x*x*sin(x)-2*alpha*sin(x)-2*x*alpha*sin(x)+alpha*alpha*sin(x))/(1.0+x)/alpha;
 
 }
 // double rhs1( double x,double y){ return  (1.-2.*(-0.5*tau))*sin(x)*sin(y);}
-static double rhs1( double x,double y){ return  (1.-alpha)*sin(x);}
+static double rhs1( double x,double){ return  (1.-alpha)*sin(x);}
 // double dx2rhs2( double x,double y){ return (1.0 - 2.*alpha + alpha*alpha)*sin(x);}
-static double dx2rhs2( double x,double y){ return (1.+x)*sin(x)-2*alpha*sin(x)+alpha*alpha*(2*cos(x)/(1.+x)/(1.+x)-2*sin(x)/(1.+x)/(1.+x)/(1.+x)+sin(x)/(1.+x));}
+static double dx2rhs2( double x,double){ return (1.+x)*sin(x)-2*alpha*sin(x)+alpha*alpha*(2*cos(x)/(1.+x)/(1.+x)-2*sin(x)/(1.+x)/(1.+x)/(1.+x)+sin(x)/(1.+x));}
 
 
 TEST_CASE( "Helmholtz")

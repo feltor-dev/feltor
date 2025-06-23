@@ -213,13 +213,13 @@ struct Probes
     private:
     template<class T=Topology, std::enable_if_t<dg::is_vector_v<typename
     T::host_vector, dg::SharedVectorTag>, bool> = true>
-    auto create_probes_vec( const dg::HVec& coord, const T& grid)
+    auto create_probes_vec( const std::vector<double>& coord, const T&)
     {
         return typename Topology::host_vector(coord);
     }
     template<class T=Topology, std::enable_if_t<dg::is_vector_v<typename
     T::host_vector, dg::MPIVectorTag>, bool> = true>
-    auto create_probes_vec( const dg::HVec& coord, const T& grid)
+    auto create_probes_vec( const std::vector<double>& coord, const T& grid)
     {
         return typename Topology::host_vector(coord, grid.communicator());
     }

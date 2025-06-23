@@ -90,11 +90,10 @@ struct Esol
      
      * @param SNi Ion gyro-center source term
      * @param potential electric potential
-     * @param y0
      * @param Sne electron density source term
      * @Note Implement ff-O2 option
      */  
-    void solveSne(double t, const container& SNi, const container& potential, const container& y0, container& Sne)
+    void solveSne(double t, const container& SNi, const container& potential, const container&, container& Sne)
     {
         if (m_p.source_rel == "zero-pol" || m_p.source_rel == "finite-pol")
         {
@@ -176,10 +175,10 @@ Esol< Geometry, IM, M,  container>::Esol( const Geometry& grid, const Parameters
     m_binv( evaluate( dg::LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
     m_lapMperp( grid, dg::centered),
     m_lapMperpN( grid, p.bc_N_x, p.bc_y, dg::centered),
+    m_polavg(grid, dg::coo2d::y),
     m_multigrid( grid, 3),
     m_phi_ex( 2, m_chi),  m_psi1_ex(2, m_chi),  m_gamma_n_ex( 2, m_chi), m_gamma0sqrt_phi_ex( 2, m_chi), m_rho_ex(2, m_chi), m_gamma0sqrtinv_rho_ex(2, m_chi), m_gamma_SNi_ex(2, m_chi),
     m_volume( dg::create::volume(grid)),
-    m_polavg(grid, dg::coo2d::y),
     m_p(p)
 {
     if(p.source_type == "flux") {

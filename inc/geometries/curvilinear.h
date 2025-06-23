@@ -145,7 +145,7 @@ struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
     {
         dg::aRealTopology2d<real_type>::do_set( new_bc);
     }
-    virtual void do_set_pq(std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final
+    virtual void do_set_pq(std::array<real_type,2>, std::array<real_type,2>) override final
     {
         throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
@@ -210,7 +210,7 @@ struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_typ
     {
         dg::aRealTopology3d<real_type>::do_set( new_bc);
     }
-    virtual void do_set_pq(std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final
+    virtual void do_set_pq(std::array<real_type,3>, std::array<real_type,3>) override final
     {
         throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }

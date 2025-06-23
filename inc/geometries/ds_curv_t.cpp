@@ -16,7 +16,11 @@
 #endif
 
 
-int main(int argc, char * argv[])
+int main(
+#ifdef WITH_MPI
+    int argc, char * argv[]
+#endif
+)
 {
 #ifdef WITH_MPI
     MPI_Init( &argc, &argv);

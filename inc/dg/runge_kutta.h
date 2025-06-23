@@ -121,10 +121,11 @@ struct IdentityFilter
      * @brief Do nothing
      *
      * @copydoc hide_ContainerType
-     * @param inout (input-output) remains unchanged
+     *
+     * unnamed parameter (usually inout) remains unchanged
      */
     template<class ContainerType1>
-    void operator()( ContainerType1& inout) const{ }
+    void operator()( ContainerType1&) const{ }
 };
 ///@cond
 template<class ContainerType>
@@ -969,14 +970,14 @@ inline bool is_same( T x, T y)
 /// @ingroup basics
 inline bool is_divisable( double a, double b, double eps = 1e-15)
 {
-    return is_same( round(a/b)*b, a);
+    return is_same( round(a/b)*b, a, eps);
 }
 /// Checks if two number are integer divisable \f$a/b \in \mathbb{Z}\f$ within accuracy
 /// @attention Does not check for equal sign!
 /// @ingroup basics
 inline bool is_divisable( float a, float b, float eps = 1e-6)
 {
-    return is_same( (float)round(a/b)*b, (float)a);
+    return is_same( (float)round(a/b)*b, (float)a, eps);
 }
 
 /*! @brief Integrate using a for loop and a fixed time-step

@@ -24,7 +24,7 @@ struct FuncDirPer2
 {
     FuncDirPer2( dg::geo::TokamakMagneticField c, double psi_0, double psi_1):
         R_0_(c.R0()), psi0_(psi_0), psi1_(psi_1), psip_(c.psip()), psipR_(c.psipR()), psipZ_(c.psipZ()){}
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return this->operator()(R,Z);
     }
     double operator()(double R, double Z) const {
@@ -68,7 +68,7 @@ struct ArakawaDirPer
 {
     ArakawaDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1):
         f_(c, psi_0, psi_1, 4), g_(c, psi_0, psi_1){ }
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return this->operator()(R,Z);
     }
     double operator()(double R, double Z) const {
@@ -82,7 +82,7 @@ struct ArakawaDirPer
 struct CurvatureDirPer
 {
     CurvatureDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4.), curvR(c,+1), curvZ(c,+1){}
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z, double) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
         return curvR( R,Z)*f_.dR(R,Z) + curvZ(R,Z)*f_.dZ(R,Z);

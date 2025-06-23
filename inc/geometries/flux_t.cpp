@@ -193,11 +193,11 @@ int main( int argc, char* argv[])
         >
         output = {
         { "xc", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+            const dg::geo::TokamakMagneticField&){
             result = g2d.map()[0];
         }},
         { "yc", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+            const dg::geo::TokamakMagneticField&){
             result = g2d.map()[1];
         }},
         { "Psip", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
@@ -212,32 +212,32 @@ int main( int argc, char* argv[])
             const dg::geo::TokamakMagneticField& mag){
             result = dg::pullback( mag.psipZ(), g2d);
         }},
-        { "g_xx", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+        { "g_xx", [&]( dg::HVec& result, const dg::aGeometry2d&,
+            const dg::geo::TokamakMagneticField&){
             result=metric.value(0,0);
         }},
-        { "g_xy", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+        { "g_xy", [&]( dg::HVec& result, const dg::aGeometry2d&,
+            const dg::geo::TokamakMagneticField&){
             result=metric.value(0,1);
         }},
-        { "g_yy", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+        { "g_yy", [&]( dg::HVec& result, const dg::aGeometry2d&,
+            const dg::geo::TokamakMagneticField&){
             result=metric.value(1,1);
         }},
-        { "g_xy_g_xx", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+        { "g_xy_g_xx", [&]( dg::HVec& result, const dg::aGeometry2d&,
+            const dg::geo::TokamakMagneticField&){
             // deformation
             dg::blas1::pointwiseDivide( metric.value(0,1),
                 metric.value(0,0), result);
         }},
-        { "g_yy_g_xx", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+        { "g_yy_g_xx", [&]( dg::HVec& result, const dg::aGeometry2d&,
+            const dg::geo::TokamakMagneticField&){
             //ribeiro ratio
             dg::blas1::pointwiseDivide( metric.value(1,1),
                 metric.value(0,0), result);
         }},
-        { "vol", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,
-            const dg::geo::TokamakMagneticField& mag){
+        { "vol", [&]( dg::HVec& result, const dg::aGeometry2d&,
+            const dg::geo::TokamakMagneticField&){
             result=dg::tensor::volume(metric);
         }},
         { "Bzeta", [&]( dg::HVec& result, const dg::aGeometry2d& g2d,

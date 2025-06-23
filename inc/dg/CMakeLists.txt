@@ -1,5 +1,7 @@
 # inc/dg/CMakeLists.txt
 
+# find . -type f \( -name "*.h" -or -name "*.cuh" -or -name "*.hpp" \) -not -path "./exblas/*" -not -path "./matrix/*" -not -path "./geometries/*" -not -path "./file/*" -not -name "*doc.h"| sort
+# Manually copy result here and replace ./ with 2 whitespaces
 set(DG_HEADERS
   adaptive.h
   advection.h
@@ -26,7 +28,6 @@ set(DG_HEADERS
   backend/blas2_stencil.h
   backend/config.h
   backend/densematrix.h
-  backend/exblas/ExSUM.FPE.hpp
   backend/exblas/accumulate.cuh
   backend/exblas/accumulate.h
   backend/exblas/config.h
@@ -34,11 +35,11 @@ set(DG_HEADERS
   backend/exblas/exdot_cuda.cuh
   backend/exblas/exdot_omp.h
   backend/exblas/exdot_serial.h
+  backend/exblas/ExSUM.FPE.hpp
   backend/exblas/fpedot_cuda.cuh
   backend/exblas/fpedot_omp.h
   backend/exblas/fpedot_serial.h
   backend/exblas/mpi_accumulate.h
-  backend/exblas/mylibm.cuh
   backend/exblas/mylibm.cuh
   backend/exblas/mylibm.hpp
   backend/exceptions.h
@@ -57,17 +58,16 @@ set(DG_HEADERS
   backend/mpi_vector.h
   backend/predicate.h
   backend/scalar_categories.h
-  backend/sparseblockmat.h
   backend/sparseblockmat_cpu_kernels.h
   backend/sparseblockmat_gpu_kernels.cuh
-  backend/sparseblockmat_gpu_kernels.cuh
+  backend/sparseblockmat.h
   backend/sparseblockmat_omp_kernels.h
-  backend/sparsematrix.h
   backend/sparsematrix_cpu.h
   backend/sparsematrix_gpu.cuh
+  backend/sparsematrix.h
   backend/sparsematrix_omp.h
-  backend/tensor_traits.h
   backend/tensor_traits_cusp.h
+  backend/tensor_traits.h
   backend/tensor_traits_scalar.h
   backend/tensor_traits_std.h
   backend/tensor_traits_thrust.h
@@ -76,21 +76,18 @@ set(DG_HEADERS
   backend/vector_categories.h
   backend/view.h
   bicgstabl.h
-  blas.h
   blas1.h
   blas2.h
+  blas.h
   chebyshev.h
   elliptic.h
   enums.h
   eve.h
-  exblas/exblas.h
   extrapolation.h
   functors.h
-  geometries/geometries.h
   helmholtz.h
   implicit.h
   lgmres.h
-  matrix/matrix.h
   multigrid.h
   multistep.h
   multistep_tableau.h
@@ -106,8 +103,8 @@ set(DG_HEADERS
   topology/average.h
   topology/base_geometry.h
   topology/base_geometryX.h
-  topology/derivatives.h
   topology/derivativesA.h
+  topology/derivatives.h
   topology/derivativesT.h
   topology/derivativesX.h
   topology/dlt.h
@@ -149,6 +146,8 @@ set(DG_HEADERS
   topology/xspacelib.h
 )
 
+# These can be compiled for MPI as well
+# find . -type f -name "*b.cpp" | sort
 set(DG_BENCHMARKS
   arakawa_b.cpp
   blas_b.cpp
@@ -164,6 +163,8 @@ set(DG_BENCHMARKS
   refined_elliptic2d_b.cpp
 )
 
+# These can be compiled for MPI as well
+# find . -type f -name "*_t.cpp" | sort
 set(DG_TESTS
   adaptive_t.cpp
   arakawa_t.cpp
@@ -188,8 +189,8 @@ set(DG_TESTS
   simpsons_t.cpp
   topology/average_t.cpp
   topology/base_geometry_t.cpp
-  topology/derivativesX_t.cpp
   topology/derivatives_t.cpp
+  topology/derivativesX_t.cpp
   topology/dlt_t.cpp
   topology/dx_t.cpp
   topology/evaluation_t.cpp
@@ -208,6 +209,9 @@ set(DG_TESTS
   topology/transform_t.cpp
 )
 
+# These are pure MPI tests
+# find . -type f -name "*mpit.cpp" | sort
+## TODO some mpi tests are missing (see Makefile MPITargets!)
 set(DG_MPI_TESTS
   backend/mpi_exblas_mpit.cpp
   backend/mpi_gather_kron_mpit.cpp
@@ -221,6 +225,20 @@ set(DG_MPI_TESTS
   topology/stencil_mpit.cpp
 )
 
+# Manually list tests that can be compiled for MPI
+# Cf Makefile, backend/Makefile and topology/Makefile
+list( APPEND DG_MPI_TESTS
+    topology/evaluation_t.cpp
+    topology/dx_t.cpp
+    topology/derivatives_t.cpp
+    topology/projection_t.cpp
+    arakawa_t.cpp
+    poisson_t.cpp
+    bicgstabl_t.cpp
+    blas_t.cpp
+    blas1_t.cpp
+)
+
 # ============================================
 # Create DG library target
 
@@ -229,57 +247,80 @@ set(DG_MPI_TESTS
 # This means it has no sources, but can link/be linked to other
 # libraries, have dependencies, etc. These properties are then
 # inherited by any target that links to it.
-add_library(dg INTERFACE ${DG_HEADERS})
-# Ensure that `#include "dg/..."` works
-# TODO remove this after other libs have their own CMakeLists.txt
-target_include_directories(dg INTERFACE "${PROJECT_SOURCE_DIR}/inc")
+add_library(dg_dg INTERFACE)
+# When installing the target we prepend the namespace dg::
+set_property(TARGET dg_dg PROPERTY EXPORT_NAME dg)
+# Create an alias: used to link to the library from external projects.
+# consistently with either subdirectory'd and installed library
+add_library(feltor::dg::dg ALIAS dg_dg)
+
 # Set the minimum C++ standard
-target_compile_features(dg INTERFACE cxx_std_17)
-# Set flags
-# CMake switches on -forward-unknown-to-host-compiler by default, so C++ flags
-# may be set even when compiling for CUDA.
-target_compile_options(dg INTERFACE
-  "${FELTOR_FLAGS_CXX}"
-  $<$<COMPILE_LANGUAGE:CUDA>:${FELTOR_FLAGS_CUDA}>
+target_compile_features(dg_dg INTERFACE cxx_std_17)
+
+# Create a file set (that can be easily installed)
+# This also provides the correct include directory to the target
+target_sources( dg_dg INTERFACE
+    FILE_SET dg_headers TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/inc
+    FILES ${DG_HEADERS}
 )
 
-# Create an alias: used to link to the library from external projects.
-add_library(dg::dg ALIAS dg)
 
 # ============================================
 # Add dg dependencies
 
-include(FeltorFetchDeps)
+# Through the exblas library we depend on vcl
+# VCL does not use cmake so we have to configure manually
+CPMAddPackage(
+    NAME vcl
+    GITHUB_REPOSITORY vectorclass/version2
+    GIT_TAG v2.02.01
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
+)
 
-if(FELTOR_FETCH_CCCL)
-  fetch_cccl()
-else()
-  find_package(cccl REQUIRED)
+if( vcl_ADDED)
+    # with vcl it is recommended to activate and optimize instruction set flags
+    message( STATUS "Found Vectorclass in ${vcl_SOURCE_DIR}")
+    add_library( vcl::vcl INTERFACE IMPORTED) # imported is visible only in current dir and below
+    target_include_directories( vcl::vcl INTERFACE ${vcl_SOURCE_DIR})
+    # Per default the dg library includes "vcl/vectorclass.h" but the vcl folder
+    # does not exist in the vectorclass github, so tell dg to directly include "vectorclass.h"
+    target_compile_definitions( vcl::vcl INTERFACE VCL_NO_INCLUDE_PREFIX)
 endif()
-target_link_libraries(dg INTERFACE CCCL::CCCL)
+
+target_link_libraries(dg_dg INTERFACE vcl::vcl)
+
+# Add cccl
+
+CPMAddPackage(
+    NAME CCCL
+    GITHUB_REPOSITORY "NVIDIA/cccl"
+    VERSION 2.8.0
+    SYSTEM ON
+    EXCLUDE_FROM_ALL ON
+)
+
+target_link_libraries(dg_dg INTERFACE CCCL::CCCL)
+
 if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
-  target_link_libraries(dg INTERFACE CUDA::cusparse)
+  # CUDA language must be enabled if device is CUDA
+  target_link_libraries(dg_dg INTERFACE CUDA::cusparse)
+  target_compile_features(dg_dg INTERFACE cuda_std_17)
 endif()
+# https://stackoverflow.com/questions/53256405/howto-pass-flag-to-nvcc-compiler-in-cmake
+target_compile_options(dg_dg INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda>)
 
-if(FELTOR_FETCH_VCL)
-  fetch_vcl()
-else()
-  find_package(VCL REQUIRED)
-endif()
-target_link_libraries(dg INTERFACE vcl::vcl)
 
-if(FELTOR_USE_MPI)
-  find_package(MPI REQUIRED)
-  target_link_libraries(dg INTERFACE MPI::MPI_CXX)
-endif()
-
-if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
-  find_package(OpenMP REQUIRED)
-  target_link_libraries(dg INTERFACE OpenMP::OpenMP_CXX)
-endif()
+# MW: cccl already links OpenMP
+# if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
+#   find_package(OpenMP REQUIRED)
+#   target_link_libraries(dg_dg INTERFACE OpenMP::OpenMP_CXX)
+# endif()
 
 # =============================================
 # Set up benchmark and test targets
+# MW a custom target is always out of date and has no output file
 if(FELTOR_BUILD_BENCHMARKS)
   add_custom_target(dg_benchmarks)
 endif()
@@ -289,38 +330,100 @@ endif()
 
 # ============================================
 # Add file utilities
-# Defines the dg::file target
+# Defines the dg_file target
 
 add_subdirectory(file)
 
 # ============================================
 # Add geometries utilities
-# Defines the dg::geometries target
+# Defines the dg_geometries target
 
 add_subdirectory(geometries)
+
+# ============================================
+# Add matrix utilities
+# Defines the dg_matrix target
+
+if(FELTOR_DG_WITH_MATRIX)
+    add_subdirectory(matrix)
+endif()
+
 
 # ============================================
 # Add dg benchmarks
 
 if(FELTOR_BUILD_BENCHMARKS)
-  include(FeltorBenchmarks)
-  foreach(benchmark_path IN LISTS DG_BENCHMARKS)
-    add_dg_benchmark("${benchmark_path}")
-  endforeach()
+    include(FeltorBenchmarks)
+    # There are no backend and topology benchmarks
+    # All benchmarks can be compiled for MPI
+    foreach(benchmark_path IN LISTS DG_BENCHMARKS)
+        add_dg_benchmark("${benchmark_path}" "" ${FELTOR_WITH_MPI} target_name )
+    endforeach()
 endif()
 
 # ============================================
 # Add dg tests
+# We need to parse the paths to be sure to put topology and backend tests in the right folder
 
 if(FELTOR_BUILD_TESTS)
-  include(FeltorTests)
-  foreach(test_path IN LISTS DG_TESTS)
-    add_dg_test("${test_path}")
-  endforeach()
-  if(FELTOR_USE_MPI)
-    foreach(test_path IN LISTS DG_MPI_TESTS)
-      add_dg_mpi_test("${test_path}")
-    endforeach()
-  endif()
+    include(FeltorTests)
+    if(FELTOR_WITH_MPI)
+        foreach(test_path IN LISTS DG_MPI_TESTS)
+            cmake_path( REMOVE_FILENAME test_path OUTPUT_VARIABLE outvar)
+            if( outvar STREQUAL "topology/")
+                add_dg_test("${test_path}" "topology" ON target_name )
+            elseif( outvar STREQUAL "backend/")
+                add_dg_test("${test_path}" "backend" ON target_name )
+            else()
+                add_dg_test("${test_path}" "" ON target_name )
+            endif()
+        endforeach()
+    else()
+        foreach(test_path IN LISTS DG_TESTS)
+            cmake_path( REMOVE_FILENAME test_path OUTPUT_VARIABLE outvar)
+            if( outvar STREQUAL "topology/")
+                add_dg_test("${test_path}" "topology" OFF target_name )
+            elseif( outvar STREQUAL "backend/")
+                add_dg_test("${test_path}" "backend" OFF target_name )
+            else()
+                add_dg_test("${test_path}" "" OFF target_name )
+            endif()
+        endforeach()
+    endif()
 endif()
 
+# ============================================
+# Add Install rules
+if(FELTOR_INSTALL)
+
+    # cmake --install build --prefix install-dir
+
+    # This install rule copies the FILE_SET "dg_headers" to install-dir/include/ (i.e. results in include/dg/...)
+    # and associates the target to an export set and a install component set
+    install(
+        TARGETS dg_dg COMPONENT feltor_dg
+        EXPORT feltor_dg # associate installed target files with an export called "feltor_dg"
+        FILE_SET dg_headers DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+
+    # This install rule creates a file ("feltor_dg-targets.cmake") at the specified destination
+    # that can (theoretically) be included by other projects and they have all targets (in feltor_dg) available
+    # Usually, this is an intermediate step towards making "find_package" work for our project
+
+# ATTENTION: This export currently (3.6.25) does not work because our external
+# dependencies are handled by CPM which is just a wrapper around FetchContent,
+# which itself is as if we add_subdirectorie'd the external packages. This
+# means e.g. the target nlohman_json::nlohmann_json is not an IMPORTED target
+# in the same way that find_package makes it. Cmake will thus complain that the
+# target is "not in any export set".  In order for this to work every
+# dependency has to be find_package'd and an external package manager has to be
+# used to install these dependencies on the system Now, find_package has its
+# own nuances and currently does not work e.g. for VCL
+    install(
+        EXPORT feltor_dg # all targets within this set
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/feltor"
+        NAMESPACE feltor::dg::
+        FILE feltor_dg-targets.cmake
+        COMPONENT feltor_dg
+    )
+endif()

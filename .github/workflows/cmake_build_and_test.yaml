@@ -32,34 +32,35 @@ jobs:
       id: strings
       shell: bash
       run: |
+        # Copy the parameters from the default presets
         echo "build-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         if [[ ${{ matrix.device }} = "gpu" ]]; then
-          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CUDA" >> "$GITHUB_OUTPUT"
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CUDA -DCMAKE_CUDA_FLAGS='-march=native -O3'" >> "$GITHUB_OUTPUT"
         elif [[ ${{ matrix.device }} = "openmp" ]]; then
-          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=OMP" >> "$GITHUB_OUTPUT"
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=OMP -DCMAKE_CXX_FLAGS='-march=native -O3'" >> "$GITHUB_OUTPUT"
         else
-          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CPP" >> "$GITHUB_OUTPUT"
+          echo "device=-DCCCL_THRUST_DEVICE_SYSTEM=CPP -DCMAKE_CXX_FLAGS='-march=native -O3'" >> "$GITHUB_OUTPUT"
         fi
         if [[ ${{ matrix.mpi }} = "mpi_on" ]]; then
-          echo "mpi=-DFELTOR_USE_MPI=ON" >> "$GITHUB_OUTPUT"
+          echo "mpi=-DFELTOR_WITH_MPI=ON" >> "$GITHUB_OUTPUT"
         else
-          echo "mpi=-DFELTOR_USE_MPI=OFF" >> "$GITHUB_OUTPUT"
+          echo "mpi=-DFELTOR_WITH_MPI=OFF" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Install dependencies
       run: |
        sudo apt-get update
-       sudo apt-get -y install libglfw3-dev libopenmpi-dev libnetcdf-dev libboost-dev
+       sudo apt-get -y install libglfw3-dev libopenmpi-dev libnetcdf-dev liblapack-dev libboost-dev
 
     - name: Configure CMake
       run: >
         cmake -B${{ steps.strings.outputs.build-dir }} .
         ${{ steps.strings.outputs.device }}
         ${{ steps.strings.outputs.mpi }}
-        -DFELTOR_FETCH_DEPS=ON
 
+    # Only build the tests
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-dir }} --verbose
+      run: cmake --build ${{ steps.strings.outputs.build-dir }} --verbose --target dg_tests
 
     - name: Test
       if: ${{ matrix.device != 'gpu' }}

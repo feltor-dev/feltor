@@ -48,11 +48,11 @@ TEST_CASE( "Probes Parser")
         CHECK( js_format.empty());
         CHECK( direct.probes == true);
         unsigned num_pins = direct.get_coords_sizes();
-        DG_RANK0 CHECK( num_pins == 4);
+        if(rank==0) CHECK( num_pins == 4);
         for( unsigned i=0; i<num_pins; i++)
         {
-            DG_RANK0 CHECK( direct.coords[0][i] == (double)i);
-            DG_RANK0 CHECK( direct.coords[1][i] == (double)i);
+            if(rank==0) CHECK( direct.coords[0][i] == (double)i);
+            if(rank==0) CHECK( direct.coords[1][i] == (double)i);
         }
     }
     SECTION( "From file")
@@ -103,16 +103,16 @@ TEST_CASE( "Probes Parser")
 
         CHECK( fromfile.probes == true);
         unsigned num_pins = fromfile.get_coords_sizes();
-        DG_RANK0 CHECK( num_pins == 4);
+        if(rank==0) CHECK( num_pins == 4);
         for( unsigned i=0; i<num_pins; i++)
         {
-            DG_RANK0 CHECK( fromfile.coords[0][i] == 10.*(double)i);
-            DG_RANK0 CHECK( fromfile.coords[1][i] == 0.5*(double)i);
+            if(rank==0) CHECK( fromfile.coords[0][i] == 10.*(double)i);
+            if(rank==0) CHECK( fromfile.coords[1][i] == 0.5*(double)i);
         }
 #ifdef WITH_MPI
         MPI_Barrier( MPI_COMM_WORLD);
 #endif
-        DG_RANK0 std::filesystem::remove( "file.json");
+        if(rank==0) std::filesystem::remove( "file.json");
     }
 
 }

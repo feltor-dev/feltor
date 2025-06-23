@@ -16,7 +16,7 @@ inline std::array<double,2> solution( double t, double nu) {
 struct Explicit
 {
     Explicit( double nu): m_nu( nu) {}
-    void operator()( double t, const std::array<double,2>& T,
+    void operator()( double t, const std::array<double,2>&,
             std::array<double,2>& Tp)
     {
         Tp[0] = m_nu*cos(t) - sin(t);
@@ -31,13 +31,13 @@ struct Implicit
 {
     Implicit( double nu): m_nu(nu) { }
 
-    void operator()( double t, const std::array<double,2>& T,
+    void operator()( double, const std::array<double,2>& T,
             std::array<double,2>& Tp)
     {
         Tp[0] = -m_nu*T[0];
         Tp[1] = -m_nu*T[1];
     }
-    void operator()( double alpha, double t, std::array<double,2>& y, const
+    void operator()( double alpha, double /*t*/, std::array<double,2>& y, const
             std::array<double,2>& rhs)
     {
         // solve y - alpha I(t,y)  = rhs

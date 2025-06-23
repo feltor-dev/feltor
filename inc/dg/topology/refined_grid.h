@@ -101,7 +101,7 @@ struct RealIdentityRefinement : public aRealRefinement1d<real_type>
         weights=dg::create::weights(g);
         abscissas=g.abscissas(0);
     }
-    virtual unsigned do_N_new( unsigned N_old, bc bcx) const override final{
+    virtual unsigned do_N_new( unsigned N_old, bc) const override final{
         return N_old;
     }
 };
@@ -130,7 +130,7 @@ struct RealLinearRefinement : public aRealRefinement1d<real_type>
         weights = left;
         abscissas = dg::detail::normalize_weights_and_compute_abscissas( g, weights);
     }
-    virtual unsigned do_N_new( unsigned N_old, bc bcx) const override final{
+    virtual unsigned do_N_new( unsigned N_old, bc) const override final{
         return N_old*m_;
     }
 };
@@ -247,7 +247,7 @@ struct RealFemRefinement : public aRealRefinement1d<real_type>
         thrust::host_vector<real_type> wrong_weights = dg::create::weights(nGrid);
         dg::blas1::pointwiseDivide( wrong_weights, weights, weights);
     }
-    virtual unsigned do_N_new( unsigned N_old, bc bcx) const override final{
+    virtual unsigned do_N_new( unsigned N_old, bc) const override final{
         return N_old*m_M;
     }
 };
@@ -290,37 +290,37 @@ struct RealEquidistRefinement : public aRealRefinement1d<real_type>
     }
     thrust::host_vector<real_type> equidist_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx, unsigned howmany) const
     {
-        assert( howm_ <= N);
-        assert( node_ <= N);
-        if( node_ != 0 && node_ != N)
-            assert( howm_ <= node_ && howm_ <= N-node_);
-        if( add_x_ == 0 || howm_ == 0)
+        assert( howmany <= N);
+        assert( node <= N);
+        if( node != 0 && node != N)
+            assert( howmany <= node && howmany <= N-node);
+        if( add_x == 0 || howmany == 0)
         {
             thrust::host_vector<real_type> w_( n*N, 1);
             return w_;
         }
         //there are add_x+1 finer cells per refined cell ...
-        thrust::host_vector< real_type> left( n*N+n*add_x_*howm_, 1), right(left);
-        for( unsigned i=0; i<(add_x_+1)*howm_; i++)//the original cell and the additional ones
+        thrust::host_vector< real_type> left( n*N+n*add_x*howm_, 1), right(left);
+        for( unsigned i=0; i<(add_x+1)*howm_; i++)//the original cell and the additional ones
             for( unsigned k=0; k<n; k++)
-                left[i*n+k] = add_x_ + 1;
+                left[i*n+k] = add_x + 1;
         //mirror left into right
         for( unsigned i=0; i<right.size(); i++)
             right[i] = left[ (left.size()-1)-i];
-        thrust::host_vector< real_type> both( n*N+2*n*add_x_*howm_, 1);
+        thrust::host_vector< real_type> both( n*N+2*n*add_x*howm_, 1);
         for( unsigned i=0; i<left.size(); i++)
             both[i] *= left[i];
         for( unsigned i=0; i<right.size(); i++)
-            both[i+n*add_x_*howm_] *= right[i];
-        if(      node_ == 0     && bcx != dg::PER) { return left; }
-        else if( node_ == N && bcx != dg::PER) { return right; }
-        else if((node_ == N || node_ == 0) && bcx == dg::PER) { return both; }
+            both[i+n*add_x*howm_] *= right[i];
+        if(      node == 0     && bcx != dg::PER) { return left; }
+        else if( node == N && bcx != dg::PER) { return right; }
+        else if((node == N || node == 0) && bcx == dg::PER) { return both; }
         else
         {
             thrust::host_vector<real_type> w_ = both;
             //now shift indices so that refinement is around node_s
             for( unsigned i=0; i<both.size(); i++)
-                w_[((howm_*add_x_+node_)*n+i)%both.size()] = both[i];
+                w_[((howm_*add_x+node)*n+i)%both.size()] = both[i];
             return w_;
         }
     }
@@ -365,36 +365,36 @@ struct RealExponentialRefinement : public aRealRefinement1d<real_type>
     }
     thrust::host_vector<real_type> exponential_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx) const
     {
-        if( add_x_ == 0)
+        if( add_x == 0)
         {
             thrust::host_vector<real_type> w_( n*N, 1);
             return w_;
         }
-        assert( node_ <= N);
-        //there are add_x_+1 finer cells per refined cell ...
-        thrust::host_vector< real_type> left( n*N+n*add_x_, 1), right(left);
+        assert( node <= N);
+        //there are add_x+1 finer cells per refined cell ...
+        thrust::host_vector< real_type> left( n*N+n*add_x, 1), right(left);
         for( unsigned k=0; k<n; k++)//the original cell and the additional ones
-            left[k] = pow( 2, add_x_);
-        for( unsigned i=0; i<add_x_; i++)
+            left[k] = pow( 2, add_x);
+        for( unsigned i=0; i<add_x; i++)
             for( unsigned k=0; k<n; k++)
-                left[(i+1)*n+k] = pow( 2, add_x_-i);
+                left[(i+1)*n+k] = pow( 2, add_x-i);
         //mirror left into right
         for( unsigned i=0; i<right.size(); i++)
             right[i] = left[ (left.size()-1)-i];
-        thrust::host_vector< real_type> both( n*N+2*n*add_x_, 1);
+        thrust::host_vector< real_type> both( n*N+2*n*add_x, 1);
         for( unsigned i=0; i<left.size(); i++)
             both[i] *= left[i];
         for( unsigned i=0; i<right.size(); i++)
-            both[i+n*add_x_] *= right[i];
-        if(      node_ == 0     && bcx != dg::PER) { return left; }
-        else if( node_ == N && bcx != dg::PER) { return right; }
-        else if((node_ == N || node_ == 0) && bcx == dg::PER) { return both; }
+            both[i+n*add_x] *= right[i];
+        if(      node == 0     && bcx != dg::PER) { return left; }
+        else if( node == N && bcx != dg::PER) { return right; }
+        else if((node == N || node == 0) && bcx == dg::PER) { return both; }
         else
         {
             thrust::host_vector<real_type> w_ = both;
             //now shift indices so that refinement is around node_s
             for( unsigned i=0; i<both.size(); i++)
-                w_[((add_x_+node_)*n+i)%both.size()] = both[i];
+                w_[((add_x+node)*n+i)%both.size()] = both[i];
             return w_;
         }
     }
@@ -457,7 +457,7 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
     {
         dg::aRealTopology2d<real_type>::do_set( new_bc);
     }
-    virtual void do_set_pq(std::array<real_type,2> new_x0, std::array<real_type,2> new_x1) override final
+    virtual void do_set_pq(std::array<real_type,2> , std::array<real_type,2> ) override final
     {
         throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
@@ -537,7 +537,7 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
     {
         dg::aRealTopology3d<real_type>::do_set( new_bc);
     }
-    virtual void do_set_pq(std::array<real_type,3> new_x0, std::array<real_type,3> new_x1) override final
+    virtual void do_set_pq(std::array<real_type,3>, std::array<real_type,3>) override final
     {
         throw dg::Error(dg::Message(_ping_)<<"This grid cannot change boundaries\n");
     }
