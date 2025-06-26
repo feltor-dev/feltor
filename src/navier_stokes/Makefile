@@ -12,10 +12,10 @@ INCLUDE+= -I../../inc   # other project libraries
 all: navier_stokes navier_stokes_hpc
 
 navier_stokes: ../feltor/feltor.cpp ../feltor/init.h navier_stokes.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -DDG_BENCHMARK -g -DWITH_NAVIER_STOKES $(VERSION_FLAGS)
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -g -DWITH_NAVIER_STOKES $(VERSION_FLAGS)
 
 navier_stokes_hpc: ../feltor/feltor.cpp ../feltor/init.h navier_stokes.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK -DWITHOUT_GLFW -DWITH_NAVIER_STOKES $(VERSION_FLAGS)
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITHOUT_GLFW -DWITH_NAVIER_STOKES $(VERSION_FLAGS)
 
 .PHONY: clean
 

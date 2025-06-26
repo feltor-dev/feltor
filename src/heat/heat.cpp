@@ -115,9 +115,7 @@ int main( int argc, char* argv[])
         glfwSwapBuffers( w);
 
         //step
-#ifdef DG_BENCHMARK
         t.tic();
-#endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
@@ -159,11 +157,9 @@ int main( int argc, char* argv[])
 
         }
         time += (double)time;
-#ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step << " at time\t"<<time<<"\n";
         std::cout << "\n\t Average time for one step: "<<t.diff()/(double)p.itstp<<"s\n\n";
-#endif//DG_BENCHMARK
     }
 
     glfwTerminate();

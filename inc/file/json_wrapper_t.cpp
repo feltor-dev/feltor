@@ -216,7 +216,7 @@ TEST_CASE("Json CPP wrapper")
         CHECK( acc.find("\"number\"") != std::string::npos);
     }
 
-    SECTION( "Test Vector 2 Json");
+    SECTION( "Test Vector 2 Json")
     {
         dg::file::WrappedJsonValue ws( dg::file::vec2json( {42, 73}));
         CHECK( ws.get( 0,0).asInt() == 42);

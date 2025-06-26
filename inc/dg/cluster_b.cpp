@@ -144,7 +144,7 @@ int main(
     t.toc();
     if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //DOT
-    double norm=0;
+    [[maybe_unused]] double norm=0;
     norm += dg::blas1::dot( lhs, rhs);//warm up
     t.tic();
     for( unsigned i=0; i<multi; i++)

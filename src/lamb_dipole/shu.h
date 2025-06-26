@@ -104,7 +104,7 @@ struct Diffusion;
 template< class Geometry, class Matrix, class Container >
 struct Shu
 {
-    friend class Diffusion<Geometry, Matrix, Container>;
+    friend struct Diffusion<Geometry, Matrix, Container>;
     using value_type = dg::get_value_type<Container>;
 
     Shu( const Geometry& grid, dg::file::WrappedJsonValue& js);

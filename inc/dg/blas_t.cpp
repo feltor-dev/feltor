@@ -202,7 +202,7 @@ TEST_CASE( "Blas2 documentation")
         //! [parallel_for]
         //! [parallel_transpose]
         // Compute transpose of vector
-        const unsigned nx = 3, ny = 3;
+        unsigned nx = 3, ny = 3;
         std::vector<double> vec = {11,12,13, 21,22,23, 31,32,33}, vecT(9);
         dg::blas2::parallel_for( [nx,ny]DG_DEVICE( unsigned k, const
                     double* ii, double* oo)

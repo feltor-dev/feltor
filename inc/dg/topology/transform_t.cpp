@@ -98,7 +98,7 @@ TEST_CASE( "Transform")
         CHECK( vy[0] - 3.2 < 1e-15);
         CHECK( vz[0] - 6 < 1e-15 );
     }
-    SECTION( "pushForwardPerp Tensor");
+    SECTION( "pushForwardPerp Tensor")
     {
         dg::SparseTensor<dg::HVec> tensor;
         dg::pushForwardPerp( dg::CONSTANT(2), dg::CONSTANT(3), dg::CONSTANT(4),

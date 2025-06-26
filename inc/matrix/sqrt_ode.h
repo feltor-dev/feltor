@@ -187,7 +187,7 @@ InvSqrtODE<Container> make_inv_sqrtodeTri( const Matrix& TH, const Container&
 template<class MatrixType>
 auto make_expode( MatrixType& A)
 {
-    return [&]( auto t, const auto& y, auto& yp) mutable
+    return [&]( auto, const auto& y, auto& yp) mutable
     {
         dg::blas2::symv( A, y, yp);
     };

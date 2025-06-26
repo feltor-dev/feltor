@@ -14,7 +14,7 @@ TEST_CASE("DLT")
     //auto n = GENERATE( RangeGenerator<unsigned>( 1,21));
 
     INFO("# of polynomial coefficients n! \t"<<n);
-    SECTION("Forward * Backward should give Delta");
+    SECTION("Forward * Backward should give Delta")
     {
         dg::Operator<double> forward( dg::DLT<double>::forward(n));
         dg::Operator<double> backward( dg::DLT<double>::backward(n));
@@ -34,7 +34,7 @@ TEST_CASE("DLT")
             }
         }
     }
-    SECTION( "Abscissas");
+    SECTION( "Abscissas")
     {
         auto abs = dg::DLT<double>::abscissas(n);
         double sum =0;

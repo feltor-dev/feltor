@@ -34,7 +34,7 @@ TEST_CASE( "Stencil")
         }
     }
 
-    SECTION( "dg slope limiter stencil");
+    SECTION( "dg slope limiter stencil")
     {
         dg::Grid1d g1d( 0,1, 3, 3);
         for( auto bc : bcs)
@@ -49,7 +49,7 @@ TEST_CASE( "Stencil")
                 INFO( stencil.values()[i]<<" ");
         }
     }
-    SECTION( "Test DIR boundary");
+    SECTION( "Test DIR boundary")
     {
         dg::Grid2d g2d( 0,1, 0,2, 3, 5, 3);
         auto stencil = dg::create::limiter_stencil( dg::coo3d::y, g2d, dg::DIR);

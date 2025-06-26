@@ -35,7 +35,7 @@ typedef ZERO NoLimiter;
 ///@cond
 namespace detail{
 
-static void parse_method( std::string method, std::string& i, std::string& p, std::string& f)
+static inline void parse_method( std::string method, std::string& i, std::string& p, std::string& f)
 {
     f = "dg";
     if( method == "dg")                 i = "dg",       p = "dg";

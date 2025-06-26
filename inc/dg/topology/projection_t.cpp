@@ -235,7 +235,7 @@ TEST_CASE( "Projection")
         CHECK( err < 1e-14);
     }
 
-    SECTION( "Test backproject 2d");
+    SECTION( "Test backproject 2d")
     {
         dg::x::Grid2d g2d(0., M_PI, 0., M_PI, 3, 10, 20);
         dg::x::Grid2d g2dequi = g2d;

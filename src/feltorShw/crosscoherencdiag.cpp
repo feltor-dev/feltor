@@ -68,7 +68,7 @@ int main( int argc, char* argv[])
     std::cout << "Gathering time data " << std::endl;
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    double time=0.;
+    //double time=0.;
     int NepID,phipID;
     double Nep,phip;
     unsigned step=0;
@@ -86,13 +86,13 @@ int main( int argc, char* argv[])
     std::cout << "tmin = 0 "<< imin << " tmax =" << steps<< std::endl;
     std::cout << "enter new imin(>0) and imax(<maxout):" << std::endl;
     std::cin >> imin >> imax;
-    time = imin*p.itstp;
+    //time = imin*p.itstp;
     step = imin;
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
             step++;
             Estart[0] = step;
-            time += p.dt;
+            //time += p.dt;
             err = nc_inq_varid(ncid, "Ne_p3", &NepID);
             err = nc_get_vara_double( ncid, NepID, Estart, Ecount, &Nep);
 

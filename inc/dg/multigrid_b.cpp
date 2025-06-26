@@ -147,7 +147,7 @@ int main()
                     std::cout << "# Nested iterations stage: " << u << ", iter: " << number << ", took "<<t.diff()<<"s\n";
                 };
         else
-            multi_inv_fmg[u] = [nu2, ev = multi_ev[u], u, &cheby =
+            multi_inv_fmg[u] = [nu2, ev = multi_ev[u], &cheby =
                 multi_cheby[u], &pol = multi_pol[u] ]( const auto& y, auto& x)
                 {
                     cheby.solve( pol, x, y, 1., ev/100., ev*1.1, nu2, false);
