@@ -35,7 +35,7 @@ TEST_CASE( "Easy dims")
     dg::ClonePtr<dg::x::aGeometry2d> grid2d_ptr = grid.perp_grid();
 
     //create NetCDF File
-    int ncid;
+    int ncid = 0;
     dg::file::NC_Error_Handle err;
     DG_RANK0 err = nc_create( filename.data(), NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
 

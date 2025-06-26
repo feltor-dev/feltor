@@ -45,7 +45,7 @@ There are 6 presets targeting 6 different hardware architectures. All require th
 [cols='3,10,14',options="header"]
 |=======================================================================
 | CMake Preset  | Requirements | Description
-| *cpu*     | gcc >= 9 or msvc >= 19 or icc >= 19.0        |Single core CPU, no parallelization; support for AVX and FMA instruction set is recommended
+| *cpu*     | gcc >= 9 or msvc >= 19 or icc >= 19.0 or clang >= 19        |Single core CPU, no parallelization; support for AVX and FMA instruction set is recommended
 | *omp* | OpenMP-4 support| Multi-core CPU parallelisation, set OMP_NUM_THREADS environment variable to set number of OpenMP threads to run. Not currently available on Windows with MSVC!
 | *gpu*    |   nvcc >= 11.0 | Parallel computation on a single NVidia GPU
 | *mpi-cpu*     | MPI version 3 | Distributed memory system for pure MPI parallelisation

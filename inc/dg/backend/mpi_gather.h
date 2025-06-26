@@ -574,7 +574,7 @@ struct MPIGather
 
     /// https://stackoverflow.com/questions/26147061/how-to-share-protected-members-between-c-template-classes
     template< template<class> class OtherVector>
-    friend class MPIGather; // enable copy
+    friend struct MPIGather; // enable copy
 
     /**
     * @brief Construct from other execution policy

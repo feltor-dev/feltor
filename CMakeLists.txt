@@ -111,6 +111,9 @@ else()
     else()
         add_compile_options(-Wall -Wextra -Wpedantic -Werror)
     endif()
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options( -Wno-c++20-extensions) # Necessary for Catch2 TEMPLATE_TEST_CASE
+    endif()
 endif()
 
 
