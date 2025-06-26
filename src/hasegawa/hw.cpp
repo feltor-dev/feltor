@@ -73,8 +73,8 @@ int main( int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
     //create timer
     dg::Timer t;
-    double E0 = rhs.energy(), E1 = 0, diff = 0; //energy0 = E0;
-    double Ezf0 = rhs.zonal_flow_energy(), Ezf1 = 0, diffzf = 0; //energyzf0 = Ezf0;
+    double E0 = 0, E1 = 0, diff = 0; //energy0 = E0;
+    double Ezf0 = 0, Ezf1 = 0, diffzf = 0; //energyzf0 = Ezf0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;

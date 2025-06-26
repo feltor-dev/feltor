@@ -488,8 +488,8 @@ struct SeparatriX
             temp = end;
             odeint.integrate_steps( y_vec[nodeX1-1], temp, 2.*M_PI-y_i[1], end,
                     N_steps_);
-            eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) +
-                    (end[1]-Z_i[1])*(end[1]-Z_i[1]));
+            //eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) +
+            //        (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
             ////////////////////bottom left region
 
