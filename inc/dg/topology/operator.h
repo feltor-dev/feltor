@@ -373,8 +373,7 @@ class SquareMatrix
      * @param mat the matrix to output
      * @return the outstream
      */
-    template< class Ostream>
-    friend Ostream& operator<<(Ostream& os, const SquareMatrix& mat)
+    friend std::ostream& operator<<(std::ostream& os, const SquareMatrix& mat)
     {
         unsigned n_ = mat.n_;
         for( size_t i=0; i < n_ ; i++)

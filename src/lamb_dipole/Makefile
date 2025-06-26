@@ -14,7 +14,7 @@ shu: shu.cpp shu.h init.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(GLFLAGS) $(JSONLIB) -g
 
 shu_hpc: shu.cpp shu.h init.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g -DDG_BENCHMARK -DWITHOUT_GLFW
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g -DWITHOUT_GLFW
 
 .PHONY: clean
 

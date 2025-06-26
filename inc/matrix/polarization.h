@@ -292,7 +292,7 @@ class PolCharge
         {
             if (m_commute == false)
             {
-                unsigned number = 0 ;
+                //unsigned number = 0 ;
                 dg::apply( m_inv_sqrt, x, m_temp2);
                 //std::cout << "#number of sqrt iterations: " << number << " "<<m_eps_gamma[0]<< std::endl;
 
@@ -300,7 +300,7 @@ class PolCharge
 
                 dg::apply( m_inv_sqrt, m_temp, m_temp2);
                 //std::cout << "#number of sqrt iterations: " << number << std::endl;
-                number++;//avoid compiler warning
+                //number++;//avoid compiler warning
 
                 dg::blas1::axpby(alpha, m_temp2, beta, y);
             }

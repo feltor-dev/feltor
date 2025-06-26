@@ -63,7 +63,7 @@
             "cacheVariables": {
                 "CCCL_THRUST_DEVICE_SYSTEM": "CPP",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "CMAKE_CXX_FLAGS": "/arch:AVX2 /O2 /EHsc -DFP_FAST_FMA -D_USE_MATH_DEFINES",
+                "CMAKE_CXX_FLAGS": "/arch:AVX2 /O2 /EHsc -D_USE_MATH_DEFINES",
                 "FELTOR_DG_WITH_MATRIX": false,
                 "CMAKE_BUILD_TYPE": "Release"
             }

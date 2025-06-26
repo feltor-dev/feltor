@@ -150,7 +150,7 @@ struct MPISparseBlockMat
     {
     }
     template< template<class> class V, class LI, class LO>
-    friend class MPISparseBlockMat; // enable copy
+    friend struct MPISparseBlockMat; // enable copy
 
     template< template<class> class V, class LI, class LO>
     MPISparseBlockMat( const MPISparseBlockMat<V,LI,LO>& src)
@@ -405,7 +405,7 @@ struct MPIDistMat
     : m_i(m), m_dist(row_dist){}
 
     template< template<class> class V, class LI, class LO>
-    friend class MPIDistMat; // enable copy
+    friend struct MPIDistMat; // enable copy
     /**
     * @brief Constructor
     *
@@ -567,7 +567,7 @@ struct MPIDistMat
         dg::blas2::stencil( f, m_o, recv_buffer, comp_buffer);
         unsigned size = comp_buffer.size();
         dg::blas2::detail::doParallelFor( SharedVectorTag(),
-            [size]DG_DEVICE( unsigned i, const value_type* x,
+            []DG_DEVICE( unsigned i, const value_type* x,
                 const int* idx, value_type* y) {
                 y[idx[i]] += x[i];
             }, size, comp_buffer, m_scatter, y.data());

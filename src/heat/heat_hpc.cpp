@@ -179,10 +179,8 @@ int main( int argc, char* argv[])
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
-#ifdef DG_BENCHMARK
         dg::Timer ti;
         ti.tic();
-#endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
@@ -235,11 +233,9 @@ int main( int argc, char* argv[])
                       <<" -> error2ref: "<< relerror <<"\n";
             err = nc_close(ncid);
         }
-#ifdef DG_BENCHMARK
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
-#endif//DG_BENCHMARK
         //////////////////////////write fields////////////////////////
         start[0] = i;
         dg::blas2::symv( project, *v3d["T"], transferD);

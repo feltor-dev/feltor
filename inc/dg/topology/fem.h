@@ -319,7 +319,7 @@ struct InverseKroneckerTriDiagonal2d
     {
         unsigned Nx = m_t.x().size(), Ny = m_t.y().size();
         // solve in two passes, first x then y
-        dg::blas2::parallel_for( [ this, Nx] DG_DEVICE(
+        dg::blas2::parallel_for( [Nx] DG_DEVICE(
                     unsigned k,
                     const value_type* M,
                     const value_type* O,
@@ -340,7 +340,7 @@ struct InverseKroneckerTriDiagonal2d
 
         }, m_t.y().size()*m_t.nz(), m_t.x().M, m_t.x().O, m_t.x().P, m_ci, m_di, y, m_tmp);
 
-        dg::blas2::parallel_for( [ this, Nx, Ny] DG_DEVICE(
+        dg::blas2::parallel_for( [Nx, Ny] DG_DEVICE(
                     unsigned l,
                     const value_type* M,
                     const value_type* O,

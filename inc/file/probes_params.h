@@ -56,10 +56,10 @@ struct ProbesParams
      */
     unsigned get_coords_sizes( ) const
     {
-        unsigned m_num_pins = coords[0].size();
+        unsigned m_num_pins = (unsigned)coords[0].size();
         for( unsigned i=1; i<coords.size(); i++)
         {
-            unsigned num_pins = coords[i].size();
+            unsigned num_pins = (unsigned)coords[i].size();
             if( m_num_pins != num_pins)
                 throw std::runtime_error( "Size of "+coords_names[i] +" probes array ("
                         +std::to_string(num_pins)+") does not match that of "+coords_names[0]+" ("

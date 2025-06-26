@@ -238,7 +238,6 @@ TEST_CASE( "ARK methods")
         //![adaptive]
         time = 0., y0 = init;
         dg::Adaptive<dg::ARKStep<std::array<double,2>>> adapt( name, y0);
-        double time = 0;
         double dt = 1e-6;
         int counter=0;
         while( time < T )

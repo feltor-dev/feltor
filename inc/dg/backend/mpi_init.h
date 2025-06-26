@@ -88,7 +88,8 @@ std::vector<T> mpi_read_as( unsigned num, MPI_Comm comm, std::istream& is = std:
         for( unsigned u=0; u<num; u++)
             is >> nums[u];
     }
-    MPI_Bcast( &nums[0], num, getMPIDataType<T>(), 0, comm);
+    if( num > 0)
+        MPI_Bcast( &nums[0], num, getMPIDataType<T>(), 0, comm);
     return nums;
 }
 

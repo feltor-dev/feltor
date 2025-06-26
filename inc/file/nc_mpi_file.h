@@ -511,7 +511,7 @@ struct MPINcFile
         x.set_communicator(comm);
     }
     template<class ContainerType>
-    void set_comm( ContainerType& x, MPI_Comm comm, dg::AnyVectorTag) const
+    void set_comm( ContainerType&, MPI_Comm, dg::AnyVectorTag) const
     {
         return;
     }

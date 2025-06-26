@@ -90,7 +90,14 @@ TEST_CASE( "Evaluation")
         INFO("2D integral               "<<std::setw(6)<<integral2d);
         INFO("Correct integral is       "<<std::setw(6)<<sol2d);
         INFO("2d error is               "<<(integral2d-sol2d));
-        CHECK( abs(res.i + 4823286950217646080 < 2));
+        INFO("2d error is               "<<res.i);
+#ifdef __clang__
+        CHECK( abs(res.i + 4823291113748037632) < 2);
+#elif _MSC_VER
+        CHECK( abs(res.i + 4823548114931548160) < 2);
+#else
+        CHECK( abs(res.i + 4823286950217646080) < 2);
+#endif
 
         double norm2d = dg::blas2::dot( w2d, func2d); res.d = norm2d;
         double solution2d = 80.0489;

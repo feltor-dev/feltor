@@ -320,7 +320,7 @@ int main(
     DG_RANK0 std::cout<<"\nGlobal communication\n";
     x = dg::construct<ArrayVec>( dg::evaluate( left, grid));
     y = dg::construct<ArrayVec>( dg::evaluate( right, grid));
-    value_type norm=0;
+    [[maybe_unused]] value_type norm=0;
     norm += dg::blas1::dot( x,y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)

@@ -377,8 +377,8 @@ struct EllipticDirPerM
 //Blob function
 struct FuncDirNeu
 {
-    FuncDirNeu( const TokamakMagneticField&, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
-        psi0_(psi_0), psi1_(psi_1),
+    FuncDirNeu( const TokamakMagneticField&, [[maybe_unused]] double psi_0, [[maybe_unused]] double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
+        //psi0_(psi_0), psi1_(psi_1),
         cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob){}
 
     double operator()(double R, double Z, double) const {
@@ -421,7 +421,7 @@ struct FuncDirNeu
         //return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
-    double psi0_, psi1_;
+    //double psi0_, psi1_;
     dg::Cauchy cauchy_;
 };
 
@@ -565,7 +565,6 @@ struct EllipticBlobDirNeuM
         return operator()(R,Z);
     }
     private:
-    double R_0_;
     FuncDirNeu func_;
 };
 

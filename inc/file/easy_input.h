@@ -315,7 +315,7 @@ void get_vara(int ncid, int varid, unsigned slice,
 // scalar data
 
 template<class T, class real_type>
-void get_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
+void get_var( int ncid, int varid, const RealMPIGrid0d<real_type>&,
     T& data, bool parallel = true)
 {
     get_var( ncid, varid, dg::RealGrid0d<real_type>(), data, parallel);

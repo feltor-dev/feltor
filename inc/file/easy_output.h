@@ -400,7 +400,7 @@ void put_vara(int ncid, int varid, unsigned slice,
 // scalar data
 
 template<class T, class real_type>
-void put_var( int ncid, int varid, const RealMPIGrid0d<real_type>& grid,
+void put_var( int ncid, int varid, const RealMPIGrid0d<real_type>&,
     T data, bool parallel = false)
 {
     int rank;

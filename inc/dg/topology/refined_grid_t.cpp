@@ -14,7 +14,7 @@ static double function( double x, double y){return sin(x)*cos(y);}
 
 TEST_CASE( "Refinement")
 {
-    SECTION("both sides");
+    SECTION("both sides")
     {
         //don't forget to test the case add_x = 0 once in a while!
         dg::Grid1d g( 0,1, 2,4, dg::PER);
@@ -96,7 +96,7 @@ TEST_CASE( "Refinement")
     }
 
     //also test P D^f_x Q f_c = D^c_x f
-    SECTION( "P D_x^f Q = D_x^c");
+    SECTION( "P D_x^f Q = D_x^c")
     {
         dg::LinearRefinement lin(3);
         dg::CartesianGrid2d g2d_c( 0., 2*M_PI, 0., 2*M_PI, 3, 20, 20);

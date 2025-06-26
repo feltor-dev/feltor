@@ -102,21 +102,17 @@ const Container& HW<G, IM, M, Container>::polarisation( const std::vector<Contai
     //extrapolate phi and gamma_n
     dg::blas1::axpby( 2., phi, -1.,  phi_old);
     phi.swap( phi_old);
-#ifdef DG_BENCHMARK
     dg::Timer t; 
     t.tic();
-#endif
     dg::blas1::axpby( 1., y[1], -1., y[0], omega); //n_i - n_e = omega
     unsigned number = pcg.solve( A, phi, omega, 1., w2d, eps_pol);
     if( number == pcg.get_max())
         throw dg::Fail( eps_pol);
-#ifdef DG_BENCHMARK
     std::cout << "# of pcg iterations for phi \t"<< number <<"\t";
     t.toc();
     std::cout<< "took \t"<<t.diff()<<"s\n";
     double meanPhi = dg::blas2::dot( phi, w2d, 1.);
     std::cout << "Mean phi "<<meanPhi<<"\n";
-#endif //DG_BENCHMARK
     return phi;
 }
 

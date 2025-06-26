@@ -147,7 +147,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<re
     ///read access to the generator
     const aRealGenerator2d<real_type>& generator() const{return *m_handle;}
     virtual RealCurvilinearProductMPIGrid3d* clone()const override final{return new RealCurvilinearProductMPIGrid3d(*this);}
-    virtual RealCurvilinearProductGrid3d<real_type>* global_geometry()const{
+    virtual RealCurvilinearProductGrid3d<real_type>* global_geometry()const override final{
         return new RealCurvilinearProductGrid3d<real_type>(
                 *m_handle,
                 {global().nx(), global().Nx(), global().bcx()},

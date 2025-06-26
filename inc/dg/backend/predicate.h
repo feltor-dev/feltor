@@ -95,8 +95,8 @@ template< typename ...> struct WhichType;
 /// @}
 /// @cond
 
-template< class T, class Tag = AnyScalarTag>
-using is_not_scalar = std::conditional_t< !std::is_base_of<Tag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
+template< class T>
+using is_not_scalar = std::conditional_t< !std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, std::true_type, std::false_type>;
 
 namespace detail
 {

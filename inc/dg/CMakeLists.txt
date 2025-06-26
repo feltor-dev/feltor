@@ -296,7 +296,7 @@ target_link_libraries(dg_dg INTERFACE vcl::vcl)
 CPMAddPackage(
     NAME CCCL
     GITHUB_REPOSITORY "NVIDIA/cccl"
-    VERSION 2.8.0
+    VERSION 2.8.4
     SYSTEM ON
     EXCLUDE_FROM_ALL ON
 )

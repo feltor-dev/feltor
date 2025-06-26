@@ -117,19 +117,19 @@ TEST_CASE( "Easy output")
     auto sliced_data = dg::split( data, grid); // a vector of views
 
     //create NetCDF File
-    int ncid;
+    int ncid = 0;
     dg::file::NC_Error_Handle err;
     DG_RANK0 err = nc_create( "output.nc", NC_NETCDF4|NC_CLOBBER, &ncid); //for netcdf4
     int dim_ids[4], tvarID;
     DG_RANK0 err = dg::file::define_dimensions( ncid, dim_ids, &tvarID, grid);
 
-    int scalarID, arrayID, subArrayID;
+    int scalarID = 0, arrayID = 0, subArrayID = 0;
     DG_RANK0 err = nc_def_var( ncid, "scalar", NC_DOUBLE, 1, dim_ids, &scalarID);
     DG_RANK0 err = nc_def_var( ncid, "array", NC_DOUBLE, 4, dim_ids, &arrayID);
     int sub_dim_ids[3] = {dim_ids[0], dim_ids[2], dim_ids[3]};
     DG_RANK0 err = nc_def_var( ncid, "sub-array", NC_DOUBLE, 3, sub_dim_ids, &subArrayID);
 
-    int staticArrayID;
+    int staticArrayID = 0;
     DG_RANK0 err = nc_def_var( ncid, "static-array", NC_DOUBLE, 3, &dim_ids[1], &staticArrayID);
     dg::file::put_var( ncid, staticArrayID, grid, data);
 

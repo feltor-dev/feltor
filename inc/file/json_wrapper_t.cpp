@@ -195,16 +195,16 @@ TEST_CASE("Json CPP wrapper")
         dg::file::WrappedJsonValue ws( js);
         std::string hello = ws["hello"].asString();
         CHECK( hello == "world");
-        int idx0 = ws[ "array"][0].asInt();
+        idx0 = ws[ "array"][0].asInt();
         CHECK( ws["array"].size() == 2);
         CHECK( idx0 == 42);
         idx0 = ws[ "array"].get(0,0).asInt();
         CHECK( idx0 == 42);
-        int idx1 = ws["array"][1].asInt();
+        idx1 = ws["array"][1].asInt();
         CHECK( idx1 == 73);
-        double hi = ws[ "nested"][ "hi"].asDouble();
+        hi = ws[ "nested"][ "hi"].asDouble();
         CHECK( hi == 38);
-        bool test = ws[ "nested"]["bool"].asBool(true);
+        test = ws[ "nested"]["bool"].asBool(true);
         CHECK( test == true);
         unsigned uint = ws["nested"]["another_nest"]["number"].asUInt();
         CHECK( uint == 7);
@@ -216,7 +216,7 @@ TEST_CASE("Json CPP wrapper")
         CHECK( acc.find("\"number\"") != std::string::npos);
     }
 
-    SECTION( "Test Vector 2 Json");
+    SECTION( "Test Vector 2 Json")
     {
         dg::file::WrappedJsonValue ws( dg::file::vec2json( {42, 73}));
         CHECK( ws.get( 0,0).asInt() == 42);

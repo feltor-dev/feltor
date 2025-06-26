@@ -40,7 +40,7 @@ struct MPIContiguousKroneckerGather
         m_buffer_size = m_mpi_gather.buffer_size(false);
     }
     template< template<class> class OtherVector>
-    friend class MPIContiguousKroneckerGather; // enable copy
+    friend struct MPIContiguousKroneckerGather; // enable copy
 
     template< template<typename > typename OtherVector>
     MPIContiguousKroneckerGather( const MPIContiguousKroneckerGather<OtherVector>& src)
@@ -204,7 +204,7 @@ struct MPIKroneckerGather
 
     /// Enable copy from different Vector type
     template< template<class> class OtherVector>
-    friend class MPIKroneckerGather;
+    friend struct MPIKroneckerGather;
 
     ///@copydoc MPIGather::MPIGather(const MPIGather<OtherVector>&)
     template< template<typename > typename OtherVector>
