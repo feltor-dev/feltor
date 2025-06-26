@@ -12,6 +12,16 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
 > Only changes in code are reported here, we do not track changes in the
 > doxygen documentation, READMEs or tex writeups.
 > As of v7.0 we also stop reporting changes in test and benchmark programs.
+## [v8.2.1] Fix Clang compilation
+### Changed
+ - Update cccl dependency version from 2.8.0 to 2.8.4
+### Fixed
+ - Fix all warnings and errors from clang-19
+ - Fix some remaining warnings from msvc
+ - `FP_FAST_FMA` macro no longer used for fma support test except for GCC
+### Removed
+ - Revmove `DG_BENCHMARK` macro everywhere
+
 ## [v8.2] CMake integration
 ### Added
  - Complete cmake build system for all programs and libraries
