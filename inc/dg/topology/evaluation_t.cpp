@@ -93,6 +93,8 @@ TEST_CASE( "Evaluation")
         INFO("2d error is               "<<res.i);
 #ifdef __clang__
         CHECK( abs(res.i + 4823291113748037632) < 2);
+#elif _MSC_VER
+        CHECK( abs(res.i + 4823548114931548160) < 2);
 #else
         CHECK( abs(res.i + 4823286950217646080) < 2);
 #endif

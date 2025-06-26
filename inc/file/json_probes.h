@@ -148,12 +148,12 @@ inline ProbesParams parse_probes( const dg::file::WrappedJsonValue& js, enum err
     // only master thread reads probes
     for( unsigned i=0; i<ndim; i++)
     {
-        unsigned num_pins = coords[out.coords_names[i]].size();
-        out.coords[i].resize(num_pins);
+        unsigned num_pins_i = coords[out.coords_names[i]].size();
+        out.coords[i].resize(num_pins_i);
         double scale = 1.;
         if( type == "file")
             scale = jsprobes["scale"][i].asDouble();
-        for( unsigned k=0; k<num_pins; k++)
+        for( unsigned k=0; k<num_pins_i; k++)
             out.coords[i][k] = coords.asJson()[out.coords_names[i]][k]
 #ifdef DG_USE_JSONHPP
             .template get<double>()
