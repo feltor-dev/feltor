@@ -208,7 +208,7 @@ struct WrappedJsonValue
     }
     /// Wrap the corresponding JsonType function with error handling
     unsigned size() const{
-        return m_js.size();
+        return (unsigned)m_js.size();
     }
     /// Wrap the corresponding JsonType function with error handling
     double asDouble( double value = 0) const{
