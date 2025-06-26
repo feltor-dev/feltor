@@ -15,15 +15,14 @@
 #endif
 
 //%%%%%%%%%%%%%%%%check for fast FMAs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-// It appears that msvc does not pre-define FP_FAST_FMA so a user must manually 
-// define it
+// It appears that only gcc pre-defines FP_FAST_FMA
 // https://stackoverflow.com/questions/16348909/how-do-i-know-if-i-can-compile-with-fma-instruction-sets
 #include <cmath>
-#ifndef FP_FAST_FMA
+#if defined(FP_FAST_FMA) || defined(__FMA__) || defined(__AVX2__)
+#define DG_FMA(a,b,c) (dg::detail::dg_fma(a,b,c))
+#else
 #pragma message( "NOTE: Fast std::fma(a,b,c) not activated! Using a*b+c instead!")
 #define DG_FMA(a,b,c) (a*b+c)
-#else
-#define DG_FMA(a,b,c) (dg::detail::dg_fma(a,b,c))
 #endif
 
 //%%%%%%%%%%%%%check for SIMD support in OpenMP4 if device system is OMP%%%%%%%%%%
