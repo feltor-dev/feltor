@@ -69,6 +69,18 @@
             }
         },
         {
+            "name": "msvc-omp",
+            "displayName": "Shared Memory OpenMP on Windows",
+            "binaryDir": "build/omp",
+            "cacheVariables": {
+                "CCCL_THRUST_DEVICE_SYSTEM": "OMP",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                "CMAKE_CXX_FLAGS": "/arch:AVX2 /O2 /EHsc -D_USE_MATH_DEFINES",
+                "FELTOR_DG_WITH_MATRIX": false,
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
             "name": "msvc-mpi-cpu",
             "displayName": "Multi core MPI on Windows",
             "binaryDir": "build/mpi-cpu",

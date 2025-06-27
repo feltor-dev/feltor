@@ -85,7 +85,7 @@ void fpedot_omp(int * status, unsigned size, std::array<T,N>& fpe, Functor f, Po
         }
         cpu::Reduction<T,N>( tid, tnum, acc, status);
     }//omp parallel
-    for( uint i=0; i<N; i++)
+    for( unsigned i=0; i<N; i++)
         fpe[i] = acc[0][i];
     for( int i=0; i<maxthreads; i++)
     {
