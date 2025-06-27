@@ -117,7 +117,9 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
                     y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
+        #ifndef _MSC_VER
         #pragma omp SIMD //very important for KNL
+        #endif
         for( int i=1; i<num_rows-1; i++)
         {
             for( int k=0; k<n; k++)
@@ -221,7 +223,9 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
                 for(int q=0; q<n; q++)
                     dprivate[d*n+q] = data[B+q];
             }
+            #ifndef _MSC_VER
             #pragma omp SIMD //very important for KNL
+            #endif
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
