@@ -62,7 +62,7 @@ TEST_CASE( "Probes")
                 "coords-names" : ["x", "y"],
                 "format" : {},
                 "x" : [0,1,2,3],
-                "y" : [0,1,2,3]
+                "y" : [1,2,3,4]
             }
         }
     })unique";
@@ -150,7 +150,7 @@ TEST_CASE( "Probes")
         file.get_var("x", {u}, x);
         CHECK( x == u);
         file.get_var("y", {u}, y);
-        CHECK( y == u);
+        CHECK( y == u+1);
 
         file.get_var("Sine", {u}, point);
         INFO( "Sine "<<point<<" "<<sin(x)*sin(y)<<" "<<point - sin(x)*sin(y));
