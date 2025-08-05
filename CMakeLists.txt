@@ -41,7 +41,7 @@ endif()
 # Project name and version
 project(
     feltor
-    VERSION         8.2.1 # Update every time a release (tag) is made
+    VERSION         8.2.2 # Update every time a release (tag) is made
     DESCRIPTION     "Numerical methods for fluid simulations of magnetized plasmas"
     HOMEPAGE_URL    "https://feltor-dev.github.io"
     LANGUAGES       CXX
