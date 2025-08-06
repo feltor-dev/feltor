@@ -108,6 +108,9 @@ else()
     if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
         # For CUDA pedantic spits out too many warnings
         add_compile_options(-Wall -Wextra)
+    elseif(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
+        # Clang has warnings about not vectorizing loops
+        add_compile_options(-Wall -Wextra -Wpedantic)
     else()
         add_compile_options(-Wall -Wextra -Wpedantic -Werror)
     endif()

@@ -28,35 +28,14 @@
 //%%%%%%%%%%%%%check for SIMD support in OpenMP4 if device system is OMP%%%%%%%%%%
 #include "thrust/device_vector.h"//the <thrust/device_vector.h> header must be included for the THRUST_DEVICE_SYSTEM macros to work
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
-#if defined(__INTEL_COMPILER)
-
-#if __INTEL_COMPILER < 1500
-#pragma message( "NOTE: icc version >= 15.0 recommended (to activate OpenMP 4 support)")
-#define SIMD
-#else//>1500
-#define SIMD simd
-#endif//__INTEL_COMPILER
-
-#elif defined(__ibmxl__)
-#define SIMD simd
-#pragma message( "Using IBM compiler!")
-
-#elif defined(__GNUG__)
-
-#ifndef GCC_VERSION
-#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#endif //GCC_VERSION
-#if GCC_VERSION < 40900
-#pragma message( "gcc version >= 4.9 recommended to activate OpenMP 4 support")
+#include <omp.h>
+#if _OPENMP < 201300 // OpenMP is older than v4.0
+#pragma message( "WARNING: No OpenMP 4 support on your compiler. Using OpenMP 2 instead.")
 #define SIMD
 #else
 #define SIMD simd
-#endif //GCC_VERSION
+#endif // _OPENMP
 
-#elif defined(_MSC_VER)
-#pragma message( "WARNING: No OpenMP 4 support on your compiler")
-#define SIMD
-#endif //compilers
 #endif //THRUST_DEVICE_SYSTEM
 
 
