@@ -12,6 +12,15 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
 > Only changes in code are reported here, we do not track changes in the
 > doxygen documentation, READMEs or tex writeups.
 > As of v7.0 we also stop reporting changes in test and benchmark programs.
+## [v8.2.2] MSVC + OpenMP
+### Fixed
+ - Fix non-standard use of uint
+ - Fix OpenMP 2 compliance on Windows
+ - Fix OpenMP version detection using `_OPENMP` Macro instead of by-compiler detection
+ - Fix error in Probes module where only first coordinate is written to file
+### Added
+ - msvc-omp cmake preset for Windows
+
 ## [v8.2.1] Fix Clang compilation
 ### Changed
  - Update cccl dependency version from 2.8.0 to 2.8.4

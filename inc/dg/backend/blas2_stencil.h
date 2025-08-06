@@ -43,7 +43,7 @@ template< class Stencil, class PointerOrValue, class ...PointerOrValues>
 inline void doParallelFor_omp( unsigned size, Stencil f, PointerOrValue x, PointerOrValues... xs)
 {
 #pragma omp for nowait
-    for( unsigned i=0; i<size; i++)
+    for( int i=0; i<(int)size; i++) // MSVC OpenMP-2 only allows int (not unsigned)
         f(i, x, xs...);
 }
 

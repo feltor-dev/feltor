@@ -117,8 +117,8 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
                     y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
-        #ifndef _MSC_VER
-        #pragma omp SIMD //very important for KNL
+        #if _OPENMP > 201300 // OpenMP is >= v4.0
+        #pragma omp SIMD //very important for KNL (6.8.25 : Clang does not vectorize this)
         #endif
         for( int i=1; i<num_rows-1; i++)
         {
@@ -223,7 +223,7 @@ void ell_omp_multiply_kernel( value_type alpha, value_type beta,
                 for(int q=0; q<n; q++)
                     dprivate[d*n+q] = data[B+q];
             }
-            #ifndef _MSC_VER
+            #if _OPENMP > 201300 // OpenMP is >= v4.0
             #pragma omp SIMD //very important for KNL
             #endif
             for( int j=right_range[0]; j<right_range[1]; j++)

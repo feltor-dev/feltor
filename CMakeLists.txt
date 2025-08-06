@@ -41,7 +41,7 @@ endif()
 # Project name and version
 project(
     feltor
-    VERSION         8.2.1 # Update every time a release (tag) is made
+    VERSION         8.2.2 # Update every time a release (tag) is made
     DESCRIPTION     "Numerical methods for fluid simulations of magnetized plasmas"
     HOMEPAGE_URL    "https://feltor-dev.github.io"
     LANGUAGES       CXX
@@ -108,6 +108,9 @@ else()
     if(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "CUDA" OR CCCL_THRUST_DEVICE_SYSTEM STREQUAL "")
         # For CUDA pedantic spits out too many warnings
         add_compile_options(-Wall -Wextra)
+    elseif(CCCL_THRUST_DEVICE_SYSTEM STREQUAL "OMP")
+        # Clang has warnings about not vectorizing loops
+        add_compile_options(-Wall -Wextra -Wpedantic)
     else()
         add_compile_options(-Wall -Wextra -Wpedantic -Werror)
     endif()

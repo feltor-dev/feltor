@@ -26,7 +26,7 @@ namespace gpu{
 //In the first kernel each block produces exactly one FPE (because threads within a block can be synchronized and shared memory lives for a block )
 //the second kernel reduces all FPEs from the first kernel (because we need a global synchronization, which is induced by separate kernel launches)
 
-template<class T, uint N, uint  THREADS_PER_BLOCK>
+template<class T, unsigned N, unsigned  THREADS_PER_BLOCK>
 __device__ void warpReduce64( T * a, unsigned int tid)
 {
     // We reduce 64 FPEs, THREADS_PER_BLOCK is the stride to access FPEs
@@ -39,13 +39,13 @@ __device__ void warpReduce64( T * a, unsigned int tid)
     int modulo_factor = 64/2;
     while( modulo_factor >=  1 )
     {
-        for( uint k=0; k<N; k++)
+        for( unsigned k=0; k<N; k++)
         {
             // The reads and writes overlap here (but not the interesting part, so no sync
             // we don't care what happens in the overlap part))
             T x = a[k*THREADS_PER_BLOCK+tid+modulo_factor];
             #pragma unroll
-            for(uint i = 0; i != N; ++i) {
+            for(unsigned i = 0; i != N; ++i) {
                 T s;
                 a[i*THREADS_PER_BLOCK+tid] = KnuthTwoSum(a[i*THREADS_PER_BLOCK+tid], x, &s);
                 x = s;
@@ -63,10 +63,10 @@ __device__ void warpReduce64( T * a, unsigned int tid)
     }
 }
 
-template<class T, uint N, uint THREADS_PER_BLOCK, class Functor, class ...PointerOrValues>
+template<class T, unsigned N, unsigned THREADS_PER_BLOCK, class Functor, class ...PointerOrValues>
 __global__ void fpeDOT(
     volatile int* status,
-    const uint NbElements,
+    const unsigned NbElements,
     T *d_PartialFPEs,
     Functor f,
     PointerOrValues ...d_xs
@@ -80,18 +80,18 @@ __global__ void fpeDOT(
     T *l_fpe = reinterpret_cast<T *>(memory);
     T *a = l_fpe + threadIdx.x;
     //Initialize FPEs
-    for (uint i = 0; i < N; i++)
+    for (unsigned i = 0; i < N; i++)
         a[i * THREADS_PER_BLOCK] = T(0);
     __syncthreads();
 
     //Read data from global memory and accumulate to sub-FPEs
-    for(uint pos = blockIdx.x*THREADS_PER_BLOCK+threadIdx.x; pos < NbElements; pos += gridDim.x*THREADS_PER_BLOCK) {
+    for(unsigned pos = blockIdx.x*THREADS_PER_BLOCK+threadIdx.x; pos < NbElements; pos += gridDim.x*THREADS_PER_BLOCK) {
         T x = f(get_element(d_xs,pos)...);
 
         //if( (x -x) != T(0) ) *status = 1;
 
         #pragma unroll
-        for(uint i = 0; i != N; ++i) {
+        for(unsigned i = 0; i != N; ++i) {
             T s;
             a[i*THREADS_PER_BLOCK] = KnuthTwoSum(a[i*THREADS_PER_BLOCK], x, &s);
             x = s;
@@ -107,11 +107,11 @@ __global__ void fpeDOT(
     while( modulo_factor >=  64 )
     {
         if(threadIdx.x < modulo_factor) {
-            for( uint k=0; k<N; k++)
+            for( unsigned k=0; k<N; k++)
             {
                 T x = a[k*THREADS_PER_BLOCK+modulo_factor];
                 #pragma unroll
-                for(uint i = 0; i != N; ++i) {
+                for(unsigned i = 0; i != N; ++i) {
                     T s;
                     a[i*THREADS_PER_BLOCK] = KnuthTwoSum(a[i*THREADS_PER_BLOCK], x, &s);
                     x = s;
@@ -129,7 +129,7 @@ __global__ void fpeDOT(
     if( threadIdx.x < 32) warpReduce64<T, N, THREADS_PER_BLOCK>( l_fpe, threadIdx.x);
     if( threadIdx.x == 0)
     {
-        for( uint i=0; i<N; i++)
+        for( unsigned i=0; i<N; i++)
             d_PartialFPEs[blockIdx.x + i*gridDim.x] = l_fpe[i*THREADS_PER_BLOCK];
     }
 
@@ -139,7 +139,7 @@ __global__ void fpeDOT(
 // Merging
 ////////////////////////////////////////////////////////////////////////////////
 
-template<class T, uint N, uint NUM_FPES> //# of FPEs to merge (max 64)
+template<class T, unsigned N, unsigned NUM_FPES> //# of FPEs to merge (max 64)
 __global__
 void fpeDOTMerge(
      T *d_PartialFPEs,
@@ -151,13 +151,13 @@ void fpeDOTMerge(
     if( threadIdx.x < 32) warpReduce64<T, N, NUM_FPES>( d_PartialFPEs, threadIdx.x);
     if( threadIdx.x == 0)
     {
-        for( uint i=0; i<N; i++)
+        for( unsigned i=0; i<N; i++)
             d_FPE[i] = d_PartialFPEs[i*NUM_FPES];
     }
 }
 
-static constexpr uint THREADS_PER_BLOCK           = 512; //# threads per block >= 64
-static constexpr uint NUM_FPES                    = 64; //# of blocks
+static constexpr unsigned THREADS_PER_BLOCK           = 512; //# threads per block >= 64
+static constexpr unsigned NUM_FPES                    = 64; //# of blocks
 
 }//namespace gpu
 ///@endcond

@@ -88,7 +88,7 @@ struct Probes
         file.template def_dimvar_as<double>( "ptime", NC_UNLIMITED, {{"axis" , "T"}});
         for( unsigned i=0; i<params.coords.size(); i++)
         {
-            auto probes_vec = create_probes_vec( params.coords[0], grid);
+            auto probes_vec = create_probes_vec( params.coords[i], grid);
             file.defput_var( params.coords_names[i], {"pdim"},
                 {{"long_name" , "Coordinate variable for probe position"}},
                 {probes_vec}, probes_vec);

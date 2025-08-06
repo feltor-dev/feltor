@@ -96,10 +96,6 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride =
 
         // Cancel carry-accumulatorve bits
         xadd(accumulator[i * stride], (int64_t) -(carry << DIGITS), overflow);
-        if (TSAFE && (s ^ overflow)){ //MW: TSAFE is always 0
-            // (Another) overflow of sign S
-            carrybit *= 2;
-        }
         carry += carrybit;
 
         ++i;
