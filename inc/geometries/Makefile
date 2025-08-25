@@ -15,6 +15,7 @@ CATCHMPI=../../tests/catch-tests-mpi
 CPPFILES=$(wildcard *.cpp)
 
 TARGETS=modified_t\
+solovev_t\
 
 #TARGETSMPI=
 

@@ -47,6 +47,7 @@ set(GEOMETRIES_HEADERS
 # find ../../geometries -name "*t.cpp" | sort
 set(GEOMETRIES_TESTS
   ../../geometries/modified_t.cpp
+  ../../geometries/solovev_t.cpp
 )
 # Manually set (all programs with WITH_MPI)
 set(GEOMETRIES_MPI_TESTS
@@ -69,7 +70,6 @@ set(GEOMETRIES_BENCHMARKS
   ../../geometries/geometryX_refined_elliptic_b.cpp
   ../../geometries/ribeiroX_b.cpp
   ../../geometries/separatrix_orthogonal_b.cpp
-  ../../geometries/solovev_b.cpp
 )
 set(GEOMETRIES_MPI_BENCHMARKS
   ../../geometries/ds_b.cpp
