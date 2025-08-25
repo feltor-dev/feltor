@@ -16,6 +16,7 @@ CPPFILES=$(wildcard *.cpp)
 
 TARGETS=modified_t\
 solovev_t\
+polynomial_t\
 
 #TARGETSMPI=
 

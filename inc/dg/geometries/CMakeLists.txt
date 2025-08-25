@@ -47,6 +47,7 @@ set(GEOMETRIES_HEADERS
 # find ../../geometries -name "*t.cpp" | sort
 set(GEOMETRIES_TESTS
   ../../geometries/modified_t.cpp
+  ../../geometries/polynomial_t.cpp
   ../../geometries/solovev_t.cpp
 )
 # Manually set (all programs with WITH_MPI)

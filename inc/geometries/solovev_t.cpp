@@ -114,7 +114,7 @@ TEST_CASE("Solovev")
         CHECK( fabs( result) < 1e-13);
     }
 
-    SECTION( "Accuracy of curvatures (values must be close to 0)")
+    SECTION( "Accuracy of bhat")
     {
         double Rmin=gp.R_0-gp.a;
         double Zmin=-gp.a*gp.elongation;
