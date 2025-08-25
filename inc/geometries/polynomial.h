@@ -41,14 +41,14 @@ struct Psip: public aCylindricalFunctor<Psip>
      *
      * @param gp geometric parameters
      */
-    Psip( Parameters gp ): m_R0(gp.R_0),  m_pp(gp.pp), m_horner(gp.c, gp.M, gp.N) {}
+    Psip( Parameters gp ): m_R0(gp.R_0),  m_pp(gp.pp), m_horner(std::make_shared<Horner2d>( gp.c, gp.M, gp.N)) {}
     double do_compute(double R, double Z) const
     {
-        return m_R0*m_pp*m_horner( R/m_R0,Z/m_R0);
+        return m_R0*m_pp*(*m_horner)( R/m_R0,Z/m_R0);
     }
   private:
     double m_R0, m_pp;
-    Horner2d m_horner;
+    std::shared_ptr<Horner2d> m_horner;
 };
 
 struct PsipR: public aCylindricalFunctor<PsipR>
@@ -59,15 +59,15 @@ struct PsipR: public aCylindricalFunctor<PsipR>
         for( unsigned i=0; i<gp.M-1; i++)
             for( unsigned j=0; j<gp.N; j++)
                 beta[i*gp.N+j] = (double)(i+1)*gp.c[ ( i+1)*gp.N +j];
-        m_horner = Horner2d( beta, gp.M-1, gp.N);
+        m_horner = std::make_shared<Horner2d>( beta, gp.M-1, gp.N);
     }
     double do_compute(double R, double Z) const
     {
-        return m_pp*m_horner( R/m_R0,Z/m_R0);
+        return m_pp*(*m_horner)( R/m_R0,Z/m_R0);
     }
   private:
     double m_R0, m_pp;
-    Horner2d m_horner;
+    std::shared_ptr<Horner2d> m_horner;
 };
 struct PsipRR: public aCylindricalFunctor<PsipRR>
 {
@@ -77,15 +77,15 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
         for( unsigned i=0; i<gp.M-2; i++)
             for( unsigned j=0; j<gp.N; j++)
                 beta[i*gp.N+j] = (double)((i+2)*(i+1))*gp.c[ (i+2)*gp.N +j];
-        m_horner = Horner2d( beta, gp.M-2, gp.N);
+        m_horner = std::make_shared<Horner2d>( beta, gp.M-2, gp.N);
     }
     double do_compute(double R, double Z) const
     {
-        return m_pp/m_R0*m_horner( R/m_R0,Z/m_R0);
+        return m_pp/m_R0*(*m_horner)( R/m_R0,Z/m_R0);
     }
   private:
     double m_R0, m_pp;
-    Horner2d m_horner;
+    std::shared_ptr<Horner2d> m_horner;
 };
 struct PsipZ: public aCylindricalFunctor<PsipZ>
 {
@@ -95,15 +95,15 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
         for( unsigned i=0; i<gp.M; i++)
             for( unsigned j=0; j<gp.N-1; j++)
                 beta[i*(gp.N-1)+j] = (double)(j+1)*gp.c[ i*gp.N +j+1];
-        m_horner = Horner2d( beta, gp.M, gp.N-1);
+        m_horner = std::make_shared<Horner2d>( beta, gp.M, gp.N-1);
     }
     double do_compute(double R, double Z) const
     {
-        return m_pp*m_horner( R/m_R0,Z/m_R0);
+        return m_pp*(*m_horner)( R/m_R0,Z/m_R0);
     }
   private:
     double m_R0, m_pp;
-    Horner2d m_horner;
+    std::shared_ptr<Horner2d> m_horner;
 };
 struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 {
@@ -113,15 +113,15 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
         for( unsigned i=0; i<gp.M; i++)
             for( unsigned j=0; j<gp.N-2; j++)
                 beta[i*(gp.N-2)+j] = (double)((j+2)*(j+1))*gp.c[ i*gp.N +j+2];
-        m_horner = Horner2d( beta, gp.M, gp.N-2);
+        m_horner = std::make_shared<Horner2d>( beta, gp.M, gp.N-2);
     }
     double do_compute(double R, double Z) const
     {
-        return m_pp/m_R0*m_horner(R/m_R0,Z/m_R0);
+        return m_pp/m_R0*(*m_horner)(R/m_R0,Z/m_R0);
     }
   private:
     double m_R0, m_pp;
-    Horner2d m_horner;
+    std::shared_ptr<Horner2d> m_horner;
 };
 struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 {
@@ -131,15 +131,15 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
         for( unsigned i=0; i<gp.M-1; i++)
             for( unsigned j=0; j<gp.N-1; j++)
                 beta[i*(gp.N-1)+j] = (double)((j+1)*(i+1))*gp.c[ (i+1)*gp.N +j+1];
-        m_horner = Horner2d( beta, gp.M-1, gp.N-1);
+        m_horner = std::make_shared<Horner2d>( beta, gp.M-1, gp.N-1);
     }
     double do_compute(double R, double Z) const
     {
-        return m_pp/m_R0*m_horner(R/m_R0,Z/m_R0);
+        return m_pp/m_R0*(*m_horner)(R/m_R0,Z/m_R0);
     }
   private:
     double m_R0, m_pp;
-    Horner2d m_horner;
+    std::shared_ptr<Horner2d> m_horner;
 };
 
 inline dg::geo::CylindricalFunctorsLvl2 createPsip( Parameters gp)

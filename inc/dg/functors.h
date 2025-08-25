@@ -1892,7 +1892,7 @@ struct BathRZ{
 struct Horner2d
 {
     ///Initialize 1 coefficient to 1
-    Horner2d(): m_c( 1, 1), m_M(1), m_N(1){}
+    Horner2d(): m_c( 1, 1), m_cx( 1,1), m_M(1), m_N(1), m_prev( {0,0,1}){}
 
     /**
      * @brief Initialize coefficients and dimensions
@@ -1901,13 +1901,17 @@ struct Horner2d
      * @param M number of polynomials in x
      * @param N number of polynomials in y
      */
-    Horner2d( std::vector<double> c, unsigned M, unsigned N): m_c(c), m_M(M), m_N(N){}
+    Horner2d( const std::vector<double>& c, unsigned M, unsigned N): m_c(c), m_cx( M), m_M(M), m_N(N), m_prev( {1e300,1e300,1e300}){}
     double operator()( double x, double y) const
     {
-        std::vector<double> cx( m_M);
-        for( unsigned i=0; i<m_M; i++)
-            cx[i] = horner( &m_c[i*m_N], m_N, y);
-        return horner( &cx[0], m_M, x);
+        if( m_prev[1] == y && m_prev[0] == x)
+            return m_prev[2];
+        if( m_prev[1] != y )
+            for( unsigned i=0; i<m_M; i++)
+                m_cx[i] = horner( &m_c[i*m_N], m_N, y);
+        m_prev[2] = horner( &m_cx[0], m_M, x);
+        m_prev[0] = x, m_prev[1] = y;
+        return m_prev[2];
     }
     private:
     double horner( const double * c, unsigned M, double x) const
@@ -1918,7 +1922,9 @@ struct Horner2d
         return b;
     }
     std::vector<double> m_c;
+    mutable std::vector<double> m_cx;
     unsigned m_M, m_N;
+    mutable std::array<double,3> m_prev;
 };
 
 
