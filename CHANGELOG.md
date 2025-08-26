@@ -20,6 +20,9 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
  - Fix error in Probes module where only first coordinate is written to file
 ### Added
  - msvc-omp cmake preset for Windows
+### Changed
+ - Optimize implementation of `dg::geo::solovev` and `dg::geo::polynomial` flux
+   functions. Speed up evaluation and fieldline integration.
 
 ## [v8.2.1] Fix Clang compilation
 ### Changed
