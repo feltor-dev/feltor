@@ -64,16 +64,24 @@ struct Psip: public aCylindricalFunctor<Psip>
      *
      * @param gp geometric parameters
      */
-    Psip( Parameters gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
+    Psip( const Parameters& gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
     double do_compute(double R, double Z) const
     {
+        // Optimization rationale: The way we compute magnetic field terms
+        // through the TokamakMagneticField class and e.g. the BHatR class
+        // leads to repeated evaluations of Psip, PsipR, etc. at the same
+        // point. We thus let the Psip classes remember the result of the
+        // previous call to avoid recomputing the same point. Since the
+        // different calls are made through different copies of Psip we need to
+        // store the previous results in a shared_ptr such that all copies of
+        // Psip have access to it
         if( R == (*m_prev)[0] && Z == (*m_prev)[1])
             return (*m_prev)[2];
 
         double Rn = R / m_R0, Rn2 = Rn * Rn, lgRn = log(Rn);
-        double Zn = Z/m_R0; 
+        double Zn = Z/m_R0;
         // Copied from Mathematica ...
         (*m_prev)[2] =   m_R0*m_pp*(mc[0] + Rn2 * ((lgRn * mA) / 2. + mc[1] +
             Zn * (mc[8] + Zn *
@@ -127,7 +135,7 @@ struct Psip: public aCylindricalFunctor<Psip>
 struct PsipR: public aCylindricalFunctor<PsipR>
 {
     ///@copydoc Psip::Psip()
-    PsipR( Parameters gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
+    PsipR( const Parameters& gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
     double do_compute(double R, double Z) const
@@ -185,7 +193,7 @@ struct PsipR: public aCylindricalFunctor<PsipR>
 struct PsipRR: public aCylindricalFunctor<PsipRR>
 {
     ///@copydoc Psip::Psip()
-    PsipRR( Parameters gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
+    PsipRR( const Parameters& gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
     double do_compute(double R, double Z) const
@@ -238,7 +246,7 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
 struct PsipZ: public aCylindricalFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZ( Parameters gp ): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
+    PsipZ( const Parameters& gp ): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
     double do_compute(double R, double Z) const
@@ -285,7 +293,7 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
 struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZZ( Parameters gp): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
+    PsipZZ( const Parameters& gp): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
     double do_compute(double R, double Z) const
@@ -329,7 +337,7 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
 struct PsipRZ: public aCylindricalFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
-    PsipRZ( Parameters gp ): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
+    PsipRZ( const Parameters& gp ): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
     double do_compute(double R, double Z) const
@@ -370,7 +378,7 @@ struct Ipol: public aCylindricalFunctor<Ipol>
      * @param gp geometric parameters (for R_0, A, PP and PI)
      * @param psip the flux function to use
      */
-    Ipol( Parameters gp, std::function<double(double,double)> psip ):  m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip) {
+    Ipol( const Parameters &gp, const std::function<double(double,double)>& psip ):  m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip) {
         if( gp.pp == 0.)
             m_pp = 1.; //safety measure to avoid divide by zero errors
     }
@@ -391,7 +399,7 @@ struct IpolR: public aCylindricalFunctor<IpolR>
      * @copydoc Ipol::Ipol()
      * @param psipR the R-derivative of the flux function to use
      */
-    IpolR(  Parameters gp, std::function<double(double,double)> psip, std::function<double(double,double)> psipR ):
+    IpolR( const Parameters& gp, const std::function<double(double,double)>& psip, std::function<double(double,double)> psipR ):
         m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip), m_psipR(psipR) {
         if( gp.pp == 0.)
             m_pp = 1.; //safety measure to avoid divide by zero errors
@@ -413,7 +421,7 @@ struct IpolZ: public aCylindricalFunctor<IpolZ>
      * @copydoc Ipol::Ipol()
      * @param psipZ the Z-derivative of the flux function to use
      */
-    IpolZ(  Parameters gp, std::function<double(double,double)> psip, std::function<double(double,double)> psipZ ):
+    IpolZ(  const Parameters& gp, const std::function<double(double,double)>& psip, std::function<double(double,double)> psipZ ):
         m_R0(gp.R_0), m_A(gp.A), m_pp(gp.pp), m_pi(gp.pi), m_psip(psip), m_psipZ(psipZ) {
         if( gp.pp == 0.)
             m_pp = 1.; //safety measure to avoid divide by zero errors
@@ -454,7 +462,7 @@ inline dg::geo::CylindricalFunctorsLvl1 createIpol( const Parameters& gp, const 
  * @ingroup solovev
  */
 inline dg::geo::TokamakMagneticField createSolovevField(
-    dg::geo::solovev::Parameters gp)
+    const dg::geo::solovev::Parameters& gp)
 {
     MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
             equilibrium::solovev, modifier::none, str2description.at( gp.description)};
@@ -480,7 +488,7 @@ inline dg::geo::TokamakMagneticField createSolovevField(
  * @ingroup solovev
  */
 inline dg::geo::TokamakMagneticField createModifiedSolovevField(
-    dg::geo::solovev::Parameters gp, double psi0, double alpha, double sign = -1)
+    const dg::geo::solovev::Parameters& gp, double psi0, double alpha, double sign = -1)
 {
     MagneticFieldParameters params = { gp.a, gp.elongation, gp.triangularity,
             equilibrium::solovev, modifier::heaviside, str2description.at( gp.description)};

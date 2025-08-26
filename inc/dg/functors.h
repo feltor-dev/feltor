@@ -1898,12 +1898,26 @@ struct Horner2d
      * @brief Initialize coefficients and dimensions
      *
      * @param c vector of size MN containing coefficientc c (accessed as c[i*N+j] i.e. y-direction is contiguous)
-     * @param M number of polynomials in x
-     * @param N number of polynomials in y
+     * @param M number of polynomials in x (if zero the whole polynomial is zero)
+     * @param N number of polynomials in y (if zero the whole polynomial is zero)
      */
-    Horner2d( const std::vector<double>& c, unsigned M, unsigned N): m_c(c), m_cx( M), m_M(M), m_N(N), m_prev( {1e300,1e300,1e300}){}
+    Horner2d( const std::vector<double>& c, unsigned M, unsigned N): m_c(c), m_cx( M), m_M(M), m_N(N), m_prev( {1e300,1e300,1e300}){
+        if( 0 == M || 0 == N)
+        {
+            // Make safe for zero coefficients
+            m_c.resize(1, 0.);
+            m_M = m_N = 1;
+            m_cx.resize(1, 0.);
+        }
+    }
     double operator()( double x, double y) const
     {
+        // Optimization rationale: Horner is typically repeatedly evaluated at
+        // the same point (as it typically happens through the
+        // dg::geo::polynomial::Psip classes in connection with magnetic field
+        // quantities) or with constant y and varying x (such as when
+        // dg::evaluate is called on Horner2d). In those cases significant
+        // computation can be saved by storing the result of the previous call.
         if( m_prev[1] == y && m_prev[0] == x)
             return m_prev[2];
         if( m_prev[1] != y )

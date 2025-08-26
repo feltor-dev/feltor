@@ -31,6 +31,22 @@ TEST_CASE("Polynomial")
     dg::geo::polynomial::Parameters gp(js);
     dg::geo::TokamakMagneticField mag = dg::geo::createPolynomialField(gp);
     REQUIRE( gp.a == 1);
+    SECTION( "Pointwise evaluation")
+    {
+        double result;
+        result = mag.psip()(2.,3.);
+        CHECK( result == 22);
+        result = mag.psipR()(2.,3.);
+        CHECK( result == 6);
+        result = mag.psipZ()(2.,3.);
+        CHECK( result == 4);
+        result = mag.psipRR()(2.,3.);
+        CHECK( result == 0);
+        result = mag.psipZZ()(2.,3.);
+        CHECK( result == 0);
+        result = mag.psipRZ()(2.,3.);
+        CHECK( result == 1);
+    }
     SECTION( "Polynomial integration")
     {
         double Rmin=gp.R_0-gp.a;
