@@ -18,6 +18,7 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
  - Fix OpenMP 2 compliance on Windows
  - Fix OpenMP version detection using `_OPENMP` Macro instead of by-compiler detection
  - Fix error in Probes module where only first coordinate is written to file
+ - Fix a bug in Feltor's restart routine
 ### Added
  - msvc-omp cmake preset for Windows
 
