@@ -152,10 +152,19 @@ T phi4( T x){
 template<class T = double>
 struct GyrolagK
 {
+    /**
+     * @brief Construct
+     * @param n order cannot be greater than 12
+     * @param a prefactor of x
+     */
     GyrolagK(unsigned n, T a): m_n (n), m_a(a) {}
 
     DG_DEVICE
     T operator()(T x) const {
+        // Factorials overflow int32 for n>12
+        static constexpr unsigned fact[] = {1, 1, 2, 6, 24, 120, 720,
+            5040, 40320, 362880, 3628800, 39916800, 479001600};
+
         if( m_n == 0)
             return exp(x*m_a); // faster to evaluate than tgamma and pow ...
         if( m_n == 1)
@@ -164,7 +173,7 @@ struct GyrolagK
             return 0.5*(-x*m_a)*(-x*m_a)*exp( x*m_a);
         if( m_n == 3)
             return (-x*m_a)*(-x*m_a)*(-x*m_a)*exp( x*m_a)/6.0;
-        return pow(-x*m_a,m_n)/tgamma(m_n+1)*exp(x*m_a);
+        return pow(-x*m_a,m_n)/fact[m_n]*exp(x*m_a);
     }
     DG_DEVICE
     T operator()(T x, T y) const { return this->operator()(x*y); }
