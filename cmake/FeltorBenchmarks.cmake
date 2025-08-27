@@ -6,8 +6,9 @@
 ### @param benchmark_path SRC file name to be compiled. Executable will be named after its STEM
 ###     Target will be named "dg_benchmarkfolder_stem" or "dg_stem".
 ### @param benchmark_folder Folder name of built executable (i.e. exe will live in
-###     build/benchmarks/${benchmark_folder}/${STEM}). If empty string "", then exe will live
-###     in build/benchmarks/${STEM}.
+###     build/inc/${benchmark_folder}/${STEM}). If empty string "", then exe will live
+###     in build/inc/dg/${STEM}, if "topology" then location is build/inc/dg/topology/${STEM},
+###     and analogous "backend".
 ### @param with_MPI If on, then executable is compiled with MPI
 ### @param target_name (write-only) Contains target name (dg_benchmarkfolder_stem or dg_stem) on output
 ###     This allows to link libraries on target_name in calling scope
@@ -36,14 +37,22 @@ function(add_dg_benchmark benchmark_path benchmark_folder with_MPI target_name)
     endif()
     # Add as dependency to the dg_benchmarks target
     add_dependencies(dg_benchmarks ${benchmark_name})
-    # Build benchmarks in ./build/benchmarks
+    # Make sure benchmarks mirror folder structure in ./build/
     if( benchmark_folder STREQUAL "")
         set_target_properties(${benchmark_name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmarks"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/dg"
         )
-    else()
+    elseif( benchmark_folder STREQUAL "topology")
         set_target_properties(${benchmark_name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/benchmarks/${benchmark_folder}"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/dg/topology"
+        )
+    elseif( benchmark_folder STREQUAL "backend")
+        set_target_properties(${benchmark_name} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/dg/backend"
+        )
+    else() # matrix, file, geometries
+        set_target_properties(${benchmark_name} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/${benchmark_folder}"
         )
     endif()
     set( target_name ${benchmark_name} PARENT_SCOPE)

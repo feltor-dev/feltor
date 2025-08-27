@@ -8,8 +8,9 @@ include(Catch)
 ### @param test_path SRC file name to be compiled. Executable will be named after its STEM.
 ###     Target will be named "dg_testfolder_stem" or "dg_stem".
 ### @param test_folder Folder name of built executable (i.e. exe will live in
-###     build/tests/${test_folder}/${STEM}). If empty string "", then exe will live
-###     in build/tests/${STEM}.
+###     build/inc/${test_folder}/${STEM}). If empty string "", then exe will live
+###     in build/inc/dg/${STEM}, if "topology" then location is build/inc/dg/topology/${STEM},
+###     and analogous "backend".
 ### @param with_MPI If on, then executable is compiled with MPI
 ### @param target_name (write-only) Contains target name (dg_testfolder_stem or dg_stem) on output
 ###     This allows to link libraries on target_name in calling scope
@@ -46,14 +47,22 @@ function(add_dg_test test_path test_folder with_MPI target_name)
     endif()
     # Add as dependency to the dg_tests target
     add_dependencies(dg_tests ${test_name})
-    # Build tests in ./build/tests
+    # Make sure tests mirror folder structure in ./build/
     if( test_folder STREQUAL "")
         set_target_properties(${test_name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/dg"
         )
-    else()
+    elseif( test_folder STREQUAL "topology")
         set_target_properties(${test_name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/${test_folder}"
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/dg/topology"
+        )
+    elseif( test_folder STREQUAL "backend")
+        set_target_properties(${test_name} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/dg/backend"
+        )
+    else() # matrix, file, geometries
+        set_target_properties(${test_name} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/inc/${test_folder}"
         )
     endif()
     # Register the tests with CTest

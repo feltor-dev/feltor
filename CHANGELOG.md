@@ -23,6 +23,11 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
 ### Changed
  - Optimize implementation of `dg::geo::solovev` and `dg::geo::polynomial` flux
    functions. Speed up evaluation and fieldline integration.
+ - Change cmake location of test and benchmark executables to follow original
+   folder structure exactly (i.e. `build/tests` and `build/benchmarks` replaced with `build/inc`)
+ - Rename some geometries and matrix file names from `*_t.cpp` to `*_b.cpp` to
+   strictly enforce all ``*_t.cpp` files as catch2 test files. For example
+   `ds_t.cpp` is now called `ds_b.cpp`
 
 ## [v8.2.1] Fix Clang compilation
 ### Changed
