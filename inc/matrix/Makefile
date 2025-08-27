@@ -17,7 +17,6 @@ CUFILES=$(wildcard *.cu)
 TARGETS=functors_t\
 tridiaginv_t\
 exp_runge_kutta_t\
-contours_t
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
@@ -39,7 +38,7 @@ $(CATCH).$(device).o: $(CATCH).cpp
 	$(CC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB) $(LAPACKLIB)
 
 tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
-	$(CC) -o $@ $^ -lCatch2 $(SPARSELIB)
+	$(CC) -o $@ $^ -lCatch2 $(SPARSELIB) $(LAPACKLIB)
 
 .PHONY: clean doc
 
