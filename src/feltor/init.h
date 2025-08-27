@@ -214,8 +214,9 @@ dg::x::HVec make_damping(
         throw dg::Error(dg::Message()<< "Invalid damping type "<<type<<"\n");
     return damping;
 }
+template<class Explicit>
 dg::x::HVec make_ntilde(
-    Explicit<dg::x::CylindricalGrid3d, dg::x::IDMatrix, dg::x::DMatrix, dg::x::DVec>& feltor,
+    Explicit& feltor,
     const dg::x::CylindricalGrid3d& grid,
     const dg::geo::TokamakMagneticField& mag,
     dg::file::WrappedJsonValue js )
