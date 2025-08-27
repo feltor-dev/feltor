@@ -35,12 +35,14 @@ namespace lapack
 extern "C" {
 extern void dstev_(char*,int*,double*,double*,double*,int*,double*,int*);
 extern void sstev_(char*,int*,float*,float*,float*,int*,float*,int*);
+extern void dsygv_(int*,char*,char*,int*,double*,int*,double*,int*,double*,double*,int*,int*);
+extern void ssygv_(int*,char*,char*,int*,float*,int*,float*,int*,float*,float*,int*,int*);
 }
 // Compute Eigenvalues and, optionally, Eigenvectors of a real symmetric tridiagonal matrix A
 template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3>
 void stev(
     char job,          // 'N' Compute Eigenvalues only, 'V' Compute Eigenvalues and Eigenvectors
-    ContainerType0& D, // diagonal of T on input, Eigenvalues on output
+    ContainerType0& D, // diagonal of T on input, Eigenvalues (in ascending order) on output
     ContainerType1& E, // subdiagonal of T on input |size D.size()-1 ; in E[0] - E[D.size()-2]|; destroyed on output
     ContainerType2& Z, // IF job = 'V' && column major then the i-th column contains i-th EV, if job = 'N' not referenced
     ContainerType3& work // If job = 'V' needs size max( 1, 2*D.size() - 2), else not referenced
@@ -83,6 +85,58 @@ void stev(
         throw dg::Error( dg::Message(_ping_) << "stev failed with error code "<<info<<"\n");
     }
 }
+
+
+// Look for dsygv on Lapack docu!
+// Compute Eigenvalues and, optionally, Eigenvectors of a real symmetric matrix system A x = lambda B x
+template<class ContainerType0, class ContainerType1, class ContainerType2, class ContainerType3>
+void sygv(
+    int itype, // 1: A*x = (\Lambda)*B*x, 2: A*B*x = (\Lambda)*x, 3: B*A*x = (\Lambda)*x
+    char jobz, // 'N' Compute Eigenvalues only, 'V' Compute Eigenvalues and Eigenvectors
+    char uplo, // 'U' Upper triangles of A and B are stored; 'L' Lower triangles of A and B
+    int N,
+    ContainerType0& A, // matrix A [LDA rows, N cols], contains Eigenvecs on output if requested
+    int lda,
+    ContainerType1& B, // matrix B [LDB rows, N cols], destroyed on output
+    int ldb,
+    ContainerType2& W,   // [out] Eigenvalues in ascending order
+    ContainerType3& work // Workspace Size 3*N-1
+    )
+{
+    using value_type = dg::get_value_type<ContainerType0>;
+    static_assert( std::is_same_v<value_type, double> or std::is_same_v<value_type, float>,
+                   "Value type must be either float or double");
+    static_assert( std::is_same_v<dg::get_value_type<ContainerType1>, value_type> &&
+                   std::is_same_v<dg::get_value_type<ContainerType2>, value_type> &&
+                   std::is_same_v<dg::get_value_type<ContainerType3>, value_type>,
+                   "All Vectors must have same value type");
+    static_assert( std::is_same_v<dg::get_execution_policy<ContainerType0>, dg::SerialTag> &&
+                   std::is_same_v<dg::get_execution_policy<ContainerType1>, dg::SerialTag> &&
+                   std::is_same_v<dg::get_execution_policy<ContainerType2>, dg::SerialTag> &&
+                   std::is_same_v<dg::get_execution_policy<ContainerType3>, dg::SerialTag>,
+                   "All Vectors must have serial execution policy");
+
+    // jobz = 'N' Compute Eigenvalues only
+    // jobz = 'V' Compute Eigenvalues and Eigenvectors
+    value_type * A_ptr = thrust::raw_pointer_cast( &A[0]);
+    value_type * B_ptr = thrust::raw_pointer_cast( &B[0]);
+    value_type * W_ptr = thrust::raw_pointer_cast( &W[0]);
+    value_type * work_ptr = thrust::raw_pointer_cast( &work[0]);
+    int work_size = (int)work.size();
+
+    int info;
+    if constexpr ( std::is_same_v<value_type, double>)
+        dsygv_( &itype, &jobz, &uplo, &N, A_ptr, &lda, B_ptr, &ldb, W_ptr, work_ptr, &work_size, &info);
+    else if constexpr ( std::is_same_v<value_type, float>)
+        ssygv_( &itype, &jobz, &uplo, &N, A_ptr, &lda, B_ptr, &ldb, W_ptr, work_ptr, &work.size, &info);
+    if( info != 0)
+    {
+        throw dg::Error( dg::Message(_ping_) << "sygv failed with error code "<<info<<"\n");
+    }
+}
+
+
+
 
 }
 ///@endcond
@@ -161,7 +215,6 @@ void compute_Tinv_y( const dg::TriDiagonal<thrust::host_vector<value_type>>
 *  Moawwad El-Mikkawy and Abdelrahman Karawi
 *  Is unstable for matrix size of roughly > 150. Fails for certain
 *  tridiagonal matrix forms.
-* @attention Not tested thoroughly!
 * @tparam real_type float or double
 */
 template< class real_type>
@@ -291,22 +344,20 @@ class TridiagInvHMGTI
         {
             for( unsigned j=0; j<ss; j++)
             {
-                Tinv.row_indices[i*ss+j]    = j;
-                Tinv.column_indices[i*ss+j] = i;
                 if (i<j) {
-                    Tinv(j, i) =
+                    Tinv(i, j) =
                         sign(j-i)*std::accumulate(std::next(b.begin(),i),
                                 std::next(b.begin(),j), 1.,
                                 std::multiplies<value_type>())*
-                        m_alphas[i]/m_alphas[j]*Tinv.values[j*ss+j];
+                        m_alphas[i]/m_alphas[j]*Tinv(j,j);
                 }
                 else if (i>j)
                 {
-                    Tinv(j, i) =
+                    Tinv(i, j) =
                         sign(i-j)*std::accumulate(std::next(c.begin(),j+1),
                                 std::next(c.begin(),i+1), 1.,
                                 std::multiplies<value_type>())*
-                        m_betas[i+1]/m_betas[j+1]*Tinv.values[j*ss+j];
+                        m_betas[i+1]/m_betas[j+1]*Tinv(j,j);
                 }
             }
         }

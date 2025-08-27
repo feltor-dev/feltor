@@ -226,5 +226,7 @@ struct MatrixFunction
     std::string m_message = "Function";
 
 };
+
+
 }//namespace mat
 }//namespace dg

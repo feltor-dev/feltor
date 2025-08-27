@@ -147,12 +147,12 @@ T phi4( T x){
 /**
  * @brief \f$ f(x) = (-a*x)^n/n! exp(a*x) \f$
  *
- * @tparam T value type
+ * @tparam T value type (can be complex)
  */
 template<class T = double>
 struct GyrolagK
 {
-    GyrolagK(T n, T a): m_n (n), m_a(a) {}
+    GyrolagK(unsigned n, T a): m_n (n), m_a(a) {}
 
     DG_DEVICE
     T operator()(T x) const {
@@ -161,14 +161,54 @@ struct GyrolagK
         if( m_n == 1)
             return (-x*m_a)*exp( x*m_a);
         if( m_n == 2)
-            return 0.5*(x*x*m_a*m_a)*exp( x*m_a);
+            return 0.5*(-x*m_a)*(-x*m_a)*exp( x*m_a);
+        if( m_n == 3)
+            return (-x*m_a)*(-x*m_a)*(-x*m_a)*exp( x*m_a)/6.0;
         return pow(-x*m_a,m_n)/tgamma(m_n+1)*exp(x*m_a);
     }
     DG_DEVICE
     T operator()(T x, T y) const { return this->operator()(x*y); }
 
     private:
-    T m_n, m_a;
+    unsigned m_n;
+    T m_a;
+};
+
+/**
+ * @brief \f$ f(x) = \frac{n}{x}+a \f$
+ *
+ * @tparam T value type (can be complex)
+ */
+template<class T = double>
+struct DLnGyrolagK
+{
+    DLnGyrolagK(unsigned n, T a): m_n (n), m_a(a) {}
+    T  DG_DEVICE operator()(T x) const {
+        return (T)m_n/x+m_a;
+    }
+    T  DG_DEVICE operator()(T x, T y) const { return this->operator()(x*y); }
+
+    private:
+    unsigned m_n;
+    T m_a;
+};
+/**
+ * @brief \f$ f(x) = -\frac{n}{x^2}  \f$
+ *
+ * @tparam T value type (can be complex)
+ */
+template<class T = double>
+struct DDLnGyrolagK
+{
+    DDLnGyrolagK(unsigned n, T a): m_n (n), m_a(a) {}
+    T  DG_DEVICE operator()(T x) const {
+        return -(T)m_n/x/x;
+    }
+    T  DG_DEVICE operator()(T x, T y) const { return this->operator()(x*y); }
+
+    private:
+    unsigned m_n;
+    T m_a;
 };
 
 }//namespace mat
