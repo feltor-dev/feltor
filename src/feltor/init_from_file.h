@@ -90,7 +90,7 @@ std::array<std::array<dg::x::DVec,2>,2> init_from_file( std::string file_name,
     DG_RANK0 std::cout << "# Current time = "<< time <<  std::endl;
     for( unsigned i=0; i<restart3d_list.size(); i++)
     {
-        file.get_var( restart3d_list[i].name, {grid}, transferIN);
+        file.get_var( restart3d_list[i].name, {grid_IN}, transferIN);
         dg::blas2::gemv( interpolateIN, transferIN, transferOUTvec[i]);
     }
     file.close();
