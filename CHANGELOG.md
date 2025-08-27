@@ -25,9 +25,9 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
    functions. Speed up evaluation and fieldline integration.
  - Change cmake location of test and benchmark executables to follow original
    folder structure exactly (i.e. `build/tests` and `build/benchmarks` replaced with `build/inc`)
- - Rename some geometries and matrix file names from `*_t.cpp` to `*_b.cpp` to
-   strictly enforce all ``*_t.cpp` files as catch2 test files. For example
-   `ds_t.cpp` is now called `ds_b.cpp`
+ - Fully integrate geometries and matrix into Catch2 tests. Changed some file
+   names from `*_t.cpp` to `*_b.cpp` to strictly enforce all ``*_t.cpp` files
+   as Catch2 test files. For example `ds_t.cpp` is now called `ds_b.cpp`
 
 ## [v8.2.1] Fix Clang compilation
 ### Changed
@@ -47,7 +47,7 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
  - matrix now depends on `lapack` directly, not `lapacke`
  - The timestamp in the file history now follows ISO8601 formatting in UTC
  - probes_params uses `std::vector` instead of `thrust::host_vector`
- - All remaining `*.cu` files are renamed to `*.cpp` 
+ - All remaining `*.cu` files are renamed to `*.cpp`
  - Moved all diag programs to their respective src project
 ### Fixed
  - everything compiles without warnings from `-Wextra -Wpedantic` and `\W4` on Windows
@@ -57,7 +57,7 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
  - `dg::is_divisable` ignored `eps` parameter
  - Avoid zero sized array warnings in `aRealMPITopology` for `Nd=0`
  - filesystem paths are given in `wchar` on windows; fix ability to read wchar
- - Fixed MPI file write error when get does not set value type 
+ - Fixed MPI file write error when get does not set value type
  - Fix probes parser when using nlohmann-json
 ### Removed
  - `diag/compare.cpp` Removed because it can be trivially implemented in python
@@ -96,7 +96,7 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
  - New blas1 function `dg::blas1::kronecker` for Nd dimensional product space evaluations
  - New blas1 function `dg::blas1::vdot` that can handle general and in particular complex scalar products
  - Novel N-dimensional Grid class `dg::aRealTopology` and `dg::RealGrid` (and its MPI counterparts) that generalize the previous 1d, 2d and 3d grids. Previous grid classes still fully function using typedefs.
- - Use catch2 as a unit test framework for `dg`, `dg/file` and `dg/topology`. We introduce `tests/run-all-tests` script
+ - Use Catch2 as a unit test framework for `dg`, `dg/file` and `dg/topology`. We introduce `tests/run-all-tests` script
  - A novel MPI communication backend allowing for consistent overlapping communication and computation in all sparse matrices
  - `dg::mpi_cart_xxx` with `xxx` in `create`, `kron`, `split` for more consistent and easier Cartesian communicator handling in MPI grids
  - `dg::mpi_read*` functions for more consistent and easier MPI initialisation
