@@ -84,22 +84,21 @@ cmake --build build/cpu --target dg_benchmarks -j 4
 cmake --build build/cpu --target feltor_projects -j 4
 # Compile all production projects of feltor
 ----
-The tests will be built in the `build/X/tests` the benchmarks
-in `build/X/benchmarks` and the projects in `build/X/src`, where `X` is the preset in use.
+The tests and benchmarks will be built in `build/X/inc` and the projects in `build/X/src`, where `X` is the preset in use. The location of the executables in `build/X` exactly mirror the folder structure of the original C++ files in `feltor`, for example `feltor/inc/dg/blas_b.cpp` compiles to `build/X/inc/dg/blas_b`.
 The tests can be run using
 [source,sh]
 ----
 ctest --test-dir build/cpu
 ----
 
-Lastly, one can also target individual programs. All programs in the dg library start with the prefix `dg_` followed by the component name `backend`, `topology`, `geometries`, `file` or `matrix` followed by the program name without suffix. The feltor project targets follow the naming scheme `project_target` where `project` is the name of the folder in the `src` directory and `target` is the program name without suffix. The output name in the binary directory follows the original folder structure and program name. For example:
+Lastly, one can also target individual programs. All programs in the dg library start with the prefix `dg_` followed by the component name `backend`, `topology`, `geometries`, `file` or `matrix` followed by the program name without suffix. The feltor project targets follow the naming scheme `project_target` where `project` is the name of the folder in the `src` directory and `target` is the program name without suffix. Again, the output name in the binary directory follows the original folder structure and program name. For example:
 [source,sh]
 ----
 cmake --build build/cpu --target dg_blas_b
-./build/cpu/benchmarks/blas_b
+./build/cpu/inc/dg/blas_b
 # Compile and run the benchmark program feltor/inc/dg/blas_b.cpp
 cmake --build build/cpu --target dg_topology_derivatives_t
-./build/cpu/tests/topology/derivatives_t
+./build/cpu/inc/dg/topology/derivatives_t
 # Compile and run the test program feltor/inc/dg/topology/derivatives_t.cpp
 cmake --build build/cpu --target feltor_feltor
 ./build/cpu/src/feltor/feltor
@@ -110,12 +109,12 @@ Again, remember to replace `cpu` with the preset of your choice and mind the var
 ----
 cmake --preset gpu
 cmake --build build/gpu --target dg_blas_b
-./build/gpu/benchmarks/blas_b
+./build/gpu/inc/dg/blas_b
 # Compile and run the benchmark program feltor/inc/dg/blas_b.cpp for GPU
 cmake --preset omp
 cmake --build build/omp --target dg_blas_b
 export OMP_NUM_THREADS=4
-./build/gpu/benchmarks/blas_b
+./build/gpu/inc/dg/blas_b
 # Compile and run the benchmark program feltor/inc/dg/blas_b.cpp for OpenMP
 cmake --preset mpi-cpu
 cmake --build build/mpi-cpu --target feltor_feltor

@@ -373,7 +373,7 @@ We allow the negative sign $-\ehat_\varphi$ to enable a sign reversal of the mag
 \end{tcolorbox}
 In cylindrical coordinates that is
 \begin{align}
-[f,g]_\perp \equiv [f,g]_{RZ} &= \pm\frac{1}{R} \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
+[f,g]_\perp \equiv [f,g]_{RZ} &= \pm \left(\partial_R f\partial_Z g - \partial_Z f\partial_R g\right) \\
 \np f &= \partial_R f \ehat_R + \partial_Z f \ehat_Z \\
 \Delta_\perp f &= \frac{1}{R}\partial_R \left( R \partial_R f\right) + \partial_Z(\partial_Z f)
 \label{}
@@ -2761,8 +2761,7 @@ can be computed in post processing.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Diagnostics}\label{sec:diagnostics}
 \mintinline{bash}{feltor/src/feltor/feltordiag.cu}
-reads one or more previously generated simulation file(s) \mintinline{bash}{input0.nc
- ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a
+reads one or more previously generated simulation file(s) \mintinline{bash}{input0.nc ... inputN.nc} described in Section~\ref{sec:output_file} and writes into a
  single second output file \mintinline{bash}{output.nc} described as follows. \\
 Compilation
 \mint{bash}{make feltordiag device={gpu,omp}}

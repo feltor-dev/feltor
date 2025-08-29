@@ -205,7 +205,11 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
         is a limiter and 0 if there isn't.
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply.
-    * @param vec The vector field to integrate. Note that you can control how the boundary conditions are represented by changing vec outside the grid domain using e.g. the \c periodify function.
+    * @param vec The vector field to integrate (contravariant components). In
+    * case the type is a \c dg::geo::TokamakMagneticField then \c
+    * dg::geo::createBHat is called. Note that you can control how the boundary
+    * conditions are represented by changing vec outside the grid domain using
+    * e.g. the \c periodify function.
     * @param grid The grid on which to integrate fieldlines.
     * @param bcx This parameter is passed on to \c dg::create::interpolation(const thrust::host_vector<real_type>&,const thrust::host_vector<real_type>&,const aRealTopology2d<real_type>&,dg::bc,dg::bc,std::string) (see there for more details)
     * function and deterimens what happens when the endpoint of the fieldline integration leaves the domain boundaries of \c grid. Note that \c bcx and \c grid.bcx() have to be either both periodic or both not periodic.
@@ -414,7 +418,7 @@ struct Fieldaligned
     const container& sqrtGp()const {
         return m_Gp;
     }
-    ///@brief bphi
+    ///@brief The contravariant phi component (3rd component) of the vector field \f$ v^\varphi\f$
     ///@return three-dimensional vector
     const container& bphi()const {
         return m_bphi;

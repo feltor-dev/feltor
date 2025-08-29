@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
+#include "dg/geometries/geometries.h"
 
 namespace feltor
 {
@@ -504,6 +505,31 @@ void create_and_set_sheath(
     t.toc();
     DG_RANK0 std::cout << "# ... took  "<<t.diff()<<"s\n";
 }
+template<class Container>
+void multiply_rhs_penalization(
+        Container& yp, bool penalize_wall, const Container& m_wall,
+        bool penalize_sheath, const Container& m_sheath)
+{
+    //mask right hand side in penalization region
+    if( penalize_wall && penalize_sheath)
+    {
+        dg::blas1::subroutine( []DG_DEVICE(
+            double& rhs, double wall, double sheath){
+                rhs *= (1.0-wall-sheath);
+            }, yp, m_wall, m_sheath);
+    }
+    else if( penalize_wall)
+    {
+        dg::blas1::subroutine( []DG_DEVICE( double& rhs, double wall){
+                rhs *= (1.0-wall); }, yp, m_wall);
+    }
+    else if( penalize_sheath)
+    {
+        dg::blas1::subroutine( []DG_DEVICE( double& rhs, double sheath){
+                rhs *= (1.0-sheath); }, yp, m_sheath);
+    }
+}
+
 
 template<class Vector, class Explicit>
 std::unique_ptr<dg::aTimeloop<Vector>> init_timestepper(

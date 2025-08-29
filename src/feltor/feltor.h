@@ -1,8 +1,9 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "parameters.h"
 #include "dg/geometries/geometries.h"
+#include "parameters.h"
+#include "common.h"
 
 #define FELTORPARALLEL 1
 #define FELTORPERP 1
@@ -178,6 +179,7 @@ struct Explicit
     const Container& divCurvKappa() const {
         return m_divCurvKappa;
     }
+    // Covariant phi component of bhat \approx \pm R
     const Container& bphi( ) const { return m_bphi; }
     const Container& binv( ) const { return m_binv; }
     const Container& divb( ) const { return m_divb; }
@@ -582,7 +584,6 @@ struct Explicit
         Container& flux,
         std::string slope_limiter);
     void compute_parallel(          std::array<std::array<Container,2>,2>& yp);
-    void multiply_rhs_penalization(      Container& yp);
     void add_wall_and_sheath_terms( std::array<std::array<Container,2>,2>& yp);
     void add_source_terms(          std::array<std::array<Container,2>,2>& yp);
     const dg::geo::Fieldaligned<Geometry, IMatrix, Container>& fieldaligned() const
@@ -969,7 +970,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
         dg::blas1::axpby( -1., m_temp1, 1., m_temp0, m_temp0);
     }
     // Add penalization method
-    multiply_rhs_penalization( m_temp0);
+    common::multiply_rhs_penalization( m_temp0, m_p.penalize_wall, m_wall,
+                    m_p.penalize_sheath, m_sheath); // F*(1-chi_w-chi_s)
     //----------Invert polarisation----------------------------//
     //if( staggered)
     //    m_old_phiST.extrapolate( time, phi);
@@ -1627,29 +1629,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
     dg::blas1::axpby( 1., m_s, 1.0, yp);
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::multiply_rhs_penalization(
-        Container& yp)
-{
-    //mask right hand side in penalization region
-    if( m_p.penalize_wall && m_p.penalize_sheath)
-    {
-        dg::blas1::subroutine( []DG_DEVICE(
-            double& rhs, double wall, double sheath){
-                rhs *= (1.0-wall-sheath);
-            }, yp, m_wall, m_sheath);
-    }
-    else if( m_p.penalize_wall)
-    {
-        dg::blas1::subroutine( []DG_DEVICE( double& rhs, double wall){
-                rhs *= (1.0-wall); }, yp, m_wall);
-    }
-    else if( m_p.penalize_sheath)
-    {
-        dg::blas1::subroutine( []DG_DEVICE( double& rhs, double sheath){
-                rhs *= (1.0-sheath); }, yp, m_sheath);
-    }
-}
-template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::add_wall_and_sheath_terms(
         std::array<std::array<Container,2>,2>& yp)
 {
@@ -1851,7 +1830,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         for( unsigned i=0; i<2; i++)
         {
             for( unsigned j=0; j<2; j++)
-                multiply_rhs_penalization( yp[i][j]); // F*(1-chi_w-chi_s)
+                common::multiply_rhs_penalization( yp[i][j], m_p.penalize_wall, m_wall,
+                    m_p.penalize_sheath, m_sheath); // F*(1-chi_w-chi_s)
         }
     }
 
@@ -1890,7 +1870,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
     {
         for( unsigned i=0; i<2; i++)
         {
-            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            common::multiply_rhs_penalization( yp[i], m_p.penalize_wall, m_wall,
+                    m_p.penalize_sheath, m_sheath); // F*(1-chi_w-chi_s)
             dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
                 -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
         }
@@ -1904,7 +1885,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
     {
         for( unsigned i=0; i<2; i++)
         {
-            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            common::multiply_rhs_penalization( yp[i], m_p.penalize_wall, m_wall,
+                    m_p.penalize_sheath, m_sheath); // F*(1-chi_w-chi_s)
             dg::blas1::pointwiseDot( -m_wall_rate, m_wall, density[i],
                 -m_sheath_rate, m_sheath, density[i], 1., yp[i]); // -r N
         }
@@ -1966,7 +1948,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
     {
         for( unsigned i=0; i<2; i++)
         {
-            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            common::multiply_rhs_penalization( yp[i], m_p.penalize_wall, m_wall,
+                    m_p.penalize_sheath, m_sheath); // F*(1-chi_w-chi_s)
             dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
                 -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
         }
@@ -1982,7 +1965,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
     {
         for( unsigned i=0; i<2; i++)
         {
-            multiply_rhs_penalization( yp[i]); // F*(1-chi_w-chi_s)
+            common::multiply_rhs_penalization( yp[i], m_p.penalize_wall, m_wall,
+                    m_p.penalize_sheath, m_sheath); // F*(1-chi_w-chi_s)
             dg::blas1::pointwiseDot( -m_wall_rate, m_wall, velocityST[i],
                 -m_sheath_rate, m_sheath, velocityST[i], 1., yp[i]); // -r U
         }

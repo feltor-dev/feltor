@@ -8,13 +8,17 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../../ # other project libraries
 INCLUDE+= -I../    # other project libraries
 
+CATCH=../../tests/catch-tests
+CATCHMPI=../../tests/catch-tests-mpi
+
 CPPFILES=$(wildcard *.cpp)
 CUFILES=$(wildcard *.cu)
 
-all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
+TARGETS=functors_t\
+tridiaginv_t\
+exp_runge_kutta_t\
 
-%_t: %_t.cpp
-	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB)  -g
+all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
 %_b: %_b.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
@@ -22,15 +26,24 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 %_mpib: %_mpib.cpp
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) -g
 
-polarization_init_t: polarization_init_t.cpp polarization_init.h
-	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
+# CATCH2 TESTS
+#
+$(CATCH).$(device).o: $(CATCH).cpp
+	$(CC) $(OPT) $(CFLAGS) $(INCLUDE) -g -c $< -o $@
 
-matrixprodexp_t: matrixprodexp_t.cpp
-	$(CC) $(OPT)$(INCLUDE) $(CFLAGS) $< -o $@   $(LAPACKLIB) $(LIBS) -g
+%_t.$(device).o: %_t.cpp %.h
+	$(CC) $(OPT) $(CFLAGS) -c $< -o $@ -g $(INCLUDE)
+
+%_t: $(CATCH).$(device).o %_t.$(device).o
+	$(CC) $(OPT) -o $@ $^ -lCatch2 $(SPARSELIB) $(LAPACKLIB)
+
+tests: $(CATCH).$(device).o $(addsuffix .$(device).o,$(TARGETS))
+	$(CC) -o $@ $^ -lCatch2 $(SPARSELIB) $(LAPACKLIB)
+
 .PHONY: clean doc
 
 doc:
 	doxygen Doxyfile
 
 clean:
-	rm -f *_t *_b *_mpit *_mpib
+	rm -f *.o *_t *_b *_mpit *_mpib tests mpi-tests

@@ -1,9 +1,10 @@
 #include <iostream>
 
 
-#include "dg/file/file.h"
+#include "dg/file/json_utilities.h"
 #include "make_field.h"
 #include "modified.h"
+#include "catch2/catch_all.hpp"
 
 /* Input-File for COMPASS axisymmetric solovev equilibrium *
   I const with X-point, Te_50eV,B0_1T,deuterium, Cref~2e-5
@@ -69,126 +70,122 @@ const std::string geometry_params_2Xpoint = R"asdf({
 
 //@ ----------------------------------------------------------
 
-int main()
+TEST_CASE( "Modified")
 {
-    std::cout << "Test predicate modifier functions\n";
-
-    assert( dg::geo::mod::everywhere( 1,2) == true);
-    assert( dg::geo::mod::nowhere( 1,2) == false);
-    dg::geo::mod::HeavisideZ heavy( 0.8, +1);
-    assert( heavy( 1,2) == true);
-    assert( heavy( 1,0.79) == false);
-    dg::geo::mod::HeavisideZ heavyM( 0.8, -1);
-    assert( heavyM( 1,2) == false);
-    assert( heavyM( 1,0.79) == true);
-
-    dg::geo::mod::RightSideOf twoP( {-1,-2}, {3,0});
-    assert( twoP( 0,0) == false);
-    assert( twoP( 0,3) == false);
-    assert( twoP( 0,-2) == true);
-
-    dg::geo::mod::RightSideOf threeP( {-1,-2}, {3,0}, {0,3});
-    assert( threeP( 0,0) == false);
-    assert( threeP( 0,4) == true);
-    assert( threeP( 0,-2) == true);
-
-    dg::geo::mod::RightSideOf twoM( {3,0}, {-1,-2});
-    assert( twoM( 0,0) == true);
-    assert( twoM( 0,3) == true);
-    assert( twoM( 0,-2) == false);
-
-    dg::geo::mod::RightSideOf threeM( {0,3}, {3,0}, {-1,-2});
-    assert( threeM( 0,0) == true);
-    assert( threeM( 0,4) == false);
-    assert( threeM( 0,-2) == false);
-
-    dg::geo::mod::Above above( {0,0.8}, {0,1.8}); //  same as HeavisideZ
-    assert( above( 1,2) == true);
-    assert( above( 1,0.79) == false);
-    dg::geo::mod::Above aboveM( {0,0.8}, {0,1.8}, false); //  same as HeavisideZ
-    assert( aboveM( 1,2) == false);
-    assert( aboveM( 1,0.79) == true);
-
-    std::cout << "Check ClosedFieldline region toroidal\n";
+    SECTION( "Predicate modifier functions")
     {
-    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json( geometry_params_toroidal);
-    dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
-            js);
-    dg::geo::mod::ClosedFieldlineRegion closed(mag);
-    assert( not closed( 100, 0));
-    assert( not closed( 100, 10));
-    dg::geo::mod::ClosedFieldlineRegion open(mag, false);
-    assert( open( 100, 0));
-    assert( open( 100, 10));
+        CHECK( dg::geo::mod::everywhere( 1,2) == true);
+        CHECK( dg::geo::mod::nowhere( 1,2) == false);
+        dg::geo::mod::HeavisideZ heavy( 0.8, +1);
+        CHECK( heavy( 1,2) == true);
+        CHECK( heavy( 1,0.79) == false);
+        dg::geo::mod::HeavisideZ heavyM( 0.8, -1);
+        CHECK( heavyM( 1,2) == false);
+        CHECK( heavyM( 1,0.79) == true);
 
+        dg::geo::mod::RightSideOf twoP( {-1,-2}, {3,0});
+        CHECK( twoP( 0,0) == false);
+        CHECK( twoP( 0,3) == false);
+        CHECK( twoP( 0,-2) == true);
+
+        dg::geo::mod::RightSideOf threeP( {-1,-2}, {3,0}, {0,3});
+        CHECK( threeP( 0,0) == false);
+        CHECK( threeP( 0,4) == true);
+        CHECK( threeP( 0,-2) == true);
+
+        dg::geo::mod::RightSideOf twoM( {3,0}, {-1,-2});
+        CHECK( twoM( 0,0) == true);
+        CHECK( twoM( 0,3) == true);
+        CHECK( twoM( 0,-2) == false);
+
+        dg::geo::mod::RightSideOf threeM( {0,3}, {3,0}, {-1,-2});
+        CHECK( threeM( 0,0) == true);
+        CHECK( threeM( 0,4) == false);
+        CHECK( threeM( 0,-2) == false);
+
+        dg::geo::mod::Above above( {0,0.8}, {0,1.8}); //  same as HeavisideZ
+        CHECK( above( 1,2) == true);
+        CHECK( above( 1,0.79) == false);
+        dg::geo::mod::Above aboveM( {0,0.8}, {0,1.8}, false); //  same as HeavisideZ
+        CHECK( aboveM( 1,2) == false);
+        CHECK( aboveM( 1,0.79) == true);
     }
 
-    std::cout << "Check ClosedFieldline region 1 X-point\n";
+    SECTION( "ClosedFieldline region toroidal")
     {
-    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json( geometry_params_Xpoint);
-    dg::geo::TokamakMagneticField neg_mag = dg::geo::createMagneticField(
-            js);
-    assert( neg_mag.psip()( 550, 0) < 0);
-    js.asJson()["PP"] = -1;
-    dg::geo::TokamakMagneticField pos_mag = dg::geo::createMagneticField(
-            js);
-    assert( pos_mag.psip()( 550, 0) > 0);
-    for( auto mag : {neg_mag, pos_mag})
-    {
+        dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+        js.asJson() = dg::file::string2Json( geometry_params_toroidal);
+        dg::geo::TokamakMagneticField mag = dg::geo::createMagneticField(
+                js);
         dg::geo::mod::ClosedFieldlineRegion closed(mag);
-        assert(     closed( 550, 0)); // O-point
-        assert(     closed( 450, -400)); // above X-point
-        assert( not closed( 350, -360)); // SOL
-        assert( not closed( 426, -460)); // PFR
-        assert( not closed( 600, -360)); // SOL
-        assert( not closed( 700,  360)); // SOL
+        CHECK( not closed( 100, 0));
+        CHECK( not closed( 100, 10));
         dg::geo::mod::ClosedFieldlineRegion open(mag, false);
-        assert( not open( 550, 0)); // O-point
-        assert( not open( 450, -400)); // above X-point
-        assert(     open( 350, -360)); // SOL
-        assert(     open( 426, -460)); // PFR
-        assert(     open( 600, -360)); // SOL
-        assert(     open( 700,  360)); // SOL
+        CHECK( open( 100, 0));
+        CHECK( open( 100, 10));
+
     }
-    }
-    std::cout << "Check ClosedFieldline region 2 X-point\n";
+
+    SECTION( "ClosedFieldline region 1 X-point")
     {
-    dg::file::WrappedJsonValue js( dg::file::error::is_warning);
-    js.asJson() = dg::file::string2Json( geometry_params_2Xpoint);
-    dg::geo::TokamakMagneticField neg_mag = dg::geo::createMagneticField(
-            js);
-    assert( neg_mag.psip()( 550, 0) < 0);
-    js.asJson()["PP"] = -1;
-    dg::geo::TokamakMagneticField pos_mag = dg::geo::createMagneticField(
-            js);
-    assert( pos_mag.psip()( 550, 0) > 0);
-    for( auto mag : {neg_mag, pos_mag})
+        dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+        js.asJson() = dg::file::string2Json( geometry_params_Xpoint);
+        dg::geo::TokamakMagneticField neg_mag = dg::geo::createMagneticField(
+                js);
+        CHECK( neg_mag.psip()( 550, 0) < 0);
+        js.asJson()["PP"] = -1;
+        dg::geo::TokamakMagneticField pos_mag = dg::geo::createMagneticField(
+                js);
+        CHECK( pos_mag.psip()( 550, 0) > 0);
+        for( auto mag : {neg_mag, pos_mag})
+        {
+            dg::geo::mod::ClosedFieldlineRegion closed(mag);
+            CHECK(     closed( 550, 0)); // O-point
+            CHECK(     closed( 450, -400)); // above X-point
+            CHECK( not closed( 350, -360)); // SOL
+            CHECK( not closed( 426, -460)); // PFR
+            CHECK( not closed( 600, -360)); // SOL
+            CHECK( not closed( 700,  360)); // SOL
+            dg::geo::mod::ClosedFieldlineRegion open(mag, false);
+            CHECK( not open( 550, 0)); // O-point
+            CHECK( not open( 450, -400)); // above X-point
+            CHECK(     open( 350, -360)); // SOL
+            CHECK(     open( 426, -460)); // PFR
+            CHECK(     open( 600, -360)); // SOL
+            CHECK(     open( 700,  360)); // SOL
+        }
+    }
+    SECTION("ClosedFieldline region 2 X-point")
     {
-        dg::geo::mod::ClosedFieldlineRegion closed(mag);
-        assert(     closed( 550, 0)); // O-point
-        assert(     closed( 460, -320)); // above 1st X-point
-        assert(     closed( 460, +320)); // below 2nd X-point
-        assert( not closed( 350, -360)); // SOL
-        assert( not closed( 450, -400)); // PFR 1
-        assert( not closed( 450, +400)); // PFR 2
-        assert( not closed( 600, -360)); // SOL
-        assert( not closed( 700,  360)); // SOL
-        dg::geo::mod::ClosedFieldlineRegion open(mag, false);
-        assert( not open( 550, 0)); // O-point
-        assert( not open( 460, -320)); // above 1st X-point
-        assert( not open( 460, +320)); // below 2nd X-point
-        assert(     open( 350, -360)); // SOL
-        assert(     open( 450, -400)); // PFR 1
-        assert(     open( 450, +400)); // PFR 2
-        assert(     open( 600, -360)); // SOL
-        assert(     open( 700,  360)); // SOL
+        dg::file::WrappedJsonValue js( dg::file::error::is_warning);
+        js.asJson() = dg::file::string2Json( geometry_params_2Xpoint);
+        dg::geo::TokamakMagneticField neg_mag = dg::geo::createMagneticField(
+                js);
+        CHECK( neg_mag.psip()( 550, 0) < 0);
+        js.asJson()["PP"] = -1;
+        dg::geo::TokamakMagneticField pos_mag = dg::geo::createMagneticField(
+                js);
+        CHECK( pos_mag.psip()( 550, 0) > 0);
+        for( auto mag : {neg_mag, pos_mag})
+        {
+            dg::geo::mod::ClosedFieldlineRegion closed(mag);
+            CHECK(     closed( 550, 0)); // O-point
+            CHECK(     closed( 460, -320)); // above 1st X-point
+            CHECK(     closed( 460, +320)); // below 2nd X-point
+            CHECK( not closed( 350, -360)); // SOL
+            CHECK( not closed( 450, -400)); // PFR 1
+            CHECK( not closed( 450, +400)); // PFR 2
+            CHECK( not closed( 600, -360)); // SOL
+            CHECK( not closed( 700,  360)); // SOL
+            dg::geo::mod::ClosedFieldlineRegion open(mag, false);
+            CHECK( not open( 550, 0)); // O-point
+            CHECK( not open( 460, -320)); // above 1st X-point
+            CHECK( not open( 460, +320)); // below 2nd X-point
+            CHECK(     open( 350, -360)); // SOL
+            CHECK(     open( 450, -400)); // PFR 1
+            CHECK(     open( 450, +400)); // PFR 2
+            CHECK(     open( 600, -360)); // SOL
+            CHECK(     open( 700,  360)); // SOL
+        }
     }
-    }
-
-    std::cout << "ALL TESTS PASSED\n";
-    return 0;
-
-
-};
+}

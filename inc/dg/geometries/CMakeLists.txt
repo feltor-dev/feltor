@@ -46,36 +46,37 @@ set(GEOMETRIES_HEADERS
 # Some can be compiled for MPI
 # find ../../geometries -name "*t.cpp" | sort
 set(GEOMETRIES_TESTS
-  ../../geometries/average_t.cpp
-  ../../geometries/ds_curv_t.cpp
-  ../../geometries/ds_guenter_t.cpp
-  ../../geometries/ds_straight_t.cpp
-  ../../geometries/ds_t.cpp
-  ../../geometries/elliptic3d_t.cpp
-  ../../geometries/flux_t.cpp
   ../../geometries/modified_t.cpp
-  ../../geometries/ribeiroX_t.cpp
-  ../../geometries/separatrix_orthogonal_t.cpp
+  ../../geometries/polynomial_t.cpp
   ../../geometries/solovev_t.cpp
 )
 # Manually set (all programs with WITH_MPI)
 set(GEOMETRIES_MPI_TESTS
-  ../../geometries/ds_curv_t.cpp
-  ../../geometries/ds_guenter_t.cpp
-  ../../geometries/ds_straight_t.cpp
-  ../../geometries/ds_t.cpp
 )
 
 # find ../../geometries -name "*b.cpp" | sort
 set(GEOMETRIES_BENCHMARKS
+  ../../geometries/average_b.cpp
   ../../geometries/conformal_elliptic_b.cpp
   ../../geometries/conformalX_elliptic_b.cpp
+  ../../geometries/ds_b.cpp
+  ../../geometries/ds_curv_b.cpp
+  ../../geometries/ds_guenter_b.cpp
+  ../../geometries/ds_straight_b.cpp
+  ../../geometries/elliptic3d_b.cpp
+  ../../geometries/flux_b.cpp
   ../../geometries/geometry_advection_b.cpp
   ../../geometries/geometry_elliptic_b.cpp
   ../../geometries/geometryX_elliptic_b.cpp
   ../../geometries/geometryX_refined_elliptic_b.cpp
+  ../../geometries/ribeiroX_b.cpp
+  ../../geometries/separatrix_orthogonal_b.cpp
 )
 set(GEOMETRIES_MPI_BENCHMARKS
+  ../../geometries/ds_b.cpp
+  ../../geometries/ds_curv_b.cpp
+  ../../geometries/ds_guenter_b.cpp
+  ../../geometries/ds_straight_b.cpp
   ../../geometries/geometry_advection_b.cpp
   ../../geometries/geometry_elliptic_b.cpp
 )
@@ -83,14 +84,13 @@ set(GEOMETRIES_MPI_BENCHMARKS
 # These targets need to link to netcdf
 # Test grep "file.h" * in geometries
 set( GEOMETRIES_BENCHMARKS_WITH_FILE
-  ../../geometries/average_t.cpp
-  ../../geometries/flux_t.cpp
+  ../../geometries/average_b.cpp
+  ../../geometries/flux_b.cpp
   ../../geometries/geometry_elliptic_b.cpp
   ../../geometries/geometryX_elliptic_b.cpp
   ../../geometries/geometryX_refined_elliptic_b.cpp
-  ../../geometries/modified_t.cpp
-  ../../geometries/ribeiroX_t.cpp
-  ../../geometries/separatrix_orthogonal_t.cpp
+  ../../geometries/ribeiroX_b.cpp
+  ../../geometries/separatrix_orthogonal_b.cpp
 )
 
 
@@ -110,14 +110,21 @@ target_link_libraries(dg_geometries INTERFACE dg_file_json)
 
 # ============================================
 # Add geometries tests
-# TODO Disabled for now, tests are not using Catch2 (added to benchmarks instead)
 
-# if(FELTOR_BUILD_TESTS)
-#   include(FeltorTests)
-#   foreach(test_path IN LISTS GEOMETRIES_TESTS)
-#     add_geometries_test("${test_path}")
-#   endforeach()
-# endif()
+if(FELTOR_BUILD_TESTS)
+    include(FeltorTests)
+    if( FELTOR_WITH_MPI)
+        foreach(test_path IN LISTS GEOMETRIES_MPI_TESTS)
+            add_dg_test("${test_path}" "geometries" ON target_name)
+            target_link_libraries( ${target_name} PRIVATE dg_geometries)
+        endforeach()
+    else()
+        foreach(test_path IN LISTS GEOMETRIES_TESTS)
+            add_dg_test("${test_path}" "geometries" OFF target_name)
+            target_link_libraries( ${target_name} PRIVATE dg_geometries)
+        endforeach()
+    endif()
+endif()
 
 # ============================================
 # Add geometries benchmarks
@@ -125,7 +132,7 @@ target_link_libraries(dg_geometries INTERFACE dg_file_json)
 if(FELTOR_BUILD_BENCHMARKS)
     include(FeltorBenchmarks)
     if( FELTOR_WITH_MPI)
-        foreach(benchmark_path IN LISTS GEOMETRIES_MPI_BENCHMARKS GEOMETRIES_MPI_TESTS)
+        foreach(benchmark_path IN LISTS GEOMETRIES_MPI_BENCHMARKS)
             if( (${benchmark_path} IN_LIST GEOMETRIES_BENCHMARKS_WITH_FILE) AND FELTOR_FILE_WITH_NETCDF)
                 add_dg_benchmark("${benchmark_path}" "geometries" ON target_name)
                 target_link_libraries( ${target_name} PRIVATE dg_geometries)
@@ -136,7 +143,7 @@ if(FELTOR_BUILD_BENCHMARKS)
             endif()
         endforeach()
     else()
-        foreach(benchmark_path IN LISTS GEOMETRIES_BENCHMARKS GEOMETRIES_TESTS)
+        foreach(benchmark_path IN LISTS GEOMETRIES_BENCHMARKS)
             if( (${benchmark_path} IN_LIST GEOMETRIES_BENCHMARKS_WITH_FILE) AND FELTOR_FILE_WITH_NETCDF)
                 add_dg_benchmark("${benchmark_path}" "geometries" OFF target_name)
                 target_link_libraries( ${target_name} PRIVATE dg_geometries)
