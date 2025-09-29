@@ -99,7 +99,7 @@ struct Explicit
     std::map<std::string, std::vector<Container>> m_q;
 
     const std::vector<std::string> q_names = {
-        "N", "N 0", "N +1", "N -1",
+        "N",     "N 0",     "N +1",     "N -1",
         "Tperp", "Tperp 0", "Tperp +1", "Tperp -1",
         "Tpara", "Tpara 0", "Tpara +1", "Tpara -1",
         "Psi0",
@@ -121,29 +121,30 @@ struct Explicit
         "ST Psi1", "ST ds Psi1",
         "ST Psi2",
         "ST Psi3",
-        "ST U", "ST U 0", "ST U +1", "ST U -1",
+        "ST U",     "ST U 0",     "ST U +1",     "ST U -1",
         "ST Uperp", "ST Uperp 0", "ST Uperp +1", "ST Uperp -1",
         "ST Upara", "ST Upara 0", "ST Upara +1", "ST Upara -1",
         // perp derivatives
-        "dxF N", "dxB N", "dyF N", "dyB N",
+        "dxF N",     "dxB N",     "dyF N",     "dyB N",
         "dxF Pperp", "dxB Pperp", "dyF Pperp", "dyB Pperp",
         "dxF Ppara", "dxB Ppara", "dyF Ppara", "dyB Ppara",
         "dx Tperp", "dy Tperp",
         "dx Tpara", "dy Tpara",
-        "dx Psi0", "dy Psi0",
-        "dx Psi1", "dy Psi1",
-        "dx Psi2", "dy Psi2",
-        "dx U", "dy U",
+        "dx Psi0",  "dy Psi0",
+        "dx Psi1",  "dy Psi1",
+        "dx Psi2",  "dy Psi2",
+        "dx U",     "dy U",
         "dx Uperp", "dy Uperp",
         "dx Upara", "dy Upara",
         // Staggered perp derivatives
-        "ST dx N", "ST dy N",
+        "ST dx N",     "ST dy N",
         "ST dx Tperp", "ST dy Tperp",
         "ST dx Tpara", "ST dy Tpara",
-        "ST dx Psi0", "ST dy Psi0",
-        "ST dx Psi1", "ST dy Psi1",
-        "ST dx Psi2", "ST dy Psi2",
-        "ST dxF U", "ST dxB U", "ST dyF U", "ST dyB U",
+        "ST dx Psi0",  "ST dy Psi0",
+        "ST dx Psi1",  "ST dy Psi1",
+        "ST dx Psi2",  "ST dy Psi2",
+        "ST dx Psi3",  "ST dy Psi3",
+        "ST dxF U",     "ST dxB U",     "ST dyF U",     "ST dyB U",
         "ST dxF Qperp", "ST dxB Qperp", "ST dyF Qperp", "ST dyB Qperp",
         "ST dxF Qpara", "ST dxB Qpara", "ST dyF Qpara", "ST dyB Qpara"
     };
@@ -259,8 +260,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     // and the perp derivatives
     m_perp.update_derivatives( m_apar, m_dxapar, m_dyapar, y, m_q);
     m_perp.update_STderivatives( m_aparST, m_dxaparST, m_dyaparST, y, m_q);
-    // Set perpendicular advection in yp
+    timer.toc();
+    accu += timer.diff();
+    DG_RANK0 std::cout << "## Compute perpendicular derivatives took "
+                       << timer.diff()<<"s\t A: "<<accu<<"s\n";
+    timer.tic();
     // main species loop
+    dg::blas1::copy( 0., yp);
     for( unsigned s=0; s<m_p.num_species; s++)
     {
         m_upToDate[s] = false;
@@ -307,7 +313,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     timer.toc();
     accu += timer.diff();
-    DG_RANK0 std::cout <<"## compute perp and para dynamics    took "
+    DG_RANK0 std::cout <<"## Main species loop perp and para   took "
                        << timer.diff() << "s\t A: "<<accu<<"s\n";
 }
 

@@ -102,7 +102,7 @@ void Collisions<Grid, IMatrix, Matrix, Container>::add_coulomb_collisions(
     dg::blas2::symv( m_lapperpM, m_temp0, m_temp1);
     // CU ST
     dg::blas1::pointwiseDivide( q.at("ST U")[s], q.at("ST N")[s], m_temp0); // U/N
-    dg::blas1::pointwiseDot( -1., m_temp0, m_temp1, 0., m_temp0); // -U/N S_NST
+    dg::blas1::pointwiseDot( -1., m_temp0, m_temp1, 0., m_temp0); // -U/N CN ST
     for( unsigned k=0; k<m_p.num_species; k++)
         if( s != k)
         {
