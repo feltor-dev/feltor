@@ -12,6 +12,7 @@
 
 #include "init.h"
 #include "../feltor/feltordiag.h" // for static lists
+// and WriteIntegrateDiagnostics2dList
 #include "../feltor/common.h"
 
 namespace thermal{
@@ -50,13 +51,80 @@ struct Variables{
     const unsigned* nfailed;
 };
 
-struct Record{
+// Our idea to solve the species problem is to make a list of species dependent
+// records that in a 2nd step gets unrolled into a list of actual records
+struct PreRecord{
     bool species_dependent; // whether variable should be prepended with species name
     std::string name;
     std::string long_name;
     bool integral; //indicates whether the function should be time-integrated
     std::function<void( dg::x::DVec&, Variables&, unsigned)> function;
 };
+
+struct Record{
+    std::string name;
+    std::string long_name;
+    bool integral; //indicates whether the function should be time-integrated
+    std::function<void( dg::x::DVec&, Variables&)> function;
+};
+
+std::vector<Record> make_records_list(
+    const std::vector<PreRecord>& list,
+    const std::vector<std::string>& species_names)
+{
+    std::vector<Record> out_list;
+    for( const auto& record : list)
+    for( unsigned s=0; s<species_names.size(); s++)
+    {
+        if( s!=0 and not record.species_dependent)
+            break;
+        std::string name = record.name;
+        if( record.species_dependent)
+            name = species_names[s] + "_"  + name;
+        Record out_record = {
+            name,
+            record.long_name,
+            record.integral,
+            [f = record.function, s]( dg::x::DVec& result, Variables& v)
+            {
+                f( result, v, s);
+            }
+        };
+        out_list.push_back( out_record);
+    }
+    return out_list;
+}
+
+// For probes (output type is different)
+std::vector<dg::file::Record<void(dg::x::DVec&,Variables&),
+        dg::file::LongNameAttribute>>
+    make_probes_list(
+        const std::vector<PreRecord>& list,
+        const std::vector<std::string>& species_names)
+{
+    std::vector<dg::file::Record<void(dg::x::DVec&,Variables&),
+        dg::file::LongNameAttribute>> out_list;
+    for( const auto& record : list)
+    for( unsigned s=0; s<species_names.size(); s++)
+    {
+        if( s!=0 and not record.species_dependent)
+            break;
+        std::string name = record.name;
+        if( record.species_dependent)
+            name = species_names[s] + "_"  + name;
+        dg::file::Record<void(dg::x::DVec&,Variables&),
+            dg::file::LongNameAttribute> out_record = {
+            name,
+            dg::file::LongNameAttribute( record.long_name.c_str()),
+            [f = record.function, s]( dg::x::DVec& result, Variables& v)
+            {
+                f( result, v, s);
+            }
+        };
+        out_list.push_back( out_record);
+    }
+    return out_list;
+}
 
 ///%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%EXTEND LISTS WITH YOUR DIAGNOSTICS HERE%%%%%%%%%%%%%%%%%%%%%%
@@ -84,8 +152,9 @@ std::vector<dg::file::Record<double(Variables&), dg::file::LongNameAttribute>> d
 std::vector<dg::file::Record<void( dg::x::HVec&, const dg::geo::TokamakMagneticField&, const dg::x::CylindricalGrid3d&), dg::file::LongNameAttribute>> diagnostics3d_static_list =
     feltor::diagnostics3d_static_list;
 
+
 // Here are all 3d outputs we want to have
-std::vector<Record> diagnostics3d_list = { // 2 + 6*s
+std::vector<PreRecord> diagnostics3d_list = { // 2 + 6*s
     {true, "n", "gyro-centre density", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             dg::blas1::copy(v.f.get("N", s), result);
@@ -128,6 +197,7 @@ std::vector<Record> diagnostics3d_list = { // 2 + 6*s
     }
 };
 
+// diagnostics2d_static_list
 std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::CylindricalGrid3d&), dg::file::LongNameAttribute>> diagnostics2d_static_list = {
     { "Psip2d", "Flux-function psi",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
@@ -273,6 +343,7 @@ std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::Cylindr
     }
 };
 
+// diagnostics2d_static_init
 std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::CylindricalGrid3d&, unsigned s), dg::file::LongNameAttribute>> diagnostics2d_static_init = {
     { "Nprof", "Density profile (that the source may force)",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& , unsigned s ){
@@ -328,7 +399,7 @@ std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::Cylindr
 
 // and here are all the 2d outputs we want to produce (currently ~ 150)
 // Call within species loop after updateQuantities
-std::vector<Record> basicDiagnostics2d_list = { // 22
+std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     {true, "n", "gyro-centre density", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             dg::blas1::copy(v.f.get("N",s), result);
@@ -1574,107 +1645,157 @@ std::vector<Record> COCEDiagnostics2d_list = { // 16
      },
 
 };
+*/
 
 // probes list
-// Idea: I think we can unfold the species dependent lists into one long list
-std::vector<dg::file::Record<void(dg::x::DVec&,Variables&)>> probe_list = {
-     {true, "n", "probe measurement of density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.density(0), result);
-         }
-     },
-     {true, "u", "probe measurement of parallel velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.velocity(0), result);
-         }
-     },
-     {true, "phi", "probe measurement of electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.potential(0), result);
-         }
-     },
-     {false, "apar", "probe measurement of parallel magnetic potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.apar(), result);
-         }
-     },
-     {"n_R", "probe measurement of d/dR electron density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradN(0)[0], result);
-         }
-     },
-     {"u_R", "probe measurement of d/dR parallel electron velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradU(0)[0], result);
-         }
-     },
-     {"phi_R", "probe measurement of d/dR electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradP(0)[0], result);
-         }
-     },
-     {"aparR", "probe measurement of d/dR parallel magnetic potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradA()[0], result);
-         }
-     },
-     {"neZ", "probe measurement of d/dZ electron density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradN(0)[1], result);
-         }
-     },
-     {"niZ", "probe measurement of d/dZ ion density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradN(1)[1], result);
-         }
-     },
-     {"ueZ", "probe measurement of d/dZ parallel electron velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradU(0)[1], result);
-         }
-     },
-     {"uiZ", "probe measurement of d/dZ parallel ion velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradU(1)[1], result);
-         }
-     },
-     {"phiZ", "probe measurement of d/dZ electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradP(0)[1], result);
-         }
-     },
-     {"aparZ", "probe measurement of d/dZ parallel magnetic potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.gradA()[1], result);
-         }
-     },
-     {"nePar", "probe measurement of d/dPar electron density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsN(0), result);
-         }
-     },
-     {"niPar", "probe measurement of d/dPar ion density",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsN(1), result);
-         }
-     },
-     {"uePar", "probe measurement of d/dPar parallel electron velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsU(0), result);
-         }
-     },
-     {"uiPar", "probe measurement of d/dPar parallel ion velocity",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsU(1), result);
-         }
-     },
-     {"phiPar", "probe measurement of d/dPar electric potential",
-         []( dg::x::DVec& result, Variables& v ) {
-              dg::blas1::copy(v.f.dsP(0), result);
-         }
-     }
- };
-*/
+std::vector<PreRecord> probe_list = {
+    {true, "n", "gyro-centre density", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("N", s), result);
+        }
+    },
+    {true, "tperp", "perpendicular temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("Tperp", s), result);
+        }
+    },
+    {true, "tpara", "parallel temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("Tpara", s), result);
+        }
+    },
+    {true, "u", "parallel velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("U", s), result);
+        }
+    },
+    {true, "uperp", "perpendicular heat flux velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("Uperp", s), result);
+        }
+    },
+    {true, "upara", "parallel heat flux velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("Upara", s), result);
+        }
+    },
+    {false, "phi", "electric potential", false,
+        []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy(v.f.get("Psi0",0), result);
+        }
+    },
+    {false, "apar", "parallel magnetic potential", false,
+        []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy(v.f.apar(), result);
+        }
+    },
+    {true, "nR", "d/dR gyro-centre density", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dxF N", s), result);
+        }
+    },
+    {true, "tperpR", "d/dR perpendicular temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dx Tperp", s), result);
+        }
+    },
+    {true, "tparaR", "d/dR parallel temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dx Tpara", s), result);
+        }
+    },
+    {true, "uR", "d/dR parallel velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dx U", s), result);
+        }
+    },
+    {true, "uperpR", "d/dR perpendicular heat flux velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dx Uperp", s), result);
+        }
+    },
+    {true, "uparaR", "d/dR parallel heat flux velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dx Upara", s), result);
+        }
+    },
+    {false, "phiR", "d/dR electric potential", false,
+        []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy(v.f.get("dx Psi0", 0), result);
+        }
+    },
+    {false, "aparR", "d/dR parallel magnetic potential", false,
+        []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy(v.f.dxapar(), result);
+        }
+    },
+    {true, "nZ", "d/dZ gyro-centre density", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dy N", s), result);
+        }
+    },
+    {true, "tperpZ", "d/dZ perpendicular temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dy Tperp", s), result);
+        }
+    },
+    {true, "tparaZ", "d/dZ parallel temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dy Tpara", s), result);
+        }
+    },
+    {true, "uZ", "d/dZ parallel velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dy U", s), result);
+        }
+    },
+    {true, "uperpZ", "d/dZ perpendicular heat flux velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dy Uperp", s), result);
+        }
+    },
+    {true, "uparaZ", "d/dZ parallel heat flux velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("dy Upara", s), result);
+        }
+    },
+    {false, "phiZ", "d/dZ electric potential", false,
+        []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy(v.f.get("dy Psi 0", 0), result);
+        }
+    },
+    {false, "aparZ", "d/dZ parallel magnetic potential", false,
+        []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy(v.f.dyapar(), result);
+        }
+    },
+    {true, "nPar", "d/dPar gyro-centre density", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
+                v.f.get( "N -1", s), v.f.get( "N +1", s), 0, result);
+        }
+    },
+    {true, "tperpPar", "d/dPar perpendicular temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
+                v.f.get( "Tperp -1", s), v.f.get( "Tperp +1", s), 0, result);
+        }
+    },
+    {true, "tparaPar", "d/dPar parallel temperature", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
+                v.f.get( "Tpara -1", s), v.f.get( "Tpara +1", s), 0, result);
+        }
+    },
+    {true, "uPar", "d/dPar parallel velocity", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.f.get("U", s), result);
+            dg::geo::ds_centered( v.f.para().fieldalignedHalf(), 1.,
+                v.f.get( "U -1/2", s), v.f.get( "U +1/2", s), 0, result);
+        }
+    }
+    // Parallel gradient potential?
+};
 
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ///%%%%%%%%%%%%%%%%%%%%%%%%%%END DIAGNOSTICS LIST%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1731,13 +1852,13 @@ void write_static_list( NcFile& file, const HostList& records, const HostList2& 
     }
 }
 
-void append_equations( std::vector<thermal::Record>& list, const std::vector<thermal::Record>& b)
+void append_equations( std::vector<thermal::PreRecord>& list, const std::vector<thermal::PreRecord>& b)
 {
     list.insert( list.begin(), b.begin(), b.end());
 }
 std::vector<thermal::Record> generate_equation_list( const dg::file::WrappedJsonValue& js)
 {
-    std::vector<thermal::Record> list;
+    std::vector<thermal::PreRecord> list;
     bool equation_list_exists = js["output"].isMember("equations");
     if( equation_list_exists)
     {
@@ -1771,164 +1892,11 @@ std::vector<thermal::Record> generate_equation_list( const dg::file::WrappedJson
         //append_equations(list, thermal::ParallelMomDiagnostics2d_list);
         //append_equations(list, thermal::RSDiagnostics2d_list);
     }
-    return list;
+    unsigned num_species = js["species"].size();
+    std::vector<std::string> name(num_species);
+    for( unsigned s=0; s<num_species; s++)
+        name[s] = js["species"][s]["name"].asString();
+    return make_records_list( list, name);
 }
-
-// TODO Same as feltor::WriteIntegrateDiagnostics2dList except capabilities to loop multiple species
-// Maybe we should rather unfold records list and then use feltor::Write ?
-template< class NcFile>
-struct WriteIntegrateDiagnostics2dList
-{
-    WriteIntegrateDiagnostics2dList( NcFile& file,
-        const dg::x::CylindricalGrid3d& grid,
-        const dg::x::CylindricalGrid3d& g3d_out,
-        const std::vector<thermal::Record>& equation_list,
-        const std::vector<std::string>& species_names) :
-            m_file(&file), m_slab(grid), m_grid(grid), m_g3d_out(g3d_out),
-            m_equation_list(equation_list), m_species_names(species_names)
-    {
-#ifdef WITH_MPI
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-#endif //WITH_MPI
-        std::unique_ptr<dg::x::aGeometry2d> g2d_out_ptr( g3d_out.perp_grid());
-        for( auto& record : m_equation_list)
-        for( unsigned s=0; s<species_names.size(); s++)
-        {
-            std::string name = record.name + "_ta2d";
-            std::string long_name = record.long_name + " (Toroidal average)";
-            if( record.species_dependent)
-                m_file->template def_var_as<double>( species_names[s] + "_" + name,
-                    {"time", "y", "x"}, {{"long_name", long_name}});
-            else if( s == 0)
-                m_file->template def_var_as<double>( name,
-                    {"time", "y", "x"}, {{"long_name", long_name}});
-            name = record.name + "_2d";
-            long_name = record.long_name+ " (Evaluated on phi = 0 plane)";
-            if( record.species_dependent)
-                m_file->template def_var_as<double>( species_names[s] + "_" + name,
-                    {"time", "y", "x"}, {{"long_name", long_name}});
-            else if( s == 0)
-                m_file->template def_var_as<double>( name,
-                    {"time", "y", "x"}, {{"long_name", long_name}});
-        }
-        m_slab = {*g2d_out_ptr};
-        #ifdef WITH_MPI // only root group needs to track
-        if( dg::file::detail::mpi_comm_global2local_rank( g2d_out_ptr->communicator()) == MPI_UNDEFINED)
-            m_track  = false;
-        #endif
-        m_resultD = dg::evaluate( dg::zero, grid);
-        m_transferD = dg::evaluate(dg::zero, g3d_out);
-        m_transferH = dg::evaluate(dg::zero, g3d_out);
-        m_projectD = dg::create::fast_projection( grid, 1, grid.Nx()/g3d_out.Nx(), grid.Ny()/g3d_out.Ny());
-        m_transferH2d = dg::evaluate( dg::zero, *g2d_out_ptr);
-        m_toroidal_average = { g3d_out, dg::coo3d::z};
-    }
-    // same as buffer and flush
-    void write( double time, Variables& var)
-    {
-        buffer( time, var);
-        flush(var);
-    }
-
-    void buffer( double time, Variables& var)
-    {
-        // evaluates function and updates time integrals for all integrals
-        auto transferD2d_view = dg::split( m_transferD, m_g3d_out);
-        for( auto& record : m_equation_list)
-        for( unsigned s=0; s<m_species_names.size(); s++)
-        {
-            if( s!=0 and not record.species_dependent)
-                break;
-            if( record.integral)
-            {
-                record.function( m_resultD, var, s);
-                dg::blas2::symv( m_projectD, m_resultD, m_transferD);
-                //toroidal average and add to time integral
-                std::string name = record.name+"_ta2d";
-                if( record.species_dependent)
-                    name = m_species_names[s] + "_"  + name;
-                dg::assign( m_transferD, m_transferH);
-                m_toroidal_average( m_transferH, m_transferH2d, false);
-                if(m_track && m_first_buffer) m_time_integrals[name].init(
-                    time, m_transferH2d);
-                if(m_track && !m_first_buffer) m_time_integrals.at(name).add( time,
-                    m_transferH2d);
-
-                // 2d data of plane varphi = 0
-                name = record.name + "_2d";
-                if( record.species_dependent)
-                    name = m_species_names[s] + "_"  + name;
-                dg::split( m_transferD, transferD2d_view, m_g3d_out);
-                dg::assign( transferD2d_view[0], m_transferH2d);
-                if(m_track && m_first_buffer) m_time_integrals[name].init(
-                    time, m_transferH2d);
-                if(m_track && !m_first_buffer) m_time_integrals.at(name).add( time,
-                    m_transferH2d);
-            }
-        }
-        if( m_first_buffer)
-            m_first_buffer = false;
-    }
-    void flush( Variables& var )
-    {
-        // write time integrals for
-        auto transferD2d_view = dg::split( m_transferD, m_g3d_out);
-        for( auto& record : m_equation_list)
-        for( unsigned s=0; s<m_species_names.size(); s++)
-        {
-            if( s!=0 and not record.species_dependent)
-                break;
-            std::array<std::string, 2> names = { record.name+"_ta2d", record.name+"_2d"};
-            if( record.species_dependent)
-            {
-                names[0] = m_species_names[s] + "_"  + names[0];
-                names[1] = m_species_names[s] + "_"  + names[1];
-            }
-            if(record.integral) // we already computed the output...
-            {
-                for( std::string name : names)
-                {
-                    if(m_track) m_transferH2d = m_time_integrals.at(name).get_integral();
-                    m_file->put_var( name, {m_start, m_slab}, m_transferH2d);
-                    if(m_track) m_time_integrals.at(name).flush();
-                }
-            }
-            else // compute from scratch
-            {
-                record.function( m_resultD, var, s);
-                dg::blas2::symv( m_projectD, m_resultD, m_transferD);
-
-                dg::assign( m_transferD, m_transferH);
-                m_toroidal_average( m_transferH, m_transferH2d, false);
-                m_file->put_var( names[0], {m_start, m_slab}, m_transferH2d);
-
-                // 2d data of plane varphi = 0
-                dg::split( m_transferD, transferD2d_view, m_g3d_out);
-                dg::assign( transferD2d_view[0], m_transferH2d);
-                m_file->put_var( names[1], {m_start, m_slab}, m_transferH2d);
-            }
-        }
-        m_start++;
-    }
-    private:
-    NcFile * m_file;
-    typename NcFile::Hyperslab m_slab;
-    bool m_first_buffer = true;
-    bool m_track = true;
-    size_t m_start = 0;
-    dg::x::DVec m_resultD;
-    dg::x::DVec m_transferD;
-    dg::x::HVec m_transferH;
-    dg::MultiMatrix<dg::x::DMatrix,dg::x::DVec> m_projectD;
-    dg::x::HVec m_transferH2d;
-    dg::Average<dg::x::IHMatrix, dg::x::HVec> m_toroidal_average;
-    std::map<std::string, dg::Simpsons<dg::x::HVec>> m_time_integrals;
-    const dg::x::CylindricalGrid3d m_grid, m_g3d_out;
-    std::vector<thermal::Record> m_equation_list;
-    std::vector<std::string> m_species_names;
-
-};
-
 
 }//namespace thermal

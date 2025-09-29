@@ -15,6 +15,10 @@ struct ParaDynamics
     {
         return m_fa;
     }
+    const dg::geo::Fieldaligned<Geometry, IMatrix, Container>& fieldalignedHalf() const
+    {
+        return m_faHalf;
+    }
 
     void set_sheath(double sheath_rate, const Container& sheath,
             const Container& sheath_coordinate)

@@ -237,17 +237,17 @@ int main( int argc, char* argv[])
 
         file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}, {"units", "Omega_ci^-1"}});
 
-        thermal::WriteIntegrateDiagnostics2dList diag2d( file, grid, g3d_out,
-            thermal::generate_equation_list( js), p.name);
+        feltor::WriteIntegrateDiagnostics2dList diag2d( file, grid, g3d_out,
+            thermal::generate_equation_list( js));
         file.defput_dim( "xr", {{"axis", "X"}}, grid.abscissas(0));
         file.defput_dim( "yr", {{"axis", "Y"}}, grid.abscissas(1));
         file.defput_dim( "zr", {{"axis", "Z"}}, grid.abscissas(2));
         for( unsigned s=0; s<p.num_species; s++)
-            for( auto& record: thermal::restart3d_list)
-                file.def_var_as<double>( "restart_"+p.name[s] +"_"+ record.name,
-                    {"zr", "yr", "xr"}, record.atts);
+        for( auto& record: thermal::restart3d_list)
+            file.def_var_as<double>( "restart_"+p.name[s] +"_"+ record.name,
+                {"zr", "yr", "xr"}, record.atts);
         // Probes need to be the last because they define dimensions in subgroup
-        //dg::file::Probes probes( file, grid, dg::file::parse_probes(js));
+        dg::file::Probes probes( file, grid, dg::file::parse_probes(js));
 
         ///////////////////////////////////first output/////////////////////////
         DG_RANK0 std::cout << "# First output ... \n";
@@ -285,24 +285,24 @@ int main( int argc, char* argv[])
         DG_RANK0 std::cout << "# Write diag4d ...\n";
         dg::MultiMatrix<dg::x::DMatrix, dg::x::DVec> project(
             dg::create::fast_projection( grid, 1, p.cx, p.cy));
-        for( unsigned s=0; s<p.num_species; s++)
-        for( auto& record : thermal::diagnostics3d_list)
+        std::vector<thermal::Record> thermal_diagnostics3d_list =
+            thermal::make_records_list( thermal::diagnostics3d_list, p.name);
+        for( auto& record : thermal_diagnostics3d_list)
         {
-            record.function ( resultD, var, s);
+            record.function ( resultD, var);
             dg::apply( project, resultD, resultD_out);
-            if( record.species_dependent)
-                file.defput_var( p.name[s] + "_" + record.name, {"time", "z", "y", "x"},
-                    {{"long_name", record.long_name}}, {0, g3d_out}, resultD_out);
-            else if( s == 0)
-                file.defput_var( record.name, {"time", "z", "y", "x"},
-                    {{"long_name", record.long_name}}, {0, g3d_out}, resultD_out);
+            file.defput_var( record.name, {"time", "z", "y", "x"},
+                {{"long_name", record.long_name}}, {0, g3d_out}, resultD_out);
         }
 
 
-        //DG_RANK0 std::cout << "# Write static probes ...\n";
-        //probes.static_write( thermal::diagnostics2d_static_list, var, grid);
-        //DG_RANK0 std::cout << "# Write probes ...\n";
-        //probes.write( time, thermal::probe_list, var);
+        DG_RANK0 std::cout << "# Write static probes ...\n";
+        probes.static_write( thermal::diagnostics2d_static_list, var, grid);
+        DG_RANK0 std::cout << "# Write probes ...\n";
+        std::vector<dg::file::Record<void(dg::x::DVec&,thermal::Variables&),
+            dg::file::LongNameAttribute>> thermal_probes_list =
+                thermal::make_probes_list( thermal::probe_list, p.name);
+        probes.write( time, thermal_probes_list, var);
 
         DG_RANK0 std::cout << "# Close file ...\n";
         file.close();
@@ -337,7 +337,7 @@ int main( int argc, char* argv[])
                 dg::Timer tti;
                 tti.tic();
 
-                //probes.buffer(time, thermal::probe_list, var);
+                probes.buffer(time, thermal_probes_list, var);
                 diag2d.buffer( time, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
@@ -376,7 +376,7 @@ int main( int argc, char* argv[])
             ti.tic();
             //////////////////////////write fields////////////////////////
             file.open( file_name, dg::file::nc_write);
-            //probes.flush();
+            probes.flush();
             diag2d.flush( var);
 
             for( unsigned s=0; s<p.num_species; s++)
@@ -391,15 +391,11 @@ int main( int argc, char* argv[])
             for( auto& record: thermal::diagnostics1d_list)
                 file.put_var( record.name, {start}, record.function( var));
 
-            for( unsigned s=0; s<p.num_species; s++)
-            for( auto& record : thermal::diagnostics3d_list)
+            for( auto& record : thermal_diagnostics3d_list)
             {
-                record.function ( resultD, var, s);
+                record.function ( resultD, var);
                 dg::apply( project, resultD, resultD_out);
-                if( record.species_dependent)
-                    file.put_var( p.name[s] + "_" + record.name, {start, g3d_out}, resultD_out);
-                else if( s == 0)
-                    file.put_var( record.name, {start, g3d_out}, resultD_out);
+                file.put_var( record.name, {start, g3d_out}, resultD_out);
             }
 
             file.close();
