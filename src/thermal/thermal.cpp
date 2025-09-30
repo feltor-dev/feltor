@@ -244,7 +244,7 @@ int main( int argc, char* argv[])
         file.defput_dim( "zr", {{"axis", "Z"}}, grid.abscissas(2));
         for( unsigned s=0; s<p.num_species; s++)
         for( auto& record: thermal::restart3d_list)
-            file.def_var_as<double>( "restart_"+p.name[s] +"_"+ record.name,
+            file.def_var_as<double>( "restart_"+p.name[s] +"-"+ record.name,
                 {"zr", "yr", "xr"}, record.atts);
         // Probes need to be the last because they define dimensions in subgroup
         dg::file::Probes probes( file, grid, dg::file::parse_probes(js));
@@ -269,7 +269,7 @@ int main( int argc, char* argv[])
         for( auto& record: thermal::restart3d_list)
         {
             record.function( resultD, y0, s);
-            file.put_var( "restart_" + p.name[s] + "_" + record.name,
+            file.put_var( "restart_" + p.name[s] + "-" + record.name,
                 {grid}, resultD);
         }
 
@@ -383,7 +383,7 @@ int main( int argc, char* argv[])
             for( auto& record: thermal::restart3d_list)
             {
                 record.function( resultD, y0, s);
-                file.put_var( "restart_" + p.name[s] + "_" + record.name,
+                file.put_var( "restart_" + p.name[s] + "-" + record.name,
                     {grid}, resultD);
             }
 

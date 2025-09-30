@@ -110,7 +110,7 @@ Vector init_from_file( std::string file_name,
     {
         for( unsigned k=0; k<restart3d_list.size(); k++)
         {
-            file.get_var( "restart_" + pIN.name[s] + "_" + restart3d_list[k].name, {grid_IN}, transferIN);
+            file.get_var( "restart_" + pIN.name[s] + "-" + restart3d_list[k].name, {grid_IN}, transferIN);
             dg::blas2::gemv( interpolateIN, transferIN, transferOUTvec);
             dg::assign( transferOUTvec, y0[k][s]);
         }

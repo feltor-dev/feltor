@@ -50,7 +50,11 @@ struct Solvers
     //volume with dG weights
     const Container& vol3d() const { return m_laplaceM.weights();}
     const Container& weights() const { return m_laplaceM.weights();}
-    const Container& gammaN( unsigned s) const { return m_old_gammaN[s].head();}
+    // s > 0
+    const Container& gammaN( unsigned s) const {
+        assert( s > 0);
+       	return m_old_gammaN[s-1].head();
+    }
     void compute_lapMperpP( const Container& phi, Container& lapMphi) const {
         dg::blas2::symv( m_laplaceM, phi, lapMphi);
     }

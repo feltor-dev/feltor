@@ -80,7 +80,7 @@ std::vector<Record> make_records_list(
             break;
         std::string name = record.name;
         if( record.species_dependent)
-            name = species_names[s] + "_"  + name;
+            name = species_names[s] + "-"  + name;
         Record out_record = {
             name,
             record.long_name,
@@ -111,7 +111,7 @@ std::vector<dg::file::Record<void(dg::x::DVec&,Variables&),
             break;
         std::string name = record.name;
         if( record.species_dependent)
-            name = species_names[s] + "_"  + name;
+            name = species_names[s] + "-"  + name;
         dg::file::Record<void(dg::x::DVec&,Variables&),
             dg::file::LongNameAttribute> out_record = {
             name,
@@ -443,27 +443,30 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     },
     {true, "psi0", "Potential 0", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
-             dg::blas1::copy(v.f.get("Psi0",s), result);
+            dg::blas1::copy(v.f.get("Psi0",s), result);
         }
     },
     {true, "psi1", "Potential 0", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
-             dg::blas1::copy(v.f.get("Psi1",s), result);
+            dg::blas1::copy(v.f.get("Psi1",s), result);
         }
     },
     {true, "psi2", "Potential 0", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
-             dg::blas1::copy(v.f.get("Psi2",s), result);
+            dg::blas1::copy(v.f.get("Psi2",s), result);
         }
     },
     {true, "psi3", "Potential 0", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
-             dg::blas1::copy(v.f.get("Psi3",s), result);
+            dg::blas1::copy(v.f.get("Psi3",s), result);
         }
     },
     {true, "gammaN", "Adjoint Gamma N", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
-             dg::blas1::copy(v.f.solvers().gammaN(s), result);
+            if( s == 0)
+                dg::blas1::copy( v.f.get( "N", 0), result);
+            else
+                dg::blas1::copy(v.f.solvers().gammaN(s), result);
         }
     },
     /// -----------------Miscellaneous additions --------------------//
@@ -1847,7 +1850,7 @@ void write_static_list( NcFile& file, const HostList& records, const HostList2& 
     {
         record.function( resultH, var, grid, s);
         dg::blas2::symv( projectH, resultH, transferH);
-        file.defput_var( species_names[s] + "_" + record.name, {"y", "x"}, record.atts,
+        file.defput_var( species_names[s] + "-" + record.name, {"y", "x"}, record.atts,
                 {*g2d_out_ptr}, transferH);
     }
 }
