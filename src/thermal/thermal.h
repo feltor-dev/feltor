@@ -275,6 +275,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
             m_q, yp);
         m_perp.add_velocities_advection( s, m_aparST, m_dxaparST, m_dyaparST,
             m_q, yp);
+
         m_perp.add_densities_diffusion(  s, m_q, yp);
         m_perp.add_velocities_diffusion( s, m_q, yp);
 
@@ -285,30 +286,24 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         m_para.add_densities_diffusion( s, m_q, yp);
         m_para.add_velocities_diffusion( s, m_q, yp);
 
-        m_para.add_sheath_neumann_terms( s, m_q, yp);
-        m_para.add_sheath_velocity_terms( s, m_q, yp);
-
         // Add collisions
         m_collisions.add_coulomb_collisions( s, m_q, yp);
         m_collisions.add_lorentz_collisions( s, m_q, y, yp);
 
-        // And sources
-        m_sources.add_wall_terms( s, yp);
-        m_sources.add_source_terms( s, m_phi, m_q, y, yp );
-
-        // Add penalization
+        // Multiply penalization (must come before adding wall and sheath terms!)
+        // F*(1-chi_w-chi_s)
         for( unsigned u=0; u<6; u++)
-        {
             common::multiply_rhs_penalization( yp[u][s], m_p.penalize_wall,
-                m_sources.get_wall(), m_p.penalize_sheath, m_para.get_sheath()); // F*(1-chi_w-chi_s)
-            if( u == 3)
-                // Apply to U, not W
-                dg::blas1::pointwiseDot( -m_p.wall_rate, m_sources.get_wall(), m_q.at("ST U")[s],
-                    -m_para.get_sheath_rate(), m_para.get_sheath(), m_q.at("ST U")[s], 1., yp[u][s]);
-            else
-                dg::blas1::pointwiseDot( -m_p.wall_rate, m_sources.get_wall(), y[u][s],
-                    -m_para.get_sheath_rate(), m_para.get_sheath(), y[u][s], 1., yp[u][s]);
-        }
+                m_sources.get_wall(), m_p.penalize_sheath, m_para.get_sheath());
+
+        // -w_sh chi_sh ( y - y_sh)
+        // -w_w chi_w ( y - y_w)
+        m_para.add_sheath_neumann_terms( s, m_q, y, yp);
+        m_para.add_sheath_velocity_terms( s, m_q, yp);
+        m_sources.add_wall_terms( s, m_q, y, yp);
+
+        // And sources
+        m_sources.add_source_terms( s, m_phi, m_q, y, yp );
     }
 
     timer.toc();

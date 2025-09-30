@@ -82,6 +82,7 @@ struct ParaDynamics
     void add_sheath_neumann_terms(
         unsigned s,
         const std::map<std::string, std::vector<Container>>& q,
+        const std::array<std::vector<Container>,6>& y,
         std::array<std::vector<Container>,6>& yp);
     void add_sheath_velocity_terms(
         unsigned s,
@@ -455,6 +456,7 @@ template<class Grid, class IMatrix, class Matrix, class Container>
 void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_sheath_neumann_terms(
         unsigned s,
         const std::map<std::string, std::vector<Container>>& q,
+        const std::array<std::vector<Container>,6>& y,
         std::array<std::vector<Container>,6>& yp)
 {
     // add sheath boundary conditions
@@ -482,8 +484,9 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_sheath_neumann_terms(
             else if( i == 5)
                 dg::blas1::pointwiseDot( 1., q.at("ST N")[s], q.at("ST Tpara")[s], m_temp, 0., m_temp); // Q = NTU
 
-            dg::blas1::pointwiseDot( m_sheath_rate, m_temp, m_sheath, 1.,
-                    yp[i][s]);
+            dg::blas1::pointwiseDot( m_sheath_rate, m_temp,  m_sheath,
+                                    -m_sheath_rate, y[i][s], m_sheath,
+                                     1., yp[i][s]);
         }
     }
 }
@@ -531,6 +534,9 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_sheath_velocity_terms(
             dg::blas1::pointwiseDot( m_sheath_rate, m_sheath,
                 m_sheath_coordinate, m_temp, 1.,  yp[3][s]);
         }
+        // Apply to U, not W
+        dg::blas1::pointwiseDot( -m_sheath_rate, m_sheath, q.at("ST U")[s],
+            1., yp[3][s]);
     }
 }
 

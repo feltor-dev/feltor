@@ -13,7 +13,10 @@ struct Sources
 {
     Sources( const Geometry&, thermal::Parameters,
         dg::geo::TokamakMagneticField, dg::file::WrappedJsonValue);
-    void add_wall_terms( unsigned s,  std::array<std::vector<Container>,6>& yp);
+    void add_wall_terms( unsigned s,
+        const std::map<std::string, std::vector<Container>>& q,
+        const std::array<std::vector<Container>,6>& y,
+        std::array<std::vector<Container>,6>& yp) const;
     void add_source_terms(
         unsigned s,
         const Container& phi,
@@ -194,17 +197,32 @@ void Sources<Geometry, IMatrix, Matrix, Container>::add_source_terms(
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Sources<Geometry, IMatrix, Matrix, Container>::add_wall_terms(
     unsigned s,
-    std::array<std::vector<Container>,6>& yp)
+    const std::map<std::string, std::vector<Container>>& q,
+    const std::array<std::vector<Container>,6>& y,
+    std::array<std::vector<Container>,6>& yp) const
 {
     // add wall boundary conditions
     if( m_p.wall_rate != 0)
     {
-        dg::blas1::axpby( +m_p.wall_rate*m_p.nwall[s], m_wall, 1., yp[0][s] );
-        dg::blas1::axpby( +m_p.wall_rate*m_p.twall*m_p.nwall[s], m_wall, 1., yp[1][s] );
-        dg::blas1::axpby( +m_p.wall_rate*m_p.twall*m_p.nwall[s], m_wall, 1., yp[2][s] );
-        dg::blas1::axpby( +m_p.wall_rate*m_p.uwall, m_wall, 1., yp[3][s] );
-        dg::blas1::axpby( +m_p.wall_rate*m_p.qwall, m_wall, 1., yp[4][s] );
-        dg::blas1::axpby( +m_p.wall_rate*m_p.qwall, m_wall, 1., yp[5][s] );
+        std::array<double,6> wall_bc = {
+            m_p.nwall[s],
+            m_p.twall*m_p.nwall[s],
+            m_p.twall*m_p.nwall[s],
+            m_p.uwall,
+            m_p.qwall,
+            m_p.qwall
+        };
+        for( unsigned u=0; u<6; u++)
+        {
+            if( u == 3)
+                // Apply to U, not W
+                dg::blas1::pointwiseDot( -m_p.wall_rate, m_wall, q.at("ST U")[s],
+                    1., yp[u][s]);
+            else
+                dg::blas1::pointwiseDot( -m_p.wall_rate, m_wall, y[u][s],
+                    1., yp[u][s]);
+            dg::blas1::axpby( m_p.wall_rate*wall_bc[s], m_wall, 1., yp[u][s] );
+        }
     }
 }
 
