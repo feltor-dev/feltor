@@ -22,17 +22,19 @@ namespace thermal{
 // You can register you own diagnostics in one of three diagnostics lists (static 3d, dynamic 3d and
 // dynamic 2d) further down
 // which will then be applied during a simulation
-struct BPerp{
-    //b_perp
-    DG_DEVICE void operator()(double A,
-        double d0A, double d1A,
-        double& bp0, double& bp1, //bperp
-        double b_2,
-        double curvKappa0,  double curvKappa1
-        ){
-        bp0 = (b_2*d1A  + A*curvKappa0);
-        bp1 = (- b_2*d0A + A*curvKappa1);
+//
+struct Lorentz
+{
+    // TODO should we use this struct in collisions as well!? (no code duplication!)
+    Lorentz(double nu_ref, double zs, double mus, double pis) : nu_ref(nu_ref), zs(zs), mus(mus), pis(pis){}
+    DG_DEVICE double operator()(double ns, double pperps, double pparas)
+    {
+        double ts = pperps/ns;
+        double nu_ss = nu_ref*ns*zs*zs*zs*zs/sqrt(2*mus*ts)/ts;
+        return nu_ss/pis/3*(pparas-pperps);
     }
+    private:
+    double nu_ref, zs, mus, pis;
 };
 
 
@@ -830,14 +832,9 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
             double zs = v.p.z[s], mus = v.p.mu[s];
             double pis = v.p.pi[s];
             // spperp Lorentz
-            dg::blas1::copy( 0, result);
-            dg::blas1::subroutine( [nu_ref, zs, mus, pis] DG_DEVICE(
-                double & spperp, double ns, double pperps, double pparas)
-            {
-                double ts = pperps/ns;
-                double nu_ss = nu_ref*ns*zs*zs*zs*zs/sqrt(2*mus*ts)/ts;
-                spperp += nu_ss/pis/3*(pparas-pperps);
-            }, result, v.y0[0][s], v.y0[1][s], v.y0[2][s]);
+            dg::blas1::evaluate( result, dg::equals(),
+                Lorentz(nu_ref, zs, mus, pis),
+                v.y0[0][s], v.y0[1][s], v.y0[2][s]);
         }
     },
     {true, "lppara_tt", "Para pressure Lorentz collisions (Time average)", true,
@@ -846,14 +843,9 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
             double zs = v.p.z[s], mus = v.p.mu[s];
             double pis = v.p.pi[s];
             // sppara Lorentz
-            dg::blas1::copy( 0, result);
-            dg::blas1::subroutine( [nu_ref, zs, mus,pis] DG_DEVICE(
-                double & sppara, double ns, double pperps, double pparas)
-            {
-                double ts = pparas/ns;
-                double nu_ss = nu_ref*ns*zs*zs*zs*zs/sqrt(2*mus*ts)/ts;
-                sppara += -2.*nu_ss/pis/3*(pparas-pperps);
-            }, result, v.y0[0][s], v.y0[1][s], v.y0[2][s]);
+            dg::blas1::evaluate( result, dg::equals(),
+                Lorentz(2*nu_ref, zs, mus, pis),
+                v.y0[0][s], v.y0[2][s], v.y0[1][s]);
         }
     },
     //
