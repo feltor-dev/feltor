@@ -114,7 +114,7 @@ struct PerpDynamics
     {
         if( alpha == 0)
         {
-            dg::blas1::scal( result, beta)
+            dg::blas1::scal( result, beta);
             return;
         }
         // if beta == 0 result is allowed to alias temp0 or temp1
