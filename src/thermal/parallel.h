@@ -236,7 +236,7 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
     for( unsigned s=0; s<m_p.num_species; s++)
     {
         std::vector<std::string> in = { "Psi0", "Psi1", "Psi2", "Psi3"}; // -> "ST Psi0", ...
-        // 0 transform psi
+        // 1st transform psi
         for( unsigned u=0; u<in.size(); u++)
         {
             m_faHalf( dg::geo::zeroMinus, q.at(in[u])[s], m_tminus);
@@ -247,7 +247,7 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
                 dg::geo::ds_centered( m_faHalf, 1., m_tminus, m_tplus, 0., q.at("ST ds Psi0")[s]);
             if( u == 1)
                 dg::geo::ds_centered( m_faHalf, 1., m_tminus, m_tplus, 0., q.at("ST ds Psi1")[s]);
-            if( u==1)
+            if( u == 1)
             {
                 m_fa( dg::geo::einsMinus, q.at(in[u])[s], m_tminus);
                 m_fa( dg::geo::zeroForw,  q.at(in[u])[s], m_temp);
@@ -257,8 +257,11 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
                 dg::geo::ds_centered( m_fa, 1., m_tminus, m_tplus, 0., q.at("ds Psi1")[s]);
             }
         }
+    }
+    for( unsigned s=0; s<m_p.num_species; s++)
+    {
         // 2nd transform all 0, +1, -1
-        in = std::vector<std::string>{
+        std::vector<std::string> in = {
             "N", "Tperp", "Tpara", "ST U", "ST Uperp", "ST Upara"};
         for( unsigned u=0; u<in.size(); u++)
         {
@@ -268,6 +271,9 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
             update_parallel_bc_2nd( m_fa, q.at(in[u]+" -1")[s],
                 q.at(in[u]+" 0")[s], q.at(in[u]+" +1")[s], m_p.bcx, 0.);
         }
+    }
+    for( unsigned s=0; s<m_p.num_species; s++)
+    {
         // 3rd transform velocities
         std::vector<const Container*> inp = {
             &q.at("ST U")[s], &y[4][s], &y[5][s]}; // ST Qperp, ST Qpara
@@ -277,19 +283,14 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
             m_faHalf( dg::geo::einsMinus, *inp[u], q.at(out[u]+" -1/2")[s]);
             m_faHalf( dg::geo::zeroPlus,  *inp[u], q.at(out[u]+" +1/2")[s]);
             update_parallel_bc_1st( q.at(out[u]+" -1/2")[s], q.at(out[u]+" +1/2")[s], m_p.bcx, 0.);
-            if( u == 0)
-                dg::blas1::axpby( 0.5, q.at(out[u]+" -1/2")[s], 0.5, q.at(out[u]+" +1/2")[s], q.at("U")[s]);
-            if( u == 1)
-            {
-                dg::blas1::axpby( 0.5, q.at(out[u]+" -1/2")[s], 0.5, q.at(out[u]+" +1/2")[s], m_temp); // Qperp
-                dg::blas1::pointwiseDivide( m_temp, y[1][s], q.at("Uperp")[s]); // Qperp/Pperp
-            }
-            if( u == 2)
-            {
-                dg::blas1::axpby( 0.5, q.at(out[u]+" -1/2")[s], 0.5, q.at(out[u]+" +1/2")[s], m_temp); // Qpara
-                dg::blas1::pointwiseDivide( m_temp, y[2][s], q.at("Upara")[s]); // Qpara/Ppara
-            }
         }
+        dg::blas1::axpby( 0.5, q.at("U -1/2")[s], 0.5, q.at("U +1/2")[s], q.at("U")[s]);
+
+        dg::blas1::axpby( 0.5, q.at("Qperp -1/2")[s], 0.5, q.at("Qperp +1/2")[s], m_temp); // Qperp
+        dg::blas1::pointwiseDivide( m_temp, y[1][s], q.at("Uperp")[s]); // Qperp/Pperp
+
+        dg::blas1::axpby( 0.5, q.at("Qpara -1/2")[s], 0.5, q.at("Qpara +1/2")[s], m_temp); // Qpara
+        dg::blas1::pointwiseDivide( m_temp, y[2][s], q.at("Upara")[s]); // Qpara/Ppara
     }
 
 }

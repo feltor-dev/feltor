@@ -17,9 +17,8 @@ namespace dg{
  * @ingroup matrixoperators
  *
  * where \f$ \chi\f$ is a vector and \f$\alpha\f$ a scalar and \f$F\f$ is an operator.
- * @attention If \f$ F\f$ is the \c Elliptic operator then the Laplacian in
- * this formula becomes positive as opposed to the negative sign in the \c Elliptic
- * operator
+ * @attention Beware the sign: if \f$ F\f$ is the \c Elliptic operator then
+ * \f$ F = -\Delta\f$ and thus \f$ (\chi + \alpha \Delta)\f$ is computed
  *
  * Can be used by the \c dg::PCG class. The following example shows how the class can be used to act as a \c Helmholtz2 operator:
  @snippet helmholtzg2_b.cpp doxygen

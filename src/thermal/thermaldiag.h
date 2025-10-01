@@ -464,9 +464,15 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     {true, "gammaN", "Adjoint Gamma N", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             if( s == 0)
+            {
                 dg::blas1::copy( v.f.get( "N", 0), result);
-            else
-                dg::blas1::copy(v.f.solvers().gammaN(s), result);
+                return;
+            }
+            // gammaN is gammaNbar / omega_s
+            dg::blas1::pointwiseDivide( 2.*v.p.z[s]*v.p.z[s]/v.p.mu[s],
+                v.f.solvers().bsquare(), v.f.get("Tperp", s), 0., result);
+            dg::blas1::pointwiseDot( result, v.f.solvers().gammaNbar(s),
+                result);
         }
     },
     /// -----------------Miscellaneous additions --------------------//

@@ -50,10 +50,12 @@ struct Solvers
     //volume with dG weights
     const Container& vol3d() const { return m_laplaceM.weights();}
     const Container& weights() const { return m_laplaceM.weights();}
+
+    const Container& bsquare() const {return m_B2;}
     // s > 0
-    const Container& gammaN( unsigned s) const {
+    const Container& gammaNbar( unsigned s) const {
         assert( s > 0);
-       	return m_old_gammaN[s-1].head();
+        return m_old_gammaNbar[s-1].head();
     }
     void compute_lapMperpP( const Container& phi, Container& lapMphi) const {
         dg::blas2::symv( m_laplaceM, phi, lapMphi);
@@ -74,7 +76,7 @@ struct Solvers
     dg::TriDiagonal<thrust::host_vector<double>> m_T;
 
     dg::Extrapolation<Container> m_old_phi, m_old_aparST;
-    std::vector<dg::Extrapolation<Container>> m_old_gammaN;
+    std::vector<dg::Extrapolation<Container>> m_old_gammaNbar;
 };
 
 template<class Geometry, class Matrix, class Container>
@@ -84,7 +86,7 @@ Solvers<Geometry, Matrix, Container>::Solvers( const Geometry& g,
     ): m_p(p),
     m_multigrid( g, p.stages),
     m_old_phi( 2, dg::evaluate( dg::zero, g)), m_old_aparST( m_old_phi),
-    m_old_gammaN( p.num_species - 1, m_old_phi)
+    m_old_gammaNbar( p.num_species - 1, m_old_phi)
 {
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_uE2 = m_rhoinv2 = m_temp2 = m_temp1 = m_temp0;
@@ -135,10 +137,9 @@ void Solvers<Geometry, Matrix, Container>::compute_phi(
         m_multi_pol[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
-    dg::blas1::copy( 0, m_temp0);
     double min = 0.;
     // Electrons
-    dg::blas1::axpby( m_p.z[0], density[0], 1., m_temp0);
+    dg::blas1::axpby( m_p.z[0], density[0], 0., m_temp0);
     for( unsigned s = 1; s<m_p.num_species; s++)
     {
         // compute 2/rho_s^2
@@ -150,11 +151,11 @@ void Solvers<Geometry, Matrix, Container>::compute_phi(
             m_multi_invgammaN[u].set_chi( m_multi_chi[u]);
 
         //compute Gamma^dagger N_s
-        m_old_gammaN[s-1].extrapolate( time, m_temp2);
+        m_old_gammaNbar[s-1].extrapolate( time, m_temp2);
         m_multigrid.set_benchmark( true, "Gamma N"+m_p.name[s]+"     ");
         std::vector<unsigned> numberG = m_multigrid.solve(
             m_multi_invgammaN, m_temp2, density[s], m_p.eps_gamma);
-        m_old_gammaN[s-1].update( time, m_temp2);
+        m_old_gammaNbar[s-1].update( time, m_temp2);
 
         // gamma *2 / rho^2
         dg::blas1::pointwiseDot( m_temp2, m_rhoinv2, m_temp2);
@@ -163,11 +164,10 @@ void Solvers<Geometry, Matrix, Container>::compute_phi(
     }
     // Add penalization method
     common::multiply_rhs_penalization( m_temp0, penalize_wall, wall, penalize_sheath, sheath );
+
     //----------Invert polarisation----------------------------//
     m_old_phi.extrapolate( time, phi);
     m_multigrid.set_benchmark( true, "Polarisation");
-
-
     std::vector<unsigned> number = m_multigrid.solve(
         m_multi_pol, phi, m_temp0, m_p.eps_pol);
     m_old_phi.update( time, phi);
@@ -175,8 +175,11 @@ void Solvers<Geometry, Matrix, Container>::compute_phi(
     // compute Lanczos tridiagonalisation of Phi
     dg::Timer t;
     t.tic();
-    dg::mat::GyrolagK<double> func(0, -1.);
-    auto unary_func = dg::mat::make_FuncEigen_Te1( [&](double x) {return func( x, 1./min);});
+    // We want the Lanczos decomposition to converge in the maximum error:
+    // - 1/min is the max of omega_s = rho_s^2/2 (i.e. largest gyro-radius)
+    // - the 3rd GyroLagK is presumably the most difficult to compute
+    dg::mat::GyrolagK<double> func(3, -1.);
+    auto unary_func = dg::mat::make_FuncEigen_Te1( [&](double x) {return func( 1./min, x);});
     m_T = m_prod.lanczos().tridiag( unary_func, m_laplaceM, phi, m_vol, m_p.eps_pol[0], 1.,
                 "universal", 1.0, 1);
     t.toc();
