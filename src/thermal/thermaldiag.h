@@ -622,7 +622,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
             dg::blas1::axpbypgz( 1., v.f.get("dy Psi0", s), 1., v.f.get("dy Psi1", s), 1., result);
 
             // N ExB_x = - Pperp (E_0+E_1)^y bhat_2
-            dg::blas1::pointwiseDot( -1., y0[1][s], result, v.f.perp().bhatgB(), 0., result);
+            dg::blas1::pointwiseDot( -1., v.y0[1][s], result, v.f.perp().bhatgB(), 0., result);
         }
     },
     {true, "jpperpEy_tt", "Radial perp pressure flux: y-component of ExB contribution (Time average)", true,
@@ -634,7 +634,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
             dg::blas1::axpbypgz( 1., v.f.get("dx Psi0", s), 1., v.f.get("dx Psi1", s), 1., result);
 
             // N ExB_y = Pperp (E_0+E_1)^x bhat_2
-            dg::blas1::pointwiseDot( +1., y0[1][s], result, v.f.perp().bhatgB(), 0., result);
+            dg::blas1::pointwiseDot( +1., v.y0[1][s], result, v.f.perp().bhatgB(), 0., result);
         }
     },
     //
@@ -647,7 +647,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
                                     -1., v.f.get("Psi1", s), result, 0., result);
 
             // N ExB_x = - N E_0^y bhat_2
-            dg::blas1::pointwiseDot( -1., y0[2][s], result, v.f.perp().bhatgB(), 0., result);
+            dg::blas1::pointwiseDot( -1., v.y0[2][s], result, v.f.perp().bhatgB(), 0., result);
         }
     },
     {true, "jpparaEy_tt", "Radial para pressure flux: y-component of ExB contribution (Time average)", true,
@@ -659,7 +659,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
                                     -1., v.f.get("Psi1", s), result, 0., result);
 
             // N ExB_y = N E_0^x bhat_2
-            dg::blas1::pointwiseDot( +1., y0[2][s], result, v.f.perp().bhatgB(), 0., result);
+            dg::blas1::pointwiseDot( +1., v.y0[2][s], result, v.f.perp().bhatgB(), 0., result);
         }
     },
     // elements of curvature fluxes
