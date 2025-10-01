@@ -112,20 +112,20 @@ struct PerpDynamics
     void compute_perp_laplace( double alpha, const Container& in, unsigned order,
             Container& temp0, Container& temp1, double beta, Container& result ) const
     {
-        // if beta == 0 result is allowed to alias temp0 or temp1
-        if( alpha > 0)
+        if( alpha == 0)
         {
-            dg::blas1::copy( in, temp0);
-            for( unsigned s=0; s<order; s++)
-            {
-                using std::swap;
-                swap( temp0, temp1);
-                dg::blas2::symv( 1., m_lapperp, temp1, 0., temp0);
-            }
-            dg::blas1::axpby( alpha, temp0, beta, result);
+            dg::blas1::scal( result, beta)
+            return;
         }
-        else
-            dg::blas1::scal( result, beta);
+        // if beta == 0 result is allowed to alias temp0 or temp1
+        dg::blas1::copy( in, temp0);
+        for( unsigned s=0; s<order; s++)
+        {
+            using std::swap;
+            swap( temp0, temp1);
+            dg::blas2::symv( 1., m_lapperpM, temp1, 0., temp0);
+        }
+        dg::blas1::axpby( alpha, temp0, beta, result);
     }
     const std::array<Container, 2> & curvNabla () const {
         return m_curvNabla;
@@ -172,7 +172,7 @@ struct PerpDynamics
 
     Matrix m_dxF, m_dxB, m_dxC, m_dx_P, m_dx_A;
     Matrix m_dyF, m_dyB, m_dyC, m_dy_P, m_dy_A;
-    dg::Elliptic2d< Geometry, Matrix, Container> m_lapperp;
+    dg::Elliptic2d< Geometry, Matrix, Container> m_lapperpM;
 
     Container m_temp0, m_temp1, m_temp2, m_temp3;
 
@@ -254,7 +254,7 @@ PerpDynamics<Grid, IMatrix, Matrix, Container>::PerpDynamics( const Grid& g,
     dg::blas1::pointwiseDot( m_gradLnB[1], m_temp0, m_gradLnB[1]);
 
     // Diffusion operators
-    m_lapperp.construct ( g, p.bcx, p.bcy, p.diff_dir);
+    m_lapperpM.construct ( g, p.bcx, p.bcy, p.diff_dir);
 }
 
 template<class Grid, class IMatrix, class Matrix, class Container>
