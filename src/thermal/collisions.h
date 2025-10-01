@@ -6,7 +6,7 @@
 
 namespace thermal
 {
-template< class Geometry, class IMatrix, class Matrix, class Container >
+template< class Geometry, class Matrix, class Container >
 struct Collisions
 {
     Collisions( const Geometry& g, thermal::Parameters p,
@@ -14,6 +14,8 @@ struct Collisions
     {
         dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
         m_temp1 = m_temp0;
+        for( int i=0; i<3; i++)
+            m_cc[i].resize( m_p.num_species, m_temp0);
         dg::assign(  dg::pullback(dg::geo::Bmodule(mag), g), m_B2);
         dg::blas1::pointwiseDot( m_B2, m_B2, m_B2);
         m_lapperpM.construct ( g, p.bcx, p.bcy,  p.diff_dir);
@@ -29,15 +31,19 @@ struct Collisions
         const std::map<std::string, std::vector<Container>>& q,
         const std::array<std::vector<Container>,6>& y,
         std::array<std::vector<Container>,6>& yp);
+    const Container& get_coulomb( unsigned u, unsigned s) const{
+        return m_cc[u][s];
+    }
     private:
     const thermal::Parameters m_p;
     const dg::file::WrappedJsonValue m_js;
     dg::Elliptic2d< Geometry, Matrix, Container> m_lapperpM;
     Container m_temp0, m_temp1, m_B2;
+    std::array<std::vector<Container>,3> m_cc; // Coulomb collision terms for all species
     double m_R0;
 };
-template<class Grid, class IMatrix, class Matrix, class Container>
-void Collisions<Grid, IMatrix, Matrix, Container>::add_coulomb_collisions(
+template<class Grid, class Matrix, class Container>
+void Collisions<Grid, Matrix, Container>::add_coulomb_collisions(
         unsigned s,
         const std::map<std::string, std::vector<Container>>& q,
         std::array<std::vector<Container>,6>& yp)
@@ -45,7 +51,7 @@ void Collisions<Grid, IMatrix, Matrix, Container>::add_coulomb_collisions(
     double nu_ref = m_p.nu_ref;
     double zs = m_p.z[s], mus = m_p.mu[s];
     // CPperp
-    dg::blas1::copy( 0., m_temp0);
+    dg::blas1::copy( 0., m_cc[1][s]);
     for( unsigned k=0; k<m_p.num_species; k++)
         if( s != k)
         {
@@ -56,18 +62,18 @@ void Collisions<Grid, IMatrix, Matrix, Container>::add_coulomb_collisions(
             {
                 spperp += -2*nu_ref*ns*nk*zs*zs*zk*zk/mus/muk/(
                     ts/mus + tk/muk)/sqrt( ts/mus + tk/muk)*(ts-tk);
-            }, m_temp0, q.at("N")[s], q.at("N")[k], q.at("Tperp")[s], q.at("Tperp")[k]);
+            }, m_cc[1][s], q.at("N")[s], q.at("N")[k], q.at("Tperp")[s], q.at("Tperp")[k]);
         }
-    dg::blas1::axpby( 1., m_temp0, 1., yp[1][s]);
+    dg::blas1::axpby( 1., m_cc[1][s], 1., yp[1][s]);
 
 
     // CN
-    dg::blas1::pointwiseDivide( m_p.mu[s]/2./m_p.z[s]/m_p.z[s], m_temp0, m_B2, 0., m_temp0);
-    dg::blas2::symv( m_lapperpM, m_temp0, m_temp1);
-    dg::blas1::axpby( 1., m_temp1, 1., yp[0][s]);
+    dg::blas1::pointwiseDivide( m_p.mu[s]/2./m_p.z[s]/m_p.z[s], m_cc[1][s], m_B2, 0., m_temp0);
+    dg::blas2::symv( m_lapperpM, m_temp0, m_cc[0][s]);
+    dg::blas1::axpby( 1., m_cc[0][s], 1., yp[0][s]);
 
     // CPpara
-    dg::blas1::pointwiseDot( m_p.mu[s],  q.at("U")[s], q.at("U")[s], m_temp1, 0., m_temp0); // mu U^2 S_N
+    dg::blas1::pointwiseDot( m_p.mu[s],  q.at("U")[s], q.at("U")[s], m_cc[0][s], 0., m_cc[2][s]); // mu U^2 S_N
     for( unsigned k=0; k<m_p.num_species; k++)
         if( s != k)
         {
@@ -78,9 +84,9 @@ void Collisions<Grid, IMatrix, Matrix, Container>::add_coulomb_collisions(
             {
                 sppara += -2*nu_ref*ns*nk*zs*zs*zk*zk/mus/muk/(
                     ts/mus + tk/muk)/sqrt( ts/mus + tk/muk)*((ts-tk) - 0.51*muk*(us-uk)*(us-uk));
-            }, m_temp0, q.at("N")[s], q.at("N")[k], q.at("Tpara")[s], q.at("Tpara")[k], q.at("U")[s], q.at("U")[k]);
+            }, m_cc[2][s], q.at("N")[s], q.at("N")[k], q.at("Tpara")[s], q.at("Tpara")[k], q.at("U")[s], q.at("U")[k]);
         }
-    dg::blas1::axpby( 1., m_temp0, 1., yp[2][s]);
+    dg::blas1::axpby( 1., m_cc[2][s], 1., yp[2][s]);
 
 
     // CPperp ST
@@ -118,8 +124,8 @@ void Collisions<Grid, IMatrix, Matrix, Container>::add_coulomb_collisions(
     dg::blas1::axpby( 1., m_temp0, 1., yp[3][s]);
 }
 
-template<class Grid, class IMatrix, class Matrix, class Container>
-void Collisions<Grid, IMatrix, Matrix, Container>::add_lorentz_collisions(
+template<class Grid, class Matrix, class Container>
+void Collisions<Grid, Matrix, Container>::add_lorentz_collisions(
         unsigned s,
         const std::map<std::string, std::vector<Container>>& q,
         const std::array<std::vector<Container>,6>& y,

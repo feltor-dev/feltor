@@ -341,9 +341,13 @@ int main( int argc, char* argv[])
                 diag2d.buffer( time, var);
 
                 DG_RANK0 std::cout << "\tTime "<<time<<"\n";
-                //double max_ue = dg::blas1::reduce(
-                //    thermal.velocity(0), 0., dg::AbsMax<double>() );
-                //DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\n";
+                double max_ue = dg::blas1::reduce(
+                    thermal.get("U", 0), 0., dg::AbsMax<double>() );
+                double min_tparae = dg::blas1::reduce(
+                    thermal.get("Tpara", 0), 3e100, thrust::minimum<double>() );
+                double min_tparai = dg::blas1::reduce(
+                    thermal.get("Tpara", 1), 3e100, thrust::minimum<double>() );
+                DG_RANK0 std::cout << "\tMaximum ue "<<max_ue<<"\tMin Tpara e|i "<<min_tparae<<" | "<<min_tparai<<"\n";
                 if( adaptive )
                 {
                     DG_RANK0 std::cout << "\tdt "<<odeint->get_dt()<<"\n";

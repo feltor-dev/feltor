@@ -133,6 +133,9 @@ struct PerpDynamics
     const std::array<Container, 2> & curvKappa () const {
         return m_curvKappa;
     }
+    const std::array<Container, 2> & gradLnB () const {
+        return m_gradLnB;
+    }
     const Container& divCurvKappa() const {
         return m_divCurvKappa;
     }
@@ -164,6 +167,8 @@ struct PerpDynamics
         dg::blas2::symv( m_dyC, f, temp1);
         dg::blas1::pointwiseDot( 1., contra_vec[1], temp1, 1., result);
     }
+    const Matrix& dxC() const { return m_dxC;}
+    const Matrix& dyC() const { return m_dyC;}
     private:
     //these should be considered const
     std::array<Container,2> m_curvNabla, m_curvKappa, m_gradLnB;
@@ -426,7 +431,7 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
         dtPperp -= N*Tperp/z*(Tpara + 2*mu*U*Uperp +  mu*U*U - 2*Tperp)*divCurvKappa;
         dtPpara -= N*Tpara/z*(3*Tpara + 2*mu*U*Upara +  mu*U*U - Tperp)*divCurvKappa;
 
-        dtN     -= N/z*( curvKappaX*(dxTpara + 2*mu*U*dxU) 
+        dtN     -= N/z*( curvKappaX*(dxTpara + 2*mu*U*dxU)
                        + curvKappaY*(dyTpara + 2*mu*U*dyU));
         dtPperp -= N*Tperp/z*( curvKappaX*(dxTpara + 2*mu*U*dxUperp + 2*mu*(U+Uperp)*dxU)
                              + curvKappaY*(dyTpara + 2*mu*U*dyUperp + 2*mu*(U+Uperp)*dyU));

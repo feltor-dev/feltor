@@ -415,6 +415,16 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
             dg::blas1::copy(v.f.get("Tpara",s), result);
         }
     },
+    {true, "pperp", "perpendicular pressure", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.y0[1][s], result);
+        }
+    },
+    {true, "ppara", "parallel pressure", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy(v.y0[2][s], result);
+        }
+    },
     {true, "u", "parallel velocity", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             dg::blas1::copy(v.f.get("U",s), result);
@@ -429,6 +439,16 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     {true, "upara", "parallel heat flux velocity Qpara/Ppara", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             dg::blas1::copy(v.f.get("Upara",s), result);
+        }
+    },
+    {true, "qperp", "perpendicular heat flux", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot(v.y0[1][s], v.f.get("Uperp",s), result);
+        }
+    },
+    {true, "qpara", "parallel heat flux", false,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot(v.y0[2][s], v.f.get("Upara",s), result);
         }
     },
     {false, "phi", "electric potential", false,
@@ -563,94 +583,314 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     }
 };
 
-// TODO Fix conservation theorems and Probes
-/*
-std::vector<Record> MassConsDiagnostics2d_list = { // 26
+std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     /// ------------------ Density terms ------------------------//
-    ////////////////// electron particle flux /////////////////////
-    {true, "jsnE_tt", "Radial particle flux: ExB contribution (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            // ExB Dot GradPsi
-            routines::jacobian( v.f.bhatgB(), v.f.gradP(0), v.gradPsip, result);
-            dg::blas1::pointwiseDot( result, v.f.density(0), result);
+    ////////////////// particle fluxes /////////////////////
+    {true, "jnEx_tt", "Radial particle flux: x-component of ExB contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // E_0^y
+            dg::blas1::pointwiseDivide( v.f.get("dy Tperp", s), v.f.get("Tperp", s), result);
+            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[1], result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dy Psi0", s),
+                                    -1., v.f.get("Psi1", s), result, 0., result);
+
+            // N ExB_x = - N E_0^y bhat_2
+            dg::blas1::pointwiseDot( -1., v.f.get("N", s), result, v.f.perp().bhatgB(), 0., result);
         }
     },
-    {true, "divnE_tt", "Divergence of ExB particle flux (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.f.curv(), v.f.gradP(0), result);
-            dg::blas1::pointwiseDot( result, v.f.density(0), result);
-            routines::jacobian( 1., v.f.bhatgB(), v.f.gradP(0), v.f.gradN(0), 1., result);
+    {true, "jnEy_tt", "Radial particle flux: y-component of ExB contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // E_0^x
+            dg::blas1::pointwiseDivide( v.f.get("dx Tperp", s), v.f.get("Tperp", s), result);
+            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[0], result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dx Psi0", s),
+                                    -1., v.f.get("Psi1", s), result, 0., result);
+
+            // N ExB_y = N E_0^x bhat_2
+            dg::blas1::pointwiseDot( +1., v.f.get("N", s), result, v.f.perp().bhatgB(), 0., result);
         }
     },
-    {true, "jscurvn_tt", "Radial particle flux: curvature contribution (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            routines::dot( v.f.curv(), v.gradPsip, result);
-            dg::blas1::pointwiseDot( v.p.tau[0], v.f.density(0), result, 0., result);
+    //
+    {true, "jpperpEx_tt", "Radial perp pressure flux: x-component of ExB contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // (E_0+E_1)^y
+            dg::blas1::pointwiseDivide( v.f.get("dy Tperp", s), v.f.get("Tperp", s), result);
+            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[1], result);
+            dg::blas1::pointwiseDot( -1., v.f.get("Psi2", s), result, 0., result);
+            dg::blas1::axpbypgz( 1., v.f.get("dy Psi0", s), 1., v.f.get("dy Psi1", s), 1., result);
+
+            // N ExB_x = - Pperp (E_0+E_1)^y bhat_2
+            dg::blas1::pointwiseDot( -1., v.f.get("Pperp", s), result, v.f.perp().bhatgB(), 0., result);
         }
     },
-    {true, "divcurvn_tt", "Divergence of curvature term (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            routines::dot( v.p.tau[0], v.f.curv(), v.f.gradN(0), 0., result);
+    {true, "jpperpEy_tt", "Radial perp pressure flux: y-component of ExB contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // (E_0+E_1)^x
+            dg::blas1::pointwiseDivide( v.f.get("dx Tperp", s), v.f.get("Tperp", s), result);
+            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[0], result);
+            dg::blas1::pointwiseDot( -1., v.f.get("Psi2", s), result, 0., result);
+            dg::blas1::axpbypgz( 1., v.f.get("dx Psi0", s), 1., v.f.get("dx Psi1", s), 1., result);
+
+            // N ExB_y = Pperp (E_0+E_1)^x bhat_2
+            dg::blas1::pointwiseDot( +1., v.f.get("Pperp", s), result, v.f.perp().bhatgB(), 0., result);
         }
     },
-    {true, "jscurvkappan_tt", "Radial particle flux: curvature contribution (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::pointwiseDot( v.p.mu[0], v.f.density(0), v.f.velocity(0),
-                    v.f.velocity(0), 0., result);
-            routines::dot( v.f.curvKappa(), v.gradPsip, v.tmp[0]);
-            dg::blas1::pointwiseDot( v.tmp[0], result, result);
+    //
+    {true, "jpparaEx_tt", "Radial para pressure flux: x-component of ExB contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // E_0^y
+            dg::blas1::pointwiseDivide( v.f.get("dy Tperp", s), v.f.get("Tperp", s), result);
+            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[1], result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dy Psi0", s),
+                                    -1., v.f.get("Psi1", s), result, 0., result);
+
+            // N ExB_x = - N E_0^y bhat_2
+            dg::blas1::pointwiseDot( -1., v.f.get("Ppara", s), result, v.f.perp().bhatgB(), 0., result);
         }
     },
-    {true, "divcurvkappan_tt", "Divergence of curvature term (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            dg::blas1::pointwiseDot( v.p.mu[0], v.f.density(0), v.f.velocity(0),
-                    v.f.velocity(0), 0., v.tmp3[0]);
-            v.f.centered_div( v.tmp3[0], v.f.curvKappa(), v.tmp2[0], result);
+    {true, "jpparaEy_tt", "Radial para pressure flux: y-component of ExB contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // E_0^x
+            dg::blas1::pointwiseDivide( v.f.get("dx Tperp", s), v.f.get("Tperp", s), result);
+            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[0], result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dx Psi0", s),
+                                    -1., v.f.get("Psi1", s), result, 0., result);
+
+            // N ExB_y = N E_0^x bhat_2
+            dg::blas1::pointwiseDot( +1., v.f.get("Ppara", s), result, v.f.perp().bhatgB(), 0., result);
         }
     },
-    {true, "jsnA_tt", "Radial particle flux: magnetic contribution (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_bperp(v.tmp);
-            routines::dot( v.tmp, v.gradPsip, result);
-            dg::blas1::pointwiseDot( 1., v.f.density(0), v.f.velocity(0), result, 0., result);
+    // elements of curvature fluxes
+    {true, "pperp_tt", "Perpendicular pressure (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot( v.f.get( "N", s), v.f.get("Tperp", s), result);
         }
     },
-    {true, "divnA_tt", "Divergence of magnetic flutter particle flux (Time average)", true,
-        []( dg::x::DVec& result, Variables& v) {
-            dg::blas1::pointwiseDot( v.f.density(0), v.f.velocity(0), v.tmp3[0]);
-            v.f.compute_bperp(v.tmp);
-            v.f.centered_div( v.tmp3[0], v.tmp, v.tmp2[0], result);
+    {true, "pperptperp_tt", "Perpendicular pressure times perp temperature (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("Tperp", s), v.f.get("Tperp", s), 0., result);
         }
     },
-    {true, "jsdia_tt", "Radial particle flux: diamagnetic contribution (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            // u_D Dot GradPsi
-            routines::jacobian( v.p.tau[0], v.f.bhatgB(), v.f.gradN(0), v.gradPsip, 0., result);
+    {true, "pparatperp_tt", "Parallel pressure times perp temperature (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("Tpara", s), v.f.get("Tperp", s), 0., result);
         }
     },
-    {true, "lnperp_tt", "Perpendicular diffusion (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            v.f.compute_perp_diffusiveN( 1., v.f.density(0), v.tmp[0],
-                    v.tmp[1], 0., result);
+    {true, "ppara_tt", "Parallel pressure (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot( v.f.get( "N", s), v.f.get("Tpara", s), result);
         }
     },
-    {true, "lnparallel_tt", "Parallel diffusion (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::axpby( v.p.nu_parallel_n, v.f.lapParN(0), 0., result);
+    {true, "nu2_tt", "2x Parallel kinetic energy (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("U", s), v.f.get("U", s), 0., result);
         }
     },
+    {true, "nuuperp_tt", "n u u_perp correlation (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("U", s), v.f.get("Uperp", s), 0., result);
+        }
+    },
+    {true, "nuupara_tt", "n u u_para correlation (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("U", s), v.f.get("Upara", s), 0., result);
+        }
+    },
+
+    {true, "jnAx_tt", "Radial particle flux: x-component of magnetic contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // bpX = A * curvKappaX + (   dyA*b_2);
+            dg::blas1::pointwiseDot( 1., v.f.perp().bhatgB(), v.f.dyapar(),
+                                     1., v.f.apar(), v.f.perp().curvKappa()[0],
+                                     0., result);
+            dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), result, 0., result);
+        }
+    },
+    {true, "jnAy_tt", "Radial particle flux: y-component of magnetic contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // bpY = A * curvKappaY + ( - dxA*b_2);
+            dg::blas1::pointwiseDot(-1., v.f.perp().bhatgB(), v.f.dxapar(),
+                                     1., v.f.apar(), v.f.perp().curvKappa()[1],
+                                     0., result);
+            dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), result, 0., result);
+        }
+    },
+    {true, "jpperpAx_tt", "Radial perp pressure flux: x-component of magnetic contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // bpX = A * curvKappaX + (   dyA*b_2);
+            dg::blas1::pointwiseDot( 1., v.f.perp().bhatgB(), v.f.dyapar(),
+                                     1., v.f.apar(), v.f.perp().curvKappa()[0],
+                                     0., v.tmp[0]);
+            dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("U", s), v.tmp[0], 0., result);
+            dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("Uperp", s), v.tmp[0], 1., result);
+        }
+    },
+    {true, "jpperpAy_tt", "Radial perp pressure flux: y-component of magnetic contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // bpY = A * curvKappaY + ( - dxA*b_2);
+            dg::blas1::pointwiseDot(-1., v.f.perp().bhatgB(), v.f.dxapar(),
+                                     1., v.f.apar(), v.f.perp().curvKappa()[1],
+                                     0., result);
+            dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("U", s), v.tmp[0], 0., result);
+            dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("Uperp", s), v.tmp[0], 1., result);
+        }
+    },
+    {true, "jpparaAx_tt", "Radial para pressure flux: x-component of magnetic contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // bpX = A * curvKappaX + (   dyA*b_2);
+            dg::blas1::pointwiseDot( 1., v.f.perp().bhatgB(), v.f.dyapar(),
+                                     1., v.f.apar(), v.f.perp().curvKappa()[0],
+                                     0., v.tmp[0]);
+            dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("U", s), v.tmp[0], 0., result);
+            dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("Upara", s), v.tmp[0], 1., result);
+        }
+    },
+    {true, "jpparaAy_tt", "Radial para pressure flux: y-component of magnetic contribution (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // bpY = A * curvKappaY + ( - dxA*b_2);
+            dg::blas1::pointwiseDot(-1., v.f.perp().bhatgB(), v.f.dxapar(),
+                                     1., v.f.apar(), v.f.perp().curvKappa()[1],
+                                     0., result);
+            dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("U", s), v.tmp[0], 0., result);
+            dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("Upara", s), v.tmp[0], 1., result);
+        }
+    },
+    // TODO output F_1 and F_2 and parallel Ppara terms!
+    //
+    {true, "dnperp_tt", "Perpendicular density diffusion (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            v.f.perp().compute_perp_laplace( -v.p.nu_perp[0], v.f.get( "N", s), v.p.diff_order,
+                v.tmp[0], v.tmp[1], 0., result);
+        }
+    },
+    {true, "dpperpperp_tt", "Perpendicular perp pressure diffusion (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            v.f.perp().compute_perp_laplace( -v.p.nu_perp[1], v.f.get( "Tperp", s), v.p.diff_order,
+                v.tmp[0], v.tmp[1], 0., result);
+        }
+    },
+    {true, "dpparaperp_tt", "Perpendicular para pressure diffusion (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            v.f.perp().compute_perp_laplace( -v.p.nu_perp[2], v.f.get( "Tpara", s), v.p.diff_order,
+                v.tmp[0], v.tmp[1], 0., result);
+            // Ppara interfaces with U
+            v.f.perp().compute_perp_laplace( v.p.nu_perp[3], v.f.get("U",s), v.p.diff_order-1,
+                v.tmp[0], v.tmp[1], 0., v.tmp[0]);
+
+            dg::blas2::symv( v.f.perp().dxC(), v.tmp[0], v.tmp[1]);
+            dg::blas2::symv( v.f.perp().dxC(), v.f.get("U", s), v.tmp2[0]);
+            dg::blas1::pointwiseDot( 2.*v.p.mu[s], v.tmp[1], v.tmp2[0], 1., result);
+
+            dg::blas2::symv( v.f.perp().dyC(), v.tmp[0], v.tmp[1]);
+            dg::blas2::symv( v.f.perp().dyC(), v.f.get("U", s), v.tmp2[0]);
+            dg::blas1::pointwiseDot( 2.*v.p.mu[s], v.tmp[1], v.tmp2[0], 1., result);
+        }
+    },
+    {true, "dnparallel_tt", "Parallel density diffusion (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::geo::dssd_centered( v.f.para().fieldaligned(), v.p.nu_parallel[0],
+                v.f.get("N -1", s), v.f.get("N 0", s), v.f.get("N +1", s), 0., result);
+        }
+    },
+    {true, "dpperpparallel_tt", "Parallel perp pressure diffusion (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::geo::dssd_centered( v.f.para().fieldaligned(), v.p.nu_parallel[0],
+                v.f.get("Tperp -1", s), v.f.get("Tperp 0", s), v.f.get("Tperp +1", s), 0., result);
+        }
+    },
+    {true, "dpparaparallel_tt", "Parallel para pressure diffusion (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::geo::dssd_centered( v.f.para().fieldaligned(), v.p.nu_parallel[0],
+                v.f.get("Tpara -1", s), v.f.get("Tpara 0", s), v.f.get("Tpara +1",s), 0., result);
+            // Add para temp generation through friction
+            dg::geo::ds_centered( v.f.para().fieldalignedHalf(), 1.,
+                v.f.get("U -1/2",s), v.f.get("U +1/2", s), 0., v.tmp[0]); //dsU
+            dg::blas1::pointwiseDot( +2.*v.p.mu[s]*v.p.nu_parallel[3], v.tmp[0], v.tmp[0], 1., result);
+        }
+    },
+    //
+    {true, "cn_tt", "Density Coulomb collisions (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.collisions().get_coulomb(0,s), result);
+        }
+    },
+    {true, "cpperp_tt", "Perp pressure Coulomb collisions (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.collisions().get_coulomb(1,s), result);
+        }
+    },
+    {true, "cppara_tt", "Para pressure Coulomb collisions (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.collisions().get_coulomb(2,s), result);
+        }
+    },
+    {true, "lpperp_tt", "Perp pressure Lorentz collisions (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            double nu_ref = v.p.nu_ref;
+            double zs = v.p.z[s], mus = v.p.mu[s];
+            double pis = v.p.pi[s];
+            // spperp Lorentz
+            dg::blas1::copy( 0, result);
+            dg::blas1::subroutine( [nu_ref, zs, mus, pis] DG_DEVICE(
+                double & spperp, double ns, double pperps, double pparas)
+            {
+                double ts = pperps/ns;
+                double nu_ss = nu_ref*ns*zs*zs*zs*zs/sqrt(2*mus*ts)/ts;
+                spperp += nu_ss/pis/3*(pparas-pperps);
+            }, result, v.y0[0][s], v.y0[1][s], v.y0[2][s]);
+        }
+    },
+    {true, "lppara_tt", "Para pressure Lorentz collisions (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            double nu_ref = v.p.nu_ref;
+            double zs = v.p.z[s], mus = v.p.mu[s];
+            double pis = v.p.pi[s];
+            // sppara Lorentz
+            dg::blas1::copy( 0, result);
+            dg::blas1::subroutine( [nu_ref, zs, mus,pis] DG_DEVICE(
+                double & sppara, double ns, double pperps, double pparas)
+            {
+                double ts = pparas/ns;
+                double nu_ss = nu_ref*ns*zs*zs*zs*zs/sqrt(2*mus*ts)/ts;
+                sppara += -2.*nu_ss/pis/3*(pparas-pperps);
+            }, result, v.y0[0][s], v.y0[1][s], v.y0[2][s]);
+        }
+    },
+    //
     {true, "sn_tt", "Source term for density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::copy( v.f.density_source(0), result);
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.sources().get_source(0, s), result);
         }
     },
+    {true, "spperp_tt", "Source term for perp pressure (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.sources().get_source(1, s), result);
+        }
+    },
+    {true, "sppara_tt", "Source term for para pressure (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.sources().get_source(2, s), result);
+        }
+    },
+    //
     {true, "divjnpar_tt", "Divergence of Parallel velocity term for density (Time average)", true,
-        []( dg::x::DVec& result, Variables& v ) {
-            dg::blas1::copy( v.f.divNUb(0), result);
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.para().get_divNUb(0, s), result);
+        }
+    },
+    {true, "divjpperppar_tt", "Divergence of Parallel velocity term for perp pressure (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.para().get_divNUb(1, s), result);
+        }
+    },
+    {true, "divjpparapar_tt", "Divergence of Parallel velocity term for para pressure (Time average)", true,
+        []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( v.f.para().get_divNUb(2, s), result);
         }
     }
 };
-
+/*
+// TODO Fix conservation theorems
 std::vector<Record> EnergyDiagnostics2d_list = { // 23
     /// ------------------- Energy terms ------------------------//
     {true, "nlnn", "Entropy", false,
@@ -1877,7 +2117,7 @@ std::vector<thermal::Record> generate_equation_list( const dg::file::WrappedJson
             if( eqn == "Basic")
                 append_equations( list, thermal::basicDiagnostics2d_list);
             else if( eqn == "Mass-conserv")
-                ;// append_equations( list, thermal::MassConsDiagnostics2d_list);
+                append_equations( list, thermal::MassConsDiagnostics2d_list);
             else if( eqn == "Energy-theorem")
                 ;// append_equations( list, thermal::EnergyDiagnostics2d_list);
             else if( eqn == "Toroidal-momentum")
@@ -1895,7 +2135,7 @@ std::vector<thermal::Record> generate_equation_list( const dg::file::WrappedJson
     else // default diagnostics
     {
         append_equations(list, thermal::basicDiagnostics2d_list);
-        //append_equations(list, thermal::MassConsDiagnostics2d_list);
+        append_equations(list, thermal::MassConsDiagnostics2d_list);
         //append_equations(list, thermal::EnergyDiagnostics2d_list);
         //append_equations(list, thermal::ToroidalExBDiagnostics2d_list);
         //append_equations(list, thermal::ParallelMomDiagnostics2d_list);

@@ -55,6 +55,7 @@ struct Explicit
     const ParaDynamics<Geometry, IMatrix, Matrix, Container>& para() const { return m_para;}
     const Sources<Geometry, IMatrix, Matrix, Container>& sources() const { return m_sources;}
     const Solvers<Geometry, Matrix, Container>& solvers() const { return m_solvers;}
+    const Collisions<Geometry, Matrix, Container>& collisions() const { return m_collisions;}
 
     unsigned called() const { return m_called;}
     /// ///////////////END DIAGNOSTIC MEMBERS //////////////////////
@@ -91,7 +92,7 @@ struct Explicit
     PerpDynamics<Geometry, IMatrix, Matrix, Container> m_perp;
     ParaDynamics<Geometry, IMatrix, Matrix, Container> m_para;
     Solvers<Geometry, Matrix, Container> m_solvers;
-    Collisions<Geometry, IMatrix, Matrix, Container> m_collisions;
+    Collisions<Geometry, Matrix, Container> m_collisions;
     Sources<Geometry, IMatrix, Matrix, Container> m_sources;
 
     dg::Extrapolation<Container> m_old_apar; // for diagnostics
