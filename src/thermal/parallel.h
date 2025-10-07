@@ -272,6 +272,7 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
                 q.at(in[u]+" 0")[s], q.at(in[u]+" +1")[s], m_p.bcx, 0.);
         }
     }
+
     for( unsigned s=0; s<m_p.num_species; s++)
     {
         // 3rd transform velocities
@@ -284,13 +285,19 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
             m_faHalf( dg::geo::zeroPlus,  *inp[u], q.at(out[u]+" +1/2")[s]);
             update_parallel_bc_1st( q.at(out[u]+" -1/2")[s], q.at(out[u]+" +1/2")[s], m_p.bcx, 0.);
         }
-        dg::blas1::axpby( 0.5, q.at("U -1/2")[s], 0.5, q.at("U +1/2")[s], q.at("U")[s]);
 
         dg::blas1::axpby( 0.5, q.at("Qperp -1/2")[s], 0.5, q.at("Qperp +1/2")[s], m_temp); // Qperp
         dg::blas1::pointwiseDivide( m_temp, y[1][s], q.at("Uperp")[s]); // Qperp/Pperp
 
         dg::blas1::axpby( 0.5, q.at("Qpara -1/2")[s], 0.5, q.at("Qpara +1/2")[s], m_temp); // Qpara
         dg::blas1::pointwiseDivide( m_temp, y[2][s], q.at("Upara")[s]); // Qpara/Ppara
+
+        // To get U we transform ST NU and divide by N
+        dg::blas1::pointwiseDot( q.at("ST U")[s], q.at("ST N")[s], m_temp);
+        m_faHalf( dg::geo::einsMinus, m_temp, m_tminus);
+        m_faHalf( dg::geo::zeroPlus,  m_temp, m_tplus);
+        dg::blas1::axpby( 0.5, m_tminus, 0.5, m_tplus, m_temp);
+        dg::blas1::pointwiseDivide( m_temp, q.at("N")[s], q.at("U")[s]);
     }
 
 }
