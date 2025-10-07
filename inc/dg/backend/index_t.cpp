@@ -6,7 +6,7 @@
 TEST_CASE( "Test index lib")
 {
     thrust::host_vector<std::array<int,2>> gIdx = std::vector<std::array<int,2>>{
-    {1,0}, {2,6}, {5,6}, {0,2}, {0,1}, {2,1}, {2,3}, {1,1}, {5,6}, {1,0}, {5,0}, {0,2}};
+    {1,0}, {2,6}, {5,6}, {0,2}, {0,1}, {2,1}, {2,3}, {1,1}, {5,6}, {1,0}, {5,0}, {0,2}, {5,0}};
     INFO("Values \n");
     for( unsigned u=0; u<gIdx.size(); u++)
         INFO("{"<<gIdx[u][0]<<","<<gIdx[u][1]<<"} ");
@@ -23,7 +23,7 @@ TEST_CASE( "Test index lib")
                 INFO("{"<<idx.first<<","<<idx.second[u]<<"} ");
             INFO("\n");
         }
-        thrust::host_vector<int> ana = std::vector{ 2, 4, 7, 0, 1, 5, 6, 3, 7, 2, 8, 0};
+        thrust::host_vector<int> ana = std::vector{ 2, 4, 7, 0, 1, 5, 6, 3, 7, 2, 8, 0, 8};
         CHECK( ana == bufferIdx);
     }
 

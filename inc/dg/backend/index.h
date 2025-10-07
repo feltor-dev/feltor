@@ -126,19 +126,19 @@ Unique<typename host_vector::value_type> find_unique_order_preserving(
     Unique<T> uni;
     // find unique elements and how many there are preserving order
     std::vector<std::vector<int>> sort; // gather sorted from unsorted elements
+    std::map<T, unsigned> sorted_unique; // map has much faster find method than unsorted vector
     for( unsigned u=0; u<unsorted_elements.size(); u++)
     {
-        auto it =thrust::find( uni.unique.begin(),
-                uni.unique.end(), unsorted_elements[u]);
-        if(  it == uni.unique.end()) // not found
+        const auto it = sorted_unique.find( unsorted_elements[u]);
+        if(  it == sorted_unique.end()) // not found
         {
+            sorted_unique[ unsorted_elements[u]] = sort.size();
             uni.unique.push_back( unsorted_elements[u]);
             sort.push_back( std::vector<int>(1,u));
         }
         else
         {
-            size_t idx = std::distance( uni.unique.begin(), it);
-            sort[idx].push_back( u);
+            sort[it->second].push_back( u);
         }
     }
     // now flatten sort
