@@ -177,8 +177,8 @@ void Solvers<Geometry, Matrix, Container>::compute_phi(
     t.tic();
     // We want the Lanczos decomposition to converge in the maximum error:
     // - 1/min is the max of omega_s = rho_s^2/2 (i.e. largest gyro-radius)
-    // - the 3rd GyroLagK is presumably the most difficult to compute
-    dg::mat::GyrolagK<double> func(3, -1.);
+    // - the 3rd GyroLagK is presumably the most difficult to compute (but fails to converge)
+    dg::mat::GyrolagK<double> func(0, -1.);
     auto unary_func = dg::mat::make_FuncEigen_Te1( [&](double x) {return func( 1./min, x);});
     m_T = m_prod.lanczos().tridiag( unary_func, m_laplaceM, phi, m_vol, m_p.eps_pol[0], 1.,
                 "universal", 1.0, 1);
