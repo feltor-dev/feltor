@@ -128,6 +128,47 @@ dg::x::HVec make_profile(
                         return nbg + exp( (npeak-nsep)/psipO/(nsep-nbg)* psip) *( nsep-nbg);
                 }, mag.psip()), grid);
     }
+    else if( "polynomial-aligned" == type)
+    {
+        double RO=mag.R0(), ZO=0.;
+        dg::geo::findOpoint( mag.get_psip(), RO, ZO);
+        double psipO = mag.psip()( RO, ZO);
+        unsigned M = js["c"].size();
+        std::vector<double> c(M);
+        for (unsigned i=0;i<M;i++)
+            c[i] = js["c"].get(i,0.).asDouble();
+        if( M < 2 )
+            throw std::runtime_error( "polynomial-aligned c needs at least 2 coefficients!");
+
+        double ret = 0, d1 = 0, d2 = 0;
+        for( unsigned i=0; i<M; i++)
+        {
+            ret = c[M-1-i] + ret*1.0;
+            if( i < M-1)
+                d1 = ret + d1*1.0;
+            if( i < M-2)
+                d2 = d1 + d2*1.0;
+        }
+        double q0 = ret - nbg;
+        double q1 = d1/q0;
+        double q2 = 0.5*(d2/q0 - q1*q1);
+        profile = dg::pullback( dg::compose(
+                [c,M,nbg, psipO, q0,q1,q2]DG_DEVICE ( double psip){
+                    double psipp = 1.-psip/psipO;
+                    if( psipp  < 1)
+                    {
+                        double b = c[M-1];
+                        for( unsigned i=1; i<M; i++)
+                            b = c[M-1-i] + b*psipp;
+                        return b;
+                    }
+                    else
+                    {
+                        return q0 == 0 ? nbg :
+                            nbg + q0*exp( q1*(psipp-1)  + q2*(psipp-1)*(psipp-1)  ) ;
+                    }
+                }, mag.psip()), grid);
+    }
     else if ( "gaussian" == type )
     {
         double x0  = mag.R0() + js.get( "posX", 0.).asDouble() *mag.params().a();

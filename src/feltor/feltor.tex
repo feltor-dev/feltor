@@ -1394,6 +1394,32 @@ Typically this profile is used in combination with an aligned damping profile~\e
 }
 \end{minted}
 \noindent
+We also allow a polynomial fit for a flux-aligned density profile as
+\begin{align} \label{eq:density_profile_polynomial}
+    \bar \psi_p :=& 1-\frac{\psi_p}{\psi_{p,O}} \\
+    n_{\text{prof}}(R,Z)=& \begin{cases}
+        \sum_{n=0}^{N-1} c_n \bar \psi_p^n &\text{ for } \bar \psi_p < 1\\
+        n_{\text{bg}} + q_0\exp\left( q_1 (\bar \psi_p - 1) + q_2 (\bar \psi_p - 1)^2 \right)&\text{ else }
+    \end{cases}
+\end{align}
+This profile is a polynomial in the normalised flux $\bar \psi_p$ in the closed fieldline region and exponentially
+decreases in the SOL to a constant background value.
+The coefficients $q_0$, $q_1$ and $q_2$ are chosen such that the function is twice continuously differentiable at $\bar \psi_p =1$.
+Typically this profile is used to fit an experimental profile.
+\begin{minted}[texcomments]{js}
+"density":
+{
+    "profile" :
+    {
+        "type" : "polynomial-aligned",
+        "c" : [1, 2, 3, ...] // Coefficients in Eq.\eqref{eq:density_profile_polynomial}, the number of elements is infered
+        "background" : 0.2 // $n_{bg}$ in Eq.~\eqref{eq:density_profile_polynomial},
+        //also value to which to dampen the profile in Eq.\eqref{eq:initial_ne}
+        //(see also nbc, minne and nwall)
+    }
+}
+\end{minted}
+\noindent
 Instead of the flux-aligned profile we can also choose a toroidally symmetric Gaussian profile
 \begin{align} \label{eq:profile_blob}
     n_{prof}(R,Z) = n_{bg} + A \exp\left( -\frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
