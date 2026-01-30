@@ -17,6 +17,13 @@ namespace geo
  direction lies within the
  R-Z planes of a cylindrical grid (The plane \f$ \perp \hat{ e}_\varphi\f$ )
  */
+/*!@class hide_toroidal_approximation2_note
+ @note We implicitly assume the toroidal field line approximation, i.e. all curvature
+ and other perpendicular terms assume that the perpendicular
+ direction lies within the
+ R-Z planes of a cylindrical grid (The plane \f$ \perp \hat{ e}_\varphi\f$ ).
+ Additionally, in this version the magnetic field strength is simply the toroidal component of the magnetic field.
+ */
 
 ///@addtogroup magnetic
 ///@{
@@ -279,6 +286,21 @@ struct Bmodule : public aCylindricalFunctor<Bmodule>
   private:
     TokamakMagneticField m_mag;
 };
+
+///@brief \f$   B_{tor} = \vec B\cdot \vec \varphi = R_0 I/R   \f$
+/// @note Can be positive and negative
+struct Btor : public aCylindricalFunctor<Btor>
+{
+    Btor( const TokamakMagneticField& mag): m_mag(mag)  { }
+    double do_compute(double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z);
+        return m_mag.R0()*ipol/R;
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
 
 /**
  * @brief \f$  |B|^{-1} = R/R_0\sqrt{I^2+(\nabla\psi)^2}    \f$
@@ -606,6 +628,86 @@ struct TrueDivCurvatureNablaB: public aCylindricalFunctor<TrueDivCurvatureNablaB
     private:
     TrueDivCurvatureKappa m_div;
 };
+////////////////////////////////////////////////////////////////////////////////
+///@brief Toroidal Approximate \f$ \mathcal{K}^{R}_{\nabla B} \f$
+///
+/// \f$ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureNablaBR: public aCylindricalFunctor<ToroidalCurvatureNablaBR>
+{
+    ToroidalCurvatureNablaBR(const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolZ = m_mag.ipolZ()(R,Z);
+        return -R*ipolZ/m_mag.R0()/ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief Toroidal Approximate \f$  \mathcal{K}^{Z}_{\nabla B}  \f$
+///
+/// \f$  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ B_{\hat \varphi}}   \left( \partial_R \ln I - \partial_R \ln R \right)\f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureNablaBZ: public aCylindricalFunctor<ToroidalCurvatureNablaBZ>
+{
+    ToroidalCurvatureNablaBZ( const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z);
+        return +R*ipolR/m_mag.R0()/ipol/ipol - 1./m_mag.R0()/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief Toroidal Approximate \f$ \mathcal{K}^{R}_{\vec{\kappa}}=0 \f$
+///
+/// \f$ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} =0  \f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureKappaR: public aCylindricalFunctor<ToroidalCurvatureKappaR>
+{
+    ToroidalCurvatureKappaR( ){ }
+    ToroidalCurvatureKappaR( const TokamakMagneticField&){ }
+    double do_compute( double, double) const
+    {
+        return  0.;
+    }
+    private:
+};
+
+///@brief Toroidal Approximate \f$  \mathcal{K}^{Z}_{\vec{\kappa}}  \f$
+///
+/// \f$  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureKappaZ: public aCylindricalFunctor<ToroidalCurvatureKappaZ>
+{
+    ToroidalCurvatureKappaZ( const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z);
+        return -1/m_mag.R0()/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief Toroidal  Approximate \f$  \vec{\nabla}\cdot \mathcal{K}_{\vec{\kappa}}  \f$
+///
+///  \f$  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{R_0 I^2} \partial_{Z} I\f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalDivCurvatureKappa: public aCylindricalFunctor<ToroidalDivCurvatureKappa>
+{
+    ToroidalDivCurvatureKappa( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolZ = m_mag.ipolZ()(R,Z);
+        return ipolZ / m_mag.R0()/ ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @brief \f$  \nabla_\parallel \ln{(B)} \f$
