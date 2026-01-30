@@ -102,4 +102,17 @@ TEST_CASE("Magnetic field")
         CHECK( fabs(divCurvKappa( R_O, Z_O) - truedivCurvKappa( R_O, Z_O)) < 1e-12);
 
     }
+
+    SECTION( "Divb")
+    {
+        dg::geo::Divb div(mag);
+        dg::geo::GradLnB gradLnB(mag);
+        dg::geo::ToroidalDivb tordiv(mag);
+        dg::geo::ToroidalGradLnB torgradLnB(mag);
+        CHECK( fabs(div( R_O, 0)  - tordiv( R_O, 0)) < 1e-12);
+        CHECK( fabs( div( R_O +1 , 10) + gradLnB(  R_O+1, 10)) < 1e-12);
+
+        CHECK( fabs( tordiv( R_O +1 , 10) + torgradLnB(  R_O+1, 10)) < 1e-12);
+
+    }
 }
