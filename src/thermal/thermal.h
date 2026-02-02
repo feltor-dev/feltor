@@ -105,8 +105,6 @@ struct Explicit
         "Tpara", "Tpara 0", "Tpara +1", "Tpara -1",
         "Psi0",
         "Psi1", "ds Psi1",
-        "Psi2",
-        "Psi3",
         "U", "U +1/2", "U -1/2",
         "Uperp",
         "Upara",
@@ -120,8 +118,6 @@ struct Explicit
         "ST Ppara +1/2", "ST Ppara -1/2",
         "ST Psi0", "ST ds Psi0",
         "ST Psi1", "ST ds Psi1",
-        "ST Psi2",
-        "ST Psi3",
         "ST U",     "ST U 0",     "ST U +1",     "ST U -1",
         "ST Uperp", "ST Uperp 0", "ST Uperp +1", "ST Uperp -1",
         "ST Upara", "ST Upara 0", "ST Upara +1", "ST Upara -1",
@@ -133,7 +129,6 @@ struct Explicit
         "dx Tpara", "dy Tpara",
         "dx Psi0",  "dy Psi0",
         "dx Psi1",  "dy Psi1",
-        "dx Psi2",  "dy Psi2",
         "dx U",     "dy U",
         "dx Uperp", "dy Uperp",
         "dx Upara", "dy Upara",
@@ -143,8 +138,6 @@ struct Explicit
         "ST dx Tpara", "ST dy Tpara",
         "ST dx Psi0",  "ST dy Psi0",
         "ST dx Psi1",  "ST dy Psi1",
-        "ST dx Psi2",  "ST dy Psi2",
-        "ST dx Psi3",  "ST dy Psi3",
         "ST dxF U",     "ST dxB U",     "ST dyF U",     "ST dyB U",
         "ST dxF Qperp", "ST dxB Qperp", "ST dyF Qperp", "ST dyB Qperp",
         "ST dxF Qpara", "ST dxB Qpara", "ST dyF Qpara", "ST dyB Qpara"
@@ -220,11 +213,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     //2. Solve for potential phi given density and temperature
 
-    m_solvers.compute_phi( t, density, m_q.at("Tperp"), m_phi, m_p.penalize_wall,
+    m_solvers.compute_phi( t, density, pperp, m_phi, m_p.penalize_wall,
         m_sources.get_wall(), m_p.penalize_sheath, m_para.get_sheath());
 
-    m_solvers.compute_psi( t, m_q.at("Tperp"), m_phi,
-        m_q.at("Psi0"), m_q.at("Psi1"), m_q.at("Psi2"), m_q.at("Psi3"));
+    m_solvers.compute_psi( t, m_phi, m_q.at("Psi0"), m_q.at("Psi1"));
 
     timer.toc();
     accu += timer.diff();
