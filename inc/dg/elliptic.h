@@ -184,24 +184,24 @@ class Elliptic1d
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     ///@copydoc Elliptic2d::get_jfactor()
     value_type get_jfactor() const {return m_jfactor;}
-    ///@copydoc Elliptic2d::operator()(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::operator()(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
     void operator()( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
 
-    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
-    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
     void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y) const
     {
         symv( alpha, x, m_jfactor, m_sigma, beta, y);
     }
-    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,const ContainerType2,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,const ContainerType2&,value_type,ContainerType1&)const
     ///@note Here \c sigma is an alias for \c chi
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     void symv( value_type alpha, const ContainerType0& x, value_type jfactor, const ContainerType2& sigma, value_type beta, ContainerType1& y) const
@@ -758,18 +758,18 @@ class Elliptic3d
         m_multiplyZ = !compute_in_2d;
     }
 
-    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
     void symv( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
-    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
     void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y) const
     {
         symv( alpha, x, m_jfactor, m_sigma, beta, y);
     }
-    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,const ContainerType2,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,const ContainerType2&,value_type,ContainerType1&)const
     template<class ContainerType0, class ContainerType1, class ContainerType2>
     void symv( value_type alpha, const ContainerType0& x, value_type jfactor, const ContainerType2& sigma, value_type beta, ContainerType1& y) const
     {
@@ -825,17 +825,17 @@ class Elliptic3d
         dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
     }
 
-    ///@copydoc Elliptic2d::variation(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::variation(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
     void variation(const ContainerType0& phi, ContainerType1& sigma)const{
         variation(1.,1., phi, 0., sigma);
     }
-    ///@copydoc Elliptic2d::variation(const ContainerTypeL&,const ContainerType0&,ContainerType1&){
+    ///@copydoc Elliptic2d::variation(const ContainerTypeL&,const ContainerType0&,ContainerType1&)const
     template<class ContainerTypeL, class ContainerType0, class ContainerType1>
     void variation(const ContainerTypeL& lambda, const ContainerType0& phi, ContainerType1& sigma)const{
         variation(1.,lambda, phi, 0., sigma);
     }
-    ///@copydoc Elliptic2d::variation(value_type,const ContainerTypeL&,const ContainerType0&,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::variation(value_type,const ContainerTypeL&,const ContainerType0&,value_type,ContainerType1&)const
     template<class ContainerTypeL, class ContainerType0, class ContainerType1>
     void variation(value_type alpha, const ContainerTypeL& lambda, const ContainerType0& phi, value_type beta, ContainerType1& sigma)const
     {
