@@ -20,39 +20,39 @@ namespace geo
 //exp(R-R_0)exp(Z)cos^2 (phi)
 struct TestFunctionPsi2
 {
-    TestFunctionPsi2( const TokamakMagneticField& c, double a):R_0(c.R0()), a(a), c_(c){}
+    TestFunctionPsi2( const TokamakMagneticField& c, double a, double kphi = 1):R_0(c.R0()), a(a), kphi(kphi), c_(c){}
     double operator()(double R, double Z, double phi) const {
-        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi);
+        return exp((R-R_0)/a)*exp(Z/a)*cos(kphi*phi)*cos(kphi*phi);
     }
     double dR( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(kphi*phi)*cos(kphi*phi)/a;
     }
     double dRR( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a/a;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(kphi*phi)*cos(kphi*phi)/a/a;
     }
     double dRZ( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a/a;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(kphi*phi)*cos(kphi*phi)/a/a;
     }
     double dZ( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(kphi*phi)*cos(kphi*phi)/a;
     }
     double dZZ( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*cos(phi)*cos(phi)/a/a;
+        return exp((R-R_0)/a)*exp(Z/a)*cos(kphi*phi)*cos(kphi*phi)/a/a;
     }
     double dP( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*(-2.*sin(phi)*cos(phi));
+        return exp((R-R_0)/a)*exp(Z/a)*(-2.*kphi*sin(kphi*phi)*cos(kphi*phi));
     }
     double dRP( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*(-2.*sin(phi)*cos(phi))/a;
+        return exp((R-R_0)/a)*exp(Z/a)*(-2.*kphi*sin(kphi*phi)*cos(kphi*phi))/a;
     }
     double dZP( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*(-2.*sin(phi)*cos(phi))/a;
+        return exp((R-R_0)/a)*exp(Z/a)*(-2.*kphi*sin(kphi*phi)*cos(kphi*phi))/a;
     }
     double dPP( double R, double Z, double phi) const{
-        return exp((R-R_0)/a)*exp(Z/a)*(2.*sin(phi)*sin(phi)-2.*cos(phi)*cos(phi));
+        return exp((R-R_0)/a)*exp(Z/a)*kphi*kphi*(2.*sin(kphi*phi)*sin(kphi*phi)-2.*cos(kphi*phi)*cos(kphi*phi));
     }
     private:
-    double R_0, a;
+    double R_0, a, kphi;
     TokamakMagneticField c_;
 };
 
@@ -213,6 +213,198 @@ struct Variation
     }
     private:
     Function f_;
+};
+
+/////Toroidal variants
+// b \nabla f
+template<class Function>
+struct ToroidalDsFunction
+{
+    ToroidalDsFunction( const TokamakMagneticField& c, Function f): f_(f), c_(c),
+        bhatR_(c), bhatZ_(c), bhatP_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return bhatR_(R,Z)*f_.dR(R,Z,phi) +
+               bhatZ_(R,Z)*f_.dZ(R,Z,phi) +
+               bhatP_(R,Z)*f_.dP(R,Z,phi);
+    }
+    private:
+    Function f_;
+    TokamakMagneticField c_;
+    dg::geo::ToroidalBHatR bhatR_;
+    dg::geo::ToroidalBHatZ bhatZ_;
+    dg::geo::ToroidalBHatP bhatP_;
+};
+//\nabla( b f)
+template<class Function>
+struct ToroidalDsDivFunction
+{
+    ToroidalDsDivFunction( const TokamakMagneticField& c, Function f):
+        f_(f), dsf_(c,f), divb_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return f_(R,Z,phi)*divb_(R,Z) + dsf_(R,Z,phi);
+    }
+    private:
+    Function f_;
+    ToroidalDsFunction<Function> dsf_;
+    dg::geo::ToroidalDivb divb_;
+};
+
+///@brief \f$ \partial_R b^R\f$
+struct ToroidalBHatRR: public aCylindricalFunctor<ToroidalBHatRR>
+{
+    ToroidalBHatRR( const TokamakMagneticField& mag): m_mag(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipZ = m_mag.psipZ()(R,Z);
+        double psipRZ = m_mag.psipRZ()(R,Z);
+        double ipol = m_mag.ipol()(R,Z);
+        double ipolR = m_mag.ipolR()(R,Z);
+        return psipRZ/ipol - psipZ*ipolR/ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+///@brief \f$ \partial_Z b^R\f$
+struct ToroidalBHatRZ: public aCylindricalFunctor<ToroidalBHatRZ>
+{
+    ToroidalBHatRZ( const TokamakMagneticField& mag): m_mag(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipZ = m_mag.psipZ()(R,Z);
+        double psipZZ = m_mag.psipZZ()(R,Z);
+        double ipol = m_mag.ipol()(R,Z);
+        double ipolZ = m_mag.ipolZ()(R,Z);
+        return psipZZ/ipol - psipZ*ipolZ/ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+///@brief \f$ \partial_R b^Z\f$
+struct ToroidalBHatZR: public aCylindricalFunctor<ToroidalBHatZR>
+{
+    ToroidalBHatZR( const TokamakMagneticField& mag): m_mag(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipR = m_mag.psipR()(R,Z);
+        double psipRR = m_mag.psipRR()(R,Z);
+        double ipol = m_mag.ipol()(R,Z);
+        double ipolR = m_mag.ipolR()(R,Z);
+        return -psipRR/ipol + psipR*ipolR/ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+///@brief \f$ \partial_Z b^Z\f$
+struct ToroidalBHatZZ: public aCylindricalFunctor<ToroidalBHatZZ>
+{
+    ToroidalBHatZZ( const TokamakMagneticField& mag): m_mag(mag){}
+    double do_compute( double R, double Z) const
+    {
+        double psipR = m_mag.psipR()(R,Z);
+        double psipRZ = m_mag.psipRZ()(R,Z);
+        double ipol = m_mag.ipol()(R,Z);
+        double ipolZ = m_mag.ipolZ()(R,Z);
+        return -psipRZ/ipol + psipR*ipolZ/ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+///@brief \f$ \partial_R \hat b^\varphi\f$
+struct ToroidalBHatPR: public aCylindricalFunctor<ToroidalBHatPR>
+{
+    ToroidalBHatPR( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double ) const
+    {
+        return -1/R/R;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+///@brief \f$ \partial_Z \hat b^\varphi\f$
+struct ToroidalBHatPZ: public aCylindricalFunctor<ToroidalBHatPZ>
+{
+    ToroidalBHatPZ( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double , double ) const
+    {
+        return 0;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+//2nd derivative \nabla_\parallel^2
+template<class Function>
+struct ToroidalDssFunction
+{
+    ToroidalDssFunction( TokamakMagneticField c, Function f):f_(f), c_(c),
+        bhatR_(c), bhatZ_(c), bhatP_(c),
+        bhatRR_(c), bhatZR_(c), bhatPR_(c),
+        bhatRZ_(c), bhatZZ_(c), bhatPZ_(c){}
+    double operator()(double R, double Z, double phi) const {
+        double bhatR = bhatR_(R,Z), bhatZ = bhatZ_(R,Z), bhatP = bhatP_(R,Z);
+        double bhatRR = bhatRR_(R,Z), bhatZR = bhatZR_(R,Z), bhatPR = bhatPR_(R,Z);
+        double bhatRZ = bhatRZ_(R,Z), bhatZZ = bhatZZ_(R,Z), bhatPZ = bhatPZ_(R,Z);
+        double fR = f_.dR(R,Z,phi), fZ = f_.dZ(R,Z,phi), fP = f_.dP(R,Z,phi);
+        double fRR = f_.dRR(R,Z,phi), fRZ = f_.dRZ(R,Z,phi), fZZ = f_.dZZ(R,Z,phi);
+        double fRP = f_.dRP(R,Z,phi), fZP = f_.dZP(R,Z,phi), fPP = f_.dPP(R,Z,phi);
+        double gradbhatR = bhatR*bhatRR+bhatZ*bhatRZ,
+               gradbhatZ = bhatR*bhatZR+bhatZ*bhatZZ,
+               gradbhatP = bhatR*bhatPR+bhatZ*bhatPZ;
+        return bhatR*bhatR*fRR + bhatZ*bhatZ*fZZ + bhatP*bhatP*fPP
+            +2.*(bhatR*bhatZ*fRZ + bhatR*bhatP*fRP + bhatZ*bhatP*fZP)
+            + gradbhatR*fR + gradbhatZ*fZ + gradbhatP*fP;
+    }
+    private:
+    Function f_;
+    TokamakMagneticField c_;
+    dg::geo::ToroidalBHatR bhatR_;
+    dg::geo::ToroidalBHatZ bhatZ_;
+    dg::geo::ToroidalBHatP bhatP_;
+    ToroidalBHatRR bhatRR_;
+    ToroidalBHatZR bhatZR_;
+    ToroidalBHatPR bhatPR_;
+    ToroidalBHatRZ bhatRZ_;
+    ToroidalBHatZZ bhatZZ_;
+    ToroidalBHatPZ bhatPZ_;
+};
+
+//positive Laplacian \Delta_\parallel
+template<class Function>
+struct ToroidalDsDivDsFunction
+{
+    ToroidalDsDivDsFunction( const TokamakMagneticField& c,Function f): dsf_(c,f), dssf_(c,f), divb_(c){}
+    double operator()(double R, double Z, double phi) const {
+        return divb_(R,Z)*dsf_(R,Z,phi) + dssf_(R,Z,phi);
+    }
+    private:
+    ToroidalDsFunction<Function> dsf_;
+    ToroidalDssFunction<Function> dssf_;
+    dg::geo::ToroidalDivb divb_;
+};
+
+//positive perp Laplacian \Delta_\perp
+template<class Function>
+struct ToroidalDPerpFunction
+{
+    ToroidalDPerpFunction( const TokamakMagneticField& c, Function f): f_(f), dsf_(c,f){}
+    double operator()(double R, double Z, double phi) const {
+        return f_.dR(R,Z,phi)/R + f_.dRR(R,Z,phi) + f_.dZZ(R,Z,phi) + f_.dPP(R,Z,phi)/R/R - dsf_(R,Z,phi);
+    }
+    private:
+    Function f_;
+    ToroidalDsDivDsFunction<Function> dsf_;
+};
+
+template<class Function>
+struct ToroidalOMDsDivDsFunction
+{
+    ToroidalOMDsDivDsFunction( const TokamakMagneticField& c,Function f): f_(f), df_(c,f){}
+    double operator()(double R, double Z, double phi) const {
+        return f_(R,Z,phi)-df_(R,Z,phi);
+    }
+    private:
+    Function f_;
+    ToroidalDsDivDsFunction<Function> df_;
 };
 
 //////////////function to call DS////////////////////

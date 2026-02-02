@@ -96,6 +96,7 @@ guenter flux surfaces. Fieldlines do not cross boundaries.");
         CHECK( fabs(vol) < std::get<3>(tuple));
     }
 }
+
 TEST_CASE("Staggered")
 {
 #ifdef WITH_MPI
@@ -170,4 +171,72 @@ TEST_CASE("Staggered")
     INFO( "volume_error    minus: "<<fabs(volumeP-volume)/volume);
     CHECK( fabs( volumeM - volume)/volume < 1e-12);
     CHECK( fabs( volumeP - volume)/volume < 1e-12);
+}
+
+TEST_CASE( "Toroidal DS Guenter")
+{
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {false,false,true});
+#endif
+    INFO( "# Test the parallel derivative DS in cylindrical coordinates for the \
+guenter flux surfaces. Fieldlines do not cross boundaries.");
+    std::string method = "dg";
+    unsigned mm = 3;
+    unsigned n = 7, Nx = 20, Ny = 20, Nz = 2, mx[2] = {mm,mm}, max_iter = 1e4;
+
+    INFO( "Combination\n"
+              <<"n:  "<<n<<"\n"
+              <<"Nx: "<<Nx<<"\n"
+              <<"Ny: "<<Ny<<"\n"
+              <<"Nz: "<<Nz<<"\n"
+              <<"mx: "<<mx[0]<<"\n"
+              <<"my: "<<mx[1]<<"\n"
+              <<"method: "<< method << "\n");
+    ////////////////////////////////initialze fields /////////////////////
+    const dg::x::CylindricalGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n,
+    Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER
+#ifdef WITH_MPI
+    , comm
+#endif
+    );
+    const dg::geo::TokamakMagneticField mag = dg::geo::createGuenterField(R_0, I_0);
+    auto bhat = dg::geo::createToroidalBHat(mag);
+    dg::geo::Fieldaligned<dg::x::aProductGeometry3d,dg::x::IDMatrix,dg::x::DVec>  dsFA(
+            bhat, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(), 1e-8, mx[0], mx[1],
+            2.*M_PI/2000, method, false);
+    dg::geo::DS<dg::x::aProductGeometry3d, dg::x::IDMatrix, dg::x::DVec>
+        ds( dsFA );
+
+    ///##########################################################///
+    auto ff = dg::geo::TestFunctionPsi2(mag,a, 0.); //  kphi = 0
+    const dg::x::DVec fun = dg::evaluate( ff, g3d);
+    dg::x::DVec derivative(fun);
+    dg::x::DVec sol0 = dg::evaluate( dg::geo::ToroidalDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::x::DVec sol1 = dg::evaluate( dg::geo::ToroidalDssFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::x::DVec sol2 = dg::evaluate( dg::geo::ToroidalDsDivFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::x::DVec sol3 = dg::evaluate( dg::geo::ToroidalDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    dg::x::DVec sol4 = dg::evaluate( dg::geo::ToroidalOMDsDivDsFunction<dg::geo::TestFunctionPsi2>(mag,ff), g3d);
+    std::vector<std::tuple<std::string, std::array<const dg::x::DVec*,2>>> names{
+         {"forward2",{&fun,&sol0}},         {"backward2",{&fun,&sol0}},
+         {"centered",{&fun,&sol0}},         {"dss",{&fun,&sol1}},
+         {"centered_bc_along",{&fun,&sol0}},{"dss_bc_along",{&fun,&sol1}},
+         {"divCentered",{&fun,&sol2}},      {"directLap",{&fun,&sol3}}//,
+    };
+
+    ///##########################################################///
+    const dg::x::DVec vol3d = dg::create::volume( g3d);
+    for( const auto& tuple :  names)
+    {
+        std::string name = std::get<0>(tuple);
+        const dg::x::DVec& function = *std::get<1>(tuple)[0];
+        const dg::x::DVec& solution = *std::get<1>(tuple)[1];
+        callDS( ds, name, function, derivative, max_iter,1e-8);
+        double sol = dg::blas2::dot( vol3d, solution);
+        dg::blas1::axpby( 1., solution, -1., derivative);
+        double norm = dg::blas2::dot( derivative, vol3d, derivative);
+        INFO("    "<<name<<":" <<" "<<sqrt(norm/sol));
+        CHECK( sqrt(norm/sol) < 1e-5);
+    }
 }
