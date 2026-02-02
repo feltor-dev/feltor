@@ -102,6 +102,17 @@ TEST_CASE("Magnetic field")
         CHECK( fabs(divCurvKappa( R_O, Z_O) - truedivCurvKappa( R_O, Z_O)) < 1e-12);
 
     }
+    SECTION( "BHat")
+    {
+        auto bhat = dg::geo::createBHat( mag);
+        auto torbhat = dg::geo::createToroidalBHat( mag);
+        double R = R_O + 0.1, Z = 0.1;
+
+        CHECK( fabs(bhat.x()(R,Z)/bhat.z()(R,Z)   - R*torbhat.x()( R,Z)) < 1e-12);
+        CHECK( fabs(bhat.y()(R,Z)/bhat.z()(R,Z)   - R*torbhat.y()( R,Z)) < 1e-12);
+        CHECK( fabs(1./R   - torbhat.z()( R,Z)) < 1e-12);
+        CHECK ( fabs( torbhat.div()(R,Z) - ( bhat.divvvz()(R,Z)/R - bhat.x()(R,Z)/bhat.z()(R,Z)/R/R )) < 1e-12);
+    }
 
     SECTION( "Divb")
     {
@@ -110,14 +121,15 @@ TEST_CASE("Magnetic field")
         dg::geo::ToroidalDivb tordiv(mag);
         dg::geo::ToroidalGradLnB torgradLnB(mag);
         dg::geo::DivVVP divvvp(mag);
-        CHECK( fabs(div( R_O, 0)  - tordiv( R_O, 0)) < 1e-12);
-        CHECK( fabs( div( R_O +1 , 10) + gradLnB(  R_O+1, 10)) < 1e-12);
+        CHECK( fabs(div( R_O, 0)  - tordiv( R_O,0))< 1e-12);
+        double R = R_O + 0.1, Z = 0.1;
+        CHECK( fabs( div( R,Z) + gradLnB(  R,Z)) < 1e-12);
 
-        CHECK( fabs( tordiv( R_O +1 , 10) + torgradLnB(  R_O+1, 10)) < 1e-12);
+        CHECK( fabs( tordiv( R,Z) + torgradLnB(  R,Z)) < 1e-12);
 
         dg::geo::BFieldR BR(mag);
         dg::geo::BFieldP Bphi(mag);
-        CHECK ( fabs( tordiv(R_O+1,10) - ( divvvp(R_O+1,10)/(R_O+1) - BR(R_O+1,10)/Bphi(R_O+1,10)/(R_O+1)/(R_O+1) )) < 1e-8);
+        CHECK ( fabs( tordiv(R,Z) - ( divvvp(R,Z)/R - BR(R,Z)/Bphi(R,Z)/R/R )) < 1e-12);
 
     }
 }
