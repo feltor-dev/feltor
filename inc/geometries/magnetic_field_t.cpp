@@ -109,10 +109,15 @@ TEST_CASE("Magnetic field")
         dg::geo::GradLnB gradLnB(mag);
         dg::geo::ToroidalDivb tordiv(mag);
         dg::geo::ToroidalGradLnB torgradLnB(mag);
+        dg::geo::DivVVP divvvp(mag);
         CHECK( fabs(div( R_O, 0)  - tordiv( R_O, 0)) < 1e-12);
         CHECK( fabs( div( R_O +1 , 10) + gradLnB(  R_O+1, 10)) < 1e-12);
 
         CHECK( fabs( tordiv( R_O +1 , 10) + torgradLnB(  R_O+1, 10)) < 1e-12);
+
+        dg::geo::BFieldR BR(mag);
+        dg::geo::BFieldP Bphi(mag);
+        CHECK ( fabs( tordiv(R_O+1,10) - ( divvvp(R_O+1,10)/(R_O+1) - BR(R_O+1,10)/Bphi(R_O+1,10)/(R_O+1)/(R_O+1) )) < 1e-8);
 
     }
 }

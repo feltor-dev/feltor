@@ -871,6 +871,43 @@ struct BHatP: public aCylindricalFunctor<BHatP>
     InvB m_invB;
 };
 
+///@brief \f$ b^R = B^R/B_{\hat \varphi}\f$
+struct ToroidalBHatR: public aCylindricalFunctor<ToroidalBHatR>
+{
+    ToroidalBHatR( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        return  m_mag.psipZ()(R,Z)/m_mag.ipol()(R,Z);
+    }
+    private:
+    TokamakMagneticField m_mag;
+
+};
+
+///@brief \f$ b^Z = B^Z/B_{\hat \varphi}\f$
+struct ToroidalBHatZ: public aCylindricalFunctor<ToroidalBHatZ>
+{
+    ToroidalBHatZ( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        return  -m_mag.psipR()(R,Z)/m_mag.ipol()(R,Z);
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief \f$ \hat b^\varphi = B^\varphi/B_{\hat \varphi}\f$
+struct ToroidalBHatP: public aCylindricalFunctor<ToroidalBHatP>
+{
+    ToroidalBHatP( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double) const
+    {
+        return 1./R;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
 
 /**
  * @brief Contravariant components of the unit vector field (0, 0, \f$\pm 1/R \f$)
@@ -1069,6 +1106,17 @@ struct DivVVP: public aCylindricalFunctor<DivVVP>
 inline CylindricalVectorLvl1 createBHat( const TokamakMagneticField& mag){
     return CylindricalVectorLvl1( BHatR(mag), BHatZ(mag), BHatP(mag),
             Divb(mag), DivVVP(mag)
+           );
+}
+/**
+ * @brief Contravariant components of the magnetic toroidal unit vector field
+ * and its Divergence and derivative in cylindrical coordinates.
+ * @param mag the tokamak magnetic field
+ * @return the tuple ToroidalBHatR, ToroidalBHatZ, ToroidalBHatP, ToroidalDivb, DivVVP constructed from mag
+ */
+inline CylindricalVectorLvl1 createToroidalBHat( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl1( ToroidalBHatR(mag), ToroidalBHatZ(mag), ToroidalBHatP(mag),
+            ToroidalDivb(mag), DivVVP(mag)
            );
 }
 
