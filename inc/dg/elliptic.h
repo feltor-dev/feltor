@@ -157,7 +157,7 @@ class Elliptic1d
     }
 
     /**
-     * @brief Return the sclar part Chi
+     * @brief Return the scalar part Chi
      * @return chi
      */
     const Container& get_chi() const { return m_sigma;}
@@ -386,7 +386,7 @@ class Elliptic2d
      */
     const SparseTensor<Container>& get_tau() const { return m_chi;}
     /**
-     * @brief Get sclar part of Chi tensor
+     * @brief Get scalar part of Chi tensor
      *
      * @return Scalar part of Chi tensor sigma
      */

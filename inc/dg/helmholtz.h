@@ -119,7 +119,7 @@ struct GeneralHelmholtz
     Container m_chi;
 };
 
-///@brief a 2d Helmholtz opereator \f$ (\chi - \alpha F)\f$ with \f$ F = -\Delta\f$
+///@brief A GeneralHelmholtz operator \f$ (\chi - \alpha F)\f$ with \f$ F = -\Delta\f$ in 2d
 ///@copydetails GeneralHelmholtz
 ///@ingroup matrixoperators
 template<class Geometry, class Matrix, class Container, class ContainerTmp = Container>
@@ -189,7 +189,7 @@ struct Helmholtz2
      */
     Helmholtz2( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.)
     {
-              construct( g, bcx, bcy, alpha, dir, jfactor);
+        construct( g, bcx, bcy, alpha, dir, jfactor);
     }
     ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,bc,bc,value_type,direction,value_type)
     void construct( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1, direction dir = dg::forward, value_type jfactor = 1.)
