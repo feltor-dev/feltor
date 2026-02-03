@@ -49,7 +49,7 @@ struct Solvers
     const Container& weights() const { return m_laplaceM.weights();}
 
     // 1/B_varphi
-    const Container& btorinv() const {return m_Btorinv;}
+    const Container& Btorinv() const {return m_Btorinv;}
     // 1/R
     const Container& rinv() const {return m_Rinv;}
     // s > 0
