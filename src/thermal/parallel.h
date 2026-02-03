@@ -55,6 +55,7 @@ struct ParaDynamics
     }
 
     void compute_parallel_transformations(
+        const Container& aparST,
         const std::array<std::vector<Container>,6>& y,
         std::map<std::string, std::vector<Container>>& q
     );
@@ -140,7 +141,7 @@ struct ParaDynamics
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faHalf;
 
     Container m_temp, m_tminus, m_tplus;
-    Container m_Btorinv;
+    Container m_Btorinv, m_R;
 
     std::array<std::vector<Container>,6> m_divNUb;
 
@@ -174,6 +175,7 @@ ParaDynamics<Grid, IMatrix, Matrix, Container>::ParaDynamics( const Grid& g,
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
     }
     dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
+    dg::assign(  dg::pullback(dg::cooX3d, g), m_R);
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_staggered_densities(
@@ -216,10 +218,20 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_staggered_densities
 
 template<class Grid, class IMatrix, class Matrix, class Container>
 void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transformations(
+        const Container& aparST,
         const std::array<std::vector<Container>,6>& y,
         std::map<std::string, std::vector<Container>>& q
 )
 {
+    for( unsigned s=0; s<m_p.num_species; s++)
+    {
+        double z = m_p.z[s], mu = m_p.mu[s];
+        dg::blas1::subroutine( [z, mu] DG_DEVICE ( double& U, double W,
+            double apar, double R)
+        {
+            U = W - z*apar/mu/R;
+        }, q.at("ST U")[s], y[3][s], aparST, m_R);
+    }
     for( unsigned s=0; s<m_p.num_species; s++)
     {
         std::vector<std::string> in = { "Psi0", "Psi1"}; // -> "ST Psi0", ...

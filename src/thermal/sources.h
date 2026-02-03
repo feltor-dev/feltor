@@ -142,7 +142,7 @@ void Sources<Geometry, IMatrix, Matrix, Container>::add_source_terms(
         // do not make lower forcing a velocity source
         // 1. Density
         dg::blas1::transform( q.at("N")[s], m_temp0, dg::PolynomialHeaviside(
-                    m_minn[s]-alpha[0]/2., alpha[0]/2., -1) );
+                    m_minn[s]-alpha/2., alpha/2., -1) );
         dg::blas1::transform( q.at("N")[s], m_temp1, dg::PLUS<double>( -m_minn[s]));
         dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 0., m_temp0);
         dg::blas1::axpby( 1., m_temp0, 1., yp[0][s]);
@@ -152,15 +152,15 @@ void Sources<Geometry, IMatrix, Matrix, Container>::add_source_terms(
         dg::blas1::pointwiseDot( 1., q.at("Tpara")[s], m_temp0, 1., yp[2][s]);
 
         // 2. Tperp and Tpara
-        alpha = m_minbeta*mint;
+        alpha = m_minbeta*m_mint;
         dg::blas1::transform( q.at("Tperp")[s], m_temp0, dg::PolynomialHeaviside(
                     m_minn[s]-alpha/2., alpha/2., -1) );
-        dg::blas1::transform( q.at("Tperp")[s], m_temp1, dg::PLUS<double>( -mint));
+        dg::blas1::transform( q.at("Tperp")[s], m_temp1, dg::PLUS<double>( -m_mint));
         dg::blas1::pointwiseDot( -m_minrate, q.at("N")[s], m_temp1, m_temp0, 1., yp[1][s]);
 
         dg::blas1::transform( q.at("Tpara")[s], m_temp0, dg::PolynomialHeaviside(
                     m_minn[s]-alpha/2., alpha/2., -1) );
-        dg::blas1::transform( q.at("Tpara")[s], m_temp1, dg::PLUS<double>( -mint));
+        dg::blas1::transform( q.at("Tpara")[s], m_temp1, dg::PLUS<double>( -m_mint));
         dg::blas1::pointwiseDot( -m_minrate, q.at("N")[s], m_temp1, m_temp0, 1., yp[2][s]);
 
     }
@@ -232,15 +232,15 @@ void Sources<Geometry, IMatrix, Matrix, Container>::add_wall_terms(
             m_p.qwall,
             m_p.qwall
         };
-        if( wall_bc == "floating")
+        if( m_p.wall_bc == "floating")
         {
             // chi_w ( 1 - chi_w )
             dg::blas1::pointwiseDot ( 1., 1., m_wall, -1., m_wall, m_wall, 0., m_temp0);
             double norm = dg::blas1::dot( m_lapperp.weights(), m_temp0);
-            wall_bc[0] = dg::blas2::dot( y[0][s], m_lapperp.weights(), m_temp0);
+            wall_bc[0] = dg::blas2::dot( y[0][s], m_lapperp.weights(), m_temp0)/norm;
             double pperp_avg = dg::blas2::dot( y[1][s], m_lapperp.weights(), m_temp0);
             double ppara_avg = dg::blas2::dot( y[2][s], m_lapperp.weights(), m_temp0);
-            wall_bc[1] = wall_bc[2] = (ppara_avg + 2*pperp_avg)/3;
+            wall_bc[1] = wall_bc[2] = (ppara_avg + 2.*pperp_avg)/3./norm;
         }
         for( unsigned u=0; u<6; u++)
         {

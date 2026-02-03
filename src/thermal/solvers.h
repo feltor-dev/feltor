@@ -52,11 +52,6 @@ struct Solvers
     const Container& Btorinv() const {return m_Btorinv;}
     // 1/R
     const Container& rinv() const {return m_Rinv;}
-    // s > 0
-    const Container& gammaNbar( unsigned s) const {
-        assert( s > 0);
-        return m_old_gammaNbar[s-1].head();
-    }
     void compute_lapMperp( const Container& f, Container& lapMf) const {
         dg::blas2::symv( m_laplaceM, f, lapMf);
     }
@@ -77,7 +72,6 @@ struct Solvers
     dg::Elliptic2d<Geometry, Matrix, Container> m_laplaceM, m_laplaceMphi;
 
     dg::Extrapolation<Container> m_old_phi, m_old_aparST;
-    std::vector<dg::Extrapolation<Container>> m_old_gammaNbar;
 };
 
 template<class Geometry, class Matrix, class Container>
@@ -86,8 +80,7 @@ Solvers<Geometry, Matrix, Container>::Solvers( const Geometry& g,
     dg::file::WrappedJsonValue
     ): m_p(p),
     m_multigrid( g, p.stages),
-    m_old_phi( 2, dg::evaluate( dg::zero, g)), m_old_aparST( m_old_phi),
-    m_old_gammaNbar( p.num_species - 1, m_old_phi)
+    m_old_phi( 2, dg::evaluate( dg::zero, g)), m_old_aparST( m_old_phi)
 {
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_uE2 = m_omega = m_temp1 = m_temp0;
@@ -112,7 +105,7 @@ Solvers<Geometry, Matrix, Container>::Solvers( const Geometry& g,
                 {m_multigrid.grid(u), p.bcxA, p.bcyA, p.pol_dir}};
         Container Rinv = dg::pullback( dg::cooX3d, m_multigrid.grid(u));
         dg::blas1::pointwiseDivide( 1., Rinv, Rinv);
-        dg::blas1::pointwiseDdot( Rinv, Rinv, Rinv); // = 1/R^2
+        dg::blas1::pointwiseDot( Rinv, Rinv, Rinv); // = 1/R^2
         m_multi_ampere[u].matrix().set_chi( Rinv);
     }
     m_laplaceM.construct( g, p.bcx, p.bcy, p.pol_dir, p.jfactor);
@@ -140,7 +133,6 @@ void Solvers<Geometry, Matrix, Container>::compute_phi(
         m_multi_pol[u].set_chi( m_multi_chi[u]);
 
     //----------Compute right hand side------------------------//
-    double min = 0.;
     // Electrons
     dg::blas1::axpby( m_p.z[0], density[0], 0., m_temp0);
     for( unsigned s = 1; s<m_p.num_species; s++)

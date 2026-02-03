@@ -242,11 +242,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     DG_RANK0 std::cout << "## Compute Apar and staggered N      took "
                        << timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic();
-    for( unsigned s=0; s<m_p.num_species; s++)
-        dg::blas1::axpby( 1., wST[s], -m_p.z[s]/m_p.mu[s], m_aparST, m_q.at("ST U")[s]);
 
     // Compute all the rest of parallel trafos
-    m_para.compute_parallel_transformations( y, m_q);
+    m_para.compute_parallel_transformations( m_aparST, y, m_q);
     timer.toc();
     accu += timer.diff();
     DG_RANK0 std::cout << "## Compute Parallel transformations  took "
@@ -266,9 +264,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     {
         m_upToDate[s] = false;
         // Add perp dynamics
-        m_perp.add_densities_advection(  s, m_apar, m_BperpX, m_BperpY,
+        m_perp.add_densities_advection(  s, m_BperpX, m_BperpY,
             m_q, yp);
-        m_perp.add_velocities_advection( s, m_aparST, m_BperpXST, m_BperpYST,
+        m_perp.add_velocities_advection( s, m_BperpXST, m_BperpYST,
             m_q, yp);
 
         m_perp.add_densities_diffusion(  s, m_q, yp);
