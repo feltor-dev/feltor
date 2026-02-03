@@ -81,7 +81,7 @@ int main( int argc, char* argv[])
     if( p.sheath_bc != "none")
     {
         common::create_and_set_sheath( argv[1], js, mag, wall, sheath,
-                sheath_coordinate, grid, thermal);
+                sheath_coordinate, grid, thermal, true); // use ToroidalBHat
     }
 
     DG_RANK0 std::cout << "# Set Source \n";

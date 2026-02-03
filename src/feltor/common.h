@@ -463,7 +463,8 @@ void create_and_set_sheath(
         dg::geo::CylindricalFunctor& sheath,
         dg::geo::CylindricalFunctor& sheath_coordinate,
         const Geometry& grid,
-        Equations& feltor
+        Equations& feltor,
+        bool toroidal_sign_convention = false //if true sign of phi is defined wrt geometric angle, else wrt bhat
         )
 {
 #ifdef WITH_MPI
@@ -487,7 +488,10 @@ void create_and_set_sheath(
                 "s").asString();
         // sheath is created on feltor magnetic field
         sheath_coordinate = dg::geo::WallFieldlineCoordinate(
-                dg::geo::createBHat( mag), sheath_walls,
+                toroidal_sign_convention ?
+                dg::geo::createToroidalBHat(mag) :
+                dg::geo::createBHat( mag),
+                sheath_walls,
                 sheath_max_angle, 1e-6, sheath_coord, dg::geo::mod::SOLRegion( mag, wall));
         sheath_rate = js ["boundary"]["sheath"].get( "penalization",
                 0.).asDouble();

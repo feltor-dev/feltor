@@ -133,23 +133,14 @@ struct ParaDynamics
              Container& flux
              )
     {
-        if( m_reversed_field)
-        {
-            // Upwind( -v, minusST, plusST) == Upwind( v, plusST, minusST)
-            dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
-                velocity, plusST, minusST);
-        }
-        else
-        {
-            dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
-                velocity, minusST, plusST);
-        }
+        dg::blas1::evaluate( flux, dg::equals(), dg::Upwind(),
+            velocity, minusST, plusST);
         dg::blas1::pointwiseDot( velocity, flux, flux);
     }
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faHalf;
 
     Container m_temp, m_tminus, m_tplus;
-    Container m_divb;
+    Container m_Btorinv;
 
     std::array<std::vector<Container>,6> m_divNUb;
 
@@ -157,7 +148,6 @@ struct ParaDynamics
 
     const thermal::Parameters m_p;
     const dg::file::WrappedJsonValue m_js;
-    bool m_reversed_field = false;
     double m_sheath_rate = 0.;
 };
 
@@ -173,11 +163,8 @@ ParaDynamics<Grid, IMatrix, Matrix, Container>::ParaDynamics( const Grid& g,
     std::fill( m_divNUb.begin(), m_divNUb.end(),
         std::vector<Container>( m_p.num_species, m_temp) );
 
-    m_reversed_field = false;
-    if( mag.ipol()( g.x0(), g.y0()) < 0)
-        m_reversed_field = true;
-    //in DS we take the true bhat
-    auto bhat = dg::geo::createBHat( mag);
+    //in DS we take the toroidal bhat
+    auto bhat = dg::geo::createToroidalBHat( mag);
     // do not construct FCI if we just want to calibrate
     if( !p.calibrate )
     {
@@ -186,7 +173,8 @@ ParaDynamics<Grid, IMatrix, Matrix, Container>::ParaDynamics( const Grid& g,
         m_faHalf.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
     }
-    dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
+    dg::assign(  dg::pullback(dg::geo::Btor(mag), g), m_Btorinv);
+    dg::blas1::pointwiseDivide( 1., m_Btorinv, m_Btorinv);
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_staggered_densities(
@@ -235,7 +223,7 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
 {
     for( unsigned s=0; s<m_p.num_species; s++)
     {
-        std::vector<std::string> in = { "Psi0", "Psi1", "Psi2", "Psi3"}; // -> "ST Psi0", ...
+        std::vector<std::string> in = { "Psi0", "Psi1"}; // -> "ST Psi0", ...
         // 1st transform psi
         for( unsigned u=0; u<in.size(); u++)
         {
@@ -338,13 +326,10 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
     // -2P_para GradPar U
     dg::geo::ds_centered( m_faHalf, 1., q.at("U -1/2")[s], q.at("U +1/2")[s], 0., m_temp);
     dg::blas1::pointwiseDot( -2., y[2][s], m_temp, 1., yp[2][s]);
-    // -2z N U_perp E_1,para
-    dg::geo::ds_centered( m_fa, 1., q.at("Tperp -1")[s], q.at("Tperp +1")[s], 0., m_temp); //GradPar Tperp
-    dg::blas1::pointwiseDivide( m_temp, q.at("Tperp")[s], m_temp);
-    dg::blas1::axpby(1., m_divb, 1., m_temp);
-    dg::blas1::pointwiseDot( -1., q.at("Psi2")[s], m_temp, +1., q.at("Psi1")[s], m_temp, 0., m_temp);
-    dg::blas1::axpby( 1., q.at("ds Psi1")[s], 1., m_temp); // E_1,para
-    dg::blas1::pointwiseDot( -2.*m_p.z[s], q.at("N")[s], q.at("Uperp")[s], m_temp, 1., yp[2][s]);
+    // -mu  Q_perp ds Psi_1,para / z / Bphi
+    //
+    dg::blas1::pointwiseDot( 1., q.at("N")[s], q.at("Tperp")[s], q.at("Uperp")[s], 0., m_temp);
+    dg::blas1::pointwiseDot( -m_p.mu[s]/m_p.z[s], m_temp, m_Btorinv, q.at("ds Psi1")[s], 1., yp[2][s]);
 }
 
 template<class Grid, class IMatrix, class Matrix, class Container>
@@ -394,20 +379,18 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_velocities_advection(
         q.at("ST Ppara -1/2")[s], q.at("ST Ppara +1/2")[s], m_fa.bphi()
     );
     // and parallel electric field
-    dg::blas1::subroutine( [z, mu, delta ]DG_DEVICE (
+    dg::blas1::subroutine( [z, mu ]DG_DEVICE (
         double& WDot, double& QperpDot,
-        double N, double Tperp, double dsTperp,
-        double dsG0, double dsG1,
-        double G1, double G2, double divb
+        double N, double Tperp,
+        double dsG0, double dsG1, double Btorinv
             )
         {
-            WDot     -= z/mu*(dsG0 - G1*(dsTperp/Tperp + divb));
-            QperpDot -= z/mu*N*Tperp*(dsG1 - (G2-G1)*(dsTperp/Tperp + divb));
+            WDot     -= z/mu*( dsG0 + mu * Tperp * Btorinv * dsG1 / 2. / z / z);
+            QperpDot -= z/mu*N*Tperp*(mu * Tperp * Btorinv * dsG1 / 2. / z / z);
         },
         yp[3][s], yp[4][s],
-        q.at("ST N")[s], q.at("ST Tperp")[s], q.at("ST ds Tperp")[s],
-        q.at("ST ds Psi0")[s], q.at("ST ds Psi1")[s],
-        q.at("ST Psi1")[s], q.at("ST Psi2")[s], m_divb
+        q.at("ST N")[s], q.at("ST Tperp")[s],
+        q.at("ST ds Psi0")[s], q.at("ST ds Psi1")[s], m_Btorinv
     );
 }
 
@@ -477,14 +460,8 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_sheath_neumann_terms(
         for( int i=0; i<6; i++)
         {
             if( i == 3) continue;
-            //The coordinate automatically sees the reversed field
-            //but m_plus and m_minus are defined wrt the angle coordinate
-            if( m_reversed_field) //bphi negative (exchange + and -)
-                dg::blas1::evaluate( m_temp, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, q.at(in[i]+" +1")[s], q.at(in[i]+" -1")[s]);
-            else
-                dg::blas1::evaluate( m_temp, dg::equals(), dg::Upwind(),
-                     m_sheath_coordinate, q.at(in[i]+" -1")[s], q.at(in[i]+" +1")[s]);
+            dg::blas1::evaluate( m_temp, dg::equals(), dg::Upwind(),
+                 m_sheath_coordinate, q.at(in[i]+" -1")[s], q.at(in[i]+" +1")[s]);
             if( i == 1 or i == 2 )
                 dg::blas1::pointwiseDot( q.at("N")[s], m_temp, m_temp); // P = NT
             else if( i == 4)

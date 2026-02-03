@@ -468,19 +468,9 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
             dg::blas1::copy(v.f.get("Psi0",s), result);
         }
     },
-    {true, "psi1", "Potential 0", false,
+    {true, "psi1", "Potential 1", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             dg::blas1::copy(v.f.get("Psi1",s), result);
-        }
-    },
-    {true, "psi2", "Potential 0", false,
-        []( dg::x::DVec& result, Variables& v, unsigned s ) {
-            dg::blas1::copy(v.f.get("Psi2",s), result);
-        }
-    },
-    {true, "psi3", "Potential 0", false,
-        []( dg::x::DVec& result, Variables& v, unsigned s ) {
-            dg::blas1::copy(v.f.get("Psi3",s), result);
         }
     },
     {true, "gammaN", "Adjoint Gamma N", false,
