@@ -489,7 +489,7 @@ inline CylindricalFunctor createWallRegion( dg::file::WrappedJsonValue gs,
 The sheath is then given by
 \f[
     \chi_s(R,Z) := \begin{cases}
-        1 \text{ if } \varphi_w(R,Z) < \varphi_s  \\
+        1 \text{ if } |\varphi_w(R,Z)| < \varphi_s  \\
         0 \text{ else}
     \end{cases},
 \f]
@@ -523,6 +523,9 @@ with \f$ \varphi_s = 2\pi b_s\f$.
 @endcode
  * (iv) The sheath region is the SetUnion of positive and negative functor,
  * together with the SetIntersection with the SetNot(wall) region.
+ *
+ * @note Since distances are measured as absolute angles it does not matter how bhat is normalised, i.e
+ * bhat, -bhat, and in general any alpha*bhat will result in the same sheath functor
  * @param jsmod must contain fields as described above
  * @param mag (in) the (unmodified) magnetic field, used to integrate
  * the field towards or away from the sheath

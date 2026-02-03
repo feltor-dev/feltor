@@ -19,7 +19,7 @@ namespace geo{
  * The following differential equation is integrated
  * \f[ \frac{ d R}{d \varphi} = b^R / b^\varphi \\
  *     \frac{ d Z}{d \varphi} = b^Z / b^\varphi \\
- *     \frac{ d s}{s \varphi} = 1   / b^\varphi
+ *     \frac{ d s}{d \varphi} = 1   / b^\varphi
  * \f]
  * for initial conditions \f$ (R,Z,0)\f$ until either a maximum angle is reached or until \f$ (R,Z) \f$ leaves the given domain. In the latter case a bisection algorithm is used to find the exact angle \f$\varphi_l\f$ of leave. Either the angle \f$ \varphi_l\f$ or the corresponding \f$ s_l\f$ is returned by the function.
  * @ingroup wall
@@ -115,7 +115,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
  * for initial conditions \f$ (R,Z,0)\f$ until either a maximum angle is reached or until \f$ (R,Z) \f$ leaves the given domain. In the latter case a bisection algorithm is used to find the exact angle \f$\varphi_l\f$ of leave.
  *
  * The difference to \c WallFieldlineDistance is that this class integrates the differential equations in **both** directions and normalizes the output to \f$ [-1,1]\f$.
- * -1 means at the negative sheath (you have to go agains the field to go out
+ * -1 means at the negative sheath (you have to go against the field to go out
  *  of the box), +1 at the postive sheath (you have to go with the field to go
  *  out of the box) and anything else is in-between; when the sheath cannot be
  *  reached 0 is returned
