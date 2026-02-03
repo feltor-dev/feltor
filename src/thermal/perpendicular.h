@@ -16,13 +16,13 @@ struct PerpDynamics
 
     void update_derivatives(
         const Container& apar,
-        Container& dxapar, Container& dyapar,
+        Container& BperpX, Container& BperpY,
         const std::array<std::vector<Container>,6>& y,
         std::map<std::string, std::vector<Container>>& q
     );
     void update_STderivatives(
         const Container& aparST,
-        Container& dxaparST, Container& dyaparST,
+        Container& BperpXST, Container& BperpYST,
         const std::array<std::vector<Container>,6>& y,
         std::map<std::string, std::vector<Container>>& q
     );
@@ -30,8 +30,8 @@ struct PerpDynamics
     void add_densities_advection(
         unsigned s,
         const Container& apar,
-        const Container& dxapar,
-        const Container& dyapar,
+        const Container& BperpX,
+        const Container& BperpY,
         const std::map<std::string, std::vector<Container>>& q,
         std::array<std::vector<Container>,6>& yp
     ) const;
@@ -40,8 +40,8 @@ struct PerpDynamics
     void add_velocities_advection(
         unsigned s,
         const Container& aparST,
-        const Container& dxaparST,
-        const Container& dyaparST,
+        const Container& BperpXST,
+        const Container& BperpYST,
         const std::map<std::string, std::vector<Container>>& q,
         std::array<std::vector<Container>,6>& yp
     ) const;
@@ -217,8 +217,7 @@ PerpDynamics<Grid, IMatrix, Matrix, Container>::PerpDynamics( const Grid& g,
     m_detg = dg::tensor::volume( metric);
     m_temp1 = m_temp2 = m_temp3 = m_temp0;
     dg::assign(  dg::pullback(dg::geo::ToroidalDivb(mag), g), m_divb);
-    dg::assign(  dg::pullback(dg::geo::Btor(mag), g), m_Btorinv);
-    dg::blas1::pointwiseDivide( 1., m_Btorinv, m_Btorinv);
+    dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
     dg::assign(  dg::pullback(dg::cooX3d, g), m_R);
 
     // Diffusion operators
@@ -228,13 +227,15 @@ PerpDynamics<Grid, IMatrix, Matrix, Container>::PerpDynamics( const Grid& g,
 template<class Grid, class IMatrix, class Matrix, class Container>
 void PerpDynamics<Grid, IMatrix, Matrix, Container>::update_derivatives(
     const Container& apar,
-    Container& dxapar, Container& dyapar, // TODO change to BperpR and BperpZ
+    Container& BperpX, Container& BperpY,
     const std::array<std::vector<Container>,6>& y,
     std::map<std::string, std::vector<Container>>& q
 )
 {
-    dg::blas2::symv( m_dx_A, apar, dxapar);
-    dg::blas2::symv( m_dy_A, apar, dyapar);
+    dg::blas2::symv( m_dy_A, apar, BperpX);
+    dg::blas1::pointwiseDivide( 1., BperpX, m_R, 0., BperpX);
+    dg::blas2::symv( m_dx_A, apar, BperpY);
+    dg::blas1::pointwiseDivide( -1., BperpY, m_R, 0., BperpY);
     for( unsigned s=0; s<m_p.num_species; s++)
     {
         dg::blas2::symv( m_dxF, y[0][s], q.at("dxF N")[s]);
@@ -277,13 +278,15 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::update_derivatives(
 template<class Grid, class IMatrix, class Matrix, class Container>
 void PerpDynamics<Grid, IMatrix, Matrix, Container>::update_STderivatives(
     const Container& aparST,
-    Container& dxaparST, Container& dyaparST,
+    Container& BperpXST, Container& BperpYST,
     const std::array<std::vector<Container>,6>& y,
     std::map<std::string, std::vector<Container>>& q
 )
 {
-    dg::blas2::symv( m_dx_A, aparST, dxaparST);
-    dg::blas2::symv( m_dy_A, aparST, dyaparST);
+    dg::blas2::symv( m_dy_A, apar, BperpX);
+    dg::blas1::pointwiseDivide( 1., BperpX, m_R, 0., BperpX);
+    dg::blas2::symv( m_dx_A, apar, BperpY);
+    dg::blas1::pointwiseDivide( -1., BperpY, m_R, 0., BperpY);
     for( unsigned s=0; s<m_p.num_species; s++)
     {
         dg::blas2::symv( m_dxC, q.at("ST N")[s],     q.at("ST dx N")[s]);
@@ -319,7 +322,7 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::update_STderivatives(
 template<class Grid, class IMatrix, class Matrix, class Container>
 void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
     unsigned s,
-    const Container& apar, const Container& dxapar, const Container& dyapar,
+    const Container& apar, const Container& BperpX, const Container& BperpY,
     const std::map<std::string, std::vector<Container>>& q,
     std::array<std::vector<Container>,6>& yp
 ) const
@@ -334,7 +337,7 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
             double dxBPperp, double dyBPperp,
             double dxFPpara, double dyFPpara,
             double dxBPpara, double dyBPpara,
-            double A,     double dxA,     double dyA,
+            double A,     double BpX,     double BpY,
             double Tperp, double dxTperp, double dyTperp,
             double Tpara, double dxTpara, double dyTpara,
             double U,     double dxU,     double dyU,
@@ -356,9 +359,9 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
         double bpX = 0., bpY = 0., divbp = 0.;
         if( beta != 0)
         {
-            bpX =   dyA/R;
-            bpY = - dxA/R;
-            divbp = - curvNablaX*dxA/R - curvNablaY*dyA/R;
+            bpX =  BpX*Btorinv;
+            bpY =  BpY*Btorinv;
+            divbp = curvNablaX*BpY - curvNablaY*BpX;
         }
         double vX = U * bpX + ( - Btorinv*E0Y) + Tperp/z *curvNablaX + (Tpara + mu*U*U)/z*curvKappaX;
         double vY = U * bpY + (   Btorinv*E0X) + Tperp/z *curvNablaY + (Tpara + mu*U*U)/z*curvKappaY;
@@ -434,7 +437,7 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
         q.at("dxB Pperp")[s], q.at("dyB Pperp")[s],
         q.at("dxF Ppara")[s], q.at("dyF Ppara")[s],
         q.at("dxB Ppara")[s], q.at("dyB Ppara")[s],
-        apar, dxapar, dyapar,
+        apar, BperpX, BperpY,
         q.at("Tperp")[s], q.at("dx Tperp")[s], q.at("dy Tperp")[s],
         q.at("Tpara")[s], q.at("dx Tpara")[s], q.at("dy Tpara")[s],
         q.at("U")[s],     q.at("dx U")[s],     q.at("dy U")[s],
@@ -444,7 +447,7 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
                          q.at("dx Psi1")[s], q.at("dy Psi1")[s],
         m_curvNabla[0], m_curvNabla[1],
         m_curvKappa[0], m_curvKappa[1],
-        m_divCurvKappa, m_Btorinv, m_divb, m_R,
+        m_divCurvKappa, m_Btorinv, m_divb,
         yp[0][s], yp[1][s], yp[2][s]
     );
 }
@@ -453,8 +456,8 @@ template<class Grid, class IMatrix, class Matrix, class Container>
 void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_velocities_advection(
     unsigned s,
     const Container& aparST,
-    const Container& dxaparST,
-    const Container& dyaparST,
+    const Container& BperpXST,
+    const Container& BperpYST,
     const std::map<std::string, std::vector<Container>>& q,
     std::array<std::vector<Container>,6>& yp
 ) const
@@ -471,13 +474,13 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_velocities_advection(
             double N, double dxN, double dyN,
             double Tperp, double dxTperp, double dyTperp,
             double Tpara, double dxTpara, double dyTpara,
-            double A, double dxA, double dyA,
+            double A, double BpX, double BpY,
             double Uperp, double Upara,
                        double dxG0, double dyG0,
                        double dxG1, double dyG1,
             double curvNablaX, double curvNablaY,
             double curvKappaX, double curvKappaY,
-            double divCurvKappa, double Btorinv, double divb, double R,
+            double divCurvKappa, double Btorinv, double divb,
             double& dtU, double& dtQperp, double& dtQpara
         )
     {
@@ -489,9 +492,9 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_velocities_advection(
         double bpX = 0., bpY = 0., divbp = 0.;
         if( beta != 0)
         {
-            bpX =   dyA/R;
-            bpY = - dxA/R;
-            divbp = - curvNablaX*dxA/R - curvNablaY*dyA/R;
+            bpX =  BpX*Btorinv;
+            bpY =  BpY*Btorinv;
+            divbp = curvNablaX*BpY - curvNablaY*BpX;
         }
         // U
         double vX = U * bpX + ( - Btorinv*E0Y) + Tperp/z *curvNablaX + (3*Tpara + mu*U*U)/z*curvKappaX;
@@ -592,13 +595,13 @@ void PerpDynamics<Grid, IMatrix, Matrix, Container>::add_velocities_advection(
         q.at("ST N")[s],     q.at("ST dx N")[s],     q.at("ST dy N")[s],
         q.at("ST Tperp")[s], q.at("ST dx Tperp")[s], q.at("ST dy Tperp")[s],
         q.at("ST Tpara")[s], q.at("ST dx Tpara")[s], q.at("ST dy Tpara")[s],
-        aparST, dxaparST, dyaparST,
+        aparST, BperpXST, BperpYST,
         q.at("ST Uperp")[s], q.at("ST Upara")[s],
                             q.at("ST dx Psi0")[s], q.at("ST dy Psi0")[s],
                             q.at("ST dx Psi1")[s], q.at("ST dy Psi1")[s],
         m_curvNabla[0], m_curvNabla[1],
         m_curvKappa[0], m_curvKappa[1],
-        m_divCurvKappa, m_Btorinv, m_divb, m_R,
+        m_divCurvKappa, m_Btorinv, m_divb,
         yp[3][s], yp[4][s], yp[5][s]
     );
 }

@@ -16,8 +16,7 @@ struct Collisions
         m_temp1 = m_temp0;
         for( int i=0; i<3; i++)
             m_cc[i].resize( m_p.num_species, m_temp0);
-        dg::assign(  dg::pullback(dg::geo::Bmodule(mag), g), m_B2);
-        dg::blas1::pointwiseDot( m_B2, m_B2, m_B2);
+        dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
         m_lapperpM.construct ( g, p.bcx, p.bcy,  p.diff_dir);
         m_R0 = mag.R0();
     }
@@ -38,7 +37,7 @@ struct Collisions
     const thermal::Parameters m_p;
     const dg::file::WrappedJsonValue m_js;
     dg::Elliptic2d< Geometry, Matrix, Container> m_lapperpM;
-    Container m_temp0, m_temp1, m_B2;
+    Container m_temp0, m_temp1, m_Btorinv;
     std::array<std::vector<Container>,3> m_cc; // Coulomb collision terms for all species
     double m_R0;
 };
@@ -68,7 +67,7 @@ void Collisions<Grid, Matrix, Container>::add_coulomb_collisions(
 
 
     // CN
-    dg::blas1::pointwiseDivide( m_p.mu[s]/2./m_p.z[s]/m_p.z[s], m_cc[1][s], m_B2, 0., m_temp0);
+    dg::blas1::pointwiseDot( m_p.mu[s]/2./m_p.z[s]/m_p.z[s], m_cc[1][s], m_Btorinv, m_Btorinv, 0., m_temp0);
     dg::blas2::symv( m_lapperpM, m_temp0, m_cc[0][s]);
     dg::blas1::axpby( 1., m_cc[0][s], 1., yp[0][s]);
 
@@ -104,7 +103,7 @@ void Collisions<Grid, Matrix, Container>::add_coulomb_collisions(
             }, m_temp0, q.at("ST N")[s], q.at("ST N")[k], q.at("ST Tperp")[s], q.at("ST Tperp")[k]);
         }
     // CN ST
-    dg::blas1::pointwiseDivide( m_p.mu[s]/2./m_p.z[s]/m_p.z[s], m_temp0, m_B2, 0., m_temp0);
+    dg::blas1::pointwiseDot( m_p.mu[s]/2./m_p.z[s]/m_p.z[s], m_temp0, m_Btorinv, m_Btorinv, 0., m_temp0);
     dg::blas2::symv( m_lapperpM, m_temp0, m_temp1);
     // CU ST
     dg::blas1::pointwiseDivide( q.at("ST U")[s], q.at("ST N")[s], m_temp0); // U/N

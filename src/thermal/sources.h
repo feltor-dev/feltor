@@ -68,7 +68,7 @@ struct Sources
     const Container& get_source( unsigned u, unsigned s) const{
         return m_ss[u][s];
     }
-    const Container& binv( ) const { return m_binv; }
+    const Container& Btorinv( ) const { return m_Btorinv; }
     void transform_density_pperp( unsigned s, const Container& density,
         const Container& pperp, const Container& phi,
         Container& gydensity, Container& gypperp) const // can be called inplace!
@@ -81,22 +81,22 @@ struct Sources
             return;
         }
         //compute FLR corrections S_N = (S_n-0.5 Lap S_p) - Div ( S_n phi)
-        dg::blas1::pointwiseDot( mus/zs/zs, pperp, m_binv, m_binv, 0., m_tempgy0);
+        dg::blas1::pointwiseDot( mus/zs/zs, pperp, m_Btorinv, m_Btorinv, 0., m_tempgy0);
         dg::blas2::gemv( m_lapperp, m_tempgy0, m_tempgy1);
         dg::blas1::axpby( 1., density, 0.5, m_tempgy1);
         // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
-        dg::blas1::pointwiseDot( mus/zs, density, m_binv, m_binv, 0., m_tempgy0);
+        dg::blas1::pointwiseDot( mus/zs, density, m_Btorinv, m_Btorinv, 0., m_tempgy0);
         m_lapperpP.symv( 1., phi, 0., m_tempgy0, 1., m_tempgy1);
         dg::blas1::copy( m_tempgy1, gydensity); //gydensity can alias density!
         // Pressure trafo
-        dg::blas1::pointwiseDot( mus/zs, pperp, m_binv, m_binv, 0., m_tempgy0);
+        dg::blas1::pointwiseDot( mus/zs, pperp, m_Btorinv, m_Btorinv, 0., m_tempgy0);
         dg::blas1::copy( pperp, gypperp);
         m_lapperpP.symv( 1., phi, 0., m_tempgy0, 1., gypperp);
     }
     private:
     const thermal::Parameters m_p;
     mutable Container m_temp0, m_temp1, m_tempgy0, m_tempgy1;
-    Container m_wall, m_binv;
+    Container m_wall, m_Btorinv;
     std::array<std::vector<Container>,3> m_ss; // source terms for all species
     std::array<std::vector<Container>,3> m_source_region, m_profile; // (physical) source terms for all species
     dg::Elliptic2d< Geometry, Matrix, Container> m_lapperp, m_lapperpP;
@@ -121,7 +121,7 @@ Sources<Grid, IMatrix, Matrix, Container>::Sources( const Grid& g,
     m_source_region = m_profile = m_ss;
     m_lapperp.construct ( g, p.bcx, p.bcy, p.diff_dir);
     m_lapperpP.construct ( g, p.bcxP, p.bcyP,  p.pol_dir),
-    dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_binv);
+    dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
 }
 
 

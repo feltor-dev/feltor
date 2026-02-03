@@ -41,11 +41,11 @@ struct Explicit
     const Container& apar() const {
         return m_apar;
     }
-    const Container& dxapar() const {
-        return m_dxapar;
+    const Container& BperpX() const {
+        return m_BperpX;
     }
-    const Container& dyapar() const {
-        return m_dyapar;
+    const Container& BperpY() const {
+        return m_BperpY;
     }
     const Container& get(std::string id, unsigned s) { return m_q.at(id)[s];}
     void compute_dot_apar( Container& tmp) const {
@@ -143,7 +143,7 @@ struct Explicit
         "ST dxF Qpara", "ST dxB Qpara", "ST dyF Qpara", "ST dyB Qpara"
     };
 
-    Container m_phi, m_apar, m_dxapar, m_dyapar, m_aparST, m_dxaparST, m_dyaparST; // same for all species
+    Container m_phi, m_apar, m_BperpX, m_BperpY, m_aparST, m_BperpXST, m_BperpYST; // same for all species
 
     const thermal::Parameters m_p;
     const dg::file::WrappedJsonValue m_js;
@@ -167,7 +167,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_phi );
-    m_apar = m_dxapar = m_dyapar = m_dxaparST = m_dyaparST = m_aparST = m_phi;
+    m_apar = m_BperpX = m_BperpY = m_BperpXST = m_BperpYST = m_aparST = m_phi;
     m_q["N"] = std::vector<Container>( m_p.num_species, m_phi);
     for( auto name : q_names)
         m_q[name] = m_q["N"];
@@ -251,8 +251,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
                        << timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic();
     // and the perp derivatives
-    m_perp.update_derivatives( m_apar, m_dxapar, m_dyapar, y, m_q);
-    m_perp.update_STderivatives( m_aparST, m_dxaparST, m_dyaparST, y, m_q);
+    m_perp.update_derivatives( m_apar, m_BperpX, m_BperpY, y, m_q);
+    m_perp.update_STderivatives( m_aparST, m_BperpXST, m_BperpYST, y, m_q);
     timer.toc();
     accu += timer.diff();
     DG_RANK0 std::cout << "## Compute perpendicular derivatives took "
@@ -264,9 +264,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     {
         m_upToDate[s] = false;
         // Add perp dynamics
-        m_perp.add_densities_advection(  s, m_apar, m_dxapar, m_dyapar,
+        m_perp.add_densities_advection(  s, m_apar, m_BperpX, m_BperpY,
             m_q, yp);
-        m_perp.add_velocities_advection( s, m_aparST, m_dxaparST, m_dyaparST,
+        m_perp.add_velocities_advection( s, m_aparST, m_BperpXST, m_BperpYST,
             m_q, yp);
 
         m_perp.add_densities_diffusion(  s, m_q, yp);

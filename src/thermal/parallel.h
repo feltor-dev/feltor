@@ -173,8 +173,7 @@ ParaDynamics<Grid, IMatrix, Matrix, Container>::ParaDynamics( const Grid& g,
         m_faHalf.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
     }
-    dg::assign(  dg::pullback(dg::geo::Btor(mag), g), m_Btorinv);
-    dg::blas1::pointwiseDivide( 1., m_Btorinv, m_Btorinv);
+    dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_staggered_densities(

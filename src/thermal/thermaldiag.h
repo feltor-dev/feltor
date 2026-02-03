@@ -251,54 +251,44 @@ std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::Cylindr
             result = dg::pullback( dg::geo::RhoP( v.mag), grid);
         }
     },
-    { "Bmodule", "Magnetic field strength",
+    { "Btor", "Toroidal magnetic field strength (can be negative)",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
-            result = dg::pullback( dg::geo::Bmodule(v.mag), grid);
+            result = dg::pullback( dg::geo::Btor(v.mag), grid);
         }
     },
     { "Divb", "The divergence of the magnetic unit vector",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
-            dg::assign(  dg::pullback(dg::geo::Divb(v.mag), grid), result);
+            dg::assign(  dg::pullback(dg::geo::ToroidalDivb(v.mag), grid), result);
         }
     },
-    { "InvB", "Inverse of Bmodule",
+    { "InvBtor", "Inverse of Btor",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid ){
-            dg::assign(  dg::pullback(dg::geo::InvB(v.mag), grid), result);
+            dg::assign(  dg::pullback(dg::geo::InvBtor(v.mag), grid), result);
         }
     },
-    { "CurvatureKappaR", "R-component of the Kappa B curvature vector",
+    { "CurvatureKappaR", "R-component of the toroidal Kappa B curvature vector",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.perp().curvKappa()[0], result);
         }
     },
-    { "CurvatureKappaZ", "Z-component of the Kappa B curvature vector",
+    { "CurvatureKappaZ", "Z-component of the toroidal Kappa B curvature vector",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.perp().curvKappa()[1], result);
         }
     },
-    { "CurvatureKappaP", "Contravariant Phi-component of the Kappa B curvature vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
-            dg::assign( v.f.perp().curvKappa()[2], result);
-        }
-    },
-    { "DivCurvatureKappa", "Divergence of the Kappa B curvature vector",
+    { "DivCurvatureKappa", "Divergence of the toroidal Kappa B curvature vector",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.perp().divCurvKappa(), result);
         }
     },
-    { "CurvatureNablaR", "R-component of the Nabla B curvature vector",
+    { "CurvatureNablaR", "R-component of the toroidal Nabla B curvature vector",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.perp().curvNabla()[0], result);
         }
     },
-    { "CurvatureNablaZ", "Z-component of the Nabla B curvature vector",
+    { "CurvatureNablaZ", "Z-component of the toroidal Nabla B curvature vector",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
             dg::assign( v.f.perp().curvNabla()[1], result);
-        }
-    },
-    { "bphi", "Covariant Phi-component of the magnetic unit vector",
-        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& ){
-            dg::assign( v.f.perp().bphi(), result);
         }
     },
     { "BHatR", "R-component of the magnetic field unit vector",
@@ -314,6 +304,21 @@ std::vector<dg::file::Record<void(dg::x::HVec&, Variables&, const dg::x::Cylindr
     { "BHatP", "P-component of the magnetic field unit vector",
         []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
             result = dg::pullback( dg::geo::BHatP(v.mag), grid);
+        }
+    },
+    { "ToroidalBHatR", "R-component of the magnetic field unit vector normalised by bphi",
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+            result = dg::pullback( dg::geo::ToroidalBHatR(v.mag), grid);
+        }
+    },
+    { "ToroidalBHatZ", "Z-component of the magnetic field unit vector normalised by bphi",
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+            result = dg::pullback( dg::geo::ToroidalBHatZ(v.mag), grid);
+        }
+    },
+    { "ToroidalBHatP", "P-component of the magnetic field unit vector normalised by bphi",
+        []( dg::x::HVec& result, Variables& v, const dg::x::CylindricalGrid3d& grid){
+            result = dg::pullback( dg::geo::ToroidalBHatP(v.mag), grid);
         }
     },
     { "NormGradPsip", "Norm of gradient of Psip",
@@ -580,76 +585,82 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     ////////////////// particle fluxes /////////////////////
     {true, "jnEx_tt", "Radial particle flux: x-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // omega_s
+            dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
+                v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
             // E_0^y
-            dg::blas1::pointwiseDivide( v.f.get("dy Tperp", s), v.f.get("Tperp", s), result);
-            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[1], result);
-            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dy Psi0", s),
-                                    -1., v.f.get("Psi1", s), result, 0., result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dy Psi0", s), 1.,
+                result, v.f.get( "dy Psi1", s), 0., result);
 
-            // N ExB_x = - N E_0^y bhat_2
-            dg::blas1::pointwiseDot( -1., v.f.get("N", s), result, v.f.perp().bhatgB(), 0., result);
+            // N ExB_x = - N E_0^y / Btor
+            dg::blas1::pointwiseDot( -1., v.f.get("N", s), result, v.f.perp().Btorinv(), 0., result);
         }
     },
     {true, "jnEy_tt", "Radial particle flux: y-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // omega_s
+            dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
+                v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
             // E_0^x
-            dg::blas1::pointwiseDivide( v.f.get("dx Tperp", s), v.f.get("Tperp", s), result);
-            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[0], result);
-            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dx Psi0", s),
-                                    -1., v.f.get("Psi1", s), result, 0., result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dx Psi0", s), 1.,
+                result, v.f.get( "dx Psi1", s), 0., result);
 
-            // N ExB_y = N E_0^x bhat_2
-            dg::blas1::pointwiseDot( +1., v.f.get("N", s), result, v.f.perp().bhatgB(), 0., result);
+            // N ExB_y = + N E_0^x / Btor
+            dg::blas1::pointwiseDot( +1., v.f.get("N", s), result, v.f.perp().Btorinv(), 0., result);
         }
     },
     //
     {true, "jpperpEx_tt", "Radial perp pressure flux: x-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // omega_s
+            dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
+                v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
             // (E_0+E_1)^y
-            dg::blas1::pointwiseDivide( v.f.get("dy Tperp", s), v.f.get("Tperp", s), result);
-            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[1], result);
-            dg::blas1::pointwiseDot( -1., v.f.get("Psi2", s), result, 0., result);
-            dg::blas1::axpbypgz( 1., v.f.get("dy Psi0", s), 1., v.f.get("dy Psi1", s), 1., result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dy Psi0", s), 2.,
+                result, v.f.get( "dy Psi1", s), 0., result);
 
-            // N ExB_x = - Pperp (E_0+E_1)^y bhat_2
-            dg::blas1::pointwiseDot( -1., v.y0[1][s], result, v.f.perp().bhatgB(), 0., result);
+            // Pperp ExB_x = - Pperp (E_0+E_1)^y / Btor
+            dg::blas1::pointwiseDot( -1., v.y0[1][s], result, v.f.perp().Btorinv(), 0., result);
         }
     },
     {true, "jpperpEy_tt", "Radial perp pressure flux: y-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // omega_s
+            dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
+                v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
             // (E_0+E_1)^x
-            dg::blas1::pointwiseDivide( v.f.get("dx Tperp", s), v.f.get("Tperp", s), result);
-            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[0], result);
-            dg::blas1::pointwiseDot( -1., v.f.get("Psi2", s), result, 0., result);
-            dg::blas1::axpbypgz( 1., v.f.get("dx Psi0", s), 1., v.f.get("dx Psi1", s), 1., result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dx Psi0", s), 2.,
+                result, v.f.get( "dx Psi1", s), 0., result);
 
-            // N ExB_y = Pperp (E_0+E_1)^x bhat_2
-            dg::blas1::pointwiseDot( +1., v.y0[1][s], result, v.f.perp().bhatgB(), 0., result);
+            // Pperp ExB_y = Pperp (E_0+E_1)^x bhat_2
+            dg::blas1::pointwiseDot( +1., v.y0[1][s], result, v.f.perp().Btorinv(), 0., result);
         }
     },
     //
     {true, "jpparaEx_tt", "Radial para pressure flux: x-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // omega_s
+            dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
+                v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
             // E_0^y
-            dg::blas1::pointwiseDivide( v.f.get("dy Tperp", s), v.f.get("Tperp", s), result);
-            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[1], result);
-            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dy Psi0", s),
-                                    -1., v.f.get("Psi1", s), result, 0., result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dy Psi0", s), 1.,
+                result, v.f.get( "dy Psi1", s), 0., result);
 
-            // N ExB_x = - N E_0^y bhat_2
-            dg::blas1::pointwiseDot( -1., v.y0[2][s], result, v.f.perp().bhatgB(), 0., result);
+            // Ppara ExB_x = - Ppara E_0^y / Btor
+            dg::blas1::pointwiseDot( -1., v.y0[2][s], result, v.f.perp().Btorinv(), 0., result);
         }
     },
     {true, "jpparaEy_tt", "Radial para pressure flux: y-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            // omega_s
+            dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
+                v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
             // E_0^x
-            dg::blas1::pointwiseDivide( v.f.get("dx Tperp", s), v.f.get("Tperp", s), result);
-            dg::blas1::axpby( 1., result, -1., v.f.perp().gradLnB()[0], result);
-            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dx Psi0", s),
-                                    -1., v.f.get("Psi1", s), result, 0., result);
+            dg::blas1::pointwiseDot( 1., 1., v.f.get( "dx Psi0", s), 1.,
+                result, v.f.get( "dx Psi1", s), 0., result);
 
-            // N ExB_y = N E_0^x bhat_2
-            dg::blas1::pointwiseDot( +1., v.y0[2][s], result, v.f.perp().bhatgB(), 0., result);
+            // Ppara ExB_y = Ppara E_0^x / Btor
+            dg::blas1::pointwiseDot( 1., v.y0[2][s], result, v.f.perp().Btorinv(), 0., result);
         }
     },
     // elements of curvature fluxes
@@ -691,58 +702,46 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
 
     {true, "jnAx_tt", "Radial particle flux: x-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
-            // bpX = A * curvKappaX + (   dyA*b_2);
-            dg::blas1::pointwiseDot( 1., v.f.perp().bhatgB(), v.f.dyapar(),
-                                     1., v.f.apar(), v.f.perp().curvKappa()[0],
-                                     0., result);
-            dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), result, 0., result);
+            // bpX = BpX / Btor;
+            dg::blas1::pointwiseDot(1., v.f.BperpX(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), v.tmp[0], 0., result);
         }
     },
     {true, "jnAy_tt", "Radial particle flux: y-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
-            // bpY = A * curvKappaY + ( - dxA*b_2);
-            dg::blas1::pointwiseDot(-1., v.f.perp().bhatgB(), v.f.dxapar(),
-                                     1., v.f.apar(), v.f.perp().curvKappa()[1],
-                                     0., result);
-            dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), result, 0., result);
+            // bpY = BpY / Btor;
+            dg::blas1::pointwiseDot(1., v.f.BperpY(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), v.tmp[0], 0., result);
         }
     },
     {true, "jpperpAx_tt", "Radial perp pressure flux: x-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
-            // bpX = A * curvKappaX + (   dyA*b_2);
-            dg::blas1::pointwiseDot( 1., v.f.perp().bhatgB(), v.f.dyapar(),
-                                     1., v.f.apar(), v.f.perp().curvKappa()[0],
-                                     0., v.tmp[0]);
+            // bpX = BpX / Btor;
+            dg::blas1::pointwiseDot(1., v.f.BperpX(), v.f.perp().Btorinv(), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("Uperp", s), v.tmp[0], 1., result);
         }
     },
     {true, "jpperpAy_tt", "Radial perp pressure flux: y-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
-            // bpY = A * curvKappaY + ( - dxA*b_2);
-            dg::blas1::pointwiseDot(-1., v.f.perp().bhatgB(), v.f.dxapar(),
-                                     1., v.f.apar(), v.f.perp().curvKappa()[1],
-                                     0., result);
+            // bpY = BpY / Btor;
+            dg::blas1::pointwiseDot(1., v.f.BperpY(), v.f.perp().Btorinv(), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("Uperp", s), v.tmp[0], 1., result);
         }
     },
     {true, "jpparaAx_tt", "Radial para pressure flux: x-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
-            // bpX = A * curvKappaX + (   dyA*b_2);
-            dg::blas1::pointwiseDot( 1., v.f.perp().bhatgB(), v.f.dyapar(),
-                                     1., v.f.apar(), v.f.perp().curvKappa()[0],
-                                     0., v.tmp[0]);
+            // bpX = BpX / Btor;
+            dg::blas1::pointwiseDot(1., v.f.BperpX(), v.f.perp().Btorinv(), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("Upara", s), v.tmp[0], 1., result);
         }
     },
     {true, "jpparaAy_tt", "Radial para pressure flux: y-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
-            // bpY = A * curvKappaY + ( - dxA*b_2);
-            dg::blas1::pointwiseDot(-1., v.f.perp().bhatgB(), v.f.dxapar(),
-                                     1., v.f.apar(), v.f.perp().curvKappa()[1],
-                                     0., result);
+            // bpY = BpY / Btor;
+            dg::blas1::pointwiseDot(1., v.f.BperpY(), v.f.perp().Btorinv(), 0., v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("Upara", s), v.tmp[0], 1., result);
         }
@@ -1955,9 +1954,9 @@ std::vector<PreRecord> probe_list = {
             dg::blas1::copy(v.f.get("dx Psi0", 0), result);
         }
     },
-    {false, "aparR", "d/dR parallel magnetic potential", false,
+    {false, "BperpR", "R component Perpendicular magnetic field", false,
         []( dg::x::DVec& result, Variables& v, unsigned ) {
-            dg::blas1::copy(v.f.dxapar(), result);
+            dg::blas1::copy(v.f.BperpX(), result);
         }
     },
     {true, "nZ", "d/dZ gyro-centre density", false,
@@ -1995,9 +1994,9 @@ std::vector<PreRecord> probe_list = {
             dg::blas1::copy(v.f.get("dy Psi 0", 0), result);
         }
     },
-    {false, "aparZ", "d/dZ parallel magnetic potential", false,
+    {false, "BperpZ", "Z component Perpendicular magnetic field", false,
         []( dg::x::DVec& result, Variables& v, unsigned ) {
-            dg::blas1::copy(v.f.dyapar(), result);
+            dg::blas1::copy(v.f.BperpY(), result);
         }
     },
     {true, "nPar", "d/dPar gyro-centre density", false,
