@@ -321,6 +321,20 @@ struct InvB : public aCylindricalFunctor<InvB>
     TokamakMagneticField m_mag;
 };
 
+///@brief \f$   B_{tor}^{-1} = 1/\vec B\cdot \vec \varphi = R/(R_0 I)   \f$
+/// @note Can be positive and negative
+struct InvBtor : public aCylindricalFunctor<InvBtor>
+{
+    InvBtor( const TokamakMagneticField& mag): m_mag(mag)  { }
+    double do_compute(double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z);
+        return R/m_mag.R0()/ipol;
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
 /**
  * @brief \f$   \ln{|B|}  \f$
  *

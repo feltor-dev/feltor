@@ -62,11 +62,18 @@ TEST_CASE("Magnetic field")
         dg::geo::Bmodule bmod( mag);
         dg::geo::Btor btor(mag);
         dg::geo::InvB invB(mag);
+        dg::geo::InvBtor invBtor(mag);
         dg::geo::LnB lnB(mag);
         CHECK ( fabs( bmod( R_O, 0) - 1 ) < 1e-12);
         CHECK ( fabs( btor( R_O, 0) - sign ) < 1e-12);
         CHECK ( fabs( invB( R_O, 0) - 1 ) < 1e-12);
+        CHECK ( fabs( invBtor( R_O, 0) - sign ) < 1e-12);
         CHECK ( fabs( lnB(  R_O, 0) ) < 1e-12);
+
+        double R = R_O + 0.2, Z = -0.1;
+        CHECK( fabs( 1./bmod(R,Z) - invB(R,Z)) < 1e-12);
+        CHECK( fabs( 1./btor(R,Z) - invBtor(R,Z)) < 1e-12);
+
     }
     SECTION( "Curvature")
     {
