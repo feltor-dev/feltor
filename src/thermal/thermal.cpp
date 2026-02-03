@@ -89,15 +89,16 @@ int main( int argc, char* argv[])
         std::array<std::vector<bool>,3> fixed_profile;
         std::array<std::vector<double>,3> source_rate;
         std::array<std::vector<dg::x::HVec>,3> profiles, source_profiles;
-        std::vector<double> minne, minrate, minalpha;
+        std::vector<double> minn;
+        double mint, minrate, minbeta;
         source_profiles = thermal::source_profiles( thermal,
             fixed_profile, source_rate, profiles,
             grid, mag, unmod_mag,
-            js["species"], minne, minrate, minalpha);
+            js["species"], minn, mint, minrate, minbeta);
         thermal.set_source( fixed_profile[0][0], source_rate,
                 profiles,
                 source_profiles,
-                minne, minrate[0], minalpha);
+                minn, mint, minrate, minbeta);
     }catch ( std::out_of_range& error){
         DG_RANK0 std::cerr << "ERROR: in source: "<<error.what();
         DG_RANK0 std::cerr <<"Is there a spelling error? I assume you do not want to continue with the wrong source so I exit! Bye Bye :)"<<std::endl;

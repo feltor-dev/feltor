@@ -64,6 +64,7 @@ The wall density is a list of values
 {
     "wall" :
     {
+        "bc" : "fixed", // Dirichlet boundary
         "nwall" : [0.1,0.1], // $N_{s,w} >0$ (see also background and minne)
         // length must equal number of species (see \ref{sec:species})
         // Quasineutrality must be observed $\sum_s z_s n_{s,wall} = 0$
@@ -71,18 +72,29 @@ The wall density is a list of values
         "twall" : 1, // $T_w > 0$ wall temperature
         "qwall" : 0, // $Q_{w}$
     }
+    "wall":
+    {
+        "bc" : "floating" // Neumann boundary
+    }
     "sheath":
     {
         "type": "bohm" //INVALID, only "wall" or "insulating" are allowed
     }
 }
 \end{minted}
-Due to collisions, there can only be one wall temperature.
+Due to collisions, there can only be one wall temperature for Dirichlet boundary condition.
 Note the restriction
 \begin{align}
     \sum_s z_s N_{s,w} = 0
 \end{align}
 and that $T_{w}>0$ and $N_{s,w}>0$ must be strictly positive.
+
+For the floating wall we set
+\begin{align}
+    N_w =& \frac{\int \d V \chi_w (1-\chi_w) N }{ \int \d V \chi_w ( 1-\chi_w)} \\
+    P_w =& \frac{\int \d V \chi_w (1-\chi_w) (P_\parallel + 2P_\perp) }{ 3\int \d V \chi_w ( 1-\chi_w) }
+\end{align}
+
 The second exception is the box boundary conditions section:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Box boundary conditions}
@@ -342,38 +354,35 @@ parallel pressure equations. The parallel momentum and heat flux sources are alw
 \end{minted}
 
 
-\paragraph{Minimum density}
-% Do we need to enforce a minimum temperature as well?
-% For now let's assume we do not need to and assume that
-% there is no mechanism that infinitely cools the plasma
-
-The first task of the source is to globally ensure a minimum density. This
-is required since through sheath dissipation the density can in
+\paragraph{Minimum density and temperature}
+The first task of the source is to globally ensure a minimum density and temperature. This
+is required since through sheath dissipation the density and temperatures can in
 principle become arbitrarily close to zero. This would however
-be detrimental to the stability of the simulation and in reality
+be detrimental to the stability of the simulation (divide by zero errors) and in reality
 also never happens due to wall-recycling etc.
 \begin{align}
-    S_{N,s} = -\omega_{\min} ( N - n_{\min}) \Theta_{\alpha/2}( n_{\min}-\alpha/2 -N)
+    S_{N,s} &= - \omega_{\min} ( N_s - n_{\min,s}) \Theta_{\beta n_{\min}/2} (n_{\min,s} - \beta n_{\min,s} / 2 - N_s)
     \label{eq:minimumne}
+    \\
+    S_{P} &= -\omega_{\min} N( T - T_{\min,s}) \Theta_{\beta T_{\min}/2}( T_{\min} - \beta T_{\min}/2 - T) + TS_{N,s}
+    \label{eq:minimump}
 \end{align}
 \begin{tcolorbox}[title=Note]
-    We do not add Eq.~\eqref{eq:minimumne} as a source in the file output or in
-    the expression for the velocity source later on.
+    We do not add Eqs.~\eqref{eq:minimumne} and \eqref{eq:minimump} as a source
+    in the file output or in the expression for the velocity source later on.
 \end{tcolorbox}
 The Heaviside function ensures that this source term only acts when the density
 is below the lower limit. $n_{\min}=0$ disables this term.
 \begin{minted}[texcomments]{js}
 "source":
 {
-    "density":
-    {
-        "minne" : 0.1 // $n_{\min,s}$ in Eq.\eqref{eq:minimumne}
-        // Note that $\sum_s z_s n_{\min, s} = 0$ must be fulfilled
-        //if 0 then the other two parameters are ignored
-        "minrate" : 1 // $\omega_{\min}$ in Eq.\eqref{eq:minimumne} (only if $n_{\min}>0$)
-        // Must be equal for all species
-        "minalpha" : 0.01 // $\alpha_s$ in Eq.\eqref{eq:minimumne} (only if $n_{\min}>0$)
-    }
+    "minn" : 0.1 // $n_{\min,s}$ in Eq.\eqref{eq:minimumne}
+    "mint" : 0.5 // $t_{\min,s}$ in Eq.\eqref{eq:minimump}
+    // Note that $\sum_s z_s n_{\min, s} = 0$ must be fulfilled
+    //if 0 then the other two parameters are ignored
+    "minrate" : 1 // $\omega_{\min}$ in Eq.\eqref{eq:minimumne} (only if $n_{\min}>0$)
+    // Must be equal for all species
+    "minbeta" : 0.25 // $\alpha_s = \beta n_{\min,s}$ in Eq.\eqref{eq:minimumne} and $\alpha_s = \beta n_{\min,s}$ in Eq.\eqref{eq:minimump} (only if $n_{\min}>0$)
 }
 \end{minted}
 \noindent

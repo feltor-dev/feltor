@@ -219,29 +219,38 @@ std::array<std::vector<dg::x::HVec>,3> source_profiles(
     const dg::geo::TokamakMagneticField& mag,
     const dg::geo::TokamakMagneticField& unmod_mag,
     dg::file::WrappedJsonValue jsspecies, // input["species"]
-    std::vector<double>& minne,
-    std::vector<double>& minrate,
-    std::vector<double>& minalpha
+    std::vector<double>& minn,
+    double& mint,
+    double& minrate,
+    double& minbeta
     )
 {
     unsigned num_species = jsspecies.size();
 
     // Minimum density
-    minne.resize( num_species);
-    minrate.resize( num_species);
-    minalpha.resize( num_species);
+    minn.resize( num_species);
     for( unsigned s=0; s<num_species; s++)
     {
         dg::file::WrappedJsonValue js = jsspecies[s]["source"];
-        minne[s] = js["density"].get("minne", 0.).asDouble();
-        minrate[s] =  minalpha[s] = 0;
-        if( minne[s] != 0)
+        minn[s] = js.get("minn", 0.).asDouble();
+        if( s == 0)
         {
-            minrate[s] = js["density"].get("minrate", 1.).asDouble();
-            minalpha[s] = js["density"].get("minalpha", 0.05).asDouble();
+            mint = js.get("mint", 0.).asDouble();
+            minrate = js.get("minrate", 1.).asDouble();
+            minbeta = js.get("minbeta", 0.25).asDouble();
         }
-        if( minrate[s] != minrate[0])
-            throw dg::Error(dg::Message()<< "Minrate must be equal among species "<<minrate[s]<<" vs "<<minrate[0]<<"!\n");
+        if( s != 0)
+        {
+            double mints = js.get("mint", 0.).asDouble();
+            double minrates = js.get("minrate", 1.).asDouble();
+            double minbetas = js.get("minbeta", 0.25).asDouble();
+            if( mints != mint)
+                throw dg::Error(dg::Message()<< "Mint must be equal among species "<<mints<<" vs "<<mint<<"!\n");
+            if( minrates != minrate)
+                throw dg::Error(dg::Message()<< "Minrate must be equal among species "<<minrates<<" vs "<<minrate<<"!\n");
+            if( minbetas != minbeta)
+                throw dg::Error(dg::Message()<< "Minbeta must be equal among species "<<minbetas<<" vs "<<minbeta<<"!\n");
+        }
     }
 
     // Source profiles

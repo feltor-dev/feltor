@@ -30,6 +30,7 @@ struct Parameters
     std::array<double, 6> nu_perp, nu_parallel;
     enum dg::direction diff_dir;
 
+    std::string wall_bc;
     std::vector<double> nwall;
     double uwall, twall, qwall, wall_rate;
 
@@ -136,7 +137,7 @@ struct Parameters
 
         curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
         penalize_wall = penalize_sheath = false;
-        nwall.resize( num_species);
+        nwall.resize( num_species, 0.);
         twall = uwall = qwall = wall_rate = 0.;
         if( js["boundary"]["wall"].get("type","none").asString() != "none")
         {
@@ -144,14 +145,20 @@ struct Parameters
                     false).asBool();
             wall_rate = js ["boundary"]["wall"].get( "penalization",
                     0.).asDouble();
-            double sum_n = 0;
-            for( unsigned s=0; s<num_species; s++)
+            wall_bc = js["boundary"]["wall"].get( "bc", "fixed").asString();
+            if( wall_bc == "fixed")
             {
-                nwall[s] = js["boundary"]["wall"]["nwall"].get( s, 1.0).asDouble();
-                sum_n += z[s] * nwall[s];
+                double sum_n = 0;
+                for( unsigned s=0; s<num_species; s++)
+                {
+                    nwall[s] = js["boundary"]["wall"]["nwall"].get( s, 1.0).asDouble();
+                    sum_n += z[s] * nwall[s];
+                }
+                if( fabs( sum_n) > 1e-15)
+                    throw std::runtime_error( "Sum of wall charge densities " + std::to_string( sum_n) +" is not zero \n");
             }
-            if( fabs( sum_n) > 1e-15)
-                throw std::runtime_error( "Sum of wall charge densities " + std::to_string( sum_n) +" is not zero \n");
+            else if( wall_bc != "floating")
+                throw std::runtime_error("Error! Wall bc '"+wall_bc+"' not recognized!\n");
             uwall = js["boundary"]["wall"].get( "uwall", 0.0).asDouble();
             qwall = js["boundary"]["wall"].get( "qwall", 0.0).asDouble();
             twall = js["boundary"]["wall"].get( "twall", 1.0).asDouble();

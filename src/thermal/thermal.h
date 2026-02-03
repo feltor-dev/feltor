@@ -65,12 +65,14 @@ struct Explicit
         const std::array<std::vector<double>,3>& source_rate,
         const std::array<std::vector<dg::x::HVec>,3>& profile, // for influx this can be ignored
         const std::array<std::vector<dg::x::HVec>,3>& source,  // for fixed profile this contains damping
-        const std::vector<double>& minne,
+        const std::vector<double>& minn,
+        double mint,
         double minrate,
-        const std::vector<double>& minalpha)
+        double minbeta
+        )
     {
         m_sources.set_source( fixed_profile, source_rate, profile, source,
-            minne, minrate, minalpha);
+            minn, mint, minrate, minbeta);
     }
     void set_wall(const Container& wall)
     {

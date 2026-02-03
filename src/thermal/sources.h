@@ -29,9 +29,10 @@ struct Sources
         const std::array<std::vector<double>,3>& source_rate,
         const std::array<std::vector<dg::x::HVec>,3>& profile, // for influx this can be ignored
         const std::array<std::vector<dg::x::HVec>,3>& source_region,  // for fixed profile this contains damping
-        const std::vector<double>& minne,
+        const std::vector<double>& minn,
+        double mint,
         double minrate,
-        const std::vector<double>& minalpha)
+        double minbeta)
     {
         m_fixed_profile = fixed_profile;
         m_source_rate = source_rate;
@@ -45,9 +46,10 @@ struct Sources
                 m_source_region[u][s]  = source_region[u][s];
             }
         }
-        m_minne = minne;
+        m_minn = minn;
+        m_mint = mint;
         m_minrate = minrate;
-        m_minalpha = minalpha;
+        m_minbeta = minbeta;
     }
     void set_wall(const Container& wall)
     {
@@ -104,8 +106,8 @@ struct Sources
     std::array<std::vector<double>,3> m_source_rate;
     bool m_fixed_profile = false;
 
-    std::vector<double> m_minne, m_minalpha;
-    double m_minrate  = 0.;
+    std::vector<double> m_minn;
+    double m_mint, m_minrate  = 0., m_minbeta;
 
 };
 template<class Grid, class IMatrix, class Matrix, class Container>
@@ -133,16 +135,34 @@ void Sources<Geometry, IMatrix, Matrix, Container>::add_source_terms(
     const std::array<std::vector<Container>,6>& y,
     std::array<std::vector<Container>,6>& yp)
 {
-    // First, add minimum density source
-    // add prevention to get below lower limit
+    // First, add minimum density and pressure source
     if( m_minrate != 0.0)
     {
+        double alpha = m_minbeta*m_minn[s];
         // do not make lower forcing a velocity source
-        // MW it may be that this form does not go well with the potential
-        dg::blas1::transform( y[0][s], m_temp0, dg::PolynomialHeaviside(
-                    m_minne[s]-m_minalpha[s]/2., m_minalpha[s]/2., -1) );
-        dg::blas1::transform( y[0][s], m_temp1, dg::PLUS<double>( -m_minne[s]));
-        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][s]);
+        // 1. Density
+        dg::blas1::transform( q.at("N")[s], m_temp0, dg::PolynomialHeaviside(
+                    m_minn[s]-alpha[0]/2., alpha[0]/2., -1) );
+        dg::blas1::transform( q.at("N")[s], m_temp1, dg::PLUS<double>( -m_minn[s]));
+        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 0., m_temp0);
+        dg::blas1::axpby( 1., m_temp0, 1., yp[0][s]);
+
+        // also add to perp and para eqs
+        dg::blas1::pointwiseDot( 1., q.at("Tperp")[s], m_temp0, 1., yp[1][s]);
+        dg::blas1::pointwiseDot( 1., q.at("Tpara")[s], m_temp0, 1., yp[2][s]);
+
+        // 2. Tperp and Tpara
+        alpha = m_minbeta*mint;
+        dg::blas1::transform( q.at("Tperp")[s], m_temp0, dg::PolynomialHeaviside(
+                    m_minn[s]-alpha/2., alpha/2., -1) );
+        dg::blas1::transform( q.at("Tperp")[s], m_temp1, dg::PLUS<double>( -mint));
+        dg::blas1::pointwiseDot( -m_minrate, q.at("N")[s], m_temp1, m_temp0, 1., yp[1][s]);
+
+        dg::blas1::transform( q.at("Tpara")[s], m_temp0, dg::PolynomialHeaviside(
+                    m_minn[s]-alpha/2., alpha/2., -1) );
+        dg::blas1::transform( q.at("Tpara")[s], m_temp1, dg::PLUS<double>( -mint));
+        dg::blas1::pointwiseDot( -m_minrate, q.at("N")[s], m_temp1, m_temp0, 1., yp[2][s]);
+
     }
 
     if( m_fixed_profile )
@@ -212,6 +232,16 @@ void Sources<Geometry, IMatrix, Matrix, Container>::add_wall_terms(
             m_p.qwall,
             m_p.qwall
         };
+        if( wall_bc == "floating")
+        {
+            // chi_w ( 1 - chi_w )
+            dg::blas1::pointwiseDot ( 1., 1., m_wall, -1., m_wall, m_wall, 0., m_temp0);
+            double norm = dg::blas1::dot( m_lapperp.weights(), m_temp0);
+            wall_bc[0] = dg::blas2::dot( y[0][s], m_lapperp.weights(), m_temp0);
+            double pperp_avg = dg::blas2::dot( y[1][s], m_lapperp.weights(), m_temp0);
+            double ppara_avg = dg::blas2::dot( y[2][s], m_lapperp.weights(), m_temp0);
+            wall_bc[1] = wall_bc[2] = (ppara_avg + 2*pperp_avg)/3;
+        }
         for( unsigned u=0; u<6; u++)
         {
             if( u == 3)
