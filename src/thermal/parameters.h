@@ -156,12 +156,12 @@ struct Parameters
                 }
                 if( fabs( sum_n) > 1e-15)
                     throw std::runtime_error( "Sum of wall charge densities " + std::to_string( sum_n) +" is not zero \n");
+                uwall = js["boundary"]["wall"].get( "uwall", 0.0).asDouble();
+                qwall = js["boundary"]["wall"].get( "qwall", 0.0).asDouble();
+                twall = js["boundary"]["wall"].get( "twall", 1.0).asDouble();
             }
             else if( wall_bc != "floating")
                 throw std::runtime_error("Error! Wall bc '"+wall_bc+"' not recognized!\n");
-            uwall = js["boundary"]["wall"].get( "uwall", 0.0).asDouble();
-            qwall = js["boundary"]["wall"].get( "qwall", 0.0).asDouble();
-            twall = js["boundary"]["wall"].get( "twall", 1.0).asDouble();
         }
         if( sheath_bc != "none")
         {
