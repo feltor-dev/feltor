@@ -121,7 +121,7 @@ dg::x::HVec make_profile(
         double npeak = js.get( "npeak", 1.0).asDouble();
         double nsep = js.get( "nsep", 1.0).asDouble();
         profile = dg::pullback( dg::compose(
-                [npeak,nsep,nbg, psipO]DG_DEVICE ( double psip){
+                [npeak,nsep,nbg, psipO] ( double psip){
                     if( psip/psipO  > 0)
                         return npeak*psip/psipO + nsep*(psipO-psip)/psipO;
                     else
@@ -153,7 +153,7 @@ dg::x::HVec make_profile(
         double q1 = d1/q0;
         double q2 = 0.5*(d2/q0 - q1*q1);
         profile = dg::pullback( dg::compose(
-                [c,M,nbg, psipO, q0,q1,q2]DG_DEVICE ( double psip){
+                [c,M,nbg, psipO, q0,q1,q2] ( double psip){
                     double psipp = 1.-psip/psipO;
                     if( psipp  < 1)
                     {
@@ -183,7 +183,7 @@ dg::x::HVec make_profile(
     }
     else if( "Compass_L_mode" == type)
         {
-        profile = dg::pullback( dg::compose([]DG_DEVICE ( double rho_p){
+        profile = dg::pullback( dg::compose([] ( double rho_p){
                         return -2.4 + (8.5 +2.4)/(1 + pow(rho_p/0.784,2.88));
                 }, dg::geo::RhoP( mag)), grid);
         }
