@@ -213,6 +213,7 @@ PerpDynamics<Grid, IMatrix, Matrix, Container>::PerpDynamics( const Grid& g,
         m_curvKappa[0], m_curvKappa[1], g);
     dg::SparseTensor<Container> metric = g.metric();
     m_detg = dg::tensor::volume( metric);
+    dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_temp1 = m_temp2 = m_temp3 = m_temp0;
     dg::assign(  dg::pullback(dg::geo::ToroidalDivb(mag), g), m_divb);
     dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
