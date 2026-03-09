@@ -28,6 +28,9 @@ namespace dg{
  * the x, y, z directions but also over all points in the xy (xz or yz) planes.
  * We are left with two- (respectively three-)dimensional vectors.
  *
+ * @note in <tt>avg( x, y, extend)</tt> if \c y contains NaN or Inf on input
+ * if will be removed on output.
+ *
  * @sa Average is essentially a \c dg::create::projection(std::array<unsigned,Md>,const aRealTopology<real_type,Nd>&) scaled with the
  * inverse area @note The integrals include the dG weights but not the volume
  * element (does
@@ -103,6 +106,7 @@ struct Average
      *  original dimensionality
      * .
      *
+     * @note If \c res contains NaN or Inf on input if will be removed on output.
      * @param src Source Vector (must have the same size as the grid given in
      * the constructor)
      * @param res result Vector (if \c extend==true, \c res must have same size
@@ -113,12 +117,26 @@ struct Average
     void operator() (const ContainerType& src, ContainerType& res, bool extend
             = true)
     {
+        // Optimization note: Notice tmp is smaller than src so
+        // blas1 functions do not matter so much performance wise
+        // Remove possible NaN in tmp (because symv does not do it)
+        // (This must be done to remove potential NaN from previous computations,
+        // otherwise the class can be "infected" with NaN)
+        dg::blas1::copy( 0., m_tmp);
+        // Cusparse makes no guarantee on NaN behaviour
+        // m_average in MPI has the "allreduce" distribution!
         dg::blas2::symv( m_average, src, m_tmp);
         dg::blas1::scal( m_tmp, m_area_inv);
         if( extend )
+        {
+            //  Remove possible NaN in res
+            dg::blas1::copy( 0., res);
             dg::blas2::symv( m_prolongation, m_tmp, res);
+        }
         else
+        {
             res = m_tmp;
+        }
     }
 
   private:

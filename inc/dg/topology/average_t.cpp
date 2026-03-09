@@ -1,4 +1,5 @@
 #include <iostream>
+#include <limits>
 #ifdef WITH_MPI
 #include <mpi.h>
 #include "../backend/mpi_init.h"
@@ -20,6 +21,7 @@ static double tor_average( double, double y) {return sin(y)*2./M_PI;}
 static double function( double x, double, double z) {return cos(x)*sin(z);}
 static double z_average( double x, double) {return cos(x)*2./M_PI;}
 static double x_average( double, double, double z) {return sin(z)*2./M_PI;}
+
 
 TEST_CASE( "2d Average in x and y direction")
 {
@@ -148,5 +150,28 @@ TEST_CASE( "3d Average in x and z direction")
         INFO( "Solution is: "<<res.d<<"\t"<<res.i);
         CHECK_THAT( res.d, WithinAbs( 0.0, 2.6e-5));
     }
-
+    SECTION( "NaN and Inf behaviour")
+    {
+        // NaNs should not remain in average
+        dg::x::DVec vector = dg::evaluate( function ,g);
+        dg::blas1::scal( vector, std::numeric_limits<double>::quiet_NaN());
+        bool hasnan = dg::blas1::reduce( vector, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+        REQUIRE( hasnan);
+        dg::Average<dg::x::IDMatrix, dg::x::DVec > avg(g, dg::coo3d::z);
+        dg::x::DVec average_z;
+        avg( vector, average_z, false); // will have NaNs
+        hasnan = dg::blas1::reduce( average_z, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+        REQUIRE( hasnan);
+        // Re-assign
+        vector = dg::evaluate( function, g);
+        hasnan = dg::blas1::reduce( vector, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+        REQUIRE( not hasnan);
+        avg( vector, average_z, false); // should not have NaN
+        hasnan = dg::blas1::reduce( average_z, false,
+                thrust::logical_or<bool>(), dg::ISNFINITE<double>());
+        CHECK( hasnan == false);
+    }
 }

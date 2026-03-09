@@ -85,6 +85,10 @@ I coo2csr( unsigned num_rows, const I& coo)
  * @sa The CSR format is nicely explained at the
  * <a href="https://docs.nvidia.com/cuda/cusparse/#compressed-sparse-row-csr">cusparse documentation</a>
  * We use the zero-base index
+ * @note There is currently no guarantee on the NaN or Inf propagation, in
+ * particular not in the \c dg::blas2::symv function. This means that in
+ * <tt>dg::blas2::symv( A, x, y)</tt> if \c y contains a NaN or Inf on input,
+ * it may or may not contain NaN or Inf on output
  *
  * @tparam Index The index type (on GPU must be either \c int or \c long)
  * @tparam Value The value type (on GPU must be either \c float or \c double)
