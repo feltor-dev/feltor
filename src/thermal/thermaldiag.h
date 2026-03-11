@@ -487,14 +487,15 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     },
     {true, "laplace_n", "Positive Lap_perp of density", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
-            v.f.perp().compute_perp_laplace(-1.0, v.f.get("N", s), 1, v.tmp[0], v.tmp[1], 0., result);
+            // Using result as temp0 effectively removes potential NaN from previous computations
+            v.f.perp().compute_perp_laplace(-1.0, v.f.get("N", s), 1, result, v.tmp[1], 0., result);
         }
     },
     // Does not work due to direct application of Laplace
     // The Laplacian of Aparallel looks smooth in paraview
     {false, "apar_vorticity", "Minus Lap_perp of magnetic potential", false,
         []( dg::x::DVec& result, Variables& v, unsigned ) {
-            v.f.perp().compute_perp_laplace(-1.0, v.f.apar(), 1, v.tmp[0], v.tmp[1], 0., result);
+            v.f.perp().compute_perp_laplace(-1.0, v.f.apar(), 1, result, v.tmp[1], 0., result);
         }
     },
     {true, "dssu", "2nd parallel derivative of velocity", false,
@@ -504,6 +505,8 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
             v.f.para().fieldaligned()( dg::geo::einsPlus,  v.f.get("U", s), v.tmp3[0]);
             v.f.para().update_parallel_bc_2nd( v.f.para().fieldaligned(),
                 v.tmp[0], v.tmp[1], v.tmp[2], v.p.bcx, 0.);
+            // Remove potential NaN  from previous computations
+            dg::blas1::copy( 0, result);
             dg::geo::dss_centered( v.f.para().fieldaligned(), 1.,
                 v.tmp[0], v.tmp[1], v.tmp[2], 0, result);
 
@@ -511,9 +514,10 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     },
     {false, "lperpinv", "Perpendicular (electron) density gradient length scale", false,
         []( dg::x::DVec& result, Variables& v, unsigned ) {
-            dg::blas1::pointwiseDot( 1., v.f.get( "dxF N", 0), v.f.get( "dxF N", 0),
-                                     1., v.f.get( "dyF N", 0), v.f.get( "dyF N", 0),
-                                     0., result);
+            // Remove potential NaN in result:
+            dg::blas1::pointwiseDot( v.f.get( "dxF N", 0), v.f.get( "dxF N", 0), result);
+            dg::blas1::pointwiseDot( 1., v.f.get( "dyF N", 0), v.f.get( "dyF N", 0),
+                                     1., result);
             dg::blas1::pointwiseDivide( result, v.f.get( "N", 0), result);
             dg::blas1::pointwiseDivide( result, v.f.get( "N", 0), result);
             // ((grad N)/N)**2
@@ -522,14 +526,16 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     },
     {false, "perpaligned", "Perpendicular (electron) density alignement", false,
         []( dg::x::DVec& result, Variables& v, unsigned ) {
-            dg::blas1::pointwiseDot( 1., v.f.get( "dxF N", 0), v.f.get( "dxF N", 0),
-                                     1., v.f.get( "dyF N", 0), v.f.get( "dyF N", 0),
-                                     0., result);
+            // Remove potential NaN in result:
+            dg::blas1::pointwiseDot( v.f.get( "dxF N", 0), v.f.get( "dxF N", 0), result);
+            dg::blas1::pointwiseDot( 1., v.f.get( "dyF N", 0), v.f.get( "dyF N", 0),
+                                     1., result);
             dg::blas1::pointwiseDivide( result, v.f.get( "N", 0), result);
         }
     },
     {false, "lparallelinv", "Parallel (electron) density gradient length scale", false,
         []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy( 0., result);
             dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
                 v.f.get( "N -1", 0), v.f.get( "N +1", 0), 0, result);
             dg::blas1::pointwiseDivide( result, v.f.get("N", 0), result);
@@ -539,6 +545,7 @@ std::vector<PreRecord> basicDiagnostics2d_list = { // 22
     },
     {false, "aligned", "Parallel (electron) density alignement", false,
         []( dg::x::DVec& result, Variables& v, unsigned ) {
+            dg::blas1::copy( 0., result);
             dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
                 v.f.get( "N -1", 0), v.f.get( "N +1", 0), 0, result);
             dg::blas1::pointwiseDot ( result, result, result);
@@ -571,6 +578,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     ////////////////// particle fluxes /////////////////////
     {true, "jnEx_tt", "Radial particle flux: x-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            dg::blas1::copy( 0., result);
             // omega_s
             dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
                 v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
@@ -584,6 +592,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     },
     {true, "jnEy_tt", "Radial particle flux: y-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            dg::blas1::copy( 0., result);
             // omega_s
             dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
                 v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
@@ -598,6 +607,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     //
     {true, "jpperpEx_tt", "Radial perp pressure flux: x-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            dg::blas1::copy( 0., result);
             // omega_s
             dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
                 v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
@@ -625,6 +635,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     //
     {true, "jpparaEx_tt", "Radial para pressure flux: x-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            dg::blas1::copy( 0., result);
             // omega_s
             dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
                 v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
@@ -638,6 +649,7 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     },
     {true, "jpparaEy_tt", "Radial para pressure flux: y-component of ExB contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
+            dg::blas1::copy( 0., result);
             // omega_s
             dg::blas1::pointwiseDot( v.p.mu[s]/2./v.p.z[s]/v.p.z[s],
                 v.f.get("Tperp", s), v.f.perp().Btorinv(), 0., result);
@@ -657,11 +669,13 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     },
     {true, "pperptperp_tt", "Perpendicular pressure times perp temperature (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("Tperp", s), v.f.get("Tperp", s), 0., result);
         }
     },
     {true, "pparatperp_tt", "Parallel pressure times perp temperature (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("Tpara", s), v.f.get("Tperp", s), 0., result);
         }
     },
@@ -672,16 +686,19 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     },
     {true, "nu2_tt", "2x Parallel kinetic energy (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("U", s), v.f.get("U", s), 0., result);
         }
     },
     {true, "nuuperp_tt", "n u u_perp correlation (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("U", s), v.f.get("Uperp", s), 0., result);
         }
     },
     {true, "nuupara_tt", "n u u_para correlation (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::blas1::pointwiseDot( 1., v.f.get( "N", s), v.f.get("U", s), v.f.get("Upara", s), 0., result);
         }
     },
@@ -689,21 +706,24 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     {true, "jnAx_tt", "Radial particle flux: x-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
             // bpX = BpX / Btor;
-            dg::blas1::pointwiseDot(1., v.f.BperpX(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::copy( 0., result);
+            dg::blas1::pointwiseDot( v.f.BperpX(), v.f.perp().Btorinv(), v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), v.tmp[0], 0., result);
         }
     },
     {true, "jnAy_tt", "Radial particle flux: y-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
             // bpY = BpY / Btor;
-            dg::blas1::pointwiseDot(1., v.f.BperpY(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::copy( 0., result);
+            dg::blas1::pointwiseDot( v.f.BperpY(), v.f.perp().Btorinv(), v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.f.get("N", s), v.f.get("U", s), v.tmp[0], 0., result);
         }
     },
     {true, "jpperpAx_tt", "Radial perp pressure flux: x-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
             // bpX = BpX / Btor;
-            dg::blas1::pointwiseDot(1., v.f.BperpX(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::copy( 0., result);
+            dg::blas1::pointwiseDot( v.f.BperpX(), v.f.perp().Btorinv(), v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("Uperp", s), v.tmp[0], 1., result);
         }
@@ -711,7 +731,8 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     {true, "jpperpAy_tt", "Radial perp pressure flux: y-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
             // bpY = BpY / Btor;
-            dg::blas1::pointwiseDot(1., v.f.BperpY(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::copy( 0., result);
+            dg::blas1::pointwiseDot( v.f.BperpY(), v.f.perp().Btorinv(), v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[1][s], v.f.get("Uperp", s), v.tmp[0], 1., result);
         }
@@ -719,7 +740,8 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     {true, "jpparaAx_tt", "Radial para pressure flux: x-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
             // bpX = BpX / Btor;
-            dg::blas1::pointwiseDot(1., v.f.BperpX(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::copy( 0., result);
+            dg::blas1::pointwiseDot( v.f.BperpX(), v.f.perp().Btorinv(), v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("Upara", s), v.tmp[0], 1., result);
         }
@@ -727,7 +749,8 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     {true, "jpparaAy_tt", "Radial para pressure flux: y-component of magnetic contribution (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s) {
             // bpY = BpY / Btor;
-            dg::blas1::pointwiseDot(1., v.f.BperpY(), v.f.perp().Btorinv(), 0., v.tmp[0]);
+            dg::blas1::copy( 0., result);
+            dg::blas1::pointwiseDot( v.f.BperpY(), v.f.perp().Btorinv(), v.tmp[0]);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("U", s), v.tmp[0], 0., result);
             dg::blas1::pointwiseDot( 1., v.y0[2][s], v.f.get("Upara", s), v.tmp[0], 1., result);
         }
@@ -737,19 +760,19 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     {true, "dnperp_tt", "Perpendicular density diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             v.f.perp().compute_perp_laplace( -v.p.nu_perp[0], v.f.get( "N", s), v.p.diff_order,
-                v.tmp[0], v.tmp[1], 0., result);
+                result, v.tmp[1], 0., result);
         }
     },
     {true, "dpperpperp_tt", "Perpendicular perp pressure diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             v.f.perp().compute_perp_laplace( -v.p.nu_perp[1], v.f.get( "Tperp", s), v.p.diff_order,
-                v.tmp[0], v.tmp[1], 0., result);
+                result, v.tmp[1], 0., result);
         }
     },
     {true, "dpparaperp_tt", "Perpendicular para pressure diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
             v.f.perp().compute_perp_laplace( -v.p.nu_perp[2], v.f.get( "Tpara", s), v.p.diff_order,
-                v.tmp[0], v.tmp[1], 0., result);
+                result, v.tmp[1], 0., result);
             // Ppara interfaces with U
             v.f.perp().compute_perp_laplace( v.p.nu_perp[3], v.f.get("U",s), v.p.diff_order-1,
                 v.tmp[0], v.tmp[1], 0., v.tmp[0]);
@@ -765,18 +788,21 @@ std::vector<PreRecord> MassConsDiagnostics2d_list = { // 26
     },
     {true, "dnparallel_tt", "Parallel density diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::geo::dssd_centered( v.f.para().fieldaligned(), v.p.nu_parallel[0],
                 v.f.get("N -1", s), v.f.get("N 0", s), v.f.get("N +1", s), 0., result);
         }
     },
     {true, "dpperpparallel_tt", "Parallel perp pressure diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::geo::dssd_centered( v.f.para().fieldaligned(), v.p.nu_parallel[0],
                 v.f.get("Tperp -1", s), v.f.get("Tperp 0", s), v.f.get("Tperp +1", s), 0., result);
         }
     },
     {true, "dpparaparallel_tt", "Parallel para pressure diffusion (Time average)", true,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::geo::dssd_centered( v.f.para().fieldaligned(), v.p.nu_parallel[0],
                 v.f.get("Tpara -1", s), v.f.get("Tpara 0", s), v.f.get("Tpara +1",s), 0., result);
             // Add para temp generation through friction
@@ -1987,25 +2013,28 @@ std::vector<PreRecord> probe_list = {
     },
     {true, "nPar", "d/dPar gyro-centre density", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
                 v.f.get( "N -1", s), v.f.get( "N +1", s), 0, result);
         }
     },
     {true, "tperpPar", "d/dPar perpendicular temperature", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
                 v.f.get( "Tperp -1", s), v.f.get( "Tperp +1", s), 0, result);
         }
     },
     {true, "tparaPar", "d/dPar parallel temperature", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
+            dg::blas1::copy( 0., result);
             dg::geo::ds_centered( v.f.para().fieldaligned(), 1.,
                 v.f.get( "Tpara -1", s), v.f.get( "Tpara +1", s), 0, result);
         }
     },
     {true, "uPar", "d/dPar parallel velocity", false,
         []( dg::x::DVec& result, Variables& v, unsigned s ) {
-            dg::blas1::copy(v.f.get("U", s), result);
+            dg::blas1::copy(0., result);
             dg::geo::ds_centered( v.f.para().fieldalignedHalf(), 1.,
                 v.f.get( "U -1/2", s), v.f.get( "U +1/2", s), 0, result);
         }
