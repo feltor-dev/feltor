@@ -251,7 +251,7 @@ void Sources<Geometry, IMatrix, Matrix, Container>::add_wall_terms(
             else
                 dg::blas1::pointwiseDot( -m_p.wall_rate, m_wall, y[u][s],
                     1., yp[u][s]);
-            dg::blas1::axpby( m_p.wall_rate*wall_bc[s], m_wall, 1., yp[u][s] );
+            dg::blas1::axpby( m_p.wall_rate*wall_bc[u], m_wall, 1., yp[u][s] );
         }
     }
 }
