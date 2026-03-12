@@ -40,7 +40,7 @@ struct Parameters
     std::string sheath_bc;
     std::string fci_bc;
     std::string output;
-    bool symmetric, calibrate;
+    bool symmetric, calibrate, isothermal;
     bool penalize_wall, penalize_sheath;
     bool partitioned;
     //
@@ -170,7 +170,7 @@ struct Parameters
         }
 
         // Computing flags
-        symmetric = calibrate = false;
+        symmetric = calibrate = isothermal = false;
         for( unsigned i=0; i<js["flags"].size(); i++)
         {
             std::string flag = js["flags"].get(i,"symmetric").asString();
@@ -182,6 +182,10 @@ struct Parameters
                     throw std::runtime_error(
                             "Calibrate not possible with glfw output!\n");
                 calibrate = true;
+            }
+            else if( flag == "isothermal")
+            {
+                isothermal = true;
             }
             else
                 throw std::runtime_error( "Flag "+flag+" not recognized!\n");

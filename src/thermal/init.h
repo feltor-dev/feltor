@@ -106,6 +106,10 @@ std::array<std::vector<dg::x::DVec>,6> initial_conditions(
                 y0[0][idx_quasineutral_n]);
         }
     }
+    if( p.isothermal)
+    {
+        y0[1] = y0[2] = y0[0];
+    }
     // Now transform to gyro-centre density
     for( unsigned s=0; s<p.num_species; s++)
     {

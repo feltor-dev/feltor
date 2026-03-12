@@ -50,6 +50,12 @@ struct Sources
         m_mint = mint;
         m_minrate = minrate;
         m_minbeta = minbeta;
+        if( m_p.isothermal)
+        {
+            m_profile[1] = m_profile[2] = m_profile[0];
+            m_source_rate[1] = m_source_rate[2] = m_source_rate[0];
+            m_source_region[1] = m_source_region[2] = m_source_region[0];
+        }
     }
     void set_wall(const Container& wall)
     {

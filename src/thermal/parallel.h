@@ -276,7 +276,7 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::compute_parallel_transforma
     {
         // 3rd transform velocities
         std::vector<const Container*> inp = {
-            &q.at("ST U")[s], &y[4][s], &y[5][s]}; // ST Qperp, ST Qpara
+            &q.at("ST U")[s], &y[4][s], &y[5][s]}; // ST U, ST Qperp, ST Qpara
         std::vector<std::string> out = {"U", "Qperp", "Qpara"};
         for( unsigned u=0; u<inp.size(); u++)
         {

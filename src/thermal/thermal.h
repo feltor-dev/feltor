@@ -199,17 +199,27 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     double accu = 0.;//accumulated time
     timer.tic();
 
+    std::array<std::vector<Container>,6> yiso;
+    if( m_p.isothermal)
+    {
+        yiso[0] = yiso[1] = yiso[2] = y[0];
+        yiso[3] = yiso[4] = yiso[5] = y[3];
+        dg::blas1::copy( 0., yiso[4]); // Qperp = Qpara = 0
+        dg::blas1::copy( 0., yiso[5]);
+    }
+    const std::array<std::vector<Container>,6>& yy = m_p.isothermal ? yiso : y;
 
-    const std::vector<Container>&  density    = y[0];
-    const std::vector<Container>&  pperp      = y[1];
-    const std::vector<Container>&  ppara      = y[2];
-    const std::vector<Container>&  wST        = y[3];
-    //const std::vector<Container>&  qperpST    = y[4];
-    //const std::vector<Container>&  qparaST    = y[5];
+
+    const std::vector<Container>&  density    = yy[0];
+    const std::vector<Container>&  pperp      = yy[1];
+    const std::vector<Container>&  ppara      = yy[2];
+    const std::vector<Container>&  wST        = yy[3];
+    //const std::vector<Container>&  qperpST    = yy[4];
+    //const std::vector<Container>&  qparaST    = yy[5];
 
 
     // 1. Transform Pperp, Ppara to Tperp, Tpara for all species
-    dg::blas1::copy( y[0], m_q.at("N"));
+    dg::blas1::copy( yy[0], m_q.at("N"));
     dg::blas1::pointwiseDivide( pperp, density, m_q.at("Tperp"));
     dg::blas1::pointwiseDivide( ppara, density, m_q.at("Tpara"));
 
@@ -227,7 +237,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     timer.tic( );
     // Given densities transform to fieldaligned grids:
     // (Guaranteed to compute "ST N")
-    m_para.compute_staggered_densities( y, m_q);
+    m_para.compute_staggered_densities( yy, m_q);
 
     // Compute m_aparST if beta != 0
     if( m_p.beta != 0)
@@ -244,15 +254,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     timer.tic();
 
     // Compute all the rest of parallel trafos
-    m_para.compute_parallel_transformations( m_aparST, y, m_q);
+    m_para.compute_parallel_transformations( m_aparST, yy, m_q);
     timer.toc();
     accu += timer.diff();
     DG_RANK0 std::cout << "## Compute Parallel transformations  took "
                        << timer.diff()<<"s\t A: "<<accu<<"s\n";
     timer.tic();
     // and the perp derivatives
-    m_perp.update_derivatives( m_apar, m_BperpX, m_BperpY, y, m_q);
-    m_perp.update_STderivatives( m_aparST, m_BperpXST, m_BperpYST, y, m_q);
+    m_perp.update_derivatives( m_apar, m_BperpX, m_BperpY, yy, m_q);
+    m_perp.update_STderivatives( m_aparST, m_BperpXST, m_BperpYST, yy, m_q);
     timer.toc();
     accu += timer.diff();
     DG_RANK0 std::cout << "## Compute perpendicular derivatives took "
@@ -273,15 +283,15 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         m_perp.add_velocities_diffusion( s, m_q, yp);
 
         // Add parallel dynamics
-        m_para.add_densities_advection(  s, y, m_q, yp);
-        m_para.add_velocities_advection( s, y, m_q, yp);
+        m_para.add_densities_advection(  s, yy, m_q, yp);
+        m_para.add_velocities_advection( s, yy, m_q, yp);
 
         m_para.add_densities_diffusion( s, m_q, yp);
         m_para.add_velocities_diffusion( s, m_q, yp);
 
         // Add collisions
         m_collisions.add_coulomb_collisions( s, m_q, yp);
-        m_collisions.add_lorentz_collisions( s, m_q, y, yp);
+        m_collisions.add_lorentz_collisions( s, m_q, yy, yp);
 
         // Multiply penalization (must come before adding wall and sheath terms!)
         // F*(1-chi_w-chi_s)
@@ -291,12 +301,19 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
         // -w_sh chi_sh ( y - y_sh)
         // -w_w chi_w ( y - y_w)
-        m_para.add_sheath_neumann_terms( s, m_q, y, yp);
+        m_para.add_sheath_neumann_terms( s, m_q, yy, yp);
         m_para.add_sheath_velocity_terms( s, m_q, yp);
-        m_sources.add_wall_terms( s, m_q, y, yp);
+        m_sources.add_wall_terms( s, m_q, yy, yp);
 
         // And sources
-        m_sources.add_source_terms( s, m_phi, m_q, y, yp );
+        m_sources.add_source_terms( s, m_phi, m_q, yy, yp );
+    }
+    if( m_p.isothermal)
+    {
+        dg::blas1::copy( 0., yp[1]);
+        dg::blas1::copy( 0., yp[2]);
+        dg::blas1::copy( 0., yp[4]);
+        dg::blas1::copy( 0., yp[5]);
     }
 
     timer.toc();
