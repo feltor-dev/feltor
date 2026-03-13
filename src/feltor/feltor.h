@@ -4,6 +4,7 @@
 #include "dg/geometries/geometries.h"
 #include "parameters.h"
 #include "common.h"
+#include "solvers.h"
 
 #define FELTORPARALLEL 1
 #define FELTORPERP 1
@@ -74,11 +75,11 @@ struct Explicit
     }
     /// ///////////////////DIAGNOSTIC MEMBERS //////////////////////
     const Geometry& grid() const {
-        return m_multigrid.grid(0);
+        return m_solvers.grid();
     }
     //potential[0]: electron potential, potential[1]: ion potential
     const Container& uE2() const {
-        return m_UE2;
+        return m_solvers.uE2();
     }
     const Container& density(int i)const{
         return m_density[i];
@@ -86,12 +87,12 @@ struct Explicit
     const Container&  gammaNi() const{
         if( m_p.tau[1] == 0)
             return m_density[1];
-        return m_old_gammaN.head();
+        return m_solvers.old_gammaN_head();
     }
     const Container&  gammaPhi() const{
         if( m_p.tau[1] == 0)
             return m_potential[0];
-        return m_old_psi.head();
+        return m_solvers.old_psi_head();
     }
 
 
@@ -381,10 +382,7 @@ struct Explicit
     }
     void compute_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
-        // polarisation term
-        dg::blas1::pointwiseDot( m_p.mu[1], density, m_binv, m_binv, 0., temp);
-        m_multi_pol[0].set_chi( temp);
-        dg::blas2::symv( -alpha, m_multi_pol[0], m_potential[0], beta, result);
+        m_solvers.compute_pol( alpha, density, m_potential[0], temp, beta, result);
     }
     void compute_source_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
@@ -523,10 +521,6 @@ struct Explicit
         dg::blas1::copy( sheath, m_sheath);
         dg::blas1::copy( sheath_coordinate, m_sheath_coordinate);
     }
-    void compute_aparST( double t, const std::array<Container,2>&,
-            std::array<Container,2>&, Container&, bool);
-    void compute_phi( double t, const std::array<Container,2>&, Container&);//, bool);
-    void compute_psi( double t, const Container& phi, Container& psi);//, bool);
     void update_staggered_density_and_phi( double t,
         const std::array<Container,2>& density,
         const std::array<Container,2>& potential);
@@ -598,6 +592,8 @@ struct Explicit
     void construct_invert( const Geometry&, feltor::Parameters,
         dg::geo::TokamakMagneticField);
 
+    Solvers<Geometry, Matrix, Container> m_solvers;
+
     //these should be considered const // m_curv is full curvature
     std::array<Container,3> m_curv, m_curvKappa, m_b; //m_b is bhat/ sqrt(g) / B
     Container m_divCurvKappa;
@@ -611,7 +607,6 @@ struct Explicit
     std::array<Container,2> m_potential, m_potentialST;
     Container m_apar, m_aparST;
 
-    Container m_UE2;
     std::array<Container,2> m_divNUb;
     std::array<Container,2> m_plusN, m_zeroN, m_minusN, m_plusU, m_zeroU, m_minusU;
     std::array<Container,2> m_plusSTN, m_minusSTN, m_plusSTU, m_minusSTU;
@@ -638,13 +633,8 @@ struct Explicit
     Matrix m_dxC, m_dyC;
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST;
     dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
-    std::vector<dg::Elliptic3d< Geometry, Matrix, Container> > m_multi_pol;
-    std::vector<dg::Helmholtz3d<Geometry, Matrix, Container> > m_multi_invgammaP,
-        m_multi_invgammaN, m_multi_ampere;
 
-    dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
-    dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_apar, m_old_aparST;
-    //dg::Extrapolation<Container> m_old_phiST, m_old_psiST, m_old_gammaNST;
+    dg::Extrapolation<Container> m_old_apar;
 
     dg::SparseTensor<Container> m_hh;
 
@@ -762,54 +752,11 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     m_lapperpP.set_jfactor(0); //we don't want jump terms in source
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
-void Explicit<Grid, IMatrix, Matrix, Container>::construct_invert(
-    const Grid&, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
-{
-    //Set a hard code limit on the maximum number of iteration to avoid
-    //endless iteration in case of failure
-    m_multigrid.set_max_iter( 1e5);
-    /////////////////////////init elliptic and helmholtz operators/////////
-    auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
-    if( p.curvmode == "true")
-        bhat = dg::geo::createBHat( mag);
-    else if( m_reversed_field)
-        bhat = dg::geo::createEPhi(-1);
-    m_multi_chi = m_multigrid.project( m_temp0);
-    m_multi_pol.resize(p.stages);
-    m_multi_invgammaP.resize(p.stages);
-    m_multi_invgammaN.resize(p.stages);
-    m_multi_ampere.resize(p.stages);
-    for( unsigned u=0; u<p.stages; u++)
-    {
-        m_multi_pol[u].construct( m_multigrid.grid(u),
-            p.bcxP, p.bcyP, dg::PER,
-            p.pol_dir, p.jfactor);
-        m_multi_invgammaP[u] = { -0.5*p.tau[1]*p.mu[1],
-                {m_multigrid.grid(u), p.bcxP, p.bcyP, dg::PER, p.pol_dir}};
-        m_multi_invgammaN[u] = { -0.5*p.tau[1]*p.mu[1],
-                {m_multigrid.grid(u), p.bcxN, p.bcyN, dg::PER, p.pol_dir}};
-        m_multi_ampere[u] = {  -1.,
-                {m_multigrid.grid(u), p.bcxA, p.bcyA, dg::PER, p.pol_dir}};
-
-        dg::SparseTensor<Container> hh = dg::geo::createProjectionTensor(
-            bhat, m_multigrid.grid(u));
-        m_multi_pol[u].set_chi( hh);
-        m_multi_invgammaP[u].matrix().set_chi( hh);
-        m_multi_invgammaN[u].matrix().set_chi( hh);
-        m_multi_ampere[u].matrix().set_chi( hh);
-        if( !((p.curvmode == "true") && (p.symmetric == false))){
-            m_multi_pol[u].set_compute_in_2d( true);
-            m_multi_invgammaP[u].matrix().set_compute_in_2d( true);
-            m_multi_invgammaN[u].matrix().set_compute_in_2d( true);
-            m_multi_ampere[u].matrix().set_compute_in_2d( true);
-        }
-    }
-}
-template<class Grid, class IMatrix, class Matrix, class Container>
 Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     feltor::Parameters p, dg::geo::TokamakMagneticField mag,
     dg::file::WrappedJsonValue js
     ):
+    m_solvers( g, p, mag, js),
     m_dxF_N( dg::create::dx( g, p.bcxN, dg::forward) ),
     m_dxB_N( dg::create::dx( g, p.bcxN, dg::backward) ),
     m_dxF_U( dg::create::dx( g, p.bcxU, dg::forward) ),
@@ -825,17 +772,12 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dz( dg::create::dz( g, dg::PER) ),
     m_dxC(   dg::create::dx( g, dg::NEU, dg::centered) ), // for divergence
     m_dyC(   dg::create::dy( g, dg::NEU, dg::centered) ), // for divergence
-    m_multigrid( g, p.stages),
-    m_old_phi( 2, dg::evaluate( dg::zero, g)),
-    m_old_psi( m_old_phi), m_old_gammaN( m_old_phi),
-    m_old_apar( m_old_phi), m_old_aparST( m_old_phi),
-    //m_old_phiST( 2, dg::evaluate( dg::zero, g)),
-    //m_old_psiST( m_old_phi), m_old_gammaNST( m_old_phi),
+    m_old_apar( 2, dg::evaluate( dg::zero, g)),
     m_p(p), m_js(js)
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_source = m_sheath_coordinate = m_UE2 = m_temp1 = m_temp0;
+    m_source = m_sheath_coordinate = m_temp1 = m_temp0;
     m_apar = m_aparST = m_profne = m_wall = m_sheath = m_temp0;
     m_plus = m_zero = m_minus = m_temp0;
     m_vbm = m_vbp = m_temp0;
@@ -857,7 +799,6 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     //--------------------------Construct-------------------------//
     construct_mag( g, p, mag);
     construct_bhat( g, p, mag);
-    construct_invert( g, p, mag);
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -878,13 +819,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
     if (m_p.tau[1] != 0.) {
         if( initphi == "zero")
         {
-            // ne-nbc = Gamma (ni-nbc)
-            dg::blas1::transform(src, m_temp0, dg::PLUS<double>(-m_p.nbc));
-            dg::blas1::plus(target, -m_p.nbc);
-            m_multigrid.set_benchmark( true, "Gamma N     ");
-            std::vector<unsigned> number = m_multigrid.solve(
-                m_multi_invgammaN, target, m_temp0, m_p.eps_gamma);
-            dg::blas1::plus(target, +m_p.nbc);
+            m_solvers.invert_gammaN( src, target);
         }
         else if( initphi == "balance")
         {
@@ -930,145 +865,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
             throw dg::Error(dg::Message(_ping_)<<"Warning! initphi value '"<<initphi<<"' not recognized. I have tau = "<<m_p.tau[1]<<" ! I don't know what to do! I exit!\n");
         }
     }
-}
-
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_phi(
-    double time, const std::array<Container,2>& density,
-    Container& phi//, bool staggered
-    )
-{
-    //density[0]:= n_e
-    //density[1]:= N_i
-    //----------Compute and set chi----------------------------//
-    dg::blas1::pointwiseDot( m_p.mu[1], density[1], m_binv, m_binv, 0., m_temp0);
-    m_multigrid.project( m_temp0, m_multi_chi);
-    for( unsigned u=0; u<m_p.stages; u++)
-        m_multi_pol[u].set_chi( m_multi_chi[u]);
-
-    //----------Compute right hand side------------------------//
-    if (m_p.tau[1] == 0.) {
-        //compute N_i - n_e
-        dg::blas1::axpby( 1., density[1], -1., density[0], m_temp0);
-    }
-    else
-    {
-        dg::blas1::transform( density[1], m_temp1, dg::PLUS<double>(-m_p.nbc));
-        //compute Gamma N_i - n_e
-        //if( staggered)
-        //    m_old_gammaNST.extrapolate( time, m_temp0);
-        //else
-            m_old_gammaN.extrapolate( time, m_temp0);
-        m_multigrid.set_benchmark( true, "Gamma N     ");
-        std::vector<unsigned> numberG = m_multigrid.solve(
-            m_multi_invgammaN, m_temp0, m_temp1, m_p.eps_gamma);
-        //if( staggered)
-        //    m_old_gammaNST.update( time, m_temp0); // store N - nbc
-        //else
-            m_old_gammaN.update( time, m_temp0); // store N - nbc
-        dg::blas1::transform( density[0], m_temp1, dg::PLUS<double>(-m_p.nbc));
-        dg::blas1::axpby( -1., m_temp1, 1., m_temp0, m_temp0);
-    }
-    // Add penalization method
-    common::multiply_rhs_penalization( m_temp0, m_p.penalize_wall, m_wall,
-                    m_p.penalize_sheath, m_sheath); // F*(1-chi_w-chi_s)
-    //----------Invert polarisation----------------------------//
-    //if( staggered)
-    //    m_old_phiST.extrapolate( time, phi);
-    //else
-        m_old_phi.extrapolate( time, phi);
-    m_multigrid.set_benchmark( true, "Polarisation");
-    std::vector<unsigned> number = m_multigrid.solve(
-        m_multi_pol, phi, m_temp0, m_p.eps_pol);
-#ifdef WRITE_POL_FILE
-    //if( number[0] > 1000)
-        counter++;
-    if( counter >= 10 && number.back() > 100) // choose a somewhat difficult timestep
-    {
-        typename dg::file::NcFile::Hyperslab slab( m_multigrid.grid(0));
-        pol_file.defput_var( "chi",  {"z","y","x"}, {}, slab, m_multi_chi[0]);
-        pol_file.defput_var( "sol",  {"z","y","x"}, {}, slab, phi);
-        pol_file.defput_var( "rhs",  {"z","y","x"}, {}, slab, m_temp0);
-        pol_file.defput_var( "ne",   {"z","y","x"}, {}, slab, density[0]);
-        pol_file.defput_var( "Ni",   {"z","y","x"}, {}, slab, density[1]);
-        pol_file.defput_var( "phiH", {"z","y","x"}, {}, slab, m_old_phi.head());
-        m_old_phi.extrapolate( time, phi);
-        pol_file.defput_var( "phi0",  {"z","y","x"}, {}, slab, phi);
-        pol_file.close();
-        dg::abort_program();
-    }
-#endif // WRITE_POL_FILE
-    //if( staggered)
-    //    m_old_phiST.update( time, phi);
-    //else
-        m_old_phi.update( time, phi);
-}
-
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_psi(
-    double time, const Container& phi, Container& psi//, bool staggered
-    )
-{
-    //-----------Solve for Gamma Phi---------------------------//
-    if (m_p.tau[1] == 0.) {
-        dg::blas1::copy( phi, psi);
-    } else {
-        //if( staggered)
-        //    m_old_psiST.extrapolate( time, psi);
-        //else
-            m_old_psi.extrapolate( time, psi);
-        m_multigrid.set_benchmark( true, "Gamma Phi   ");
-        std::vector<unsigned> number = m_multigrid.solve(
-            m_multi_invgammaP, psi, phi, m_p.eps_gamma);
-        //if( staggered)
-        //    m_old_psiST.update( time, psi);
-        //else
-            m_old_psi.update( time, psi);
-    }
-    //-------Compute Psi and derivatives
-    dg::blas2::symv( m_dx_P, phi, m_dP[0][0]);
-    dg::blas2::symv( m_dy_P, phi, m_dP[0][1]);
-    if( m_compute_in_3d) dg::blas2::symv( m_dz, phi, m_dP[0][2]);
-    //if( staggered)
-    //    dg::tensor::scalar_product3d( 1., m_binv,
-    //        m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
-    //        m_dP[0][0], m_dP[0][1], m_dP[0][2], 1., psi);
-    //else
-    //{
-        dg::tensor::scalar_product3d( 1., m_binv,
-            m_dP[0][0], m_dP[0][1], m_dP[0][2], m_hh, m_binv, //grad_perp
-            m_dP[0][0], m_dP[0][1], m_dP[0][2], 0., m_UE2);
-        //m_UE2 now contains u_E^2
-        dg::blas1::axpby( -0.5, m_UE2, 1., psi);
-    //}
-}
-
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_aparST(
-    double time, const std::array<Container,2>& densityST,
-    std::array<Container,2>& velocityST, Container& aparST, bool update)
-{
-    //on input
-    //densityST[0] = n_e, velocityST[0]:= w_e
-    //densityST[1] = N_i, velocityST[1]:= W_i
-
-    //----------Compute right hand side------------------------//
-    dg::blas1::pointwiseDot(  m_p.beta, densityST[1], velocityST[1],
-                             -m_p.beta, densityST[0], velocityST[0],
-                              0., m_temp0);
-    //----------Invert Induction Eq----------------------------//
-    if( update)
-        m_old_aparST.extrapolate( time, aparST);
-    m_multigrid.set_benchmark( true, "Apar        ");
-    std::vector<unsigned> number = m_multigrid.solve(
-        m_multi_ampere, aparST, m_temp0, m_p.eps_ampere);
-    if( update)
-        m_old_aparST.update( time, aparST);
-    if(  number[0] == m_multigrid.max_iter())
-        throw dg::Fail( m_p.eps_ampere);
-    //----------Compute Velocities-----------------------------//
-    dg::blas1::axpby( 1., velocityST[0], -1./m_p.mu[0], aparST, velocityST[0]);
-    dg::blas1::axpby( 1., velocityST[1], -1./m_p.mu[1], aparST, velocityST[1]);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1138,15 +934,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_staggered_density_an
         update_parallel_bc_1st( m_minusSTN[i], m_plusSTN[i],
                 m_p.bcxN, m_p.bcxN == dg::DIR ? m_p.nbc : 0.);
         dg::blas1::axpby( 0.5, m_minusSTN[i], 0.5, m_plusSTN[i], m_densityST[i]);
-    }
-    //----------Compute and set chi----------------------------//
-    if( m_p.beta != 0)
-    {
-        dg::blas1::axpby(  m_p.beta/m_p.mu[1], m_densityST[1],
-                          -m_p.beta/m_p.mu[0], m_densityST[0], m_temp0);
-        m_multigrid.project( m_temp0, m_multi_chi);
-        for( unsigned u=0; u<m_p.stages; u++)
-            m_multi_ampere[u].set_chi( m_multi_chi[u]);
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -1733,9 +1520,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #if FELTORPERP == 1
 
     // set m_potential[0]
-    compute_phi( t, m_density, m_potential[0]);//, false);
-    // set m_potential[1] and m_UE2 --- needs m_potential[0]
-    compute_psi( t, m_potential[0], m_potential[1]);//, false);
+    m_solvers.compute_phi( t, m_density, m_potential[0], m_p.penalize_wall,
+        m_wall, m_p.penalize_sheath, m_sheath);
+    // set m_potential[1] and m_uE2 --- needs m_potential[0]
+    m_solvers.compute_psi( t, m_potential[0], m_potential[1]);
 
 #else
 
@@ -1767,7 +1555,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     dg::blas1::copy( y[1], m_velocityST);
     if( m_p.beta != 0)
     {
-        compute_aparST( t, m_densityST, m_velocityST, m_aparST, true);
+        m_solvers.compute_aparST( t, m_densityST, m_velocityST, m_aparST, true);
     }
     //Compute m_velocity and m_apar
     update_velocity_and_apar( t, m_velocityST, m_aparST);
