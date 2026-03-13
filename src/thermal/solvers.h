@@ -84,8 +84,7 @@ Solvers<Geometry, Matrix, Container>::Solvers( const Geometry& g,
 {
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_uE2 = m_omega = m_temp1 = m_temp0;
-    dg::assign(  dg::pullback(dg::geo::Btor(mag), g), m_Btorinv);
-    dg::blas1::pointwiseDivide( 1., m_Btorinv, m_Btorinv);
+    dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
     dg::assign(  dg::pullback(dg::cooX3d, g), m_Rinv);
     dg::blas1::pointwiseDivide( 1., m_Rinv, m_Rinv);
 
