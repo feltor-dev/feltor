@@ -96,6 +96,9 @@ void Explicit<G, M, Container>::compute_psi( double t)
             m_multigrid.set_benchmark( true, "Gamma Phi   ");
             m_multigrid.solve( m_multi_gamma1, m_phi[1], m_phi[0], m_p.eps_gamma);
             m_old_psi.update( t, m_phi[1]);
+            // // The LWL is numerically unstable:
+            // dg::blas2::symv( m_multi_gamma1[0].matrix(), m_phi[0], m_phi[1]);
+            // dg::blas1::axpby( 1., m_phi[0], -m_p.tau/2., m_phi[1]);
         }
     }
     //compute (nabla phi)^2
@@ -170,6 +173,9 @@ void Explicit<G, M, Container>::polarisation( double t,
             m_multigrid.set_benchmark( true, "Gamma N     ");
             m_multigrid.solve( m_multi_gamma1, m_gamma_n, y[1], m_p.eps_gamma);
             m_old_gammaN.update(t, m_gamma_n);
+            // // The LWL is numerically unstable:
+            // dg::blas2::symv( m_multi_gamma1[0].matrix(), y[1], m_gamma_n);
+            // dg::blas1::axpby( 1., y[1], -m_p.tau/2., m_gamma_n);
         }
         dg::blas1::axpby( -1., y[0], 1., m_gamma_n, m_omega); //omega = a_i\Gamma n_i - n_e
     }
