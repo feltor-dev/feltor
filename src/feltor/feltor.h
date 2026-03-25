@@ -5,6 +5,7 @@
 #include "parameters.h"
 #include "common.h"
 #include "solvers.h"
+#include "perpendicular.h"
 
 #define FELTORPARALLEL 1
 #define FELTORPERP 1
@@ -19,20 +20,6 @@ dg::file::NcFile pol_file;
 
 namespace feltor
 {
-
-struct BPerp{
-    //b_perp
-    DG_DEVICE void operator()(double A,
-        double d0A, double d1A, double d2A,
-        double& bp0, double& bp1, double& bp2, //bperp
-        double b_0,         double b_1,         double b_2,
-        double curvKappa0,  double curvKappa1,  double curvKappa2
-        ){
-        bp0 = (b_2*d1A - b_1*d2A + A*curvKappa0);
-        bp1 = (b_0*d2A - b_2*d0A + A*curvKappa1);
-        bp2 = (b_1*d0A - b_0*d1A + A*curvKappa2);
-    }
-};
 
 template< class Geometry, class IMatrix, class Matrix, class Container >
 struct Explicit
@@ -160,46 +147,53 @@ struct Explicit
         // MW: don't like this function, if we need more gradients we might
         // want a more flexible solution
         // grad S_ne and grad S_ni
-        dg::blas2::symv( m_dxF_N, m_s[0][i], gradS[0]);
-        dg::blas2::symv( m_dyF_N, m_s[0][i], gradS[1]);
-        if(m_compute_in_3d)dg::blas2::symv( m_dz, m_s[0][i], gradS[2]);
+        m_perp.compute_gradN( m_s[0][i], gradS);
     }
     void compute_dot_aparallel( Container& tmp) const {
         m_old_apar.derive( tmp);
     }
     const dg::SparseTensor<Container>& projection() const{
-        return m_hh;
+        return m_perp.projection();
     }
     const std::array<Container, 3> & curv () const {
-        return m_curv;
+        return m_perp.curv();
     }
     const std::array<Container, 3> & curvKappa () const {
-        return m_curvKappa;
+        return m_perp.curvKappa();
     }
     const Container& divCurvKappa() const {
-        return m_divCurvKappa;
+        return m_perp.divCurvKappa();
     }
     // Covariant phi component of bhat \approx \pm R
-    const Container& bphi( ) const { return m_bphi; }
-    const Container& binv( ) const { return m_binv; }
-    const Container& divb( ) const { return m_divb; }
+    const Container& bphi( ) const { return m_perp.bphi(); }
+    const Container& binv( ) const { return m_perp.binv(); }
+    const Container& divb( ) const { return m_perp.divb(); }
     //volume with dG weights
-    const Container& vol3d() const { return m_lapperpN.weights();}
-    const Container& weights() const { return m_lapperpN.weights();}
+    const Container& vol3d() const { return m_perp.weights();}
+    const Container& weights() const { return m_perp.weights();}
     //bhat / sqrt{g} / B
     const std::array<Container, 3> & bhatgB () const {
         // covariant components
-        return m_b;
+        return m_perp.bhatgB();
     }
-    void compute_lapMperpN (double alpha, const Container& density, Container& temp0, double beta, Container& result)
+    void compute_perp_diffusiveN( double alpha, const Container& density,
+            Container& temp0, Container& temp1, double beta, Container& result ) const
+        {
+            return m_perp.compute_diffusiveN( alpha, density, temp0, temp1, beta, result);
+        }
+    void compute_perp_diffusiveU( double alpha, const Container& velocity,
+            const Container& density,
+            Container& temp0, Container& temp1, Container& temp2, Container& temp3, double beta, Container& result) const
+        {
+            return m_perp.compute_diffusiveU( alpha, velocity, density, temp0, temp1, temp2, temp3, beta, result);
+        }
+    void compute_lapMperpN (double alpha, const Container& density, Container& temp0, double beta, Container& result) const
     {
-        // positive Laplacian
-        dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
-        dg::blas2::symv( alpha, m_lapperpN, temp0, beta, result);
+        m_perp.compute_lapMperpN( alpha, density, temp0, beta, result);
     }
     void compute_lapMperpU (int i, Container& result)
     {
-        dg::blas2::symv( m_lapperpU, m_q.at("U")[i], result);
+        m_perp.compute_lapMperpU( m_q.at("U")[i], result);
     }
     void compute_lapMperpP (int i, Container& result)
     {
@@ -208,18 +202,12 @@ struct Explicit
     }
     void compute_lapMperpA ( Container& result)
     {
-        // only if lapperpU has same direction as lapperpP
-        dg::blas2::gemv( m_lapperpU, m_apar, result);
+        m_perp.compute_lapMperpU(m_apar, result);
     }
     void compute_bperp( std::array<Container,3>& bperp)
     {
         update_diag();
-        dg::blas1::subroutine( BPerp(), m_apar,
-            m_dA[0], m_dA[1], m_dA[2],
-            bperp[0], bperp[1], bperp[2], // bperp on output
-            m_b[0], m_b[1], m_b[2],
-            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2]
-        );
+        m_perp.compute_bperp( m_apar, m_dA, bperp);
     }
     const Container& get_source() const{
         return m_source;
@@ -235,87 +223,6 @@ struct Explicit
     }
     const Container& get_sheath_coordinate() const{
         return m_sheath_coordinate;
-    }
-    void compute_perp_diffusiveN( double alpha, const Container& density,
-            Container& temp0, Container& temp1, double beta, Container& result )
-    {
-        // density = full N
-        // result = alpha Lambda_N + beta result
-        if( m_p.nu_perp_n > 0)
-        {
-            dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
-            for( unsigned s=0; s<m_p.diff_order; s++)
-            {
-                using std::swap;
-                swap( temp0, temp1);
-                dg::blas2::symv( 1., m_lapperpN, temp1, 0., temp0);
-            }
-            dg::blas1::axpby( -alpha*m_p.nu_perp_n, temp0, beta, result);
-        }
-        else
-            dg::blas1::scal( result, beta);
-    }
-    void compute_perp_diffusiveU( double alpha, const Container& velocity,
-            const Container& density,
-            Container& temp0, Container& temp1, Container& temp2, Container& temp3, double beta, Container& result)
-    {
-        // density = full N
-        // result = alpha Lambda_U + beta result
-        if( m_p.nu_perp_u > 0)
-        {
-            dg::blas1::copy( velocity, temp0);
-            for( unsigned s=0; s<m_p.diff_order; s++)
-            {
-                using std::swap;
-                swap( temp0, temp1);
-                dg::blas2::symv( 1., m_lapperpU, temp1, 0., temp0);
-            }
-            if( !m_p.modify_diff)
-                dg::blas1::pointwiseDivide( -alpha*m_p.nu_perp_u, temp0, density, beta, result);
-            else
-                dg::blas1::axpby( -alpha*m_p.nu_perp_u, temp0, beta, result);
-        }
-        else
-            dg::blas1::scal( result, beta);
-        double nu = m_p.nu_perp_n;
-        if( m_p.modify_diff)
-            nu += m_p.nu_perp_u;
-        if( nu > 0 )
-        {
-
-            dg::blas1::transform( density, temp0, dg::PLUS<double>(-m_p.nbc));
-            for( unsigned s=0; s<m_p.diff_order-1; s++)
-            {
-                using std::swap;
-                swap( temp0, temp1);
-                dg::blas2::symv( 1., m_lapperpN, temp1, 0., temp0);
-            }
-
-            // - v_x dx U
-            if( m_p.diff_dir == dg::centered)
-                dg::blas2::symv( m_dxC, temp0, temp1);
-            else if( m_p.diff_dir == dg::forward)
-                dg::blas2::symv( m_dxF_N, temp0, temp1);
-            else
-                dg::blas2::symv( m_dxB_N, temp0, temp1);
-            dg::blas1::pointwiseDivide( -nu, temp1, density, 0., temp1);
-            dg::blas2::symv( m_dxB_U, velocity, temp2);
-            dg::blas2::symv( m_dxF_U, velocity, temp3);
-            dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
-                    temp1, temp2, temp3);
-            // - v_y dy U
-            if( m_p.diff_dir == dg::centered)
-                dg::blas2::symv( m_dyC, temp0, temp1);
-            else if( m_p.diff_dir == dg::forward)
-                dg::blas2::symv( m_dyF_N, temp0, temp1);
-            else
-                dg::blas2::symv( m_dyB_N, temp0, temp1);
-            dg::blas1::pointwiseDivide( -nu, temp1, density, 0., temp1);
-            dg::blas2::symv( m_dyB_U, velocity, temp2);
-            dg::blas2::symv( m_dyF_U, velocity, temp3);
-            dg::blas1::evaluate( result, dg::minus_equals(), dg::UpwindProduct(),
-                    temp1, temp2, temp3);
-        }
     }
 
     void compute_parallel_diffusiveN( int i, Container& result)
@@ -344,40 +251,17 @@ struct Explicit
     }
 
 
-    // Compute divergence using centered derivatives
-    // note that no matter how divergence is computed you always loose one order
-    // unless the polarisation term or the Laplacian of N,U is computed
-    // then the correct direction must be chosen
-    // prefactor cannot alias result!!
-    // Div ( f v)
     template<class Container2>
     void centered_div( const Container2& prefactor,
             const std::array<Container, 3>& contra_vec,
             Container& temp0, Container& result)
     {
-        dg::blas1::pointwiseDot( 1., prefactor, m_detg, contra_vec[0], 0., temp0);
-        dg::blas2::symv( m_dxC, temp0, result);
-        dg::blas1::pointwiseDot( 1., prefactor, m_detg, contra_vec[1], 0., temp0);
-        dg::blas2::symv( 1., m_dyC, temp0, 1., result);
-        if( m_compute_in_3d)
-        {
-            dg::blas1::pointwiseDot( 1., prefactor, m_detg, contra_vec[2], 0., temp0);
-            dg::blas2::symv( 1., m_dz, temp0, 1., result);
-        }
-        dg::blas1::pointwiseDivide( 1., result, m_detg, 0., result);
+        m_perp.centered_div( prefactor, contra_vec, temp0, result);
     }
     void centered_v_dot_nabla( const std::array<Container, 3>& contra_vec,
             const Container& f, Container& temp1, Container& result)
     {
-        dg::blas2::symv( m_dxC, f, temp1);
-        dg::blas1::pointwiseDot( contra_vec[0], temp1, result);
-        dg::blas2::symv( m_dyC, f, temp1);
-        dg::blas1::pointwiseDot( 1., contra_vec[1], temp1, 1., result);
-        if( m_compute_in_3d)
-        {
-            dg::blas2::symv( m_dz, f, temp1);
-            dg::blas1::pointwiseDot( 1., contra_vec[2], temp1, 1., result);
-        }
+        m_perp.centered_v_dot_nabla( contra_vec, f, temp1, result);
     }
     void compute_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
@@ -386,7 +270,7 @@ struct Explicit
     void compute_source_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
         // we don't want jumps in phi in here so we use lapperpP
-        dg::blas1::pointwiseDot( m_p.mu[1], density, m_binv, m_binv, 0., temp);
+        dg::blas1::pointwiseDot( m_p.mu[1], density, m_perp.binv(), m_perp.binv(), 0., temp);
         m_lapperpP.set_chi( temp);
         dg::blas2::symv( -alpha, m_lapperpP, m_q.at("Psi")[0], beta, result);
     }
@@ -539,20 +423,6 @@ struct Explicit
         std::map<std::string, std::array<Container,2>>& q,
         const Container& aparST, Container& apar);
 
-    void update_perp_derivatives(
-        std::map<std::string, std::array<Container,2>>& q,
-        const Container& apar);
-    void update_perp_STderivatives(
-        std::map<std::string, std::array<Container,2>>& q,
-        const Container& aparST);
-    void compute_perp_density( double t,
-        const std::map<std::string, std::array<Container,2>>& q,
-        const Container& apar,
-        std::array<Container,2>& densityDOT);
-    void compute_perp_velocity( double t,
-        const std::map<std::string, std::array<Container,2>>& q,
-        const Container& aparST,
-        std::array<Container,2>& velocityDOT);
     void compute_parallel_flux(
              const Container& velocityKM,
              const Container& velocityKP,
@@ -594,19 +464,12 @@ struct Explicit
         return m_fa;
     }
   private:
-    void construct_mag( const Geometry&, feltor::Parameters,
-        dg::geo::TokamakMagneticField);
     void construct_bhat( const Geometry&, feltor::Parameters,
-        dg::geo::TokamakMagneticField);
-    void construct_invert( const Geometry&, feltor::Parameters,
         dg::geo::TokamakMagneticField);
 
     Solvers<Geometry, Matrix, Container> m_solvers;
+    PerpDynamics<Geometry, Matrix, Container> m_perp;
 
-    //these should be considered const // m_curv is full curvature
-    std::array<Container,3> m_curv, m_curvKappa, m_b; //m_b is bhat/ sqrt(g) / B
-    Container m_divCurvKappa;
-    Container m_bphi, m_binv, m_divb, m_detg;
     Container m_source, m_profne, m_sheath_coordinate;
     Container m_wall, m_sheath;
 
@@ -651,11 +514,9 @@ struct Explicit
     Container m_vbm, m_vbp, m_dN, m_dNMM, m_dNM, m_dNZ, m_dNP, m_dNPP;
 
     //matrices and solvers
-    Matrix m_dxF_N, m_dxB_N, m_dxC_N, m_dxF_U, m_dxB_U, m_dxC_U, m_dx_P, m_dx_A;
-    Matrix m_dyF_N, m_dyB_N, m_dyC_N, m_dyF_U, m_dyB_U, m_dyC_U, m_dy_P, m_dy_A, m_dz;
-    Matrix m_dxC, m_dyC;
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faST;
-    dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpN, m_lapperpU, m_lapperpP;
+
+    dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpP;
 
     dg::Extrapolation<Container> m_old_apar;
 
@@ -673,59 +534,6 @@ struct Explicit
 };
 
 template<class Grid, class IMatrix, class Matrix, class Container>
-void Explicit<Grid, IMatrix, Matrix, Container>::construct_mag(
-    const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag
-    )
-{
-    //due to the various approximations bhat and mag not always correspond
-    dg::geo::CylindricalVectorLvl0 curvNabla, curvKappa;
-    m_reversed_field = false;
-    if( mag.ipol()( g.x0(), g.y0()) < 0)
-        m_reversed_field = true;
-    if( p.curvmode == "true" )
-    {
-        curvNabla = dg::geo::createTrueCurvatureNablaB(mag);
-        curvKappa = dg::geo::createTrueCurvatureKappa(mag);
-        dg::assign(  dg::pullback(dg::geo::TrueDivCurvatureKappa(mag), g),
-            m_divCurvKappa);
-    }
-    else if( p.curvmode == "low beta")
-    {
-        if( m_reversed_field)
-            curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, -1);
-        else
-            curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, +1);
-        dg::assign( dg::evaluate(dg::zero, g), m_divCurvKappa);
-    }
-    else if( p.curvmode == "toroidal")
-    {
-        if( m_reversed_field)
-        {
-            curvNabla = dg::geo::createCurvatureNablaB(mag, -1);
-            curvKappa = dg::geo::createCurvatureKappa(mag, -1);
-            dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, -1), g),
-                m_divCurvKappa);
-        }
-        else
-        {
-            curvNabla = dg::geo::createCurvatureNablaB(mag, +1);
-            curvKappa = dg::geo::createCurvatureKappa(mag, +1);
-            dg::assign(  dg::pullback(dg::geo::DivCurvatureKappa(mag, +1), g),
-                m_divCurvKappa);
-        }
-    }
-    else
-        throw std::runtime_error( "Warning! curvmode value '"+p.curvmode+"' not recognized!! I don't know what to do! I exit!\n");
-    dg::pushForward(curvNabla.x(), curvNabla.y(), curvNabla.z(),
-        m_curv[0], m_curv[1], m_curv[2], g);
-    dg::pushForward(curvKappa.x(), curvKappa.y(), curvKappa.z(),
-        m_curvKappa[0], m_curvKappa[1], m_curvKappa[2], g);
-    dg::blas1::axpby( 1., m_curvKappa, 1., m_curv);
-    dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_binv);
-    dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
-
-}
-template<class Grid, class IMatrix, class Matrix, class Container>
 void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
     const Grid& g, feltor::Parameters p, dg::geo::TokamakMagneticField mag)
 {
@@ -740,39 +548,6 @@ void Explicit<Grid, IMatrix, Matrix, Container>::construct_bhat(
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
     }
 
-    // in Poisson we take EPhi except for the true curvmode
-    bhat = dg::geo::createEPhi(+1);
-    if( p.curvmode == "true")
-        bhat = dg::geo::createBHat(mag);
-    else if( m_reversed_field)
-        bhat = dg::geo::createEPhi(-1);
-    dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
-    dg::SparseTensor<Container> metric = g.metric();
-    // make bhat covariant:
-    dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
-                                        m_b[0], m_b[1], m_b[2]);
-    dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
-    m_detg = dg::tensor::volume( metric);
-    dg::blas1::pointwiseDivide( m_binv, m_detg, m_temp0); //1/B/detg
-    for( int i=0; i<3; i++)
-        dg::blas1::pointwiseDot( m_temp0, m_b[i], m_b[i]); //b_i/detg/B
-    m_hh = dg::geo::createProjectionTensor( bhat, g);
-    m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER,  p.diff_dir),
-    m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER,  p.diff_dir),
-    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER,  p.pol_dir),
-    m_lapperpN.set_chi( m_hh);
-    m_lapperpU.set_chi( m_hh);
-    m_lapperpP.set_chi( m_hh);
-    if( (p.curvmode == "true") && (p.symmetric == false))
-        m_compute_in_3d = true;
-    else
-    {
-        m_compute_in_3d = false;
-        m_lapperpN.set_compute_in_2d(true);
-        m_lapperpU.set_compute_in_2d(true);
-        m_lapperpP.set_compute_in_2d(true);
-    }
-    m_lapperpP.set_jfactor(0); //we don't want jump terms in source
 }
 template<class Grid, class IMatrix, class Matrix, class Container>
 Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
@@ -780,25 +555,7 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     dg::file::WrappedJsonValue js
     ):
     m_solvers( g, p, mag, js),
-    m_dxF_N( dg::create::dx( g, p.bcxN, dg::forward) ),
-    m_dxB_N( dg::create::dx( g, p.bcxN, dg::backward) ),
-    m_dxC_N( dg::create::dx( g, p.bcxN, dg::centered) ),
-    m_dxF_U( dg::create::dx( g, p.bcxU, dg::forward) ),
-    m_dxB_U( dg::create::dx( g, p.bcxU, dg::backward) ),
-    m_dxC_U( dg::create::dx( g, p.bcxU, dg::centered) ),
-    m_dx_P(  dg::create::dx( g, p.bcxP, p.pol_dir) ),
-    m_dx_A(  dg::create::dx( g, p.bcxA, p.pol_dir) ),
-    m_dyF_N( dg::create::dy( g, p.bcyN, dg::forward) ),
-    m_dyB_N( dg::create::dy( g, p.bcyN, dg::backward) ),
-    m_dyC_N( dg::create::dy( g, p.bcyN, dg::centered) ),
-    m_dyF_U( dg::create::dy( g, p.bcyU, dg::forward) ),
-    m_dyB_U( dg::create::dy( g, p.bcyU, dg::backward) ),
-    m_dyC_U( dg::create::dy( g, p.bcyU, dg::centered) ),
-    m_dy_P(  dg::create::dy( g, p.bcyP, p.pol_dir) ),
-    m_dy_A(  dg::create::dy( g, p.bcyA, p.pol_dir) ),
-    m_dz( dg::create::dz( g, dg::PER) ),
-    m_dxC(   dg::create::dx( g, dg::NEU, dg::centered) ), // for divergence
-    m_dyC(   dg::create::dy( g, dg::NEU, dg::centered) ), // for divergence
+    m_perp( g, p, mag, js),
     m_old_apar( 2, dg::evaluate( dg::zero, g)),
     m_p(p), m_js(js)
 {
@@ -824,8 +581,21 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_s[0] = m_s[1] = m_dsN ;
 
     //--------------------------Construct-------------------------//
-    construct_mag( g, p, mag);
+    m_reversed_field = false;
+    if( mag.ipol()( g.x0(), g.y0()) < 0)
+        m_reversed_field = true;
     construct_bhat( g, p, mag);
+
+    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER,  p.pol_dir),
+    m_lapperpP.set_chi( m_perp.projection());
+    if( (p.curvmode == "true") && (p.symmetric == false))
+        m_compute_in_3d = true;
+    else
+    {
+        m_compute_in_3d = false;
+        m_lapperpP.set_compute_in_2d(true);
+    }
+    m_lapperpP.set_jfactor(0); //we don't want jump terms in source
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -851,9 +621,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializene(
         else if( initphi == "balance")
         {
             //add FLR correction -0.5*tau*mu*Delta n_e
-            dg::blas1::transform(src, m_temp0, dg::PLUS<double>(-m_p.nbc));
-            dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
-                m_lapperpN, m_temp0, 1.0, target);
+            m_perp.compute_lapMperpN( 0.5*m_p.tau[1]*m_p.mu[1], src, m_temp0, 1.0, target);
             //wird stark negativ falls alpha klein!!
         }
         else if( !(initphi == "zero_pol"))
@@ -874,17 +642,13 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
         if( initphi == "zero")
         {
             //add FLR correction -0.5*tau*mu*Delta n_e
-            dg::blas1::transform(src, m_temp0, dg::PLUS<double>(-m_p.nbc));
-            dg::blas2::symv( 0.5*m_p.tau[1]*m_p.mu[1],
-                m_lapperpN, m_temp0, 1.0, target);
+            m_perp.compute_lapMperpN( 0.5*m_p.tau[1]*m_p.mu[1], src, m_temp0, 1.0, target);
             //wird stark negativ falls alpha klein!!
         }
         else if( initphi == "balance")
         {
             //add FLR correction +0.5*tau*mu*Delta n_e
-            dg::blas1::transform(src, m_temp0, dg::PLUS<double>(-m_p.nbc));
-            dg::blas2::symv( -0.5*m_p.tau[1]*m_p.mu[1],
-                m_lapperpN, m_temp0, 1.0, target);
+            m_perp.compute_lapMperpN( -0.5*m_p.tau[1]*m_p.mu[1], src, m_temp0, 1.0, target);
             //wird stark negativ falls alpha klein!!
         }
         else if( !(initphi == "zero_pol"))
@@ -894,88 +658,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
     }
 }
 
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::update_perp_derivatives(
-    std::map<std::string, std::array<Container,2>>& q,
-    const Container& apar)
-{
-    for( unsigned i=0; i<2; i++)
-    {
-        ////////////////////perpendicular dynamics////////////////////////
-        //First compute forward and backward derivatives for upwind scheme
-        dg::blas1::transform( q.at("N")[i], m_temp1, dg::PLUS<double>(-m_p.nbc));
-        dg::blas2::symv( m_dxF_N, m_temp1, q.at("dxF N")[i]);
-        dg::blas2::symv( m_dyF_N, m_temp1, q.at("dyF N")[i]);
-        dg::blas2::symv( m_dxB_N, m_temp1, q.at("dxB N")[i]);
-        dg::blas2::symv( m_dyB_N, m_temp1, q.at("dyB N")[i]);
-        if(m_compute_in_3d) dg::blas2::symv( m_dz, m_temp1, q.at( "dzF N")[i]);
-        if(m_compute_in_3d) dg::blas2::symv( m_dz, m_temp1, q.at( "dzB N")[i]);
-        if( m_p.diff_dir == dg::forward)
-        {
-            dg::blas2::symv( m_dxF_U, q.at("U")[i], q.at("dx U")[i]);
-            dg::blas2::symv( m_dyF_U, q.at("U")[i], q.at("dy U")[i]);
-        }
-        else if( m_p.diff_dir == dg::backward)
-        {
-            dg::blas2::symv( m_dxB_U, q.at("U")[i], q.at("dx U")[i]);
-            dg::blas2::symv( m_dyB_U, q.at("U")[i], q.at("dy U")[i]);
-        }
-        else
-        {
-            dg::blas2::symv( m_dxC_U, q.at("U")[i], q.at("dx U")[i]);
-            dg::blas2::symv( m_dyC_U, q.at("U")[i], q.at("dy U")[i]);
-        }
-        if(m_compute_in_3d) dg::blas2::symv( m_dz, q.at("U")[i], q.at( "dz U")[i]);
-
-        dg::blas2::symv( m_dx_P, q.at("Psi")[i], q.at("dx Psi")[i]);
-        dg::blas2::symv( m_dy_P, q.at("Psi")[i], q.at("dy Psi")[i]);
-        if( m_compute_in_3d) dg::blas2::symv( m_dz, q.at("Psi")[i], q.at("dz Psi")[i]);
-    }
-    dg::blas2::symv( m_dx_A, apar, m_dA[0]);
-    dg::blas2::symv( m_dy_A, apar, m_dA[1]);
-    if( m_compute_in_3d) dg::blas2::symv( m_dz, apar, m_dA[2]);
-}
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::update_perp_STderivatives(
-    std::map<std::string, std::array<Container,2>>& q,
-    const Container& aparST)
-{
-    for( unsigned i=0; i<2; i++)
-    {
-        ////////////////////perpendicular dynamics////////////////////////
-        //First compute forward and backward derivatives for upwind scheme
-        dg::blas1::transform( q.at("ST N")[i], m_temp1, dg::PLUS<double>(-m_p.nbc));
-        if( m_p.diff_dir == dg::forward)
-        {
-            dg::blas2::symv( m_dxF_U, m_temp1, q.at("ST dx N")[i]);
-            dg::blas2::symv( m_dyF_U, m_temp1, q.at("ST dy N")[i]);
-        }
-        else if( m_p.diff_dir == dg::backward)
-        {
-            dg::blas2::symv( m_dxB_U, m_temp1, q.at("ST dx N")[i]);
-            dg::blas2::symv( m_dyB_U, m_temp1, q.at("ST dy N")[i]);
-        }
-        else
-        {
-            dg::blas2::symv( m_dxC_U, m_temp1, q.at("ST dx N")[i]);
-            dg::blas2::symv( m_dyC_U, m_temp1, q.at("ST dy N")[i]);
-        }
-        if(m_compute_in_3d) dg::blas2::symv( m_dz, m_temp1, q.at( "ST dz N")[i]);
-
-        dg::blas2::symv( m_dxF_U, q.at("ST U")[i], q.at("ST dxF U")[i]);
-        dg::blas2::symv( m_dyF_U, q.at("ST U")[i], q.at("ST dyF U")[i]);
-        dg::blas2::symv( m_dxB_U, q.at("ST U")[i], q.at("ST dxB U")[i]);
-        dg::blas2::symv( m_dyB_U, q.at("ST U")[i], q.at("ST dyB U")[i]);
-        if(m_compute_in_3d) dg::blas2::symv( m_dz, q.at("ST U")[i], q.at( "ST dzF U")[i]);
-        if(m_compute_in_3d) dg::blas2::symv( m_dz, q.at("ST U")[i], q.at( "ST dzB U")[i]);
-        dg::blas2::symv( m_dx_P, q.at("ST Psi")[i], q.at("ST dx Psi")[i]);
-        dg::blas2::symv( m_dy_P, q.at("ST Psi")[i], q.at("ST dy Psi")[i]);
-        if( m_compute_in_3d) dg::blas2::symv( m_dz, q.at("ST Psi")[i], q.at("ST dz Psi")[i]);
-    }
-    dg::blas2::symv( m_dx_A, aparST, m_dAST[0]);
-    dg::blas2::symv( m_dy_A, aparST, m_dAST[1]);
-    if( m_compute_in_3d) dg::blas2::symv( m_dz, aparST, m_dAST[2]);
-}
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix, Container>::update_staggered_density_and_phi(
     double,
@@ -1032,172 +714,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::update_velocity_and_apar(
     m_old_apar.update( t, apar);
 }
 
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_density(
-    double,
-    const std::map<std::string, std::array<Container,2>>& q,
-    const Container& apar,
-    std::array<Container,2>& densityDOT)
-{
-    //y[0] = N, y[1] = W; fields[0] = N, fields[1] = U
-    for( unsigned i=0; i<2; i++)
-    {
-        ////////////////////perpendicular dynamics////////////////////////
-        double mu = m_p.mu[i], tau = m_p.tau[i], beta = m_p.beta;
-        dg::blas1::subroutine( [mu, tau, beta] DG_DEVICE (
-                double N, double d0FN, double d1FN, double d2FN,
-                          double d0BN, double d1BN, double d2BN,
-                double U, double d0U, double d1U, double d2U,
-                          double d0P, double d1P, double d2P,
-                double A, double d0A, double d1A, double d2A,
-                double b_0,         double b_1,         double b_2,
-                double curv0,       double curv1,       double curv2,
-                double curvKappa0,  double curvKappa1,  double curvKappa2,
-                double divCurvKappa,
-                double& dtN
-            )
-            {
-                dtN = 0;
-                // density - upwind scheme
-                double v0 = (b_1*d2P - b_2*d1P) + tau*curv0 + mu*U*U*curvKappa0;
-                double v1 = (b_2*d0P - b_0*d2P) + tau*curv1 + mu*U*U*curvKappa1;
-                double v2 = (b_0*d1P - b_1*d0P) + tau*curv2 + mu*U*U*curvKappa2;
-                double bp0 = 0., bp1 = 0., bp2 = 0.;
-                if( beta != 0)
-                {
-                    bp0 = A * curvKappa0 + ( d1A*b_2 - d2A*b_1);
-                    bp1 = A * curvKappa1 + ( d2A*b_0 - d0A*b_2);
-                    bp2 = A * curvKappa2 + ( d0A*b_1 - d1A*b_0);
-
-                    v0 += U * bp0;
-                    v1 += U * bp1;
-                    v2 += U * bp2;
-                    //Q: doesn't U in U^2K_kappa and U b_perp create nonlinearity
-                    //in velocity equation that may create shocks?
-                    //A: we did some studies in the reconnection2d program and
-                    //did not find shocks. LeVeque argues that for smooth
-                    //solutions the upwind discretization should be fine but is
-                    //wrong for shocks
-                }
-                dtN += ( v0 > 0 ) ? -v0*d0BN : -v0*d0FN;
-                dtN += ( v1 > 0 ) ? -v1*d1BN : -v1*d1FN;
-                dtN += ( v2 > 0 ) ? -v2*d2BN : -v2*d2FN;
-
-                double KappaU = curvKappa0*d0U+curvKappa1*d1U+curvKappa2*d2U;
-                double KP = curv0*d0P+curv1*d1P+curv2*d2P;
-
-                dtN +=  - N * ( KP + mu * U * U * divCurvKappa
-                                + 2. * mu * U * KappaU);
-                if( beta != 0)
-                {
-                    double divbp = A*divCurvKappa
-                                     - (curv0-curvKappa0)*d0A
-                                     - (curv1-curvKappa1)*d1A
-                                     - (curv2-curvKappa2)*d2A;
-                    double bpU = bp0*d0U + bp1*d1U + bp2*d2U;
-                    dtN +=  -N*( U*divbp + bpU);
-                }
-                return;
-            },
-            //species depdendent
-            q.at("N")[i], q.at("dxF N")[i], q.at("dyF N")[i], q.at("dzF N")[i],
-                          q.at("dxB N")[i], q.at("dyB N")[i], q.at("dzB N")[i],
-            q.at("U")[i], q.at("dx U")[i], q.at("dy U")[i], q.at("dz U")[i],
-                          q.at("dx Psi")[i], q.at("dy Psi")[i], q.at("dz Psi")[i],
-            //aparallel
-            apar, m_dA[0], m_dA[1], m_dA[2],
-            //magnetic parameters
-            m_b[0], m_b[1], m_b[2],
-            m_curv[0], m_curv[1], m_curv[2],
-            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-            m_divCurvKappa, densityDOT[i]
-        );
-    }
-}
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::compute_perp_velocity(
-    double,
-    const std::map<std::string, std::array<Container,2>>& q,
-    const Container& aparST,
-    std::array<Container,2>& velocityDOT)
-{
-    //y[0] = N, y[1] = W; fields[0] = N, fields[1] = U
-    for( unsigned i=0; i<2; i++)
-    {
-        ////////////////////perpendicular dynamics////////////////////////
-        double mu = m_p.mu[i], tau = m_p.tau[i], beta = m_p.beta;
-        dg::blas1::subroutine( [mu, tau, beta] DG_DEVICE (
-                double N, double d0N, double d1N, double d2N,
-                double U, double d0FU, double d1FU, double d2FU,
-                          double d0BU, double d1BU, double d2BU,
-                          double d0P, double d1P, double d2P,
-                double A, double d0A, double d1A, double d2A,
-                double b_0,         double b_1,         double b_2,
-                double curv0,       double curv1,       double curv2,
-                double curvKappa0,  double curvKappa1,  double curvKappa2,
-                double divCurvKappa,
-                double& dtU
-            )
-            {
-                dtU = 0;
-                // velocity - upwind scheme
-                double v0 = (b_1*d2P - b_2*d1P) + tau*curv0 + mu*U*U*curvKappa0;
-                double v1 = (b_2*d0P - b_0*d2P) + tau*curv1 + mu*U*U*curvKappa1;
-                double v2 = (b_0*d1P - b_1*d0P) + tau*curv2 + mu*U*U*curvKappa2;
-                double bp0 = 0., bp1 = 0., bp2 = 0.;
-                if( beta != 0)
-                {
-                    bp0 = A * curvKappa0 + ( d1A*b_2 - d2A*b_1);
-                    bp1 = A * curvKappa1 + ( d2A*b_0 - d0A*b_2);
-                    bp2 = A * curvKappa2 + ( d0A*b_1 - d1A*b_0);
-
-                    v0 += U * bp0;
-                    v1 += U * bp1;
-                    v2 += U * bp2;
-                    //Q: doesn't U in U^2K_kappa and U b_perp create nonlinearity
-                    //in velocity equation that may create shocks?
-                    //A: we did some studies in the reconnection2d program and
-                    //did not find shocks. LeVeque argues that for smooth
-                    //solutions the upwind discretization should be fine but is
-                    //wrong for shocks
-                }
-                // velocity - upwind scheme
-                v0 += 2.*tau*curvKappa0;
-                v1 += 2.*tau*curvKappa1;
-                v2 += 2.*tau*curvKappa2;
-                dtU += ( v0 > 0 ) ? -v0*d0BU : -v0*d0FU;
-                dtU += ( v1 > 0 ) ? -v1*d1BU : -v1*d1FU;
-                dtU += ( v2 > 0 ) ? -v2*d2BU : -v2*d2FU;
-
-                // use centered derivatives
-                double KappaN = curvKappa0*d0N+curvKappa1*d1N+curvKappa2*d2N;
-                double KappaP = curvKappa0*d0P+curvKappa1*d1P+curvKappa2*d2P;
-
-                dtU +=  - U * ( 2. * tau * KappaN / N + tau * divCurvKappa
-                                + KappaP);
-                if( beta != 0)
-                {
-                    double bpN = bp0 * d0N + bp1 * d1N + bp2 * d2N;
-                    double bpP = bp0 * d0P + bp1 * d1P + bp2 * d2P;
-                    dtU +=  - bpP/mu - tau/mu * bpN/N;
-                }
-                return;
-            },
-            //species depdendent
-            q.at("ST N")[i], q.at("ST dx N")[i], q.at("ST dy N")[i], q.at("ST dz N")[i],
-            q.at("ST U")[i], q.at("ST dxF U")[i], q.at("ST dyF U")[i], q.at("ST dzF U")[i],
-                             q.at("ST dxB U")[i], q.at("ST dyB U")[i], q.at("ST dzB U")[i],
-                             q.at("ST dx Psi")[i], q.at("ST dy Psi")[i], q.at("ST dz Psi")[i],
-            //aparallel
-            aparST, m_dAST[0], m_dAST[1], m_dAST[2],
-            //magnetic parameters
-            m_b[0], m_b[1], m_b[2],
-            m_curv[0], m_curv[1], m_curv[2],
-            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2],
-            m_divCurvKappa, velocityDOT[i]
-        );
-    }
-}
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void Explicit<Geometry, IMatrix, Matrix,
      Container>::compute_parallel_advection(
@@ -1434,10 +950,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
     }
 
     //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
-    dg::blas2::gemv( m_lapperpN, m_s[0][0], m_temp0);
+    m_perp.compute_lapMperpU( m_s[0][0], m_temp0); // lapU avoids subtraction of nbc
     dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
     // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
-    dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_binv, m_binv, 0., m_temp0);
+    dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_perp.binv(), m_perp.binv(), 0., m_temp0);
     m_lapperpP.set_chi( m_temp0);
     m_lapperpP.symv( 1., m_q.at("Psi")[0], 1., m_s[0][1]);
 
@@ -1610,10 +1126,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #if FELTORPERP == 1
 
     // Set perpendicular dynamics in yp
-    update_perp_derivatives( m_q, m_apar);
-    compute_perp_density(  t, m_q, m_apar, yp[0]);
-    update_perp_STderivatives( m_q, m_aparST);
-    compute_perp_velocity( t, m_q, m_aparST, yp[1]);
+    m_perp.update_derivatives( m_q, m_apar, m_dA);
+    m_perp.compute_density(  t, m_q, m_apar, m_dA, yp[0]);
+    m_perp.update_STderivatives( m_q, m_aparST, m_dAST);
+    m_perp.compute_velocity( t, m_q, m_aparST, m_dAST, yp[1]);
 
 #else
 
@@ -1707,7 +1223,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_density(
     }
 #if FELTORPERP == 1
     for( unsigned i=0; i<2; i++)
-        compute_perp_diffusiveN( 1., q.at("N")[i], m_temp0,
+        m_perp.compute_diffusiveN( 1., q.at("N")[i], m_temp0,
                 m_temp1, 1., yp[i]);
 #endif
     if( !m_p.no_diff_penalization)
@@ -1785,7 +1301,7 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit_velocityST(
 #if FELTORPERP == 1
     for( unsigned i=0; i<2; i++)
     {
-        compute_perp_diffusiveU( 1., q.at("ST U")[i], q.at("ST N")[i], m_temp0,
+        m_perp.compute_diffusiveU( 1., q.at("ST U")[i], q.at("ST N")[i], m_temp0,
                 m_temp1, m_zero, m_plus, 1., yp[i]);
     }
 #endif
