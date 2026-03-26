@@ -7,6 +7,7 @@
 #include "solvers.h"
 #include "perpendicular.h"
 #include "parallel.h"
+#include "sources.h"
 
 #define FELTORPARALLEL 1
 #define FELTORPERP 1
@@ -40,10 +41,6 @@ struct Explicit
         std::array<std::array<Container,2>,2>& yp);
     void implicit( double t,
         const std::array<std::array<Container,2>,2>& y,
-        std::array<std::array<Container,2>,2>& yp);
-    void add_implicit( double t,
-        const std::map<std::string, std::array<Container,2>>& q,
-        double beta,
         std::array<std::array<Container,2>,2>& yp);
     /// ///////////////////RESTART    MEMBERS //////////////////////
     const Container& restart_density(int i)const{
@@ -79,14 +76,10 @@ struct Explicit
 
 
     const Container& density_source(int i)const{
-        return m_s[0][i];
+        return m_sources.get_density_source( i);
     }
     const Container& velocity(int i)const{
         return m_q.at("U")[i];
-    }
-    const Container& velocity_source(int i){
-        update_diag();
-        return m_s[1][i];
     }
     const Container& potential(int i) const {
         return m_q.at("Psi")[i];
@@ -139,11 +132,8 @@ struct Explicit
         update_diag();
         return m_lapParN[i];
     }
-    void compute_gradSN( int i, std::array<Container,3>& gradS) const{
-        // MW: don't like this function, if we need more gradients we might
-        // want a more flexible solution
-        // grad S_ne and grad S_ni
-        m_perp.compute_gradN( m_s[0][i], gradS);
+    void compute_gradN( const Container& in, std::array<Container,3>& gradN) const{
+        m_perp.compute_gradN( in, gradN);
     }
     void compute_dot_aparallel( Container& tmp) const {
         m_old_apar.derive( tmp);
@@ -174,15 +164,15 @@ struct Explicit
     }
     void compute_perp_diffusiveN( double alpha, const Container& density,
             Container& temp0, Container& temp1, double beta, Container& result ) const
-        {
-            return m_perp.compute_diffusiveN( alpha, density, temp0, temp1, beta, result);
-        }
+    {
+        return m_perp.compute_diffusiveN( alpha, density, temp0, temp1, beta, result);
+    }
     void compute_perp_diffusiveU( double alpha, const Container& velocity,
             const Container& density,
             Container& temp0, Container& temp1, Container& temp2, Container& temp3, double beta, Container& result) const
-        {
-            return m_perp.compute_diffusiveU( alpha, velocity, density, temp0, temp1, temp2, temp3, beta, result);
-        }
+    {
+        return m_perp.compute_diffusiveU( alpha, velocity, density, temp0, temp1, temp2, temp3, beta, result);
+    }
     void compute_lapMperpN (double alpha, const Container& density, Container& temp0, double beta, Container& result) const
     {
         m_perp.compute_lapMperpN( alpha, density, temp0, beta, result);
@@ -193,8 +183,7 @@ struct Explicit
     }
     void compute_lapMperpP (int i, Container& result)
     {
-        m_lapperpP.set_chi( 1.);
-        dg::blas2::gemv( m_lapperpP, m_q.at("Psi")[i], result);
+        m_sources.compute_lapMperpP( m_q.at("Psi")[i], result);
     }
     void compute_lapMperpA ( Container& result)
     {
@@ -206,13 +195,13 @@ struct Explicit
         m_perp.compute_bperp( m_apar, m_dA, bperp);
     }
     const Container& get_source() const{
-        return m_source;
+        return m_sources.get_source();
     }
     const Container& get_source_prof() const{
-        return m_profne;
+        return m_sources.get_source_prof();
     }
     const Container& get_wall() const{
-        return m_wall;
+        return m_sources.get_wall();
     }
     const Container& get_sheath() const{
         return m_para.get_sheath();
@@ -265,10 +254,7 @@ struct Explicit
     }
     void compute_source_pol( double alpha, const Container& density, Container& temp, double beta, Container& result)
     {
-        // we don't want jumps in phi in here so we use lapperpP
-        dg::blas1::pointwiseDot( m_p.mu[1], density, m_perp.binv(), m_perp.binv(), 0., temp);
-        m_lapperpP.set_chi( temp);
-        dg::blas2::symv( -alpha, m_lapperpP, m_q.at("Psi")[0], beta, result);
+        m_sources.compute_source_pol( alpha, density, m_q.at("Psi")[0], temp, beta, result);
     }
     unsigned called() const { return m_called;}
 
@@ -308,10 +294,6 @@ struct Explicit
                     m_zero, m_plus, 0., m_dssU[i]);
                 dg::geo::ds_centered( m_para.fieldaligned(), 1., m_minus, m_plus, 0.,
                         m_dsU[i]);
-                // velocity source
-                dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
-                            double sn, double u, double n){ return -u*sn/n;},
-                        m_s[0][i], m_q.at("U")[i], m_q.at("N")[i]);
             }
             for( unsigned i=0; i<2; i++)
             {
@@ -349,30 +331,19 @@ struct Explicit
     }
 
     //source strength, profile - 1
-    void set_source( bool fixed_profile, Container profile, double source_rate, Container source, double minne, double minrate, double minalpha)
+    void set_source( bool fixed_profile, const Container& profile, double source_rate, const Container& source, double minne, double minrate, double minalpha)
     {
-        m_fixed_profile = fixed_profile;
-        m_profne = profile;
-        m_source_rate = source_rate;
-        m_source = source;
-        m_minne = minne;
-        m_minrate = minrate;
-        m_minalpha = minalpha;
+        m_sources.set_source( fixed_profile, profile, source_rate, source, minne, minrate, minalpha);
     }
-    void set_wall(double wall_rate, const Container& wall, double nwall, double uwall)
+    void set_wall(const Container& wall)
     {
-        m_wall_rate = wall_rate;
-        dg::blas1::copy( wall, m_wall);
-        m_nwall = nwall;
-        m_uwall = uwall;
+        m_sources.set_wall( wall);
     }
     void set_sheath(double sheath_rate, const Container& sheath,
             const Container& sheath_coordinate)
     {
         m_para.set_sheath( sheath_rate, sheath, sheath_coordinate);
     }
-    void add_source_terms(  const std::map<std::string, std::array<Container,2>>&,
-                            std::array<std::array<Container,2>,2>& yp);
     const dg::geo::Fieldaligned<Geometry, IMatrix, Container>& fieldaligned() const
     {
         return m_para.fieldaligned();
@@ -381,9 +352,8 @@ struct Explicit
     Solvers<Geometry, Matrix, Container> m_solvers;
     PerpDynamics<Geometry, Matrix, Container> m_perp;
     ParaDynamics<Geometry, IMatrix, Matrix, Container> m_para;
+    Sources<Geometry, Matrix, Container> m_sources;
 
-    Container m_source, m_profne;
-    Container m_wall;
 
     std::map<std::string, std::array<Container,2>> m_q;
 
@@ -406,13 +376,10 @@ struct Explicit
     };
     // Only set once every call to operator()
     Container m_apar, m_aparST;
-
-    // overwritten by diag_update and/or set once by operator()
     std::array<Container,3> m_dA, m_dAST;
-    std::array<Container,2> m_dsN, m_dsU, m_dsP;
-    std::array<std::array<Container,2>,2> m_s;
 
     // Set by diag_update
+    std::array<Container,2> m_dsN, m_dsU, m_dsP;
     std::array<Container,2> m_dssU, m_lapParU, m_lapParN;
     std::array<std::array<Container,3>,2> m_gradN, m_gradU, m_gradP;
 
@@ -420,18 +387,11 @@ struct Explicit
     Container m_temp0, m_temp1;
     Container m_minus, m_zero, m_plus;
 
-    //matrices and solvers
-
-    dg::Elliptic3d< Geometry, Matrix, Container> m_lapperpP;
-
+    // Helper to compute Dot Apar in diag file
     dg::Extrapolation<Container> m_old_apar;
 
     const feltor::Parameters m_p;
     const dg::file::WrappedJsonValue m_js;
-    double m_source_rate = 0., m_wall_rate = 0.;
-    double m_minne = 0., m_minrate  = 0., m_minalpha = 0.;
-    double m_nwall = 0., m_uwall = 0.;
-    bool m_fixed_profile = true, m_compute_in_3d = true;
     bool m_upToDate = false;
     unsigned m_called = 0;
 
@@ -445,13 +405,14 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_solvers( g, p, mag, js),
     m_perp( g, p, mag, js),
     m_para( g, p, mag, js),
+    m_sources( g, p, mag, js, m_perp),
     m_old_apar( 2, dg::evaluate( dg::zero, g)),
     m_p(p), m_js(js)
 {
     //--------------------------init vectors to 0-----------------//
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
-    m_source = m_temp1 = m_temp0;
-    m_apar = m_aparST = m_profne = m_wall = m_temp0;
+    m_temp1 = m_temp0;
+    m_apar = m_aparST = m_temp0;
     m_plus = m_zero = m_minus = m_temp0;
 
     m_q["N"] = std::array<Container,2>{ m_temp0, m_temp0};
@@ -463,20 +424,9 @@ Explicit<Grid, IMatrix, Matrix, Container>::Explicit( const Grid& g,
     m_dA[0] = m_dA[1] = m_dA[2] = m_temp0;
     m_dAST = m_dA;
     m_gradP = m_gradU = m_gradN = {m_dA, m_dA};
-    m_s[0] = m_s[1] = m_dsN ;
 
     //--------------------------Construct-------------------------//
 
-    m_lapperpP.construct ( g, p.bcxP, p.bcyP, dg::PER,  p.pol_dir),
-    m_lapperpP.set_chi( m_perp.projection());
-    if( (p.curvmode == "true") && (p.symmetric == false))
-        m_compute_in_3d = true;
-    else
-    {
-        m_compute_in_3d = false;
-        m_lapperpP.set_compute_in_2d(true);
-    }
-    m_lapperpP.set_jfactor(0); //we don't want jump terms in source
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -541,63 +491,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::initializeni(
 
 
 
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::add_source_terms(
-    const std::map<std::string, std::array<Container,2>>& q,
-    std::array<std::array<Container,2>,2>& yp)
-{
-    if( m_source_rate != 0.0)
-    {
-        if( m_fixed_profile )
-            dg::blas1::subroutine(
-                [] DG_DEVICE ( double& result, double ne, double profne,
-                    double source, double source_rate){
-                    result = source_rate*source*(profne - ne);
-                    },
-                m_s[0][0], q.at("N")[0], m_profne, m_source, m_source_rate);
-        else
-            dg::blas1::axpby( m_source_rate, m_source, 0., m_s[0][0]);
-    }
-    else
-        dg::blas1::copy( 0., m_s[0][0]);
-    // add prevention to get below lower limit
-    if( m_minrate != 0.0)
-    {
-        // do not make lower forcing a velocity source
-        // MW it may be that this form does not go well with the potential
-        dg::blas1::transform( q.at("N")[0], m_temp0, dg::PolynomialHeaviside(
-                    m_minne-m_minalpha/2., m_minalpha/2., -1) );
-        dg::blas1::transform( q.at("N")[0], m_temp1, dg::PLUS<double>( -m_minne));
-        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][0]);
-        dg::blas1::transform( q.at("N")[1], m_temp0, dg::PolynomialHeaviside(
-                    m_minne-m_minalpha/2., m_minalpha/2., -1) );
-        dg::blas1::transform( q.at("N")[1], m_temp1, dg::PLUS<double>( -m_minne));
-        dg::blas1::pointwiseDot( -m_minrate, m_temp1, m_temp0, 1., yp[0][1]);
-    }
-
-    //compute FLR corrections S_N = (1-0.5*mu*tau*Lap)*S_n
-    m_perp.compute_lapMperpU( m_s[0][0], m_temp0); // lapU avoids subtraction of nbc
-    dg::blas1::axpby( 1., m_s[0][0], 0.5*m_p.tau[1]*m_p.mu[1], m_temp0, m_s[0][1]);
-    // potential part of FLR correction S_N += -div*(mu S_n grad*Phi/B^2)
-    dg::blas1::pointwiseDot( m_p.mu[1], m_s[0][0], m_perp.binv(), m_perp.binv(), 0., m_temp0);
-    m_lapperpP.set_chi( m_temp0);
-    m_lapperpP.symv( 1., m_q.at("Psi")[0], 1., m_s[0][1]);
-
-    // S_U = - U S_N/N
-    for(int i=0; i<2; i++)
-    {
-        // transform to adjoint plane and add to velocity source
-        m_para.fieldalignedHalf()( dg::geo::zeroMinus, m_s[0][i], m_minus);
-        m_para.fieldalignedHalf()( dg::geo::einsPlus,  m_s[0][i], m_plus);
-        m_para.update_parallel_bc_1st( m_minus, m_plus, m_p.bcxN, 0.);
-        dg::geo::ds_average( m_para.fieldalignedHalf(), 1., m_minus, m_plus, 0., m_temp0);
-        dg::blas1::evaluate( m_s[1][i], dg::equals(), []DG_DEVICE(
-                    double sn, double u, double n){ return -u*sn/n;},
-                m_temp0, m_q.at("ST U")[i], m_q.at("ST N")[i]);
-    }
-    //Add all to the right hand side
-    dg::blas1::axpby( 1., m_s, 1.0, yp);
-}
 
 #ifndef WITH_NAVIER_STOKES
 template<class Geometry, class IMatrix, class Matrix, class Container>
@@ -630,12 +523,9 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     // set Psi[0]
     m_solvers.compute_phi( t, m_q.at("N"), m_q.at("Psi")[0], m_p.penalize_wall,
-        m_wall, m_p.penalize_sheath, m_para.get_sheath());
-    // set m_potential[1] and m_uE2 --- needs m_potential[0]
+        m_sources.get_wall(), m_p.penalize_sheath, m_para.get_sheath());
+    // set Psi[1] and m_uE2 --- needs Psi[0]
     m_solvers.compute_psi( t, m_q.at("Psi")[0], m_q.at("Psi")[1]);
-
-#else
-
 
 #endif
 
@@ -648,11 +538,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     //Compute ST N and ST Psi
     m_para.update_staggered_density_and_phi( t, m_q);
 
-    //// Now refine potential on staggered grid
-    //// set m_potentialST[0]
-    //compute_phi( t, m_q.at("ST N"), m_potentialST[0], true);
-    //// set m_potentialST[1]  --- needs m_potentialST[0]
-    //compute_psi( t, m_potentialST[0], m_potentialST[1], true);
     timer.toc();
     accu += timer.diff();
     DG_RANK0 std::cout << "## Compute phi and psi ST            took "
@@ -699,6 +584,8 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 #if FELTORPARALLEL == 1
 
     m_para.compute_parallel( m_q, yp);
+    m_para.add_densities_diffusion( m_q, yp);
+    m_para.add_velocities_diffusion( m_q, yp);
 
 #endif
 #if FELTORPERP == 1
@@ -715,35 +602,38 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
         m_q.at("ST U")[0], m_q.at("ST U")[1], yp[1][0], yp[1][1]);
 #endif
 
-    if( !m_p.partitioned)
+    if( m_p.no_diff_penalization)
     {
-        // explicit and implicit timestepper
-        add_implicit( t, m_q, 1., yp);
-    }
-    else
-    {
-        // partitioned means imex timestepper
         for( unsigned i=0; i<2; i++)
+        for( unsigned j=0; j<2; j++)
         {
-            for( unsigned j=0; j<2; j++)
-                common::multiply_rhs_penalization( yp[i][j], m_p.penalize_wall, m_wall,
+            common::multiply_rhs_penalization( yp[i][j], m_p.penalize_wall, m_sources.get_wall(),
+                    m_p.penalize_sheath, m_para.get_sheath()); // F*(1-chi_w-chi_s)
+        }
+    }
+#if FELTORPERP == 1
+    for( unsigned i=0; i<2; i++)
+    {
+        m_perp.compute_diffusiveN( 1., m_q.at("N")[i], m_temp0,
+                m_temp1, 1., yp[0][i]);
+        m_perp.compute_diffusiveU( 1., m_q.at("ST U")[i], m_q.at("ST N")[i], m_temp0,
+                m_temp1, m_zero, m_plus, 1., yp[1][i]);
+    }
+#endif
+    if( !m_p.no_diff_penalization)
+    {
+        for( unsigned i=0; i<2; i++)
+        for( unsigned j=0; j<2; j++)
+        {
+            common::multiply_rhs_penalization( yp[i][j], m_p.penalize_wall, m_sources.get_wall(),
                     m_p.penalize_sheath, m_para.get_sheath()); // F*(1-chi_w-chi_s)
         }
     }
 
-    m_para.add_sheath_terms( m_q, m_nwall, m_uwall, yp);
-    // add wall boundary conditions
-    if( m_wall_rate != 0)
-    {
-        for( unsigned i=0; i<2; i++)
-        {
-            dg::blas1::axpby( +m_wall_rate*m_nwall, m_wall, 1., yp[0][i] );
-            dg::blas1::axpby( +m_wall_rate*m_uwall, m_wall, 1., yp[1][i] );
-        }
-    }
+    m_para.add_sheath_terms( m_q, yp);
+    m_sources.add_wall_terms( m_q, yp);
     //Add source terms
-    // set m_s
-    add_source_terms( m_q, yp );
+    m_sources.add_source_terms( m_q, m_perp, m_para, yp );
 
     timer.toc();
     accu += timer.diff();
@@ -752,56 +642,6 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
     #endif
     std::cout << "## Add parallel dynamics and sources took "<<timer.diff()
               << "s\t A: "<<accu<<"\n";
-}
-template<class Geometry, class IMatrix, class Matrix, class Container>
-void Explicit<Geometry, IMatrix, Matrix, Container>::add_implicit(
-    double,
-    const std::map<std::string, std::array<Container,2>>& q,
-    double beta,
-    std::array<std::array<Container,2>,2>& yp)
-{
-    dg::blas1::scal( yp, beta);
-#if FELTORPARALLEL == 1
-    m_para.add_densities_diffusion( m_q, yp);
-    m_para.add_velocities_diffusion( m_q, yp);
-#endif
-    if( m_p.no_diff_penalization)
-    {
-        for( unsigned i=0; i<2; i++)
-        {
-            common::multiply_rhs_penalization( yp[0][i], m_p.penalize_wall, m_wall,
-                    m_p.penalize_sheath, m_para.get_sheath()); // F*(1-chi_w-chi_s)
-            common::multiply_rhs_penalization( yp[1][i], m_p.penalize_wall, m_wall,
-                    m_p.penalize_sheath, m_para.get_sheath()); // F*(1-chi_w-chi_s)
-            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, q.at("N")[i],
-                -m_para.get_sheath_rate(), m_para.get_sheath(), q.at("N")[i], 1., yp[0][i]); // -r N
-            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, q.at("ST U")[i],
-                -m_para.get_sheath_rate(), m_para.get_sheath(), q.at("ST U")[i], 1., yp[1][i]); // -r U
-        }
-    }
-#if FELTORPERP == 1
-    for( unsigned i=0; i<2; i++)
-    {
-        m_perp.compute_diffusiveN( 1., q.at("N")[i], m_temp0,
-                m_temp1, 1., yp[0][i]);
-        m_perp.compute_diffusiveU( 1., q.at("ST U")[i], q.at("ST N")[i], m_temp0,
-                m_temp1, m_zero, m_plus, 1., yp[1][i]);
-    }
-#endif
-    if( !m_p.no_diff_penalization)
-    {
-        for( unsigned i=0; i<2; i++)
-        {
-            common::multiply_rhs_penalization( yp[0][i], m_p.penalize_wall, m_wall,
-                    m_p.penalize_sheath, m_para.get_sheath()); // F*(1-chi_w-chi_s)
-            common::multiply_rhs_penalization( yp[1][i], m_p.penalize_wall, m_wall,
-                    m_p.penalize_sheath, m_para.get_sheath()); // F*(1-chi_w-chi_s)
-            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, q.at("N")[i],
-                -m_para.get_sheath_rate(), m_para.get_sheath(), q.at("N")[i], 1., yp[0][i]); // -r N
-            dg::blas1::pointwiseDot( -m_wall_rate, m_wall, q.at("ST U")[i],
-                -m_para.get_sheath_rate(), m_para.get_sheath(), q.at("ST U")[i], 1., yp[1][i]); // -r U
-        }
-    }
 }
 
 

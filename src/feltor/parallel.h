@@ -46,7 +46,6 @@ struct ParaDynamics
     void compute_parallel(  const std::map<std::string, std::array<Container,2>>&,
                             std::array<std::array<Container,2>,2>& yp);
     void add_sheath_terms( const std::map<std::string, std::array<Container,2>>&,
-                            double, double,
                             std::array<std::array<Container,2>,2>& yp);
     void update_parallel_bc_1st( Container& minusST, Container& plusST,
             dg::bc bcx, double value) const
@@ -416,7 +415,6 @@ void ParaDynamics<Geometry, IMatrix, Matrix, Container>::compute_parallel(
 template<class Geometry, class IMatrix, class Matrix, class Container>
 void ParaDynamics<Geometry, IMatrix, Matrix, Container>::add_sheath_terms(
     const std::map<std::string, std::array<Container,2>>& q,
-    double , double uwall, //necessary if "wall" is sheath bc
         std::array<std::array<Container,2>,2>& yp)
 {
     // add sheath boundary conditions
@@ -435,16 +433,17 @@ void ParaDynamics<Geometry, IMatrix, Matrix, Container>::add_sheath_terms(
             else
                 dg::blas1::evaluate( m_temp, dg::equals(), dg::Upwind(),
                      m_sheath_coordinate, q.at("N -1")[i], q.at("N +1")[i]);
-            dg::blas1::pointwiseDot( m_sheath_rate, m_temp, m_sheath, 1.,
-                    yp[0][i]);
+            dg::blas1::pointwiseDot( m_sheath_rate, m_temp,  m_sheath,
+                                    -m_sheath_rate, q.at("N")[i], m_sheath,
+                                     1., yp[0][i]);
         }
         //compute sheath velocity
         if( "wall" == m_p.sheath_bc)
         {
             for( unsigned i=0; i<2; i++)
             {
-                //dg::blas1::axpby( +m_sheath_rate*m_nwall, m_sheath, 1., yp[0][i] );
-                dg::blas1::axpby( +m_sheath_rate*uwall, m_sheath, 1., yp[1][i] );
+                //dg::blas1::axpby( +m_sheath_rate*m_p.nwall, m_sheath, 1., yp[0][i] );
+                dg::blas1::axpby( +m_sheath_rate*m_p.uwall, m_sheath, 1., yp[1][i] );
             }
         }
         else
@@ -478,6 +477,10 @@ void ParaDynamics<Geometry, IMatrix, Matrix, Container>::add_sheath_terms(
             dg::blas1::pointwiseDot( sheath_rate*cs,
                     m_sheath, m_sheath_coordinate, 1.,  yp[1][1]);
         }
+        // Apply to U, not W
+        for( unsigned i=0; i<2; i++)
+            dg::blas1::pointwiseDot( -m_sheath_rate, m_sheath, q.at("ST U")[i],
+                1., yp[1][i]);
     }
 }
 template<class Geometry, class IMatrix, class Matrix, class Container>

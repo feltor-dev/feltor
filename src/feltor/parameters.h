@@ -45,7 +45,6 @@ struct Parameters
     std::string output;
     bool symmetric, calibrate, modify_diff, no_diff_penalization;
     bool penalize_wall, penalize_sheath;
-    bool partitioned;
     //
 
     Parameters() = default;
@@ -55,7 +54,6 @@ struct Parameters
         Nx          = js["grid"].get("Nx", 0).asUInt();
         Ny          = js["grid"].get("Ny", 0).asUInt();
         Nz          = js["grid"].get("Nz", 0).asUInt();
-        partitioned = false;
         output      = js["output"].get( "type", "netcdf").asString();
         if( !("netcdf" == output) && !("glfw" == output))
             throw std::runtime_error( "Output type "+output+" not recognized!\n");

@@ -1222,7 +1222,7 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //27
     },
     {"sospi_tt", "Diamagnetic vorticity source term with electron source", true,
         []( dg::x::DVec& result, Variables& v){
-            v.f.compute_gradSN( 0, v.tmp);
+            v.f.compute_gradN( v.f.density_source(0), v.tmp);
             routines::dot( v.p.mu[1]*v.p.tau[1], v.tmp, v.gradPsip, 0., result);
         }
     },

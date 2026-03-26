@@ -78,8 +78,7 @@ int main( int argc, char* argv[])
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
     DG_RANK0 std::cout << "# Done!\n";
 
-    feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
-                    wall, grid)), p.nwall, p.uwall );
+    feltor.set_wall( dg::construct<dg::x::DVec>( dg::pullback( wall, grid)) );
 
     dg::geo::CylindricalFunctor sheath, sheath_coordinate =
         [](double, double){return 0.;};
