@@ -183,7 +183,7 @@ void Sources<Geometry, Matrix, Container>::add_wall_terms(
             {
                 // chi_w ( 1 - chi_w )
                 dg::blas1::pointwiseDot ( 1., 1., m_wall, -1., m_wall, m_wall, 0., m_temp0);
-                double norm = dg::blas1::dot( m_lapperp.weights(), m_temp0);
+                double norm = dg::blas1::dot( m_lapperpP.weights(), m_temp0);
                 nwall = dg::blas2::dot( q.at("N")[i], m_lapperpP.weights(), m_temp0)/norm;
             }
             dg::blas1::axpby( +m_p.wall_rate*nwall, m_wall, 1., yp[0][i] );
