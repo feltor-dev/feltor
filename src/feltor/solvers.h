@@ -58,6 +58,8 @@ struct Solvers
 
     // 1/B_varphi
     const Container& binv( ) const { return m_binv; }
+    // 1/R
+    const Container& rinv() const {return m_Rinv;}
     //void compute_lapMperp( const Container& f, Container& lapMf) const {
     //    dg::blas2::symv( m_laplaceM, f, lapMf);
     //}
@@ -85,7 +87,7 @@ struct Solvers
 
     private:
     feltor::Parameters m_p;
-    Container m_temp0, m_temp1, m_uE2, m_binv;
+    Container m_temp0, m_temp1, m_uE2, m_binv, m_Rinv;
     Matrix m_dx_P, m_dy_P, m_dz;
     dg::MultigridCG2d<Geometry, Matrix, Container> m_multigrid;
     std::vector<Container> m_multi_chi;
@@ -98,8 +100,6 @@ struct Solvers
 
     dg::Extrapolation<Container> m_old_phi, m_old_psi, m_old_gammaN, m_old_aparST;
     //dg::Extrapolation<Container> m_old_phiST, m_old_psiST, m_old_gammaNST;
-
-    bool m_reversed_field = false;
 };
 
 template<class Geometry, class Matrix, class Container>
@@ -119,11 +119,15 @@ Solvers<Geometry, Matrix, Container>::Solvers( const Geometry& g,
 {
     dg::assign( dg::evaluate( dg::zero, g), m_temp0 );
     m_uE2 =  m_temp1 = m_temp0;
-    dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_binv);
+    if( m_p.curvmode == "flutemode")
+    {
+        dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_binv);
+        dg::assign(  dg::pullback(dg::cooX3d, g), m_Rinv);
+        dg::blas1::pointwiseDivide( 1., m_Rinv, m_Rinv);
+    }
+    else
+        dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_binv);
 
-    m_reversed_field = false;
-    if( mag.ipol()( g.x0(), g.y0()) < 0)
-        m_reversed_field = true;
     //Set a hard code limit on the maximum number of iteration to avoid
     //endless iteration in case of failure
     m_multigrid.set_max_iter( 1e5);
@@ -131,8 +135,6 @@ Solvers<Geometry, Matrix, Container>::Solvers( const Geometry& g,
     auto bhat = dg::geo::createEPhi(+1); //bhat = ephi except when "true"
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat( mag);
-    else if( m_reversed_field)
-        bhat = dg::geo::createEPhi(-1);
     m_multi_chi = m_multigrid.project( m_temp0);
     m_multi_pol.resize(p.stages);
     m_multi_invgammaP.resize(p.stages);
@@ -156,6 +158,13 @@ Solvers<Geometry, Matrix, Container>::Solvers( const Geometry& g,
         m_multi_invgammaP[u].matrix().set_chi( hh);
         m_multi_invgammaN[u].matrix().set_chi( hh);
         m_multi_ampere[u].matrix().set_chi( hh);
+        if( p.curvmode == "flutemode")
+        {
+            Container Rinv = dg::pullback( dg::cooX3d, m_multigrid.grid(u));
+            dg::blas1::pointwiseDivide( 1., Rinv, Rinv);
+            dg::blas1::pointwiseDot( Rinv, Rinv, Rinv); // = 1/R^2
+            m_multi_ampere[u].matrix().set_chi( Rinv);
+        }
         if( !((p.curvmode == "true") && (p.symmetric == false))){
             m_multi_pol[u].set_compute_in_2d( true);
             m_multi_invgammaP[u].matrix().set_compute_in_2d( true);
@@ -251,19 +260,21 @@ void Solvers<Geometry, Matrix, Container>::compute_aparST(
     //densityST[0] = n_e, velocityST[0]:= w_e
     //densityST[1] = N_i, velocityST[1]:= W_i
     //
+    // beta is nonzero when this function is called
     //----------Compute and set chi----------------------------//
-    if( m_p.beta != 0)
-    {
-        dg::blas1::axpby(  m_p.beta/m_p.mu[1], densityST[1],
-                          -m_p.beta/m_p.mu[0], densityST[0], m_temp0);
-        m_multigrid.project( m_temp0, m_multi_chi);
-        for( unsigned u=0; u<m_p.stages; u++)
-            m_multi_ampere[u].set_chi( m_multi_chi[u]);
-    }
+    dg::blas1::axpby(  m_p.beta/m_p.mu[1], densityST[1],
+                      -m_p.beta/m_p.mu[0], densityST[0], m_temp0);
+    if( m_p.curvmode == "flutemode")
+        dg::blas1::pointwiseDot( 1., m_temp0, m_Rinv, m_Rinv, 1., m_temp0);
+    m_multigrid.project( m_temp0, m_multi_chi);
+    for( unsigned u=0; u<m_p.stages; u++)
+        m_multi_ampere[u].set_chi( m_multi_chi[u]);
     //----------Compute right hand side------------------------//
     dg::blas1::pointwiseDot(  m_p.beta, densityST[1], velocityST[1],
                              -m_p.beta, densityST[0], velocityST[0],
                               0., m_temp0);
+    if( m_p.curvmode == "flutemode")
+        dg::blas1::pointwiseDot(  m_temp0, m_Rinv, m_temp0);
     //----------Invert Induction Eq----------------------------//
     if( update)
         m_old_aparST.extrapolate( time, aparST);
@@ -274,6 +285,8 @@ void Solvers<Geometry, Matrix, Container>::compute_aparST(
         m_old_aparST.update( time, aparST);
     if(  number[0] == m_multigrid.max_iter())
         throw dg::Fail( m_p.eps_ampere);
+    if( m_p.curvmode == "flutemode")
+        dg::blas1::pointwiseDot( aparST, m_Rinv, aparST); // Aparallel = Avarphi / R
     //----------Compute Velocities-----------------------------//
     dg::blas1::axpby( 1., velocityST[0], -1./m_p.mu[0], aparST, velocityST[0]);
     dg::blas1::axpby( 1., velocityST[1], -1./m_p.mu[1], aparST, velocityST[1]);

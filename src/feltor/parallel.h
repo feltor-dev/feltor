@@ -176,6 +176,11 @@ ParaDynamics<Grid, IMatrix, Matrix, Container>::ParaDynamics( const Grid& g,
         m_reversed_field = true;
     //in DS we take the true bhat
     auto bhat = dg::geo::createBHat( mag);
+    if( p.curvmode == "flutemode")
+    {
+        bhat = dg::geo::createToroidalBHat( mag);
+        m_reversed_field = false;
+    }
     // do not construct FCI if we just want to calibrate
     if( !p.calibrate )
     {

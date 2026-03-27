@@ -85,7 +85,7 @@ int main( int argc, char* argv[])
     if( p.sheath_bc != "none")
     {
         common::create_and_set_sheath( argv[1], js, mag, wall, sheath,
-                sheath_coordinate, grid, feltor);
+                sheath_coordinate, grid, feltor, p.curvmode == "flutemode");
     }
 
     DG_RANK0 std::cout << "# Set Source \n";

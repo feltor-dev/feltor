@@ -707,10 +707,15 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             }
             else
             {
+                dg::blas1::copy( v.f.gradA()[0], v.tmp[0]);
+                if( v.p.curvmode == "flutemode")
+                {
+                    dg::blas1::pointwiseDot( 1., v.f.aparallel(), v.f.rinv(), 1., v.tmp[0]);
+                }
                 dg::tensor::scalar_product3d( 1./2./v.p.beta, 1.,
-                    v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
+                    v.tmp[0], v.f.gradA()[1], v.f.gradA()[2],
                     v.f.projection(), 1., //grad_perp
-                    v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2], 0., result);
+                    v.tmp[0], v.f.gradA()[1], v.f.gradA()[2], 0., result);
             }
         }
     },

@@ -434,13 +434,46 @@ In low beta plasmas \(\beta\ll1\) the curvature reduces to:
 \end{align}
 This simplifies the curvature operators to:
 \begin{align}
-\KK \approx
-\vec{ {K} }_{\vn  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
+\KK \approx \KB
+  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\ehat_R +\frac{1}{B^2} \frac{\partial B}{\partial R}\ehat_Z &
 {K} (f) &\approx 2{K}_{\vn  B} (f) , &
     \vn\times\bhat \cdot \KB &= 0.
 \end{align}
 The divergence over the curvature vanishes \( \nc \vec{ {K} } = 0\) only if \( \nc \KB   = 0\).
 In general, the divergence \( \nc \vec{ {K} } \approx 0\) is only approximately vanishing.
+
+\subsubsection{Flutemode ordering} \label{sec:flutemode}
+When applying flutemode ordering to the gyro-kinetic one-form directly it turns
+out that the angular momentum can be conserved exactly. This is what we do in the thermal code.
+It consists of
+\begin{align}
+    B \approx B_{\hat \varphi}:=& \frac{R_0 I}{R}
+    \\
+    \KB :=& \frac{\ehat_\varphi \times \vn \ln B_{\hat \varphi}}{B_{\hat \varphi}}= - \frac{1}{B_{\hat \varphi}}\frac{ \partial_Z I}{I} e_R + \left(\frac{1}{B_{\hat \varphi}}\frac{\partial_R I}{I} - \frac{1}{R_0 I}\right) e_Z
+    \\
+    \KK :=& \frac{\vn \times \ehat_\varphi}{B_{\hat \varphi}} = \frac{-\hat e_Z/R}{B_{\hat \varphi}} = - \frac{1}{R_0 I} \hat e_Z
+    \\
+    \nc \KK :=& \frac{\partial_Z I}{R_0 I^2}
+    \\
+    \nc \frac{\vec B}{B_{\hat \varphi}} =& B_R\left(  \frac{1}{R_0 I} - \frac{1}{B_{\hat \varphi}}\frac{\partial_R I}{I}\right) = \frac{\psi_Z}{I} \left( \frac{1}{R} -  \frac{\partial_R I}{I} \right)
+\end{align}
+Note that if $I=I_0$ (typically the case) then $\KK = \KB$ and we automatically have the low-beta approximation.
+\begin{align}
+    \ehat_\varphi \times \vec v = -v_Ze_R +v_Re_Z
+\end{align}
+Contrary to the toroidal field approximation we do not need to use $\pm \ehat_\varphi$ here. The sign of $\vec B$ is taken care of automatically in $B_{\hat \varphi}$.
+This means that the sign of the sheath coordinate is taken wrt to the geometric angle instead of $\bhat$.
+
+In this ordering the parallel Ampere law is derived from the variation of the actual $B_\perp^2$ term.
+Thus the parallel Ampere law is changed to
+\begin{align}
+    \left(\frac{\beta}{\mu_i}R^{-2}N_i - \frac{\beta}{\mu_e} R^{-2}n_e - \vn R^{-2} \np \right) (A_\parallel R)= \beta R^{-1}(N_i W_{\parallel,i} - n_e w_{\parallel,e})
+\end{align}
+We solve this equation for $(A_\parallel R)$ and then obtain $A_\parallel = (A_\parallel R)/R$ from it.
+The magnetic energy likewise reads
+\begin{align}
+\vec B_\perp^2 = (\vn \times A_\parallel \ehat_\varphi)^2 = \left( \frac{\np (R A_\parallel)}{R}\right)^2 = (\partial_Z A_\parallel)^2 + ( \partial_R A_\parallel + R^{-1} A_\parallel)^2
+\end{align}
 \subsubsection{True perpendicular terms} \label{sec:trueapprox}
 
 Without any approximations we have

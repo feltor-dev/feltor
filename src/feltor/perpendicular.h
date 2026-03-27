@@ -226,7 +226,7 @@ struct PerpDynamics
 
     const feltor::Parameters m_p;
     const dg::file::WrappedJsonValue m_js;
-    bool m_reversed_field = false, m_compute_in_3d = true;
+    bool m_compute_in_3d = true;
 };
 
 template<class Grid, class Matrix, class Container>
@@ -258,9 +258,9 @@ PerpDynamics<Grid, Matrix, Container>::PerpDynamics( const Grid& g,
     dg::assign( dg::evaluate( dg::zero, g), m_temp );
     //due to the various approximations bhat and mag not always correspond
     dg::geo::CylindricalVectorLvl0 curvNabla, curvKappa;
-    m_reversed_field = false;
+    bool reversed_field = false;
     if( mag.ipol()( g.x0(), g.y0()) < 0)
-        m_reversed_field = true;
+        reversed_field = true;
     if( p.curvmode == "true" )
     {
         curvNabla = dg::geo::createTrueCurvatureNablaB(mag);
@@ -270,7 +270,7 @@ PerpDynamics<Grid, Matrix, Container>::PerpDynamics( const Grid& g,
     }
     else if( p.curvmode == "low beta")
     {
-        if( m_reversed_field)
+        if( reversed_field)
             curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, -1);
         else
             curvNabla = curvKappa = dg::geo::createCurvatureNablaB(mag, +1);
@@ -278,7 +278,7 @@ PerpDynamics<Grid, Matrix, Container>::PerpDynamics( const Grid& g,
     }
     else if( p.curvmode == "toroidal")
     {
-        if( m_reversed_field)
+        if( reversed_field)
         {
             curvNabla = dg::geo::createCurvatureNablaB(mag, -1);
             curvKappa = dg::geo::createCurvatureKappa(mag, -1);
@@ -293,32 +293,54 @@ PerpDynamics<Grid, Matrix, Container>::PerpDynamics( const Grid& g,
                 m_divCurvKappa);
         }
     }
+    else if( p.curvmode == "flutemode")
+    {
+        // In flute-mode the negative sign is always automatically taken care of
+        reversed_field = false;
+        dg::assign(  dg::pullback(dg::geo::ToroidalDivCurvatureKappa(mag), g),
+            m_divCurvKappa);
+    }
     else
         throw std::runtime_error( "Warning! curvmode value '"+p.curvmode+"' not recognized!! I don't know what to do! I exit!\n");
-    dg::pushForward(curvNabla.x(), curvNabla.y(), curvNabla.z(),
-        m_curv[0], m_curv[1], m_curv[2], g);
-    dg::pushForward(curvKappa.x(), curvKappa.y(), curvKappa.z(),
-        m_curvKappa[0], m_curvKappa[1], m_curvKappa[2], g);
-    dg::blas1::axpby( 1., m_curvKappa, 1., m_curv);
-    dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_binv);
-    dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
+    if( p.curvmode == "flutemode")
+    {
+        dg::geo::ToroidalCurvatureNablaBR curvNablaBR(mag);
+        dg::geo::ToroidalCurvatureNablaBZ curvNablaBZ(mag);
+        dg::geo::ToroidalCurvatureKappaR curvKappaBR(mag);
+        dg::geo::ToroidalCurvatureKappaZ curvKappaBZ(mag);
+        dg::pushForward( curvNablaBR, curvNablaBZ, dg::geo::Constant(0),
+            m_curv[0], m_curv[1], m_curv[2], g);
+        dg::pushForward(curvKappaBR, curvKappaBZ, dg::geo::Constant(0),
+            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2], g);
+        dg::blas1::axpby( 1., m_curvKappa, 1., m_curv);
+        dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_binv);
+        dg::assign(  dg::pullback(dg::geo::ToroidalDivb(mag), g), m_divb);
+    }
+    else
+    {
+        dg::pushForward(curvNabla.x(), curvNabla.y(), curvNabla.z(),
+            m_curv[0], m_curv[1], m_curv[2], g);
+        dg::pushForward(curvKappa.x(), curvKappa.y(), curvKappa.z(),
+            m_curvKappa[0], m_curvKappa[1], m_curvKappa[2], g);
+        dg::blas1::axpby( 1., m_curvKappa, 1., m_curv);
+        dg::assign(  dg::pullback(dg::geo::InvB(mag), g), m_binv);
+        dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
+    }
 
     // in Poisson we take EPhi except for the true curvmode
-    auto bhat = dg::geo::createEPhi(+1);
+    auto bhat = dg::geo::createEPhi(+1); // 0, 0, 1/R
     if( p.curvmode == "true")
         bhat = dg::geo::createBHat(mag);
-    else if( m_reversed_field)
-        bhat = dg::geo::createEPhi(-1);
     dg::pushForward(bhat.x(), bhat.y(), bhat.z(), m_b[0], m_b[1], m_b[2], g);
     dg::SparseTensor<Container> metric = g.metric();
     // make bhat covariant:
     dg::tensor::inv_multiply3d( metric, m_b[0], m_b[1], m_b[2],
-                                        m_b[0], m_b[1], m_b[2]);
+                                        m_b[0], m_b[1], m_b[2]); // 0, 0, R
     dg::assign( m_b[2], m_bphi); //save bphi for momentum conservation
     m_detg = dg::tensor::volume( metric);
     dg::blas1::pointwiseDivide( m_binv, m_detg, m_temp); //1/B/detg
     for( int i=0; i<3; i++)
-        dg::blas1::pointwiseDot( m_temp, m_b[i], m_b[i]); //b_i/detg/B
+        dg::blas1::pointwiseDot( m_temp, m_b[i], m_b[i]); //b_i/detg/B ~ (0,0,1/B)
     m_hh = dg::geo::createProjectionTensor( bhat, g);
     m_lapperpN.construct ( g, p.bcxN, p.bcyN, dg::PER,  p.diff_dir),
     m_lapperpU.construct ( g, p.bcxU, p.bcyU, dg::PER,  p.diff_dir),

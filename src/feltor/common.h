@@ -464,7 +464,7 @@ void create_and_set_sheath(
         dg::geo::CylindricalFunctor& sheath_coordinate,
         const Geometry& grid,
         Equations& feltor,
-        bool toroidal_sign_convention = false //if true sign of phi is defined wrt geometric angle, else wrt bhat
+        bool toroidal_sign_convention = false //if true sign of sheath-coordinate is defined wrt geometric angle, else wrt bhat
         )
 {
 #ifdef WITH_MPI

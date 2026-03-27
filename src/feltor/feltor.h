@@ -153,6 +153,7 @@ struct Explicit
     // Covariant phi component of bhat \approx \pm R
     const Container& bphi( ) const { return m_perp.bphi(); }
     const Container& binv( ) const { return m_perp.binv(); }
+    const Container& rinv( ) const { return m_solvers.rinv(); }
     const Container& divb( ) const { return m_perp.divb(); }
     //volume with dG weights
     const Container& vol3d() const { return m_perp.weights();}
