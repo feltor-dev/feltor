@@ -199,8 +199,8 @@ PerpDynamics<Grid, IMatrix, Matrix, Container>::PerpDynamics( const Grid& g,
 {
     //--------------------------Construct-------------------------//
     //due to the various approximations bhat and mag not always correspond
-    if( p.curvmode != "toroidal" )
-        throw std::runtime_error( "curvmode : anything other than toroidal is not possible in thermal code!");
+    if( p.curvmode != "flutemode" )
+        throw std::runtime_error( "curvmode : anything other than flutemode is not possible in thermal code!");
     dg::geo::ToroidalCurvatureNablaBR curvNablaBR(mag);
     dg::geo::ToroidalCurvatureNablaBZ curvNablaBZ(mag);
     dg::geo::ToroidalCurvatureKappaR curvKappaBR(mag);

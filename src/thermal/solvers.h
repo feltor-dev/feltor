@@ -164,9 +164,10 @@ void Solvers<Geometry, Matrix, Container>::compute_aparST(
     dg::blas1::copy( 0, m_temp0);
     for( unsigned s=0; s<m_p.num_species; s++)
     {
-        dg::blas1::pointwiseDot(  m_p.beta*m_p.z[s]*m_p.z[s]/m_p.mu[s],
-            densityST[s], m_Rinv, m_Rinv, 1., m_temp0);
+        dg::blas1::axpby(  m_p.beta*m_p.z[s]*m_p.z[s]/m_p.mu[s],
+            densityST[s], 1., m_temp0);
     }
+    dg::blas1::pointwiseDot( 1., m_temp0, m_Rinv, m_Rinv, 1., m_temp0);
     m_multigrid.project( m_temp0, m_multi_chi);
     for( unsigned u=0; u<m_p.stages; u++)
         m_multi_ampere[u].set_chi( m_multi_chi[u]);
@@ -175,9 +176,10 @@ void Solvers<Geometry, Matrix, Container>::compute_aparST(
     dg::blas1::copy( 0, m_temp0);
     for( unsigned s=0; s<m_p.num_species; s++)
     {
-        dg::blas1::pointwiseDot(  m_p.beta*m_p.z[s], densityST[s], wST[s], m_Rinv,
+        dg::blas1::pointwiseDot(  m_p.beta*m_p.z[s], densityST[s], wST[s],
                                   1., m_temp0);
     }
+    dg::blas1::pointwiseDot( m_temp0, m_Rinv, m_temp0);
     //----------Invert Induction Eq----------------------------//
     if( update)
         m_old_aparST.extrapolate( time, aparST);

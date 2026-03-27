@@ -135,7 +135,7 @@ struct Parameters
         bcxA = dg::NEU, bcyA = dg::NEU;
 
 
-        curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
+        curvmode    = js["magnetic_field"].get( "curvmode", "flutemode").asString();
         penalize_wall = penalize_sheath = false;
         nwall.resize( num_species, 0.);
         twall = uwall = qwall = wall_rate = 0.;

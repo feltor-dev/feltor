@@ -124,17 +124,6 @@ int main( int argc, char* argv[])
         try{
             y0 = thermal::initial_conditions(thermal, grid, p, mag, unmod_mag,
                     js["species"], time, sheath_coordinate );
-#ifdef WITH_NAVIER_STOKES
-            std::string advection = js["advection"].get("type", "velocity-staggered").asString();
-            if( advection == "log-staggered" || advection == "staggered-direct")
-                dg::blas1::transform( y0[0], y0[0], dg::LN<double>());
-            else if( advection == "staggered")
-            {
-                // MW: Not correct, density is not staggered,only
-                // works when velocity is zero
-                dg::blas1::pointwiseDot( y0[0], y0[1], y0[1]);
-            }
-#endif // WITH_NAVIER_STOKES
         }catch ( dg::Error& error){
             DG_RANK0 std::cerr << error.what();
             DG_RANK0 std::cerr << "Is there a spelling error? I assume you do not want to continue with the wrong parameter so I exit! Bye Bye :)\n";
