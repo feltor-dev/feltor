@@ -40,7 +40,7 @@ struct Parameters
     enum dg::bc bcxN, bcyN, bcxU, bcyU, bcxP, bcyP, bcxA, bcyA;
     enum dg::direction pol_dir;
     std::string curvmode;
-    std::string sheath_bc;
+    std::string sheath_bc, wall_bc;
     std::string fci_bc;
     std::string output;
     bool symmetric, calibrate, modify_diff, no_diff_penalization;
@@ -158,13 +158,21 @@ struct Parameters
         curvmode    = js["magnetic_field"].get( "curvmode", "toroidal").asString();
         penalize_wall = penalize_sheath = false;
         nwall = uwall = wall_rate = 0.;
+        wall_bc = "fixed";
         if( js["boundary"]["wall"].get("type","none").asString() != "none")
         {
             penalize_wall = js["boundary"]["wall"].get( "penalize-rhs",
                     false).asBool();
             wall_rate = js ["boundary"]["wall"].get( "penalization",
                     0.).asDouble();
-            nwall = js["boundary"]["wall"].get( "nwall", 1.0).asDouble();
+            if( js["boundary"]["wall"]["nwall"].isString())
+            {
+                wall_bc = js["boundary"]["wall"]["nwall"].asString();
+                if (wall_bc != "floating")
+                    throw std::runtime_error( "ERROR: boundary: wall: nwall must be either a number or \"floating\"!\n");
+            }
+            else
+                nwall = js["boundary"]["wall"].get( "nwall", 1.0).asDouble();
             uwall = js["boundary"]["wall"].get( "uwall", 0.0).asDouble();
         }
         if( sheath_bc != "none")

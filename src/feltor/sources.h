@@ -178,8 +178,16 @@ void Sources<Geometry, Matrix, Container>::add_wall_terms(
     {
         for( unsigned i=0; i<2; i++)
         {
-            dg::blas1::axpby( +m_p.wall_rate*m_p.nwall, m_wall, 1., yp[0][i] );
-            dg::blas1::axpby( +m_p.wall_rate*m_p.uwall, m_wall, 1., yp[1][i] );
+            double nwall = m_p.nwall, uwall = m_p.uwall;
+            if( m_p.wall_bc == "floating")
+            {
+                // chi_w ( 1 - chi_w )
+                dg::blas1::pointwiseDot ( 1., 1., m_wall, -1., m_wall, m_wall, 0., m_temp0);
+                double norm = dg::blas1::dot( m_lapperp.weights(), m_temp0);
+                nwall = dg::blas2::dot( q.at("N")[i], m_lapperpP.weights(), m_temp0)/norm;
+            }
+            dg::blas1::axpby( +m_p.wall_rate*nwall, m_wall, 1., yp[0][i] );
+            dg::blas1::axpby( +m_p.wall_rate*uwall, m_wall, 1., yp[1][i] );
             dg::blas1::pointwiseDot( -m_p.wall_rate, m_wall, q.at("N")[i], 1., yp[0][i]);
             dg::blas1::pointwiseDot( -m_p.wall_rate, m_wall, q.at("ST U")[i], 1., yp[1][i]);
         }

@@ -140,7 +140,7 @@ dg::x::HVec make_profile(
         if( M < 2 )
             throw std::runtime_error( "polynomial-aligned c needs at least 2 coefficients!");
 
-        double ret = 0, d1 = 0, d2 = 0;
+        double ret = 0, d1 = 0, d2 = 0; // compute derivatives at Psipp = 1:
         for( unsigned i=0; i<M; i++)
         {
             ret = c[M-1-i] + ret*1.0;

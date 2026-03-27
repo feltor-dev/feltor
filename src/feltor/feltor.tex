@@ -999,8 +999,13 @@ right hand sides as defined in Eqs.~\eqref{eq:EgyrofluidN} and \eqref{eq:Egyrofl
         "modify-B" : false, // modify the magnetic field inside the wall to a
         // purely toroidal field (uses the same parameters as the wall itself)
         "penalize-rhs" : false, // if true we use Eq.\eqref{eq:wall_equations} else \eqref{eq:wall_penalization}
+
         "nwall" : 0.1, // $N_w$ (see also nbc, background and minne)
         "uwall" : 0.0 // $U_{\parallel,w}$
+        // or
+        "nwall" : "floating" // $N_w$ is chosen as average $N$ right before wall region
+
+
     }
 }
 \end{minted}
@@ -1017,6 +1022,19 @@ The polarization equation is penalized according to the immersed boundary method
 \begin{align}
     -\nc\left( \frac{N_i}{B^2}\np \phi \right) = (\Gamma_{1,i} N_i - n_e)(1-\chi_w)
 \end{align}
+
+For the "floating" wall boundary condition we choose $N_w$ as
+\begin{align}
+    N_{w,s} = \frac{1}{\int \d V \chi_w(1-\chi_w)}\int \d V \chi_w ( 1-\chi_w) N_s \equiv N_{avg,s}
+\end{align}
+Note that
+\begin{align}
+\int \d V N ( 1- \chi_w) = \int \d V F_N (1-\chi_w)^2 - \omega_w \int \d V \chi_w (1-\chi_w) ( N - N_w)
+\nonumber\\
+\approx& \int \d \vec A\cdot j - \omega_w V_{avg} (N_{avg} - N_w)
+\end{align}
+For the floating wall boundary the last term vanishes to exactly $0$. (Since the polarisation equations is
+penalized it may not matter that $n_{w,e}\neq N_{w,i}$ is possible. \fixme{Confirm})
 
 
 \begin{tcolorbox}[title=Note]
