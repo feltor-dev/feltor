@@ -141,7 +141,7 @@ struct ParaDynamics
     dg::geo::Fieldaligned<Geometry, IMatrix, Container> m_fa, m_faHalf;
 
     Container m_temp, m_tminus, m_tplus;
-    Container m_Btorinv, m_R;
+    Container m_divb, m_Btorinv, m_R;
 
     std::array<std::vector<Container>,6> m_divNUb;
 
@@ -174,6 +174,7 @@ ParaDynamics<Grid, IMatrix, Matrix, Container>::ParaDynamics( const Grid& g,
         m_faHalf.construct( bhat, g, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
             p.rk4eps, p.mx, p.my, 2.*M_PI/(double)p.Nz/2., p.interpolation_method );
     }
+    dg::assign(  dg::pullback(dg::geo::Divb(mag), g), m_divb);
     dg::assign(  dg::pullback(dg::geo::InvBtor(mag), g), m_Btorinv);
     dg::assign(  dg::pullback(dg::cooX3d, g), m_R);
 }
@@ -337,10 +338,15 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_densities_advection(
     // -2P_para GradPar U
     dg::geo::ds_centered( m_faHalf, 1., q.at("U -1/2")[s], q.at("U +1/2")[s], 0., m_temp);
     dg::blas1::pointwiseDot( -2., y[2][s], m_temp, 1., yp[2][s]);
-    // -mu  Q_perp ds Psi_1,para / z / Bphi
-    //
-    dg::blas1::pointwiseDot( 1., q.at("N")[s], q.at("Tperp")[s], q.at("Uperp")[s], 0., m_temp);
-    dg::blas1::pointwiseDot( -m_p.mu[s]/m_p.z[s], m_temp, m_Btorinv, q.at("ds Psi1")[s], 1., yp[2][s]);
+
+    // -2z N U_perp E_1,para
+    dg::geo::ds_centered( m_fa, 1., q.at("Tperp -1")[s], q.at("Tperp +1")[s], 0., m_temp); //GradPar Tperp
+    dg::blas1::pointwiseDivide( m_temp, q.at("Tperp")[s], m_temp);
+    dg::blas1::axpby(1., m_divb, 1., m_temp);
+    dg::blas1::pointwiseDot( q.at("Psi1")[s], m_temp, m_temp);
+    dg::blas1::axpby( -1., q.at("ds Psi1")[s], 1., m_temp); // E_1,para
+    dg::blas1::pointwiseDot( -2.*m_p.z[s], q.at("N")[s], q.at("Uperp")[s], m_temp, 1., yp[2][s]);
+
 }
 
 template<class Grid, class IMatrix, class Matrix, class Container>
@@ -392,16 +398,16 @@ void ParaDynamics<Grid, IMatrix, Matrix, Container>::add_velocities_advection(
     // and parallel electric field
     dg::blas1::subroutine( [z, mu ]DG_DEVICE (
         double& WDot, double& QperpDot,
-        double N, double Tperp,
-        double dsG0, double dsG1, double Btorinv
+        double N, double Tperp, double dsTperp,
+        double dsG0, double dsG1, double G1, double divb
             )
         {
-            WDot     -= z/mu*( dsG0 + mu * Tperp * Btorinv * dsG1 / 2. / z / z);
-            QperpDot -= z/mu*N*Tperp*(mu * Tperp * Btorinv * dsG1 / 2. / z / z);
+            WDot     -= z/mu*( dsG0 + G1*(dsTperp/Tperp + divb));
+            QperpDot -= z/mu*N*Tperp*( -dsG1 + G1*(dsTperp/Tperp + divb));
         },
         yp[3][s], yp[4][s],
-        q.at("ST N")[s], q.at("ST Tperp")[s],
-        q.at("ST ds Psi0")[s], q.at("ST ds Psi1")[s], m_Btorinv
+        q.at("ST N")[s], q.at("ST Tperp")[s], q.at("ST ds Tperp")[s],
+        q.at("ST ds Psi0")[s], q.at("ST ds Psi1")[s], q.at( "ST Psi1")[s], m_divb
     );
 }
 

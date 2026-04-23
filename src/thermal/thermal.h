@@ -225,10 +225,10 @@ void Explicit<Geometry, IMatrix, Matrix, Container>::operator()(
 
     //2. Solve for potential phi given density and temperature
 
-    m_solvers.compute_phi( t, density, pperp, m_phi, m_p.penalize_wall,
+    m_solvers.compute_phi( t, density, m_q.at("Tperp"), m_phi, m_p.penalize_wall,
         m_sources.get_wall(), m_p.penalize_sheath, m_para.get_sheath());
 
-    m_solvers.compute_psi( t, m_phi, m_q.at("Psi0"), m_q.at("Psi1"));
+    m_solvers.compute_psi( t, m_q.at("Tperp"), m_phi, m_q.at("Psi0"), m_q.at("Psi1"));
 
     timer.toc();
     accu += timer.diff();
