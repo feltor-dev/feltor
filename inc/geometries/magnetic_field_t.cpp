@@ -139,4 +139,16 @@ TEST_CASE("Magnetic field")
         CHECK ( fabs( tordiv(R,Z) - ( divvvp(R,Z)/R - BR(R,Z)/Bphi(R,Z)/R/R )) < 1e-12);
 
     }
+
+    SECTION( "BR BZ")
+    {
+        dg::geo::BR bR(mag);
+        dg::geo::BZ bZ(mag);
+
+        dg::geo::ToroidalBR torbR(mag);
+        dg::geo::ToroidalBZ torbZ(mag);
+
+        CHECK( fabs(bR( R_O, Z_O) - sign*torbR( R_O, Z_O)) < 1e-12);
+        CHECK( fabs(bZ( R_O, Z_O) - sign*torbZ( R_O, Z_O)) < 1e-12);
+    }
 }

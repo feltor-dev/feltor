@@ -399,6 +399,40 @@ struct BZ: public aCylindricalFunctor<BZ>
     InvB m_invB;
 };
 
+/**
+ * @brief \f$  \frac{\partial B_{\hat \varphi }{ \partial R}  \f$
+ *
+ \f$  \frac{\partial B_{\hat \varphi} }{ \partial R} =
+      \frac{R_0 }{R} \frac{\partial I}{\partial R}-\frac{R_0 I}{R^2} \f$
+ */
+struct ToroidalBR: public aCylindricalFunctor<ToroidalBR>
+{
+    ToroidalBR(const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute(double R, double Z) const
+    {
+        return m_mag.R0() / R *m_mag.ipolR()(R,Z) - m_mag.R0() * m_mag.ipol()(R,Z)/ R / R;
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
+/**
+ * @brief \f$  \frac{\partial B_{\hat \varphi }{ \partial Z}  \f$
+ *
+ \f$  \frac{\partial B_{\hat \varphi} }{ \partial Z} =
+      \frac{R_0 }{R} \frac{\partial I}{\partial Z} \f$
+ */
+struct ToroidalBZ: public aCylindricalFunctor<ToroidalBZ>
+{
+    ToroidalBZ(const TokamakMagneticField& mag ): m_mag(mag) { }
+    double do_compute(double R, double Z) const
+    {
+        return m_mag.R0() / R *m_mag.ipolZ()(R,Z);
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
 ///@brief Approximate \f$ \mathcal{K}^{R}_{\nabla B} \f$
 ///
 /// \f$ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f$
