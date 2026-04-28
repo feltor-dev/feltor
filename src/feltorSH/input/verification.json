@@ -4,7 +4,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "n" :  3,       //# x-y-polynomials
     "Nx" : 100,     //# grid points in x
     "Ny" : 100,     //# grid points in y
-    "dt" : 3.0,     //time step in units of c_s/rho_s
+    "dt" : 1.0,     //time step in units of c_s/rho_s
     "n_out"  : 3,   //# x-y polynomials in output
     "Nx_out" : 100, //# grid points in x in output fields
     "Ny_out" : 100, //# grid points in y in output fields
