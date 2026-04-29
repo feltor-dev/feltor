@@ -10,19 +10,85 @@
 namespace dg{
 namespace mat{
 
-// Problem: Newton method is attracted by saddle points. This we observe often i.e. Newton
-// moves in the wrong diretion
-// https://arxiv.org/pdf/1406.2572
-// https://www.scientific.net/AMM.347-350.2586
-//
-template<class Func, class Jacobian, class InvHessian, class ContainerType>
-unsigned newton( Func f, Jacobian jac, InvHessian invhess,
+/**
+ * @brief Newton iteration
+ *
+ * a minimization algorithm based on the recursion
+ *   \f[
+ *   x_{k+1} = x_k - H^{-1}(x_k) \vec g (x_k)
+ *   \f]
+ * where \f$H\f$ is the Hessian matrix and \f$\vec g(x_k) = \nabla f |_{x_k}\f$ is the gradient of \f$f(\vec x)\f$.
+ * The Newton iterate is essentially a root finding routine for the gradient of \f$f(\vec x)\f$.
+ *
+ * This already highlights the problem of using Newton for minimization:
+ * - it can also find maxima and (more importantly)
+ * - **it finds saddle points**.
+ *
+ * In essence Newton only works **if the Hessian is positive definite** at all search points **including the initial guess**.
+ * Neither of these conditions is met often in practise, i.e. what we observe often is that *
+ * the Newton method is attracted by saddle points and moves in the wrong diretion
+ *
+ * @section wolfe (Failed, not implemented) Line search and the Wolfe conditions
+ * The Newton iterate produces a direction
+ * \f[
+ * p_k = - H_k^{-1} \vec g_k
+ * \f]
+ * The idea of a **line search algorithm** is to introduce a step-length $\alpha$ into the iterates:
+ * \f[
+ * x_{k+1} = x_k + \alpha_k p_k
+ * \f]
+ * and to find \f$\alpha\f$ through the condition
+ * \f[
+ * \alpha_k = \text{arg min}_{\alpha} f(\vec x_k + \alpha \vec p_k) \equiv \text{arg min}_{\alpha} \phi_k(\alpha)
+ * \f]
+ *
+ * Typically, this minimization is not solved exactly. It is solved only to the
+ * degree that the **Wolfe conditions** are satisfied
+ * \f[
+ * \begin{align}
+ * \phi(\alpha) &\leq \phi(0) + c_1 \alpha \phi'(0)\\
+ * \phi'(\alpha) &\geq c_2  \phi'(0)
+ * \end{align}
+ * \f]
+ * with \f$0<c_1<c_2<1\f$ and in practise \f$c_1 = 10^{-4}\f$ and \f$c_2 = 0.9\f$.
+ * A slightly stronger version are **the strong Wolfe conditions**
+ *
+ * \f[
+ * \begin{align}
+ * \phi(\alpha) &\leq \phi(0) + c_1 \alpha \phi'(0)\\
+ * |\phi'(\alpha)| &\leq |c_2  \phi'(0)|
+ * \end{align}
+ * \f]
+ *
+ * The problem with this is that
+ * - it is quite tedious to come up with an efficient line search that comes up
+ *   with an efficient step length satisfying the Wolfe conditins
+ * - for example: negative Eigenvalues in \f$H\f$ may lead to \f$\vec p_k =
+ *   -H^{-1}\vec g_k \f$ **not a descent direction** (but \f$p_k\f$ being a descent
+ *   direction is necessary for the existence of \f$\alpha_k >0\f$ satisfying the
+ *   Wolfe conditions)
+ *
+ * @tparam Gradient a callable with signature <tt>void operator()(const ContainerType& x0, ContainerType& grad)</tt>
+ * @tparam InvHessian a callable with signature <tt>void operator()(const ContainerType& x0, const ContainerType& grad, ContainerType& p)</tt>
+ * @param grad The gradient of the target function
+ * @param invhess The inverse Hessian matrix
+ * @param x0 initial guess on input, solution on output
+ * @param tol succes condition is \f$ ||\nabla f(x_k)|| < \epsilon\f$
+ * @param max_iter Maximum number of allowed iterations
+ *
+ * @ingroup opt
+ * @sa "Numerical optimization" by Nocedal & Wright (Springer 2006)
+ * @sa https://arxiv.org/pdf/1406.2572
+ * @sa https://www.scientific.net/AMM.347-350.2586
+ */
+template<class Gradient, class InvHessian, class ContainerType>
+unsigned newton( Gradient grad, InvHessian invhess,
     ContainerType& x0, double tol = 1e-5, unsigned max_iter = 1000)
 {
     ContainerType jj(x0), p(x0), test(x0);
     for ( unsigned i=0; i<max_iter; i++)
     {
-        jac( x0, jj);
+        grad( x0, jj);
         invhess( x0, jj, p);
         double alpha = 1.;
         dg::blas1::axpby( -alpha, p, 1., x0);
@@ -33,6 +99,187 @@ unsigned newton( Func f, Jacobian jac, InvHessian invhess,
     return max_iter;
 }
 
+/**
+ * @brief The Levenberg Marquardt algorithm
+ *
+ * @section trust Trust region algorithms
+
+ * A line search algorithm first chooses an appropriate descent
+ * direction and then tries to find the optimal step length. A trust region
+ * algorithm first chooses a (maximum) step length and then tries to find the
+ * direction that minimizes the function. Both algorithms (at least of Newton
+ * type) assume a Taylor expansion of the function
+ * \f[
+ * f(x_k + p) \approx f(x_k) +  g_k^T p + \frac{1}{2} p^T H_k p \equiv m_k(p)
+ * \f]
+ * A trust region algorithm is an algorithm that minimizes \f$m_k(p)\f$ over
+ * \f$p\f$ with the condition that \f$||p|| \leq \Delta_k\f$ where
+ * \f$\Delta_k\f$ is the trust region radius:
+ * \f[
+ * \begin{align}
+ * p &= \text{arg min}_p m_k(p) \\
+ * ||p || &\leq \Delta_k
+ * \end{align}
+ * \f]
+ *
+ * It turns out somewhat surprisingly that even though \f$m_k(p)\f$ is a
+ * quadratic function a closed solution is somewhat non-trivial (at least the
+ * literature immediately goes on to only finding approximate solutions)
+ *
+ * Let us first state an important result: **The trust region minimization has
+ * no solution** \f$p\f$ **with** \f$||p|| = \Delta_k\f$ **if and only if** \f$H\f$ **is
+ * positive definite and** \f$|| H_k^{-1} g_k|| < \Delta_k\f$. This result
+ * means we can focus on the case were the minimization has a solution \f$||p||
+ * = \Delta_k\f$.
+
+
+ * @section lsq Least squares problem
+ *
+ * Assume our objective function (the minimum of which we seek) has the form
+ * \f[
+ * f( x) = \frac{1}{2}\sum_{j=1}^m r_j(x)^2
+ * \f]
+ * where \f$r_j(x)\f$ (the residuals) are smooth functions and we assume
+ * \f$m>n\f$ with \f$n\f$ the number of parameters (or dimension of \f$x\f$).
+ * Typically, this appears if \f$ f\f$ is an error function and \f$ x\f$ are a
+ * set of \f$n\f$ parameters that we try to optimize to reduce the residuals at
+ * various test points j.  In the literature minimization of this form is
+ * treated under **nonlinear least squares problems**.
+ *
+ * Let us define
+ * \f[
+ * J = \frac{\partial r_j}{\partial x_i}
+ * \f]
+ * Then (with \f$r(x) = (r_1(x), r_2(x) , ...)\f$)
+ * \f[
+ * \begin{align}
+ * g(x) =& \nabla f(x) = J^T r(x)\\
+ * H(x) =& J^T J + \sum_{j=1}^m r_j(x) \nabla\nabla r_j(x)
+ * \end{align}
+ * \f]
+ * Often, the second term in the Hessian \f$H(x)\f$ can be neglected, which is
+ * the distinctive feature of least squares problems.
+ *
+ * In fact, Newton's method where \f$H\f$ is replaced with \f$J^T J\f$ is
+ * called **Gauss-Newton** method and the search direction is the solution to
+ * the linear least squares problem (at each step \f$k\f$)
+ * \f[
+ * \text{min}_p || J p + r||^2
+ * \f]
+ * Of course, in practice Gauss-Newton still needs to be combined with a line-search method.
+ *
+
+ *
+ * @section lm Levenberg-Marquardt algorithm (for nonlinear least squares problems)
+ *
+ * The LM algorith is a trust region algorithm where the Hessian is replaced by
+ * \f$H\approx J^T J\f$ and the Jacobian is the \f$m\times n\f$ derivatives of
+ * the \f$r_i(x)\f$. Doing so, all Eigenvalues are \f$\lambda_i \geq 0\f$.
+ *
+ * The way to solve a constraint minimization problem (the trust region
+ * minimization above) is through Lagrange multipliers
+ * \f[
+ * L(p, \lambda) = r^T J p + \frac{1}{2} p^T J^T J p + \lambda( ||p||^2 -
+ * \Delta^2)/2 \simeq ||Jp +r||^2/2 + \lambda( ||p||_W^2 - \Delta^2)/2
+ * \f]
+ * The Euler Lagrange equations read
+ * \f[
+ * \begin{align}
+ * J^T r + J^T J p + \lambda W p =& 0 \\
+ * p^T W p =& \Delta^2
+ * \end{align}
+ * \f]
+ * The proposed search direction is therefore
+ * \f[
+ * p = -( J^T J + \lambda W)^{-1} J^T r
+ * \f]
+ * with \f$\lambda > 0\f$. The case \f$\lambda = 0\f$ is equivalent to a
+ * Gauss-Newton step.  For \f$\lambda\ll 1\f$ the search direction converges to
+ * that of Gauss-Newton while for \f$\lambda\gg 1\f$ the \f$p\f$ is the
+ * steepest descent direction.  The basis for this algorithm is the result that
+ * there exists a \f$\Delta\f$ related to \f$\lambda\f$ such that \f$p\f$ is
+ * the solution to the minimization
+ * \f[
+ * \begin{align}
+ * p =& \text{arg min}_p ||J p + r||^2/2 \\
+ * ||p||_W\leq &\Delta(\lambda)
+ * \end{align}
+ * \f]
+ * Note that there is an inverse relation between \f$\Delta\f$ and
+ * \f$\lambda\f$, i.e. if \f$\lambda\gg 1\f$ then \f$\Delta\ll 1\f$.  From a
+ * (generalized) Eigenvalue decomposition of \f$A\equiv J^T J = WE_A \Lambda_A
+ * E_A^TW\f$ we get with \f$\bar g = E_H^T J^T r\f$ (and \f$A v_j = \lambda_j W
+ * v_j\f$)
+ * \f[
+ * \Delta^2 = \sum_j \frac{\bar g_j^2}{(\lambda_j + \lambda)^2}
+ * \f]
+ * Finally, note that in practice one needs to take care to make the algorithm
+ * scale invariant by using \f$|| W p ||\leq \Delta\f$ in the constrained
+ * minimization.
+ *
+ * Two ideas seem to exist going forward. The original paper by Marquardt
+ * suggests to use \f$\lambda\f$ directly as the adaptive parameter (i.e. a
+ * substitute for the trust radius). Some notes suggest that in this case the
+ * dogleg method is preferable. Later, a paper by Moré (1977) "The
+ * Levenberg-Marquardt algorithm: Implementation and Theory" suggests to
+ * consider \f$\Delta\f$ as given and iteratively finding \f$\lambda\f$ such
+ * that
+ * \f[
+ * ||p||_W = \Delta
+ * \f]
+ * (which is attributed to Hebden). They suggest to use QR decomposition and
+ * cleverly combine that with a root finding for \f$\lambda\f$. In our own
+ * implementation we use lapack's Eigenvalue decomposition of \f$J^T J\f$ and
+ * combine it with a 1d Newton root finding, to find \f$\lambda\f$. The
+ * disadvantage to compute \f$J^TJ\f$ is not too high compared to computing QR
+ * of \f$J\f$ for low dimensions. Nocedal&Wright suggest to use the target
+ * function
+ * \f[
+ * \phi(\lambda)= 1/\Delta - 1/||p(\lambda)||_W
+ * \f]
+ * for the root finding because \f$\phi(\lambda)\simeq \lambda\f$ near the
+ * optimum, however one must take care because the target function is not
+ * differentiable at \f$\lambda = \lambda_i\f$. \f$\lambda_0 > -\lambda_1\f$
+ * where \f$\lambda_1\f$ is the smallest Eigenvalue should be a good starting
+ * value.
+ *
+ * @subsection adapt Adaptive choice of trust region radius
+ * If we implement for given \f$\Delta_k\f$ the above procedure we get a search
+ * vector \f$p_k\f$.  Similar to adaptive timestep algorithms we can define an
+ * error quantity comparing \f$f(x+p_k)\f$ with \f$m_k(p_k)\f$.  In practice
+ * this is done using the ratio
+ * \f[
+ * \begin{align}
+ * \rho_k = \frac{f(x_k) - f(x_k+p_k)}{m_k(0) - m_k(p_k)}
+ * \end{align}
+ * \f]
+ * If \f$\rho_k\approx 1\f$ it means that \f$f(x)\f$ is very well approximated
+ * by \f$m_k\f$ and we can extend the trust radius \f$\Delta_k\f$
+ * in the next step.
+ * If \f$\rho_k \leq 0\f$ or \f$\rho_k \ll 1\f$ it means that \f$m_k\f$ was
+ * such a poor representation of \f$f\f$ that we must reject the proposed step
+ * and reduce the trust region.
+ * We use Algorithm 4.1. of [Nocedal&Wright]
+ *
+ * @tparam Func Callable with signature <tt>void operator()(const std::vector<double>& x0, ContainerType& rs)</tt>
+ * @tparam Jacobian Callable with signature <tt>void operator()(const
+ * std::vector<double>& x0, std::vector<ContainerType>& jacs)</tt>
+ * @tparam ContainerType Determine the target architecture to run the algorithm
+ * on (and the 2nd argument type of \c Func and \c Jacobian
+ * @param fun Compute the residuals \f$ r_j\f$ given parameters \c x
+ * @param jac Compute the gradients of the residuals: each element of the outer
+ * \c std::vector contains the gradient \f$ \partial \vec r/ \partial x_i\f$
+ * @param x0 The initial guess on input, solution on output. The size
+ * of \c x0 determines the number of free parameters \f$n \f$ to optimize.
+ * @param copyable Determine the size \f$m\f$ and type of the second arguments
+ * of \c fun and \c jac The contents are irrelevant, just the size and type are
+ * important.
+ * @param tol Tolerance determines termination condition
+        <tt>if( sqrt(dg::blas1::dot( pk,pk)) <= tol*(normx0 + 1.))</tt>
+ * @param max_iter Maximum number of iterations
+ * @ingroup opt
+ * @sa "Numerical optimization" by Nocedal & Wright (Springer 2006)
+ */
 template<class Func, class Jacobian, class ContainerType>
 unsigned levenberg_marquardt( Func fun, Jacobian jac,
     std::vector<double>& x0,
@@ -49,7 +296,7 @@ unsigned levenberg_marquardt( Func fun, Jacobian jac,
     thrust::host_vector<double> work( 3*num_p-1);
     // init loop
     fun( x0, rs);
-    jac( x0, jacs); // TODO FIX BUG HERE
+    jac( x0, jacs);
     double delta = 0;
     for( unsigned p=0; p<num_p; p++)
         WW(p,p) = W[p] = dg::blas1::dot( jacs[p], jacs[p]);
@@ -185,6 +432,8 @@ unsigned levenberg_marquardt( Func fun, Jacobian jac,
 }
 
 
+///@cond
+//The following is an implementation of the python notebook
 
 double f_alpha( double alphabar, double lambda = 1.)
 {
@@ -522,6 +771,7 @@ void error_talbot( unsigned N, const std::vector<double>& rrs, const std::vector
         dg::blas1::pointwiseDot( 1., tmp, tmp, 1., error);
     }
 }
+///@endcond
 
 } //namespace mat
 } //namespace dg

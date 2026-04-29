@@ -28,7 +28,7 @@ namespace mat{
  * @note The \c apply and \c apply_adjoint methods are just abbreviations. If one wants full control, e.g. to reuse a tridiagonalisation one has to manually code:
  *
  * @code{.cpp}
- * double max = dg::blas1::reduce( diag, -1e308, thrust::maximum<double>());
+ *  double max = dg::blas1::reduce( diag, -1e308, thrust::maximum<double>());
     auto func = dg::mat::make_FuncEigen_Te1( [&](value_type x) {return op( max, x);});
     dg::mat::ProductMatrixFunction<ContainerType> prod( x, 100);
     auto T = prod.lanczos().tridiag( func, A,
@@ -39,6 +39,8 @@ namespace mat{
     prod.compute_vlcl_adjoint( op, A, diag, T, x, b,
                 weights, prod.lanczos().get_bnorm());
  * @endcode
+ * @attention The adjoint methods unfortunately do not converge so use cautiously!
+ * @sa dg::mat::UniversalLanczos dg::mat::CauchyMatrixProductAdj
  */
 template<class ContainerType>
 struct ProductMatrixFunction
@@ -52,7 +54,7 @@ struct ProductMatrixFunction
      * @brief Allocate memory for the method
      *
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param max_iterations Maximum number of iterations to be used
+     * @param max_iterations Maximum number of iterations in Lanczos to be used
      */
     ProductMatrixFunction( const ContainerType& copyable, unsigned max_iterations)
     {
@@ -129,8 +131,11 @@ struct ProductMatrixFunction
             DG_RANK0 std::cout << "# `"<<m_message<<"` solve with {"<<T.num_rows<<"} iterations took "<<t.diff()<<"s\n";
         return T.num_rows;
     }
+
     /**
      * @brief Compute \f$ \vec x = f(A, \vec d) \vec b = E_{A} (F^T \odot   E^T_{A}M^T) b\f$
+     *
+     * @attention The adjoint methods unfortunately do not converge so use cautiously!
      *
      * This function is equivalent to:
      * @code{.cpp}
@@ -193,6 +198,39 @@ struct ProductMatrixFunction
         return T.num_rows;
     }
 
+    /**
+     * @brief Compute \f$ \vec x = f(\vec d, A) \vec b = (E_{A} \odot F ) E^T_{A}M^T b\f$
+     *
+     * where \f$ E_A := V_A E_T \f$ and \f$ F_{ai} := f( d_a, \lambda_i)\f$
+     * and \f$ T\f$ and \f$ V_A\f$  are the tridiagonal matrix and vectors that
+     * come out of a Lanczos iteration on \f$ A\f$, \f$ W\f$, \f$ \vec b\f$; \f$ \vec d\f$ is a vector.
+     *
+     * This function takes a previously computed tridiagonalisation of \c A,
+     * called \c T and computes the Eigendecomposition of \c T and then
+     * re-creates the Eigenvectors in \c V to compute the above result.
+     *
+     * @note the Tridiagonalisation \c T can thus be reused to compute various matrix functions
+     * of the same right hand side. It can be computed using
+     * @code{.cpp}
+     * double max = dg::blas1::reduce( diag, -1e308, thrust::maximum<double>());
+       auto func = dg::mat::make_FuncEigen_Te1( [&](value_type x) {return op( max, x);});
+       dg::mat::ProductMatrixFunction<ContainerType> prod( x, 100);
+       auto T = prod.lanczos().tridiag( func, A,
+                   b, weights, eps, nrmb_correction,
+                   "universal", 1.0, 1);
+       prod.compute_vlcl( op, diag, A, T, x, b, prod.lanczos().get_bnorm());
+       // or
+       prod.compute_vlcl_adjoint( op, A, diag, T, x, b,
+                   weights, prod.lanczos().get_bnorm());
+     * @endcode
+     * @param op a  binary Operator representing the product matrix function
+     * @param diag the diagonal vector
+     * @param A A self-adjoint, positive definit matrix
+     * @param T The tridiagonalisation of \c A
+     * @param x output-vector, contains result on output, ignored on input
+     * @param b The initial vector that starts orthogonalization
+     * @param bnorm the norm of \c b
+     */
     template< class BinaryOp, class ContainerType0, class MatrixType,
         class ContainerType1, class ContainerType2>
     void compute_vlcl( BinaryOp op, const ContainerType0& diag,
@@ -240,6 +278,34 @@ struct ProductMatrixFunction
             }
         }
     }
+
+    /**
+     * @brief Compute \f$ \vec x = f(A, \vec d) \vec b = E_{A} (F^T \odot   E^T_{A}M^T) b\f$
+     *
+     * where \f$ E_A := V_A E_T \f$ and \f$ F_{ai} := f( d_a, \lambda_i)\f$
+     * and \f$ T\f$ and \f$ V_A\f$  are the tridiagonal matrix and vectors that
+     * come out of a Lanczos iteration on \f$ A\f$, \f$ W\f$, \f$ \vec b\f$; \f$ \vec d\f$ is a vector
+     *
+     * @attention The adjoint methods unfortunately do not converge so use cautiously!
+     *
+     * This function takes a previously computed tridiagonalisation of \c A,
+     * called \c T and computes the Eigendecomposition of \c T and then
+     * re-creates the Eigenvectors in \c V to compute the above result.
+     *
+     * @note \f$ f(A, \vec d)\f$ is the adjoint operation to \f$ f( \vec d, A)\f$
+     *  since both \f$ \vec d\f$ and \f$ A\f$ are self-adjoint.
+     * @param op a  binary Operator representing the product matrix function
+     * @param A A self-adjoint, positive definit matrix
+     * @param diag the diagonal vector
+     * @attention The order of \c A and \c diag is reversed compared to the
+     * \c apply method
+     * @param T The tridiagonalisation of \c A
+     * @param x output-vector, contains result on output, ignored on input
+     * @param b The initial vector that starts orthogonalization
+     * @param weights Weights that define the scalar product in which \c A is
+     *  self-adjoint and in which the error norm is computed.
+     * @param bnorm the norm of \c b
+     */
     template< class BinaryOp, class MatrixType, class ContainerType0,
         class ContainerType1, class ContainerType2, class ContainerType3>
     void compute_vlcl_adjoint( BinaryOp op,
@@ -311,6 +377,10 @@ struct ProductMatrixFunction
             dg::blas1::axpby( cl[i+1], m_v, 1., x);
         }
     }
+
+    /**
+     * @brief Access the Lanczos class that is constructed with the constructor parameters
+     */
     UniversalLanczos<ContainerType>& lanczos() { return m_lanczos;}
     private:
 
@@ -321,11 +391,11 @@ struct ProductMatrixFunction
 };
 
 /*!
- * @brief Computation of \f$ \vec x = f(A,\vec d)\vec b\f$ where \f$ A \f$ is a
+ * @brief Computation of \f$ \vec x = f(\alpha A,\vec d)\vec b\f$ where \f$ A \f$ is a
  * positive definite matrix self-adjoint in the weights \f$ W\f$ .
  *
- * This class implements the Cauchy contour integral method
- * \f[ f( A, D) \vec b \approx \sum_{k=1}^{N} \frac{w_k}{z_k 1 - A} f(z_k, D) \vec b \f]
+ * This class implements the %Cauchy contour integral method
+ * \f[ f( \alpha A, D) \vec b \approx \sum_{k=1}^{N} \frac{w_k}{z_k 1 - \alpha A} f(z_k, D) \vec b \f]
  *
  * The complex nodes and weights \f$ z_k\f$ and \f$ w_k\f$ are found by applying
  * the Levenberg-Marquardt optimization to an initial Talbot curve. The number of nodes is
@@ -342,6 +412,7 @@ struct ProductMatrixFunction
  * @tparam Geometry The Geometry type in MultigridCG2d
  * @tparam Matrix The (real) derviative class for projection / interpolation in Multigrid
  * @tparam ComplexContainer A complex Container type
+ * @ingroup matrixfunctionapproximation
  */
 template<class Geometry, class Matrix, class ComplexContainer>
 struct CauchyMatrixProductAdj
