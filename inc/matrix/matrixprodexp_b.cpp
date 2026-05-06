@@ -74,8 +74,8 @@ int main()
     };
     dg::mat::UniversalLanczos<dg::DVec> krylovfunceigen( w2d, max_iter);
     dg::mat::ProductMatrixFunction<dg::DVec> krylovproduct( w2d, max_iter);
-    unsigned num_nodes = 10, num_stages = 3;
-    dg::mat::CauchyMatrixProductAdj<dg::CartesianGrid2d, dg::DMatrix, dg::cDVec> cauchy( num_nodes, g, num_stages);
+    unsigned num_stages = 3;
+    dg::mat::CauchyMatrixProductAdj<dg::CartesianGrid2d, dg::DMatrix, dg::cDVec> cauchy( 1e-5, g, num_stages);
     std::vector<dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::cDVec>> multipol( num_stages);
     for( unsigned u=0; u<num_stages; u++)
         multipol[u].construct( cauchy.multigrid().grid(u), dg::centered, 1.0);

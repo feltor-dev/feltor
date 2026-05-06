@@ -4,6 +4,7 @@
 #include "dg/algorithm.h"
 #include "lanczos.h"
 #include "contours.h"
+#include "optimise.h"
 
 namespace dg{
 namespace mat{
@@ -399,17 +400,20 @@ struct ProductMatrixFunction
  *
  * The complex nodes and weights \f$ z_k\f$ and \f$ w_k\f$ are found by applying
  * the Levenberg-Marquardt optimization to an initial Talbot curve. The number of nodes is
- * a constructor parameter that cannot be changed afterwards.
- * The individual complex Helmholtz type equations are solved using a dg::MultigridCG2d COCG algorithm
+ * such that the given error tolerance is fulfilled.
+ * The individual complex Helmholtz type equations are solved using a \c dg::MultigridCG2d COCG algorithm
  * and we store the previous result at every timestep
  *
- * The class automatically keeps a solution cache, which contains the extreme Eigenvalues of the matrix
- * A and the diagonal matrix D together with the optimal complex nodes and weights. Furthermore, the
- * previous solution(s) to the Helmholtz equations are stored. The class automatically recognises a change
- * in D but not in A or the matrix function f. If either of those two change the \c clear_cache member
- * function must be called before a solve call.
+ * The class automatically caches the extreme Eigenvalues of the matrix A.
+ * Furthermore, the previous solution(s) to the Helmholtz equations are stored.
+ * The \c solve method automatically recognises a change in D or the matrix
+ * function f and accordingly recomputes nodes and weighs and clears the
+ * previous solution cache. However, changes in A are not automatically
+ * recognised. If the matrix needs to change the \c clear_cache member function
+ * must be called before the next solve call in order to trigger a
+ * re-computation of the Eigenvalues.
  *
- * @tparam Geometry The Geometry type in MultigridCG2d
+ * @tparam Geometry The Geometry type in \c dg::MultigridCG2d
  * @tparam Matrix The (real) derviative class for projection / interpolation in Multigrid
  * @tparam ComplexContainer A complex Container type
  * @ingroup matrixfunctionapproximation
@@ -418,29 +422,96 @@ template<class Geometry, class Matrix, class ComplexContainer>
 struct CauchyMatrixProductAdj
 {
     CauchyMatrixProductAdj() = default;
-    CauchyMatrixProductAdj( unsigned num_nodes, const Geometry& grid, unsigned stages )
-    : m_num_nodes( num_nodes), m_multi( grid, stages), m_previous( num_nodes,
-        {1, m_multi.copyable()}), m_z( m_multi.copyable()), m_rhs( m_multi.copyable())
+    CauchyMatrixProductAdj( double lm_eps, const Geometry& grid, unsigned stages )
+    : m_eps( lm_eps),
+    m_multi( grid, stages),
+    m_previous( 2, {1, m_multi.copyable()}),
+    m_z( m_multi.copyable()),
+    m_rhs( m_multi.copyable()),
+    m_grid_points(grid.size()),
+    m_cauchy_opt()
     {
     }
 
-    const dg::MultigridCG2d<Geometry, Matrix, ComplexContainer, dg::complex_symmetric>& multigrid() { return m_multi;}
+    /// Access the internal multigrid method to be able to construct matrices
+    const dg::MultigridCG2d<Geometry, Matrix, ComplexContainer,
+        dg::complex_symmetric>& multigrid() const { return m_multi;}
+
+    /*!
+     * @brief Clear the cached Eigenvalues of the matrix in the \c solve method
+     *
+     * Call if the matrix in the next call to the \c solve method changes
+     * (which typically should not happen);
+     * ignore otherwise.
+     */
+    void clear_cache(){
+        m_EV_up2date = false;
+    }
+
+    /*!
+     * @brief Verbose output to \c std::cout
+     * @param verbose If true output more information to \c std::cout
+     */
+    void set_verbose( bool verbose) {
+        m_verbose = verbose;
+        m_cauchy_opt.set_verbose(verbose);
+    }
+
+    /*!
+     * @brief Number of (complex) nodes used in the latest call to \c solve
+     * @return Number of complex nodes
+     */
+    unsigned num_nodes() const { return m_cauchy_opt.num_nodes();}
+
+    /*!
+     * @brief Compute the bivariate matrix function
+     *
+     * In the first call the extreme Eigenvalues of \c ops[0] are computed and
+     * stored.  In the following calls the cached Eigenvalues are used unless
+     * \c clear_cache is called beforehand.
+     *
+     * In a first step we then determine if the previously used nodes and weights
+     * are still sufficient for the given parameters and optionally re-compute them.
+     * (The method tries to avoid recomputing the nodes if possible because of
+     * how long it may take).
+     * In a second step the num_nodes complex Helmholtz problems are solved using
+     * multigrid methods and initial guesses from previous solves.
+     * @param x (write-only) Contains solution on output
+     * @param func The bivariate matrix function
+     * @param dxlnfunc The derivative of the logarithm of the bivariate matrix function
+     * @param alpha scaling parameter for the matrix
+     * @param ops The matrix discretized on the grid used in \c multigrid()
+     * @param d The diagonal vector
+     * @param b the right hand side
+     * @param eps the error tolerance forwarded to the \c multigrid().solve method
+     */
     template<class MatrixType, class UnaryFunc, class UnaryFuncD,
         class ContainerType0, class ContainerType1, class ContainerType2>
     void solve( ContainerType0& x, UnaryFunc func, UnaryFuncD dxlnfunc, double alpha, std::vector<MatrixType>& ops,
         const ContainerType1& d, const ContainerType2& b, std::vector<double> eps)
     {
-        bool zeroInit = false;
-        if( !m_up2date)
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
+        // 1. (re)compute current nodes and weights
+        if( !m_EV_up2date)
         {
-            zeroInit = true;
-            init_cache( ops, func, dxlnfunc, d);
+            // 1. Compute extreme Eigenvalues
+            update_extremeEVs( ops[0]);
         }
-
         double dmin = dg::blas1::reduce( d, +1e300, thrust::minimum());
         double dmax = dg::blas1::reduce( d, -1e300, thrust::maximum());
-        if( dmin < m_dmin || dmax > m_dmax)
-            update_zkwk( func, dxlnfunc, dmin, dmax);
+        bool changed = false;
+        const auto& zkwk = m_cauchy_opt.update_zkwk( changed, func, dxlnfunc,
+            m_lmin, m_lmax, dmin, dmax, m_with_zero, m_eps);
+        if( changed) // if the nodes change we need to re-alloced solution space.
+            m_previous.assign( m_cauchy_opt.num_nodes(), {1, m_multi.copyable()});
+
+        if( m_verbose )
+        {
+            DG_RANK0 std::cout << "# Current number of nodes "<<m_cauchy_opt.num_nodes()<<"\n";
+        }
 
         thrust::complex<double> zk, wk;
         ///////////////
@@ -468,18 +539,13 @@ struct CauchyMatrixProductAdj
             shifted_ops.push_back( ShiftedOp{ ops[u], zk, alpha});
 
         dg::blas1::copy( 0., x);
-        for( unsigned k=0; k<m_num_nodes; k++)
+        for( unsigned k=0; k<m_cauchy_opt.num_nodes(); k++)
         {
-            zk = m_zk[k];
-            wk = m_wk[k];
+            zk = zkwk.first[k];
+            wk = zkwk.second[k];
             // std::cout << "Zk wk "<<zk<<" "<<wk<<"\n";
             // The very first m_z is zero: this should work in COCG as an allowed initial guess
-            if( zeroInit && k == 0)
-                dg::blas1::copy( 0., m_z);
-            else if( zeroInit && k > 0)
-                m_previous[k-1].extrapolate( m_z);
-            else
-                m_previous[k].extrapolate( m_z);
+            m_previous[k].extrapolate( m_z);
             dg::blas1::axpby( zk, d, 0., m_rhs);
             dg::blas1::transform ( m_rhs, m_rhs, func);
             dg::blas1::pointwiseDot( wk, m_rhs, b, 0., m_rhs);
@@ -494,80 +560,7 @@ struct CauchyMatrixProductAdj
         //std::cout << std::endl;
     }
 
-    void clear_cache(){
-        m_up2date = false;
-    }
-
-    void set_verbose( bool verbose) { m_verbose = verbose;}
     private:
-    template<class MatrixType, class UnaryFunc, class UnaryFuncD,
-        class ContainerType1>
-    void init_cache( std::vector<MatrixType>& ops, UnaryFunc func, UnaryFuncD dxlnfunc,
-        const ContainerType1& d)
-    {
-        // 1. Compute extreme Eigenvalues and min/max of d
-        update_extremeEVs( ops[0]);
-        double dmin = dg::blas1::reduce( d, +1e300, thrust::minimum());
-        double dmax = dg::blas1::reduce( d, -1e300, thrust::maximum());
-        update_zkwk( func, dxlnfunc, dmin, dmax);
-        m_up2date = true;
-    }
-
-    template<class UnaryFunc, class UnaryFuncD>
-    void update_zkwk( UnaryFunc func, UnaryFuncD dxlnfunc, double dmin, double dmax)
-    {
-        m_dmin = dmin, m_dmax = dmax;
-        auto rrs = dg::mat::generate_range( dmin, dmax);
-        auto lls = dg::mat::generate_range( m_lmin, m_lmax);
-        std::vector<double> results( lls.size()*rrs.size());
-        if( m_verbose)
-        {
-            std::cout << "# Extreme EVs are "<<m_lmin<<" "<<m_lmax<<"\n";
-            std::cout << "# Extreme d's are "<<m_dmin<<" "<<m_dmax<<"\n";
-        }
-
-        std::vector<double> params = {0.5017,0.6122,0.2645,dg::mat::finv_alpha(0.6407)};
-        // 2. Levenberg-Marquardt algorithm
-        for( unsigned n = 2; n <= m_num_nodes; n++)
-        {
-            dg::mat::LeastSquaresCauchyError
-                 cauchy( 2*n, dg::mat::weights_and_nodes_talbot, func, rrs, lls);
-            dg::mat::LeastSquaresCauchyJacobian
-                 jac( 2*n, dg::mat::weights_and_nodes_talbot, dg::mat::jacobian_talbot, func, dxlnfunc, rrs, lls);
-            // One can play between 1 and 2 here
-            cauchy.set_order(1);
-            jac.set_order(1);
-
-            unsigned steps = levenberg_marquardt( cauchy, jac, params, results, 1e-4, 1000);
-            if( m_verbose && n == m_num_nodes)
-            {
-                std::cout << "# Num steps in Levenberg Marquardt "<<steps<<"\n";
-                cauchy.error( params, results);
-                std::cout << "# Cauchy error "<<dg::blas1::dot( results, results)<<" ";
-                std::cout << "#  with params "<<params[0]<<" "<<params[1]<<" "<<params[2]<<" "<<params[3]<<"\n";
-                std::cout << "# Abs max error "<<dg::blas1::reduce( results, -1e300, thrust::maximum<double>(), dg::ABS<double>())<<"\n";
-            }
-        }
-        dg::mat::LeastSquaresCauchyError
-            Icauchy( 2*m_num_nodes, dg::mat::weights_and_nodes_identity, func, rrs, lls);
-        dg::mat::LeastSquaresCauchyJacobian
-            Ijac( 2*m_num_nodes, dg::mat::weights_and_nodes_identity, dg::mat::jacobian_identity, func, dxlnfunc, rrs, lls);
-        Icauchy.set_order(1);
-        Ijac.set_order(1);
-        auto zkwk = dg::mat::weights_and_nodes_talbot( 2*m_num_nodes, params);
-        auto paramsI = dg::mat::weights_and_nodes2params( zkwk);
-        unsigned steps = levenberg_marquardt( Icauchy, Ijac, paramsI, results, 1e-6, 1000);
-        Icauchy.error( paramsI, results);
-        if( m_verbose)
-        {
-            std::cout << "# Num steps in Levenberg Marquardt Id "<<steps<<"\n";
-            std::cout << "# Cauchy I error "<<dg::blas1::dot( results, results)<<"\n";
-            std::cout << "# Abs max I error "<<dg::blas1::reduce( results, -1e300, thrust::maximum<double>(), dg::ABS<double>())<<"\n";
-        }
-        zkwk = dg::mat::weights_and_nodes_identity( 2*m_num_nodes, paramsI);
-        m_zk = zkwk.first;
-        m_wk = zkwk.second;
-    }
 
     template<class MatrixType>
     void update_extremeEVs( MatrixType&& A)
@@ -575,16 +568,32 @@ struct CauchyMatrixProductAdj
         dg::mat::UniversalLanczos<ComplexContainer> lanczos( A.weights(), 20);
         auto T = lanczos.tridiag( A, A.weights(), A.weights());
         auto EVs = dg::mat::compute_extreme_EV( T);
-        m_lmin = EVs[0], m_lmax = EVs[1];
+        if( EVs[0] == 0)
+        {
+            m_lmin = m_lmax/ m_grid_points;
+            m_with_zero = true;
+        }
+        else
+        {
+            m_lmin = EVs[0];
+            m_with_zero = false;
+        }
+
+        m_lmax = EVs[1];
+        m_EV_up2date = true;
     }
 
-    unsigned m_num_nodes;
-    double m_lmin, m_lmax, m_dmin, m_dmax;
-    std::vector<thrust::complex<double>> m_zk, m_wk;
+
+    double m_eps;
     MultigridCG2d<Geometry, Matrix, ComplexContainer, dg::complex_symmetric> m_multi; // does not remember any solutions
     std::vector<dg::Extrapolation<ComplexContainer, double>> m_previous; // previous solutions for every zk
     ComplexContainer m_z, m_rhs; // complex vectors
-    bool m_up2date = false;
+    unsigned m_grid_points;
+    CauchyOptimizer m_cauchy_opt;
+
+    bool m_with_zero = false;
+    double m_lmin = 0, m_lmax = 0;
+    bool m_EV_up2date = false;
     bool m_verbose = false;
 };
 
