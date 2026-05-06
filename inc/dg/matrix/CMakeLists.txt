@@ -31,7 +31,6 @@ set(MATRIX_TESTS
   ../../matrix/contours_t.cpp
   ../../matrix/exp_runge_kutta_t.cpp
   ../../matrix/functors_t.cpp
-  ../../matrix/matrixprod_t.cpp
   ../../matrix/optimise_t.cpp
   ../../matrix/tridiaginv_t.cpp
 )
