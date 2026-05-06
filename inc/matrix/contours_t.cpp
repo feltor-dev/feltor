@@ -187,7 +187,7 @@ TEST_CASE( "Contours")
     SECTION( "Performance")
     {
         auto rrs = dg::mat::generate_range( 0.0625, 12.5);
-        auto lls = dg::mat::generate_range( 21, 23401947);
+        auto lls = dg::mat::generate_range( 3.13e-5, 18.3);
         unsigned n = 7;
         dg::mat::LeastSquaresCauchyError cauchyTCV( 2*n, dg::mat::weights_and_nodes_talbot,
             func, rrs, lls);
@@ -235,4 +235,24 @@ TEST_CASE("Optimization")
         INFO( "Cauchy error Abs max "<<sqrt( absmax));
         CHECK( sqrt( absmax) < 1e-5);
     }
+}
+
+TEST_CASE("Automatic Optimizer")
+{
+    auto func      = dg::mat::GyrolagK<thrust::complex<double>>(0,1);
+    auto dxlnfunc  = dg::mat::DLnGyrolagK<thrust::complex<double>>(0,1);
+    double rmin = 0.0625, rmax = 12.5;
+    double lmin = 3.1294270272326995e-5, lmax = 18.321045703058758;
+    bool with_zero = true;
+    SECTION( "Automatic")
+    {
+        dg::mat::CauchyOptimizer cauchy_opt;
+        //cauchy_opt.set_verbose(true);
+        bool changed = false;
+        auto zkwk = cauchy_opt.update_zkwk( changed, func, dxlnfunc, lmin,
+            lmax, rmin, rmax, with_zero, 1e-4);
+        CHECK( changed);
+        CHECK ( cauchy_opt.num_nodes() < 12);
+    }
+
 }
