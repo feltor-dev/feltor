@@ -5,13 +5,16 @@
 # don't technically matter but it does not block anything either
 set(MATRIX_HEADERS
   matrix.h
+  ../../matrix/contours.h
   ../../matrix/exp_runge_kutta.h
   ../../matrix/functors.h
   ../../matrix/lanczos.h
   ../../matrix/matrixfunction.h
   ../../matrix/matrix.h
+  ../../matrix/matrixprod.h
   ../../matrix/matrixsqrt.h
   ../../matrix/mcg.h
+  ../../matrix/optimise.h
   ../../matrix/polarization.h
   ../../matrix/polarization_init.h
   ../../matrix/sqrt_cauchy.h
@@ -28,6 +31,8 @@ set(MATRIX_TESTS
   ../../matrix/contours_t.cpp
   ../../matrix/exp_runge_kutta_t.cpp
   ../../matrix/functors_t.cpp
+  ../../matrix/matrixprod_t.cpp
+  ../../matrix/optimise_t.cpp
   ../../matrix/tridiaginv_t.cpp
 )
 
