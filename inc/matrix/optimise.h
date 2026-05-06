@@ -201,7 +201,7 @@ unsigned newton( Gradient grad, InvHessian invhess,
  * The way to solve a constraint minimization problem (the trust region
  * minimization above) is through Lagrange multipliers
  * \f[
- * L(p, \lambda) = r^T J p + \frac{1}{2} p^T J^T J p + \lambda( ||p||^2 -
+ * L(p, \lambda) = r^T J p + \frac{1}{2} p^T J^T J p + \lambda( ||p||_W^2 -
  * \Delta^2)/2 \simeq ||Jp +r||^2/2 + \lambda( ||p||_W^2 - \Delta^2)/2
  * \f]
  * The Euler Lagrange equations read
@@ -299,6 +299,15 @@ unsigned newton( Gradient grad, InvHessian invhess,
  * such a poor representation of \f$f\f$ that we must reject the proposed step
  * and reduce the trust region.
  * We use Algorithm 4.1. of [Nocedal&Wright]
+ * @subsection weights Choice of weights
+ * The weights are chosen according to [Nocedal&Wright, More1967] as the decreasing sequence
+ * \f[
+ * \begin{align}
+ *  W^{k} =& \text{diag}( W_0^k, ..., W_{n-1}^k)\\
+ *  W_i^k = & \text{max}( || J_i||^2, W_i^{k-1})
+ *  \end{align}
+ *  \f]
+ *
  *
  * @ingroup opt
  * @sa "Numerical optimization" by Nocedal & Wright (Springer 2006)
@@ -313,7 +322,7 @@ unsigned levenberg_marquardt( Func fun, Jacobian jac,
     auto x1 = x0, W = x0;
     auto rs(copyable), rs1(rs);
     std::vector<ContainerType1> jacs(num_p, copyable);
-    dg::SquareMatrix<double> HH(num_p, 0.), evHH( HH), evHH_T(HH), WW(HH);
+    dg::SquareMatrix<double> HH(num_p, 0.), evHH( HH), evHH_T(HH), WW(HH), syWW(WW);
     thrust::host_vector<double> evs( num_p), grad(num_p), gradbar(num_p),
         pk(num_p), pkbar(num_p);
     thrust::host_vector<double> work( 3*num_p-1);
@@ -344,9 +353,11 @@ unsigned levenberg_marquardt( Func fun, Jacobian jac,
         {
             for( unsigned j=l; j<num_p; j++)
                 HH(j,l) = HH(l,j) = dg::blas1::dot( jacs[l], jacs[j]);
-            WW(l,l) = std::max( WW(l,l), HH(l,l));
+            WW(l,l) = std::max( WW(l,l), HH(l,l)); // After Mor´e the weights must not decrease
         }
-        lapack::sygv( 1, 'V', 'U', num_p, HH.data(), num_p, WW.data(), num_p, evs, work);
+        // !!! sygv destroys WW on output (so use copy syWW instead) !!!
+        syWW = WW;
+        lapack::sygv( 1, 'V', 'U', num_p, HH.data(), num_p, syWW.data(), num_p, evs, work);
         evHH_T = HH;
         evHH = HH.transpose();
         //std::cout << "#########Iteration "<<k<<"\n";
@@ -364,7 +375,6 @@ unsigned levenberg_marquardt( Func fun, Jacobian jac,
             for( unsigned p=0; p<num_p; p++)
                 pkbar[p]= -gradbar[p]/(evs[p] +lambda == 0 ? 1e-16 : evs[p]+lambda);
             normp = sqrt(dg::blas1::dot( pkbar, pkbar));
-            //std::cout << "Norm p "<<normp<<" delta "<<delta<<"\n";
             return 1./delta - 1./normp;
         };
         auto dtarget = [&]( double lambda)
@@ -383,7 +393,6 @@ unsigned levenberg_marquardt( Func fun, Jacobian jac,
         {
             for( unsigned i=0; i<max_newton; i++) // Safeguard
             {
-                //std::cout << "phi "<<phi<<" lambda "<<lambda<<"\n";
                 // if ||p|| leq delta ( 1+sigma)
                 if ( fabs(phi) <= sigma/normp || i == max_newton-1)
                     break;
@@ -395,7 +404,6 @@ unsigned levenberg_marquardt( Func fun, Jacobian jac,
         dg::blas2::gemv(evHH, pkbar, pk);
         // target(lambda) updates grad and normp
         // 2. Check termination
-        //std::cout << "Norm p "<<normp<<" normx0 "<<normx0<<"\n";
         //std::cout << "Real Norm p "<<sqrt(dg::blas1::dot( pk, pk))<<" normx0 "<<normx0<<"\n";
         if( sqrt(dg::blas1::dot( pk,pk)) <= tol*(normx0 + 1.))
         {
