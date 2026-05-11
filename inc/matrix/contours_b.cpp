@@ -41,8 +41,7 @@ int main()
     t.toc();
     std::cout << "Generating params took "<<t.diff()<<"\n";
     auto func = dg::mat::GyrolagK<thrust::complex<double>>(0,1);
-    auto dxlnfunc = dg::mat::DLnGyrolagK<thrust::complex<double>>(0,1);
-    //auto dxxlnfunc = dg::mat::DDLnGyrolagK<thrust::complex<double>>(0,1);
+    auto dxfunc = dg::mat::DGyrolagK<thrust::complex<double>>(0,1);
 
     // TCV
     auto rrs = dg::mat::generate_range( 0.0625, 12.5, 20);
@@ -62,13 +61,13 @@ int main()
         func, rrs, lls);
     dg::mat::LeastSquaresCauchyJacobian jacTCV( 2*n, dg::mat::weights_and_nodes_talbot,
         dg::mat::jacobian_talbot,
-        func, dxlnfunc, rrs, lls);
+        func, dxfunc, rrs, lls);
     std::vector<double> results( lls.size()*rrs.size());
     dg::mat::LeastSquaresCauchyError IcauchyTCV( 2*n, dg::mat::weights_and_nodes_identity,
         func, rrs, lls);
     dg::mat::LeastSquaresCauchyJacobian IjacTCV( 2*n, dg::mat::weights_and_nodes_identity,
         dg::mat::jacobian_identity,
-        func, dxlnfunc, rrs, lls);
+        func, dxfunc, rrs, lls);
     // One can play between 1 and 2 here
     cauchyTCV.set_order(1);
     jacTCV.set_order(1);
