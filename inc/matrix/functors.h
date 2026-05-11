@@ -145,7 +145,7 @@ T phi4( T x){
 }
 
 /**
- * @brief \f$ f(x) = (-a*x)^n/n! exp(a*x) \f$
+ * @brief \f$ f(x) = \frac{(ax)^n}{n!} exp(-ax) \f$
  *
  * \f$ f(x,y) \equiv f(xy) \f$
  * @tparam T value type (can be complex)
@@ -158,7 +158,7 @@ struct GyrolagK
      * @param n order cannot be greater than 12
      * @param a prefactor of x
      */
-    GyrolagK(unsigned n, T a): m_n (n), m_a(a) {}
+    GyrolagK(unsigned n, T a = T(1)): m_n (n), m_a(a) {}
 
     DG_DEVICE
     T operator()(T x) const {
@@ -167,14 +167,14 @@ struct GyrolagK
             5040, 40320, 362880, 3628800, 39916800, 479001600};
 
         if( m_n == 0)
-            return exp(x*m_a); // faster to evaluate than tgamma and pow ...
+            return exp(-x*m_a); // faster to evaluate than tgamma and pow ...
         if( m_n == 1)
-            return (-x*m_a)*exp( x*m_a);
+            return (x*m_a)*exp( -x*m_a);
         if( m_n == 2)
-            return 0.5*(-x*m_a)*(-x*m_a)*exp( x*m_a);
+            return 0.5*(x*m_a)*(x*m_a)*exp( -x*m_a);
         if( m_n == 3)
-            return (-x*m_a)*(-x*m_a)*(-x*m_a)*exp( x*m_a)/6.0;
-        return pow(-x*m_a,m_n)/fact[m_n]*exp(x*m_a);
+            return (x*m_a)*(x*m_a)*(x*m_a)*exp( -x*m_a)/6.0;
+        return pow(x*m_a,m_n)/fact[m_n]*exp(-x*m_a);
     }
     DG_DEVICE
     T operator()(T x, T y) const { return this->operator()(x*y); }
@@ -185,40 +185,25 @@ struct GyrolagK
 };
 
 /**
- * @brief \f$ f(x) = \frac{n}{x}+a \f$
+ * @brief \f$ f(x) = \frac{e^{-ax} (ax)^n ( n - ax)}{xn!} \f$
  *
  * @tparam T value type (can be complex)
  */
 template<class T = double>
-struct DLnGyrolagK
+struct DGyrolagK
 {
-    DLnGyrolagK(unsigned n, T a): m_n (n), m_a(a) {}
+    DGyrolagK(unsigned n, T a = T(1)): m_n (n), m_a(a), m_kn(n,a), m_knm(n-1,a) {}
     T  DG_DEVICE operator()(T x) const {
-        return (T)m_n/x+m_a;
+        if( m_n == 0)
+            return-m_a*exp(-x*m_a);
+        return m_a*(m_knm(x) - m_kn(x));
     }
     T  DG_DEVICE operator()(T x, T y) const { return this->operator()(x*y); }
 
     private:
     unsigned m_n;
     T m_a;
-};
-/**
- * @brief \f$ f(x) = -\frac{n}{x^2}  \f$
- *
- * @tparam T value type (can be complex)
- */
-template<class T = double>
-struct DDLnGyrolagK
-{
-    DDLnGyrolagK(unsigned n, T a): m_n (n), m_a(a) {}
-    T  DG_DEVICE operator()(T x) const {
-        return -(T)m_n/x/x;
-    }
-    T  DG_DEVICE operator()(T x, T y) const { return this->operator()(x*y); }
-
-    private:
-    unsigned m_n;
-    T m_a;
+    GyrolagK<T> m_kn, m_knm;
 };
 
 }//namespace mat
