@@ -34,8 +34,6 @@ namespace dg
  * := {E^{-1}}^\mathrm{T} A E^{-1} \f$, \f$ \bar x := Ex\f$ and \f$ \bar b :=
  * {E^{-1}}^\mathrm{T}\f$, where \f$ P = {E^{-1}}^\mathrm{T} E^{-1}\f$ is
  * the preconditioner. The bounds on the spectrum then need to be on the \f$PA\f$ matrix.
-* @note The maximum Eigenvalue of \f$ A\f$ and \f$ P A\f$ can be estimated
-* using the \c EVE class.
 * \sa For more information see the book
 * <a href="https://www-users.cs.umn.edu/~saad/IterMethBook_2ndEd.pdf">"Iteratvie Methods for Sparse Linear Systems" 2nd edition by Yousef Saad </a>
 * @note If the initial vector is zero Chebyshev iteration will produce the
@@ -84,7 +82,6 @@ class ChebyshevIteration
      * @param b The right hand side vector. x and b may be the same vector.
      * @param min_ev an estimate of the minimum Eigenvalue
      * @param max_ev an estimate of the maximum Eigenvalue of \f$ A\f$ (must be larger than \c min_ev)
-     * Use \c EVE to get this value
      * @param num_iter the number of iterations \c k (equals the number of times A is applied)
      * If 0 the function returns immediately
      * @param x_is_zero If true, the first matrix-vector multiplication is avoided
@@ -142,7 +139,6 @@ class ChebyshevIteration
      * @param P the Preconditioner (\f$ M^{-1}\f$ in the above notation
      * @param min_ev an estimate of the minimum Eigenvalue
      * @param max_ev an estimate of the maximum Eigenvalue of \f$ P A\f$ (must be larger than \c min_ev)
-     * Use \c EVE to get this value
      * @param num_iter the number of iterations k (equals the number of times \c A is applied)
      * If 0 the function returns immediately
      * @param x_is_zero If true, the first matrix-vector multiplication is avoided
@@ -232,7 +228,6 @@ struct ChebyshevPreconditioner
      * @param copyable A ContainerType must be copy-constructible from this
      * @param ev_min an estimate of the minimum Eigenvalue (It is important to get a good value here. Unfortunately, we currently have no perfect way of getting this value, as a suggestion use \c 0.01*max_ev)
      * @param ev_max an estimate of the maximum Eigenvalue of \f$ A\f$ (must be larger than \c min_ev)
-     * Use \c EVE to get this value
      * @param degree degree k of the Polynomial (5 should be a good number)
      */
     ChebyshevPreconditioner( Matrix op, const ContainerType& copyable, value_type ev_min,
@@ -280,7 +275,6 @@ struct ModifiedChebyshevPreconditioner
      * get a good value here. The authors propose to use
      * \f$ \lambda_\min = \lambda_\max / (5r)\f$ where \c r is the \c degree
      * @param ev_max an estimate of the maximum Eigenvalue of \f$ A\f$ (must be larger than \c min_ev)
-     * Use \c EVE to get this value
      * @param degree degree k of the Polynomial (5 should be a good number)
      */
     ModifiedChebyshevPreconditioner( Matrix op, const ContainerType& copyable, value_type ev_min,
@@ -347,7 +341,7 @@ struct LeastSquaresPreconditioner
      * @param op The Matrix (copied, so maybe choose a reference type for shallow copying) will be called as \c dg::blas2::symv( op, x, y)
      * @param P The inner Preconditioner (copied, so maybe choose a reference type for shallow copying) will be called as \c dg::blas2::symv( op, x, y)
      * @param copyable A ContainerType must be copy-constructible from this
-     * @param ev_max An estimate of the largest Eigenvalue of \f$ M^{-1} A\f$. Use \c EVE to get this value
+     * @param ev_max An estimate of the largest Eigenvalue of \f$ M^{-1} A\f$.
      * @param degree degree k of the Polynomial (5 should be a good number - only up to degree 10 polynomials are implemented at the moment)
      */
     LeastSquaresPreconditioner( Matrix op, InnerPreconditioner P, const ContainerType& copyable, value_type ev_max, unsigned degree):

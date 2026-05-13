@@ -18,7 +18,6 @@ TARGETS=blas_t\
 blas1_t\
 pcg_t\
 elliptic_t\
-eve_t\
 bicgstabl_t\
 helmholtz_t\
 simpsons_t\

@@ -83,7 +83,6 @@ set(DG_HEADERS
   chebyshev.h
   elliptic.h
   enums.h
-  eve.h
   extrapolation.h
   functors.h
   helmholtz.h
@@ -180,7 +179,6 @@ set(DG_TESTS
   blas1_t.cpp
   blas_t.cpp
   elliptic_t.cpp
-  eve_t.cpp
   extrapolation_t.cpp
   helmholtz_t.cpp
   implicit_t.cpp

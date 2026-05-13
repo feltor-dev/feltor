@@ -7,7 +7,6 @@
 #include "blas.h"
 #include "pcg.h"
 #include "chebyshev.h"
-#include "eve.h"
 #include "backend/timer.h"
 #ifdef MPI_VERSION
 #include "topology/mpi_projection.h"

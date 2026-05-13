@@ -14,6 +14,9 @@ const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
 
+//const double lmin = 1; // The minimum Eigenvalue of Elliptic centered (gotten from python and pyfeltor)
+//const double lmax = 893.5; // Maximum EV for n=3, Nx = 8, Ny = 16
+
 double initial( double, double) {return 0.;}
 double amp = 0.9999;
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
@@ -36,6 +39,14 @@ double der(double x, double y)  { return cos( x)*sin(y);}
 //4. With forward discretization there seems to be a sweet spot on how many smoothing steps to choose
 //5. The relevant errors for us are the gradient in phi errors
 //6. The range that the Chebyshev solver smoothes influences the error in the end
+//
+struct NORM
+{
+    template<class T, class Z>
+    DG_DEVICE
+    auto operator()( T w, Z z) {
+        return w*norm(z);} // returns floating point
+};
 
 int main()
 {
@@ -69,17 +80,13 @@ int main()
 
     std::vector<dg::DVec> multi_x = nested.project( x);
     std::vector<dg::DVec> multi_b = nested.project( b);
-    std::vector<dg::EVE<dg::DVec> > multi_eve(stages);
     std::vector<dg::PCG<dg::DVec> > multi_pcg( stages);
     std::vector<dg::ChebyshevIteration<dg::DVec> > multi_cheby( stages);
     std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> >
         multi_pol( stages);
     std::vector<std::function<void( const dg::DVec&, dg::DVec&)> >
         multi_inv_pol(stages), multi_inv_cheby(stages), multi_inv_fmg(stages);
-    std::vector<double> multi_ev(stages);
-    double eps_ev = 1e-10;
-    unsigned counter;
-    std::cout << "\nPrecision EVE is "<<eps_ev<<"\n";
+    std::vector<double> multi_ev(stages, n*n*Nx*Ny);
     for(unsigned u=0; u<stages; u++)
     {
         multi_pol[u].construct( nested.grid(u),
@@ -87,15 +94,8 @@ int main()
         multi_pol[u].set_chi( multi_chi[u]);
         multi_pcg[u].construct( multi_x[u], 1000);
         multi_cheby[u].construct( multi_x[u]);
+        multi_ev[u] = n*n*Nx*Ny/pow( 4, u);
 
-        //estimate EVs
-        multi_eve[u].construct( multi_chi[u]);
-        counter = multi_eve[u].solve( multi_pol[u], multi_x[u], multi_b[u],
-            //multi_pol[u].precond(), multi_pol[u].weights(), multi_ev[u], eps_ev);
-            1., multi_pol[u].weights(), multi_ev[u], eps_ev);
-
-        std::cout << "Eigenvalue estimate eve: "<<multi_ev[u]<<"\n";
-        std::cout << " with "<<counter<<" iterations\n";
         multi_inv_pol[u] = [&, u, &pcg = multi_pcg[u], &pol = multi_pol[u]](
             const auto& y, auto& x)
             {
@@ -118,7 +118,7 @@ int main()
             const auto& y, auto& x)
             {
                 //multi_cheby[u].solve( multi_pol[u], x, y, multi_pol[u].precond(),
-                cheby.solve( pol, x, y, 1., ev/100., ev*1.1, nu2+1, true);
+                cheby.solve( pol, x, y, 1., 1., ev*1.1, nu2+1, true);
             };
         multi_inv_cheby[u] = [eps, u, &pcg = multi_pcg[u], &pol = multi_pol[u], p =
             std::move(precond) ]( const auto& y, auto& x)
@@ -150,7 +150,7 @@ int main()
             multi_inv_fmg[u] = [nu2, ev = multi_ev[u], &cheby =
                 multi_cheby[u], &pol = multi_pol[u] ]( const auto& y, auto& x)
                 {
-                    cheby.solve( pol, x, y, 1., ev/100., ev*1.1, nu2, false);
+                    cheby.solve( pol, x, y, 1., 1., ev*1.1, nu2, false);
                 };
     }
 
@@ -206,11 +206,11 @@ int main()
     }
     cmultigrid.solve( cmulti_pol, cx, cb, {eps,eps,eps} );
     t.toc();
-    double nrm = dg::blas1::vdot([](double w, auto z){ return w*norm(z);},
+    double nrm = dg::blas1::vdot(NORM(),
             w2d, csolution);
     dg::cDVec cerror( csolution);
     dg::blas1::axpby( 1.,cx,-1., csolution, cerror);
-    double err = dg::blas1::vdot([](double w, auto z){ return w*norm(z);},
+    double err = dg::blas1::vdot(NORM(),
             w2d, cerror);
     err = sqrt( err/nrm);
     std::cout << " Error of nested iterations "<<err<<"\n";
@@ -239,6 +239,8 @@ int main()
             };
         x = dg::evaluate( initial, grid);
         t.tic();
+        multi_pcg[0].set_max( 20); // otherwise will iterate infinitely
+        multi_pcg[0].set_throw_on_fail( false);
         multi_pcg[0].solve(multi_pol[0], x, b, fmg_precond, multi_pol[0].weights(), eps);
         t.toc();
         std::cout << "Took "<<t.diff()<<"s\n";
@@ -254,9 +256,16 @@ int main()
         std::cout << "MULTIGRID FMG SOLVE:\n";
         x = dg::evaluate( initial, grid);
         t.tic();
-        //multigrid.fmg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
-        dg::fmg_solve( multi_pol, x, b, multi_inv_fmg, multi_inv_fmg, nested,
+        try
+        {
+            //multigrid.fmg_solve(multi_pol, x, b, multi_ev, nu1, nu2, gamma, eps);
+            dg::fmg_solve( multi_pol, x, b, multi_inv_fmg, multi_inv_fmg, nested,
                 w2d, eps, gamma);
+        }
+        catch(dg::Error& e)
+        {
+            std::cerr << e.what() << std::endl<<std::endl;
+        }
         t.toc();
         std::cout << "Took "<<t.diff()<<"s\n";
         const double norm = dg::blas2::dot( w2d, solution);
