@@ -101,6 +101,30 @@ circular flux surfaces with DIR and NEU boundary conditions.");
     }
 }
 
+TEST_CASE( "Fieldaligned construction")
+{
+    // This test is taken from a failed MAST simulation which failed on construction
+#ifdef WITH_MPI
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm comm = dg::mpi_cart_create( MPI_COMM_WORLD, {0,0,0}, {false,false,true});
+#endif
+    const dg::x::CylindricalGrid3d g3d( 96.2339, 752.624, -682.386, 682.386, 0, 2.*M_PI,
+        3, 32, 67, 32, dg::NEU, dg::NEU, dg::PER
+#ifdef WITH_MPI
+    , comm
+#endif
+    );
+    double R_0 = 469.921339;
+    const dg::geo::TokamakMagneticField mag = dg::geo::createToroidalField( R_0);
+    auto bhat = dg::geo::createBHat(mag);
+    std::string method = "linear-nearest";
+    dg::geo::Fieldaligned<dg::x::aProductGeometry3d,dg::x::IDMatrix,dg::x::DVec>  dsFA(
+            bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, 12, 12,
+            -1, method, false);
+    CHECK(true);
+}
+
 TEST_CASE("Fieldaligned")
 {
 #ifdef WITH_MPI

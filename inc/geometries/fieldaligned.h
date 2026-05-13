@@ -663,7 +663,9 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
             grid_transform->x0(),
             grid_transform->x1(),
             grid_transform->y0() + sub*grid_transform->hy(),
-            grid_transform->y0() + (sub+1)*grid_transform->hy(),
+            // Fix: construction bug The local right boundary should be the same as the global right boundary
+            sub == grid_transform->Ny()-1 ? grid_transform->y1() :
+                grid_transform->y0() + (sub+1)*grid_transform->hy(),
             grid_transform->n(), grid_transform->Nx(), 1,
             grid_transform->bcx(), grid_transform->bcy());
         // We do not need metric of grid_equidist or of grid_fine

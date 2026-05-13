@@ -247,7 +247,9 @@ struct Fieldaligned< ProductMPIGeometry, MIMatrix, MPI_Vector<LocalContainer> >
                 grid_fine_sub.x0(),
                 grid_fine_sub.x1(),
                 grid_fine_sub.y0() + sub*grid_fine_sub.hy(),
-                grid_fine_sub.y0() + (sub+1)*grid_fine_sub.hy(),
+                // Fix: construction bug The local right boundary should be the same as the global right boundary
+                sub == grid_transform->local().Ny()-1 ? grid_fine_sub.y1() :
+                    grid_fine_sub.y0() + (sub+1)*grid_fine_sub.hy(),
                 grid_fine_sub.n(), grid_fine_sub.Nx(), 1,
                 grid_fine_sub.bcx(), grid_fine_sub.bcy());
 
