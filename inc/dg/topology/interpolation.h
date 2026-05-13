@@ -586,10 +586,10 @@ dg::SparseMatrix<int, real_type, thrust::host_vector> interpolation(
     for( unsigned u=0; u<Nd; u++)
     {
         if( g_new.p(u) < g_old.p(u))
-            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.p(u)<<" lies outside old grid "<<g_old.p(u)<<" "<<g_old.p(u)-g_new.p(u)<<"\n";
+            std::cerr << "ERROR: New grid boundary number "<<u<<" with value p "<<g_new.p(u)<<" lies outside old grid "<<g_old.p(u)<<" "<<g_old.p(u)-g_new.p(u)<<"\n";
         assert( g_new.p(u) >= g_old.p(u));
         if( g_new.q(u) > g_old.q(u))
-            std::cerr << "ERROR: New grid boundary number "<<u<<" with value "<<g_new.q(u)<<" lies outside old grid "<<g_old.q(u)<<" "<<g_old.q(u)-g_new.q(u)<<"\n";
+            std::cerr << "ERROR: New grid boundary number "<<u<<" with value q "<<g_new.q(u)<<" lies outside old grid "<<g_old.q(u)<<" "<<g_old.q(u)-g_new.q(u)<<"\n";
         assert( g_new.q(u) <= g_old.q(u));
     }
     std::array<dg::SparseMatrix<int,real_type,thrust::host_vector>,Nd> axes;
