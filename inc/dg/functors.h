@@ -286,16 +286,16 @@ struct MinMod
     }
 };
 
-/// \c std::uniform_real_distribution as a functor to evaluate on our grids
+/// <tt>std::uniform_real_distribution<T></tt> as a functor to evaluate on our grids
 template<class T>
 struct UniformRealDistribution
 {
-    /// Parameters of \c uniform_real_distribution
+    /// Parameters of <tt>uniform_real_distribution<T></tt>
     UniformRealDistribution( T a, T b): m_rng(), m_dist(a,b){}
 
-    /// @return \c uniform_real_distribution(minstd_rand) (changes state by being called)
+    /// @return <tt>uniform_real_distribution<T>(minstd_rand)</tt> (changes state by being called)
     template< class ...Ts>
-DG_DEVICE auto operator()( Ts... )
+DG_DEVICE T operator()( Ts... )
     {
         return m_dist(m_rng);
     }
