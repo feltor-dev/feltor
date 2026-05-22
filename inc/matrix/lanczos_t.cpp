@@ -26,7 +26,7 @@ TEST_CASE( "Lanczos")
     {
         grid.set_bcs( {dg::DIR, dg::DIR});
         dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> ell( {grid, dg::centered, 1.0});
-        lanczos.set_verbose(true);
+        //lanczos.set_verbose(true);
         auto T = lanczos.tridiag( ell, rnd, w2d);
         auto extremeEVs = dg::mat::compute_extreme_EV( T);
         // Eigenvalues computed with pyfeltor and scipy
@@ -37,7 +37,7 @@ TEST_CASE( "Lanczos")
     {
         grid.set_bcs( {dg::NEU, dg::NEU});
         dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> ell( {grid, dg::centered, 1.0});
-        lanczos.set_verbose(true);
+        //lanczos.set_verbose(true);
         auto T = lanczos.tridiag( ell, rnd, w2d);
         auto extremeEVs = dg::mat::compute_extreme_EV( T);
 
@@ -48,7 +48,7 @@ TEST_CASE( "Lanczos")
     {
         grid.set_bcs( {dg::PER, dg::PER});
         dg::Elliptic<dg::CartesianGrid2d, Matrix, Container> ell( {grid, dg::centered, 1.0});
-        lanczos.set_verbose(true);
+        //lanczos.set_verbose(true);
         auto T = lanczos.tridiag( ell, rnd, w2d );
         auto extremeEVs = dg::mat::compute_extreme_EV( T);
 
