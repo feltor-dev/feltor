@@ -6,8 +6,10 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <vector>
-#include <random>
 #include <functional>
+#include <thrust/random/linear_congruential_engine.h>
+#include <thrust/random/normal_distribution.h>
+#include <thrust/random/uniform_real_distribution.h>
 #include "blas1.h"
 #include "topology/grid.h"
 #include "topology/evaluation.h"
@@ -283,6 +285,28 @@ struct MinMod
         return this-> operator()( this-> operator()( x1, x2), x3);
     }
 };
+
+/// \c std::uniform_real_distribution as a functor to evaluate on our grids
+template<class T>
+struct UniformRealDistribution
+{
+    /// Parameters of \c uniform_real_distribution
+    UniformRealDistribution( T a, T b): m_rng(), m_dist(a,b){}
+
+    /// @return \c uniform_real_distribution(minstd_rand) (changes state by being called)
+    template< class ...Ts>
+DG_DEVICE auto operator()( Ts... )
+    {
+        return m_dist(m_rng);
+    }
+    private:
+    thrust::minstd_rand m_rng;
+    thrust::uniform_real_distribution<T> m_dist;
+};
+
+/// Makes it easier to find (people search for "Random" if they want random numbers)
+template<class T>
+using RandomNumbers = UniformRealDistribution<T>;
 
 /**
  * @brief \f$ f(x_1,x_2) = 2\begin{cases}
@@ -1770,9 +1794,9 @@ struct BathRZ{
         double N_kRh = N_kR_/2.;
         double N_kZh = N_kZ_/2.;
 
-        std::minstd_rand generator;
-        std::normal_distribution<double> ndistribution( 0.0, 1.0); // ( mean, stddev)
-        std::uniform_real_distribution<double> udistribution(0.0,tpi); //between [0 and 2pi)
+        thrust::minstd_rand generator;
+        thrust::normal_distribution<double> ndistribution( 0.0, 1.0); // ( mean, stddev)
+        thrust::uniform_real_distribution<double> udistribution(0.0,tpi); //between [0 and 2pi)
         for (unsigned j=1;j<=N_kZ_;j++)
         {
             double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);

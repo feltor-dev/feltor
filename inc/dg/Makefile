@@ -23,6 +23,7 @@ helmholtz_t\
 simpsons_t\
 poisson_t\
 extrapolation_t\
+functors_t\
 nullstelle_t\
 runge_kutta_t\
 adaptive_t\

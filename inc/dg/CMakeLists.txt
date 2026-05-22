@@ -180,6 +180,7 @@ set(DG_TESTS
   blas_t.cpp
   elliptic_t.cpp
   extrapolation_t.cpp
+  functors_t.cpp
   helmholtz_t.cpp
   implicit_t.cpp
   multistep_t.cpp
