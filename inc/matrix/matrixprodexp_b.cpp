@@ -13,14 +13,17 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
-// const double m=3./2.;
-// const double n=4.;
-// const double m=1./2.;
-// const double n=1.;
-const double ms=3./2.;
+//dg::bc bcx = dg::PER;
+//dg::bc bcy = dg::PER;
+// const double ms=3./2.; // NOTE THAT THESE VALUES VIOLATE PER BC
+// const double ns=2.;
+// const double ms_s=1./2.;
+// const double ns_s=2.;
+const double ms=3.;
 const double ns=2.;
-const double ms_s=1./2.;
+const double ms_s=1.;
 const double ns_s=2.;
+
 const double alpha = 1./2.;
 const double ell_fac = (ms*ms+ns*ns);
 const double ell_facs = (ms_s*ms_s+ns_s*ns_s);
@@ -67,15 +70,17 @@ int main()
     dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> A( {g, dg::centered, 1.0});
 
     std::vector<std::string> outs = {
-            "K_0(-alpha A)",    // UniversalLanczos
-            "K_0(d, -alpha A)", // ProductMatrixFunction
-            "K_0(-alpha A, d)", // ProductMatrixFunction
-            "K_0(-A, alpha d)"  // CauchyMatrixProductAdj
+            "K_0(alpha A)",    // UniversalLanczos
+            "K_0(d, alpha A)", // ProductMatrixFunction
+            "K_0(alpha A, d)", // ProductMatrixFunction
+            "K_0(d, alpha A) Cauchy", // CauchyMatrixProduct
+            "K_0(alpha A, d) Cauchy"  // CauchyMatrixProduct
     };
     dg::mat::UniversalLanczos<dg::DVec> krylovfunceigen( w2d, max_iter);
     dg::mat::ProductMatrixFunction<dg::DVec> krylovproduct( w2d, max_iter);
     unsigned num_stages = 3;
-    dg::mat::CauchyMatrixProductAdj<dg::CartesianGrid2d, dg::DMatrix, dg::cDVec> cauchy( 1e-5, g, num_stages);
+    // making Cauchy more precise decreases the error
+    dg::mat::CauchyMatrixProduct<dg::CartesianGrid2d, dg::DMatrix, dg::cDVec> cauchy( 1e-5, g, num_stages);
     std::vector<dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec, dg::cDVec>> multipol( num_stages);
     for( unsigned u=0; u<num_stages; u++)
         multipol[u].construct( cauchy.multigrid().grid(u), dg::centered, 1.0);
@@ -99,7 +104,7 @@ int main()
 
 
 
-        dg::mat::GyrolagK<double> func(0, -alpha);
+        dg::mat::GyrolagK<double> func(0, alpha);
         auto funcE1 = dg::mat::make_FuncEigen_Te1( func);
         double time = 0.;
 
@@ -141,10 +146,22 @@ int main()
         if( u == 3)
         {
             cauchy.set_verbose(true);
+            cauchy.set_adjoint( false);
             t.tic();
-            auto func = dg::mat::GyrolagK<thrust::complex<double>>(0,1);
-            auto dxlnfunc = dg::mat::DLnGyrolagK<thrust::complex<double>>(0,1);
-            cauchy.solve( x, func , dxlnfunc, alpha, multipol, d, b, std::vector<double>(num_stages, eps));
+            auto func = dg::mat::GyrolagK<thrust::complex<double>>(0,alpha);
+            auto dxfunc = dg::mat::DGyrolagK<thrust::complex<double>>(0,alpha);
+            cauchy.solve( x, func , dxfunc, multipol, d, b, std::vector<double>(num_stages, eps));
+            t.toc();
+            time = t.diff();
+        }
+        if( u == 4)
+        {
+            cauchy.set_verbose(true);
+            cauchy.set_adjoint( true);
+            t.tic();
+            auto func = dg::mat::GyrolagK<thrust::complex<double>>(0,alpha);
+            auto dxfunc = dg::mat::DGyrolagK<thrust::complex<double>>(0,alpha);
+            cauchy.solve( x, func , dxfunc, multipol, d, b, std::vector<double>(num_stages, eps));
             t.toc();
             time = t.diff();
         }
@@ -158,12 +175,12 @@ int main()
         {
             dg::DVec fd(d); // helper variable
             //Compute absolute and relative error in adjointness
-            if (u==2 || u == 3)
+            if (u==2 || u == 4)
             {
                 x_h = dg::evaluate(lhss, g); // -> g
                 dg::blas1::axpby(ell_facs, d, 0.0, fd);
-                dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,-alpha));
-                dg::blas1::pointwiseDot(fd, x_h, x_exac); //x_exac = f(-alpha*(ms^2+ns^2) d) sin(x*ms) cos(y*ms) \equiv exp(d,-alpha A) g
+                dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,alpha));
+                dg::blas1::pointwiseDot(fd, x_h, x_exac); //x_exac = f(alpha*(ms^2+ns^2) d) sin(x*ms) cos(y*ms) \equiv exp(d,-alpha A) g
                 x_h = dg::evaluate(lhs, g); // -> f
                 double fOg = dg::blas2::dot( x_h, w2d, x_exac); //<f,exp(d,-alpha A) g>
                 std::cout << "#    <f, exp(d,-alpha A) g> = " << fOg << std::endl;
@@ -179,11 +196,11 @@ int main()
             //Compute exact error for product exponential (is used also for adjoint product exponential since we have no analytical solution there)
             x_h = dg::evaluate(lhs, g);
             dg::blas1::axpby(ell_fac, d, 0.0, fd);
-            dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,-alpha));
-            dg::blas1::pointwiseDot(fd, x_h, x_exac); //x_exac = f(-alpha*(m^2+n^2) d) sin(m x) cos(n y)
+            dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,alpha));
+            dg::blas1::pointwiseDot(fd, x_h, x_exac); //x_exac = f(alpha*(m^2+n^2) d) sin(m x) cos(n y)
         }
         std::cout << "    universal-time: "<<time<<"s \n";
-        if (u==0 || u==1) {
+        if (u==0 || u==1 || u == 3) {
             dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
             erel = sqrt(dg::blas2::dot( w2d, error) / dg::blas2::dot( w2d, x_exac));
             std::cout << "    universal-error: "<<erel  << "\n";

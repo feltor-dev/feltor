@@ -41,7 +41,7 @@ namespace mat{
                 weights, prod.lanczos().get_bnorm());
  * @endcode
  * @attention The adjoint methods unfortunately do not converge so use cautiously!
- * @sa dg::mat::UniversalLanczos dg::mat::CauchyMatrixProductAdj
+ * @sa dg::mat::UniversalLanczos dg::mat::CauchyMatrixProduct
  */
 template<class ContainerType>
 struct ProductMatrixFunction
@@ -392,11 +392,16 @@ struct ProductMatrixFunction
 };
 
 /*!
- * @brief Computation of \f$ \vec x = f(\alpha A,\vec d)\vec b\f$ where \f$ A \f$ is a
- * positive definite matrix self-adjoint in the weights \f$ W\f$ .
+ * @brief Computation of \f$ \vec x = f(A,\vec d)\vec b\f$ or \f$ \vec x = f( \vec d, A) \vec b\f$ where \f$ A \f$ is a
+ * positive (semi)-definite matrix self-adjoint in the weights \f$ W\f$ .
  *
  * This class implements the %Cauchy contour integral method
- * \f[ f( \alpha A, D) \vec b \approx \sum_{k=1}^{N} \frac{w_k}{z_k 1 - \alpha A} f(z_k, D) \vec b \f]
+ * \f[
+ * \begin{align}
+ * f( A, D) \vec b \approx \sum_{k=1}^{N} \frac{1}{z_k 1 -  A} w_kf(z_k, D) \vec b\\
+ * f( D, A) \vec b \approx \sum_{k=1}^{N} w_kf(z_k, D)\frac{1}{z_k 1 -  A}  \vec b\\
+ * \end{align
+ * \f]
  *
  * The complex nodes and weights \f$ z_k\f$ and \f$ w_k\f$ are found by applying
  * the Levenberg-Marquardt optimization to an initial Talbot curve. The number of nodes is
@@ -419,17 +424,18 @@ struct ProductMatrixFunction
  * @ingroup matrixfunctionapproximation
  */
 template<class Geometry, class Matrix, class ComplexContainer>
-struct CauchyMatrixProductAdj
+struct CauchyMatrixProduct
 {
-    CauchyMatrixProductAdj() = default;
-    CauchyMatrixProductAdj( double lm_eps, const Geometry& grid, unsigned stages )
+    CauchyMatrixProduct() = default;
+    CauchyMatrixProduct( double lm_eps, const Geometry& grid, unsigned stages, bool adjoint = true )
     : m_eps( lm_eps),
     m_multi( grid, stages),
     m_previous( 2, {1, m_multi.copyable()}),
     m_z( m_multi.copyable()),
     m_rhs( m_multi.copyable()),
     m_grid_points(grid.size()),
-    m_cauchy_opt()
+    m_cauchy_opt(),
+    m_adjoint(adjoint)
     {
     }
 
@@ -464,6 +470,24 @@ struct CauchyMatrixProductAdj
     unsigned num_nodes() const { return m_cauchy_opt.num_nodes();}
 
     /*!
+     * @brief Determine if adjoint or direct bivariate matrix function is computed
+     *
+     * @attention Changing this parameter resets the solution cache (i.e. previous stored solutions are zeroed)
+     * @param adjoint If true compute the matrix function \f$ f(A, d)b\f$, else compute \f$ f(d, A)b\f$
+     */
+    void set_adjoint( bool adjoint) {
+        // reset solution cache
+        if( m_adjoint != adjoint)
+        {
+            m_previous.assign( m_previous.size(), {1, m_multi.copyable()});
+            m_adjoint = adjoint;
+        }
+    }
+
+    /// Current value of the adjoint parameter
+    bool get_adjoint() const { return m_adjoint;}
+
+    /*!
      * @brief Compute the bivariate matrix function
      *
      * In the first call the extreme Eigenvalues of \c ops[0] are computed and
@@ -478,8 +502,7 @@ struct CauchyMatrixProductAdj
      * multigrid methods and initial guesses from previous solves.
      * @param x (write-only) Contains solution on output
      * @param func The bivariate matrix function
-     * @param dxlnfunc The derivative of the logarithm of the bivariate matrix function
-     * @param alpha scaling parameter for the matrix
+     * @param dxfunc The derivative of the bivariate matrix function
      * @param ops The matrix discretized on the grid used in \c multigrid()
      * @param d The diagonal vector
      * @param b the right hand side
@@ -487,7 +510,7 @@ struct CauchyMatrixProductAdj
      */
     template<class MatrixType, class UnaryFunc, class UnaryFuncD,
         class ContainerType0, class ContainerType1, class ContainerType2>
-    void solve( ContainerType0& x, UnaryFunc func, UnaryFuncD dxlnfunc, double alpha, std::vector<MatrixType>& ops,
+    void solve( ContainerType0& x, UnaryFunc func, UnaryFuncD dxfunc, std::vector<MatrixType>& ops,
         const ContainerType1& d, const ContainerType2& b, std::vector<double> eps)
     {
 #ifdef MPI_VERSION
@@ -498,12 +521,17 @@ struct CauchyMatrixProductAdj
         if( !m_EV_up2date)
         {
             // 1. Compute extreme Eigenvalues
-            update_extremeEVs( ops[0]);
+            update_extremeEVs( ops);
         }
         double dmin = dg::blas1::reduce( d, +1e300, thrust::minimum());
         double dmax = dg::blas1::reduce( d, -1e300, thrust::maximum());
         bool changed = false;
-        const auto& zkwk = m_cauchy_opt.update_zkwk( changed, func, dxlnfunc,
+        if( m_verbose )
+        {
+            DG_RANK0 std::cout << "# "<<dmin<<" < D < "<<dmax<<"\n";
+            DG_RANK0 std::cout << "# "<<m_lmin<<" < Lambda < "<<m_lmax<<"\n";
+        }
+        const auto& zkwk = m_cauchy_opt.update_zkwk( changed, func, dxfunc,
             m_lmin, m_lmax, dmin, dmax, m_with_zero, m_eps);
         if( changed) // if the nodes change we need to re-alloced solution space.
             m_previous.assign( m_cauchy_opt.num_nodes(), {1, m_multi.copyable()});
@@ -517,40 +545,53 @@ struct CauchyMatrixProductAdj
         ///////////////
         struct ShiftedOp
         {
-            ShiftedOp( MatrixType& mat, const thrust::complex<double>& z, double alpha)
-            : m_z(z), m_mat(mat), m_alpha(alpha){}
+            ShiftedOp( MatrixType& mat, const thrust::complex<double>& zk)
+            : m_zk(zk), m_mat(mat){}
             void operator()( const ComplexContainer& x, ComplexContainer& y)
             {
                 // Question: does COCG not care if matrix is positive/negative definite?
                 // maybe not, since matrix does not have real EV anyways?
                 dg::blas2::symv( m_mat, x, y);
-                dg::blas1::axpby( -m_z, x, -m_alpha, y);
+                dg::blas1::axpby( m_zk, x, -1., y);
             }
             auto weights() const { return m_mat.weights();}
             auto precond() const { return m_mat.precond();}
             private:
-            const thrust::complex<double>& m_z;
+            const thrust::complex<double>& m_zk;
             MatrixType& m_mat;
-            double m_alpha;
         };
         ///////////////
         std::vector<ShiftedOp > shifted_ops;
         for( unsigned u=0; u<m_multi.stages(); u++)
-            shifted_ops.push_back( ShiftedOp{ ops[u], zk, alpha});
+            shifted_ops.push_back( ShiftedOp{ ops[u], zk});
 
         dg::blas1::copy( 0., x);
         for( unsigned k=0; k<m_cauchy_opt.num_nodes(); k++)
+        //for( int k=m_cauchy_opt.num_nodes()-1; k>=0; k--)
         {
             zk = zkwk.first[k];
             wk = zkwk.second[k];
             // std::cout << "Zk wk "<<zk<<" "<<wk<<"\n";
             // The very first m_z is zero: this should work in COCG as an allowed initial guess
             m_previous[k].extrapolate( m_z);
-            dg::blas1::axpby( zk, d, 0., m_rhs);
-            dg::blas1::transform ( m_rhs, m_rhs, func);
-            dg::blas1::pointwiseDot( wk, m_rhs, b, 0., m_rhs);
-            m_multi.solve( shifted_ops, m_z, m_rhs, eps);
-            m_previous[k].update( m_z);
+
+            if( m_adjoint)
+            {
+                dg::blas1::axpby( zk, d, 0., m_rhs);
+                dg::blas1::transform ( m_rhs, m_rhs, func);
+                dg::blas1::pointwiseDot( wk, m_rhs, b, 0., m_rhs);
+                m_multi.solve( shifted_ops, m_z, m_rhs, eps);
+                m_previous[k].update( m_z);
+            }
+            else
+            {
+                dg::blas1::axpby( wk, b, 0., m_rhs);
+                m_multi.solve( shifted_ops, m_z, m_rhs, eps);
+                m_previous[k].update( m_z);
+                dg::blas1::axpby( zk, d, 0., m_rhs);
+                dg::blas1::transform ( m_rhs, m_rhs, func);
+                dg::blas1::pointwiseDot( m_rhs, m_z, m_z);
+            }
             dg::blas1::subroutine([]DG_DEVICE( thrust::complex<double> z, double& x) {
                 x += 2*z.real();}, m_z, x );
         }
@@ -563,23 +604,25 @@ struct CauchyMatrixProductAdj
     private:
 
     template<class MatrixType>
-    void update_extremeEVs( MatrixType&& A)
+    void update_extremeEVs(std::vector<MatrixType>& ops )
     {
-        dg::mat::UniversalLanczos<ComplexContainer> lanczos( A.weights(), 20);
-        auto T = lanczos.tridiag( A, A.weights(), A.weights());
+        dg::mat::UniversalLanczos<ComplexContainer> lanczos( ops[0].weights(), 2000);
+        if( m_verbose)
+            lanczos.set_verbose(true);
+        auto rnd = ops[0].weights();
+        dg::blas1::transform( rnd, rnd, dg::RandomNumbers<double>(0.0,1.0));
+        auto T = lanczos.tridiag( ops[0], rnd, ops[0].weights(), 1e-4, 1., "compute_extreme_EV");
+        //auto T = lanczos.tridiag( ops[0], rnd, ops[0].weights());
         auto EVs = dg::mat::compute_extreme_EV( T);
-        if( EVs[0] == 0)
+        m_lmax = EVs[1];
+        m_lmin = EVs[0];
+        m_with_zero = false;
+        if( m_lmin < 1e-10*m_lmax)
         {
+            if( m_verbose) DG_RANK0 std::cout << "# Found zero EV!\n";
             m_lmin = m_lmax/ m_grid_points;
             m_with_zero = true;
         }
-        else
-        {
-            m_lmin = EVs[0];
-            m_with_zero = false;
-        }
-
-        m_lmax = EVs[1];
         m_EV_up2date = true;
     }
 
@@ -590,6 +633,7 @@ struct CauchyMatrixProductAdj
     ComplexContainer m_z, m_rhs; // complex vectors
     unsigned m_grid_points;
     CauchyOptimizer m_cauchy_opt;
+    bool m_adjoint = true;
 
     bool m_with_zero = false;
     double m_lmin = 0, m_lmax = 0;

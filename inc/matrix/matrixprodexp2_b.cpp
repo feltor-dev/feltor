@@ -117,7 +117,7 @@ int main()
     for( unsigned k=0; k<outs_k.size(); k++)
     for( unsigned u=0; u<outs.size(); u++)
     {
-        dg::mat::GyrolagK<double> func(k, -alpha);
+        dg::mat::GyrolagK<double> func(k, alpha);
         std::cout << "\n#Compute x = "<<outs_k[k]<<outs[u]<<" b " << std::endl;
 
         Container x = dg::evaluate(lhs, g), x_exac(x), x_h(x), b(x), error(x);
@@ -251,7 +251,7 @@ int main()
             {
                 x_h = dg::evaluate(lhss, g); // -> g
                 dg::blas1::axpby(ell_facs, d, 0.0, fd);
-                dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,-alpha));
+                dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,alpha));
                 dg::blas1::pointwiseDot(fd, x_h, x_exac); //x_exac = f(-alpha*(ms^2+ns^2) d) sin(x*ms) cos(y*ms) \equiv exp(d,-alpha A) g
                 x_h = dg::evaluate(lhs, g); // -> f
                 double fOg = dg::blas2::dot( x_h, w2d, x_exac); //<f,exp(d,-alpha A) g>
@@ -267,7 +267,7 @@ int main()
             //Compute exact error for product exponential (is used also for adjoint product exponential since we have no analytical solution there)
             x_h = dg::evaluate(lhs, g);
             dg::blas1::axpby(ell_fac, d, 0.0, fd);
-            dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,-alpha));
+            dg::blas1::transform(fd, fd, dg::mat::GyrolagK<double>(0.,alpha));
             dg::blas1::pointwiseDot(fd, x_h, x_exac); //x_exac = f(-alpha*(m^2+n^2) d) sin(m x) cos(n y)
         }
         dg::blas1::axpby(1.0, x, -1.0, x_exac, error);
