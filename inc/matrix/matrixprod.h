@@ -614,8 +614,9 @@ struct CauchyMatrixProduct
         auto T = lanczos.tridiag( ops[0], rnd, ops[0].weights(), 1e-4, 1., "compute_extreme_EV");
         //auto T = lanczos.tridiag( ops[0], rnd, ops[0].weights());
         auto EVs = dg::mat::compute_extreme_EV( T);
-        m_lmax = EVs[1];
-        m_lmin = EVs[0];
+        // Let's use 10% safety range here (maybe test more but initial test show a slight improvement)
+        m_lmax = 1.1*EVs[1];
+        m_lmin = 0.9*EVs[0];
         m_with_zero = false;
         if( m_lmin < 1e-10*m_lmax)
         {
