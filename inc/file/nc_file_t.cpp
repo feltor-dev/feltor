@@ -59,6 +59,15 @@ TEST_CASE( "Test the NcFile class")
         file.close();
         DG_RANK0 std::filesystem::remove( absolute);
     }
+    SECTION( "New files have NetCDF-4 format")
+    {
+        dg::file::NcFile file( "test.nc", dg::file::nc_clobber);
+        auto format = file.get_format();
+        CHECK( format == NC_FORMAT_NETCDF4);
+        file.close();
+        DG_RANK0 std::filesystem::remove( "test.nc");
+
+    }
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
 #endif

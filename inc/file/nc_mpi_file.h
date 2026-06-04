@@ -149,6 +149,12 @@ struct MPINcFile
         return m_file.get_ncid();
     }
 
+    ///@copydoc SerialNcFile::get_format
+    int get_format()const
+    {
+        return mpi_invoke( &SerialNcFile::get_format, m_file);
+    }
+
     /// Return MPI communicator set in constructor
     MPI_Comm communicator() const { return m_comm;}
 

@@ -84,7 +84,8 @@ namespace file
 
 /*! @brief NetCDF file format
  *
- * All Files are opened/ created in Netcdf-4 data format
+ * All Files are created in Netcdf-4 data format. File format of existing files
+ * is automatically determined.
  * @note If you are looking for an "nc_append" you can use
 @code{.cpp}
 auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
@@ -109,7 +110,10 @@ enum NcFileMode
  *
  * @note This is a singleton that cannot be copied/assigned but only
  * moved/move-assign
- * @note Only Netcdf-4 files are supported
+ * @note New files are automatically created in netCDF-4 format. The format of
+ * existing files is automatically determined so one must take care not to use
+ * netCDF-4 operations (no groups etc) if the file format is not netCDF-4. The
+ * class will usually throw if something is not allowed.
  * @note The class hides all integer ids that the NetCDF C-library uses
  * ("Ids do not exist in the Netcdf-4 data model!")
  * @note Most member functions will throw if they are called on a closed file
@@ -133,7 +137,8 @@ struct SerialNcFile
      * execution path of the program** i.e. relative to \c
      * std::filesystem::current_path()
      * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
-     * nc_noclobber)
+     * nc_noclobber). The file format of existing files is automatically
+     * determined. The file format for new files is netCDF-4
      *
      * @snippet{trimleft} nc_file_t.cpp constructor
      * @sa NcFileMode
@@ -200,11 +205,11 @@ struct SerialNcFile
         switch (mode)
         {
             case nc_nowrite:
-                err = nc_open( filename.string().c_str(), NC_NETCDF4 |
+                err = nc_open( filename.string().c_str(),
                         NC_NOWRITE, &m_ncid);
                 break;
             case nc_write:
-                err = nc_open( filename.string().c_str(), NC_NETCDF4 |
+                err = nc_open( filename.string().c_str(),
                         NC_WRITE, &m_ncid);
                 break;
             case nc_noclobber:
@@ -263,6 +268,20 @@ struct SerialNcFile
      * closing the file or whatever
      */
     int get_ncid() const noexcept{ return m_ncid;}
+
+    /*! @brief Check the binary file format of the netCDF file
+     *
+     * A wrapper around `nc_inq_format`
+     * @return One of NC_FORMAT_CLASSIC, NC_FORMAT_64BIT_OFFSET,
+     * NC_FORMAT_CDF5, NC_FORMAT_NETCDF4, NC_FORMAT_NETCDF4_CLASSIC
+     */
+    int get_format() const
+    {
+        file::NC_Error_Handle err;
+        int formatp;
+        err = nc_inq_format(m_ncid, &formatp);
+        return formatp;
+    }
 
     // ///////////// Groups /////////////////
     /*! Define a group named \c name in the current group
