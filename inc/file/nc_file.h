@@ -939,8 +939,8 @@ struct SerialNcFile
      *
      * @snippet{trimleft} nc_file_t.cpp get_var
      * @param name of previously defined variable
-     * @param start coordinate to take scalar from (can be empty for scalar
-     * variable)
+     * @param start coordinate to take scalar from (can be empty/is ignored for
+     * 0d variable)
      * @param data Result on output
      */
     template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
@@ -958,6 +958,54 @@ struct SerialNcFile
             std::vector<size_t> count( start.size(), 1);
             err = detail::get_vara_T( m_grp, varid, &start[0], &count[0], &data);
         }
+    }
+
+    /*! @brief Convenience shortcut (vector version)
+     *
+     * Short for
+     * @code{.cpp}
+     *  ContainerType data;
+     *  get_var( name, slab, data);
+     *  return data;
+     * @endcode
+     */
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, SharedVectorTag>, bool > = true>
+    ContainerType get_var_as( std::string name, const NcHyperslab& slab) const
+    {
+        ContainerType data;
+        get_var( name, slab, data);
+        return data;
+    }
+    /*! @brief Convenience shortcut for <tt>get_var_as<ContainerType>( name, {*this, name});</tt>
+     *
+     * @attention This has no MPI correspondance (because we cannot
+     * automatically infer the distribution of data among participating
+     * processes)
+     */
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, SharedVectorTag>, bool > = true>
+    ContainerType get_var_as( std::string name) const
+    {
+        // ! Does not work for MPI !
+        return get_var_as<ContainerType>( name, {*this, name});
+    }
+
+    /*! @brief Convenience shortcut (scalar version)
+     *
+     * Short for
+     * @code{.cpp}
+     *  T var;
+     *  nc_file.get_var( name, start, var);
+     *  return var;
+     * @endcode
+     */
+    template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
+    T get_var_as( std::string name, const std::vector<size_t>& start = {}) const
+    {
+        T var;
+        get_var( name, start, var);
+        return var;
     }
 
     /// Check if variable named \c name is defined in the current group

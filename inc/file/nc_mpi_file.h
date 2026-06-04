@@ -486,6 +486,27 @@ struct MPINcFile
             mpi_bcast( data);
     }
 
+    ///@copydoc SerialNcFile::get_var_as(std::string,const NcHyperslab&)const
+    template<class ContainerType, typename = std::enable_if_t<
+        dg::is_vector_v<ContainerType, dg::SharedVectorTag> or
+        dg::is_vector_v<ContainerType, dg::MPIVectorTag>>>
+    ContainerType get_var_as( std::string name, const MPINcHyperslab& slab
+            ) const
+    {
+        ContainerType data;
+        get_var( name, slab, data);
+        return data;
+    }
+
+    ///@copydoc SerialNcFile::get_var_as(std::string,const std::vector<size_t>&)const
+    template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
+    T get_var_as( std::string name, const std::vector<size_t>& start = {}) const
+    {
+        T var;
+        get_var( name, start, var);
+        return var;
+    }
+
     ///@copydoc SerialNcFile::var_is_defined
     bool var_is_defined( std::string name) const
     {

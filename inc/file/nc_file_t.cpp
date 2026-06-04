@@ -366,8 +366,7 @@ TEST_CASE( "Test variables in the NcFile class")
         //! [var_is_defined]
         file.put_var( "scalar", {}, 42);
         CHECK( file.get_var_dims("scalar").empty());
-        int scalar;
-        file.get_var( "scalar", {}, scalar);
+        int scalar = file.get_var_as<int>( "scalar");
         CHECK( scalar == 42);
     }
     SECTION( "Variable attributes exist")
@@ -389,16 +388,25 @@ TEST_CASE( "Test variables in the NcFile class")
         file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
         file.put_var("time", {52}, 10);
         file.close();
-        double test;
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         file.open( "variables.nc", mode);
         CHECK( file.var_is_defined( "time"));
         CHECK( file.att_is_defined( "axis", "time"));
         CHECK( file.get_att_as<std::string>( "axis", "time") == "T");
         //![get_var]
+        double test = file.get_var_as<double>("time", {52});
+        CHECK( test == 10);
+        // or
         file.get_var("time", {52}, test);
         CHECK( test == 10);
         //![get_var]
+        // or
+#ifndef MPI_VERSION
+        auto times = file.get_var_as<std::vector<double>>( "time");
+        CHECK( times.size() == 53);
+        CHECK( times[52] == 10);
+#endif
+
     }
     SECTION( "Group sees dimension")
     {

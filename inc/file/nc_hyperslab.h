@@ -48,7 +48,7 @@ struct NcHyperslab
         assert( start.size() == count.size());
     }
 
-    /*! <tt>{0}, {file.get_dims_shape( file.get_var_dims(name))}</tt>
+    /*! @brief <tt>{0}, {file.get_dims_shape( file.get_var_dims(name))}</tt>
      *
      * Infer hyperslab from the dimensions of the variable
      * @param file Reference to the file object \c get_dims_shape and \c
@@ -59,7 +59,7 @@ struct NcHyperslab
     NcHyperslab( const File& file, std::string name)
     {
         auto dims = file.get_var_dims(name);
-        m_count = std::vector<size_t>( get_dims_shape( dims));
+        m_count = std::vector<size_t>( file.get_dims_shape( dims));
         m_start = std::vector<size_t>( dims.size(), 0);
     }
 
