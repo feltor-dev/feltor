@@ -55,7 +55,8 @@ struct MatrixSqrt
         m_lanczos.construct( weights, max_iter);
 
         dg::mat::UniversalLanczos<ContainerType> eigen( weights, 2000);
-        const Container rnd = dg::evaluate( dg::RandomNumbers<double>(0,1), grid);
+        const ContainerType rnd = weights;
+        dg::blas1::transform( rnd, rnd, dg::RandomNumbers<double>(0,1));
         auto T = eigen.tridiag( A, rnd, weights);
         m_EVs = dg::mat::compute_extreme_EV( T);
     }

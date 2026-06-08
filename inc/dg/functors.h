@@ -297,7 +297,7 @@ struct UniformRealDistribution
     template< class ...Ts>
 DG_DEVICE T operator()( Ts... )
     {
-        return m_dist(m_rng);
+        return m_dist(m_rng); //what happens on GPU? Does every thread get the same?
     }
     private:
     thrust::minstd_rand m_rng;
