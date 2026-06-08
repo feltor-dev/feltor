@@ -102,7 +102,7 @@ struct MPINcFile
     /*!@copydoc SerialNcFile::open
      * @note if <tt>mode</tt> contains the <tt>NC_OPEN</tt> and
      * <tt>NC_NOWRITE</tt> flags all ranks in comm open the file and the read
-     * member functions involve no communication
+     * member functions involve **no communication**
      * @note May invoke \c MPI_Barrier so that all ranks see the existence of a
      * possibly new file
      */

@@ -29,7 +29,7 @@ TEST_CASE( "Test the NcFile class")
         CHECK( file.is_open());
         // Cannot open another file while open
         CHECK_THROWS_AS( file.open("test.nc"), dg::file::NC_Error);
-        // Calls nc_open( "test.nc", NC_NOWRITE, &ncid);
+        // This will call nc_open( "test.nc", NC_NOWRITE, &ncid);
         file.close();
         //! [constructor]
         DG_RANK0 std::filesystem::remove( "../test.nc");
@@ -41,6 +41,7 @@ TEST_CASE( "Test the NcFile class")
         //! [default]
         dg::file::NcFile file;
         file.open("test.nc", dg::file::nc_noclobber);
+        // This will call nc_create("test.nc", dg::file::NC_CREATE | NC_NOCLOBBER | NC_NETCDF4, &ncid);
         CHECK( file.is_open());
         file.close();
         //! [default]

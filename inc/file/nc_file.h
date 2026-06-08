@@ -32,6 +32,26 @@ namespace file
  * manipulate them
  * @snippet{trimleft} nc_file_t.cpp groups
  */
+/*! @class hide_open_details
+ *
+ * @brief Open/Create a netCDF file.
+ *
+ * Call <tt>nc_open</tt> / <tt>nc_create</tt> depending on the \c
+ * dg::file::NC_OPEN and the \c dg::file::NC_CREATE flags in the \c mode
+ * integer. \c mode minus \c dg::file::NC_OPEN respectively \c
+ * dg::file::NC_CREATE is then forwarded to the \c nc_open / \c nc_create
+ * function.
+ * @param filename  Name or path including the name of the netCDF file to
+ * open or create. The path may be either absolute or **relative to the
+ * execution path of the program** i.e. relative to \c
+ * std::filesystem::current_path()
+ * @param mode flags forwarded to either <tt>nc_open</tt> or <tt>nc_create</tt>.
+ * The dg::file::NC_OPEN and dg::file::NC_CREATE flags are used to determine which
+ * function is called and are removed before forwarding.
+ * (see \c dg::file::NcFileMode for convenience flags dg::file::nc_nowrite,
+ * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber).
+ * @sa NcFileMode
+ */
 /*! @class hide_dimension_hiding
  *
  * @note Dimensions are **visible** in a group and all of its subgroups.  Now,
@@ -136,19 +156,8 @@ struct SerialNcFile
     /// @snippet{trimleft} nc_file_t.cpp default
     SerialNcFile () = default;
     /*!
-     * @brief Open/Create a netCDF file.
-     * @param filename  Name or path including the name of the netCDF file to
-     * open or create. The path may be either absolute or **relative to the
-     * execution path of the program** i.e. relative to \c
-     * std::filesystem::current_path()
-     * @param mode flags forwarded to either <tt>nc_open</tt> or <tt>nc_create</tt>.
-     * The dg::file::NC_OPEN and dg::file::NC_CREATE flags are used to determine which
-     * function is called and are removed before forwarding.
-     * (see \c dg::file::NcFileMode for convenience flags dg::file::nc_nowrite,
-     * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber).
-     *
+     * @copydoc hide_open_details
      * @snippet{trimleft} nc_file_t.cpp constructor
-     * @sa NcFileMode
      */
     SerialNcFile(const std::filesystem::path& filename,
             int mode = nc_nowrite)
@@ -187,19 +196,10 @@ struct SerialNcFile
     }
     // /////////////////// open/close /////////
 
-    /*! Explicitly open or create a netCDF file
-     *
-     * @param filename  Name or path including the name of the netCDF file to
-     * open or create. The path may be either absolute or **relative to the
-     * execution path of the program** i.e. relative to \c
-     * std::filesystem::current_path()
-     * @param mode flags forwarded to either <tt>nc_open</tt> or <tt>nc_create</tt>.
-     * The dg::file::NC_OPEN and dg::file::NC_CREATE flags are used to determine which
-     * function is called and are removed before forwarding.
-     * (see \c dg::file::NcFileMode for convenience flags dg::file::nc_nowrite,
-     * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber).
-     * @note Just like \c std::fstream opening fails if a file is already
-     * associated (\c is_open()) \c close() it before opening a new file.
+    /*!
+     * @copydoc hide_open_details
+     * @note Just like for \c std::fstream opening fails if a file is already
+     * associated (\c is_open()). \c close() it before opening a new file!
      *
      * @snippet{trimleft} nc_file_t.cpp default
     */
