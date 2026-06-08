@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <numeric> // lcm and gcd
 #include "grid.h"
 #include "interpolation.h"
 #include "weights.h"
@@ -10,44 +11,6 @@
   @brief Creation of projection matrices
  */
 namespace dg{
-
-/**
- * @brief Greatest common divisor
- *
- * @param a First number
- * @param b Second number
- *
- * @return greatest common divisor
- * @ingroup basics
- */
-template<class T>
-T gcd( T a, T b)
-{
-    T r2 = std::max(a,b);
-    T r1 = std::min(a,b);
-    while( r1!=0)
-    {
-        r2 = r2%r1;
-        std::swap( r1, r2);
-    }
-    return r2;
-}
-
-/**
- * @brief Least common multiple
- *
- * @param a Fist number
- * @param b Second number
- *
- * @return Least common multiple
- * @ingroup basics
- */
-template<class T>
-T lcm( T a, T b)
-{
-    T g = gcd( a,b);
-    return a/g*b;
-}
 
 namespace create{
 ///@addtogroup interpolation
@@ -176,8 +139,8 @@ dg::SparseMatrix< int, real_type, thrust::host_vector> transformation(
     std::array<unsigned, Nd> n_lcm{}, N_lcm{};
     for( unsigned u=0; u<Nd; u++)
     {
-        n_lcm [u] = lcm( g_new.n(u), g_old.n(u));
-        N_lcm [u] = lcm( g_new.N(u), g_old.N(u));
+        n_lcm [u] = std::lcm( g_new.n(u), g_old.n(u));
+        N_lcm [u] = std::lcm( g_new.N(u), g_old.N(u));
     }
     RealGrid<real_type, Nd> g_lcm ( g_new.get_p(), g_new.get_q(), n_lcm, N_lcm, g_new.get_bc());
     return create::projection( g_new, g_lcm)*create::interpolation( g_lcm, g_old);
