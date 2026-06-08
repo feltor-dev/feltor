@@ -24,10 +24,12 @@ TEST_CASE( "Test the NcFile class")
     {
         //! [constructor]
         dg::file::NcFile file( "../test.nc", dg::file::nc_clobber);
+        // This will call nc_create( "../test.nc", NC_CLOBBER | NC_NETCDF4, &ncid);
         CHECK( std::filesystem::exists( "../test.nc"));
         CHECK( file.is_open());
         // Cannot open another file while open
         CHECK_THROWS_AS( file.open("test.nc"), dg::file::NC_Error);
+        // Calls nc_open( "test.nc", NC_NOWRITE, &ncid);
         file.close();
         //! [constructor]
         DG_RANK0 std::filesystem::remove( "../test.nc");
@@ -68,9 +70,37 @@ TEST_CASE( "Test the NcFile class")
         DG_RANK0 std::filesystem::remove( "test.nc");
 
     }
+    SECTION( "Create and open files with custom flags")
+    {
+        dg::file::NcFile file( "old-netcdf.nc", dg::file::NC_CREATE | NC_CLOBBER | NC_64BIT_OFFSET );
+        auto format = file.get_format();
+        CHECK( format == NC_FORMAT_64BIT_OFFSET);
+        file.close();
+        file.open( "old-netcdf.nc");
+        format = file.get_format();
+        CHECK( format == NC_FORMAT_64BIT_OFFSET);
+        file.close();
+        CHECK_THROWS_AS( file.open("old-netcdf.nc", dg::file::NC_CREATE | dg::file::NC_OPEN),
+            dg::file::NC_Error);
+        DG_RANK0 std::filesystem::remove( "old-netcdf.nc");
+    }
 #ifdef WITH_MPI
+    SECTION( "Hidden readonly param")
+    {
+        // Here we test the code line that sets the readonly parameter
+        std::vector<int> modes = { dg::file::nc_noclobber, dg::file::nc_clobber, dg::file::nc_write, dg::file::nc_nowrite,
+            NC_NOWRITE | dg::file::NC_OPEN | NC_DISKLESS, NC_CLOBBER | dg::file::NC_CREATE | NC_64BIT_OFFSET
+        };
+        std::vector<bool> readonlies = { false, false, false, true, true, false};
+        for(unsigned i=0; i<modes.size(); i++)
+        {
+            int mode = modes[i];
+            bool readonly = ( mode & dg::file::NC_OPEN and not (mode & NC_WRITE));
+            CHECK( readonly == readonlies[i]);
+        }
+    }
     MPI_Barrier( MPI_COMM_WORLD);
-#endif
+#endif // WITH_MPI
 }
 TEST_CASE( "Open, groups, dims, atts")
 {

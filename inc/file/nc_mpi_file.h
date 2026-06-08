@@ -5,7 +5,7 @@
 
 /*!@file
  *
- * Our take on a modern C++ implementation of the NetCDF-4 data model
+ * Our take on a modern C++ implementation of the NetCDF data model
  * MPI - Version
  */
 
@@ -14,7 +14,7 @@ namespace dg
 namespace file
 {
 
-/*! @brief MPI NetCDF-4 file based on **serial** NetCDF
+/*! @brief MPI NetCDF file based on **serial** NetCDF
  *
  * by funneling all file operations through the rank 0 of the given
  * communicator. In general, only the rank 0 actually opens, reads and writes
@@ -55,11 +55,11 @@ struct MPINcFile
     MPINcFile (MPI_Comm comm = MPI_COMM_WORLD)
     : m_comm(comm)
     {}
-    /*! @copydoc SerialNcFile::SerialNcFile(const std::filesystem::path&,enum NcFileMode)
+    /*! @copydoc SerialNcFile::SerialNcFile(const std::filesystem::path&,int)
      * @param comm All ranks in comm must participate in all subsequent member
      * function calls
      */
-    MPINcFile(const std::filesystem::path& filename, enum NcFileMode mode =
+    MPINcFile(const std::filesystem::path& filename, int mode =
         nc_nowrite, MPI_Comm comm = MPI_COMM_WORLD)
     : m_comm(comm)
     {
@@ -100,20 +100,24 @@ struct MPINcFile
     // /////////////////// open/close /////////
 
     /*!@copydoc SerialNcFile::open
-     * @note if <tt> mode == nc_nowrite</tt> all ranks in comm open the file and
-     *  the read member functions involve no communication
+     * @note if <tt>mode</tt> contains the <tt>NC_OPEN</tt> and
+     * <tt>NC_NOWRITE</tt> flags all ranks in comm open the file and the read
+     * member functions involve no communication
      * @note May invoke \c MPI_Barrier so that all ranks see the existence of a
      * possibly new file
      */
     void open(const std::filesystem::path& filename,
-            enum NcFileMode mode = nc_nowrite)
+            int mode = nc_nowrite)
     {
         // General problem: HDF5 may use file locks to prevent multiple processes
         // from opening the same file for write at the same time
         int rank;
         MPI_Comm_rank( m_comm, &rank);
         m_rank0 = (rank == 0);
-        m_readonly = ( mode == nc_nowrite);
+
+        // !!! IF THIS LINE IS CHANGED ALSO CHANGE THE TEST in nc_file_t !!!
+        m_readonly = ( mode & NC_OPEN and not (mode & NC_WRITE));
+
         // Classic file access, one process writes, everyone else reads
         mpi_invoke_void( &SerialNcFile::open, m_file, filename, mode);
         MPI_Barrier( m_comm); // all ranks agree that file exists

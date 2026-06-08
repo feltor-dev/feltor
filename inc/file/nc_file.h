@@ -82,25 +82,32 @@ namespace file
  * See <a href="https://github.com/Unidata/netcdf-c/issues/1898">NetCDF issue</a>
  */
 
-/*! @brief NetCDF file format
+// Developper note: The reason we need our own flag is that NC_NOWRITE and
+// NC_CLOBBER are both defined as 0x0000 in the netcdf library so we need a
+// way to distinguish them because we merge nc_open and nc_create into one
+// function
+// Developper note: 0x1, 0x2, 0x4, etc read as bit-maps 0000, 0001, 0010,
+// 0100, etc. so these are quite useful as flags
+inline constexpr int NC_OPEN = 0x10000000; //!< dispatch to function <tt>nc_open</tt>
+inline constexpr int NC_CREATE = 0x20000000; //!< dispatch to function <tt>nc_create</tt>
+
+/*! @brief Convenience NetCDF file opening/create flag combinations
  *
- * All Files are created in Netcdf-4 data format. File format of existing files
- * is automatically determined.
  * @note If you are looking for an "nc_append" you can use
 @code{.cpp}
 auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
 @endcode
 @ingroup netcdf
 */
-enum NcFileMode
+enum NcFileMode : int
 {
-    nc_nowrite,  //!< NC_NOWRITE Open an existing file for read-only access, fail if it does not exist
-    nc_write,    //!< NC_WRITE Open an existing file for read and write access, fail if it does not exist
-    nc_clobber, //!< NC_CLOBBER Create a new file for read and write access, overwrite if file exists
-    nc_noclobber, //!< NC_NOCLOBBER Create new file for read and write access, fail if already exists
+    nc_nowrite = NC_NOWRITE | NC_OPEN,  //!< Short for <tt>dg::file::NC_OPEN | NC_NOWRITE</tt> Call <tt>nc_open(path, NC_NOWRITE, ...);</tt>. Open an existing file for read-only access, fail if it does not exist; file format is automatically determined
+    nc_write = NC_WRITE | NC_OPEN,  //!< Short for <tt>dg::file::NC_OPEN | NC_WRITE</tt> Call <tt>nc_open(path, NC_WRITE, ...)</tt>Open an existing file for read and write access, fail if it does not exist; file format is automatically determined
+    nc_clobber = NC_CLOBBER | NC_NETCDF4 | NC_CREATE, //!< Short for <tt>dg::file::NC_CREATE | NC_CLOBBER | NC_NETCDF4</tt> Call <tt>nc_create( path, NC_CLOBBER | NC_NETCDF4, ...);</tt>Create a new netCDF-4 file for read and write access, overwrite if file exists
+    nc_noclobber = NC_NOCLOBBER | NC_NETCDF4 | NC_CREATE, //!< Short for <tt>dg::file::NC_CREATE | NC_NOCLOBBER | NC_NETCDF4</tt>Call <tt>nc_create( path, NC_NOCLOBBER | NC_NETCDF4, ...);</tt> Create new netCDF-4 file for read and write access, fail if already exists
 };
 
-/*! @brief Serial NetCDF-4 file
+/*! @brief Serial NetCDF file
  *
  * Our take on a modern C++ implementation of
 <a href="https://docs.unidata.ucar.edu/netcdf-c/4.9.2/netcdf_data_model.html">the NetCDF-4 data model</a>
@@ -108,14 +115,12 @@ enum NcFileMode
  * See here a usage example
  * @snippet nc_utilities_t.cpp ncfile
  *
- * @note This is a singleton that cannot be copied/assigned but only
- * moved/move-assign
- * @note New files are automatically created in netCDF-4 format. The format of
- * existing files is automatically determined so one must take care not to use
- * netCDF-4 operations (no groups etc) if the file format is not netCDF-4. The
- * class will usually throw if something is not allowed.
+ * @note This class cannot be copied/assigned but only moved/move-assign
+ * @note If the file format of newly created or opened files is not netCDF-4
+ * one should take care not to use netCDF-4 operations (no groups etc). The
+ * class will throw if something is not allowed.
  * @note The class hides all integer ids that the NetCDF C-library uses
- * ("Ids do not exist in the Netcdf-4 data model!")
+ * ("Ids do not exist in the NetCDF data model!")
  * @note Most member functions will throw if they are called on a closed file
  * @sa Conventions to follow are the
  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html">CF-conventions</a>
@@ -136,15 +141,17 @@ struct SerialNcFile
      * open or create. The path may be either absolute or **relative to the
      * execution path of the program** i.e. relative to \c
      * std::filesystem::current_path()
-     * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
-     * nc_noclobber). The file format of existing files is automatically
-     * determined. The file format for new files is netCDF-4
+     * @param mode flags forwarded to either <tt>nc_open</tt> or <tt>nc_create</tt>.
+     * The dg::file::NC_OPEN and dg::file::NC_CREATE flags are used to determine which
+     * function is called and are removed before forwarding.
+     * (see \c dg::file::NcFileMode for convenience flags dg::file::nc_nowrite,
+     * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber).
      *
      * @snippet{trimleft} nc_file_t.cpp constructor
      * @sa NcFileMode
      */
     SerialNcFile(const std::filesystem::path& filename,
-            enum NcFileMode mode = nc_nowrite)
+            int mode = nc_nowrite)
     {
         open( filename, mode);
     }
@@ -186,15 +193,18 @@ struct SerialNcFile
      * open or create. The path may be either absolute or **relative to the
      * execution path of the program** i.e. relative to \c
      * std::filesystem::current_path()
-     * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
-     * nc_noclobber)
+     * @param mode flags forwarded to either <tt>nc_open</tt> or <tt>nc_create</tt>.
+     * The dg::file::NC_OPEN and dg::file::NC_CREATE flags are used to determine which
+     * function is called and are removed before forwarding.
+     * (see \c dg::file::NcFileMode for convenience flags dg::file::nc_nowrite,
+     * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber).
      * @note Just like \c std::fstream opening fails if a file is already
      * associated (\c is_open()) \c close() it before opening a new file.
      *
      * @snippet{trimleft} nc_file_t.cpp default
     */
     void open(const std::filesystem::path& filename,
-            enum NcFileMode mode = nc_nowrite)
+            int mode = nc_nowrite)
     {
         // Like a std::fstream opening fails if file already associated
         if( m_open)
@@ -202,25 +212,22 @@ struct SerialNcFile
 
         // TODO Test the pathing on Windows
         NC_Error_Handle err;
-        switch (mode)
+        if( (mode & NC_OPEN) && (mode & NC_CREATE)) // both bits are set
         {
-            case nc_nowrite:
-                err = nc_open( filename.string().c_str(),
-                        NC_NOWRITE, &m_ncid);
-                break;
-            case nc_write:
-                err = nc_open( filename.string().c_str(),
-                        NC_WRITE, &m_ncid);
-                break;
-            case nc_noclobber:
-                err = nc_create( filename.string().c_str(), NC_NETCDF4 |
-                        NC_NOCLOBBER, &m_ncid);
-                break;
-            case nc_clobber:
-                err = nc_create( filename.string().c_str(), NC_NETCDF4 |
-                        NC_CLOBBER, &m_ncid);
-                break;
+            throw NC_Error( 1003);
         }
+        else if( mode & NC_OPEN) // check if bit is set
+        {
+            err = nc_open( filename.string().c_str(),
+                    mode ^ NC_OPEN, &m_ncid); // XOR removes bit
+        }
+        else if( mode & NC_CREATE)
+        {
+            err = nc_create( filename.string().c_str(),
+                    mode ^ NC_CREATE, &m_ncid);
+        }
+        else //  no bit is set
+            throw NC_Error( 1003);
         m_open = true;
         m_grp = m_ncid;
     }
