@@ -291,7 +291,7 @@ struct SerialNcFile
     }
 
     // ///////////// Groups /////////////////
-    /*! Define a group named \c name in the current group
+    /*! @brief Define a group named \c name in the current group
      *
      * @copydoc hide_grps_NetCDF_example
      * Think of this as the bash command \c mkdir name
@@ -309,7 +309,7 @@ struct SerialNcFile
         // Is no performance hit as cached
     }
 
-    /*! Define a group named \c path and all required intermediary groups
+    /*! @brief Define a group named \c path and all required intermediary groups
      *
      * @copydoc hide_grps_NetCDF_example
      * Think of this as the bash command \c mkdir -p path
@@ -405,7 +405,7 @@ struct SerialNcFile
             err = nc_inq_grp_full_ncid( m_ncid, name.c_str(), &m_grp);
         }
     }
-    /// rename a subgroup in the current group from \c old_name to \c new_name
+    /// @brief rename a subgroup in the current group from \c old_name to \c new_name
     /// @copydoc hide_grps_NetCDF_example
     void rename_grp( std::string old_name, std::string new_name)
     {
@@ -426,7 +426,7 @@ struct SerialNcFile
         return get_grp_path( m_grp);
     }
 
-    /// Get all subgroups in the current group as absolute paths
+    /// @brief Get all subgroups in the current group as absolute paths
     /// @copydoc hide_grps_NetCDF_example
     std::list<std::filesystem::path> get_grps( ) const
     {
@@ -514,7 +514,7 @@ struct SerialNcFile
             shape[u] = get_dim_size( dims[u]);
         return shape;
     }
-    /*! Get all visible dimension names in the current group
+    /*! @brief Get all visible dimension names in the current group
      *
      * The visible dimensions are all the dimensions in the current group
      * and all its parent group.
@@ -550,7 +550,7 @@ struct SerialNcFile
         return dims;
     }
 
-    /*! Get all visible unlimited dimension names in the current group
+    /*! @brief Get all visible unlimited dimension names in the current group
      *
      * @copydoc hide_dimension_hiding
      * This function **does not** include the parent groups
@@ -717,8 +717,15 @@ struct SerialNcFile
         int retval = nc_inq_attid( m_grp, varid, att_name.c_str(), &attid);
         return retval == NC_NOERR;
     }
-    /// Rename an attribute
-    /// @snippet{trimleft} nc_file_t.cpp rename_att
+    /*! @brief Rename an attribute of the variable \c id
+     *
+     * @param old_att_name Name of the attribute to change
+     * @param new_att_name New mane of the attribute
+     * @param id Variable name in the current group or empty string, in which
+     * case the attributes refer to the current group
+     *
+     * @snippet{trimleft} nc_file_t.cpp rename_att
+     */
     void rename_att(std::string old_att_name, std::string
             new_att_name, std::string id = "")
     {
