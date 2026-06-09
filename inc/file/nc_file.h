@@ -36,20 +36,15 @@ namespace file
  *
  * @brief Open/Create a netCDF file.
  *
- * Call <tt>nc_open</tt> / <tt>nc_create</tt> depending on the \c
- * dg::file::NC_OPEN and the \c dg::file::NC_CREATE flags in the \c mode
- * integer. \c mode minus \c dg::file::NC_OPEN respectively \c
- * dg::file::NC_CREATE is then forwarded to the \c nc_open / \c nc_create
- * function.
+ * Call <tt>nc_open</tt> / <tt>nc_create</tt> depending on the value of \c mode
  * @param filename  Name or path including the name of the netCDF file to
  * open or create. The path may be either absolute or **relative to the
  * execution path of the program** i.e. relative to \c
  * std::filesystem::current_path()
- * @param mode flags forwarded to either <tt>nc_open</tt> or <tt>nc_create</tt>.
- * The dg::file::NC_OPEN and dg::file::NC_CREATE flags are used to determine which
- * function is called and are removed before forwarding.
- * (see \c dg::file::NcFileMode for convenience flags dg::file::nc_nowrite,
- * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber).
+ * @param mode see \c dg::file::NcFileMode for possible values dg::file::nc_nowrite,
+ * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber.
+ * @attention Only netCDF-4 files can be created and only netCDF-4 files can be
+ * opened for write access. All file formats can be opened in NC_NOWRITE mode.
  * @sa NcFileMode
  */
 /*! @class hide_dimension_hiding
@@ -108,10 +103,8 @@ namespace file
 // function
 // Developper note: 0x1, 0x2, 0x4, etc read as bit-maps 0000, 0001, 0010,
 // 0100, etc. so these are quite useful as flags
-inline constexpr int NC_OPEN = 0x10000000; //!< dispatch to function <tt>nc_open</tt>
-inline constexpr int NC_CREATE = 0x20000000; //!< dispatch to function <tt>nc_create</tt>
 
-/*! @brief Convenience NetCDF file opening/create flag combinations
+/*! @brief Convenience NetCDF file opening/create flags
  *
  * @note If you are looking for an "nc_append" you can use
 @code{.cpp}
@@ -119,15 +112,15 @@ auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
 @endcode
 @ingroup netcdf
 */
-enum NcFileMode : int
+enum NcFileMode
 {
-    nc_nowrite = NC_NOWRITE | NC_OPEN,  //!< Short for <tt>dg::file::NC_OPEN | NC_NOWRITE</tt> Call <tt>nc_open(path, NC_NOWRITE, ...);</tt>. Open an existing file for read-only access, fail if it does not exist; file format is automatically determined
-    nc_write = NC_WRITE | NC_OPEN,  //!< Short for <tt>dg::file::NC_OPEN | NC_WRITE</tt> Call <tt>nc_open(path, NC_WRITE, ...)</tt>Open an existing file for read and write access, fail if it does not exist; file format is automatically determined
-    nc_clobber = NC_CLOBBER | NC_NETCDF4 | NC_CREATE, //!< Short for <tt>dg::file::NC_CREATE | NC_CLOBBER | NC_NETCDF4</tt> Call <tt>nc_create( path, NC_CLOBBER | NC_NETCDF4, ...);</tt>Create a new netCDF-4 file for read and write access, overwrite if file exists
-    nc_noclobber = NC_NOCLOBBER | NC_NETCDF4 | NC_CREATE, //!< Short for <tt>dg::file::NC_CREATE | NC_NOCLOBBER | NC_NETCDF4</tt>Call <tt>nc_create( path, NC_NOCLOBBER | NC_NETCDF4, ...);</tt> Create new netCDF-4 file for read and write access, fail if already exists
+    nc_nowrite,  //!< Call <tt>nc_open(path, NC_NOWRITE, ...);</tt>. Open an existing file for read-only access, fail if it does not exist; file format is automatically determined (i.e. can be other than netCDF-4)
+    nc_write,  //!< Call <tt>nc_open(path, NC_WRITE, ...)</tt>Open an existing (netCDF-4 file for read and write access, fail if it does not exist;
+    nc_clobber, //!< Call <tt>nc_create( path, NC_CLOBBER | NC_NETCDF4, ...);</tt>Create a new netCDF-4 file for read and write access, overwrite if file exists
+    nc_noclobber, //!< Call <tt>nc_create( path, NC_NOCLOBBER | NC_NETCDF4, ...);</tt> Create new netCDF-4 file for read and write access, fail if already exists
 };
 
-/*! @brief Serial NetCDF file
+/*! @brief Serial NetCDF-4 file
  *
  * Our take on a modern C++ implementation of
 <a href="https://docs.unidata.ucar.edu/netcdf-c/4.9.2/netcdf_data_model.html">the NetCDF-4 data model</a>
@@ -136,10 +129,11 @@ enum NcFileMode : int
  * @snippet nc_utilities_t.cpp ncfile
  *
  * @note This class cannot be copied/assigned but only moved/move-assign
- * @note If the file format of newly created or opened files is not netCDF-4
- * one should take care not to use netCDF-4 operations (no groups etc). The
- * class will throw if something is not allowed.
- * @note The class hides all integer ids that the NetCDF C-library uses
+ * @note Only netCDF-4 format is supported in write mode. The reason is that we
+ * do not expose the \c nc_enddef and \c nc_redef meachanism of the old netCDF
+ * formats. Read-only access of old netCDF formats works fine.
+ * @note The class hides all integer ids that the NetCDF C-library uses as well
+ * as the distinction between define mode and data mode.
  * ("Ids do not exist in the NetCDF data model!")
  * @note Most member functions will throw if they are called on a closed file
  * @sa Conventions to follow are the
@@ -160,7 +154,7 @@ struct SerialNcFile
      * @snippet{trimleft} nc_file_t.cpp constructor
      */
     SerialNcFile(const std::filesystem::path& filename,
-            int mode = nc_nowrite)
+            enum NcFileMode mode = nc_nowrite)
     {
         open( filename, mode);
     }
@@ -209,25 +203,27 @@ struct SerialNcFile
         // Like a std::fstream opening fails if file already associated
         if( m_open)
             throw NC_Error( 1002);
-
         // TODO Test the pathing on Windows
         NC_Error_Handle err;
-        if( (mode & NC_OPEN) && (mode & NC_CREATE)) // both bits are set
+        switch (mode)
         {
-            throw NC_Error( 1003);
+            case nc_nowrite:
+                err = nc_open( filename.string().c_str(), NC_NETCDF4 |
+                        NC_NOWRITE, &m_ncid);
+                break;
+            case nc_write:
+                err = nc_open( filename.string().c_str(), NC_NETCDF4 |
+                        NC_WRITE, &m_ncid);
+                break;
+            case nc_noclobber:
+                err = nc_create( filename.string().c_str(), NC_NETCDF4 |
+                        NC_NOCLOBBER, &m_ncid);
+                break;
+            case nc_clobber:
+                err = nc_create( filename.string().c_str(), NC_NETCDF4 |
+                        NC_CLOBBER, &m_ncid);
+                break;
         }
-        else if( mode & NC_OPEN) // check if bit is set
-        {
-            err = nc_open( filename.string().c_str(),
-                    mode ^ NC_OPEN, &m_ncid); // XOR removes bit
-        }
-        else if( mode & NC_CREATE)
-        {
-            err = nc_create( filename.string().c_str(),
-                    mode ^ NC_CREATE, &m_ncid);
-        }
-        else //  no bit is set
-            throw NC_Error( 1003);
         m_open = true;
         m_grp = m_ncid;
     }
@@ -278,6 +274,7 @@ struct SerialNcFile
 
     /*! @brief Check the binary file format of the netCDF file
      *
+     * useful if an unkown file is opened.
      * A wrapper around `nc_inq_format`
      * @return One of NC_FORMAT_CLASSIC, NC_FORMAT_64BIT_OFFSET,
      * NC_FORMAT_CDF5, NC_FORMAT_NETCDF4, NC_FORMAT_NETCDF4_CLASSIC
@@ -667,7 +664,6 @@ struct SerialNcFile
 
     /*! @brief Read all NetCDF attributes of a certain type
      *
-     * For example
      * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
      * @return A Dictionary containing all the attributes of a certain type
      * for the variable or file. Can be empty if no attribute is present.
