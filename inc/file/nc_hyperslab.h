@@ -94,7 +94,7 @@ struct NcHyperslab
     }
 
     /// Same as <tt>NcHyperslab{ start0, 1, param}</tt>
-    template<class T>
+    template<class T, std::enable_if_t<!dg::is_scalar_v<T>, bool> = true>
     NcHyperslab( size_t start0, const T& param)
           : NcHyperslab( start0, 1, param)
     {
@@ -102,7 +102,8 @@ struct NcHyperslab
 
     /*! @brief <tt>{start0, NcHyperslab( param).start()}, {count0, NcHyperslab(param).count()}</tt>
      *
-     * @tparam T <tt>NcHyperslab::NcHyperslab<T>(param)</tt> must be callable
+     * @tparam T <tt>NcHyperslab::NcHyperslab<T>(param)</tt> must be callable,
+     * i.e. currently T must be either a Topology or a ContainerType
      * @param start0 The start coordinate of the unlimited dimension
      * is prepended to \c NcHyperslab(param)
      * @param count0 The count coordinate of the unlimited dimension
