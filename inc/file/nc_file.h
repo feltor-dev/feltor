@@ -103,6 +103,11 @@ namespace file
 // function
 // Developper note: 0x1, 0x2, 0x4, etc read as bit-maps 0000, 0001, 0010,
 // 0100, etc. so these are quite useful as flags
+// Developper note: the only meaningful flag we do not capture here is
+// NC_CLASSIC_MODEL which enforces the classic mode on a NetCDF-4 file: Not
+// sure what the difference is to just not use groups, user defined types,
+// multiple unlimited dimensions, or new atomic types (I'm also unsure if this
+// will force the nc_enddef nc_redef behaviour as well?)
 
 /*! @brief Convenience NetCDF file opening/create flags
  *
@@ -266,9 +271,9 @@ struct SerialNcFile
     }
     /*! @brief Get the \c ncid of the underlying NetCDF C-API
      *
-     * Just if for whatever reason you want to call a NetCDF C-function
-     * yourself ... just don't use it for something nasty, like
-     * closing the file or whatever
+     * In case you want to call a NetCDF C-function yourself for whatever
+     * reason ... just don't use it for something nasty, like closing the file
+     * or whatever
      */
     int get_ncid() const noexcept{ return m_ncid;}
 
@@ -368,8 +373,11 @@ struct SerialNcFile
     }
     /*! @brief Change group to \c path
      *
-     * @copydoc hide_grps_NetCDF_example
      * All subsequent calls to atts, dims and vars are made to that group
+     * @note This call does not actually write or change anything in the
+     * underlying netCDF file (i.e. it **works for a read-only file**). It simply
+     * sets an internally (to this class) held \c ncid to the required \c grpid
+     * @copydoc hide_grps_NetCDF_example
      *
      * @param path can be absolute or relative to the current group.
      * Empty string or "/" goes back to root group. "." is the current group
