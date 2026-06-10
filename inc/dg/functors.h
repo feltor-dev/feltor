@@ -2055,8 +2055,8 @@ struct RealFourier1d
     std::vector<double> m_ab;
     unsigned m_K, m_S;
     double m_period;
-    mutable std::array<double,2> m_prev;
     mutable std::vector<double> m_modes;
+    mutable std::array<double,2> m_prev;
 };
 
 //struct Horner2dRealFourier1d
