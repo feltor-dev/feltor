@@ -203,19 +203,21 @@ struct CylindricalFunctorsLvl1
     /**
     * @brief Construct with given functors
     *
-    * @param f \f$ f(x,y)\f$ the function in some coordinates (x,y)
+    * @param f \f$ f(x,y,z)\f$ the function in some coordinates (x,y,z)
     * @param fx \f$ \partial f / \partial x \f$ its derivative in the first coordinate
     * @param fy \f$ \partial f / \partial y \f$ its derivative in the second coordinate
+    * @param fz \f$ \partial f / \partial z \f$ its derivative in the third coordinate
     */
-    CylindricalFunctorsLvl1(  CylindricalFunctor f,  CylindricalFunctor fx,
-        CylindricalFunctor fy) : p_{{ f, fx, fy}} {
+    CylindricalFunctorsLvl1(  const CylindricalFunctor& f,  const CylindricalFunctor& fx,
+        const CylindricalFunctor& fy, const CylindricalFunctor& fz = Constant(0)) : p_{{ f, fx, fy, fz}} {
     }
     ///copy given functors
-    void reset( CylindricalFunctor f, CylindricalFunctor fx, CylindricalFunctor fy)
+    void reset( const CylindricalFunctor& f, const CylindricalFunctor& fx, const CylindricalFunctor& fy, const CylindricalFunctor& fz = Constant(0))
     {
         p_[0] = f;
         p_[1] = fx;
         p_[2] = fy;
+        p_[3] = fz;
     }
     /// \f$ f \f$
     const CylindricalFunctor& f()const{return p_[0];}
@@ -223,8 +225,10 @@ struct CylindricalFunctorsLvl1
     const CylindricalFunctor& dfx()const{return p_[1];}
     /// \f$ \partial f / \partial y\f$
     const CylindricalFunctor& dfy()const{return p_[2];}
+    /// \f$ \partial f / \partial z\f$
+    const CylindricalFunctor& dfz()const{return p_[3];}
     private:
-    std::array<CylindricalFunctor,3> p_;
+    std::array<CylindricalFunctor,4> p_;
 };
 
 
@@ -246,14 +250,31 @@ struct CylindricalFunctorsLvl2
     CylindricalFunctorsLvl2(  CylindricalFunctor f,  CylindricalFunctor fx,
         CylindricalFunctor fy,   CylindricalFunctor fxx,
         CylindricalFunctor fxy,  CylindricalFunctor fyy):
-        f0(f,fx,fy), f1(fxx,fxy,fyy)
+        f0(f,fx,fy), f1(fxx,fxy,fyy), f2(Constant(0), Constant(0), Constant(0))
+    { }
+    CylindricalFunctorsLvl2(  CylindricalFunctor f,  CylindricalFunctor fx,
+        CylindricalFunctor fy,   CylindricalFunctor fz,
+        CylindricalFunctor fxx, CylindricalFunctor fxy, CylindricalFunctor fxz,
+        CylindricalFunctor fyy, CylindricalFunctor fyz,
+        CylindricalFunctor fzz
+        ):
+        f0(f,fx,fy, fz), f1(fxx,fxy,fyy), f2(fxz, fyz, fzz)
     { }
     ///Replace with given Functors
     void reset( CylindricalFunctor f, CylindricalFunctor fx,
         CylindricalFunctor fy, CylindricalFunctor fxx,
         CylindricalFunctor fxy, CylindricalFunctor fyy)
     {
-        f0.reset( f,fx,fy), f1.reset(fxx,fxy,fyy);
+        f0.reset( f,fx,fy), f1.reset(fxx,fxy,fyy), f2.reset( Constant(0), Constant(0), Constant(0));
+    }
+    ///Replace with given Functors
+    void reset(  CylindricalFunctor f,  CylindricalFunctor fx,
+        CylindricalFunctor fy,   CylindricalFunctor fz,
+        CylindricalFunctor fxx, CylindricalFunctor fxy, CylindricalFunctor fxz,
+        CylindricalFunctor fyy, CylindricalFunctor fyz,
+        CylindricalFunctor fzz)
+    {
+        f0.reset(f,fx,fy, fz), f1.reset(fxx,fxy,fyy), f2.reset(fxz, fyz, fzz);
     }
     ///type conversion: Lvl2 can also be used as Lvl1
     operator CylindricalFunctorsLvl1 ()const {return f0;}
@@ -263,19 +284,27 @@ struct CylindricalFunctorsLvl2
     const CylindricalFunctor& dfx()const{return f0.dfx();}
     /// \f$ \partial f / \partial y\f$
     const CylindricalFunctor& dfy()const{return f0.dfy();}
+    /// \f$ \partial f / \partial z\f$
+    const CylindricalFunctor& dfz()const{return f0.dfz();}
     /// \f$ \partial^2f/\partial x^2\f$
     const CylindricalFunctor& dfxx()const{return f1.f();}
     /// \f$ \partial^2 f / \partial x \partial y\f$
     const CylindricalFunctor& dfxy()const{return f1.dfx();}
+    /// \f$ \partial^2 f / \partial x \partial z\f$
+    const CylindricalFunctor& dfxz()const{return f2.f();}
     /// \f$ \partial^2f/\partial y^2\f$
     const CylindricalFunctor& dfyy()const{return f1.dfy();}
+    /// \f$ \partial^2f/\partial y\partial z\f$
+    const CylindricalFunctor& dfyz()const{return f2.dfx();}
+    /// \f$ \partial^2f/\partial z^2\f$
+    const CylindricalFunctor& dfzz()const{return f2.dfy();}
     private:
-    CylindricalFunctorsLvl1 f0,f1;
+    CylindricalFunctorsLvl1 f0,f1,f2;
 };
 
 
 /**
- * @brief This function finds critical points of psi (any point with vanishing gradient, including the X-point or O-point) via Newton iteration applied to the gradient of psi
+ * @brief This function finds critical points of psi (any point with vanishing gradient in R and Z, including the X-point or O-point) via Newton iteration applied to the gradient of psi
  *
  * Newton iteration applied to \f$ \nabla \psi (\vec x) = 0 \f$ reads
  * \f[ \vec x_{i+1} = \vec x_i - H^{-1} \nabla \psi (\vec x_i)\f]
@@ -284,28 +313,29 @@ struct CylindricalFunctorsLvl2
  * @param psi \f$ \psi(R,Z)\f$
  * @param RC start value on input, critical point on output
  * @param ZC start value on input, critical point on output
+ * @param P0 The plane in which to find vanishing gradient in
  * @return 0 if no critical point or Hessian (determinant) is zero,
  * 1 if local minimum,
  * 2 if local maximum,
  * 3 if saddle point
  * @ingroup misc_geo
  */
-inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC, double P0 = 0.)
 {
     std::array<double, 2> X{ {0,0} }, XN(X), X_OLD(X);
     X[0] = RC, X[1] = ZC;
     double eps = 1e10, eps_old= 2e10;
     unsigned counter = 0; //safety measure to avoid deadlock
-    double psipRZ = psi.dfxy()(X[0], X[1]);
-    double psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
-    double psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+    double psipRZ = psi.dfxy()(X[0], X[1], P0);
+    double psipRR = psi.dfxx()(X[0], X[1], P0), psipZZ = psi.dfyy()(X[0],X[1], P0);
+    double psipR  = psi.dfx()(X[0], X[1], P0), psipZ = psi.dfy()(X[0], X[1], P0);
     double D0 =  (psipZZ*psipRR - psipRZ*psipRZ);
     if(D0 == 0) // try to change initial guess slightly if we are very lucky
     {
         X[0] *= 1.0001, X[1]*=1.0001;
-        psipRZ = psi.dfxy()(X[0], X[1]);
-        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
-        psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+        psipRZ = psi.dfxy()(X[0], X[1], P0);
+        psipRR = psi.dfxx()(X[0], X[1], P0), psipZZ = psi.dfyy()(X[0],X[1], P0);
+        psipR  = psi.dfx()(X[0], X[1], P0), psipZ = psi.dfy()(X[0], X[1], P0);
         D0 =  (psipZZ*psipRR - psipRZ*psipRZ);
     }
     double Dinv = 1./D0;
@@ -317,9 +347,9 @@ inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, do
         XN.swap(X);
         eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
         X_OLD = X; eps_old= eps;
-        psipRZ = psi.dfxy()(X[0], X[1]);
-        psipRR = psi.dfxx()(X[0], X[1]), psipZZ = psi.dfyy()(X[0],X[1]);
-        psipR  = psi.dfx()(X[0], X[1]), psipZ = psi.dfy()(X[0], X[1]);
+        psipRZ = psi.dfxy()(X[0], X[1], P0);
+        psipRR = psi.dfxx()(X[0], X[1], P0), psipZZ = psi.dfyy()(X[0],X[1], P0);
+        psipR  = psi.dfx()(X[0], X[1], P0), psipZ = psi.dfy()(X[0], X[1], P0);
         D0 = (psipZZ*psipRR - psipRZ*psipRZ);
         Dinv = 1./D0;
         if( D0 == 0) break;
@@ -344,12 +374,13 @@ inline int findCriticalPoint( const CylindricalFunctorsLvl2& psi, double& RC, do
  * @param psi \f$ \psi(R,Z)\f$
  * @param RC start value on input, O-point on output
  * @param ZC start value on input, O-point on output
+ * @param P0 Default plane to find O-point in
  * @return 1 if local minimum, 2 if local maximum,
  * @ingroup misc_geo
  */
-inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC, double P0 = 0.)
 {
-    int point = findCriticalPoint( psi, RC, ZC);
+    int point = findCriticalPoint( psi, RC, ZC, P0);
     if( point == 3 || point == 0 )
         throw dg::Error(dg::Message(_ping_)<<"There is no O-point near "<<RC<<" "<<ZC);
     return point;
@@ -363,11 +394,12 @@ inline int findOpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& Z
  * @param psi \f$ \psi(R,Z)\f$
  * @param RC start value on input, X-point on output
  * @param ZC start value on input, X-point on output
+ * @param P0 Default plane to find X-point in
  * @ingroup misc_geo
  */
-inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC)
+inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& ZC, double P0 = 0.)
 {
-    int point = findCriticalPoint( psi, RC, ZC);
+    int point = findCriticalPoint( psi, RC, ZC, P0);
     if( point != 3)
         throw dg::Error(dg::Message(_ping_)<<"There is no X-point near "<<RC<<" "<<ZC);
 }
@@ -424,7 +456,7 @@ struct CylindricalSymmTensorLvl1
     std::array<CylindricalFunctor,5> p_;
 };
 
-/// A vector field with three components that depend only on the first two coordinates
+/// @brief A vector field with three components
 ///@snippet ds_b.cpp doxygen
 struct CylindricalVectorLvl0
 {
