@@ -266,7 +266,7 @@ inline TokamakMagneticField periodify( const TokamakMagneticField& mag, double R
 struct LaplacePsip : public aCylindricalFunctor<LaplacePsip>
 {
     LaplacePsip( const TokamakMagneticField& mag): m_mag(mag)  { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_mag.psipR()(R,Z)/R+ m_mag.psipRR()(R,Z) + m_mag.psipZZ()(R,Z);
     }
@@ -278,7 +278,7 @@ struct LaplacePsip : public aCylindricalFunctor<LaplacePsip>
 struct Bmodule : public aCylindricalFunctor<Bmodule>
 {
     Bmodule( const TokamakMagneticField& mag): m_mag(mag)  { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z), ipol = m_mag.ipol()(R,Z);
         return m_mag.R0()/R*sqrt(ipol*ipol+psipR*psipR +psipZ*psipZ);
@@ -292,7 +292,7 @@ struct Bmodule : public aCylindricalFunctor<Bmodule>
 struct Btor : public aCylindricalFunctor<Btor>
 {
     Btor( const TokamakMagneticField& mag): m_mag(mag)  { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z);
         return m_mag.R0()*ipol/R;
@@ -312,7 +312,7 @@ struct Btor : public aCylindricalFunctor<Btor>
 struct InvB : public aCylindricalFunctor<InvB>
 {
     InvB(  const TokamakMagneticField& mag): m_mag(mag){ }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z), ipol = m_mag.ipol()(R,Z);
         return R/(m_mag.R0()*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
@@ -326,7 +326,7 @@ struct InvB : public aCylindricalFunctor<InvB>
 struct InvBtor : public aCylindricalFunctor<InvBtor>
 {
     InvBtor( const TokamakMagneticField& mag): m_mag(mag)  { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z);
         return R/m_mag.R0()/ipol;
@@ -345,7 +345,7 @@ struct InvBtor : public aCylindricalFunctor<InvBtor>
 struct LnB : public aCylindricalFunctor<LnB>
 {
     LnB(const TokamakMagneticField& mag): m_mag(mag) { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z), ipol = m_mag.ipol()(R,Z);
         return log(m_mag.R0()/R*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
@@ -367,7 +367,7 @@ struct LnB : public aCylindricalFunctor<LnB>
 struct BR: public aCylindricalFunctor<BR>
 {
     BR(const TokamakMagneticField& mag): m_invB(mag), m_mag(mag) { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double Rn = R/m_mag.R0();
         double invB = m_invB(R,Z);
@@ -389,7 +389,7 @@ struct BR: public aCylindricalFunctor<BR>
 struct BZ: public aCylindricalFunctor<BZ>
 {
     BZ(const TokamakMagneticField& mag ): m_mag(mag), m_invB(mag) { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double Rn = R/m_mag.R0();
         return (m_invB(R,Z)/Rn/Rn)*(m_mag.ipol()(R,Z)*m_mag.ipolZ()(R,Z) + m_mag.psipR()(R,Z)*m_mag.psipRZ()(R,Z) + m_mag.psipZ()(R,Z)*m_mag.psipZZ()(R,Z));
@@ -408,7 +408,7 @@ struct BZ: public aCylindricalFunctor<BZ>
 struct ToroidalBR: public aCylindricalFunctor<ToroidalBR>
 {
     ToroidalBR(const TokamakMagneticField& mag): m_mag(mag) { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_mag.R0() / R *m_mag.ipolR()(R,Z) - m_mag.R0() * m_mag.ipol()(R,Z)/ R / R;
     }
@@ -425,7 +425,7 @@ struct ToroidalBR: public aCylindricalFunctor<ToroidalBR>
 struct ToroidalBZ: public aCylindricalFunctor<ToroidalBZ>
 {
     ToroidalBZ(const TokamakMagneticField& mag ): m_mag(mag) { }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_mag.R0() / R *m_mag.ipolZ()(R,Z);
     }
@@ -445,7 +445,7 @@ struct CurvatureNablaBR: public aCylindricalFunctor<CurvatureNablaBR>
         else
             m_sign = -1;
     }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return -m_sign*m_invB(R,Z)*m_invB(R,Z)*m_bZ(R,Z);
     }
@@ -467,7 +467,7 @@ struct CurvatureNablaBZ: public aCylindricalFunctor<CurvatureNablaBZ>
         else
             m_sign = -1;
     }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return m_sign*m_invB(R,Z)*m_invB(R,Z)*m_bR(R,Z);
     }
@@ -485,7 +485,7 @@ struct CurvatureKappaR: public aCylindricalFunctor<CurvatureKappaR>
 {
     CurvatureKappaR( ){ }
     CurvatureKappaR( const TokamakMagneticField& , int = +1){ }
-    double do_compute( double, double) const
+    double do_compute( double, double, double) const
     {
         return  0.;
     }
@@ -504,7 +504,7 @@ struct CurvatureKappaZ: public aCylindricalFunctor<CurvatureKappaZ>
         else
             m_sign = -1;
     }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return -m_sign*m_invB(R,Z)/R;
     }
@@ -525,7 +525,7 @@ struct DivCurvatureKappa: public aCylindricalFunctor<DivCurvatureKappa>
         else
             m_sign = -1;
     }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return m_sign*m_bZ(R,Z)*m_invB(R,Z)*m_invB(R,Z)/R;
     }
@@ -542,7 +542,7 @@ struct DivCurvatureKappa: public aCylindricalFunctor<DivCurvatureKappa>
 struct DivCurvatureNablaB: public aCylindricalFunctor<DivCurvatureNablaB>
 {
     DivCurvatureNablaB( const TokamakMagneticField& mag, int sign): m_div(mag, sign){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return -m_div(R,Z);
     }
@@ -555,7 +555,7 @@ struct DivCurvatureNablaB: public aCylindricalFunctor<DivCurvatureNablaB>
 struct TrueCurvatureNablaBR: public aCylindricalFunctor<TrueCurvatureNablaBR>
 {
     TrueCurvatureNablaBR(const TokamakMagneticField& mag): m_R0(mag.R0()), m_mag(mag), m_invB(mag), m_bZ(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z), ipol = m_mag.ipol()(R,Z);
         return -invB*invB*invB*ipol*m_R0/R*m_bZ(R,Z);
@@ -573,7 +573,7 @@ struct TrueCurvatureNablaBR: public aCylindricalFunctor<TrueCurvatureNablaBR>
 struct TrueCurvatureNablaBZ: public aCylindricalFunctor<TrueCurvatureNablaBZ>
 {
     TrueCurvatureNablaBZ(const TokamakMagneticField& mag): m_R0(mag.R0()), m_mag(mag), m_invB(mag), m_bR(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z), ipol = m_mag.ipol()(R,Z);
         return invB*invB*invB*ipol*m_R0/R*m_bR(R,Z);
@@ -591,7 +591,7 @@ struct TrueCurvatureNablaBZ: public aCylindricalFunctor<TrueCurvatureNablaBZ>
 struct TrueCurvatureNablaBP: public aCylindricalFunctor<TrueCurvatureNablaBP>
 {
     TrueCurvatureNablaBP(const TokamakMagneticField& mag): m_mag(mag), m_invB(mag),m_bR(mag), m_bZ(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z);
         return m_mag.R0()*invB*invB*invB/R/R*(m_mag.psipZ()(R,Z)*m_bZ(R,Z) + m_mag.psipR()(R,Z)*m_bR(R,Z));
@@ -607,7 +607,7 @@ struct TrueCurvatureNablaBP: public aCylindricalFunctor<TrueCurvatureNablaBP>
 struct TrueCurvatureKappaR: public aCylindricalFunctor<TrueCurvatureKappaR>
 {
     TrueCurvatureKappaR( const TokamakMagneticField& mag):m_mag(mag), m_invB(mag), m_bZ(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z);
         return m_mag.R0()*invB*invB/R*(m_mag.ipolZ()(R,Z) - m_mag.ipol()(R,Z)*invB*m_bZ(R,Z));
@@ -622,7 +622,7 @@ struct TrueCurvatureKappaR: public aCylindricalFunctor<TrueCurvatureKappaR>
 struct TrueCurvatureKappaZ: public aCylindricalFunctor<TrueCurvatureKappaZ>
 {
     TrueCurvatureKappaZ( const TokamakMagneticField& mag):m_mag(mag), m_invB(mag), m_bR(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z);
         return m_mag.R0()*invB*invB/R*( - m_mag.ipolR()(R,Z) + m_mag.ipol()(R,Z)*invB*m_bR(R,Z));
@@ -636,7 +636,7 @@ struct TrueCurvatureKappaZ: public aCylindricalFunctor<TrueCurvatureKappaZ>
 struct TrueCurvatureKappaP: public aCylindricalFunctor<TrueCurvatureKappaP>
 {
     TrueCurvatureKappaP( const TokamakMagneticField& mag):m_mag(mag), m_invB(mag), m_bR(mag), m_bZ(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z);
         return m_mag.R0()*invB*invB/R/R*(
@@ -654,7 +654,7 @@ struct TrueCurvatureKappaP: public aCylindricalFunctor<TrueCurvatureKappaP>
 struct TrueDivCurvatureKappa: public aCylindricalFunctor<TrueDivCurvatureKappa>
 {
     TrueDivCurvatureKappa( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag), m_bR(mag), m_bZ(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z);
         return m_mag.R0()*invB*invB*invB/R*( m_mag.ipolR()(R,Z)*m_bZ(R,Z) - m_mag.ipolZ()(R,Z)*m_bR(R,Z) );
@@ -670,7 +670,7 @@ struct TrueDivCurvatureKappa: public aCylindricalFunctor<TrueDivCurvatureKappa>
 struct TrueDivCurvatureNablaB: public aCylindricalFunctor<TrueDivCurvatureNablaB>
 {
     TrueDivCurvatureNablaB( const TokamakMagneticField& mag): m_div(mag){}
-    double do_compute( double R, double Z) const {
+    double do_compute( double R, double Z, double) const {
         return - m_div(R,Z);
     }
     private:
@@ -684,7 +684,7 @@ struct TrueDivCurvatureNablaB: public aCylindricalFunctor<TrueDivCurvatureNablaB
 struct ToroidalCurvatureNablaBR: public aCylindricalFunctor<ToroidalCurvatureNablaBR>
 {
     ToroidalCurvatureNablaBR(const TokamakMagneticField& mag): m_mag(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z), ipolZ = m_mag.ipolZ()(R,Z);
         return -R*ipolZ/m_mag.R0()/ipol/ipol;
@@ -700,7 +700,7 @@ struct ToroidalCurvatureNablaBR: public aCylindricalFunctor<ToroidalCurvatureNab
 struct ToroidalCurvatureNablaBZ: public aCylindricalFunctor<ToroidalCurvatureNablaBZ>
 {
     ToroidalCurvatureNablaBZ( const TokamakMagneticField& mag): m_mag(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z);
         return +R*ipolR/m_mag.R0()/ipol/ipol - 1./m_mag.R0()/ipol;
@@ -717,7 +717,7 @@ struct ToroidalCurvatureKappaR: public aCylindricalFunctor<ToroidalCurvatureKapp
 {
     ToroidalCurvatureKappaR( ){ }
     ToroidalCurvatureKappaR( const TokamakMagneticField&){ }
-    double do_compute( double, double) const
+    double do_compute( double, double, double) const
     {
         return  0.;
     }
@@ -731,7 +731,7 @@ struct ToroidalCurvatureKappaR: public aCylindricalFunctor<ToroidalCurvatureKapp
 struct ToroidalCurvatureKappaZ: public aCylindricalFunctor<ToroidalCurvatureKappaZ>
 {
     ToroidalCurvatureKappaZ( const TokamakMagneticField& mag): m_mag(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z);
         return -1/m_mag.R0()/ipol;
@@ -747,7 +747,7 @@ struct ToroidalCurvatureKappaZ: public aCylindricalFunctor<ToroidalCurvatureKapp
 struct ToroidalDivCurvatureKappa: public aCylindricalFunctor<ToroidalDivCurvatureKappa>
 {
     ToroidalDivCurvatureKappa( const TokamakMagneticField& mag): m_mag(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z), ipolZ = m_mag.ipolZ()(R,Z);
         return ipolZ / m_mag.R0()/ ipol/ipol;
@@ -765,7 +765,7 @@ struct ToroidalDivCurvatureKappa: public aCylindricalFunctor<ToroidalDivCurvatur
 struct GradLnB: public aCylindricalFunctor<GradLnB>
 {
     GradLnB( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag), m_bR(mag), m_bZ(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double invB = m_invB(R,Z);
         return m_mag.R0()*invB*invB*(m_bR(R,Z)*m_mag.psipZ()(R,Z)-m_bZ(R,Z)*m_mag.psipR()(R,Z))/R ;
@@ -785,7 +785,7 @@ struct GradLnB: public aCylindricalFunctor<GradLnB>
 struct Divb: public aCylindricalFunctor<Divb>
 {
     Divb( const TokamakMagneticField& mag): m_gradLnB(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return -m_gradLnB(R,Z);
     }
@@ -801,7 +801,7 @@ struct Divb: public aCylindricalFunctor<Divb>
 struct ToroidalGradLnB: public aCylindricalFunctor<ToroidalGradLnB>
 {
     ToroidalGradLnB( const TokamakMagneticField& mag): m_mag(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
         return ipolR * psipZ / ipol /ipol - psipZ/ipol/R;
@@ -818,7 +818,7 @@ struct ToroidalGradLnB: public aCylindricalFunctor<ToroidalGradLnB>
 struct ToroidalDivb: public aCylindricalFunctor<ToroidalDivb>
 {
     ToroidalDivb( const TokamakMagneticField& mag): m_torgradLnB(mag) { }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return -m_torgradLnB(R,Z);
     }
@@ -830,7 +830,7 @@ struct ToroidalDivb: public aCylindricalFunctor<ToroidalDivb>
 struct BFieldP: public aCylindricalFunctor<BFieldP>
 {
     BFieldP( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return m_mag.R0()*m_mag.ipol()(R,Z)/R/R;
     }
@@ -843,7 +843,7 @@ struct BFieldP: public aCylindricalFunctor<BFieldP>
 struct BFieldR: public aCylindricalFunctor<BFieldR>
 {
     BFieldR( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return  m_mag.R0()/R*m_mag.psipZ()(R,Z);
     }
@@ -856,7 +856,7 @@ struct BFieldR: public aCylindricalFunctor<BFieldR>
 struct BFieldZ: public aCylindricalFunctor<BFieldZ>
 {
     BFieldZ( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return -m_mag.R0()/R*m_mag.psipR()(R,Z);
     }
@@ -868,7 +868,7 @@ struct BFieldZ: public aCylindricalFunctor<BFieldZ>
 struct BFieldT: public aCylindricalFunctor<BFieldT>
 {
     BFieldT( const TokamakMagneticField& mag):  m_R0(mag.R0()), m_fieldR(mag), m_fieldZ(mag){}
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         double r2 = (R-m_R0)*(R-m_R0) + Z*Z;
         return m_fieldR(R,Z)*(-Z/r2) + m_fieldZ(R,Z)*(R-m_R0)/r2;
@@ -883,7 +883,7 @@ struct BFieldT: public aCylindricalFunctor<BFieldT>
 struct BHatR: public aCylindricalFunctor<BHatR>
 {
     BHatR( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return  m_invB(R,Z)*m_mag.R0()/R*m_mag.psipZ()(R,Z);
     }
@@ -897,7 +897,7 @@ struct BHatR: public aCylindricalFunctor<BHatR>
 struct BHatZ: public aCylindricalFunctor<BHatZ>
 {
     BHatZ( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return  -m_invB(R,Z)*m_mag.R0()/R*m_mag.psipR()(R,Z);
     }
@@ -910,7 +910,7 @@ struct BHatZ: public aCylindricalFunctor<BHatZ>
 struct BHatP: public aCylindricalFunctor<BHatP>
 {
     BHatP( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return m_invB(R,Z)*m_mag.R0()*m_mag.ipol()(R,Z)/R/R;
     }
@@ -923,7 +923,7 @@ struct BHatP: public aCylindricalFunctor<BHatP>
 struct ToroidalBHatR: public aCylindricalFunctor<ToroidalBHatR>
 {
     ToroidalBHatR( const TokamakMagneticField& mag): m_mag(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return  m_mag.psipZ()(R,Z)/m_mag.ipol()(R,Z);
     }
@@ -936,7 +936,7 @@ struct ToroidalBHatR: public aCylindricalFunctor<ToroidalBHatR>
 struct ToroidalBHatZ: public aCylindricalFunctor<ToroidalBHatZ>
 {
     ToroidalBHatZ( const TokamakMagneticField& mag): m_mag(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return  -m_mag.psipR()(R,Z)/m_mag.ipol()(R,Z);
     }
@@ -948,7 +948,7 @@ struct ToroidalBHatZ: public aCylindricalFunctor<ToroidalBHatZ>
 struct ToroidalBHatP: public aCylindricalFunctor<ToroidalBHatP>
 {
     ToroidalBHatP( const TokamakMagneticField& mag): m_mag(mag){ }
-    double do_compute( double R, double) const
+    double do_compute( double R, double, double) const
     {
         return 1./R;
     }
@@ -967,8 +967,8 @@ struct ToroidalBHatP: public aCylindricalFunctor<ToroidalBHatP>
  */
 inline CylindricalVectorLvl1 createEPhi( int sign ){
     if( sign > 0)
-        return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double){ return 1./x;}, Constant(0), Constant(0));
-    return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double){ return -1./x;}, Constant(0), Constant(0));
+        return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double, double){ return 1./x;}, Constant(0), Constant(0));
+    return CylindricalVectorLvl1( Constant(0), Constant(0), [](double x, double, double){ return -1./x;}, Constant(0), Constant(0));
 }
 /**
  * @brief Approximate curvature vector field (CurvatureNablaBR, CurvatureNablaBZ, Constant(0))
@@ -1028,7 +1028,7 @@ inline CylindricalVectorLvl0 createGradPsip( const TokamakMagneticField& mag){
 struct BHatRR: public aCylindricalFunctor<BHatRR>
 {
     BHatRR( const TokamakMagneticField& mag): m_invB(mag), m_br(mag), m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipZ = m_mag.psipZ()(R,Z);
         double psipRZ = m_mag.psipRZ()(R,Z);
@@ -1045,7 +1045,7 @@ struct BHatRR: public aCylindricalFunctor<BHatRR>
 struct BHatRZ: public aCylindricalFunctor<BHatRZ>
 {
     BHatRZ( const TokamakMagneticField& mag): m_invB(mag), m_bz(mag), m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipZ = m_mag.psipZ()(R,Z);
         double psipZZ = m_mag.psipZZ()(R,Z);
@@ -1061,7 +1061,7 @@ struct BHatRZ: public aCylindricalFunctor<BHatRZ>
 struct BHatZR: public aCylindricalFunctor<BHatZR>
 {
     BHatZR( const TokamakMagneticField& mag): m_invB(mag), m_br(mag), m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z);
         double psipRR = m_mag.psipRR()(R,Z);
@@ -1078,7 +1078,7 @@ struct BHatZR: public aCylindricalFunctor<BHatZR>
 struct BHatZZ: public aCylindricalFunctor<BHatZZ>
 {
     BHatZZ( const TokamakMagneticField& mag): m_invB(mag), m_bz(mag), m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z);
         double psipRZ = m_mag.psipRZ()(R,Z);
@@ -1094,7 +1094,7 @@ struct BHatZZ: public aCylindricalFunctor<BHatZZ>
 struct BHatPR: public aCylindricalFunctor<BHatPR>
 {
     BHatPR( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag), m_br(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double binv = m_invB(R,Z);
         double ipol = m_mag.ipol()(R,Z);
@@ -1112,7 +1112,7 @@ struct BHatPR: public aCylindricalFunctor<BHatPR>
 struct BHatPZ: public aCylindricalFunctor<BHatPZ>
 {
     BHatPZ( const TokamakMagneticField& mag): m_mag(mag), m_invB(mag), m_bz(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double binv = m_invB(R,Z);
         double ipol = m_mag.ipol()(R,Z);
@@ -1131,7 +1131,7 @@ struct DivVVP: public aCylindricalFunctor<DivVVP>
 {
     DivVVP( const TokamakMagneticField& mag): m_mag(mag),
         m_bhatP(mag){ }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z),
                ipolZ  = m_mag.ipolZ()(R,Z);
@@ -1188,7 +1188,7 @@ struct RhoP: public aCylindricalFunctor<RhoP>
                 m_psipmin = -10;
         }
     }
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         return sqrt( 1.-m_mag.psip()(R,Z)/m_psipmin ) ;
     }
@@ -1202,7 +1202,7 @@ struct RhoP: public aCylindricalFunctor<RhoP>
 struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
 {
     Hoo( dg::geo::TokamakMagneticField mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z), ipol = m_mag.ipol()(R,Z);
         double psip2 = psipR*psipR+psipZ*psipZ;
@@ -1238,7 +1238,7 @@ struct WallDirection : public dg::geo::aCylindricalFunctor<WallDirection>
     WallDirection( dg::geo::TokamakMagneticField mag,
             dg::Grid2d walls) : m_vertical({walls.x0(), walls.x1()}),
         m_horizontal({walls.y0(), walls.y1()}), m_BR( mag), m_BZ(mag){}
-    double do_compute ( double R, double Z) const
+    double do_compute ( double R, double Z, double) const
     {
         std::vector<double> v_dist(1,1e100), h_dist(1,1e100);
         for( auto v : m_vertical)

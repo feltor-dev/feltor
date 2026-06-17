@@ -9,90 +9,78 @@ namespace geo
 
 ///@addtogroup fluxfunctions
 ///@{
-/*! @brief Inject both 2d and 3d \c operator() to a 2d functor
- *
- * The purpose of this class is to extend any 2d Functor to a
- * 3d Functor by defining \f$ f(x,y,z) := f(x,y)\f$. This class is
- * especially useful in an interface since any 2d functor can be converted
- * to it (type erasure property of the \c std::function that we use
- * to implement this class).
- * @note If you want to write a functor that is both 2d and 3d directly,
- * it is easier to derive from \c aCylindricalFunctor
- * @sa this class is an alternative to \c aCylindricalFunctor and
- * \c aCylindricalFunctor can be converted to this class
- */
-template<class real_type>
-struct RealCylindricalFunctor
-{
-    RealCylindricalFunctor(){}
-    /**
-    * @brief Construct from any binary functor
-    *
-    * @tparam BinaryFunctor Interface must be <tt> real_type(real_type x, real_type y)</tt>
-    * @param f a 2d functor
-    */
-    template<class BinaryFunctor>
-    RealCylindricalFunctor( BinaryFunctor f):
-        m_f(f) {}
-    /// @return f(R,Z)
-    real_type operator()( real_type R, real_type Z) const{
-        return m_f(R,Z);
-    }
-    /// @return f(R,Z)
-    real_type operator()( real_type R, real_type Z, real_type) const{
-        return m_f(R,Z);
-    }
-    private:
-    std::function<real_type(real_type,real_type)> m_f;
-};
-
-///Most of the times we use \c double
-using CylindricalFunctor = RealCylindricalFunctor<double>;
 
 /**
-* @brief Represent functions written in cylindrical coordinates
-        that are independent of the angle phi serving as both 2d and 3d functions
+* @brief Represent (potentially axisymmetric) functions \f$f(R,Z,\varphi)\f$ written in Cylindrical coordinates
 
-* The rational is that these functors can serve as both 2d and 3d functors
-* where the 3d functor trivially redirects to the 2d version.
+* The rational is that axisymmetric functors \f$f(R,Z,\varphi)\f$ can serve as
+* both 2d and 3d functors as it is independent of the angle:
+* \f[
+* f_{2d}(R,Z)\equiv f(R,Z,\varphi)
+* \f]
+*
+* If a given 3d functor \f$ f(R,Z,\varphi)\f$ is not axisymmetric a
+* corresponding 2d functor can be defined by fixing the angle to a given value
+* \f[
+* f_{2d,0}(R,Z) \equiv f(R,Z,\varphi_0)
+* \f]
+* \f$ \phi_0 = 0\f$ by default, use \c set_phi to change.
+*
 * This behaviour is injected into all classes that derive from this class
 * via the Curiously Recurring Template Pattern (CRTP).
+* All classes need to implement the \c do_compute function which computes \f$f(R,Z,\varphi)\f$
 * @sa \c aCylindricalFunctor
-* @sa An alternative is \c RealCylindricalFunctor
-* @tparam Derived Interface: <tt> double do_compute(double,double) const</tt>
+* @sa The default implementation is \c RealCylindricalFunctor
+* @tparam Derived Interface: <tt> double do_compute(double,double,double) const</tt>
 */
 template<class Derived>
 struct aCylindricalFunctor
 {
     /**
-    * @brief <tt> do_compute(R,Z)</tt>
+    * @brief <tt>do_compute(R,Z, P0)</tt>
     *
     * @param R radius (cylindrical coordinate)
     * @param Z height (cylindrical coordinate)
     *
-    * @return f(R,Z)
+    * @return f(R,Z,P0)
+    *
+    * @sa set_phi to change the default P0 value
+    * @attention The \c do_compute function should be considered private and
+    * its interface can change
     */
     double operator()(double R, double Z) const
     {
-        const Derived& underlying = static_cast<const Derived&>(*this);
-        return underlying.do_compute(R,Z);
+        return operator()(R,Z,m_P);
     }
     /**
-    * @brief <tt> do_compute(R,Z)</tt>
+    * @brief <tt> do_compute(R,Z,P)</tt>
     *
     * @param R radius (cylindrical coordinate)
     * @param Z height (cylindrical coordinate)
+    * @param P toroidal angle (clockwise when seen from above)
     *
-    * @return f(R,Z)
+    * @return f(R,Z,P)
+    * @attention The \c do_compute function should be considered private and
+    * its interface can change
     */
-    double operator()(double R, double Z, double)const
+    double operator()(double R, double Z, double P)const
     {
         const Derived& underlying = static_cast<const Derived&>(*this);
-        return underlying.do_compute(R,Z);
+        return underlying.do_compute(R,Z,P);
     }
+    /**
+     * @brief Set the default angle \c P0 that the 2d operator uses
+     *
+     * This is only relevant for non-axisymmetric functors and only for the 2d operator.
+     * @param phi New P0 value for the 2d operator
+     */
+    void set_phi( double P0) { m_P = P0;}
+    /// @brief Read access to the default phi value P0
+    double get_phi() const { return m_P;}
+    private:
+    double m_P = 0.;
 #ifndef __CUDACC__ //nvcc below 10 has problems with the following construct
     //This trick avoids that classes inherit from the wrong Base:
-    private:
     friend Derived;
     aCylindricalFunctor(){}
     /**
@@ -106,19 +94,46 @@ struct aCylindricalFunctor
 #endif //__CUDACC__
 };
 
+/*! @brief Inject both 2d and 3d \c operator() to a 2d functor
+ *
+ * The purpose of this class is to serve as a general purpose
+ * functor parameter in interfaces
+ * to catch any other functor of type \c aCylindricalFunctor or
+ * in fact any 2d or 3d functor type (type erasure property of the \c
+ * std::function that we use to implement this class).
+ * @note If you want to avoid the indirection inherent in the \c std::function
+ * it is easier to derive from \c aCylindricalFunctor
+ * @sa \c aCylindricalFunctor can be converted to this class
+ */
+struct CylindricalFunctor : public aCylindricalFunctor<CylindricalFunctor>
+{
+    CylindricalFunctor(){}
+
+    template<class TernaryFunctor>
+    CylindricalFunctor( const TernaryFunctor& f):
+        m_f(f) {}
+    double do_compute( double R, double Z, double P) const { return m_f(R,Z,P);}
+    private:
+    std::function<double(double,double,double)> m_f;
+};
+
+//If ever we need float there is an issue with templated Derived classes:
+//https://stackoverflow.com/questions/2940402/templated-derived-class-in-crtp-curiously-recurring-template-pattern
+//Essentially then **all** derived classes need to be templates
+//using CylindricalFunctor = RealCylindricalFunctor;
 /**
- * @brief \f$ f(x,y) = c\f$
+ * @brief \f$ f(R,Z,P) = c\f$
  */
 struct Constant: public aCylindricalFunctor<Constant>
 {
     Constant(double c):c_(c){}
-    double do_compute(double,double)const{return c_;}
+    double do_compute(double,double,double)const{return c_;}
     private:
     double c_;
 };
 /**
  * @brief
- * \f$ f(R,Z)= \begin{cases}
+ * \f$ f(R,Z,P)= \begin{cases}
  0 \text{ if } Z < Z_X \\
  1 \text{ else }
  \end{cases}
@@ -128,7 +143,7 @@ struct Constant: public aCylindricalFunctor<Constant>
 struct ZCutter : public aCylindricalFunctor<ZCutter>
 {
     ZCutter(double ZX, int sign = +1): m_heavi( ZX, sign){}
-    double do_compute(double, double Z) const {
+    double do_compute(double, double Z,double) const {
         return m_heavi(Z);
     }
     private:
@@ -163,13 +178,13 @@ struct Periodify : public aCylindricalFunctor<Periodify>
             double Z1, dg::bc bcx, dg::bc bcy):
         m_g( R0, R1, Z0, Z1, 3, 10, 10, bcx, bcy), m_f(functor)
     {}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double P) const
     {
         bool negative = false;
         dg::create::detail::shift( negative, R, m_g.bcx(), m_g.x0(), m_g.x1());
         dg::create::detail::shift( negative, Z, m_g.bcy(), m_g.y0(), m_g.y1());
-        if( negative) return -m_f(R,Z);
-        return m_f( R, Z);
+        if( negative) return -m_f(R,Z,P);
+        return m_f( R, Z, P);
     }
     private:
     dg::Grid2d m_g;
@@ -486,11 +501,11 @@ struct CylindricalVectorLvl1
 struct ScalarProduct : public aCylindricalFunctor<ScalarProduct>
 {
     ScalarProduct( CylindricalVectorLvl0 v, CylindricalVectorLvl0 w) : m_v(v), m_w(w){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double P) const
     {
-        return m_v.x()(R,Z)*m_w.x()(R,Z)
-             + m_v.y()(R,Z)*m_w.y()(R,Z)
-             + m_v.z()(R,Z)*m_w.z()(R,Z);
+        return m_v.x()(R,Z)*m_w.x()(R,Z,P)
+             + m_v.y()(R,Z)*m_w.y()(R,Z,P)
+             + m_v.z()(R,Z)*m_w.z()(R,Z,P);
     }
   private:
     CylindricalVectorLvl0 m_v, m_w;
@@ -504,9 +519,9 @@ struct ScalarProduct : public aCylindricalFunctor<ScalarProduct>
 struct SquareNorm : public aCylindricalFunctor<SquareNorm>
 {
     SquareNorm( CylindricalVectorLvl0 v, CylindricalVectorLvl0 w) : m_s(v, w){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double P) const
     {
-        return sqrt(m_s(R,Z));
+        return sqrt(m_s(R,Z,P));
     }
   private:
     ScalarProduct m_s;

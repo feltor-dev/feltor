@@ -42,7 +42,7 @@ struct Psip: public aCylindricalFunctor<Psip>
      * @param gp geometric parameters
      */
     Psip( const Parameters& gp ): m_R0(gp.R_0),  m_pp(gp.pp), m_horner(std::make_shared<Horner2d>( gp.c, gp.M, gp.N)) {}
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         // Optimization rationale: The way we compute magnetic field terms
         // through the TokamakMagneticField class and e.g. the BHatR class
@@ -69,7 +69,7 @@ struct PsipR: public aCylindricalFunctor<PsipR>
                 beta[i*gp.N+j] = (double)(i+1)*gp.c[ ( i+1)*gp.N +j];
         m_horner = std::make_shared<Horner2d>( beta, gp.M-1, gp.N);
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_pp*(*m_horner)( R/m_R0,Z/m_R0);
     }
@@ -87,7 +87,7 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
                 beta[i*gp.N+j] = (double)((i+2)*(i+1))*gp.c[ (i+2)*gp.N +j];
         m_horner = std::make_shared<Horner2d>( beta, gp.M-2, gp.N);
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_pp/m_R0*(*m_horner)( R/m_R0,Z/m_R0);
     }
@@ -105,7 +105,7 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
                 beta[i*(gp.N-1)+j] = (double)(j+1)*gp.c[ i*gp.N +j+1];
         m_horner = std::make_shared<Horner2d>( beta, gp.M, gp.N-1);
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_pp*(*m_horner)( R/m_R0,Z/m_R0);
     }
@@ -123,7 +123,7 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
                 beta[i*(gp.N-2)+j] = (double)((j+2)*(j+1))*gp.c[ i*gp.N +j+2];
         m_horner = std::make_shared<Horner2d>( beta, gp.M, gp.N-2);
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_pp/m_R0*(*m_horner)(R/m_R0,Z/m_R0);
     }
@@ -141,7 +141,7 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
                 beta[i*(gp.N-1)+j] = (double)((j+1)*(i+1))*gp.c[ (i+1)*gp.N +j+1];
         m_horner = std::make_shared<Horner2d>( beta, gp.M-1, gp.N-1);
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_pp/m_R0*(*m_horner)(R/m_R0,Z/m_R0);
     }

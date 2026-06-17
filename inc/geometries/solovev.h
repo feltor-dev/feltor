@@ -67,7 +67,7 @@ struct Psip: public aCylindricalFunctor<Psip>
     Psip( const Parameters& gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         // Optimization rationale: The way we compute magnetic field terms
         // through the TokamakMagneticField class and e.g. the BHatR class
@@ -138,7 +138,7 @@ struct PsipR: public aCylindricalFunctor<PsipR>
     PsipR( const Parameters& gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         if( R == (*m_prev)[0] && Z == (*m_prev)[1])
             return (*m_prev)[2];
@@ -196,7 +196,7 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
     PsipRR( const Parameters& gp ): m_R0(gp.R_0), mA(gp.A), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         if( R == (*m_prev)[0] && Z == (*m_prev)[1])
             return (*m_prev)[2];
@@ -249,7 +249,7 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
     PsipZ( const Parameters& gp ): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         if( R == (*m_prev)[0] && Z == (*m_prev)[1])
             return (*m_prev)[2];
@@ -296,7 +296,7 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
     PsipZZ( const Parameters& gp): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         if( R == (*m_prev)[0] && Z == (*m_prev)[1])
             return (*m_prev)[2];
@@ -340,7 +340,7 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
     PsipRZ( const Parameters& gp ): m_R0(gp.R_0), m_pp(gp.pp), mc(gp.c) {
         m_prev = std::make_shared< std::array<double,3>>(std::array<double,3>{ 0,0,0});
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         if( R == (*m_prev)[0] && Z == (*m_prev)[1])
             return (*m_prev)[2];
@@ -382,7 +382,7 @@ struct Ipol: public aCylindricalFunctor<Ipol>
         if( gp.pp == 0.)
             m_pp = 1.; //safety measure to avoid divide by zero errors
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return m_pi*sqrt(-2.*m_A* m_psip(R,Z) /m_R0/m_pp + 1.);
     }
@@ -404,7 +404,7 @@ struct IpolR: public aCylindricalFunctor<IpolR>
         if( gp.pp == 0.)
             m_pp = 1.; //safety measure to avoid divide by zero errors
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return -m_pi/sqrt(-2.*m_A* m_psip(R,Z) /m_R0/m_pp + 1.)*(m_A*m_psipR(R,Z)/m_R0/m_pp);
     }
@@ -426,7 +426,7 @@ struct IpolZ: public aCylindricalFunctor<IpolZ>
         if( gp.pp == 0.)
             m_pp = 1.; //safety measure to avoid divide by zero errors
     }
-    double do_compute(double R, double Z) const
+    double do_compute(double R, double Z, double) const
     {
         return -m_pi/sqrt(-2.*m_A* m_psip(R,Z) /m_R0/m_pp + 1.)*(m_A*m_psipZ(R,Z)/m_R0/m_pp);
     }

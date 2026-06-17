@@ -253,7 +253,7 @@ struct ToroidalDsDivFunction
 struct ToroidalBHatRR: public aCylindricalFunctor<ToroidalBHatRR>
 {
     ToroidalBHatRR( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipZ = m_mag.psipZ()(R,Z);
         double psipRZ = m_mag.psipRZ()(R,Z);
@@ -268,7 +268,7 @@ struct ToroidalBHatRR: public aCylindricalFunctor<ToroidalBHatRR>
 struct ToroidalBHatRZ: public aCylindricalFunctor<ToroidalBHatRZ>
 {
     ToroidalBHatRZ( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipZ = m_mag.psipZ()(R,Z);
         double psipZZ = m_mag.psipZZ()(R,Z);
@@ -283,7 +283,7 @@ struct ToroidalBHatRZ: public aCylindricalFunctor<ToroidalBHatRZ>
 struct ToroidalBHatZR: public aCylindricalFunctor<ToroidalBHatZR>
 {
     ToroidalBHatZR( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z);
         double psipRR = m_mag.psipRR()(R,Z);
@@ -298,7 +298,7 @@ struct ToroidalBHatZR: public aCylindricalFunctor<ToroidalBHatZR>
 struct ToroidalBHatZZ: public aCylindricalFunctor<ToroidalBHatZZ>
 {
     ToroidalBHatZZ( const TokamakMagneticField& mag): m_mag(mag){}
-    double do_compute( double R, double Z) const
+    double do_compute( double R, double Z, double) const
     {
         double psipR = m_mag.psipR()(R,Z);
         double psipRZ = m_mag.psipRZ()(R,Z);
@@ -313,7 +313,7 @@ struct ToroidalBHatZZ: public aCylindricalFunctor<ToroidalBHatZZ>
 struct ToroidalBHatPR: public aCylindricalFunctor<ToroidalBHatPR>
 {
     ToroidalBHatPR( const TokamakMagneticField& mag): m_mag(mag){ }
-    double do_compute( double R, double ) const
+    double do_compute( double R, double, double ) const
     {
         return -1/R/R;
     }
@@ -324,7 +324,7 @@ struct ToroidalBHatPR: public aCylindricalFunctor<ToroidalBHatPR>
 struct ToroidalBHatPZ: public aCylindricalFunctor<ToroidalBHatPZ>
 {
     ToroidalBHatPZ( const TokamakMagneticField& mag): m_mag(mag){ }
-    double do_compute( double , double ) const
+    double do_compute( double , double, double ) const
     {
         return 0;
     }
