@@ -796,7 +796,7 @@ struct Divb: public aCylindricalFunctor<Divb>
 /**
  * @brief \f$  \frac{\vec B}{B_{\hat \varphi} \ln{(B_{\hat \varphi})} \f$
  *
- *    \f$  = \frac{\partial_R I \partial_Z \psi_p}{I^2 } - \frac{\partial_Z \psi_p}{I R} \f$
+ *    \f$  = \frac{\partial_R I \partial_Z \psi_p - \partial_Z I \partial_R \psi_p}{I^2 } - \frac{\partial_Z \psi_p}{I R} \f$
  */
 struct ToroidalGradLnB: public aCylindricalFunctor<ToroidalGradLnB>
 {
@@ -804,7 +804,8 @@ struct ToroidalGradLnB: public aCylindricalFunctor<ToroidalGradLnB>
     double do_compute( double R, double Z, double) const
     {
         double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
-        return ipolR * psipZ / ipol /ipol - psipZ/ipol/R;
+        double ipolZ = m_mag.ipolZ()(R,Z), psipR = m_mag.psipR()(R,Z);
+        return (ipolR * psipZ - ipolZ * psipR)/ ipol /ipol - psipZ/ipol/R;
     }
     private:
     TokamakMagneticField m_mag;
