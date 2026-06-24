@@ -1968,6 +1968,13 @@ struct Horner1d
         m_prev[0] = x;
         return m_prev[1];
     }
+    Horner1d dx() const
+    {
+        std::vector<double> beta ( m_M-1);
+        for( unsigned i=0; i<m_M-1; i++)
+            beta[i] = (double)(i+1)*m_c[i+1];
+        return Horner1d( beta);
+    }
     private:
     std::vector<double> m_c;
     unsigned m_M;
@@ -2017,6 +2024,23 @@ struct Horner2d
         m_prev[0] = x, m_prev[1] = y;
         return m_prev[2];
     }
+
+    Horner2d dx() const
+    {
+        std::vector<double> beta ( (m_M-1)*m_N);
+        for( unsigned i=0; i<m_M-1; i++)
+            for( unsigned j=0; j<m_N; j++)
+                beta[i*m_N+j] = (double)(i+1)*m_c[(i+1)*m_N + j];
+        return Horner2d( beta, m_M-1, m_N);
+    }
+    Horner2d dy() const
+    {
+        std::vector<double> beta ( m_M*(m_N-1));
+        for( unsigned i=0; i<m_M; i++)
+            for( unsigned j=0; j<m_N-1; j++)
+                beta[i*(m_N-1)+j] = (double)(j+1)*m_c[i*m_N + j + 1];
+        return Horner2d( beta, m_M, m_N-1);
+    }
     private:
     std::vector<double> m_c;
     mutable std::vector<double> m_cx;
@@ -2035,6 +2059,14 @@ struct RealFourier1d
     RealFourier1d(): m_ab( 1, 1), m_K(1), m_S(0), m_prev( {0,1}){}
 
     /// K + S == ab.size()
+    /*!@brief construct from coefficients (cosine, sine)
+     * @param ab The coefficients ab[0] is the constant, ab[0:K] are cosine
+     * coefficients, (K-1) is the highest cosine mode) ab[K:K+S] are sine
+     * coefficients starting with mode 1 up to S
+     * @param K the number of cosine coefficients (including the constant)
+     * @param S the number sine coefficients
+     * @param period The periodicity P
+     */
     RealFourier1d( const std::vector<double>& ab, unsigned K, unsigned S, double period) : m_ab(ab), m_K(K), m_S(S), m_period( period ), m_modes( ab), m_prev( {1e300, 1e300}){
         assert( ab.size() >= K+S);
         }
@@ -2044,11 +2076,7 @@ struct RealFourier1d
         if( m_prev[0] == x)
             return m_prev[1];
         detail::fourier_modes( &m_modes[0], m_K, m_S, m_period, x);
-        //m_prev[1] = dg::blas1::vdot( dg::Product(), m_modes, m_ab);
-        //m_prev[1] = dg::blas1::dot( m_modes, m_ab);
-        m_prev[1] = 0;
-        for( unsigned u=0; u<m_modes.size(); u++)
-            m_prev[1] += m_modes[u]*m_ab[u];
+        m_prev[1] = dg::blas1::vdot( dg::Product(), m_modes, m_ab);
         return m_prev[1];
     }
     private:
@@ -2058,41 +2086,6 @@ struct RealFourier1d
     mutable std::vector<double> m_modes;
     mutable std::array<double,2> m_prev;
 };
-
-//struct Horner2dRealFourier1d
-//{
-//    // z direction is contiguous in memory, then y, then x
-//    Horner2dRealFourier1d( const std::vector<double>& c, unsigned M, unsigned
-//        N, unsigned K, unsigned S, double period)
-//    double operator()( double x, double y, double z)
-//    {
-//        // Optimisation rationale: Evaluate z direction first as this is the
-//        // slowest varying in dg::evaluate
-//        if( m_prev[2] == z && m_prev[1] == y && m_prev[0] == x)
-//            return m_prev[3];
-//        if( m_prev[2] != z )
-//        {
-//            detail::fourier_modes( modes, m_K, m_S, period, z);
-//            for( unsigned i=0; i<m_M*m_N; i++)
-//            {
-//                // We could here also use symv here like in dg::Average
-//                auto view = create_view( &m_c[i*(m_K+m_S)], m_K);
-//                m_cxy[i] = dg::blas1::vdot( dg::Product(), view, m_modesz);
-//        }
-//
-//        if( m_prev[1] != y || m_prev[2] != z) // only when both y and z stayed the same can this be skipped
-//            for( unsigned i=0; i<m_M; i++)
-//                m_cx[i] = detail::horner( &m_cxy[i*m_N], m_N, y);
-//        // At this point we know for sure that one of x, y, or z changed
-//        m_prev[3] = detail::horner( &m_cx[0], m_M, x);
-//        m_prev[0] = x, m_prev[1] = y, m_prev[2] = z;
-//        return m_prev[3];
-//
-//    }
-//    private:
-//    mutable std::array<double,4> m_prev;
-//
-//};
 
 
 /**

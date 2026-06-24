@@ -114,6 +114,8 @@ struct CylindricalFunctor : public aCylindricalFunctor<CylindricalFunctor>
         m_f(f) {}
     double do_compute( double R, double Z, double P) const { return m_f(R,Z,P);}
     private:
+    // Optimization note: from https://www.boost.org/doc/libs/1_45_0/doc/html/function/faq.html#id1284915
+    // the performance overhead of calling std::function is about (20 +- 10)ns
     std::function<double(double,double,double)> m_f;
 };
 
