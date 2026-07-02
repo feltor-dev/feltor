@@ -12,13 +12,13 @@
 const std::string geometry_params = R"asdf({
     "PP": 1,
     "PI": 1,
-    "c" :[  1,2,1, 3,4,2, 0,0,1],
+    "c" :[  1,2,3,4],
     "R_0"                : 4,
     "inverseaspectratio" : 0.25,
     "elongation"         : 1,
     "triangularity"      : 1,
-    "M" : 3,
-    "N" : 3,
+    "M" : 2,
+    "N" : 2,
     "equilibrium"  : "polynomial",
     "description" : "standardX"
 })asdf";
@@ -35,17 +35,17 @@ TEST_CASE("Polynomial")
     {
         double result;
         result = mag.psip()(2.,3.);
-        CHECK( result == 433./16.);
+        CHECK( result == 22);
         result = mag.psipR()(2.,3.);
-        CHECK( result == 123./16.);
+        CHECK( result == 6);
         result = mag.psipZ()(2.,3.);
-        CHECK( result == 59./8.);
+        CHECK( result == 4);
         result = mag.psipRR()(2.,3.);
-        CHECK( result == 9./32.);
-        result = mag.psipRZ()(2.,3.);
-        CHECK( result == 17./8.);
+        CHECK( result == 0);
         result = mag.psipZZ()(2.,3.);
-        CHECK( result == 9./8.);
+        CHECK( result == 0);
+        result = mag.psipRZ()(2.,3.);
+        CHECK( result == 1);
     }
     SECTION( "Polynomial integration")
     {
@@ -57,7 +57,7 @@ TEST_CASE("Polynomial")
         auto weights = dg::create::weights( grid);
         auto psi = dg::evaluate( mag.psip(), grid);
         double result = dg::blas1::dot( weights, psi);
-        CHECK( fabs(result - 9409./144.)<1e-12);
+        CHECK( result == 64);
     }
     SECTION( "Accuracy of bhat")
     {

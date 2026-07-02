@@ -43,7 +43,7 @@ struct Psip : public aCylindricalFunctor<Psip>
     Psip( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
         double j1_c12 = std::cyl_bessel_j( 1, c_[11]*Rn);
@@ -79,7 +79,7 @@ struct PsipR: public aCylindricalFunctor<PsipR>
         cs_=sqrt(c_[11]*c_[11]-c_[10]*c_[10]);
 
     }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
         double j1_c12R = std::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
@@ -116,7 +116,7 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
     PsipRR( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
         double j1_c12R = c_[11]*(std::cyl_bessel_j(0, c_[11]*Rn) - Rn*c_[11]*std::cyl_bessel_j(1, c_[11]*Rn));
@@ -149,7 +149,7 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
     PsipZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
         double j1_c12 = std::cyl_bessel_j( 1, c_[11]*Rn);
@@ -180,7 +180,7 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
     PsipZZ( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double Rn = R/R0_, Zn = Z/R0_;
         double j1_cs = std::cyl_bessel_j( 1, cs_*Rn);
@@ -209,7 +209,7 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
     PsipRZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double Rn=R/R0_, Zn=Z/R0_;
         double j1_c12R = std::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
@@ -245,7 +245,7 @@ struct Ipol: public aCylindricalFunctor<Ipol>
 {
     ///@copydoc Psip::Psip()
     Ipol(  solovev::Parameters gp ): c12_(gp.c[11]), psip_(gp) { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return c12_*psip_(R,Z);
 
@@ -261,7 +261,7 @@ struct IpolR: public aCylindricalFunctor<IpolR>
 {
     ///@copydoc Psip::Psip()
     IpolR(  solovev::Parameters gp ): c12_(gp.c[11]), psipR_(gp) { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return c12_*psipR_(R,Z);
     }
@@ -276,7 +276,7 @@ struct IpolZ: public aCylindricalFunctor<IpolZ>
 {
     ///@copydoc Psip::Psip()
     IpolZ(  solovev::Parameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return c12_*psipZ_(R,Z);
     }

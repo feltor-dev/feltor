@@ -31,7 +31,7 @@ namespace guenter
 struct Psip : public aCylindricalFunctor<Psip>
 {
     Psip(double R_0 ):   R_0(R_0) {}
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
@@ -44,7 +44,7 @@ struct Psip : public aCylindricalFunctor<Psip>
 struct PsipR : public aCylindricalFunctor<PsipR>
 {
     PsipR(double R_0 ):   R_0(R_0) {}
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return -M_PI*0.5*sin(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
@@ -57,7 +57,7 @@ struct PsipR : public aCylindricalFunctor<PsipR>
 struct PsipRR : public aCylindricalFunctor<PsipRR>
 {
     PsipRR(double R_0 ):   R_0(R_0) {}
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
@@ -71,7 +71,7 @@ struct PsipZ : public aCylindricalFunctor<PsipZ>
 
 {
     PsipZ(double R_0 ):   R_0(R_0) {}
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return -M_PI*0.5*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
@@ -84,7 +84,7 @@ struct PsipZ : public aCylindricalFunctor<PsipZ>
 struct PsipZZ : public aCylindricalFunctor<PsipZZ>
 {
     PsipZZ(double R_0 ):   R_0(R_0){}
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
@@ -97,7 +97,7 @@ struct PsipZZ : public aCylindricalFunctor<PsipZZ>
 struct PsipRZ : public aCylindricalFunctor<PsipRZ>
 {
     PsipRZ(double R_0 ):   R_0(R_0) {}
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return M_PI*M_PI*0.25*sin(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
@@ -111,7 +111,7 @@ struct PsipRZ : public aCylindricalFunctor<PsipRZ>
 struct Ipol : public aCylindricalFunctor<Ipol>
 {
     Ipol( double I_0):   I_0(I_0) {}
-    double do_compute(double, double, double) const { return I_0; }
+    double do_compute(double, double) const { return I_0; }
     private:
     double I_0;
 };
@@ -121,7 +121,7 @@ struct Ipol : public aCylindricalFunctor<Ipol>
 struct IpolR : public aCylindricalFunctor<IpolR>
 {
     IpolR(  ) {}
-    double do_compute(double, double, double) const { return 0; }
+    double do_compute(double, double) const { return 0; }
     private:
 };
 /**
@@ -130,7 +130,7 @@ struct IpolR : public aCylindricalFunctor<IpolR>
 struct IpolZ : public aCylindricalFunctor<IpolZ>
 {
     IpolZ(  ) {}
-    double do_compute(double, double, double) const { return 0; }
+    double do_compute(double, double) const { return 0; }
     private:
 };
 

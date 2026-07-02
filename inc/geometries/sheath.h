@@ -63,7 +63,7 @@ struct WallFieldlineDistance : public aCylindricalFunctor<WallFieldlineDistance>
      * @return distance in phi or s
      * @sa dg::integrateERK
      */
-    double do_compute( double R, double Z, double) const
+    double do_compute( double R, double Z) const
     {
         std::array<double,3> coords{ R, Z, 0}, coordsP(coords);
         // determine sign
@@ -141,7 +141,7 @@ struct WallFieldlineCoordinate : public aCylindricalFunctor<WallFieldlineCoordin
         if( m_type != "phi" && m_type != "s")
             throw std::runtime_error( "Distance type "+m_type+" not recognized!\n");
     }
-    double do_compute( double R, double Z, double) const
+    double do_compute( double R, double Z) const
     {
         double phiP = m_deltaPhi, phiM = -m_deltaPhi;
         std::array<double,3> coords{ R, Z, 0}, coordsP(coords), coordsM(coords);

@@ -18,7 +18,7 @@ namespace detail{
 struct LaplaceAdaptPsi: public aCylindricalFunctor<LaplaceAdaptPsi>
 {
     LaplaceAdaptPsi( const CylindricalFunctorsLvl2& psi, const CylindricalFunctorsLvl1& chi) : psi_(psi), chi_(chi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         return  psi_.dfx()(x,y)*chi_.dfx()(x,y) +
                 psi_.dfy()(x,y)*chi_.dfy()(x,y) +
@@ -33,7 +33,7 @@ struct LaplaceChiPsi: public aCylindricalFunctor<LaplaceChiPsi>
 {
     LaplaceChiPsi( const CylindricalFunctorsLvl2& psi, const CylindricalSymmTensorLvl1& chi):
         psi_(psi), chi_(chi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         return psi_.dfxx()(x,y)*chi_.xx()(x,y)+2.*psi_.dfxy()(x,y)*chi_.xy()(x,y)+psi_.dfyy()(x,y)*chi_.yy()(x,y)
             + chi_.divX()(x,y)*psi_.dfx()(x,y) + chi_.divY()(x,y)*psi_.dfy()(x,y);
@@ -47,7 +47,7 @@ struct LaplaceChiPsi: public aCylindricalFunctor<LaplaceChiPsi>
 struct LaplacePsi: public aCylindricalFunctor<LaplacePsi>
 {
     LaplacePsi( const CylindricalFunctorsLvl2& psi): psi_(psi){}
-    double do_compute(double x, double y, double)const{return psi_.dfxx()(x,y)+psi_.dfyy()(x,y);}
+    double do_compute(double x, double y)const{return psi_.dfxx()(x,y)+psi_.dfyy()(x,y);}
     private:
     CylindricalFunctorsLvl2 psi_;
 };
@@ -70,7 +70,7 @@ struct NablaPsiInv: public aCylindricalFunctor<NablaPsiInv>
      * @param psi \f$ \psi(x,y)\f$ and its first derivatives
      */
     NablaPsiInv( const CylindricalFunctorsLvl1& psi): psi_(psi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
         return 1./sqrt(psiX*psiX+psiY*psiY);
@@ -86,7 +86,7 @@ struct NablaPsiInv: public aCylindricalFunctor<NablaPsiInv>
 struct NablaPsiInvX: public aCylindricalFunctor<NablaPsiInvX>
 {
     NablaPsiInvX( const CylindricalFunctorsLvl2& psi):psi_(psi) {}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
         double psiXX = psi_.dfxx()(x,y), psiXY = psi_.dfxy()(x,y);
@@ -105,7 +105,7 @@ struct NablaPsiInvX: public aCylindricalFunctor<NablaPsiInvX>
 struct NablaPsiInvY: public aCylindricalFunctor<NablaPsiInvY>
 {
     NablaPsiInvY( const CylindricalFunctorsLvl2& psi):psi_(psi) {}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
         double psiYY = psi_.dfyy()(x,y), psiXY = psi_.dfxy()(x,y);
@@ -138,7 +138,7 @@ inline CylindricalFunctorsLvl1 make_NablaPsiInvCollective( const CylindricalFunc
 struct Liseikin_XX: public aCylindricalFunctor<Liseikin_XX>
 {
     Liseikin_XX(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
@@ -161,7 +161,7 @@ struct Liseikin_XX: public aCylindricalFunctor<Liseikin_XX>
 struct Liseikin_XY: public aCylindricalFunctor<Liseikin_XY>
 {
     Liseikin_XY(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
@@ -184,7 +184,7 @@ struct Liseikin_XY: public aCylindricalFunctor<Liseikin_XY>
 struct Liseikin_YY: public aCylindricalFunctor<Liseikin_YY>
 {
     Liseikin_YY(const CylindricalFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
@@ -204,7 +204,7 @@ struct Liseikin_YY: public aCylindricalFunctor<Liseikin_YY>
 struct DivLiseikinX: public aCylindricalFunctor<DivLiseikinX>
 {
     DivLiseikinX(const CylindricalFunctorsLvl2& psi, double k, double eps): k_(k), eps_(eps), psi_(psi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psiXX = psi_.dfxx()(x,y), psiXY = psi_.dfxy()(x,y), psiYY=psi_.dfyy()(x,y);
@@ -231,7 +231,7 @@ struct DivLiseikinX: public aCylindricalFunctor<DivLiseikinX>
 struct DivLiseikinY : public aCylindricalFunctor<DivLiseikinY>
 {
     DivLiseikinY(const CylindricalFunctorsLvl2& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
-    double do_compute(double x, double y, double)const
+    double do_compute(double x, double y)const
     {
         double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psiXX = psi_.dfxx()(x,y), psiXY = psi_.dfxy()(x,y), psiYY=psi_.dfyy()(x,y);

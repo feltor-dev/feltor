@@ -40,7 +40,7 @@ struct Psip: public aCylindricalFunctor<Psip>
     Psip( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, double psi0, double alpha, double sign = -1) :
         m_ipoly( psi0, alpha, sign), m_psip(psip), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         if( m_pred( R,Z))
@@ -58,7 +58,7 @@ struct PsipR: public aCylindricalFunctor<PsipR>
     PsipR( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, std::function<double(double,double)> psipR, double psi0, double alpha, double sign = -1) :
         m_poly( psi0, alpha, sign), m_psip(psip), m_psipR(psipR), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double psip  = m_psip(R,Z);
         double psipR = m_psipR(R,Z);
@@ -77,7 +77,7 @@ struct PsipZ: public aCylindricalFunctor<PsipZ>
     PsipZ( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, std::function<double(double,double)> psipZ, double psi0, double alpha, double sign = -1) :
         m_poly( psi0, alpha, sign), m_psip(psip), m_psipZ(psipZ), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipZ = m_psipZ(R,Z);
@@ -97,7 +97,7 @@ struct PsipZZ: public aCylindricalFunctor<PsipZZ>
     PsipZZ( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, std::function<double(double,double)> psipZ, std::function<double(double,double)> psipZZ, double psi0, double alpha, double sign = -1) :
         m_poly( psi0, alpha, sign), m_dpoly( psi0, alpha, sign), m_psip(psip), m_psipZ(psipZ), m_psipZZ(psipZZ), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipZ = m_psipZ(R,Z);
@@ -119,7 +119,7 @@ struct PsipRR: public aCylindricalFunctor<PsipRR>
     PsipRR( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, std::function<double(double,double)> psipR, std::function<double(double,double)> psipRR, double psi0, double alpha, double sign = -1) :
         m_poly( psi0, alpha, sign), m_dpoly( psi0, alpha, sign), m_psip(psip), m_psipR(psipR), m_psipRR(psipRR), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipR = m_psipR(R,Z);
@@ -140,7 +140,7 @@ struct PsipRZ: public aCylindricalFunctor<PsipRZ>
     PsipRZ( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, std::function<double(double,double)> psipR, std::function<double(double,double)> psipZ, std::function<double(double,double)> psipRZ, double psi0, double alpha, double sign = -1) :
         m_poly( psi0, alpha, sign), m_dpoly( psi0, alpha, sign), m_psip(psip), m_psipR(psipR), m_psipZ(psipZ), m_psipRZ(psipRZ), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         double psipR = m_psipR(R,Z);
@@ -193,7 +193,7 @@ struct DampingRegion : public aCylindricalFunctor<DampingRegion>
     DampingRegion( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, double psi0, double alpha, double sign = -1) :
         m_poly( psi0, alpha, sign), m_psip(psip), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         if( m_pred( R,Z))
             return m_poly( m_psip(R,Z));
@@ -210,7 +210,7 @@ struct MagneticTransition : public aCylindricalFunctor<MagneticTransition>
     MagneticTransition( std::function<bool(double,double)> predicate, std::function<double(double,double)> psip, double psi0, double alpha, double sign = -1) :
         m_dpoly( psi0, alpha, sign), m_psip(psip), m_pred(predicate)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double psip = m_psip(R,Z);
         if( m_pred( R,Z))
@@ -460,7 +460,7 @@ struct SetCompose : public aCylindricalFunctor<SetCompose>
             std::function<double(double,double)> fct2) :
         m_fct1(fct1), m_fct2(fct2), m_fct_mod( fct_mod)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return m_fct_mod( m_fct1(R,Z), m_fct2(R,Z));
     }
@@ -479,7 +479,7 @@ struct SetUnion : public aCylindricalFunctor<SetUnion>
             std::function<double(double,double)> fct2) :
         m_fct1(fct1), m_fct2(fct2)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double f1 = m_fct1(R,Z), f2 = m_fct2( R,Z);
         return f1 + f2 - f1*f2;
@@ -499,7 +499,7 @@ struct SetIntersection : public aCylindricalFunctor<SetIntersection>
             std::function<double(double,double)> fct2) :
         m_fct1(fct1), m_fct2(fct2)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         double f1 = m_fct1(R,Z), f2 = m_fct2( R,Z);
         return f1*f2;
@@ -518,7 +518,7 @@ struct SetNot : public aCylindricalFunctor<SetNot>
     SetNot( std::function<double(double,double)> fct) :
         m_fct(fct)
     { }
-    double do_compute(double R, double Z, double) const
+    double do_compute(double R, double Z) const
     {
         return 1-m_fct(R,Z);
     }
