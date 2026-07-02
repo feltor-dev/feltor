@@ -28,44 +28,57 @@ namespace geo
 ///@addtogroup magnetic
 ///@{
 
+//struct FluxLabel
+//{
+//    enum fluxtype fluxtype; // psip, psit, rhop, rhot
+//    CylindricalFunctorsLvl2 rho;
+//};
 
+// FIXME Documentation and Rationale
 struct MagneticField
 {
-    MagneticField( double R0, const CylindricalFunctorsLvl1& pRBR, const CylindricalFunctorsLvl1& mRBZ, const CylindricalFunctorsLvl1& pRBP)
-        : m_R0(R0), m_br(pRBR), m_bz(mRBZ), m_bp(pRBP){}
+    MagneticField( double R0, const CylindricalFunctorsLvl1& pR_BR, const CylindricalFunctorsLvl1& mR_BZ, const CylindricalFunctorsLvl1& pR_BP) //, std::optional<FluxLabel> fluxlabel = std::nullopt )
+        : m_R0(R0), m_br(pR_BR), m_bz(mR_BZ), m_bp(pR_BP){}
 
     /// \f$ R_0 \f$
     double R0()const {return m_R0;}
     /// \f$ +\frac{R B_R}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBR()const{return m_br.f();}
+    const CylindricalFunctor& pR_BR()const{return m_br.f();}
     /// \f$ +\partial_R \frac{R B_R}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBRR()const{return m_br.dfx();}
+    const CylindricalFunctor& pR_BRR()const{return m_br.dfx();}
     /// \f$ +\partial Z \frac{R B_R}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBRZ()const{return m_br.dfy();}
+    const CylindricalFunctor& pR_BRZ()const{return m_br.dfy();}
     /// \f$ +\partial_P \frac{R B_R}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBRP()const{return m_br.dfz();}
+    const CylindricalFunctor& pR_BRP()const{return m_br.dfz();}
 
     /// \f$ -\frac{R B_Z}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& mRBZ()const{return m_bz.f();}
+    const CylindricalFunctor& mR_BZ()const{return m_bz.f();}
     /// \f$ -\partial_R \frac{R B_Z}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& mRBZR()const{return m_bz.dfx();}
+    const CylindricalFunctor& mR_BZR()const{return m_bz.dfx();}
     /// \f$ -\partial Z \frac{R B_Z}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& mRBZZ()const{return m_bz.dfy();}
+    const CylindricalFunctor& mR_BZZ()const{return m_bz.dfy();}
     /// \f$ -\partial_P \frac{R B_Z}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& mRBZP()const{return m_bz.dfz();}
+    const CylindricalFunctor& mR_BZP()const{return m_bz.dfz();}
 
     /// \f$ +\frac{R B_P}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBP()const{return m_bp.f();}
+    const CylindricalFunctor& pR_BP()const{return m_bp.f();}
     /// \f$ +\partial_R \frac{R B_P}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBPR()const{return m_bp.dfx();}
+    const CylindricalFunctor& pR_BPR()const{return m_bp.dfx();}
     /// \f$ +\partial Z \frac{R B_P}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBPZ()const{return m_bp.dfy();}
+    const CylindricalFunctor& pR_BPZ()const{return m_bp.dfy();}
     /// \f$ +\partial_P \frac{R B_P}{R_0}\f$, where R, Z, P are Cylindrical coordinates
-    const CylindricalFunctor& pRBPP()const{return m_bp.dfz();}
+    const CylindricalFunctor& pR_BPP()const{return m_bp.dfz();}
 
+    bool isAxisymmetric() const
+    {
+        return m_axisymmetric;
+    }
     private:
+    bool m_axisymmetric = true;
     double m_R0;
     CylindricalFunctorsLvl1 m_br, m_bz, m_bp;
+    //std::optional<FluxLabel> m_fluxlabel;
+    //std::shared_ptr<dg::WrappedJsonValue> m_json;
 };
 
 ///@brief How flux-function is computed. Decides how to construct magnetic field.
@@ -327,8 +340,8 @@ struct Bmodule : public aCylindricalFunctor<Bmodule>
     Bmodule( const MagneticField& mag): m_mag(mag)  { }
     double do_compute(double R, double Z, double P) const
     {
-        double mRBZ = m_mag.mRBZ()(R,Z,P), pRBR = m_mag.pRBR()(R,Z,P), pRBP = m_mag.pRBP()(R,Z,P);
-        return m_mag.R0()/R*sqrt(pRBP*pRBP+mRBZ*mRBZ +pRBR*pRBR);
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P), pR_BR = m_mag.pR_BR()(R,Z,P), pR_BP = m_mag.pR_BP()(R,Z,P);
+        return m_mag.R0()/R*sqrt(pR_BP*pR_BP+mR_BZ*mR_BZ +pR_BR*pR_BR);
     }
   private:
     MagneticField m_mag;
@@ -341,8 +354,8 @@ struct Btor : public aCylindricalFunctor<Btor>
     Btor( const MagneticField& mag): m_mag(mag)  { }
     double do_compute(double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P);
-        return m_mag.R0()*pRBP/R;
+        double pR_BP = m_mag.pR_BP()(R,Z,P);
+        return m_mag.R0()*pR_BP/R;
     }
   private:
     MagneticField m_mag;
@@ -361,8 +374,8 @@ struct InvB : public aCylindricalFunctor<InvB>
     InvB(  const MagneticField& mag): m_mag(mag){ }
     double do_compute(double R, double Z, double P) const
     {
-        double mRBZ = m_mag.mRBZ()(R,Z,P), pRBR = m_mag.pRBR()(R,Z,P), pRBP = m_mag.pRBP()(R,Z,P);
-        return R/(m_mag.R0()*sqrt(pRBP*pRBP + mRBZ*mRBZ +pRBR*pRBR)) ;
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P), pR_BR = m_mag.pR_BR()(R,Z,P), pR_BP = m_mag.pR_BP()(R,Z,P);
+        return R/(m_mag.R0()*sqrt(pR_BP*pR_BP + mR_BZ*mR_BZ +pR_BR*pR_BR)) ;
     }
   private:
     MagneticField m_mag;
@@ -375,8 +388,8 @@ struct InvBtor : public aCylindricalFunctor<InvBtor>
     InvBtor( const MagneticField& mag): m_mag(mag)  { }
     double do_compute(double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P);
-        return R/m_mag.R0()/pRBP;
+        double pR_BP = m_mag.pR_BP()(R,Z,P);
+        return R/m_mag.R0()/pR_BP;
     }
   private:
     MagneticField m_mag;
@@ -394,8 +407,8 @@ struct LnB : public aCylindricalFunctor<LnB>
     LnB(const MagneticField& mag): m_mag(mag) { }
     double do_compute(double R, double Z, double P) const
     {
-        double mRBZ = m_mag.mRBZ()(R,Z,P), pRBR = m_mag.pRBR()(R,Z,P), pRBP = m_mag.pRBP()(R,Z,P);
-        return log(m_mag.R0()/R*sqrt(pRBP*pRBP + mRBZ*mRBZ +pRBR*pRBR)) ;
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P), pR_BR = m_mag.pR_BR()(R,Z,P), pR_BP = m_mag.pR_BP()(R,Z,P);
+        return log(m_mag.R0()/R*sqrt(pR_BP*pR_BP + mR_BZ*mR_BZ +pR_BR*pR_BR)) ;
     }
   private:
     MagneticField m_mag;
@@ -418,7 +431,7 @@ struct BR: public aCylindricalFunctor<BR>
     {
         double Rn = R/m_mag.R0();
         double invB = m_invB(R,Z,P);
-        return -1./R/invB + invB/Rn/Rn*(m_mag.pRBP()(R,Z,P)*m_mag.pRBPR()(R,Z,P) + m_mag.mRBZ()(R,Z,P)*m_mag.mRBZR()(R,Z,P) + m_mag.pRBR()(R,Z,P)*m_mag.pRBRR()(R,Z,P));
+        return -1./R/invB + invB/Rn/Rn*(m_mag.pR_BP()(R,Z,P)*m_mag.pR_BPR()(R,Z,P) + m_mag.mR_BZ()(R,Z,P)*m_mag.mR_BZR()(R,Z,P) + m_mag.pR_BR()(R,Z,P)*m_mag.pR_BRR()(R,Z,P));
     }
   private:
     InvB m_invB;
@@ -439,7 +452,7 @@ struct BZ: public aCylindricalFunctor<BZ>
     double do_compute(double R, double Z, double P) const
     {
         double Rn = R/m_mag.R0();
-        return (m_invB(R,Z,P)/Rn/Rn)*(m_mag.pRBP()(R,Z,P)*m_mag.pRBPZ()(R,Z,P) + m_mag.mRBZ()(R,Z,P)*m_mag.mRBZZ()(R,Z,P) + m_mag.pRBR()(R,Z,P)*m_mag.pRBRZ()(R,Z,P));
+        return (m_invB(R,Z,P)/Rn/Rn)*(m_mag.pR_BP()(R,Z,P)*m_mag.pR_BPZ()(R,Z,P) + m_mag.mR_BZ()(R,Z,P)*m_mag.mR_BZZ()(R,Z,P) + m_mag.pR_BR()(R,Z,P)*m_mag.pR_BRZ()(R,Z,P));
     }
   private:
     MagneticField m_mag;
@@ -455,7 +468,7 @@ struct BP: public aCylindricalFunctor<BP>
     double do_compute(double R, double Z, double P) const
     {
         double Rn = R/m_mag.R0();
-        return (m_invB(R,Z,P)/Rn/Rn)*(m_mag.pRBP()(R,Z,P)*m_mag.pRBPP()(R,Z,P) + m_mag.mRBZ()(R,Z,P)*m_mag.mRBZP()(R,Z,P) + m_mag.pRBR()(R,Z,P)*m_mag.pRBRP()(R,Z,P));
+        return (m_invB(R,Z,P)/Rn/Rn)*(m_mag.pR_BP()(R,Z,P)*m_mag.pR_BPP()(R,Z,P) + m_mag.mR_BZ()(R,Z,P)*m_mag.mR_BZP()(R,Z,P) + m_mag.pR_BR()(R,Z,P)*m_mag.pR_BRP()(R,Z,P));
     }
   private:
     MagneticField m_mag;
@@ -474,7 +487,7 @@ struct ToroidalBR: public aCylindricalFunctor<ToroidalBR>
     ToroidalBR(const MagneticField& mag): m_mag(mag) { }
     double do_compute(double R, double Z, double P) const
     {
-        return m_mag.R0() / R *m_mag.pRBPR()(R,Z,P) - m_mag.R0() * m_mag.pRBP()(R,Z,P)/ R / R;
+        return m_mag.R0() / R *m_mag.pR_BPR()(R,Z,P) - m_mag.R0() * m_mag.pR_BP()(R,Z,P)/ R / R;
     }
   private:
     MagneticField m_mag;
@@ -491,7 +504,7 @@ struct ToroidalBZ: public aCylindricalFunctor<ToroidalBZ>
     ToroidalBZ(const MagneticField& mag ): m_mag(mag) { }
     double do_compute(double R, double Z, double P) const
     {
-        return m_mag.R0() / R *m_mag.pRBPZ()(R,Z,P);
+        return m_mag.R0() / R *m_mag.pR_BPZ()(R,Z,P);
     }
   private:
     MagneticField m_mag;
@@ -622,8 +635,8 @@ struct TrueCurvatureNablaBR: public aCylindricalFunctor<TrueCurvatureNablaBR>
     TrueCurvatureNablaBR(const MagneticField& mag): m_R0(mag.R0()), m_mag(mag), m_invB(mag), m_bZ(mag) { }
     double do_compute( double R, double Z, double P) const
     {
-        double invB = m_invB(R,Z,P), pRBP = m_mag.pRBP()(R,Z,P);
-        return -invB*invB*invB*pRBP*m_R0/R*m_bZ(R,Z,P);
+        double invB = m_invB(R,Z,P), pR_BP = m_mag.pR_BP()(R,Z,P);
+        return -invB*invB*invB*pR_BP*m_R0/R*m_bZ(R,Z,P);
     }
     private:
     double m_R0;
@@ -641,8 +654,8 @@ struct TrueCurvatureNablaBZ: public aCylindricalFunctor<TrueCurvatureNablaBZ>
     TrueCurvatureNablaBZ(const MagneticField& mag): m_R0(mag.R0()), m_mag(mag), m_invB(mag), m_bR(mag) { }
     double do_compute( double R, double Z, double P) const
     {
-        double invB = m_invB(R,Z,P), pRBP = m_mag.pRBP()(R,Z,P);
-        return invB*invB*invB*pRBP*m_R0/R*m_bR(R,Z,P);
+        double invB = m_invB(R,Z,P), pR_BP = m_mag.pR_BP()(R,Z,P);
+        return invB*invB*invB*pR_BP*m_R0/R*m_bR(R,Z,P);
     }
     private:
     double m_R0;
@@ -661,7 +674,7 @@ struct TrueCurvatureNablaBP: public aCylindricalFunctor<TrueCurvatureNablaBP>
     double do_compute( double R, double Z, double P) const
     {
         double invB = m_invB(R,Z,P);
-        return m_mag.R0()*invB*invB*invB/R/R*(m_mag.pRBR()(R,Z,P)*m_bZ(R,Z,P) + m_mag.mRBZ()(R,Z,P)*m_bR(R,Z,P));
+        return m_mag.R0()*invB*invB*invB/R/R*(m_mag.pR_BR()(R,Z,P)*m_bZ(R,Z,P) + m_mag.mR_BZ()(R,Z,P)*m_bR(R,Z,P));
     }
     private:
     MagneticField m_mag;
@@ -678,7 +691,7 @@ struct TrueCurvatureKappaR: public aCylindricalFunctor<TrueCurvatureKappaR>
     double do_compute( double R, double Z, double P) const
     {
         double invB = m_invB(R,Z,P);
-        return m_mag.R0()*invB*invB/R*(m_mag.pRBPZ()(R,Z,P) - m_mag.pRBP()(R,Z,P)*invB*m_bZ(R,Z,P));
+        return m_mag.R0()*invB*invB/R*(m_mag.pR_BPZ()(R,Z,P) - m_mag.pR_BP()(R,Z,P)*invB*m_bZ(R,Z,P));
     }
     private:
     MagneticField m_mag;
@@ -694,7 +707,7 @@ struct TrueCurvatureKappaZ: public aCylindricalFunctor<TrueCurvatureKappaZ>
     double do_compute( double R, double Z, double P) const
     {
         double invB = m_invB(R,Z,P);
-        return m_mag.R0()*invB*invB/R*( - m_mag.pRBPR()(R,Z,P) + m_mag.pRBP()(R,Z,P)*invB*m_bR(R,Z,P));
+        return m_mag.R0()*invB*invB/R*( - m_mag.pR_BPR()(R,Z,P) + m_mag.pR_BP()(R,Z,P)*invB*m_bR(R,Z,P));
     }
     private:
     MagneticField m_mag;
@@ -710,8 +723,8 @@ struct TrueCurvatureKappaP: public aCylindricalFunctor<TrueCurvatureKappaP>
     {
         double invB = m_invB(R,Z,P);
         return m_mag.R0()*invB*invB/R/R*(
-            + invB*m_mag.pRBR()(R,Z,P)*m_bZ(R,Z,P) + invB *m_mag.mRBZ()(R,Z,P)*m_bR(R,Z,P)
-            + m_mag.mRBZ()(R,Z,P)/R - m_mag.mRBZR()(R,Z,P) - m_mag.pRBRZ()(R,Z,P));
+            + invB*m_mag.pR_BR()(R,Z,P)*m_bZ(R,Z,P) + invB *m_mag.mR_BZ()(R,Z,P)*m_bR(R,Z,P)
+            + m_mag.mR_BZ()(R,Z,P)/R - m_mag.mR_BZR()(R,Z,P) - m_mag.pR_BRZ()(R,Z,P));
     }
     private:
     MagneticField m_mag;
@@ -728,7 +741,7 @@ struct TrueDivCurvatureKappa: public aCylindricalFunctor<TrueDivCurvatureKappa>
     double do_compute( double R, double Z, double P) const
     {
         double invB = m_invB(R,Z,P);
-        return m_mag.R0()*invB*invB*invB/R*( m_mag.pRBPR()(R,Z,P)*m_bZ(R,Z,P) - m_mag.pRBPZ()(R,Z,P)*m_bR(R,Z,P) );
+        return m_mag.R0()*invB*invB*invB/R*( m_mag.pR_BPR()(R,Z,P)*m_bZ(R,Z,P) - m_mag.pR_BPZ()(R,Z,P)*m_bR(R,Z,P) );
     }
     private:
     MagneticField m_mag;
@@ -758,8 +771,8 @@ struct ToroidalCurvatureNablaBR: public aCylindricalFunctor<ToroidalCurvatureNab
     ToroidalCurvatureNablaBR(const MagneticField& mag): m_mag(mag) { }
     double do_compute( double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P), pRBPZ = m_mag.pRBPZ()(R,Z,P);
-        return -R*pRBPZ/m_mag.R0()/pRBP/pRBP;
+        double pR_BP = m_mag.pR_BP()(R,Z,P), pR_BPZ = m_mag.pR_BPZ()(R,Z,P);
+        return -R*pR_BPZ/m_mag.R0()/pR_BP/pR_BP;
     }
     private:
     MagneticField m_mag;
@@ -774,8 +787,8 @@ struct ToroidalCurvatureNablaBZ: public aCylindricalFunctor<ToroidalCurvatureNab
     ToroidalCurvatureNablaBZ( const MagneticField& mag): m_mag(mag) { }
     double do_compute( double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P), pRBPR = m_mag.pRBPR()(R,Z,P);
-        return +R*pRBPR/m_mag.R0()/pRBP/pRBP - 1./m_mag.R0()/pRBP;
+        double pR_BP = m_mag.pR_BP()(R,Z,P), pR_BPR = m_mag.pR_BPR()(R,Z,P);
+        return +R*pR_BPR/m_mag.R0()/pR_BP/pR_BP - 1./m_mag.R0()/pR_BP;
     }
     private:
     MagneticField m_mag;
@@ -805,8 +818,8 @@ struct ToroidalCurvatureKappaZ: public aCylindricalFunctor<ToroidalCurvatureKapp
     ToroidalCurvatureKappaZ( const MagneticField& mag): m_mag(mag) { }
     double do_compute( double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P);
-        return -1/m_mag.R0()/pRBP;
+        double pR_BP = m_mag.pR_BP()(R,Z,P);
+        return -1/m_mag.R0()/pR_BP;
     }
     private:
     MagneticField m_mag;
@@ -821,8 +834,8 @@ struct ToroidalDivCurvatureKappa: public aCylindricalFunctor<ToroidalDivCurvatur
     ToroidalDivCurvatureKappa( const MagneticField& mag): m_mag(mag){ }
     double do_compute( double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P), pRBPZ = m_mag.pRBPZ()(R,Z,P);
-        return pRBPZ / m_mag.R0()/ pRBP/pRBP;
+        double pR_BP = m_mag.pR_BP()(R,Z,P), pR_BPZ = m_mag.pR_BPZ()(R,Z,P);
+        return pR_BPZ / m_mag.R0()/ pR_BP/pR_BP;
     }
     private:
     MagneticField m_mag;
@@ -840,7 +853,7 @@ struct GradLnB: public aCylindricalFunctor<GradLnB>
     double do_compute( double R, double Z, double P) const
     {
         double invB = m_invB(R,Z,P);
-        return m_mag.R0()*invB*invB*(m_bR(R,Z,P)*m_mag.pRBR()(R,Z,P)-m_bZ(R,Z,P)*m_mag.mRBZ()(R,Z,P)+m_bP(R,Z,P)*m_mag.pRBP()(R,Z,P))/R ;
+        return m_mag.R0()*invB*invB*(m_bR(R,Z,P)*m_mag.pR_BR()(R,Z,P)-m_bZ(R,Z,P)*m_mag.mR_BZ()(R,Z,P)+m_bP(R,Z,P)*m_mag.pR_BP()(R,Z,P))/R ;
     }
     private:
     MagneticField m_mag;
@@ -876,9 +889,9 @@ struct ToroidalGradLnB: public aCylindricalFunctor<ToroidalGradLnB>
     ToroidalGradLnB( const MagneticField& mag): m_mag(mag) { }
     double do_compute( double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P), pRBPR = m_mag.pRBPR()(R,Z,P), pRBR = m_mag.pRBR()(R,Z,P);
-        double mRBZ = m_mag.mRBZ()(R,Z,P), pRBPZ = m_mag.pRBPZ()(R,Z,P), pRBPP = m_mag.pRBPP()(R,Z,P);
-        return (pRBPR * pRBR  - pRBPZ * mRBZ)/ pRBP /pRBP - pRBR/pRBP/R + pRBPP/ R / pRBP;
+        double pR_BP = m_mag.pR_BP()(R,Z,P), pR_BPR = m_mag.pR_BPR()(R,Z,P), pR_BR = m_mag.pR_BR()(R,Z,P);
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P), pR_BPZ = m_mag.pR_BPZ()(R,Z,P), pR_BPP = m_mag.pR_BPP()(R,Z,P);
+        return (pR_BPR * pR_BR  - pR_BPZ * mR_BZ)/ pR_BP /pR_BP - pR_BR/pR_BP/R + pR_BPP/ R / pR_BP;
     }
     private:
     MagneticField m_mag;
@@ -906,7 +919,7 @@ struct BFieldP: public aCylindricalFunctor<BFieldP>
     BFieldP( const MagneticField& mag): m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        return m_mag.R0()*m_mag.pRBP()(R,Z,P)/R/R;
+        return m_mag.R0()*m_mag.pR_BP()(R,Z,P)/R/R;
     }
     private:
 
@@ -919,7 +932,7 @@ struct BFieldR: public aCylindricalFunctor<BFieldR>
     BFieldR( const MagneticField& mag): m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        return  m_mag.R0()/R*m_mag.pRBR()(R,Z,P);
+        return  m_mag.R0()/R*m_mag.pR_BR()(R,Z,P);
     }
     private:
     MagneticField m_mag;
@@ -932,7 +945,7 @@ struct BFieldZ: public aCylindricalFunctor<BFieldZ>
     BFieldZ( const MagneticField& mag): m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        return -m_mag.R0()/R*m_mag.mRBZ()(R,Z,P);
+        return -m_mag.R0()/R*m_mag.mR_BZ()(R,Z,P);
     }
     private:
     MagneticField m_mag;
@@ -959,7 +972,7 @@ struct BHatR: public aCylindricalFunctor<BHatR>
     BHatR( const MagneticField& mag): m_mag(mag), m_invB(mag){ }
     double do_compute( double R, double Z, double P) const
     {
-        return  m_invB(R,Z,P)*m_mag.R0()/R*m_mag.pRBR()(R,Z,P);
+        return  m_invB(R,Z,P)*m_mag.R0()/R*m_mag.pR_BR()(R,Z,P);
     }
     private:
     MagneticField m_mag;
@@ -973,7 +986,7 @@ struct BHatZ: public aCylindricalFunctor<BHatZ>
     BHatZ( const MagneticField& mag): m_mag(mag), m_invB(mag){ }
     double do_compute( double R, double Z, double P) const
     {
-        return  -m_invB(R,Z,P)*m_mag.R0()/R*m_mag.mRBZ()(R,Z,P);
+        return  -m_invB(R,Z,P)*m_mag.R0()/R*m_mag.mR_BZ()(R,Z,P);
     }
     private:
     MagneticField m_mag;
@@ -986,7 +999,7 @@ struct BHatP: public aCylindricalFunctor<BHatP>
     BHatP( const MagneticField& mag): m_mag(mag), m_invB(mag){ }
     double do_compute( double R, double Z, double P) const
     {
-        return m_invB(R,Z,P)*m_mag.R0()*m_mag.pRBP()(R,Z,P)/R/R;
+        return m_invB(R,Z,P)*m_mag.R0()*m_mag.pR_BP()(R,Z,P)/R/R;
     }
     private:
     MagneticField m_mag;
@@ -999,7 +1012,7 @@ struct ToroidalBHatR: public aCylindricalFunctor<ToroidalBHatR>
     ToroidalBHatR( const MagneticField& mag): m_mag(mag){ }
     double do_compute( double R, double Z, double P) const
     {
-        return  m_mag.pRBR()(R,Z,P)/m_mag.pRBP()(R,Z,P);
+        return  m_mag.pR_BR()(R,Z,P)/m_mag.pR_BP()(R,Z,P);
     }
     private:
     MagneticField m_mag;
@@ -1012,7 +1025,7 @@ struct ToroidalBHatZ: public aCylindricalFunctor<ToroidalBHatZ>
     ToroidalBHatZ( const MagneticField& mag): m_mag(mag){ }
     double do_compute( double R, double Z, double P) const
     {
-        return  -m_mag.mRBZ()(R,Z,P)/m_mag.pRBP()(R,Z,P);
+        return  -m_mag.mR_BZ()(R,Z,P)/m_mag.pR_BP()(R,Z,P);
     }
     private:
     MagneticField m_mag;
@@ -1104,11 +1117,11 @@ struct BHatRR: public aCylindricalFunctor<BHatRR>
     BHatRR( const MagneticField& mag): m_invB(mag), m_br(mag), m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        double pRBR = m_mag.pRBR()(R,Z,P);
-        double mRBZZ = m_mag.mRBZZ()(R,Z,P);
+        double pR_BR = m_mag.pR_BR()(R,Z,P);
+        double mR_BZZ = m_mag.mR_BZZ()(R,Z,P);
         double binv = m_invB(R,Z,P);
-        return -pRBR*m_mag.R0()*binv/R/R + mRBZZ*binv*m_mag.R0()/R
-            -pRBR*m_mag.R0()/R*binv*binv*m_br(R,Z,P);
+        return -pR_BR*m_mag.R0()*binv/R/R + mR_BZZ*binv*m_mag.R0()/R
+            -pR_BR*m_mag.R0()/R*binv*binv*m_br(R,Z,P);
     }
     private:
     InvB m_invB;
@@ -1121,10 +1134,10 @@ struct BHatRZ: public aCylindricalFunctor<BHatRZ>
     BHatRZ( const MagneticField& mag): m_invB(mag), m_bz(mag), m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        double pRBR = m_mag.pRBR()(R,Z,P);
-        double pRBRZ = m_mag.pRBRZ()(R,Z,P);
+        double pR_BR = m_mag.pR_BR()(R,Z,P);
+        double pR_BRZ = m_mag.pR_BRZ()(R,Z,P);
         double binv = m_invB(R,Z,P);
-        return m_mag.R0()/R*( pRBRZ*binv  -binv*binv*m_bz(R,Z,P)*pRBR );
+        return m_mag.R0()/R*( pR_BRZ*binv  -binv*binv*m_bz(R,Z,P)*pR_BR );
     }
     private:
     InvB m_invB;
@@ -1137,11 +1150,11 @@ struct BHatZR: public aCylindricalFunctor<BHatZR>
     BHatZR( const MagneticField& mag): m_invB(mag), m_br(mag), m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        double mRBZ = m_mag.mRBZ()(R,Z,P);
-        double mRBZR = m_mag.mRBZR()(R,Z,P);
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P);
+        double mR_BZR = m_mag.mR_BZR()(R,Z,P);
         double binv = m_invB(R,Z,P);
-        return +mRBZ*m_mag.R0()*binv/R/R - mRBZR*binv*m_mag.R0()/R
-            +mRBZ*m_mag.R0()/R*binv*binv*m_br(R,Z,P);
+        return +mR_BZ*m_mag.R0()*binv/R/R - mR_BZR*binv*m_mag.R0()/R
+            +mR_BZ*m_mag.R0()/R*binv*binv*m_br(R,Z,P);
     }
     private:
     InvB m_invB;
@@ -1154,10 +1167,10 @@ struct BHatZZ: public aCylindricalFunctor<BHatZZ>
     BHatZZ( const MagneticField& mag): m_invB(mag), m_bz(mag), m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        double mRBZ = m_mag.mRBZ()(R,Z,P);
-        double mRBZZ = m_mag.mRBZZ()(R,Z,P);
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P);
+        double mR_BZZ = m_mag.mR_BZZ()(R,Z,P);
         double binv = m_invB(R,Z,P);
-        return -m_mag.R0()/R*( mRBZZ*binv  -binv*binv*m_bz(R,Z,P)*mRBZ );
+        return -m_mag.R0()/R*( mR_BZZ*binv  -binv*binv*m_bz(R,Z,P)*mR_BZ );
     }
     private:
     InvB m_invB;
@@ -1171,11 +1184,11 @@ struct BHatPR: public aCylindricalFunctor<BHatPR>
     double do_compute( double R, double Z, double P) const
     {
         double binv = m_invB(R,Z,P);
-        double pRBP = m_mag.pRBP()(R,Z,P);
-        double pRBPR = m_mag.pRBPR()(R,Z,P);
-        return -binv*binv*m_br(R,Z,P)*m_mag.R0()*pRBP/R/R
-            - 2./R/R/R*binv*m_mag.R0()*pRBP
-            + binv *m_mag.R0()/R/R*pRBPR;
+        double pR_BP = m_mag.pR_BP()(R,Z,P);
+        double pR_BPR = m_mag.pR_BPR()(R,Z,P);
+        return -binv*binv*m_br(R,Z,P)*m_mag.R0()*pR_BP/R/R
+            - 2./R/R/R*binv*m_mag.R0()*pR_BP
+            + binv *m_mag.R0()/R/R*pR_BPR;
     }
     private:
     MagneticField m_mag;
@@ -1189,10 +1202,10 @@ struct BHatPZ: public aCylindricalFunctor<BHatPZ>
     double do_compute( double R, double Z, double P) const
     {
         double binv = m_invB(R,Z,P);
-        double pRBP = m_mag.pRBP()(R,Z,P);
-        double pRBPZ = m_mag.pRBPZ()(R,Z,P);
-        return -binv*binv*m_bz(R,Z,P)*m_mag.R0()*pRBP/R/R
-            + binv *m_mag.R0()/R/R*pRBPZ;
+        double pR_BP = m_mag.pR_BP()(R,Z,P);
+        double pR_BPZ = m_mag.pR_BPZ()(R,Z,P);
+        return -binv*binv*m_bz(R,Z,P)*m_mag.R0()*pR_BP/R/R
+            + binv *m_mag.R0()/R/R*pR_BPZ;
     }
     private:
     MagneticField m_mag;
@@ -1207,13 +1220,13 @@ struct DivVVP: public aCylindricalFunctor<DivVVP>
         m_bhatP(mag){ }
     double do_compute( double R, double Z, double P) const
     {
-        double pRBP = m_mag.pRBP()(R,Z,P), pRBPR = m_mag.pRBPR()(R,Z,P),
-               pRBPZ  = m_mag.pRBPZ()(R,Z,P);
-        double mRBZ = m_mag.mRBZ()(R,Z,P), pRBR = m_mag.pRBR()(R,Z,P);
-        double pRBPP = m_mag.pRBPP()(R,Z,P);
+        double pR_BP = m_mag.pR_BP()(R,Z,P), pR_BPR = m_mag.pR_BPR()(R,Z,P),
+               pR_BPZ  = m_mag.pR_BPZ()(R,Z,P);
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P), pR_BR = m_mag.pR_BR()(R,Z,P);
+        double pR_BPP = m_mag.pR_BPP()(R,Z,P);
         double bphi = m_bhatP(R,Z,P);
-        return -(pRBR*(pRBPR/R - 2.*pRBP/R/R) - pRBPZ/R*mRBZ + pRBPP/R*pRBP/R)/
-                     (pRBP*pRBP + mRBZ*mRBZ + pRBR*pRBR)/bphi/bphi;
+        return -(pR_BR*(pR_BPR/R - 2.*pR_BP/R/R) - pR_BPZ/R*mR_BZ + pR_BPP/R*pR_BP/R)/
+                     (pR_BP*pR_BP + mR_BZ*mR_BZ + pR_BR*pR_BR)/bphi/bphi;
     }
     private:
     MagneticField m_mag;
@@ -1279,11 +1292,11 @@ struct Hoo : public dg::geo::aCylindricalFunctor<Hoo>
     Hoo( dg::geo::MagneticField mag): m_mag(mag){}
     double do_compute( double R, double Z, double P) const
     {
-        double mRBZ = m_mag.mRBZ()(R,Z,P), pRBR = m_mag.pRBR()(R,Z,P), pRBP = m_mag.pRBP()(R,Z,P);
-        double psip2 = mRBZ*mRBZ+pRBR*pRBR;
+        double mR_BZ = m_mag.mR_BZ()(R,Z,P), pR_BR = m_mag.pR_BR()(R,Z,P), pR_BP = m_mag.pR_BP()(R,Z,P);
+        double psip2 = mR_BZ*mR_BZ+pR_BR*pR_BR;
         if( psip2 == 0)
             psip2 = 1e-16;
-        return (pRBP*pRBP + psip2)/R/R/psip2;
+        return (pR_BP*pR_BP + psip2)/R/R/psip2;
     }
     private:
     dg::geo::MagneticField m_mag;
