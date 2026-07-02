@@ -19,6 +19,7 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
  - Fix OpenMP version detection using `_OPENMP` Macro instead of by-compiler detection
  - Fix error in Probes module where only first coordinate is written to file
  - Fix a bug in Feltor's restart routine
+ - Fix unnecessary duplicate call in MPIFieldaligned
 ### Added
  - msvc-omp cmake preset for Windows
 ### Changed
