@@ -37,11 +37,9 @@ circular flux surfaces with DIR and NEU boundary conditions.");
               <<"Nz: "<<Nz<<"\n"
               <<"mx: "<<mx[0]<<"\n"
               <<"my: "<<mx[1]<<"\n"
-              <<"method: "<< method << "\n");
-    if( bcx == dg::DIR)
-        INFO( "Dirichlet");
-    if( bcx == dg::NEU)
-        INFO( "Neumann");
+              <<"method: "<< method << "\n"
+              <<"bc: "<<dg::bc2str(bcx)<<"\n"
+              );
     const dg::x::CylindricalGrid3d g3d( R_0-a, R_0+a, -a, a, 0, 2.*M_PI,
         n, Nx, Ny, Nz, bcx, bcx, dg::PER
 #ifdef WITH_MPI
@@ -77,7 +75,6 @@ circular flux surfaces with DIR and NEU boundary conditions.");
             -1, method, false);
     dg::geo::DS<dg::x::aProductGeometry3d, dg::x::IDMatrix, dg::x::DVec>
         ds( dsFA );
-    INFO( "Boundary conditions!");
     for( const auto& tuple :  names)
     {
         std::string name = std::get<0>(tuple);
