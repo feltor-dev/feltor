@@ -8,6 +8,7 @@ namespace poet
 {//We use the typedefs and DG_RANK0
 //
 //everyone reads their portion of the input data
+//FIXME Update to use dg::file::NcFile class!
 std::array<dg::x::DVec,2> init_from_file( std::string file_name, const dg::x::CartesianGrid2d& grid, const Parameters&, double& time){
 
 #ifdef WITH_MPI

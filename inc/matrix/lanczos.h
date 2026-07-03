@@ -89,9 +89,9 @@ with
    \end{pmatrix}
 \f]
 
-* @note The "compute_extreme_EV" and "compute_max_EV" stopping criteria
+* @note The **"compute_extreme_EV"** and **"compute_max_EV"** stopping criteria
 * are based on tracking the convergence progress of \f$\lambda^T_\min\f$ and
-* \f$ \lambda^T_\max\f$ or the tridiagonal matrix \f$ T\f$.
+* \f$ \lambda^T_\max\f$ of the tridiagonal matrix \f$ T\f$.
 * \f[
 * |\lambda^T_{\min, 10(i-1)} - \lambda^T_{\min , 10i}| < 10(\epsilon\lambda_\min  + 10^{-12}\lambda_\max)\\
 * |\lambda^T_{\max, 10(i-1)} - \lambda^T_{\max , 10i}| < 10\epsilon\lambda_\max
@@ -104,18 +104,18 @@ with
 *   for several iterations no larger/smaller Eigenvalue appears (this happens
 *   not infrequently). Testing only every 10th iteration decreases this risk
 *   such that we do not see it in practise (but it does not vanish entirely)
-*   .
-*   Also here note that theoretically the minimum and maximum Eigenvalue should converge
-*   at the same rate, however the error constant for the minimum Eigenvalue is much worse
-*   (by the condition number \f$\kappa\f$ of the matrix!). This is because all Eigenvalues that are found
-*   by \f$ T\f$ lie within the spectrum of \f$A\f$, i.e.
-*   \f[
-*   \lambda^A_\min < \lambda^T_\min < \lambda^T_\max < \lambda^T_\max
-*   \\
-*   \frac{\lambda^A_\max - \lambda^T_\max }{\lambda^A_\max}  <  1
-*   \\
-*   \frac{\lambda^T_\min - \lambda^A_\min}{\lambda^A_\min}  = \kappa\frac{\lambda^T_\min - \lambda^A_\min}{\lambda^A_\max} <  \kappa
-*   \f]
+* .
+* Also here note that theoretically the minimum and maximum Eigenvalue should converge
+* at the same rate, however the error constant for the minimum Eigenvalue is much worse
+* (by the condition number \f$\kappa\f$ of the matrix!). This is because all Eigenvalues that are found
+* by \f$ T\f$ lie within the spectrum of \f$A\f$, i.e.
+* \f[
+* \lambda^A_\min < \lambda^T_\min < \lambda^T_\max < \lambda^T_\max
+* \\
+* \frac{\lambda^A_\max - \lambda^T_\max }{\lambda^A_\max}  <  1
+* \\
+* \frac{\lambda^T_\min - \lambda^A_\min}{\lambda^A_\min}  = \kappa\frac{\lambda^T_\min - \lambda^A_\min}{\lambda^A_\max} <  \kappa
+* \f]
 *
 *
 * @note THIS METHOD DOES NOT WORK (but is still instructive:

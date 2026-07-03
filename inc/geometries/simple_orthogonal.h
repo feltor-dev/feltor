@@ -385,6 +385,8 @@ struct SimpleOrthogonal : public aGenerator2d
      * closed flux surface)
      * @param mode Indicate mode used to create
      * the first line discretization: 0 is conformal, 1 is an equalarc adaption
+     * @param eps Accuracy of rz integration
+     * @param verbose If true print intermediate results to std::cout
      */
     SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const
             CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1,

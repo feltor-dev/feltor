@@ -19,6 +19,7 @@
 #include "diag.h"
 
 
+// FIXME Update to use dg::file::NcFile class
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////

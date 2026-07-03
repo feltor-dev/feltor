@@ -275,7 +275,7 @@ unsigned newton( Gradient grad, InvHessian invhess,
  * We here see that if \f$ \phi(0) <= 0\f$ we must immediately choose \f$
  * \lambda = 0\f$ since no \f$\lambda > 0 \f$ exists such that \f$\phi(\lambda)
  * = 0\f$. In this case we have \f$||p||_W <\Delta\f$. In the case \f$\phi(0)>0\f$
- * we can use Newton iteration to find \f$ \lambda>0\f$ such that 
+ * we can use Newton iteration to find \f$ \lambda>0\f$ such that
  * \f$ | ||p||_W  - \Delta| \leq \sigma \Delta\f$. i.e.
  * \f[ |\phi(\lambda) | \leq \frac{\sigma}{||p||_W}
  * \f]

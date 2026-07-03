@@ -24,7 +24,6 @@ dg::SquareMatrix<value_type> asSquareMatrix( const dg::SparseMatrix<index_type, 
         }
     return out;
 }
-/// @endcond
 
 /**
 * @brief The dG discretization of the 1d Laplacian \f$ -\frac{1}{v} \partial_x ( v \partial_x ) \f$
@@ -225,6 +224,7 @@ struct LaplaceDecomposition
     ContainerType m_weights, m_v, m_f;
     thrust::host_vector<unsigned> m_idx;
 };
+/// @endcond
 
 
 } // namespace mat

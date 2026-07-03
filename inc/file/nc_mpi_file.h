@@ -5,7 +5,7 @@
 
 /*!@file
  *
- * Our take on a modern C++ implementation of the NetCDF data model
+ * Our take on a modern C++ implementation of the NetCDF-4 data model
  * MPI - Version
  */
 
