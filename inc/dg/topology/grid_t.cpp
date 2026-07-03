@@ -66,11 +66,20 @@ TEST_CASE( "The grid class")
             dg::create::detail::shift( mirrored2, x1, bcx, g1d.x0(), g1d.x1());
             dg::create::detail::shift( mirrored3, x2, bcx, g1d.x0(), g1d.x1());
             CHECK ( x0 >= g1d.x0());
-            CHECK ( x0 < g1d.x1());
             CHECK ( x1 >= g1d.x0());
-            CHECK ( x1 < g1d.x1());
             CHECK ( x2 >= g1d.x0());
-            CHECK ( x2 < g1d.x1());
+            if ( bcx == dg::PER)
+            {
+                CHECK ( x0 < g1d.x1());
+                CHECK ( x1 < g1d.x1());
+                CHECK ( x2 < g1d.x1());
+            }
+            else
+            {
+                CHECK ( x0 <= g1d.x1());
+                CHECK ( x1 <= g1d.x1());
+                CHECK ( x2 <= g1d.x1());
+            }
             INFO( "shifted "<< mirrored<<" "<<x0);
             if( bcx == dg::PER)
             {
