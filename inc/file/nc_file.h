@@ -203,7 +203,7 @@ struct SerialNcFile
      * @snippet{trimleft} nc_file_t.cpp default
     */
     void open(const std::filesystem::path& filename,
-            int mode = nc_nowrite)
+            enum NcFileMode mode = nc_nowrite)
     {
         // Like a std::fstream opening fails if file already associated
         if( m_open)

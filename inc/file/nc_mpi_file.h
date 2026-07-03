@@ -59,7 +59,7 @@ struct MPINcFile
      * @param comm All ranks in comm must participate in all subsequent member
      * function calls
      */
-    MPINcFile(const std::filesystem::path& filename, NcFileMode mode =
+    MPINcFile(const std::filesystem::path& filename, enum NcFileMode mode =
         nc_nowrite, MPI_Comm comm = MPI_COMM_WORLD)
     : m_comm(comm)
     {
