@@ -22,16 +22,22 @@ namespace detail{
 /*!@class hide_shift_doc
  * @brief Shift any point coordinate to a corresponding grid coordinate according to the boundary condition
  *
- * If the given point is already inside the grid, the function does nothing, else along each dimension the following happens: check the boundary condition.
- *If \c dg::PER, the point will be shifted topologically back onto the domain (modulo operation). Else the
- * point will be mirrored at the closest boundary. If the boundary is a Dirichlet boundary (happens for \c dg::DIR, \c dg::DIR_NEU and \c dg::NEU_DIR; the latter two apply \c dg::DIR to the respective left or right boundary )
- * an additional sign flag is swapped. This process is repeated until the result lies inside the grid. This function forms the basis for extending/periodifying a
- * function discretized on the grid beyond the grid boundaries.
+ * If the given point is already inside the grid, the function does nothing,
+ * else along each dimension the following happens: check the boundary
+ * condition.  If \c dg::PER, the point will be shifted topologically back onto
+ * the domain (modulo operation). Else the point will be mirrored at the
+ * closest boundary. If the boundary is a Dirichlet boundary (happens for \c
+ * dg::DIR, \c dg::DIR_NEU and \c dg::NEU_DIR; the latter two apply \c dg::DIR
+ * to the respective left or right boundary ) an additional sign flag is
+ * swapped. This process is repeated until the result lies inside the grid.
+ * This function forms the basis for extending/periodifying a function
+ * discretized on the grid beyond the grid boundaries.
  * @sa interpolate
  * @note For periodic boundaries the right boundary point is considered outside the grid and is shifted to the left boundary point.
  * @param negative swap value if there was a sign swap (happens when a point is mirrored along a Dirichlet boundary)
- * @param x point to shift (inout) the result is guaranteed to lie in the interval [x0,x1[, i.e. If x == x0, no shift occurs.
- * x == x1 is shifted to x0.
+ * @param x point to shift (inout) for periodic boundary conditions the result
+ * is guaranteed to lie in the interval [x0,x1[, i.e. x == x1 is shifted to x0,
+ * otherwise the interval is [x0,x1]
  */
 template<class real_type>
 void shift( bool& negative, real_type & x, dg::bc bc, real_type x0, real_type x1)
@@ -43,7 +49,7 @@ void shift( bool& negative, real_type & x, dg::bc bc, real_type x0, real_type x1
         x = x == x1 ? x0 : x - N0*(x1-x0); //shift
     }
     //mirror along boundary as often as necessary
-    while( (x<x0) || (x>=x1) )
+    while( (x<x0) || (x>x1) )
     {
         if( x < x0){
             x = 2.*x0 - x;
@@ -52,7 +58,7 @@ void shift( bool& negative, real_type & x, dg::bc bc, real_type x0, real_type x1
                 negative = !negative;//swap sign
         }
         if( x >= x1){
-            x = x == x1 ? x0 : 2.*x1 - x;
+            x = 2.*x1 - x;
             if( bc == dg::DIR || bc == dg::NEU_DIR) //notice the different boundary NEU_DIR to the above DIR_NEU !
                 negative = !negative; //swap sign
         }
@@ -110,7 +116,6 @@ std::vector<real_type> lagrange( real_type x, const std::vector<real_type>& xi)
     return l;
 }
 
-//THERE IS A BUG FOR PERIODIC BC !! ( really? MW: 9.9.2025)
 template<class real_type>
 void choose_1d_abscissas( real_type X,
         unsigned points_per_line, double lx,// const RealGrid1d<real_type>& g,
@@ -120,7 +125,7 @@ void choose_1d_abscissas( real_type X,
         )
 {
     // Select points for nearest, linear or cubic interpolation
-    // (Optimisation 9.9.25: sing the fact that abs are equidistant does not gain a speedup)
+    // (Optimisation 9.9.25: the fact that abs are equidistant does not gain a speedup)
     // lx is needed for PER bondary conditions
     //determine which cell (X) lies in
     // abs must be sorted for std::lower_bound to work
@@ -166,8 +171,9 @@ void choose_1d_abscissas( real_type X,
                     }
                     else
                     {
-                        // This makes it consistent with fem_t
-                        xs.resize(1); // cols should also be resized ...
+                        // Nearest Neigbor: This makes it consistent with fem_t
+                        xs.resize(1);
+                        cols.resize(1);
                         xs[0] = *it;
                         cols[0] = 0;
                     }
@@ -182,8 +188,9 @@ void choose_1d_abscissas( real_type X,
                     }
                     else
                     {
-                        // This makes it consistent with fem_t
-                        xs.resize(1); // cols should also be resized ...
+                        // Nearest neighbor: this makes it consistent with fem_t
+                        xs.resize(1);
+                        cols.resize(1);
                         xs[0] = *(it-1);
                         cols[0] = it-abs.begin()-1;
                     }
@@ -202,13 +209,13 @@ void choose_1d_abscissas( real_type X,
                     {
                         xs[0] = *abs.begin(), cols[0] = 0;
                         xs[1] = *(abs.begin()+1), cols[1] = 1;
-                        xs[2] = it == abs.begin() ? *(abs.end() -2) : *(abs.begin()+2);
+                        xs[2] = it == abs.begin() ? *(abs.end() -2) -lx: *(abs.begin()+2);
                         cols[2] = it == abs.begin() ? abs.end()-abs.begin() -2 : 2;
-                        xs[3] = *(abs.end() -1);
+                        xs[3] = *(abs.end() -1) -lx;
                         cols[3] = abs.end()-abs.begin() -1;
                     }
                     else
-                    {
+                    {   // use boundary polynomial
                         it = abs.begin();
                         xs[0] = *it,     xs[1] = *(it+1);
                         xs[2] = *(it+2), xs[3] = *(it+3);
@@ -220,14 +227,14 @@ void choose_1d_abscissas( real_type X,
                 {
                     if( bcx == dg::PER)
                     {
-                        xs[0] = *abs.begin(), cols[0] = 0;
-                        xs[1] = it == abs.end() ? *(abs.begin()+1) : *(abs.end() -3) ;
+                        xs[0] = *abs.begin()+lx, cols[0] = 0;
+                        xs[1] = it == abs.end() ? *(abs.begin()+1) + lx : *(abs.end() -3) ;
                         cols[1] = it == abs.end() ? 1 :  abs.end()-abs.begin()-3 ;
                         xs[2] = *(abs.end() - 2), cols[2] = abs.end()-abs.begin()-2;
                         xs[3] = *(abs.end() - 1), cols[3] = abs.end()-abs.begin()-1;
                     }
                     else
-                    {
+                    {   // use boundary polynomial
                         it = abs.end();
                         xs[0] = *(it-4), xs[1] = *(it-3);
                         xs[2] = *(it-2), xs[3] = *(it-1);
@@ -266,7 +273,7 @@ void interpolation_row( dg::space sp, real_type X,
     //determine normalized coordinates
     real_type xn = 2.*xnn - (real_type)(2*nn+1);
     //intervall correction
-    if (nn==g.N()) {
+    if (nn==g.N()) { //only happens fo X == x1
         nn-=1;
         xn = 1.;
     }
@@ -390,11 +397,18 @@ dg::SparseMatrix<int, dg::get_value_type<host_vector2>, thrust::host_vector> int
 ///@addtogroup interpolation
 ///@{
 /*!@class hide_bcx_doc
- * @param bcx determines what to do when a point lies outside the boundary in x. If \c dg::PER, the point will be shifted topologically back onto the domain. Else the
- * point will be mirrored at the boundary: \c dg::NEU will then simply interpolate at the resulting point, \c dg::DIR will take the negative of the interpolation.
- (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c dg::DIR to the respective left or right boundary )
- * This means the result of the interpolation is as if the interpolated function were Fourier transformed with the correct boundary condition and thus extended beyond the grid boundaries.
- * Note that if a point lies directly on the boundary between two grid cells, the value of the polynomial to the right is taken.
+ * @param bcx determines what to do when a point lies outside the boundary in
+ * x. If \c dg::PER, the point will be shifted topologically back onto the
+ * domain (which is defined as [x0,x1[; i.e. x1 will be shifted to x0).  Else
+ * the point will be mirrored at the boundary: \c dg::NEU will then simply
+ * interpolate at the resulting point, \c dg::DIR will take the negative of the
+ * interpolation.  (\c dg::DIR_NEU and \c dg::NEU_DIR apply \c dg::NEU / \c
+ * dg::DIR to the respective left or right boundary ) This means the result of
+ * the interpolation is as if the interpolated function were Fourier
+ * transformed with the correct boundary condition and thus extended beyond the
+ * grid boundaries. Note that if a point lies directly on the boundary between
+ * two grid cells, the value of the polynomial to the right is taken, except
+ * for x == x1 where the left polynomial is taken.
 */
 /*!@class hide_method
  * @param method Several interpolation methods are available: **dg** uses the native
@@ -402,8 +416,11 @@ dg::SparseMatrix<int, dg::get_value_type<host_vector2>, thrust::host_vector> int
  * nearest point and copies its value, **linear** searches for the two (in 2d
  * four, etc.) closest points and linearly interpolates their values, **cubic**
  * searches for the four (in 2d 16, etc) closest points and interpolates a
- * cubic polynomial. Pay attention that **linear** and **cubic** entail nearest neighbor
- * **communication in mpi**.
+ * cubic polynomial. Pay attention that **linear** and **cubic** entail nearest
+ * neighbor **communication in mpi**. The linear method reverts to nearest
+ * neighbor interpolation for values very close to the boundary (unless \c
+ * dg::PER is used), the cubic method interpolates the polynomial through the
+ * points closest to the boundary for values close to the boundary.
  */
 
 /*! @brief Create interpolation matrix of a list of points in given grid
