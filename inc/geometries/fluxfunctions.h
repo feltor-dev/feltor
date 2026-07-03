@@ -179,7 +179,7 @@ struct Periodify : public aCylindricalFunctor<Periodify>
 /**
 * @brief This struct bundles a function and its first derivatives
 *
-* @snippet flux_t.cpp hector
+* @snippet flux_b.cpp hector
 */
 struct CylindricalFunctorsLvl1
 {
@@ -216,7 +216,7 @@ struct CylindricalFunctorsLvl1
 /**
 * @brief This struct bundles a function and its first and second derivatives
 *
-* @snippet flux_t.cpp hector
+* @snippet flux_b.cpp hector
 */
 struct CylindricalFunctorsLvl2
 {
@@ -359,7 +359,7 @@ inline void findXpoint( const CylindricalFunctorsLvl2& psi, double& RC, double& 
 
 
 /// A symmetric 2d tensor field and its divergence
-///@snippet flux_t.cpp hector
+///@snippet flux_b.cpp hector
 struct CylindricalSymmTensorLvl1
 {
     /**
@@ -410,7 +410,7 @@ struct CylindricalSymmTensorLvl1
 };
 
 /// A vector field with three components that depend only on the first two coordinates
-///@snippet ds_t.cpp doxygen
+///@snippet ds_b.cpp doxygen
 struct CylindricalVectorLvl0
 {
     CylindricalVectorLvl0(){}

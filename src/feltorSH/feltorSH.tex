@@ -55,11 +55,11 @@ The generlized electric potential, its FLR due to a dynamic gyro-radius and the 
 \end{align}
 The gyro-averaging operators read:
 \begin{align}\label{eq:gamma1def} 
- \Gamma_{1,i} f&:= \frac{1}{1-\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2} f. & 
+ \Gamma_{1,i} f&:= e^{-\rho_i^2/2, -\Delta_\perp} f \approx \frac{1}{1-\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2} f. & 
   \Gamma_{1,i}^\dagger f&:= \frac{1}{1-\vec{\nabla}_\perp^2\frac{\rho_i^2}{2}} f.
 \end{align}
 \begin{align}\label{eq:gamma2def}
- \Gamma_{2,i} f&: = \frac{\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2}{\left(1-\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2\right)^2} f.&
+ \Gamma_{2,i} f&: = \frac{\rho_i^2}{2} e^{-\rho_i^2/2, -\Delta_\perp} \Delta_\perp f \approx \frac{\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2}{\left(1-\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2\right)^2} f.&
  \Gamma_{2,i}^\dagger f&: = \frac{\vec{\nabla}_\perp^2\frac{\rho_i^2}{2}}{\left(1-\vec{\nabla}_\perp^2\frac{\rho_i^2}{2}\right)^2} f. 
 \end{align}
 \subsection{Perpendicular dissipation}
@@ -157,7 +157,7 @@ bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU,
 bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
 initmode  & integer & 0 & - & \(n_e = \Gamma_1^\dagger N_i\)(0), \(n_e = N_i\) (1) (cf. initialization)\\
 tempmode & integer & 0    & - &thermal (0), isothermal (1)\\
-flrmode  & integer & 1    & - &const FLR (0), dyn. FLR (1)\\
+flrmode  & integer & 1    & - &const FLR (0), dyn. FLR (1), matrix product FLR (2)\\
 \bottomrule
 \end{longtable}
 

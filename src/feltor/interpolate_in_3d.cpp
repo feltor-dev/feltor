@@ -10,14 +10,13 @@
 #include "dg/file/file.h"
 #include "feltordiag.h"
 
-thrust::host_vector<float> append( const thrust::host_vector<float>& in, const dg::aRealTopology3d<double>& g)
+template<class container>
+container append( const container& in, const dg::aRealTopology3d<double>& g)
 {
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-    thrust::host_vector<float> out(g.size()+size2d);
-    for( unsigned i=0; i<g.size(); i++)
-        out[i] = in[i];
-    for( unsigned i=0; i<size2d; i++)
-        out[g.size()+i] = in[i];
+    container out(g.size()+size2d);
+    thrust::copy( in.begin(), in.end(), out.begin());
+    thrust::copy( in.begin(), in.begin()+size2d, out.begin()+g.size());
     return out;
 }
 //convert all 3d variables of every TIME_FACTOR-th timestep to float
@@ -92,33 +91,41 @@ int main( int argc, char* argv[])
     dg::RealCylindricalGrid3d<double> g3d_out_equidistant( box.at("Rmin"),box.at("Rmax"),
             box.at("Zmin"),box.at("Zmax"), 0, 2*M_PI, 1, n_out*Nx_out, n_out*Ny_out,
             INTERPOLATE*Nz_out, p.bcxN, p.bcyN, dg::PER);
-    dg::RealCylindricalGrid3d<float> g3d_out_periodic( box.at("Rmin"),box.at("Rmax"), box.at("Zmin"),box.at("Zmax"), 0,
-            2*M_PI+g3d_out.hz(), n_out, Nx_out, Ny_out, INTERPOLATE*Nz_out+1,
-            p.bcxN, p.bcyN, dg::PER);
     dg::RealCylindricalGrid3d<float> g3d_out_periodic_equidistant( box.at("Rmin"),box.at("Rmax"),
             box.at("Zmin"),box.at("Zmax"), 0, 2*M_PI+g3d_out.hz(), 1, n_out*Nx_out, n_out*Ny_out,
             INTERPOLATE*Nz_out+1, p.bcxN, p.bcyN, dg::PER);
+    std::cout <<"Size of output grid in GB is "<<g3d_out.size() * 8.0/ 1e9<<"\n";
+    /////////////////////////////////////////////////////////////////////////
+    auto bhat = dg::geo::createBHat( mag);
+    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> fieldaligned(
+        bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
+        //let's take NEU bc because N is not homogeneous
+        p.rk4eps, 5, 5, -1, "dg" );
+
+    std::cout << "Interpolation ...\n";
+    dg::SquareMatrix<double> backwardeq( dg::DLT<double>::backwardEQ( g3d_out.n()));
+    dg::SquareMatrix<double> forward( dg::DLT<double>::forward( g3d_out.n()));
+    dg::MultiMatrix<dg::DMatrix, dg::DVec> backscatter =
+        dg::create::fast_transform( backwardeq*forward, backwardeq*forward, g3d_out);
+
+    // Construct weights and temporaries
+    dg::DVec transferD_in = dg::evaluate(dg::zero,g3d_in);
+    dg::DVec transferD_out = dg::evaluate(dg::zero,g3d_out);
+    dg::DVec transferD = dg::evaluate(dg::zero,g3d_out_equidistant);
+    dg::fDVec transferD_out_float = dg::construct<dg::fDVec>( transferD);
+
     // For field-aligned output
     dg::RealCylindricalGrid3d<double> g3d_out_fieldaligned( box.at("Rmin"),box.at("Rmax"),
             box.at("Zmin"),box.at("Zmax"), -2*M_PI, 2*M_PI, 1, n_out*Nx_out, n_out*Ny_out, 2*Nz_out,
             p.bcxN, p.bcyN, dg::PER);
     dg::RealGrid2d<double> g2d( box.at("Rmin"),box.at("Rmax"),box.at("Zmin"),box.at("Zmax"), 1, n_out*Nx_out,
             n_out*Ny_out, p.bcxN, p.bcyN);
-
-
-    // Construct weights and temporaries
-    dg::HVec transferH_in = dg::evaluate(dg::zero,g3d_in);
-    dg::HVec transferH_out = dg::evaluate(dg::zero,g3d_out);
-    dg::HVec transferH = dg::evaluate(dg::zero,g3d_out_equidistant);
-    dg::fHVec transferH_out_float = dg::construct<dg::fHVec>( transferH);
-    // Construct for field-aligned output
-    dg::HVec transferH_aligned_out = dg::evaluate( dg::zero, g3d_out_fieldaligned);
+    dg::DVec transferD_aligned_out = dg::evaluate( dg::zero, g3d_out_fieldaligned);
     dg::HVec RR = dg::evaluate( dg::zero, g3d_out_fieldaligned), ZZ(RR), PP(RR);
-    std::array<thrust::host_vector<double>,3> yy0{
+    std::array<dg::HVec,3> yy0{
         dg::evaluate( dg::cooX2d, g2d),
         dg::evaluate( dg::cooY2d, g2d),
         dg::evaluate( dg::zero, g2d)}, yy1(yy0); //s
-    auto bhat = dg::geo::createBHat( mag);
     dg::geo::detail::DSFieldCylindrical3 cyl_field(bhat);
     dg::Adaptive<dg::ERKStep<std::array<double,3>>> adapt(
             "Dormand-Prince-7-4-5", std::array<double,3>{0,0,0});
@@ -153,7 +160,7 @@ int main( int argc, char* argv[])
         phi0 += deltaPhi;
     }
     phi0 = deltaPhi/2.;
-    yy0 = std::array<thrust::host_vector<double>,3> {
+    yy0 = std::array<dg::HVec,3> {
         dg::evaluate( dg::cooX2d, g2d),
         dg::evaluate( dg::cooY2d, g2d),
         dg::evaluate( dg::zero, g2d)};
@@ -176,16 +183,9 @@ int main( int argc, char* argv[])
         std::swap( yy0, yy1);
         phi0 -= deltaPhi;
     }
-    dg::IHMatrix big_matrix
+    dg::IDMatrix big_matrix
         = dg::create::interpolation( RR, ZZ, PP, g3d_in, p.bcxN, p.bcyN, dg::PER, "linear");
 
-    /////////////////////////////////////////////////////////////////////////
-    dg::geo::Fieldaligned<dg::CylindricalGrid3d, dg::IHMatrix, dg::HVec> fieldaligned(
-        bhat, g3d_out, dg::NEU, dg::NEU, dg::geo::NoLimiter(),
-        //let's take NEU bc because N is not homogeneous
-        p.rk4eps, 5, 5, -1, "dg" );
-    dg::IHMatrix interpolate_in_2d = dg::create::interpolation(
-            g3d_out_equidistant, g3d_out);
 
     { // Static write
     file_out.defput_dim( "x", {{"axis", "X"}},
@@ -195,28 +195,33 @@ int main( int argc, char* argv[])
     file_out.defput_dim( "z", {{"axis", "Z"}},
             g3d_out_periodic_equidistant.abscissas(2));
 
+    std::cout << "Static write ...\n";
     for( auto& record : feltor::diagnostics3d_static_list)
     {
+        std::cout << "Name : "<<record.name<<"\n";
         if( record.name != "xc" && record.name != "yc" && record.name != "zc" )
         {
-            file_in.get_var( record.name, {g3d_in}, transferH_in);
+            file_in.get_var( record.name, {g3d_in}, transferD_in);
 
-            transferH_out = fieldaligned.interpolate_from_coarse_grid(
-                g3d_in, transferH_in);
-            dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
-            dg::assign( transferH, transferH_out_float);
-            file_out.defput_var( record.name, {"z", "y", "x"}, record.atts,
-                    {g3d_out_periodic_equidistant},
-                    append( transferH_out_float, g3d_out_equidistant));
+            transferD_out = fieldaligned.interpolate_from_coarse_grid(
+                g3d_in, transferD_in);
+            dg::blas2::symv( backscatter, transferD_out, transferD);
+            dg::assign( transferD, transferD_out_float);
         }
         else
         {
-            record.function ( transferH_out, mag, g3d_out_equidistant);
-            dg::assign( transferH_out, transferH_out_float);
-            file_out.defput_var( record.name, {"z", "y", "x"}, record.atts,
-                    {g3d_out_periodic_equidistant},
-                    append( transferH_out_float, g3d_out_equidistant));
+            if( record.name == "xc")
+                transferD_out = dg::evaluate( dg::cooRZP2X, g3d_out_equidistant);
+            else if ( record.name == "yc")
+                transferD_out = dg::evaluate( dg::cooRZP2Y, g3d_out_equidistant);
+            else if ( record.name == "zc")
+                transferD_out = dg::evaluate( dg::cooRZP2Z, g3d_out_equidistant);
+
+            dg::assign( transferD_out, transferD_out_float);
         }
+        file_out.defput_var( record.name, {"z", "y", "x"}, record.atts,
+                {g3d_out_periodic_equidistant},
+                append( transferD_out_float, g3d_out_equidistant));
     }
     }
     // for fieldaligned output (transform to Cartesian coords)
@@ -272,6 +277,7 @@ int main( int argc, char* argv[])
         file_out.put_var( "timef", {i/TIME_FACTOR}, time);
         for( auto& record : feltor::diagnostics3d_list)
         {
+            std::cout << "Name : "<<record.name<<"\n";
             std::string record_name = record.name;
             bool available = true;
 
@@ -286,24 +292,24 @@ int main( int argc, char* argv[])
             }
             if( available)
             {
-                file_in.get_var( record.name, {i,g3d_in}, transferH_in);
-                transferH_out = fieldaligned.interpolate_from_coarse_grid(
-                    g3d_in, transferH_in);
-                dg::blas2::symv( interpolate_in_2d, transferH_out, transferH);
-                dg::assign( transferH, transferH_out_float);
+                file_in.get_var( record.name, {i,g3d_in}, transferD_in);
+                transferD_out = fieldaligned.interpolate_from_coarse_grid(
+                    g3d_in, transferD_in);
+                dg::blas2::symv( backscatter, transferD_out, transferD);
+                dg::assign( transferD, transferD_out_float);
                 // and the fieldaligned variables
-                dg::blas2::symv( big_matrix, transferH_in, transferH_aligned_out);
+                dg::blas2::symv( big_matrix, transferD_in, transferD_aligned_out);
             }
             else
             {
-                dg::blas1::scal( transferH_out_float, (float)0);
-                dg::blas1::scal( transferH_aligned_out, (double)0);
+                dg::blas1::scal( transferD_out_float, (float)0);
+                dg::blas1::scal( transferD_aligned_out, (double)0);
             }
             file_out.put_var( record.name, {i/TIME_FACTOR,
-                g3d_out_periodic_equidistant}, append( transferH_out_float,
+                g3d_out_periodic_equidistant}, append( transferD_out_float,
                         g3d_out_equidistant));
             file_out.put_var( record.name+"FF", {i/TIME_FACTOR,
-                g3d_out_fieldaligned}, transferH_aligned_out);
+                g3d_out_fieldaligned}, transferD_aligned_out);
         }
 
     } //end timestepping

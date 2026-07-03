@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <thrust/host_vector.h>
+#include <thrust/copy.h>
 
 #include "exceptions.h"
 #include "config.h"
@@ -9,6 +10,92 @@
 #include "tensor_traits.h"
 #include "memory.h"
 #include "index.h"
+#ifdef DG_WITH_NCCL
+#include "nccl.h"
+///@cond
+namespace dg
+{
+namespace detail
+{
+
+// Note from ncclCommGetAsyncError documentation: Query progress and/or errors
+// from asynchronous nccl function
+//
+// nccl functions without stream argument are complete as soon as the return
+// value is ncclSuccess. nccl functions with stream arguments return
+// ncclSuccess as soon as the operation kernel is submitted to the stream. If
+// the state is ncclInProgress no other kernels are allowed to be issued on the
+// stream used by nccl (MW: unless it is another nccl function within ncclGroup
+// calls I guess?) If there is an error on a communicator it should be
+// destroyed using ncclCommAbort
+void ncclCommSynchronize(ncclComm_t comm)
+{
+    // Wait untill all Kernels are submitted, or function returns
+    ncclResult_t state;
+    do
+    {
+        ncclResult_t result = ncclCommGetAsyncError( comm, &state);
+        if( result != ncclSuccess)
+            throw dg::Error(dg::Message(_ping_)<<ncclGetErrorString(result));
+    }
+    while( state == ncclInProgress);
+    if( state != ncclSuccess)
+        throw dg::Error(dg::Message(_ping_)<<ncclGetErrorString(state));
+}
+
+// Similar to exblas/mpi_accumulate, this keeps a static map of comms we already created
+inline void getNcclComm( MPI_Comm comm, ncclComm_t * ncclcomm, cudaStream_t * stream )
+{
+    static std::map<MPI_Comm, std::pair<ncclComm_t, cudaStream_t>> comms;
+    if( comms.count(comm) == 1 )
+    {
+        *ncclcomm = std::get<0>(comms[comm]);
+        *stream = std::get<1>(comms[comm]);
+        return;
+    }
+    int rank, size;
+    MPI_Comm_rank( comm, &rank);
+    MPI_Comm_size( comm, &size);
+
+    ncclUniqueId ncclid;
+    // Check the nccl user-guide for options
+    ncclConfig_t config = NCCL_CONFIG_INITIALIZER;
+    config.blocking = 0; // important! We want asynchronous communication (MW but has seg-fault on nccl-2.22 and super slow on nccl-2.28)
+    // If blocking = 1 the ncclCommSynchronize calls should be deleted
+
+    if( rank == 0)
+        ncclGetUniqueId(&ncclid);
+    MPI_Bcast((void *)&ncclid, sizeof(ncclid), MPI_BYTE, 0, comm);
+    ncclCommInitRankConfig( ncclcomm, size, ncclid, rank, &config);
+    ncclCommSynchronize( *ncclcomm);
+
+
+    cudaStreamCreate( stream);
+
+    comms[comm] = {*ncclcomm, *stream};
+}
+template<class value_type>
+inline ncclDataType_t getNcclDataType(){ assert( false && "Type not supported!\n" ); return ncclDataType_t{}; }
+template<> inline ncclDataType_t getNcclDataType<char>(){ return ncclChar;}
+template<> inline ncclDataType_t getNcclDataType<signed char>(){ return ncclChar;}
+template<> inline ncclDataType_t getNcclDataType<unsigned char>(){ return ncclUint8;}
+template<> inline ncclDataType_t getNcclDataType<int>(){ return ncclInt;}
+template<> inline ncclDataType_t getNcclDataType<unsigned int>(){ return ncclUint32;}
+template<> inline ncclDataType_t getNcclDataType<signed long int>(){ return ncclInt64;}
+template<> inline ncclDataType_t getNcclDataType<unsigned long int>(){ return ncclUint64;}
+template<> inline ncclDataType_t getNcclDataType<float>(){ return ncclFloat;}
+template<> inline ncclDataType_t getNcclDataType<double>(){ return ncclDouble;}
+
+// We need to separately catch the complex nature of the array though
+template<> inline ncclDataType_t getNcclDataType<std::complex<float>>(){ return ncclFloat;}
+template<> inline ncclDataType_t getNcclDataType<std::complex<double>>(){ return ncclDouble;}
+template<> inline ncclDataType_t getNcclDataType<thrust::complex<float>>(){ return ncclFloat;}
+template<> inline ncclDataType_t getNcclDataType<thrust::complex<double>>(){ return ncclDouble;}
+
+}// namespace detail
+}// namespace dg
+///@endcond
+#endif // DG_WITH_NCCL
 
 namespace dg{
 
@@ -170,6 +257,20 @@ communicate to start with (the \c dg::mpi_permute function does that):
 
 ///@cond
 namespace detail{
+inline void cuda_check_error_and_sync_device()
+{
+#ifdef __CUDACC__ // g++ does not know cuda code (happens for device=cpu, code must be valid)
+    // cuda - sync device
+    cudaError_t code = cudaGetLastError( );
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+    // We have to wait that all kernels are finished and values are
+    // ready to be sent
+    code = cudaDeviceSynchronize();
+    if( code != cudaSuccess)
+        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
+#endif // __CUDACC__
+}
 
 // Used for Average operation
 struct MPIAllreduce
@@ -179,42 +280,60 @@ struct MPIAllreduce
     template<class ContainerType> // a Shared Vector
     void reduce( ContainerType& y) const
     {
-        using value_type = dg::get_value_type<ContainerType>;
-        void * send_ptr = thrust::raw_pointer_cast(y.data());
+
         if constexpr (dg::has_policy_v<ContainerType, dg::CudaTag>)
         {
-#ifdef __CUDACC__ // g++ does not know cuda code
-            // cuda - sync device
-            cudaError_t code = cudaGetLastError( );
-            if( code != cudaSuccess)
-                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-            if constexpr ( not dg::cuda_aware_mpi)
-            {
-                m_h_buffer.template set<value_type>( y.size());
-                auto& h_buffer = m_h_buffer.template get<value_type>();
-                code = cudaMemcpy( &h_buffer[0], send_ptr,
-                    y.size()*sizeof(value_type), cudaMemcpyDeviceToHost);
-                send_ptr = // re-point pointer
-                    thrust::raw_pointer_cast(&h_buffer[0]);
-                if( code != cudaSuccess)
-                    throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-            }
-            // We have to wait that all kernels are finished and values are
-            // ready to be sent
-            code = cudaDeviceSynchronize();
-            if( code != cudaSuccess)
-                throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-#else
-            assert( false && "Something is wrong! This should never execute!");
-#endif
+            detail::cuda_check_error_and_sync_device();
+            if constexpr ( dg::nccl_mpi)
+                nccl_reduce( y);
+            else if constexpr ( dg::cuda_aware_mpi)
+                mpi_reduce( y);
+            else
+                cuda_unaware_reduce( y);
         }
-        MPI_Allreduce( MPI_IN_PLACE, send_ptr, y.size(),
-            getMPIDataType<value_type>(), MPI_SUM, m_comm);
-        if constexpr (dg::has_policy_v<ContainerType, dg::CudaTag>
-            and not dg::cuda_aware_mpi)
-            y = m_h_buffer.template get<value_type>();
+        else
+            mpi_reduce(y);
     }
     private:
+    template<class ContainerType>
+    void mpi_reduce( ContainerType& y) const
+    {
+        using value_type = dg::get_value_type<ContainerType>;
+        void * send_ptr = thrust::raw_pointer_cast(y.data());
+        MPI_Allreduce( MPI_IN_PLACE, send_ptr, y.size(),
+            getMPIDataType<value_type>(), MPI_SUM, m_comm);
+    }
+    template<class ContainerType>
+    void nccl_reduce( ContainerType& y) const
+    {
+#ifdef DG_WITH_NCCL
+        using value_type = dg::get_value_type<ContainerType>;
+        ncclComm_t ncclcomm;
+        cudaStream_t stream;
+        detail::getNcclComm( m_comm, &ncclcomm, &stream);
+        unsigned ysize = y.size();
+        if constexpr( std::is_same_v<dg::get_tensor_category<value_type>, dg::ComplexTag>)
+            ysize *= 2;
+        // Since this operation is put on stream != default_stream this will execute asynchronously
+        void * send_ptr = thrust::raw_pointer_cast(y.data());
+        ncclAllReduce( send_ptr, send_ptr, ysize,
+            detail::getNcclDataType<value_type>(), ncclSum, ncclcomm, stream);
+	// Wait for Kernel to be issued to stream
+	ncclCommSynchronize( ncclcomm);
+	// Sync the stream
+	cudaStreamSynchronize(stream);
+#endif // DG_WITH_NCCL
+    }
+    template<class ContainerType>
+    void cuda_unaware_reduce( ContainerType& y) const
+    {
+        using value_type = dg::get_value_type<ContainerType>;
+        m_h_buffer.template set<value_type>( y.size());
+        auto& h_buffer = m_h_buffer.template get<value_type>();
+        thrust::copy( y.begin(), y.end(), h_buffer.begin() ); // works even if y is a view
+        mpi_reduce( h_buffer);
+        thrust::copy( h_buffer.begin(), h_buffer.end(), y.begin() ); // works even if y is a view
+    }
     MPI_Comm m_comm;
     mutable detail::AnyVector<thrust::host_vector>  m_h_buffer;
 };
@@ -269,11 +388,12 @@ struct MPIContiguousGather
     {
         m_sendMsg = mpi_permute ( recvMsg, comm);
         m_communicating = is_communicating( recvMsg, comm);
-        // if cuda unaware we need to send messages through host
-        for( auto& chunks : m_sendMsg)
-        for( auto& chunk : chunks.second)
-            m_store_size += chunk.size;
         resize_rqst();
+        m_gatherFrom_minSize = 0;
+        for( auto& chunks : m_sendMsg) // first is PID, second is vector of chunks
+        for( auto& chunk : chunks.second)
+            m_gatherFrom_minSize = std::max( m_gatherFrom_minSize,
+                (unsigned)(chunk.idx+chunk.size));
     }
 
     /// Concatenate neigboring indices to bulk messasge
@@ -294,21 +414,10 @@ struct MPIContiguousGather
     }
 
     MPI_Comm communicator() const{return m_comm;}
-    /// How many elements in the buffer in total
+    /// How many elements in the buffer (size of recv messages) in total
     unsigned buffer_size( bool self_communication = true) const
     {
-        unsigned buffer_size = 0;
-        int rank;
-        MPI_Comm_rank( m_comm, &rank);
-        // We need to find out the minimum amount of memory we need to allocate
-        for( auto& chunks : m_recvMsg) // first is PID, second is vector of chunks
-        for( auto& chunk : chunks.second)
-        {
-            if( chunks.first == rank and not self_communication)
-                continue;
-            buffer_size += chunk.size;
-        }
-        return buffer_size;
+        return msg_size( m_recvMsg, self_communication);
     }
 
     bool isCommunicating() const{
@@ -319,90 +428,34 @@ struct MPIContiguousGather
     void global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer,
         bool self_communication = true) const
     {
+        if( gatherFrom.size() < m_gatherFrom_minSize)
+            throw dg::Error(dg::Message(_ping_)<<"In MPIGather GatherFrom size "
+                <<gatherFrom.size() << " must be at least "<<m_gatherFrom_minSize);
+        if( buffer.size() < buffer_size( self_communication))
+            throw dg::Error(dg::Message(_ping_)<<"In MPIGather buffer     size "
+                <<buffer.size() << " must be at least "<<buffer_size( self_communication));
+        int rank;
+        MPI_Comm_rank( m_comm, &rank);
         // TODO only works if m_recvMsg is non-overlapping
         using value_type = dg::get_value_type<ContainerType0>;
         static_assert( std::is_same_v<value_type,
                 get_value_type<ContainerType1>>);
-        int rank;
-        MPI_Comm_rank( m_comm, &rank);
-        // BugFix: buffer value_type must be set even if no messages are sent
-        // so that global_gather_wait works
-        if constexpr (dg::has_policy_v<ContainerType1, dg::CudaTag>
-            and not dg::cuda_aware_mpi)
+        if constexpr (dg::has_policy_v<ContainerType0, dg::CudaTag>)
         {
-            m_h_store.template set<value_type>( m_store_size);
-            m_h_buffer.template set<value_type>( buffer_size(self_communication));
-        }
-        // Receives (we implicitly receive chunks in the order)
-        unsigned start = 0;
-        unsigned rqst_counter = 0;
-        for( auto& msg : m_recvMsg) // first is PID, second is vector of chunks
-        for( unsigned u=0; u<msg.second.size(); u++)
-        {
-            if( msg.first == rank and not self_communication)
-                continue;
-            auto chunk = msg.second[u];
-            void * recv_ptr;
-            assert( buffer.size() >= unsigned(start + chunk.size - 1));
-            if constexpr (dg::has_policy_v<ContainerType1, dg::CudaTag>
-                and not dg::cuda_aware_mpi)
-            {
-                auto& h_buffer = m_h_buffer.template get<value_type>();
-                recv_ptr = thrust::raw_pointer_cast( h_buffer.data())
-                   + start;
-            }
+            detail::cuda_check_error_and_sync_device();
+            if constexpr ( dg::nccl_mpi)
+                nccl_global_gather_init( gatherFrom, buffer,
+                    self_communication, rank, m_recvMsg, m_sendMsg);
+            else if constexpr ( dg::cuda_aware_mpi)
+                mpi_global_gather_init( gatherFrom, buffer,
+                    self_communication, rank, m_recvMsg, m_sendMsg);
             else
-                recv_ptr = thrust::raw_pointer_cast( buffer.data())
-                   + start;
-            MPI_Irecv( recv_ptr, chunk.size,
-                   getMPIDataType<value_type>(),  //receiver
-                   msg.first, u, m_comm, &m_rqst[rqst_counter]);  //source
-            rqst_counter ++;
-            start += chunk.size;
+                cuda_unaware_global_gather_init( gatherFrom, buffer,
+                    self_communication, rank, m_recvMsg, m_sendMsg);
         }
-
-        // Send
-        start = 0;
-        for( auto& msg : m_sendMsg) // first is PID, second is vector of chunks
-        for( unsigned u=0; u<msg.second.size(); u++)
-        {
-            if( msg.first == rank and not self_communication)
-                continue;
-            auto chunk = msg.second[u];
-            const void * send_ptr = thrust::raw_pointer_cast(gatherFrom.data()) + chunk.idx;
-            assert( gatherFrom.size() >= unsigned(chunk.idx + chunk.size - 1));
-            if constexpr (dg::has_policy_v<ContainerType0, dg::CudaTag>)
-            {
-#ifdef __CUDACC__ // g++ does not know cuda code
-                // cuda - sync device
-                cudaError_t code = cudaGetLastError( );
-                if( code != cudaSuccess)
-                    throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-                if constexpr ( not dg::cuda_aware_mpi)
-                {
-                    auto& h_store = m_h_store.template get<value_type>();
-                    code = cudaMemcpy( &h_store[start], send_ptr,
-                        chunk.size*sizeof(value_type), cudaMemcpyDeviceToHost);
-                    send_ptr = // re-point pointer
-                        thrust::raw_pointer_cast(&h_store[start]);
-                    if( code != cudaSuccess)
-                        throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-                }
-                // We have to wait that all kernels are finished and values are
-                // ready to be sent
-                code = cudaDeviceSynchronize();
-                if( code != cudaSuccess)
-                    throw dg::Error(dg::Message(_ping_)<<cudaGetErrorString(code));
-#else
-                assert( false && "Something is wrong! This should never execute!");
-#endif
-            }
-            MPI_Isend( send_ptr, chunk.size,
-                   getMPIDataType<value_type>(),  //sender
-                   msg.first, u, m_comm, &m_rqst[rqst_counter]);  //destination
-            rqst_counter ++;
-            start+= chunk.size;
-        }
+        else
+            mpi_global_gather_init( gatherFrom, buffer,
+                self_communication, rank, m_recvMsg, m_sendMsg);
     }
 
     ///@copydoc MPIGather<Vector>::global_gather_wait
@@ -410,10 +463,31 @@ struct MPIContiguousGather
     void global_gather_wait( ContainerType& buffer) const
     {
         using value_type = dg::get_value_type<ContainerType>;
-        MPI_Waitall( m_rqst.size(), &m_rqst[0], MPI_STATUSES_IGNORE );
-        if constexpr (dg::has_policy_v<ContainerType, dg::CudaTag>
-                and not dg::cuda_aware_mpi)
-            buffer = m_h_buffer.template get<value_type>();
+        if constexpr (dg::has_policy_v<ContainerType, dg::CudaTag>)
+        {
+            if constexpr ( dg::nccl_mpi)
+            {
+#ifdef DG_WITH_NCCL
+    // Make sure all Send/Recv Kernels are actually issued to the stream
+                ncclComm_t ncclcomm;
+                cudaStream_t stream;
+                detail::getNcclComm( m_comm, &ncclcomm, &stream);
+		ncclCommSynchronize( ncclcomm);
+                cudaStreamSynchronize(stream);
+#endif // DG_WITH_NCCL
+            }
+            else if constexpr ( dg::cuda_aware_mpi)
+                MPI_Waitall( m_rqst.size(), &m_rqst[0], MPI_STATUSES_IGNORE );
+            else
+            {
+                MPI_Waitall( m_rqst.size(), &m_rqst[0], MPI_STATUSES_IGNORE );
+                auto & h_buffer = m_h_buffer.template get<value_type>();
+                thrust::copy( h_buffer.begin(), h_buffer.end(), buffer.begin() );
+            }
+        }
+        else
+            MPI_Waitall( m_rqst.size(), &m_rqst[0], MPI_STATUSES_IGNORE );
+
     }
     private:
     MPI_Comm m_comm; // from constructor
@@ -423,7 +497,7 @@ struct MPIContiguousGather
 
     mutable detail::AnyVector<thrust::host_vector>  m_h_buffer;
 
-    unsigned m_store_size = 0;
+    unsigned m_gatherFrom_minSize = 0;
     mutable detail::AnyVector<thrust::host_vector>  m_h_store;
 
     mutable std::vector<MPI_Request> m_rqst;
@@ -437,6 +511,150 @@ struct MPIContiguousGather
             rqst_size += msg.second.size();
         m_rqst.resize( rqst_size, MPI_REQUEST_NULL);
     }
+    /// How many elements in the msg in total
+    unsigned msg_size( const std::map<int,thrust::host_vector<MsgChunk>>& msg,
+        bool self_communication = true) const
+    {
+        unsigned msg_size = 0;
+        int rank;
+        MPI_Comm_rank( m_comm, &rank);
+        // We need to find out the minimum amount of memory we need to allocate
+        for( auto& chunks : msg) // first is PID, second is vector of chunks
+        for( auto& chunk : chunks.second)
+        {
+            if( chunks.first == rank and not self_communication)
+                continue;
+            msg_size += chunk.size;
+        }
+        return msg_size;
+    }
+    // Size of the h_store
+    unsigned store_size( bool self_communication = true) const
+    {
+        return msg_size( m_sendMsg, self_communication);
+    }
+    template<class ContainerType0, class ContainerType1>
+    void mpi_global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer,
+        bool self_communication, int rank,
+        const std::map<int,thrust::host_vector<MsgChunk>>& recvMsg,
+        const std::map<int,thrust::host_vector<MsgChunk>>& sendMsg
+        ) const
+    {
+        // TODO only works if recvMsg is non-overlapping
+        // MW: not sure what exactly can go wrong ...
+        //
+        using value_type = dg::get_value_type<ContainerType0>;
+        // Receives (we implicitly receive chunks in the order)
+        unsigned start = 0;
+        unsigned rqst_counter = 0;
+        for( auto& msg : recvMsg) // first is PID, second is vector of chunks
+        for( unsigned u=0; u<msg.second.size(); u++)
+        {
+            if( msg.first == rank and not self_communication)
+                continue;
+            auto chunk = msg.second[u];
+            void * recv_ptr = thrust::raw_pointer_cast( buffer.data()) + start;
+            MPI_Irecv( recv_ptr, chunk.size,
+               getMPIDataType<value_type>(),  //receiver
+               msg.first, u, m_comm, &m_rqst[rqst_counter]);  //source
+            rqst_counter ++;
+            start += chunk.size;
+        }
+        // Send
+        for( auto& msg : sendMsg) // first is PID, second is vector of chunks
+        for( unsigned u=0; u<msg.second.size(); u++)
+        {
+            if( msg.first == rank and not self_communication)
+                continue;
+            auto chunk = msg.second[u];
+            const void * send_ptr = thrust::raw_pointer_cast(gatherFrom.data()) + chunk.idx;
+            MPI_Isend( send_ptr, chunk.size,
+               getMPIDataType<value_type>(),  //sender
+               msg.first, u, m_comm, &m_rqst[rqst_counter]);  //destination
+            rqst_counter ++;
+        }
+    }
+    template<class ContainerType0, class ContainerType1>
+    void nccl_global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer,
+        bool self_communication, int rank,
+        const std::map<int,thrust::host_vector<MsgChunk>>& recvMsg,
+        const std::map<int,thrust::host_vector<MsgChunk>>& sendMsg
+        ) const
+    {
+#ifdef DG_WITH_NCCL
+        using value_type = dg::get_value_type<ContainerType0>;
+        ncclComm_t ncclcomm;
+        cudaStream_t stream;
+        detail::getNcclComm( m_comm, &ncclcomm, &stream);
+        unsigned mod_size = 1;
+        if constexpr( std::is_same_v<dg::get_tensor_category<value_type>, dg::ComplexTag>)
+            mod_size = 2;
+        ncclGroupStart();
+
+        unsigned start = 0;
+        for( auto& msg : recvMsg) // first is PID, second is vector of chunks
+        for( unsigned u=0; u<msg.second.size(); u++)
+        {
+            if( msg.first == rank and not self_communication)
+                continue;
+            auto chunk = msg.second[u];
+            void * recv_ptr = thrust::raw_pointer_cast( buffer.data()) + start;
+            ncclRecv( recv_ptr, chunk.size*mod_size,
+                detail::getNcclDataType<value_type>(), msg.first, ncclcomm, stream);
+            start += chunk.size;
+        }
+        for( auto& msg : sendMsg) // first is PID, second is vector of chunks
+        for( unsigned u=0; u<msg.second.size(); u++)
+        {
+            if( msg.first == rank and not self_communication)
+                continue;
+            auto chunk = msg.second[u];
+            const void * send_ptr = thrust::raw_pointer_cast(gatherFrom.data()) + chunk.idx;
+            ncclSend( send_ptr, chunk.size*mod_size,
+                detail::getNcclDataType<value_type>(), msg.first, ncclcomm, stream);
+        }
+	// GroupEnd does not yet mean that all Kernels are submitted, just that grouping is done
+        ncclGroupEnd();
+#endif // DG_WITH_NCCL
+    }
+    template<class ContainerType0, class ContainerType1>
+    void cuda_unaware_global_gather_init( const ContainerType0& gatherFrom, ContainerType1& buffer,
+        bool self_communication, int rank,
+        const std::map<int,thrust::host_vector<MsgChunk>>& recvMsg,
+        const std::map<int,thrust::host_vector<MsgChunk>>& sendMsg
+        ) const
+    {
+#ifdef __CUDACC__ // g++ does not know cuda code
+        // if cuda unaware we need to send messages through host
+        using value_type = dg::get_value_type<ContainerType0>;
+        m_h_store.template set<value_type>( store_size( self_communication));
+        // BugFix: buffer value_type must be set even if no messages are sent
+        // so that global_gather_wait works
+        m_h_buffer.template set<value_type>( buffer.size()); // global_gather_wait assigns same size
+        auto& h_buffer = m_h_buffer.template get<value_type>();
+        auto& h_store = m_h_store.template get<value_type>();
+        //
+        std::map<int,thrust::host_vector<MsgChunk>> h_sendMsg = sendMsg;
+        unsigned start = 0;
+        for( auto& msg : sendMsg) // first is PID, second is vector of chunks
+        for( unsigned u=0; u<msg.second.size(); u++)
+        {
+            if( msg.first == rank and not self_communication)
+                continue;
+            auto chunk = msg.second[u];
+            const void * send_ptr = thrust::raw_pointer_cast(gatherFrom.data()) + chunk.idx;
+            thrust::copy( gatherFrom.begin()+chunk.idx,
+                gatherFrom.begin()+chunk.idx+chunk.size, h_store.begin() + start);
+
+            h_sendMsg[msg.first][u].idx = start;
+            start += chunk.size;
+        }
+        mpi_global_gather_init( h_store, h_buffer, self_communication, rank,
+            recvMsg, h_sendMsg);
+#endif // __CUDACC__
+
+    }
+
 };
 }//namespace detail
 ///@endcond
@@ -692,7 +910,6 @@ struct MPIGather
     }
 
     private:
-
     bool m_contiguous = false;
     Vector<int> m_g2;
     dg::detail::MPIContiguousGather m_mpi_gather;

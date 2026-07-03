@@ -170,6 +170,14 @@ struct WrappedJsonValue
         return m_js.isMember(key);
 #endif
     }
+    /// Call corresponding JsonType function
+    bool isString() const {
+#ifdef DG_USE_JSONHPP
+        return m_js.is_string();
+#else
+        return m_js.isString();
+#endif
+    }
 
     // //////////Members imitating the original JsonType///////////////
     /// Wrap the corresponding JsonType function with error handling

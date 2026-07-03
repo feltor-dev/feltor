@@ -61,7 +61,7 @@ int main(
     int dims[3] = {1,1,1};
     int rank = 0;
 #ifdef WITH_MPI
-    dg::mpi_init( argc, argv);
+    dg::mpi_init( &argc, &argv);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm comm;
     bool verbose = false;
@@ -69,10 +69,10 @@ int main(
             true, verbose, std::cout);
     dg::mpi_read_grid( n, {&Nx, &Ny, &Nz}, comm, std::cin, verbose, std::cout);
     int periods[3], coords[3];
-    MPI_Cart_get( comm, 3, dims, periods, coords);
+    dg::mpi_cart_get( comm, 3, dims, periods, coords);
     periods[0] = false, periods[1] = false;
-    MPI_Comm commEll;
-    MPI_Cart_create( MPI_COMM_WORLD, 3, dims, periods, true, &commEll);
+    MPI_Comm commEll = dg::mpi_cart_create( MPI_COMM_WORLD,
+        {dims[0], dims[1], dims[2]}, {periods[0], periods[1], periods[2]});
 #else
     std::cin >> n >> Nx >> Ny >> Nz;
 #endif

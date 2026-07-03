@@ -52,7 +52,7 @@ int main(
 )
 {
 #ifdef WITH_MPI
-    dg::mpi_init( argc, argv);
+    dg::mpi_init( &argc, &argv);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm comm1d = dg::mpi_cart_create( MPI_COMM_WORLD, {0}, {1});

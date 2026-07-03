@@ -16,7 +16,6 @@
   */
 namespace dg
 {
-    //TODO Elliptic can be made complex aware with a 2nd complex ContainerType
 // Note that there are many tests for this file : elliptic2d_b,
 // elliptic2d_mpib, elliptic_b, elliptic_mpib, ellipticX2d_b
 // And don't forget inc/geometries/elliptic3d_t (testing alignment and
@@ -24,8 +23,9 @@ namespace dg
 // and geometryX_elliptic_b and geometryX_refined_elliptic_b
 
 
-/*!
- * @class hide_note_jump
+// NOTE: Direct applications of Elliptic converge with n-2
+
+/*! @class hide_note_jump
  *
  * @sa Our theory guide <a href="https://www.overleaf.com/read/rpbjsqmmfzyj" target="_blank">Introduction to dg methods</a> on overleaf holds a detailed derivation
  *
@@ -41,6 +41,17 @@ namespace dg
  The \f$ \chi_{on/off} \f$ in the jump term serves to weight the jump term with \f$ \chi \f$. This can be switched either on or off with off being the default.
  Also note that a forward discretization has more diffusion than a centered discretization.
  */
+/*! @class hide_ContainerTmp
+ * @tparam ContainerTmp The container type for temporary storage during the
+ * symv matrix-vector multiplication.  The intention is to allow \c
+ * ContainerTmp different from \c Container in order to allow a real operator
+ * to apply to a complex vector.  So, for example <tt>Container =
+ * thrust::device_vector<double></tt> and <tt>ContainerTmp =
+ * thrust::device_vector<thrust::complex<double>></tt>.  In all other cases \c
+ * ContainerTmp should equal \c Container.
+ *
+ */
+
 /**
  * @brief A 1d negative elliptic differential operator \f$ -\partial_x ( \chi \partial_x ) \f$
  *
@@ -54,6 +65,8 @@ namespace dg
   strictly positive though).
  * @copydoc hide_note_jump
  * @copydoc hide_geometry_matrix_container
+ * @copydoc hide_ContainerTmp
+ *
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ \chi=1\f$ so that a
@@ -61,7 +74,7 @@ namespace dg
  * @note The inverse of \f$ \chi\f$ makes a good general purpose preconditioner
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
-template <class Geometry, class Matrix, class Container>
+template <class Geometry, class Matrix, class Container, class ContainerTmp = Container>
 class Elliptic1d
 {
     public:
@@ -109,7 +122,8 @@ class Elliptic1d
 
         dg::assign( dg::create::weights(g),       m_weights);
         dg::assign( dg::evaluate( dg::one, g),    m_precond);
-        m_tempx = m_sigma = m_precond;
+        dg::assign( m_precond, m_sigma);
+        dg::assign( m_precond, m_tempx);
     }
 
     ///@copydoc hide_construct
@@ -143,6 +157,12 @@ class Elliptic1d
     }
 
     /**
+     * @brief Return the scalar part Chi
+     * @return chi
+     */
+    const Container& get_chi() const { return m_sigma;}
+
+    /**
      * @brief Return the weights making the operator self-adjoint
      * @return weights
      */
@@ -164,35 +184,42 @@ class Elliptic1d
     void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     ///@copydoc Elliptic2d::get_jfactor()
     value_type get_jfactor() const {return m_jfactor;}
-    ///@copydoc Elliptic2d::operator()(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::operator()(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
-    void operator()( const ContainerType0& x, ContainerType1& y){
+    void operator()( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
 
-    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
-    void symv( const ContainerType0& x, ContainerType1& y){
+    void symv( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
-    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
-    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
+    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y) const
+    {
+        symv( alpha, x, m_jfactor, m_sigma, beta, y);
+    }
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,const ContainerType2&,value_type,ContainerType1&)const
+    ///@note Here \c sigma is an alias for \c chi
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void symv( value_type alpha, const ContainerType0& x, value_type jfactor, const ContainerType2& sigma, value_type beta, ContainerType1& y) const
     {
         dg::blas2::gemv( m_rightx, x, m_tempx);
-        dg::blas1::pointwiseDot( m_tempx, m_sigma, m_tempx);
+        dg::blas1::pointwiseDot( m_tempx, sigma, m_tempx);
         dg::blas2::symv( -alpha, m_leftx, m_tempx, beta, y);
         //add jump terms
-        if( 0.0 != m_jfactor )
+        if( 0.0 != jfactor )
         {
-            dg::blas2::symv( m_jfactor*alpha, m_jumpX, x, 1., y);
+            dg::blas2::symv( jfactor*alpha, m_jumpX, x, 1., y);
         }
     }
 
     private:
     Matrix m_leftx, m_rightx, m_jumpX;
     Container m_weights, m_precond;
-    Container m_tempx;
+    mutable ContainerTmp m_tempx; // could be complex
     Container m_sigma;
     value_type m_jfactor;
 };
@@ -220,6 +247,8 @@ class Elliptic1d
  The following code snippet demonstrates the use of \c Elliptic in an inversion problem
  * @snippet elliptic2d_b.cpp pcg
  * @copydoc hide_geometry_matrix_container
+ * @copydoc hide_ContainerTmp
+ *
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ \chi=\sqrt{g}g^{-1}\f$ so that a
@@ -229,7 +258,7 @@ class Elliptic1d
  * this class also can compute the variation integrand \f$ \lambda^2\nabla \phi\cdot \tau\cdot\nabla\phi\f$
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
-template <class Geometry, class Matrix, class Container>
+template <class Geometry, class Matrix, class Container, class ContainerTmp = Container>
 class Elliptic2d
 {
     public:
@@ -291,7 +320,8 @@ class Elliptic2d
 
         dg::assign( dg::create::volume(g),        m_weights);
         dg::assign( dg::evaluate( dg::one, g),    m_precond);
-        m_temp = m_tempx = m_tempy = m_weights;
+        dg::assign( m_weights, m_temp);
+        m_tempx = m_tempy = m_temp;
         m_chi=g.metric();
         m_sigma = m_vol = dg::tensor::volume(m_chi);
     }
@@ -350,6 +380,19 @@ class Elliptic2d
     }
 
     /**
+     * @brief Get tensor part of Chi tensor
+     *
+     * @return Tensor part of Chi tensor tau
+     */
+    const SparseTensor<Container>& get_tau() const { return m_chi;}
+    /**
+     * @brief Get scalar part of Chi tensor
+     *
+     * @return Scalar part of Chi tensor sigma
+     */
+    const Container& get_sigma() const { return m_sigma;}
+
+    /**
      * @brief Return the weights making the operator self-adjoint
      *
      * i.e. the volume form
@@ -381,12 +424,12 @@ class Elliptic2d
     value_type get_jfactor() const {return m_jfactor;}
     /**
      * @brief Set the chi weighting of jump terms
-     * @param jump_weighting Switch for weighting the jump factor with chi. Either true or false.
+     * @param jump_weighting Switch for weighting the jump factor with chi.
      */
     void set_jump_weighting( bool jump_weighting) {m_chi_weight_jump = jump_weighting;}
     /**
      * @brief Get the current state of chi weighted jump terms.
-     * @return Whether the weighting of jump terms with chi is enabled. Either true or false.
+     * @return Whether the weighting of jump terms with chi is enabled.
      */
     bool get_jump_weighting() const {return m_chi_weight_jump;}
     /**
@@ -398,7 +441,7 @@ class Elliptic2d
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
-    void operator()( const ContainerType0& x, ContainerType1& y){
+    void operator()( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
 
@@ -411,7 +454,7 @@ class Elliptic2d
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
-    void symv( const ContainerType0& x, ContainerType1& y){
+    void symv( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
     /**
@@ -425,33 +468,63 @@ class Elliptic2d
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
-    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
+    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y) const
+    {
+        symv( alpha, x, m_jfactor, m_sigma, beta, y);
+    }
+    /**
+     * @brief Compute elliptic term and add to output
+     *
+     * i.e. \c y=alpha*M*x+beta*y.
+     * This version uses the given \c sigma and \c jfactor instead of the
+     * internally stored ones.  Equivalent to the following
+     * @code{.cpp}
+     * auto old_jfactor = elliptic.get_jfactor();
+     * const auto& old_sigma = elliptic.get_sigma();
+     * elliptic.set_jfactor(jfactor);
+     * elliptic.set_chi(sigma);
+     * elliptic.symv( alpha, x, beta, y);
+     * elliptic.set_jfactor(old_jfactor);
+     * elliptic.set_chi(old_sigma);
+     * @endcode
+     * @note The main rationale for having such a function is that it can be const
+     * (because no \c set_chi or \c set_jfactor needs to be called)
+     * @param alpha a scalar
+     * @param x left-hand-side
+     * @param jfactor This value will be used instead of the internal one
+     * @param sigma This value will be used instead of the internal one
+     * @param beta a scalar
+     * @param y result
+     * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
+     */
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void symv( value_type alpha, const ContainerType0& x, value_type jfactor, const ContainerType2& sigma, value_type beta, ContainerType1& y) const
     {
         //compute gradient
         dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, x, m_tempy); //R_y*f
 
         //multiply with tensor (note the alias)
-        dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
+        dg::tensor::multiply2d(sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
 
         //now take divergence
         dg::blas2::symv( m_lefty, m_tempy, m_temp);
         dg::blas2::symv( -1., m_leftx, m_tempx, -1., m_temp);
 
         //add jump terms
-        if( 0.0 != m_jfactor )
+        if( 0.0 != jfactor )
         {
             if(m_chi_weight_jump)
             {
-                dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
-                dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
-                dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
+                dg::blas2::symv( jfactor, m_jumpX, x, 0., m_tempx);
+                dg::blas2::symv( jfactor, m_jumpY, x, 0., m_tempy);
+                dg::tensor::multiply2d(sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
                 dg::blas1::axpbypgz(1.0,m_tempx,1.0,m_tempy,1.0,m_temp);
             }
             else
             {
-                dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-                dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+                dg::blas2::symv( jfactor, m_jumpX, x, 1., m_temp);
+                dg::blas2::symv( jfactor, m_jumpY, x, 1., m_temp);
             }
         }
         dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
@@ -466,7 +539,7 @@ class Elliptic2d
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerType0, class ContainerType1>
-    void variation(const ContainerType0& phi, ContainerType1& sigma){
+    void variation(const ContainerType0& phi, ContainerType1& sigma) const{
         variation(1., 1., phi, 0., sigma);
     }
     /**
@@ -479,7 +552,7 @@ class Elliptic2d
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerTypeL, class ContainerType0, class ContainerType1>
-    void variation(const ContainerTypeL& lambda, const ContainerType0& phi, ContainerType1& sigma){
+    void variation(const ContainerTypeL& lambda, const ContainerType0& phi, ContainerType1& sigma) const{
         variation(1.,lambda, phi, 0., sigma);
     }
     /**
@@ -494,7 +567,7 @@ class Elliptic2d
      * @tparam ContainerTypes must be usable with \c Container in \ref dispatch
      */
     template<class ContainerTypeL, class ContainerType0, class ContainerType1>
-    void variation(value_type alpha, const ContainerTypeL& lambda, const ContainerType0& phi, value_type beta, ContainerType1& sigma)
+    void variation(value_type alpha, const ContainerTypeL& lambda, const ContainerType0& phi, value_type beta, ContainerType1& sigma) const
     {
         dg::blas2::gemv( m_rightx, phi, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, phi, m_tempy); //R_y*f
@@ -505,7 +578,7 @@ class Elliptic2d
     private:
     Matrix m_leftx, m_lefty, m_rightx, m_righty, m_jumpX, m_jumpY;
     Container m_weights, m_precond;
-    Container m_tempx, m_tempy, m_temp;
+    mutable ContainerTmp m_tempx, m_tempy, m_temp;
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
@@ -514,10 +587,10 @@ class Elliptic2d
 
 ///@copydoc Elliptic2d
 ///@ingroup matrixoperators
-template <class Geometry, class Matrix, class Container>
-using Elliptic = Elliptic2d<Geometry, Matrix, Container>;
+template <class Geometry, class Matrix, class Container, class ContainerTmp = Container>
+using Elliptic = Elliptic2d<Geometry, Matrix, Container, ContainerTmp>;
 
-//Elliptic3d is tested in inc/geometries/elliptic3d_t.cu
+//Elliptic3d is tested in inc/geometries/elliptic3d_b.cpp
 /**
  * @brief A 3d negative elliptic differential operator \f$ -\nabla \cdot ( \mathbf{\chi}\cdot \nabla ) \f$
  *
@@ -544,6 +617,8 @@ using Elliptic = Elliptic2d<Geometry, Matrix, Container>;
  The following code snippet demonstrates the use of \c Elliptic3d in an inversion problem
  * @snippet elliptic_b.cpp invert
  * @copydoc hide_geometry_matrix_container
+ * @copydoc hide_ContainerTmp
+ *
  * This class has the \c SelfMadeMatrixTag so it can be used in \c blas2::symv functions
  * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ \chi=\sqrt{g}g^{-1}\f$ so that a
@@ -553,7 +628,7 @@ using Elliptic = Elliptic2d<Geometry, Matrix, Container>;
  * this class also can compute the variation integrand \f$ \lambda^2\nabla \phi\cdot \tau\cdot\nabla\phi\f$
  * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
-template <class Geometry, class Matrix, class Container>
+template <class Geometry, class Matrix, class Container, class ContainerTmp = Container>
 class Elliptic3d
 {
     public:
@@ -619,7 +694,8 @@ class Elliptic3d
 
         dg::assign( dg::create::volume(g),        m_weights);
         dg::assign( dg::evaluate( dg::one, g),    m_precond);
-        m_temp = m_tempx = m_tempy = m_tempz = m_weights;
+        dg::assign( m_weights, m_temp);
+        m_tempx = m_tempy = m_tempz = m_temp;
         m_chi=g.metric();
         m_sigma = m_vol = dg::tensor::volume(m_chi);
     }
@@ -649,6 +725,10 @@ class Elliptic3d
     {
         m_chi = SparseTensor<Container>(tau);
     }
+    ///@copydoc Elliptic2d::get_tau()
+    const SparseTensor<Container>& get_tau() const { return m_chi;}
+    ///@copydoc Elliptic2d::get_sigma()
+    const Container& get_sigma() const { return m_sigma;}
 
     ///@copydoc Elliptic2d::weights()
     const Container& weights()const {
@@ -678,14 +758,20 @@ class Elliptic3d
         m_multiplyZ = !compute_in_2d;
     }
 
-    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
-    void symv( const ContainerType0& x, ContainerType1& y){
+    void symv( const ContainerType0& x, ContainerType1& y) const {
         symv( 1, x, 0, y);
     }
-    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
-    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
+    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y) const
+    {
+        symv( alpha, x, m_jfactor, m_sigma, beta, y);
+    }
+    ///@copydoc Elliptic2d::symv(value_type,const ContainerType0&,value_type,const ContainerType2&,value_type,ContainerType1&)const
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void symv( value_type alpha, const ContainerType0& x, value_type jfactor, const ContainerType2& sigma, value_type beta, ContainerType1& y) const
     {
         //compute gradient
         dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
@@ -695,33 +781,33 @@ class Elliptic3d
             dg::blas2::gemv( m_rightz, x, m_tempz); //R_z*f
 
             //multiply with tensor (note the alias)
-            dg::tensor::multiply3d(m_sigma, m_chi, m_tempx, m_tempy, m_tempz, 0., m_tempx, m_tempy, m_tempz);
+            dg::tensor::multiply3d(sigma, m_chi, m_tempx, m_tempy, m_tempz, 0., m_tempx, m_tempy, m_tempz);
             //now take divergence
             dg::blas2::symv( -1., m_leftz, m_tempz, 0., m_temp);
             dg::blas2::symv( -1., m_lefty, m_tempy, 1., m_temp);
         }
         else
         {
-            dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
+            dg::tensor::multiply2d(sigma, m_chi, m_tempx, m_tempy, 0., m_tempx, m_tempy);
             dg::blas2::symv( -1.,m_lefty, m_tempy, 0., m_temp);
         }
         dg::blas2::symv( -1., m_leftx, m_tempx, 1., m_temp);
 
         //add jump terms
-        if( 0 != m_jfactor )
+        if( 0 != jfactor )
         {
             if(m_chi_weight_jump)
             {
-                dg::blas2::symv( m_jfactor, m_jumpX, x, 0., m_tempx);
-                dg::blas2::symv( m_jfactor, m_jumpY, x, 0., m_tempy);
+                dg::blas2::symv( jfactor, m_jumpX, x, 0., m_tempx);
+                dg::blas2::symv( jfactor, m_jumpY, x, 0., m_tempy);
                 if( m_addJumpZ)
                 {
-                    dg::blas2::symv( m_jfactor, m_jumpZ, x, 0., m_tempz);
-                    dg::tensor::multiply3d(m_sigma, m_chi, m_tempx, m_tempy,
+                    dg::blas2::symv( jfactor, m_jumpZ, x, 0., m_tempz);
+                    dg::tensor::multiply3d(sigma, m_chi, m_tempx, m_tempy,
                             m_tempz, 0., m_tempx, m_tempy, m_tempz);
                 }
                 else
-                    dg::tensor::multiply2d(m_sigma, m_chi, m_tempx, m_tempy,
+                    dg::tensor::multiply2d(sigma, m_chi, m_tempx, m_tempy,
                             0., m_tempx, m_tempy);
 
                 dg::blas1::axpbypgz(1., m_tempx, 1., m_tempy, 1., m_temp);
@@ -730,28 +816,28 @@ class Elliptic3d
             }
             else
             {
-                dg::blas2::symv( m_jfactor, m_jumpX, x, 1., m_temp);
-                dg::blas2::symv( m_jfactor, m_jumpY, x, 1., m_temp);
+                dg::blas2::symv( jfactor, m_jumpX, x, 1., m_temp);
+                dg::blas2::symv( jfactor, m_jumpY, x, 1., m_temp);
                 if( m_addJumpZ)
-                    dg::blas2::symv( m_jfactor, m_jumpZ, x, 1., m_temp);
+                    dg::blas2::symv( jfactor, m_jumpZ, x, 1., m_temp);
             }
         }
         dg::blas1::pointwiseDivide( alpha, m_temp, m_vol, beta, y);
     }
 
-    ///@copydoc Elliptic2d::variation(const ContainerType0&,ContainerType1&)
+    ///@copydoc Elliptic2d::variation(const ContainerType0&,ContainerType1&)const
     template<class ContainerType0, class ContainerType1>
-    void variation(const ContainerType0& phi, ContainerType1& sigma){
+    void variation(const ContainerType0& phi, ContainerType1& sigma)const{
         variation(1.,1., phi, 0., sigma);
     }
-    ///@copydoc Elliptic2d::variation(const ContainerTypeL&,const ContainerType0&,ContainerType1&){
+    ///@copydoc Elliptic2d::variation(const ContainerTypeL&,const ContainerType0&,ContainerType1&)const
     template<class ContainerTypeL, class ContainerType0, class ContainerType1>
-    void variation(const ContainerTypeL& lambda, const ContainerType0& phi, ContainerType1& sigma){
+    void variation(const ContainerTypeL& lambda, const ContainerType0& phi, ContainerType1& sigma)const{
         variation(1.,lambda, phi, 0., sigma);
     }
-    ///@copydoc Elliptic2d::variation(value_type,const ContainerTypeL&,const ContainerType0&,value_type,ContainerType1&)
+    ///@copydoc Elliptic2d::variation(value_type,const ContainerTypeL&,const ContainerType0&,value_type,ContainerType1&)const
     template<class ContainerTypeL, class ContainerType0, class ContainerType1>
-    void variation(value_type alpha, const ContainerTypeL& lambda, const ContainerType0& phi, value_type beta, ContainerType1& sigma)
+    void variation(value_type alpha, const ContainerTypeL& lambda, const ContainerType0& phi, value_type beta, ContainerType1& sigma)const
     {
         dg::blas2::gemv( m_rightx, phi, m_tempx); //R_x*f
         dg::blas2::gemv( m_righty, phi, m_tempy); //R_y*f
@@ -765,7 +851,7 @@ class Elliptic3d
     private:
     Matrix m_leftx, m_lefty, m_leftz, m_rightx, m_righty, m_rightz, m_jumpX, m_jumpY, m_jumpZ;
     Container m_weights, m_precond;
-    Container m_tempx, m_tempy, m_tempz, m_temp;
+    mutable ContainerTmp m_tempx, m_tempy, m_tempz, m_temp;
     SparseTensor<Container> m_chi;
     Container m_sigma, m_vol;
     value_type m_jfactor;
@@ -773,21 +859,21 @@ class Elliptic3d
     bool m_chi_weight_jump;
 };
 ///@cond
-template< class G, class M, class V>
-struct TensorTraits< Elliptic1d<G, M, V> >
+template< class G, class M, class V, class V2>
+struct TensorTraits< Elliptic1d<G, M, V, V2> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
-template< class G, class M, class V>
-struct TensorTraits< Elliptic2d<G, M, V> >
+template< class G, class M, class V, class V2>
+struct TensorTraits< Elliptic2d<G, M, V, V2> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 
-template< class G, class M, class V>
-struct TensorTraits< Elliptic3d<G, M, V> >
+template< class G, class M, class V, class V2>
+struct TensorTraits< Elliptic3d<G, M, V, V2> >
 {
     using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

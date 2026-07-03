@@ -19,7 +19,7 @@ TEST_CASE( "Interpolation")
 {
     const unsigned n = 3, Nx = 9, Ny = 5, Nz = 4;
 
-    dg::Grid1d g1d( -M_PI, 0, n, Nx);
+    dg::Grid1d g1d( -M_PI/2., M_PI/2., n, Nx);
     dg::Grid2d g( -M_PI, 0, -5*M_PI, -4*M_PI, n, Nx, Ny);
     SECTION( "Interpolating abscissas makes ones in matrix")
     {
@@ -40,14 +40,14 @@ TEST_CASE( "Interpolation")
     }
     SECTION( "1D equidist interpolate")
     {
+        // interpolate the function f(x) = x
         thrust::host_vector<double> xs = dg::evaluate( dg::cooX1d, g1d);
         thrust::host_vector<double> x( g1d.size());
         for( unsigned i=0; i<x.size(); i++)
         {
             //create equidistant values
-            x[i] = g1d.x0() + g1d.lx() + (i+0.5)*g1d.h()/(double)(g1d.n());
-            //use DIR because the cooX1d is zero on the right boundary
-            double xi = dg::interpolate( dg::xspace,xs, x[i], g1d, dg::DIR);
+            x[i] = g1d.x0() + (i+0.5)*g1d.h()/(double)(g1d.n());
+            double xi = dg::interpolate( dg::xspace,xs, x[i], g1d, dg::NEU);
             INFO( "X "<<i<<"\t"<<x[i]<<"  \t"<<xi);
             CHECK( x[i] - xi < 1e-14);
         }
@@ -58,8 +58,7 @@ TEST_CASE( "Interpolation")
         for( unsigned i=0; i<x.size(); i++)
             x[i] = g1d.x0() + g1d.lx() + (i+0.5)*g1d.h()/(double)(g1d.n());
 
-        //use DIR because the coo.2d is zero on the right boundary
-        Matrix B = dg::create::interpolation( x, g1d, dg::DIR, "dg");
+        Matrix B = dg::create::interpolation( x, g1d, dg::NEU, "dg");
         //values outside the grid are mirrored back in
 
         const thrust::host_vector<double> vec = dg::evaluate( function, g1d);
@@ -74,29 +73,57 @@ TEST_CASE( "Interpolation")
         INFO( "Error for method dg is "<<error<<" (should be small)!");
         CHECK( error < 1e-14);
     }
+    SECTION( "BC in 1d dg interpolation")
+    {
+        thrust::host_vector<double> x = {g1d.x0(), g1d.x1()};
+        dg::bc bcx = GENERATE( as<dg::bc>{}, dg::PER, dg::DIR, dg::NEU);
+        Matrix B = dg::create::interpolation( x, g1d, bcx, "dg");
+        const thrust::host_vector<double> vec = dg::evaluate( function, g1d);
+        thrust::host_vector<double> inter(x);
+        dg::blas2::symv( B, vec, inter);
+        if(bcx == dg::PER)
+        {
+            CHECK( inter[0] == inter[1]);
+        }
+        else
+            CHECK(inter[0] == -inter[1]);
+
+    }
     SECTION( "1d non-dg interpolation")
     {
-        g1d = dg::Grid1d ( -1.5, 6.5, 1, 8);
-        std::vector<double> x = { -1.6, -0.4, .1, 2.2, 2.8, 3, 3.1, 3.4, 4.9, 6.1};
+        // Compare Mathematica script
+        g1d = dg::Grid1d ( -1.5, 6.5, 1, 8); // abscissas are -1,0,1,2,3,4,5,6
+        std::vector<double> x = { -1.6, -1.5, -0.4, .1, 2.2, 2.8, 3, 3.1, 3.4, 4.9, 6.0, 6.5, 6.6};
         auto method = GENERATE( as<std::string>{}, "nearest", "linear", "cubic");
-        //use DIR because the coo.2d is zero on the right boundary
-        Matrix B = dg::create::interpolation( x, g1d, dg::DIR, method);
+        dg::bc bcx = GENERATE( as<dg::bc>{}, dg::PER, dg::DIR, dg::NEU);
+        Matrix B = dg::create::interpolation( x, g1d, bcx, method);
         //values outside the grid are mirrored back in
 
         const std::vector<double> vec{0,0,0,0,1,1,1,1};
-        const std::vector<double> sol0{0, 0,0,0,1,1,1,1,1,1};
-        const std::vector<double> sol1{0, 0,0,0.2,0.8,1,1,1,1,1};
-        const std::vector<double> sol3{0, 0,0,0.184,0.816,1.,1.0285,1.064,1,1};
+        std::map<std::string, std::vector<double>> solmap;
+        if( bcx == dg::PER)solmap["nearest"] = {1, 0, 0,0,0,1,1,1,1,1,1,0., 0.};
+        if( bcx == dg::DIR)solmap["nearest"] = {0, 0, 0,0,0,1,1,1,1,1,1,1.,-1.};
+        if( bcx == dg::NEU)solmap["nearest"] = {0, 0, 0,0,0,1,1,1,1,1,1,1., 1.};
+
+        if( bcx == dg::PER)solmap["linear"] = {0.6, 0.5, 0,0,0.2,0.8,1,1,1,1,1,0.5,0.4};
+        if( bcx == dg::DIR)solmap["linear"] = {0, 0.,    0,0,0.2,0.8,1,1,1,1,1,1., -1.};
+        if( bcx == dg::NEU)solmap["linear"] = {0, 0.,    0,0,0.2,0.8,1,1,1,1,1,1., 1.};
+
+        if( bcx == dg::PER)solmap["cubic"] = {0.608, 0.5, -0.056, 0.,0.184,0.816,1.,1.0285,1.064,1,1,0.5,0.392};
+        if( bcx == dg::DIR)solmap["cubic"] = {0, 0., 0,           0.,0.184,0.816,1.,1.0285,1.064,1,1,1., -1.};
+        if( bcx == dg::NEU)solmap["cubic"] = {0, 0., .0,          0.,0.184,0.816,1.,1.0285,1.064,1,1,1., 1.};
 
         thrust::host_vector<double> inter(x.size());
         dg::blas2::symv( B, (dg::HVec)vec, inter);
-        if( method == "nearest") dg::blas1::axpby( 1., (dg::HVec)sol0, -1., inter);
-        if( method == "linear") dg::blas1::axpby( 1., (dg::HVec)sol1, -1., inter);
-        if( method == "cubic") dg::blas1::axpby( 1., (dg::HVec)sol3, -1., inter);
-        //inter now contains the values of vec interpolated at equidistant points
-        double error = dg::blas1::dot( inter, inter);
-        INFO( "Error for method "<<method<<" is "<<error<<" (should be small)!");
-        CHECK( error < 1e-14);
+        for( unsigned i=0; i<inter.size(); i++)
+        {
+            double sol = solmap[method][i];
+            INFO( "Method "<<method<<" bc "<<dg::bc2str(bcx)<<" at "<<x[i]<<"\tis "<<inter[i]<< " should be "<<sol);
+            CHECK( fabs(inter[i]-sol) < 1e-14);
+        }
+        //double error = dg::blas1::dot( inter, inter);
+        //INFO( "Error for method "<<method<<" is "<<error<<" (should be small)!");
+        //CHECK( error < 1e-14);
     }
 
     SECTION("2D equidist dg interpolation")
@@ -190,7 +217,6 @@ TEST_CASE( "Interpolation")
             }
         for( unsigned i=0; i<g.size(); i++)
         {
-            //use DIR because the coo.2d is zero on the right boundary
             double xi = dg::interpolate(dg::lspace, xF, x[i],y[i], g, dg::DIR,
                     dg::DIR);
             double yi = dg::interpolate(dg::xspace, ys, x[i],y[i], g, dg::DIR,

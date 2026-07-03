@@ -21,7 +21,7 @@ using Container = dg::MDVec;
 
 int main(int argc, char * argv[])
 {
-    MPI_Init(&argc, &argv);
+    dg::mpi_init(argc, argv);
     dg::Timer t;
     unsigned n, Nx, Ny;
 //     std::cout << "# Type n, Nx and Ny\n";

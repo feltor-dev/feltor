@@ -50,8 +50,8 @@
         {
             "name": "mpi-omp",
             "displayName": "Multi core MPI with OpenMP",
-            "binaryDir": "build/mpi-gpu",
-            "inherits": "gpu",
+            "binaryDir": "build/mpi-omp",
+            "inherits": "omp",
             "cacheVariables": {
                 "FELTOR_WITH_MPI": "ON"
             }

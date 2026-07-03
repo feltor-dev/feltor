@@ -15,3 +15,4 @@
 #include "tensorelliptic.h"
 #include "tridiaginv.h"
 #include "exp_runge_kutta.h"
+#include "matrixprod.h"

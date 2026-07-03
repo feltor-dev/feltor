@@ -51,7 +51,7 @@ std::array<dg::x::DVec,2> init_from_file( std::string file_name, const dg::x::Ca
     int periods[2] = {false, false}; //non-, non-, periodic
     if( pIN.bc_x == dg::PER) periods[0] = true;
     if( pIN.bc_y == dg::PER) periods[1] = true;
-    MPI_Cart_get( grid.communicator(), 2, dimsIN, periods, coordsIN);
+    dg::mpi_cart_get( grid.communicator(), 2, dimsIN, periods, coordsIN);
     size_t countIN[2] = {grid_IN.n()*(grid_IN.local().Ny()), grid_IN.n()*(grid_IN.local().Nx())};  
     size_t startIN[2] = {coordsIN[1]*countIN[0], coordsIN[0]*countIN[1]};
 #else //WITH_MPI

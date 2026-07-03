@@ -53,8 +53,11 @@ struct MatrixSqrt
             return dg::apply( A, x, y);
         };
         m_lanczos.construct( weights, max_iter);
-        dg::mat::UniversalLanczos<ContainerType> eigen( weights, 20);
-        auto T = eigen.tridiag( A, weights, weights);
+
+        dg::mat::UniversalLanczos<ContainerType> eigen( weights, 2000);
+        const ContainerType rnd = weights;
+        dg::blas1::transform( rnd, rnd, dg::RandomNumbers<double>(0,1));
+        auto T = eigen.tridiag( A, rnd, weights);
         m_EVs = dg::mat::compute_extreme_EV( T);
     }
     ///@copydoc hide_construct

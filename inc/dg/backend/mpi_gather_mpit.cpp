@@ -167,7 +167,7 @@ TEST_CASE("MPIAllreduce")
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     unsigned N = 100;
-    thrust::host_vector<int> v(N, 1);
+    thrust::device_vector<int> v(N, 1);
     dg::detail::MPIAllreduce red( MPI_COMM_WORLD);
     red.reduce(v);
     CHECK( v[99] == size);

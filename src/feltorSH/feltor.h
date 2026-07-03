@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
+#include "dg/matrix/matrix.h"
 #include "parameters.h"
 /*!@file
 
@@ -100,6 +101,8 @@ struct Explicit
     dg::Poisson< Geometry, Matrix, container> poisson; 
 
     dg::Elliptic<   Geometry, Matrix, container> lapperpM; 
+    dg::mat::ProductMatrixFunction<container> m_prod;
+    dg::TriDiagonal<thrust::host_vector<double>> m_T;
     std::vector<container> multi_chi;
     std::vector<dg::Elliptic<   Geometry, Matrix, container> > multi_pol;     
     std::vector<dg::Helmholtz<  Geometry, Matrix, container> > multi_invgamma1;    
@@ -141,6 +144,8 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     }
     dg::blas1::pointwiseDivide(one,binv,B2);
     dg::blas1::pointwiseDivide(B2,binv,B2);
+
+    m_prod.construct( chi, 1e3);
 }
 
 template<class G, class Matrix, class container>
@@ -159,7 +164,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
         dg::blas1::axpby( 1., y[1], 0.,chi); //chi = N_i - 1
     } 
     else {
-        if (p.flrmode == 1)
+        if (p.flrmode == 1 or p.flrmode == 2)
         {
             dg::blas1::transform( y[3], chi, dg::PLUS<>( (p.bgprofamp + p.nprofileamp))); //Ti
             dg::blas1::pointwiseDivide(B2,chi,lambda); //B^2/T_i
@@ -173,6 +178,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
             dg::blas1::axpby(1.0,y[1],-(p.bgprofamp + p.nprofileamp)*0.5*p.tau[1],omega,omega);    
             dg::blas1::axpby(1.0,omega,(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv*p.tau[1],one,omega);        
             old_gammaN.extrapolate( chi);
+            multigrid.set_benchmark( true, "Gamma N     ");
             std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chi,omega, p.eps_gamma);
             old_gammaN.update( chi);
             dg::blas1::pointwiseDot(chi,lambda,chi);   //chi = B^2/T_i chi Gamma (Ni-(bgamp+profamp))   
@@ -186,6 +192,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
             }
             dg::blas1::axpby(1.0,y[1],0.0,omega,omega);
             old_gammaN.extrapolate( chi);
+            multigrid.set_benchmark( true, "Gamma N     ");
             std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chi,omega, p.eps_gamma);
             old_gammaN.update( chi);
         }  
@@ -194,22 +201,60 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);  //chi= Gamma1^dagger (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
      //invert pol
     old_phi.extrapolate( phi[0]);
+    multigrid.set_benchmark( true, "Polarisation");
     std::vector<unsigned> number = multigrid.solve( multi_pol, phi[0], chi, p.eps_pol);
     old_phi.update( phi[0]);
     if(  number[0] == multigrid.max_iter())
         throw dg::Fail( p.eps_pol);
+    if( p.flrmode == 2)
+    {
+        dg::blas1::transform( y[3], chi, dg::PLUS<>( (p.bgprofamp + p.nprofileamp))); //Ti
+        // compute Lanczos tridiagonalisation of Phi
+        dg::blas1::pointwiseDivide( p.mu[1]*p.tau[1]/2., chi, B2, 0., lambda);
+        double max = dg::blas1::reduce( lambda, -1e308, thrust::maximum<double>());
+        dg::Timer t;
+        t.tic();
+        // We want the Lanczos decomposition to converge in the maximum error:
+        // - max is the max of rho_s^2/2 (i.e. largest gyro-radius)
+        dg::mat::GyrolagK<double> func(0, -1.);
+        auto unary_func = dg::mat::make_FuncEigen_Te1( [&](double x) {return func( max, x);});
+        m_T = m_prod.lanczos().tridiag( unary_func, lapperpM, phi[0], w2d, p.eps_pol, 1.,
+                    "universal", 1.0, 1);
+        t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
+        DG_RANK0 std::cout << "# Lanczos tridiag "<<m_T.size()<<" iterations took "<<t.diff()<<"s\n";
+    }
     return phi[0];
+
 }
 
 template<class G, class Matrix, class container>
 container& Explicit<G, Matrix,container>::compute_psi(const container& ti,container& potential)
 {
     if (p.tau[1] == 0.) {
-        dg::blas1::axpby( 1., potential, 0., phi[1]); 
-    } 
+        dg::blas1::axpby( 1., potential, 0., phi[1]);
+    }
     else {
+        if (p.flrmode == 2)
+        {
+            dg::Timer t;
+            t.tic();
+            dg::blas1::pointwiseDivide( p.mu[1]*p.tau[1]/2., ti, B2, 0., lambda); // rho^2/2
+            dg::mat::GyrolagK<double> func(0, -1.); // A^n/n! exp( -A), A = -\Delta_\perp, omega_s
+            m_prod.compute_vlcl( func, lambda, lapperpM, m_T, phi[1], potential,
+                m_prod.lanczos().get_bnorm());
+            t.toc();
+#ifdef MPI_VERSION
+            int rank;
+            MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
+            DG_RANK0 std::cout << "# Gamma1 Phi      "<<m_T.size()<<" iterations took "<<t.diff()<<"s\n";
+        }
         if (p.flrmode == 1)
-        {   
+        {
             dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
             multigrid.project( lambda, multi_chi);
             for( unsigned u=0; u<3; u++)
@@ -218,8 +263,9 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
             }
             dg::blas1::pointwiseDot(lambda,potential,lambda); //lambda= B^2/T phi
             old_psi.extrapolate( phi[1]);
+            multigrid.set_benchmark( true, "Gamma Phi   ");
             std::vector<unsigned> number = multigrid.solve( multi_invgamma1, phi[1], lambda, p.eps_gamma);
-            old_psi.update( phi[1]);    
+            old_psi.update( phi[1]);
         }
         if (p.flrmode == 0)
         {
@@ -229,6 +275,7 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
                 multi_invgamma1[u].set_chi( multi_chi[u]);
             }
             old_psi.extrapolate( phi[1]);
+            multigrid.set_benchmark( true, "Gamma Phi   ");
             std::vector<unsigned> number = multigrid.solve( multi_invgamma1, phi[1], potential, p.eps_gamma);
             old_psi.update( phi[1]);
         }
@@ -245,6 +292,22 @@ container& Explicit<G, Matrix,container>::compute_chii(const container& ti,conta
         dg::blas1::scal(chii,0.0); 
     } 
     else {
+        if (p.flrmode == 2)
+        {
+            dg::Timer t;
+            t.tic();
+            dg::blas1::pointwiseDivide( p.mu[1]*p.tau[1]/2., ti, B2, 0., lambda); // rho^2/2
+            dg::mat::GyrolagK<double> func(1, -1.); // A^n/n! exp( -A), A = -\Delta_\perp, omega_s
+            m_prod.compute_vlcl( func, lambda, lapperpM, m_T, chii, potential,
+                m_prod.lanczos().get_bnorm());
+            dg::blas1::scal( chii, -1.);
+            t.toc();
+#ifdef MPI_VERSION
+            int rank;
+            MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+#endif
+            DG_RANK0 std::cout << "# Gamma2 Phi      "<<m_T.size()<<" iterations took "<<t.diff()<<"s\n";
+        }
         if (p.flrmode==1)
         {
                 //  setup rhs
@@ -257,10 +320,13 @@ container& Explicit<G, Matrix,container>::compute_chii(const container& ti,conta
             dg::blas2::gemv(lapperpM,potential,lambda); //lambda = - nabla_perp^2 phi
             dg::blas1::scal(lambda,-0.5*p.tau[1]*p.mu[1]); // lambda = 0.5*tau_i*nabla_perp^2 phi 
             old_chiia.extrapolate( chii);
+            multigrid.set_benchmark( true, "Gamma2aPhi  ");
             std::vector<unsigned> number = multigrid.solve( multi_invgamma1, chii, lambda, p.eps_gamma);
-            old_chiia.update( chii);        dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
+            old_chiia.update( chii);
+            dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
             dg::blas1::pointwiseDot(chii,lambda,lambda);
             old_chiib.extrapolate( chii);
+            multigrid.set_benchmark( true, "Gamma2bPhi  ");
             number = multigrid.solve( multi_invgamma1, chii, lambda, p.eps_gamma);
             old_chiib.update( chii);
         }
@@ -270,7 +336,7 @@ container& Explicit<G, Matrix,container>::compute_chii(const container& ti,conta
 template<class G, class Matrix, class container>
 void Explicit<G, Matrix, container>::initializene( const container& src, const container& ti,container& target)
 {   
-    if (p.flrmode == 1)
+    if (p.flrmode == 1 or p.flrmode == 2)
     {
         dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T    
         multigrid.project( lambda, multi_chi);
@@ -310,7 +376,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
     //target =pi-bg^2 =  (n_i-bg)*(t_i-bg) + bg(n_i-bg) + bg(t_i-bg)
     if (p.init==0)        
     {
-        if (p.flrmode == 1)
+        if (p.flrmode == 1 or p.flrmode == 2)
         {
             dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/Ti
             multigrid.project( lambda, multi_chi);
@@ -357,7 +423,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
     
     if (p.init==1)
     {
-        if (p.flrmode==1)
+        if (p.flrmode==1 or p.flrmode == 2)
         {
             //solve polarisation for phi with Ti=Ni=ne
             dg::blas1::pointwiseDot( ti, binv, chi);        //chi = (T_i ) /B

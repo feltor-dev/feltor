@@ -9,6 +9,7 @@
 #include "tensor_traits.h"
 #include "memory.h"
 #include "mpi_gather.h"
+#include "mpi_cart.h" // for MPI_Cart functions
 
 namespace dg
 {
@@ -28,7 +29,7 @@ struct MPIContiguousKroneckerGather
     : m_recvIdx(recvIdx), m_chunk_size(chunk_size)
     {
         int ndims;
-        MPI_Cartdim_get( comm_1d, &ndims);
+        mpi_cartdim_get( comm_1d, &ndims);
         assert( ndims == 1);
         int rank;
         MPI_Comm_rank( comm_1d, &rank);

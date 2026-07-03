@@ -70,7 +70,7 @@ int main(
 )
 {
 #ifdef WITH_MPI
-    dg::mpi_init( argc, argv);
+    dg::mpi_init( &argc, &argv);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif
@@ -360,12 +360,14 @@ int main(
     ////////////////////////////////////////////////////////////////
     DG_RANK0 std::cout<<"\nAverages\n";
     dg::Average<dg::x::IDMatrix, dg::x::DVec> pol(grid, dg::coo3d::x);
+    pol( x[0], y[0]);
     t.tic();
     for( int i=0; i<multi; i++)
         pol( x[0], y[0]);
     t.toc();
     DG_RANK0 std::cout << "Average vector over x took:      "<<t.diff()/multi<<"s\t"<<3/3*gbytes*multi/t.diff()<<"GB/s\n";
     pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::y);
+    pol( x[0], y[0]);
     t.tic();
     for( int i=0; i<multi; i++)
         pol( x[0], y[0]);
@@ -374,6 +376,7 @@ int main(
     if( grid.Nz() > 1)
     {
         pol = dg::Average<dg::x::IDMatrix, dg::x::DVec>(grid, dg::coo3d::z);
+        pol( x[0], y[0]);
         t.tic();
         for( int i=0; i<multi; i++)
             pol( x[0], y[0]);

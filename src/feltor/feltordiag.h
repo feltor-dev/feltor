@@ -707,10 +707,15 @@ std::vector<Record> EnergyDiagnostics2d_list = { // 23
             }
             else
             {
+                dg::blas1::copy( v.f.gradA()[0], v.tmp[0]);
+                if( v.p.curvmode == "flutemode")
+                {
+                    dg::blas1::pointwiseDot( 1., v.f.aparallel(), v.f.rinv(), 1., v.tmp[0]);
+                }
                 dg::tensor::scalar_product3d( 1./2./v.p.beta, 1.,
-                    v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2],
+                    v.tmp[0], v.f.gradA()[1], v.f.gradA()[2],
                     v.f.projection(), 1., //grad_perp
-                    v.f.gradA()[0], v.f.gradA()[1], v.f.gradA()[2], 0., result);
+                    v.tmp[0], v.f.gradA()[1], v.f.gradA()[2], 0., result);
             }
         }
     },
@@ -1222,7 +1227,7 @@ std::vector<Record> ToroidalExBDiagnostics2d_list = { //27
     },
     {"sospi_tt", "Diamagnetic vorticity source term with electron source", true,
         []( dg::x::DVec& result, Variables& v){
-            v.f.compute_gradSN( 0, v.tmp);
+            v.f.compute_gradN( v.f.density_source(0), v.tmp);
             routines::dot( v.p.mu[1]*v.p.tau[1], v.tmp, v.gradPsip, 0., result);
         }
     },
@@ -1928,13 +1933,14 @@ std::vector<feltor::Record> generate_equation_list( const dg::file::WrappedJsonV
     return list;
 }
 
-template< class NcFile>
+// This class is also used in the thermal code
+template< class NcFile, class Record = feltor::Record>
 struct WriteIntegrateDiagnostics2dList
 {
     WriteIntegrateDiagnostics2dList( NcFile& file,
         const dg::x::CylindricalGrid3d& grid,
         const dg::x::CylindricalGrid3d& g3d_out,
-        const std::vector<feltor::Record>& equation_list) :
+        const std::vector<Record>& equation_list) :
             m_file(&file), m_slab(grid), m_grid(grid), m_g3d_out(g3d_out),
             m_equation_list(equation_list)
     {
@@ -1967,13 +1973,15 @@ struct WriteIntegrateDiagnostics2dList
         m_toroidal_average = { g3d_out, dg::coo3d::z};
     }
     // same as buffer and flush
-    void write( double time, Variables& var)
+    template< class ... Params>
+    void write( double time, Params&& ... ps)
     {
-        buffer( time, var);
-        flush(var);
+        buffer( time, std::forward<Params>(ps)...);
+        flush(std::forward<Params>(ps)...);
     }
 
-    void buffer( double time, Variables& var)
+    template< class ... Params>
+    void buffer( double time, Params&& ... ps)
     {
         // evaluates function and updates time integrals for all integrals
         auto transferD2d_view = dg::split( m_transferD, m_g3d_out);
@@ -1981,7 +1989,7 @@ struct WriteIntegrateDiagnostics2dList
         {
             if( record.integral)
             {
-                record.function( m_resultD, var);
+                record.function( m_resultD, std::forward<Params>(ps)...);
                 dg::blas2::symv( m_projectD, m_resultD, m_transferD);
                 //toroidal average and add to time integral
                 std::string name = record.name+"_ta2d";
@@ -2005,7 +2013,8 @@ struct WriteIntegrateDiagnostics2dList
         if( m_first_buffer)
             m_first_buffer = false;
     }
-    void flush( Variables& var )
+    template< class ... Params>
+    void flush( Params&& ... ps)
     {
         // write time integrals for
         auto transferD2d_view = dg::split( m_transferD, m_g3d_out);
@@ -2025,7 +2034,7 @@ struct WriteIntegrateDiagnostics2dList
             }
             else // compute from scratch
             {
-                record.function( m_resultD, var);
+                record.function( m_resultD, std::forward<Params>(ps)...);
                 dg::blas2::symv( m_projectD, m_resultD, m_transferD);
 
                 dg::assign( m_transferD, m_transferH);
@@ -2054,7 +2063,7 @@ struct WriteIntegrateDiagnostics2dList
     dg::Average<dg::x::IHMatrix, dg::x::HVec> m_toroidal_average;
     std::map<std::string, dg::Simpsons<dg::x::HVec>> m_time_integrals;
     const dg::x::CylindricalGrid3d m_grid, m_g3d_out;
-    std::vector<feltor::Record> m_equation_list;
+    std::vector<Record> m_equation_list;
 
 };
 

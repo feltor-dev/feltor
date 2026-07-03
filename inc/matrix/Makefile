@@ -15,8 +15,10 @@ CPPFILES=$(wildcard *.cpp)
 CUFILES=$(wildcard *.cu)
 
 TARGETS=functors_t\
+lanczos_t\
 tridiaginv_t\
 exp_runge_kutta_t\
+contours_t
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 

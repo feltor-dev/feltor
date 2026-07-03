@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm> // std::copy_n
 #include <map>
+#include "mpi_cart.h"
 #include "exceptions.h"
 
 
@@ -58,7 +59,7 @@ inline void mpi_cart_register_cart( MPI_Comm comm)
     if( it == detail::mpi_cart_registry.end())
     {
         int ndims;
-        MPI_Cartdim_get( comm, &ndims);
+        dg::mpi_cartdim_get( comm, &ndims);
         std::vector<int> remain_dims( ndims, true);
         detail::MPICartInfo info{ comm, remain_dims};
         detail::mpi_cart_registry[comm] = info;
@@ -70,18 +71,19 @@ inline void mpi_cart_register_cart( MPI_Comm comm)
  *
  * @param comm communicator with Cartesian structure (handle) (parameter used
  * in \c MPI_Cart_sub)
- * @param remain_dims the i-th entry of \c remain_dims specifies whether the
- * i-th dimension is kept in the subgrid (true) or is dropped (false), must
- * have \c ndims entries. (parameter used in \c MPI_Cart_sub)
+ * @param remain_dims The actual parameter used in \c MPI_Cart_sub
+ * corresponding to \c comm
  * @param newcomm communicator containing the subgrid that includes the calling
  * process (handle) (parameter used in \c MPI_Cart_sub)
  * @copydoc hide_mpi_cart_rationale
  */
 inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_Comm newcomm)
 {
+    // How should we handle row-major vs column-major issue?
     detail::mpi_cart_register_cart( comm);
     detail::MPICartInfo info = detail::mpi_cart_registry.at(comm);
-    for( unsigned u=0; u<info.remain_dims.size(); u++)
+    unsigned ndims = info.remain_dims.size();
+    for( unsigned u=0; u<ndims; u++)
         info.remain_dims[u]  = remain_dims[u];
     detail::mpi_cart_registry[newcomm] = info;
 }
@@ -95,8 +97,11 @@ inline void register_mpi_cart_sub( MPI_Comm comm, const int remain_dims[], MPI_C
  * @param comm communicator with Cartesian structure (handle) (parameter used
  * in \c MPI_Cart_sub)
  * @param remain_dims the i-th entry of \c remain_dims specifies whether the
- * i-th dimension is kept in the subgrid (true) or is dropped (false), must
+ * (N-i)-th dimension is kept in the subgrid (true) or is dropped (false), must
  * have \c ndims entries. (parameter used in \c MPI_Cart_sub)
+ * @note Notice the transposition in \c remain_dims ! In the dg-library we
+ * always transpose Cartesian communicators to effectively make the process
+ * ranking column-major instead of row-major.
  * @param duplicate Determines what happens in case \c MPI_Cart_sub was already
  * registered with \c comm and the same \c
  * remain_dims. True: call \c MPI_Cart_sub and generate a novel communicator
@@ -112,7 +117,7 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
     duplicate = false)
 {
     int ndims;
-    MPI_Cartdim_get( comm, &ndims);
+    dg::mpi_cartdim_get( comm, &ndims);
     assert( (unsigned) ndims == remain_dims.size());
 
     detail::mpi_cart_register_cart( comm);
@@ -144,7 +149,7 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
         }
     }
     MPI_Comm newcomm;
-    int err = MPI_Cart_sub( comm, &remain_dims[0], &newcomm);
+    int err = dg::mpi_cart_sub( comm, &remain_dims[0], &newcomm);
     if( err != MPI_SUCCESS)
         throw Error(Message(_ping_)<<
                 "Cannot create Cartesian sub comm from given communicator");
@@ -152,10 +157,10 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
     return newcomm;
 }
 
-/*! @brief Form a Kronecker product among Cartesian communicators
+/*! @brief Form a (transposed) Kronecker product among Cartesian communicators
  *
  * Find communicator as the one that hypothetically generated all
- * input comms through <tt>MPI_Cart_sub( return_comm, remain_dims[u],
+ * input comms through <tt>dg::mpi_cart_sub( return_comm, remain_dims[u],
  * comms[u]);</tt> for all <tt>u < comms.size();</tt>
  *
  * Unless \c comms is empty or contains only 1 communicator all input comms
@@ -169,8 +174,9 @@ inline MPI_Comm mpi_cart_sub( MPI_Comm comm, std::vector<int> remain_dims, bool
  * For example
  * @snippet{trimleft} mpi_kron_mpit.cpp split and join
  *
- * @attention The order of communicators matters. The function will not
- * transpose communicators
+ * @attention The order of communicators matters. The function will always
+ * transpose communicators, such that the first dimension in \c cmoms is the
+ * last dimension in the return Cartesian communicator
  * @param comms input communicators
  * @return Kronecker product of communicators
  * @copydoc hide_mpi_cart_rationale
@@ -232,7 +238,7 @@ inline MPI_Comm mpi_cart_kron( std::vector<MPI_Comm> comms)
  * std::vector<MPI_Comm>(comms.begin(), comms.end()));</tt>
  */
 template<class Vector>
-MPI_Comm mpi_cart_kron( Vector comms)
+MPI_Comm mpi_cart_kron( const Vector& comms)
 {
     return mpi_cart_kron( std::vector<MPI_Comm>(comms.begin(), comms.end()));
 }
@@ -243,13 +249,15 @@ MPI_Comm mpi_cart_kron( Vector comms)
  * using repeated calls to \c dg::mpi_cart_sub
  * @param comm input Cartesian communicator
  * @return Array of 1-dimensional Cartesian communicators. The i-th
- * communicator corresponds to the i-th axis in \c comm
+ * communicator corresponds to the (N-i)-th axis in \c comm
+ * @attention Notice the tranpose. The first dimension in \c comm is the last
+ * dimension in the return vector.
  */
 inline std::vector<MPI_Comm> mpi_cart_split( MPI_Comm comm)
 {
     // Check that there is a Comm that was already split
     int ndims;
-    MPI_Cartdim_get( comm, &ndims);
+    dg::mpi_cartdim_get( comm, &ndims);
 
     std::vector<MPI_Comm> comms(ndims);
     for( int u=0; u<ndims; u++)
@@ -261,12 +269,14 @@ inline std::vector<MPI_Comm> mpi_cart_split( MPI_Comm comm)
     return comms;
 }
 /*!
- * @brief Same as \c mpi_cart_split but differen return type
+ * @brief Same as \c mpi_cart_split but different return type
  *
  * @snippet{trimleft} mpi_kron_mpit.cpp split and join
  * @tparam Nd Number of dimensions to copy from \c mpi_cart_split
  * @param comm input Cartesian communicator ( <tt>Nd <= comm.ndims</tt>)
  * @return Array of 1-dimensional Cartesian communicators
+ * @attention Notice the tranpose. The first dimension in \c comm is the last
+ * dimension in the return vector.
  */
 template<size_t Nd>
 std::array<MPI_Comm, Nd> mpi_cart_split_as( MPI_Comm comm)

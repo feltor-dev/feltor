@@ -72,7 +72,7 @@ TEST_CASE( "mpi_cart_create")
     {
         MPI_Comm cart = dg::mpi_cart_create( comm, {0,0}, {false, true});
         int dims[2], periods[2], coords[2];
-        int err = MPI_Cart_get( cart, 2, dims, periods, coords);
+        int err = dg::mpi_cart_get( cart, 2, dims, periods, coords);
         CHECK(  err == MPI_SUCCESS);
         CHECK( dims[0]*dims[1] == size);
         CHECK( periods[0] == false);
@@ -84,7 +84,7 @@ TEST_CASE( "mpi_cart_create")
         MPI_Dims_create( size, 2, &dd[0]);
         MPI_Comm cart = dg::mpi_cart_create( comm, dd, {true, true});
         int dims[2], periods[2], coords[2];
-        int err = MPI_Cart_get( cart, 2, dims, periods, coords);
+        int err = dg::mpi_cart_get( cart, 2, dims, periods, coords);
         CHECK(  err == MPI_SUCCESS);
         CHECK( dims[0]*dims[1] == size);
         CHECK( periods[0] == true);
@@ -110,7 +110,7 @@ TEST_CASE( "mpi_cart_create verbose")
         MPI_Comm cart = dg::mpi_cart_create( {dg::PER, dg::PER}, iss, comm, true, false, os);
         CHECK( os.str().empty());
         int dims[2], periods[2], coords[2];
-        int err = MPI_Cart_get( cart, 2, dims, periods, coords);
+        int err = dg::mpi_cart_get( cart, 2, dims, periods, coords);
         CHECK(  err == MPI_SUCCESS);
         CHECK( dims[0]*dims[1] == size);
         CHECK( periods[0] == true);
@@ -124,7 +124,7 @@ TEST_CASE( "mpi_cart_create verbose")
         else
             CHECK( os.str().empty());
         int dims[2], periods[2], coords[2];
-        int err = MPI_Cart_get( cart, 2, dims, periods, coords);
+        int err = dg::mpi_cart_get( cart, 2, dims, periods, coords);
         CHECK(  err == MPI_SUCCESS);
         CHECK( dims[0]*dims[1] == size);
         CHECK( periods[0] == false);

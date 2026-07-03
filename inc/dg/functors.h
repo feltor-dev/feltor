@@ -6,8 +6,10 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <vector>
-#include <random>
 #include <functional>
+#include <thrust/random/linear_congruential_engine.h>
+#include <thrust/random/normal_distribution.h>
+#include <thrust/random/uniform_real_distribution.h>
 #include "blas1.h"
 #include "topology/grid.h"
 #include "topology/evaluation.h"
@@ -283,6 +285,28 @@ struct MinMod
         return this-> operator()( this-> operator()( x1, x2), x3);
     }
 };
+
+/// <tt>std::uniform_real_distribution<T></tt> as a functor to evaluate on our grids
+template<class T>
+struct UniformRealDistribution
+{
+    /// Parameters of <tt>uniform_real_distribution<T></tt>
+    UniformRealDistribution( T a, T b): m_rng(), m_dist(a,b){}
+
+    /// @return <tt>uniform_real_distribution<T>(minstd_rand)</tt> (changes state by being called)
+    template< class ...Ts>
+DG_DEVICE T operator()( Ts... )
+    {
+        return m_dist(m_rng); //what happens on GPU? Does every thread get the same?
+    }
+    private:
+    thrust::minstd_rand m_rng;
+    thrust::uniform_real_distribution<T> m_dist;
+};
+
+/// Makes it easier to find (people search for "Random" if they want random numbers)
+template<class T>
+using RandomNumbers = UniformRealDistribution<T>;
 
 /**
  * @brief \f$ f(x_1,x_2) = 2\begin{cases}
@@ -1770,9 +1794,9 @@ struct BathRZ{
         double N_kRh = N_kR_/2.;
         double N_kZh = N_kZ_/2.;
 
-        std::minstd_rand generator;
-        std::normal_distribution<double> ndistribution( 0.0, 1.0); // ( mean, stddev)
-        std::uniform_real_distribution<double> udistribution(0.0,tpi); //between [0 and 2pi)
+        thrust::minstd_rand generator;
+        thrust::normal_distribution<double> ndistribution( 0.0, 1.0); // ( mean, stddev)
+        thrust::uniform_real_distribution<double> udistribution(0.0,tpi); //between [0 and 2pi)
         for (unsigned j=1;j<=N_kZ_;j++)
         {
             double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);
@@ -1884,6 +1908,57 @@ struct BathRZ{
     std::vector<double> unif1, unif2, normal1,normal2,alpha,theta;
 };
 
+///@cond
+namespace detail
+{
+inline double horner( const double * c, unsigned M, double x)
+{
+    double b = c[M-1];
+    for( unsigned i=0; i<M-1; i++)
+        b = c[M-2-i] + b*x;
+    return b;
+}
+
+} // namespace detail
+///@endcond
+
+/**
+ * @brief \f$ f(x) = \sum_{i=0}^{M-1} c_{i} x^i  \f$
+ *
+ * Evaluated using [Horner's method](https://en.wikipedia.org/wiki/Horner%27s_method)
+ */
+struct Horner1d
+{
+    ///Initialize 1 coefficient to 1
+    Horner1d(): m_c( 1, 1), m_M(1), m_prev( {0,1}){}
+
+    /**
+     * @brief Initialize coefficients and dimensions
+     *
+     * @param c vector of size M containing coefficients c
+     */
+    Horner1d( const std::vector<double>& c): m_c(c), m_M(c.size()), m_prev( {1e300,1e300}){
+        if( 0 == m_M )
+        {
+            // Make safe for zero coefficients
+            m_c.resize(1, 0.);
+            m_M = 1;
+        }
+    }
+    double operator()( double x) const
+    {
+        if( m_prev[0] == x)
+            return m_prev[1];
+        m_prev[1] = detail::horner( &m_c[0], m_M, x);
+        m_prev[0] = x;
+        return m_prev[1];
+    }
+    private:
+    std::vector<double> m_c;
+    unsigned m_M;
+    mutable std::array<double,2> m_prev;
+};
+
 /**
  * @brief \f$ f(x,y) = \sum_{i=0}^{M-1} \sum_{j=0}^{N-1} c_{iN+j} x^i y^j  \f$
  *
@@ -1897,7 +1972,7 @@ struct Horner2d
     /**
      * @brief Initialize coefficients and dimensions
      *
-     * @param c vector of size MN containing coefficientc c (accessed as c[i*N+j] i.e. y-direction is contiguous)
+     * @param c vector of size MN containing coefficients c (accessed as c[i*N+j] i.e. y-direction is contiguous)
      * @param M number of polynomials in x (if zero the whole polynomial is zero)
      * @param N number of polynomials in y (if zero the whole polynomial is zero)
      */
@@ -1922,25 +1997,17 @@ struct Horner2d
             return m_prev[2];
         if( m_prev[1] != y )
             for( unsigned i=0; i<m_M; i++)
-                m_cx[i] = horner( &m_c[i*m_N], m_N, y);
-        m_prev[2] = horner( &m_cx[0], m_M, x);
+                m_cx[i] = detail::horner( &m_c[i*m_N], m_N, y);
+        m_prev[2] = detail::horner( &m_cx[0], m_M, x);
         m_prev[0] = x, m_prev[1] = y;
         return m_prev[2];
     }
     private:
-    double horner( const double * c, unsigned M, double x) const
-    {
-        double b = c[M-1];
-        for( unsigned i=0; i<M-1; i++)
-            b = c[M-2-i] + b*x;
-        return b;
-    }
     std::vector<double> m_c;
     mutable std::vector<double> m_cx;
     unsigned m_M, m_N;
     mutable std::array<double,3> m_prev;
 };
-
 
 /**
  * @brief Compute a histogram on a 1D grid

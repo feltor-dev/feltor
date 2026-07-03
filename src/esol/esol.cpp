@@ -29,7 +29,7 @@ int main( int argc, char* argv[])
     
 #ifdef WITH_MPI
     ////////////////////////////////setup MPI///////////////////////////////
-    dg::mpi_init( argc, argv);
+    dg::mpi_init( &argc, &argv);
     MPI_Comm comm;
     dg::mpi_init2d( p.bc_x, p.bc_y, comm, std::cin, true);
     int rank;

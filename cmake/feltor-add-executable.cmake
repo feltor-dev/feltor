@@ -5,7 +5,7 @@
 # to the feltor_projects custom target
 # @param project Name of the project the executable is part of
 # @param executable Full path to the executable
-# @param target Target to create
+# @param target Target to create is "project_target"
 # @param PROJECT_HEADERS the list of headers the executable depends on (surround with "" when calling)
 # @param with_MPI If with_MPI and FELTOR_WITH_MPI are unequal then the target will not be created. 
 # Otherwise if with_MPI the target links to MPI

@@ -139,13 +139,15 @@ dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
     psipmax = -fx_0/(1.-fx_0)*psipO;
     std::cout << "psi outer in g1d_out is "<<psipmax<<"\n";
     std::cout << "Generate orthogonal flux-aligned grid ... \n";
+    dg::Timer t;
+    t.tic();
     std::unique_ptr<dg::geo::aGenerator2d> generator;
     if( !(mag.params().getDescription() == dg::geo::description::standardX))
         generator = std::make_unique<dg::geo::SimpleOrthogonal>(
             mag.get_psip(),
             psipO<psipmax ? psipO : psipmax,
             psipO<psipmax ? psipmax : psipO,
-            mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1);
+            mag.R0() + 0.1*mag.params().a(), 0., 0.1*psipO, 1, 1e-10, true);
     else
     {
 
@@ -163,7 +165,8 @@ dg::geo::CurvilinearGrid2d generate_XGrid( dg::file::WrappedJsonValue config,
     }
     dg::geo::CurvilinearGrid2d gridX2d(*generator,
             npsi, Npsi, Neta, dg::DIR, dg::PER);
-    std::cout << "DONE!\n";
+    t.toc();
+    std::cout << "Took "<<t.diff()<<"\n";
     //f0 makes a - sign if psipmax < psipO
     f0 = ( gridX2d.x1() - gridX2d.x0() ) / ( psipmax - psipO );
     return gridX2d;
@@ -441,7 +444,7 @@ void check_Nz( unsigned Nz, MPI_Comm comm)
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     int dims[3], periods[3], coords[3];
-    MPI_Cart_get( comm, 3, dims, periods, coords);
+    dg::mpi_cart_get( comm, 3, dims, periods, coords);
     if( dims[2] >= (int)Nz)
     {
         DG_RANK0 std::cerr << "ERROR: Number of processes in z "<<dims[2]
@@ -460,7 +463,8 @@ void create_and_set_sheath(
         dg::geo::CylindricalFunctor& sheath,
         dg::geo::CylindricalFunctor& sheath_coordinate,
         const Geometry& grid,
-        Equations& feltor
+        Equations& feltor,
+        bool toroidal_sign_convention = false //if true sign of sheath-coordinate is defined wrt geometric angle, else wrt bhat
         )
 {
 #ifdef WITH_MPI
@@ -484,7 +488,10 @@ void create_and_set_sheath(
                 "s").asString();
         // sheath is created on feltor magnetic field
         sheath_coordinate = dg::geo::WallFieldlineCoordinate(
-                dg::geo::createBHat( mag), sheath_walls,
+                toroidal_sign_convention ?
+                dg::geo::createToroidalBHat(mag) :
+                dg::geo::createBHat( mag),
+                sheath_walls,
                 sheath_max_angle, 1e-6, sheath_coord, dg::geo::mod::SOLRegion( mag, wall));
         sheath_rate = js ["boundary"]["sheath"].get( "penalization",
                 0.).asDouble();

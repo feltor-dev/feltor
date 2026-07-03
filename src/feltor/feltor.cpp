@@ -27,7 +27,7 @@ int main( int argc, char* argv[])
 {
 #ifdef WITH_MPI
     ////////////////////////////////setup MPI///////////////////////////////
-    dg::mpi_init( argc, argv);
+    dg::mpi_init( &argc, &argv);
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::DIR, dg::PER, comm, std::cin, true);
     int rank;
@@ -78,15 +78,14 @@ int main( int argc, char* argv[])
         dg::x::DMatrix, dg::x::DVec> feltor( grid, p, mag, js);
     DG_RANK0 std::cout << "# Done!\n";
 
-    feltor.set_wall( p.wall_rate, dg::construct<dg::x::DVec>( dg::pullback(
-                    wall, grid)), p.nwall, p.uwall );
+    feltor.set_wall( dg::construct<dg::x::DVec>( dg::pullback( wall, grid)) );
 
     dg::geo::CylindricalFunctor sheath, sheath_coordinate =
         [](double, double){return 0.;};
     if( p.sheath_bc != "none")
     {
         common::create_and_set_sheath( argv[1], js, mag, wall, sheath,
-                sheath_coordinate, grid, feltor);
+                sheath_coordinate, grid, feltor, p.curvmode == "flutemode");
     }
 
     DG_RANK0 std::cout << "# Set Source \n";
@@ -169,11 +168,11 @@ int main( int argc, char* argv[])
             file.open( file_name, dg::file::nc_clobber);
             feltor::write_global_attributes( file, argc, argv, inputfile);
 #ifdef WRITE_POL_FILE
-            file_pol.open( "polarisation.nc", dg::file::nc_clobber);
-            feltor::write_global_attributes( file_pol, argc, argv, inputfile);
-            file_pol.defput_dim( "x", {{"axis", "X"}}, grid.abscissas(0));
-            file_pol.defput_dim( "y", {{"axis", "Y"}}, grid.abscissas(1));
-            file_pol.defput_dim( "z", {{"axis", "Z"}}, grid.abscissas(2));
+            pol_file.open( "polarisation.nc", dg::file::nc_clobber);
+            feltor::write_global_attributes( pol_file, argc, argv, inputfile);
+            pol_file.defput_dim( "x", {{"axis", "X"}}, grid.abscissas(0));
+            pol_file.defput_dim( "y", {{"axis", "Y"}}, grid.abscissas(1));
+            pol_file.defput_dim( "z", {{"axis", "Z"}}, grid.abscissas(2));
 #endif
 
         }catch( std::exception& e)

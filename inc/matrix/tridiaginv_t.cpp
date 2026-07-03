@@ -83,7 +83,7 @@ TEST_CASE( "Lapack")
     -0.2886751345948129, -0.5000000000000000, -0.5773502691896258, -0.5000000000000000, -0.2886751345948129};
 
 
-    dg::TriDiagonal<std::vector<double>> T(5);
+    dg::TriDiagonal<thrust::host_vector<double>> T(5);
     for( unsigned u=0; u<5; u++)
     {
         T.O[u] = 2;
@@ -118,5 +118,11 @@ TEST_CASE( "Lapack")
                 INFO( "Eigenevector "<<u<<" "<<k<<" "<<evs(u,k));
                 CHECK ( fabs( evs(u,k) - sol( 4-u,k)) < 1e-14);
             }
+    }
+    SECTION( "Compute extreme EV")
+    {
+        auto EVs = dg::mat::compute_extreme_EV( T);
+        CHECK( fabs(EVs[0] - lambda[4]) < 1e-14);
+        CHECK( fabs(EVs[1] - lambda[0]) < 1e-14);
     }
 }

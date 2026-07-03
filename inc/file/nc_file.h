@@ -32,6 +32,21 @@ namespace file
  * manipulate them
  * @snippet{trimleft} nc_file_t.cpp groups
  */
+/*! @class hide_open_details
+ *
+ * @brief Open/Create a netCDF file.
+ *
+ * Call <tt>nc_open</tt> / <tt>nc_create</tt> depending on the value of \c mode
+ * @param filename  Name or path including the name of the netCDF file to
+ * open or create. The path may be either absolute or **relative to the
+ * execution path of the program** i.e. relative to \c
+ * std::filesystem::current_path()
+ * @param mode see \c dg::file::NcFileMode for possible values dg::file::nc_nowrite,
+ * dg::file::nc_write, dg::file::nc_clobber, dg::file::nc_noclobber.
+ * @attention Only netCDF-4 files can be created and only netCDF-4 files can be
+ * opened for write access. All file formats can be opened in NC_NOWRITE mode.
+ * @sa NcFileMode
+ */
 /*! @class hide_dimension_hiding
  *
  * @note Dimensions are **visible** in a group and all of its subgroups.  Now,
@@ -82,9 +97,20 @@ namespace file
  * See <a href="https://github.com/Unidata/netcdf-c/issues/1898">NetCDF issue</a>
  */
 
-/*! @brief NetCDF file format
+// Developper note: The reason we need our own flag is that NC_NOWRITE and
+// NC_CLOBBER are both defined as 0x0000 in the netcdf library so we need a
+// way to distinguish them because we merge nc_open and nc_create into one
+// function
+// Developper note: 0x1, 0x2, 0x4, etc read as bit-maps 0000, 0001, 0010,
+// 0100, etc. so these are quite useful as flags
+// Developper note: the only meaningful flag we do not capture here is
+// NC_CLASSIC_MODEL which enforces the classic mode on a NetCDF-4 file: Not
+// sure what the difference is to just not use groups, user defined types,
+// multiple unlimited dimensions, or new atomic types (I'm also unsure if this
+// will force the nc_enddef nc_redef behaviour as well?)
+
+/*! @brief Convenience NetCDF file opening/create flags
  *
- * All Files are opened/ created in Netcdf-4 data format
  * @note If you are looking for an "nc_append" you can use
 @code{.cpp}
 auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
@@ -93,10 +119,10 @@ auto nc_append = std::filesystem::exists(filename) ? nc_write : nc_noclobber;
 */
 enum NcFileMode
 {
-    nc_nowrite,  //!< NC_NOWRITE Open an existing file for read-only access, fail if it does not exist
-    nc_write,    //!< NC_WRITE Open an existing file for read and write access, fail if it does not exist
-    nc_clobber, //!< NC_CLOBBER Create a new file for read and write access, overwrite if file exists
-    nc_noclobber, //!< NC_NOCLOBBER Create new file for read and write access, fail if already exists
+    nc_nowrite,  //!< Call <tt>nc_open(path, NC_NOWRITE, ...);</tt>. Open an existing file for read-only access, fail if it does not exist; file format is automatically determined (i.e. can be other than netCDF-4)
+    nc_write,  //!< Call <tt>nc_open(path, NC_WRITE, ...)</tt>Open an existing (netCDF-4 file for read and write access, fail if it does not exist;
+    nc_clobber, //!< Call <tt>nc_create( path, NC_CLOBBER | NC_NETCDF4, ...);</tt>Create a new netCDF-4 file for read and write access, overwrite if file exists
+    nc_noclobber, //!< Call <tt>nc_create( path, NC_NOCLOBBER | NC_NETCDF4, ...);</tt> Create new netCDF-4 file for read and write access, fail if already exists
 };
 
 /*! @brief Serial NetCDF-4 file
@@ -107,11 +133,13 @@ enum NcFileMode
  * See here a usage example
  * @snippet nc_utilities_t.cpp ncfile
  *
- * @note This is a singleton that cannot be copied/assigned but only
- * moved/move-assign
- * @note Only Netcdf-4 files are supported
- * @note The class hides all integer ids that the NetCDF C-library uses
- * ("Ids do not exist in the Netcdf-4 data model!")
+ * @note This class cannot be copied/assigned but only moved/move-assign
+ * @note Only netCDF-4 format is supported in write mode. The reason is that we
+ * do not expose the \c nc_enddef and \c nc_redef meachanism of the old netCDF
+ * formats. Read-only access of old netCDF formats works fine.
+ * @note The class hides all integer ids that the NetCDF C-library uses as well
+ * as the distinction between define mode and data mode.
+ * ("Ids do not exist in the NetCDF data model!")
  * @note Most member functions will throw if they are called on a closed file
  * @sa Conventions to follow are the
  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.9/cf-conventions.html">CF-conventions</a>
@@ -127,16 +155,8 @@ struct SerialNcFile
     /// @snippet{trimleft} nc_file_t.cpp default
     SerialNcFile () = default;
     /*!
-     * @brief Open/Create a netCDF file.
-     * @param filename  Name or path including the name of the netCDF file to
-     * open or create. The path may be either absolute or **relative to the
-     * execution path of the program** i.e. relative to \c
-     * std::filesystem::current_path()
-     * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
-     * nc_noclobber)
-     *
+     * @copydoc hide_open_details
      * @snippet{trimleft} nc_file_t.cpp constructor
-     * @sa NcFileMode
      */
     SerialNcFile(const std::filesystem::path& filename,
             enum NcFileMode mode = nc_nowrite)
@@ -175,16 +195,10 @@ struct SerialNcFile
     }
     // /////////////////// open/close /////////
 
-    /*! Explicitly open or create a netCDF file
-     *
-     * @param filename  Name or path including the name of the netCDF file to
-     * open or create. The path may be either absolute or **relative to the
-     * execution path of the program** i.e. relative to \c
-     * std::filesystem::current_path()
-     * @param mode (see \c NcFileMode for nc_nowrite, nc_write, nc_clobber,
-     * nc_noclobber)
-     * @note Just like \c std::fstream opening fails if a file is already
-     * associated (\c is_open()) \c close() it before opening a new file.
+    /*!
+     * @copydoc hide_open_details
+     * @note Just like for \c std::fstream opening fails if a file is already
+     * associated (\c is_open()). \c close() it before opening a new file!
      *
      * @snippet{trimleft} nc_file_t.cpp default
     */
@@ -194,7 +208,6 @@ struct SerialNcFile
         // Like a std::fstream opening fails if file already associated
         if( m_open)
             throw NC_Error( 1002);
-
         // TODO Test the pathing on Windows
         NC_Error_Handle err;
         switch (mode)
@@ -258,14 +271,29 @@ struct SerialNcFile
     }
     /*! @brief Get the \c ncid of the underlying NetCDF C-API
      *
-     * Just if for whatever reason you want to call a NetCDF C-function
-     * yourself ... just don't use it for something nasty, like
-     * closing the file or whatever
+     * In case you want to call a NetCDF C-function yourself for whatever
+     * reason ... just don't use it for something nasty, like closing the file
+     * or whatever
      */
     int get_ncid() const noexcept{ return m_ncid;}
 
+    /*! @brief Check the binary file format of the netCDF file
+     *
+     * useful if an unkown file is opened.
+     * A wrapper around `nc_inq_format`
+     * @return One of NC_FORMAT_CLASSIC, NC_FORMAT_64BIT_OFFSET,
+     * NC_FORMAT_CDF5, NC_FORMAT_NETCDF4, NC_FORMAT_NETCDF4_CLASSIC
+     */
+    int get_format() const
+    {
+        file::NC_Error_Handle err;
+        int formatp;
+        err = nc_inq_format(m_ncid, &formatp);
+        return formatp;
+    }
+
     // ///////////// Groups /////////////////
-    /*! Define a group named \c name in the current group
+    /*! @brief Define a group named \c name in the current group
      *
      * @copydoc hide_grps_NetCDF_example
      * Think of this as the bash command \c mkdir name
@@ -283,7 +311,7 @@ struct SerialNcFile
         // Is no performance hit as cached
     }
 
-    /*! Define a group named \c path and all required intermediary groups
+    /*! @brief Define a group named \c path and all required intermediary groups
      *
      * @copydoc hide_grps_NetCDF_example
      * Think of this as the bash command \c mkdir -p path
@@ -345,8 +373,11 @@ struct SerialNcFile
     }
     /*! @brief Change group to \c path
      *
-     * @copydoc hide_grps_NetCDF_example
      * All subsequent calls to atts, dims and vars are made to that group
+     * @note This call does not actually write or change anything in the
+     * underlying netCDF file (i.e. it **works for a read-only file**). It simply
+     * sets an internally (to this class) held \c ncid to the required \c grpid
+     * @copydoc hide_grps_NetCDF_example
      *
      * @param path can be absolute or relative to the current group.
      * Empty string or "/" goes back to root group. "." is the current group
@@ -379,7 +410,7 @@ struct SerialNcFile
             err = nc_inq_grp_full_ncid( m_ncid, name.c_str(), &m_grp);
         }
     }
-    /// rename a subgroup in the current group from \c old_name to \c new_name
+    /// @brief rename a subgroup in the current group from \c old_name to \c new_name
     /// @copydoc hide_grps_NetCDF_example
     void rename_grp( std::string old_name, std::string new_name)
     {
@@ -400,7 +431,7 @@ struct SerialNcFile
         return get_grp_path( m_grp);
     }
 
-    /// Get all subgroups in the current group as absolute paths
+    /// @brief Get all subgroups in the current group as absolute paths
     /// @copydoc hide_grps_NetCDF_example
     std::list<std::filesystem::path> get_grps( ) const
     {
@@ -488,7 +519,7 @@ struct SerialNcFile
             shape[u] = get_dim_size( dims[u]);
         return shape;
     }
-    /*! Get all visible dimension names in the current group
+    /*! @brief Get all visible dimension names in the current group
      *
      * The visible dimensions are all the dimensions in the current group
      * and all its parent group.
@@ -524,7 +555,7 @@ struct SerialNcFile
         return dims;
     }
 
-    /*! Get all visible unlimited dimension names in the current group
+    /*! @brief Get all visible unlimited dimension names in the current group
      *
      * @copydoc hide_dimension_hiding
      * This function **does not** include the parent groups
@@ -641,7 +672,6 @@ struct SerialNcFile
 
     /*! @brief Read all NetCDF attributes of a certain type
      *
-     * For example
      * @note byte attributes are mapped to boolean values (0b for true, 1b for false)
      * @return A Dictionary containing all the attributes of a certain type
      * for the variable or file. Can be empty if no attribute is present.
@@ -691,8 +721,15 @@ struct SerialNcFile
         int retval = nc_inq_attid( m_grp, varid, att_name.c_str(), &attid);
         return retval == NC_NOERR;
     }
-    /// Rename an attribute
-    /// @snippet{trimleft} nc_file_t.cpp rename_att
+    /*! @brief Rename an attribute of the variable \c id
+     *
+     * @param old_att_name Name of the attribute to change
+     * @param new_att_name New mane of the attribute
+     * @param id Variable name in the current group or empty string, in which
+     * case the attributes refer to the current group
+     *
+     * @snippet{trimleft} nc_file_t.cpp rename_att
+     */
     void rename_att(std::string old_att_name, std::string
             new_att_name, std::string id = "")
     {
@@ -920,8 +957,8 @@ struct SerialNcFile
      *
      * @snippet{trimleft} nc_file_t.cpp get_var
      * @param name of previously defined variable
-     * @param start coordinate to take scalar from (can be empty for scalar
-     * variable)
+     * @param start coordinate to take scalar from (can be empty/is ignored for
+     * 0d variable)
      * @param data Result on output
      */
     template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
@@ -939,6 +976,54 @@ struct SerialNcFile
             std::vector<size_t> count( start.size(), 1);
             err = detail::get_vara_T( m_grp, varid, &start[0], &count[0], &data);
         }
+    }
+
+    /*! @brief Convenience shortcut (vector version)
+     *
+     * Short for
+     * @code{.cpp}
+     *  ContainerType data;
+     *  get_var( name, slab, data);
+     *  return data;
+     * @endcode
+     */
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, SharedVectorTag>, bool > = true>
+    ContainerType get_var_as( std::string name, const NcHyperslab& slab) const
+    {
+        ContainerType data;
+        get_var( name, slab, data);
+        return data;
+    }
+    /*! @brief Convenience shortcut for <tt>get_var_as<ContainerType>( name, {*this, name});</tt>
+     *
+     * @attention This has no MPI correspondance (because we cannot
+     * automatically infer the distribution of data among participating
+     * processes)
+     */
+    template<class ContainerType, std::enable_if_t< dg::is_vector_v<
+        ContainerType, SharedVectorTag>, bool > = true>
+    ContainerType get_var_as( std::string name) const
+    {
+        // ! Does not work for MPI !
+        return get_var_as<ContainerType>( name, {*this, name});
+    }
+
+    /*! @brief Convenience shortcut (scalar version)
+     *
+     * Short for
+     * @code{.cpp}
+     *  T var;
+     *  nc_file.get_var( name, start, var);
+     *  return var;
+     * @endcode
+     */
+    template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
+    T get_var_as( std::string name, const std::vector<size_t>& start = {}) const
+    {
+        T var;
+        get_var( name, start, var);
+        return var;
     }
 
     /// Check if variable named \c name is defined in the current group

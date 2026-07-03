@@ -14,13 +14,13 @@ all: feltor feltor_hpc feltor_mpi feltorSHdiag feltorSHdiag2 feltorSHvmaxdiag
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)
 
 feltor: feltor.cpp feltor.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LIBS) $(JSONLIB) -DWITH_GLFW
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(LAPACKLIB) $(LIBS) $(JSONLIB) -DWITH_GLFW $(VERSION_FLAGS)
 
 feltor_hpc: feltor.cpp feltor.h
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB)
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) $(LIBS) $(JSONLIB) $(VERSION_FLAGS)
 
 feltor_mpi: feltor.cpp feltor.h
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DWITH_MPI
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LAPACKLIB) $(LIBS) $(JSONLIB) -DWITH_MPI $(VERSION_FLAGS)
 
 .PHONY: clean
 

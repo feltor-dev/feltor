@@ -54,6 +54,19 @@ bool equal64( const Vector& vec, int64_t result)
     return true;
 }
 template<class Vector>
+bool equalInt( const Vector& vec, int result)
+{
+    for( unsigned i=0; i<vec.size(); i++)
+    {
+        if( vec[i] != result)
+        {
+            UNSCOPED_INFO( "Element "<<i<<" "<< vec[i] << " "<<result);
+            return false;
+        }
+    }
+    return true;
+}
+template<class Vector>
 auto result( const Vector& vec) { return vec[0];}
 #ifdef WITH_MPI
 template<class Vector, class T>
@@ -65,6 +78,11 @@ template<class Vector>
 bool equal64( const dg::MPI_Vector<Vector>& vec, int64_t result)
 {
     return equal64( vec.data(), result);
+}
+template<class Vector>
+bool equalInt( const dg::MPI_Vector<Vector>& vec, int result)
+{
+    return equalInt( vec.data(), result);
 }
 template<class Vector>
 auto result( const dg::MPI_Vector<Vector>& vec) { return vec.data()[0];}
@@ -350,6 +368,31 @@ TEST_CASE( "Complex algebra")
         dg::blas1::pointwiseDot( v3, c1, c2);
         INFO( "3*{2,2} = " << result(c2) <<" (6,6)");
         CHECK( equal<dg::cDVec,thrust::complex<double>>( c2, {6,6}));
+    }
+}
+
+TEST_CASE( "Integer algebra")
+{
+    dg::iDVec v1p( 500, 1), v2p( 500, 2);
+    dg::iDVec v3p( 500, 3), v4p( 500, 4);
+#ifdef WITH_MPI
+    dg::x::iDVec v1(v1p, MPI_COMM_WORLD), v2(v2p, MPI_COMM_WORLD);
+    dg::x::iDVec v3(v3p, MPI_COMM_WORLD), v4(v4p, MPI_COMM_WORLD);
+#else
+    dg::x::iDVec v1(v1p), v2(v2p);
+    dg::x::iDVec v3(v3p), v4(v4p);
+#endif
+    SECTION( "Axpby")
+    {
+        dg::blas1::axpby( 2, v1, 3, v2);
+        INFO( "2*1+ 3*2 = " << result(v2) <<" (8)");
+        CHECK( equalInt( v2, 8));
+    }
+    SECTION( "pointwiseDot")
+    {
+        dg::blas1::pointwiseDot( v3, v4, v2);
+        INFO( "3*4 = " << result(v2) <<" (12)");
+        CHECK( equalInt( v2, 12));
     }
 }
 

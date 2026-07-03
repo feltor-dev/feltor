@@ -39,13 +39,20 @@
 #endif //THRUST_DEVICE_SYSTEM
 
 
-//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
+//%%%%%%%%%%%%%%%try to check for cuda-aware MPI support or NCCL%%%%%%%%%%%%%%%%%%%%%%%%%%
 //TODO This should be tested somewhere
 namespace dg{
 #ifdef MPI_VERSION
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA // cuda is involved
 //{;
 
+#ifdef DG_WITH_NCCL
+inline constexpr bool nccl_mpi = true;
+inline constexpr bool cuda_aware_mpi = false;
+#pragma message( "NCCL MPI support enabled!")
+#else
+inline constexpr bool nccl_mpi = false;
+//{
 #ifdef DG_CUDA_UNAWARE_MPI
 //{;
 #pragma message( "Assume CUDA-unaware MPI support as per user indication!")
@@ -74,9 +81,12 @@ inline constexpr bool cuda_aware_mpi = true;
 //}
 #endif // DG_CUDA_UNAWARE_MPI
 //}
+#endif // DG_WITH_NCCL
+//}
 #else // THRUST != CUDA
 //{;
 inline constexpr bool cuda_aware_mpi = false;
+inline constexpr bool nccl_mpi = false;
 //}
 #endif //THRUST == CUDA
 #endif //MPI_VERSION

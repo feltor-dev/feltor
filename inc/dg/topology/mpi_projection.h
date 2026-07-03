@@ -57,19 +57,30 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
     // 3. Convert inner rows to local and move outer rows to vectors (invalidating them in inner)
     // 4. Use global columns vector to construct MPIGather
     // 5. Use buffer index to construct local CooMat
+    int size;
+    MPI_Comm_size( col_policy.communicator(), &size);
+    if( size == 1)
+    {
+        return { global_cols,
+                 dg::SparseMatrix<int, real_type, thrust::host_vector>{},
+                 MPIGather<thrust::host_vector>{},
+                 thrust::host_vector<int>{} };
+    }
     int rank;
     MPI_Comm_rank( col_policy.communicator(), &rank);
 
     const dg::IHMatrix_t<real_type>& A = global_cols;
     std::vector<int> global_row( A.num_rows(), 0);
+    thrust::host_vector<int> pids(A.num_nnz()), lIdx(A.num_nnz());
     // 1st pass determine local rows
     for(int i = 0; i < (int)A.num_rows(); i++)
     for (int jj = A.row_offsets()[i]; jj < A.row_offsets()[i+1]; jj++)
     {
-        int lIdx=0, pid = 0;
-        assert( col_policy.global2localIdx( A.column_indices()[jj], lIdx, pid));
-        if( pid != rank)
+        assert( col_policy.global2localIdx( A.column_indices()[jj], lIdx[jj], pids[jj]));
+        if( pids[jj] != rank)
+        {
             global_row[i] = 1;
+        }
     }
 
     // 2nd pass: distribute entries
@@ -83,16 +94,14 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
     {
         for (int jj = A.row_offsets()[i]; jj < A.row_offsets()[i+1]; jj++)
         {
-            int lIdx=0, pid = 0;
-            col_policy.global2localIdx( A.column_indices()[jj], lIdx, pid);
             if( global_row[i] == 1)
             {
-                outer_col.push_back( {pid,lIdx});
+                outer_col.push_back( {pids[jj],lIdx[jj]});
                 outer_val.push_back( A.values()[jj]);
             }
             else
             {
-                inner_col.push_back( lIdx);
+                inner_col.push_back( lIdx[jj]);
                 inner_val.push_back( A.values()[jj]);
             }
         }
@@ -156,7 +165,7 @@ dg::MIHMatrix_t<real_type> make_mpi_matrix(
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed it
  * simply has row-indices converted from global to local indices. \c num_cols
- * is the one from \c global
+ * is the one from \c global, \c num_rows is \c row_policy.local_size()
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a
  * ConversionPolicy;
  * @ingroup mpi_matvec
@@ -165,18 +174,24 @@ template<class ConversionPolicy, class real_type>
 dg::IHMatrix_t<real_type> convertGlobal2LocalRows( const
     dg::IHMatrix_t<real_type>& global, const ConversionPolicy& row_policy)
 {
+    int size;
+    MPI_Comm_size( row_policy.communicator(), &size);
+    if( size == 1)
+    {
+        return global; // no conversion necessary
+    }
     // 0. Convert to coo matrix
     thrust::host_vector<int> global_row_indices = dg::detail::csr2coo( global.row_offsets());
 
     // 1. For all rows determine pid to which it belongs
-    auto gIdx = dg::gIdx2gIdx( global_row_indices, row_policy);
+    thrust::host_vector<int> pids = dg::gIdx2gIdx( global_row_indices, row_policy);
     std::map<int, thrust::host_vector<int>> rows, cols;
     std::map<int, thrust::host_vector<real_type>> vals;
-    for( unsigned u=0; u<gIdx.size(); u++)
+    for( unsigned u=0; u<global_row_indices.size(); u++)
     {
-        rows[gIdx[u][0]].push_back( gIdx[u][1]);
-        cols[gIdx[u][0]].push_back( global.column_indices()[u]);
-        vals[gIdx[u][0]].push_back( global.values()[u]);
+        rows[pids[u]].push_back( global_row_indices[u]);
+        cols[pids[u]].push_back( global.column_indices()[u]);
+        vals[pids[u]].push_back( global.values()[u]);
     }
     // 2. Now send those rows to where they belong
     auto row_buf = dg::mpi_permute( rows, row_policy.communicator());
@@ -232,11 +247,12 @@ void convertLocal2GlobalCols( dg::IHMatrix_t<real_type>& local, const Conversion
     // 1. For all columns determine pid to which it belongs
     int rank=0;
     MPI_Comm_rank( policy.communicator(), &rank);
-    thrust::host_vector<int> local_cols = local.column_indices();
+    thrust::host_vector<int>& local_cols = local.column_indices();
+    local.num_cols() = policy.size();
 
     for(unsigned i=0; i<local.column_indices().size(); i++)
         assert( policy.local2globalIdx(local_cols[i], rank, local_cols[i]) );
-    local.set( local.num_rows(), policy.size(), local.row_offsets(), local_cols, local.values());
+    //local.set( local.num_rows(), policy.size(), local.row_offsets(), local_cols, local.values());
 }
 
 namespace create

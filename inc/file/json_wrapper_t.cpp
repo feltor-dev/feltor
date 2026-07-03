@@ -215,6 +215,16 @@ TEST_CASE("Json CPP wrapper")
         CHECK( acc.find("\"another_nest\"") != std::string::npos);
         CHECK( acc.find("\"number\"") != std::string::npos);
     }
+    SECTION("Existence")
+    {
+        dg::file::WrappedJsonValue ws( js);
+        REQUIRE( ws.isMember( "hello"));
+        CHECK( ws["hello"].isString());
+        CHECK( not ws["array"].isString());
+        CHECK( not ws["nested"].isString());
+        CHECK( not ws["nested"]["hi"].isString());
+        CHECK( not ws["nested"]["bool"].isString());
+    }
 
     SECTION( "Test Vector 2 Json")
     {

@@ -1,6 +1,9 @@
 #!/bin/bash
+# This script runs all tests on a local machine. It should be executed from
+# time to time because the automated tests on github do not run e.g. for
+# multi-GPU systems
 
-for dir in ../inc/dg/backend ../inc/dg/topology ../inc/dg ../inc/file
+for dir in ../inc/dg/backend ../inc/dg/topology ../inc/dg ../inc/file ../inc/geometries ../inc/matrix
 do
     current=$(pwd)
     cd $dir

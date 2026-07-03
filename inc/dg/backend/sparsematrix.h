@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <iomanip>
 #include <numeric>
 #include <thrust/sort.h>
 #include <thrust/gather.h>
@@ -72,9 +73,10 @@ I coo2csr( unsigned num_rows, const I& coo)
 
 /*! @brief A CSR formatted sparse matrix
  *
- * This class was designed to replace our dependency on \c cusp::csr_matrix. On
- * the host arithmetic operators like + and \* are overloaded allowing for
- * expressive code to concisely assemble the matrix:
+ * This class was designed to replace our dependency on \c cusp::csr_matrix,
+ * which is no longer maintained. On the host arithmetic operators like + and
+ * \* are overloaded allowing for expressive code to concisely assemble the
+ * matrix:
  * @snippet{trimleft} sparsematrix_t.cpp summary
  *
  * On the device like OpenMP or GPU the only currently allowed operations are \c transpose and the
@@ -84,6 +86,10 @@ I coo2csr( unsigned num_rows, const I& coo)
  * @sa The CSR format is nicely explained at the
  * <a href="https://docs.nvidia.com/cuda/cusparse/#compressed-sparse-row-csr">cusparse documentation</a>
  * We use the zero-base index
+ * @note There is currently no guarantee on the NaN or Inf propagation, in
+ * particular not in the \c dg::blas2::symv function. This means that in
+ * <tt>dg::blas2::symv( A, x, y)</tt> if \c y contains a NaN or Inf on input,
+ * it may or may not contain NaN or Inf on output
  *
  * @tparam Index The index type (on GPU must be either \c int or \c long)
  * @tparam Value The value type (on GPU must be either \c float or \c double)
@@ -270,6 +276,11 @@ struct SparseMatrix
     /// Alias for \c num_cols
     size_t total_num_cols() const { return m_num_cols;} // for blas2_sparseblockmat dispatch
 
+    /// Set number of rows in matrix (empties performance cache)
+    size_t& num_rows() { m_cache.forget(); return m_num_rows;}
+    /// Set number of columns in matrix (empties performance cache)
+    size_t& num_cols() { m_cache.forget(); return m_num_cols;}
+
     /// Number of rows in matrix
     size_t num_rows() const { return m_num_rows;}
     /// Number of columns in matrix
@@ -282,23 +293,64 @@ struct SparseMatrix
     size_t num_entries() const { return m_vals.size();}
 
     /*! @brief Read row_offsets vector
-     * @return row_offsets
+     * @return Row offsets
      */
     const Vector<Index> & row_offsets() const { return m_row_offsets;}
     /*! @brief Read column indices vector
-     * @return column indices
+     * @return Column indices
      */
     const Vector<Index> & column_indices() const { return m_cols;}
     /*! @brief Read values vector
-     * @return values
+     * @return Values
      */
     const Vector<Value> & values() const { return m_vals;}
+    /*! @brief Write row_offsets vector directly
+     *
+     * This function is intended for efficient matrix assembly but in obscure
+     * cases (like storing the reference to keep changing the indices after the
+     * matrix is in use in dg::blas2::symv) can mess with the performance cache
+     * for matrix-vector multiplications.
+     * @note Since changing the column indices changes the sparsity pattern
+     * this will automatically empty the performance cache and the returned
+     * reference is only safe to use until the performance cache is filled
+     * again.
+     * @attention You are responsible for keeping num_rows, num_cols,
+     * row_offsets, column_indices and values consistent, e.g.
+     * <tt>row_offsets().size() == num_rows() + 1</tt>
+     * @return Row offsets. The returned reference is only safe to use until a
+     * cache altering member (like matrix-vector multiplicaiton) is used!
+     */
+    Vector<Index> & row_offsets() {
+        m_cache.forget();
+        return m_row_offsets;
+    }
+    /*! @brief Write column indices vector directly
+     *
+     * This function is intended for efficient matrix assembly but in obscure
+     * cases (like storing the reference to keep changing the indices after the
+     * matrix is in use in dg::blas2::symv) can mess with the performance cache
+     * for matrix-vector multiplications.
+     * @note Since changing the column indices changes the sparsity pattern
+     * this will automatically empty the performance cache and the returned
+     * reference is only safe to use until the performance cache is filled
+     * again.
+     * @attention You are responsible for keeping num_rows, num_cols,
+     * row_offsets, column_indices and values consistent, e.g.
+     * <tt>column_indices().size() == values.size()</tt>
+     * @return Column indices. The returned reference is only safe to use until a
+     * cache altering member (like matrix-vector multiplicaiton) is used!
+     */
+    Vector<Index> & column_indices() {
+        m_cache.forget();
+        return m_cols;
+    }
     /*! @brief Change values vector
-     * @note The reason why \c values can be changed directly while \c
-     * row_offsets and \c column_indices cannot,  is that changing the values
-     * does not influence the performance cache, while changing the sparsity
-     * pattern through \c row_offsets and \c column_indices does
-     * @return Values array reference
+     *
+     * @note Changing the values can be done without emptying the performance cache.
+     * This is because changing the values does not change the sparsity pattern.
+     * (If the values array is resized then of course also the column indices need
+     * to be resized, which in turn does empty the performance cache)
+     * @return Values
      */
     Vector<Value> & values() { return m_vals;}
 
@@ -431,8 +483,8 @@ struct SparseMatrix
     template<class OtherMatrix = SparseMatrix>
     enable_if_serial<OtherMatrix>& operator+=( const SparseMatrix& op)
     {
-        SparseMatrix tmp = *this + op;
-        swap( tmp, *this);
+        *this = *this + op;
+        return *this;
     }
     /**
      * @brief subtract
@@ -444,8 +496,8 @@ struct SparseMatrix
     template<class OtherMatrix = SparseMatrix>
     enable_if_serial<OtherMatrix>& operator-=( const SparseMatrix& op)
     {
-        SparseMatrix tmp = *this + (-op);
-        swap( tmp, *this);
+        *this = *this + (-op);
+        return *this;
     }
     /**
      * @brief scalar multiply
@@ -631,6 +683,28 @@ struct SparseMatrix
     Vector<Index> m_row_offsets, m_cols;
     Vector<Value> m_vals;
 };
+
+/*! @brief Print textual representation of sparse matrix
+ *
+ * The main purpose of this function is to allow debugging.
+ * It will print the size of the matrix followed by all its entries separated by newline.
+ * @param m Matrix to print
+ * @param out The output stream to write the matrix to
+ *
+ * @note This does work for GPU matrices but it maybe slow
+ */
+template<class Sparse>
+void print( const Sparse& m, std::ostream& out = std::cout )
+{
+    out << "Sparse matrix <" << m.num_rows() << ", " << m.num_cols() << "> with "<< m.num_nnz() << " entries\n";
+    auto row_indices = detail::csr2coo( m.row_offsets());
+    for( unsigned u=0; u<m.num_nnz(); u++)
+    {
+        out << " "<< std::setw(14) << row_indices[u];
+        out << " "<< std::setw(14) << m.column_indices()[u];
+        out << " "<< std::setw(14) << "("<< m.values()[u]<<")\n";
+    }
+}
 
 ///@addtogroup traits
 ///@{

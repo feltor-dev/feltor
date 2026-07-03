@@ -66,8 +66,9 @@ auto make_FuncEigen_Te1( UnaryOp f)
  * @note The Eigenvalues can be estimated from a few lanczos iterations (which
  *  is at least more reliable than doing it semi-analytically)
  * @code{.cpp}
- *  dg::mat::UniversalLanczos lanczos( A.weights(), 20);
- *  auto T = lanczos.tridiag( A, A.weights(), A.weights());
+ *  dg::mat::UniversalLanczos lanczos( A.weights(), 2000);
+ *  const Container rnd = dg::evaluate( dg::RandomNumbers<double>(0,1), grid);
+ *  auto T = lanczos.tridiag( A, rnd, A.weights());
  *  auto EVs = dg::mat::compute_extreme_EV( T);
  *  auto make_SqrtCauchy_Te1( -1, EVs, 40);
  * @endcode
@@ -104,8 +105,9 @@ auto make_SqrtCauchy_Te1( int exp, std::array<value_type,2> EVs, unsigned stepsC
  * @note The Eigenvalues can be estimated from a few lanczos iterations (which
  *  is at least more reliable than doing it semi-analytically)
  * @code{.cpp}
- *  dg::mat::UniversalLanczos lanczos( A.weights(), 20);
- *  auto T = lanczos.tridiag( A, A.weights(), A.weights());
+ *  dg::mat::UniversalLanczos lanczos( A.weights(), 2000);
+ *  const Container rnd = dg::evaluate( dg::RandomNumbers<double>(0,1), grid);
+ *  auto T = lanczos.tridiag( A, rnd, A.weights());
  *  auto EVs = dg::mat::compute_extreme_EV( T);
  *  auto make_SqrtCauchyEigen_Te1( -1, EVs, 40);
  * @endcode

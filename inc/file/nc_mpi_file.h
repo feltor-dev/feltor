@@ -100,8 +100,8 @@ struct MPINcFile
     // /////////////////// open/close /////////
 
     /*!@copydoc SerialNcFile::open
-     * @note if <tt> mode == nc_nowrite</tt> all ranks in comm open the file and
-     *  the read member functions involve no communication
+     * @note if <tt>mode == nc_nowrite</tt> all ranks in comm open the file and the read
+     * member functions involve **no communication**
      * @note May invoke \c MPI_Barrier so that all ranks see the existence of a
      * possibly new file
      */
@@ -113,7 +113,9 @@ struct MPINcFile
         int rank;
         MPI_Comm_rank( m_comm, &rank);
         m_rank0 = (rank == 0);
+
         m_readonly = ( mode == nc_nowrite);
+
         // Classic file access, one process writes, everyone else reads
         mpi_invoke_void( &SerialNcFile::open, m_file, filename, mode);
         MPI_Barrier( m_comm); // all ranks agree that file exists
@@ -147,6 +149,12 @@ struct MPINcFile
     int get_ncid() const noexcept
     {
         return m_file.get_ncid();
+    }
+
+    ///@copydoc SerialNcFile::get_format
+    int get_format()const
+    {
+        return mpi_invoke( &SerialNcFile::get_format, m_file);
     }
 
     /// Return MPI communicator set in constructor
@@ -478,6 +486,27 @@ struct MPINcFile
         mpi_invoke_void( &SerialNcFile::get_var<T>, m_file, name, start, data);
         if( not m_readonly)
             mpi_bcast( data);
+    }
+
+    ///@copydoc SerialNcFile::get_var_as(std::string,const NcHyperslab&)const
+    template<class ContainerType, typename = std::enable_if_t<
+        dg::is_vector_v<ContainerType, dg::SharedVectorTag> or
+        dg::is_vector_v<ContainerType, dg::MPIVectorTag>>>
+    ContainerType get_var_as( std::string name, const MPINcHyperslab& slab
+            ) const
+    {
+        ContainerType data;
+        get_var( name, slab, data);
+        return data;
+    }
+
+    ///@copydoc SerialNcFile::get_var_as(std::string,const std::vector<size_t>&)const
+    template<class T, std::enable_if_t< dg::is_scalar_v<T>, bool> = true>
+    T get_var_as( std::string name, const std::vector<size_t>& start = {}) const
+    {
+        T var;
+        get_var( name, start, var);
+        return var;
     }
 
     ///@copydoc SerialNcFile::var_is_defined

@@ -23,13 +23,13 @@ TEST_CASE("Format conversion")
 TEST_CASE( "Construct sparse matrix")
 {
     size_t num_rows = 3, num_cols = 5, num_nnz = 6;
-    thrust::host_vector<int> rows(num_rows+1), cols(num_nnz);
-    thrust::host_vector<double> vals(num_nnz);
+    thrust::device_vector<int> rows(num_rows+1), cols(num_nnz);
+    thrust::device_vector<double> vals(num_nnz);
     SECTION( "Construct")
     {
-        dg::SparseMatrix<int,double,thrust::host_vector> mat ( num_rows, num_cols, rows, cols, vals);
+        dg::SparseMatrix<int,double,thrust::device_vector> mat ( num_rows, num_cols, rows, cols, vals);
         static_assert( std::is_same_v< dg::get_tensor_category< dg::SparseMatrix<
-            int,double,thrust::host_vector>>, dg::SparseMatrixTag>);
+            int,double,thrust::device_vector>>, dg::SparseMatrixTag>);
         CHECK( mat.num_rows() == num_rows);
         CHECK( mat.num_cols() == num_cols);
         CHECK( mat.num_vals() == vals.size());
@@ -41,6 +41,14 @@ TEST_CASE( "Construct sparse matrix")
         CHECK( mat.num_rows() == num_rows);
         CHECK( mat.num_cols() == num_cols);
         CHECK( mat.num_vals() == vals.size());
+        mat.num_rows() = 7;
+        CHECK( mat.num_rows() == 7);
+        mat.num_cols() = 12;
+        CHECK( mat.num_cols() == 12);
+        mat.row_offsets().resize( 8);
+        mat.column_indices().resize( 9);
+        mat.values().resize( 9);
+        CHECK( mat.num_nnz() == 9);
     }
     SECTION( "Constructing sorts columns")
     {
@@ -165,19 +173,26 @@ TEST_CASE( "Linear algebra")
         num_rows = 3, num_cols = 5;
         rows = {0,2,4,4}, cols = {1,4,1,2};
         vals = {2,4,1,2};
-        dg::SparseMatrix<int,double,std::vector> D;
-        D.set( num_rows, num_cols, rows, cols, vals);
+        dg::SparseMatrix<int,double,std::vector> C;
+        C.set( num_rows, num_cols, rows, cols, vals);
         //![set]
 
         // 1 2 0 2 7
         // 2 1 7 0 0
         // 0 4 0 0 1
-        auto C = A + D;
+        C += A; // The way this is implemented this will also test C + A
         CHECK( C.num_rows() == 3);
         CHECK( C.num_cols() == 5);
         CHECK( C.row_offsets() == std::vector<int>{ 0,4,7,9});
         CHECK( C.column_indices() == std::vector<int>{ 0,1,3,4,0,1,2,1,4});
         CHECK( C.values() == std::vector<double>{ 1,2,2,7,2,1,7,4,1});
+        C -= A;
+        CHECK( C.num_rows() == 3);
+        CHECK( C.num_cols() == 5);
+        CHECK( C.row_offsets() == std::vector<int>{ 0,4,7,9});
+        CHECK( C.column_indices() == std::vector<int>{ 0,1,3,4,0,1,2,1,4});
+        CHECK( C.values() == std::vector<double>{ 0,2,0,4,0,1,2,0,0});
+
     }
     SECTION( "Scal")
     {
@@ -238,6 +253,9 @@ TEST_CASE( "SpMV on device")
 
 TEST_CASE("Documentation")
 {
+    // redirect std::cout to string stream
+    std::stringstream ss;
+    auto cout_buf = std::cout.rdbuf( ss.rdbuf());
     //![summary]
     // 1 0 0 2
     // 2 0 5 0
@@ -247,6 +265,7 @@ TEST_CASE("Documentation")
     std::vector<int> rows = {0,2,4,5,7}, cols = {0,3,0,2,1,1,2};
     std::vector<double> vals = {1,2,2,5,4,1,1};
     dg::SparseMatrix<int,double,std::vector> A ( num_rows, num_cols, rows, cols, vals);
+    dg::print( A);
     //
     // 2 0 0 0
     // 0 3 3 5
@@ -258,6 +277,7 @@ TEST_CASE("Documentation")
     cols = {0,1,2,3,2,3,0,3};
     vals = {2,3,3,5,4,5,1,2};
     dg::SparseMatrix<int,double,std::vector> B ( num_rows, num_cols, rows, cols, vals);
+    dg::print( B);
     //
     // 3 4 0 0
     // 10 16.5 13.5 8.5
@@ -265,6 +285,7 @@ TEST_CASE("Documentation")
     // 10 0 0 2.5
     // 5.5 2 0 1
     auto C = B*A.transpose()+0.5*B;
+    dg::print( C);
     //
     CHECK( C.num_rows() == 5);
     CHECK( C.num_cols() == 4);
@@ -282,4 +303,6 @@ TEST_CASE("Documentation")
     thrust::copy( dw.begin(), dw.end(), w.begin());
     CHECK( w == std::vector{22.5,236.,125.5,42.,29.5});
     //![summary]
+    // reset buffer
+    std::cout.rdbuf( cout_buf);
 }

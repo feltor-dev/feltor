@@ -261,10 +261,10 @@ auto make_mpi_sparseblockmat( // not actually communicating
     int rank;
     MPI_Comm_rank( g_cols.communicator(), &rank);
     int ndim;
-    MPI_Cartdim_get( g_cols.communicator(), &ndim);
+    mpi_cartdim_get( g_cols.communicator(), &ndim);
     assert( ndim == 1);
     int dim, period, coord;
-    MPI_Cart_get( g_cols.communicator(), 1, &dim, &period, &coord); // coord of the calling process
+    mpi_cart_get( g_cols.communicator(), 1, &dim, &period, &coord); // coord of the calling process
     if( dim == 1)
     {
         return MPISparseBlockMat<thrust::host_vector, EllSparseBlockMat<real_type, thrust::host_vector>,

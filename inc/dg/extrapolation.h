@@ -221,10 +221,10 @@ struct LeastSquaresExtrapolation
 * @ingroup extrapolation
 * @sa https://en.wikipedia.org/wiki/Extrapolation
 */
-template<class ContainerType>
+template<class ContainerType, class real_type = dg::get_value_type<ContainerType>> // The real_type is if ContainerType is complex
 struct Extrapolation
 {
-    using value_type = get_value_type<ContainerType>;
+    using value_type = real_type;
     using container_type = ContainerType;
     /*! @brief Leave values uninitialized
      */
@@ -286,8 +286,12 @@ struct Extrapolation
     * @param t time to which to extrapolate (or at which interpolating
     * polynomial is evaluated)
     * @param new_x (write only) contains extrapolated value on output
+    * @attention If the update function has not been called enough times to
+    * fill all values the result depends:
+    *  - never called => new_x is zero
+    *  - called at least once => the interpolating polynomial is constructed
+    *  with all available values
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
-    * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => new_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
     */
     template<class ContainerType0>
     void extrapolate( value_type t, ContainerType0& new_x) const{
@@ -323,7 +327,11 @@ struct Extrapolation
     * @note If t is chosen as the latest time of update t0, then the result coincides
     * with the backward difference formula of order  \c max
     * @attention If max==1, the result is 0 (derivative of a constant)
-    * @attention If the update function has not been called enough times to fill all values the result depends: (i) never called => dot_x is zero (ii) called at least once => the interpolating polynomial is constructed with all available values
+    * @attention If the update function has not been called enough times to
+    * fill all values the result depends:
+    *  - never called => new_x is zero
+    *  - called at least once => the interpolating polynomial is constructed
+    *  with all available values
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */
     template<class ContainerType0>
@@ -352,7 +360,12 @@ struct Extrapolation
 
     /**
     * @brief Extrapolate value (equidistant version)
-    * @param new_x (write only) contains extrapolated value on output
+    * @param new_x (write only) contains extrapolated value on output.
+    * @attention If the update function has not been called enough times to
+    * fill all values the result depends:
+    *  - never called => new_x is zero
+    *  - called at least once => the interpolating polynomial is constructed
+    *  with all available values
     * @note Assumes that extrapolation time equals last inserted time+1
     * @tparam ContainerType0 must be usable with \c ContainerType in \ref dispatch
     */

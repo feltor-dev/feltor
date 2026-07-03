@@ -329,7 +329,7 @@ void swap_bc_perp( const FieldAligned& fa, const container& fm,
 \f$\nabla_\parallel^\dagger = -\nabla\cdot(\vec v .)\f$ and
 \f$\Delta_\parallel=-\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
-@snippet ds_t.cpp doxygen
+@snippet ds_b.cpp doxygen
  * @note The parallel Laplacian cannot be inverted as long as there are
  * closed fieldlines somewhere in the domain (which is virtually always true).
 @note The \c div and \c symv member functions are close to but not exactly volume conserving
@@ -428,7 +428,7 @@ struct DS
     * forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
     * @copydoc hide_ds_parameters4
     */
-    void forward( double alpha, const container& f, double beta, container& g){
+    void forward( double alpha, const container& f, double beta, container& g)const{
         m_fa(zeroForw, f, m_tempO);
         m_fa(einsPlus, f, m_tempP);
         ds_forward( m_fa, alpha, m_tempO, m_tempP, beta, g);
@@ -439,7 +439,7 @@ struct DS
     * forward derivative \f$ g_i = \alpha \frac{1}{2h_z^+}(-f_{i+2} + 4f_{i+1} - 3f_{i}) + \beta g_i\f$
     * @copydoc hide_ds_parameters4
     */
-    void forward2( double alpha, const container& f, double beta, container& g){
+    void forward2( double alpha, const container& f, double beta, container& g)const{
         m_fa(zeroForw, f, m_tempO);
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsPlus, m_tempP, m_tempM);
@@ -451,7 +451,7 @@ struct DS
     * backward derivative \f$ g_i = \alpha \frac{1}{h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
     * @copydoc hide_ds_parameters4
     */
-    void backward( double alpha, const container& f, double beta, container& g){
+    void backward( double alpha, const container& f, double beta, container& g)const{
         m_fa(einsMinus, f, m_tempM);
         m_fa(zeroForw, f, m_tempO);
         ds_backward( m_fa, alpha, m_tempM, m_tempO, beta, g);
@@ -462,7 +462,7 @@ struct DS
     * backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(3f_{i} - 4f_{i-1} + f_{i-2}) + \beta g_i \f$
     * @copydoc hide_ds_parameters4
     */
-    void backward2( double alpha, const container& f, double beta, container& g){
+    void backward2( double alpha, const container& f, double beta, container& g)const{
         m_fa(einsMinus, f, m_tempM);
         m_fa(einsMinus, m_tempM, m_tempP);
         m_fa(zeroForw, f, m_tempO);
@@ -478,7 +478,7 @@ struct DS
     * writeup
     * @copydoc hide_ds_parameters4
     */
-    void centered( double alpha, const container& f, double beta, container& g){
+    void centered( double alpha, const container& f, double beta, container& g)const{
         m_fa(einsPlus,  f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         ds_centered( m_fa, alpha, m_tempM, m_tempP, beta, g);
@@ -486,7 +486,7 @@ struct DS
     /// Same as \c dg::geo::ds_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void centered_bc_along_field(
         double alpha, const container& f, double beta, container& g, dg::bc bound,
-        std::array<double,2> boundary_value = {0,0}){
+        std::array<double,2> boundary_value = {0,0}) const{
         m_fa(einsPlus,  f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         assign_bc_along_field_2nd( m_fa, m_tempM, f, m_tempP, m_tempM, m_tempP,
@@ -500,7 +500,7 @@ struct DS
     * backward derivative \f$ g_i = \frac{v^\varphi}{\Delta\varphi}(f_{i} - f_{i-1}) \f$
     * @copydoc hide_ds_parameters2
     */
-    void backward( const container& f, container& g){
+    void backward( const container& f, container& g) const{
         backward(1., f,0.,g);
     }
     /**
@@ -509,7 +509,7 @@ struct DS
     * forward derivative \f$ g_i = \frac{v^\varphi}{\Delta\varphi}(f_{i+1} - f_{i})\f$
     * @copydoc hide_ds_parameters2
     */
-    void forward( const container& f, container& g){
+    void forward( const container& f, container& g) const {
         forward(1.,f, 0.,g);
     }
     /**
@@ -518,14 +518,14 @@ struct DS
     * centered derivative \f$ g_i = \frac{v^\varphi}{2\Delta\varphi}(f_{i+1} - f_{i-1})\f$
     * @copydoc hide_ds_parameters2
     */
-    void centered( const container& f, container& g){
+    void centered( const container& f, container& g) const {
         centered(1.,f,0.,g);
     }
 
     ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
     ///@copydoc hide_ds_attention
-    void divForward( double alpha, const container& f, double beta, container& g){
+    void divForward( double alpha, const container& f, double beta, container& g) const {
         m_fa(einsPlus,  f, m_tempP);
         m_fa(zeroForw,  f, m_tempO);
         ds_divForward( m_fa, alpha, m_tempO, m_tempP, beta, g);
@@ -533,7 +533,7 @@ struct DS
     ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
     ///@copydoc hide_ds_attention
-    void divBackward( double alpha, const container& f, double beta, container& g){
+    void divBackward( double alpha, const container& f, double beta, container& g) const {
         m_fa(einsMinus,  f, m_tempM);
         m_fa(zeroForw,  f, m_tempO);
         ds_divBackward( m_fa, alpha, m_tempM, m_tempO, beta, g);
@@ -541,7 +541,7 @@ struct DS
     ///@brief centered divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydoc hide_ds_parameters4
     ///@copydoc hide_ds_attention
-    void divCentered(double alpha, const container& f, double beta, container& g){
+    void divCentered(double alpha, const container& f, double beta, container& g) const {
         m_fa(einsPlus,  f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         ds_divCentered( m_fa, alpha, m_tempM, m_tempP, beta, g);
@@ -549,19 +549,19 @@ struct DS
     ///@brief forward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
     ///@copydoc hide_ds_attention
-    void divForward(const container& f, container& g){
+    void divForward(const container& f, container& g) const {
         divForward( 1.,f,0.,g);
     }
     ///@brief backward divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
     ///@copydoc hide_ds_attention
-    void divBackward(const container& f, container& g){
+    void divBackward(const container& f, container& g) const {
         divBackward( 1.,f,0.,g);
     }
     ///@brief centered divergence \f$ g = \nabla\cdot(\vec v f)\f$
     ///@copydoc hide_ds_parameters2
     ///@copydoc hide_ds_attention
-    void divCentered(const container& f, container& g){
+    void divCentered(const container& f, container& g) const {
         divCentered( 1.,f,0.,g);
     }
 
@@ -571,7 +571,7 @@ struct DS
     * @param dir redirects to either \c forward(), \c backward() or \c centered()
     * @copydoc hide_ds_parameters2
     */
-    void ds(dg::direction dir,  const container& f, container& g){
+    void ds(dg::direction dir,  const container& f, container& g) const {
         ds(dir, 1., f, 0., g);
     }
     /**
@@ -580,7 +580,7 @@ struct DS
     * @param dir redirects to either \c forward(), \c backward() or \c centered()
     * @copydoc hide_ds_parameters4
     */
-    void ds(dg::direction dir, double alpha, const container& f, double beta, container& g);
+    void ds(dg::direction dir, double alpha, const container& f, double beta, container& g) const ;
     /**
     * @brief Discretizes \f$ g = \nabla \cdot ( \vec v f) \f$
     *
@@ -588,7 +588,7 @@ struct DS
     * @copydoc hide_ds_parameters2
      * @copydoc hide_ds_attention
     */
-    void div(dg::direction dir,  const container& f, container& g){
+    void div(dg::direction dir,  const container& f, container& g) const {
         div(dir, 1., f, 0., g);
     }
     /**
@@ -598,7 +598,7 @@ struct DS
     * @copydoc hide_ds_parameters4
      * @copydoc hide_ds_attention
     */
-    void div(dg::direction dir, double alpha, const container& f, double beta, container& g);
+    void div(dg::direction dir, double alpha, const container& f, double beta, container& g) const;
 
     /**
      * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$
@@ -609,7 +609,7 @@ struct DS
      * @note The \c dg::TensorTraits are defined for this class and thus \c DS
      * is usable as a Matrix class (calling \c symv )
      */
-    void symv( const container& f, container& g){ symv( 1., f, 0., g);}
+    void symv( const container& f, container& g) const{ symv( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
      *
@@ -619,14 +619,14 @@ struct DS
      * @note The \c dg::TensorTraits are defined for this class and thus \c DS
      * is usable as a Matrix class (calling \c symv )
      */
-    void symv( double alpha, const container& f, double beta, container& g);
+    void symv( double alpha, const container& f, double beta, container& g) const;
     /**
      * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$
      *
      * Same as \c forward followed by \c backward
      * @copydoc hide_ds_parameters2
      */
-    void dss( const container& f, container& g){
+    void dss( const container& f, container& g) const{
         dss( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
@@ -634,7 +634,7 @@ struct DS
      * Same as \c forward followed by \c backward
      * @copydoc hide_ds_parameters4
      */
-    void dss( double alpha, const container& f, double beta, container& g){
+    void dss( double alpha, const container& f, double beta, container& g) const{
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         m_fa(zeroForw,  f, m_tempO);
@@ -643,7 +643,7 @@ struct DS
     /// Same as \c dg::geo::dss_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void dss_bc_along_field(
         double alpha, const container& f, double beta, container& g, dg::bc bound,
-        std::array<double,2> boundary_value = {0,0}){
+        std::array<double,2> boundary_value = {0,0}) const{
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         m_fa(zeroForw,  f, m_tempO);
@@ -653,7 +653,7 @@ struct DS
     }
     /// Same as \c dg::geo::dssd_centered
     void dssd( double alpha, const container& f, double
-            beta, container& g){
+            beta, container& g) const{
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         m_fa(zeroForw,  f, m_tempO);
@@ -662,7 +662,7 @@ struct DS
     /// Same as \c dg::geo::dssd_centered after \c dg::geo::ds_assign_bc_along_field_2nd
     void dssd_bc_along_field( double alpha, const
             container& f, double beta, container& g, dg::bc bound,
-            std::array<double,2> boundary_value = {0,0}){
+            std::array<double,2> boundary_value = {0,0}) const{
         m_fa(einsPlus, f, m_tempP);
         m_fa(einsMinus, f, m_tempM);
         m_fa(zeroForw,  f, m_tempO);
@@ -685,7 +685,7 @@ struct DS
     const FA& fieldaligned()const{return m_fa;}
     private:
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
-    container m_tempP, m_tempO, m_tempM;
+    mutable container m_tempP, m_tempO, m_tempM;
 };
 
 ///@cond
@@ -699,7 +699,7 @@ DS<Geometry, I, container>::DS( Fieldaligned<Geometry, I, container> fa): m_fa(f
 
 template<class G, class I, class container>
 inline void DS<G,I,container>::ds( dg::direction dir, double alpha,
-    const container& f, double beta, container& dsf) {
+    const container& f, double beta, container& dsf) const {
     switch( dir){
         case dg::centered:
         return centered( alpha, f, beta, dsf);
@@ -711,7 +711,7 @@ inline void DS<G,I,container>::ds( dg::direction dir, double alpha,
 }
 template<class G, class I, class container>
 inline void DS<G,I,container>::div( dg::direction dir, double alpha,
-    const container& f, double beta, container& dsf) {
+    const container& f, double beta, container& dsf) const {
     switch( dir){
         case dg::centered:
         return divCentered( alpha, f, beta, dsf);
@@ -724,7 +724,7 @@ inline void DS<G,I,container>::div( dg::direction dir, double alpha,
 
 
 template<class G,class I, class container>
-void DS<G,I,container>::symv( double alpha, const container& f, double beta, container& dsTdsf)
+void DS<G,I,container>::symv( double alpha, const container& f, double beta, container& dsTdsf) const
 {
     dssd( alpha, f, beta, dsTdsf);
 };

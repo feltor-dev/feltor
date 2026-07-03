@@ -19,7 +19,7 @@ TEST_CASE("MPI Kron test")
 
         std::vector<int> remain_dims = {1, 0, 0};
         MPI_Comm comm_sub100;
-        MPI_Cart_sub( comm, &remain_dims[0], &comm_sub100);
+        dg::mpi_cart_sub( comm, &remain_dims[0], &comm_sub100);
 
         dg::register_mpi_cart_sub( comm, &remain_dims[0], comm_sub100);
 
@@ -66,7 +66,7 @@ TEST_CASE("MPI Kron test")
 
         MPI_Comm kron = dg::mpi_cart_kron( {comm_sub100, comm_sub001}); // 100 + 001
         int coords[2], np[2] = {0,0}, periods[2];
-        MPI_Cart_get( kron, 2, np, periods, coords);
+        dg::mpi_cart_get( kron, 2, np, periods, coords);
         CHECK( np[0] == np3d[0]);
         CHECK( np[1] == np3d[2]);
         CHECK(mm.at(kron).root == comm);

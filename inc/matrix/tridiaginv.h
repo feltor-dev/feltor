@@ -713,8 +713,9 @@ dg::SquareMatrix<value_type> invert(
  * @brief Compute extreme Eigenvalues of a symmetric tridiangular matrix
  *
  * @code{.cpp}
- *  dg::mat::UniversalLanczos lanczos( A.weights(), 20);
- *  auto T = lanczos.tridiag( A, A.weights(), A.weights());
+ *  dg::mat::UniversalLanczos lanczos( A.weights(), 2000);
+ *  const Container rnd = dg::evaluate( dg::RandomNumbers<double>(0,1), grid);
+ *  auto T = lanczos.tridiag( A, rnd, A.weights());
  *  auto EV = dg::mat::compute_extreme_EV( T);
  *  // EV[0] is the minimum, EV[1] the maximum Eigenvalue
  * @endcode
@@ -725,13 +726,10 @@ dg::SquareMatrix<value_type> invert(
 template<class value_type>
 std::array<value_type, 2> compute_extreme_EV( const dg::TriDiagonal<thrust::host_vector<value_type>>& T)
 {
-    dg::SquareMatrix<value_type> evecs;
     // We use P as "subdiagonal" because it is symmetric and the first element must be on 0 index
     thrust::host_vector<value_type> evals( T.O), subdiagonal( T.P), Z, work;
     lapack::stev('N', evals,  subdiagonal, Z, work);
-    value_type EVmax = dg::blas1::reduce( evals, 0., dg::AbsMax<value_type>());
-    value_type EVmin = dg::blas1::reduce( evals, EVmax, dg::AbsMin<value_type>());
-    return std::array<value_type, 2>{EVmin, EVmax};
+    return std::array<value_type, 2>{evals[0], evals[evals.size()-1]};
 }
 
 

@@ -19,7 +19,7 @@
 int main( int argc, char* argv[])
 {
 #ifdef WITH_MPI
-    dg::mpi_init( argc, argv);
+    dg::mpi_init( &argc, &argv);
     MPI_Comm comm;
     dg::mpi_init2d( dg::DIR, dg::PER, comm, std::cin, true);
     int rank;
@@ -193,7 +193,7 @@ int main( int argc, char* argv[])
             file.open(outputfile, dg::file::nc_clobber);
         }catch( std::exception& e)
         {
-            DG_RANK0 std::cerr << "ERROR creating file "<<argv[1]<<std::endl;
+            DG_RANK0 std::cerr << "ERROR creating file "<<outputfile<<std::endl;
             DG_RANK0 std::cerr << e.what() << std::endl;
             dg::abort_program();
         }

@@ -98,7 +98,7 @@ DG_DEVICE auto sum( T1 x1) const
 ///@brief \f$ y = \prod_i x_i \f$
 struct Product
 {
-    ///@brief \f[ \sum_i x_i \f]
+    ///@brief \f[ \prod_i x_i \f]
     template< class T1, class ...Ts>
 DG_DEVICE auto operator()( T1 x, Ts... rest) const
     {

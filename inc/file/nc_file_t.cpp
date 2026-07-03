@@ -24,10 +24,12 @@ TEST_CASE( "Test the NcFile class")
     {
         //! [constructor]
         dg::file::NcFile file( "../test.nc", dg::file::nc_clobber);
+        // This will call nc_create( "../test.nc", NC_CLOBBER | NC_NETCDF4, &ncid);
         CHECK( std::filesystem::exists( "../test.nc"));
         CHECK( file.is_open());
         // Cannot open another file while open
         CHECK_THROWS_AS( file.open("test.nc"), dg::file::NC_Error);
+        // This will call nc_open( "test.nc", NC_NOWRITE, &ncid);
         file.close();
         //! [constructor]
         DG_RANK0 std::filesystem::remove( "../test.nc");
@@ -39,6 +41,7 @@ TEST_CASE( "Test the NcFile class")
         //! [default]
         dg::file::NcFile file;
         file.open("test.nc", dg::file::nc_noclobber);
+        // This will call nc_create("test.nc", NC_NOCLOBBER | NC_NETCDF4, &ncid);
         CHECK( file.is_open());
         file.close();
         //! [default]
@@ -59,9 +62,18 @@ TEST_CASE( "Test the NcFile class")
         file.close();
         DG_RANK0 std::filesystem::remove( absolute);
     }
+    SECTION( "New files have NetCDF-4 format")
+    {
+        dg::file::NcFile file( "test.nc", dg::file::nc_clobber);
+        auto format = file.get_format();
+        CHECK( format == NC_FORMAT_NETCDF4);
+        file.close();
+        DG_RANK0 std::filesystem::remove( "test.nc");
+
+    }
 #ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD);
-#endif
+#endif // WITH_MPI
 }
 TEST_CASE( "Open, groups, dims, atts")
 {
@@ -357,8 +369,7 @@ TEST_CASE( "Test variables in the NcFile class")
         //! [var_is_defined]
         file.put_var( "scalar", {}, 42);
         CHECK( file.get_var_dims("scalar").empty());
-        int scalar;
-        file.get_var( "scalar", {}, scalar);
+        int scalar = file.get_var_as<int>( "scalar");
         CHECK( scalar == 42);
     }
     SECTION( "Variable attributes exist")
@@ -380,16 +391,25 @@ TEST_CASE( "Test variables in the NcFile class")
         file.def_dimvar_as<double>( "time", NC_UNLIMITED, {{"axis", "T"}});
         file.put_var("time", {52}, 10);
         file.close();
-        double test;
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         file.open( "variables.nc", mode);
         CHECK( file.var_is_defined( "time"));
         CHECK( file.att_is_defined( "axis", "time"));
         CHECK( file.get_att_as<std::string>( "axis", "time") == "T");
         //![get_var]
+        double test = file.get_var_as<double>("time", {52});
+        CHECK( test == 10);
+        // or
         file.get_var("time", {52}, test);
         CHECK( test == 10);
         //![get_var]
+        // or
+#ifndef MPI_VERSION
+        auto times = file.get_var_as<std::vector<double>>( "time");
+        CHECK( times.size() == 53);
+        CHECK( times[52] == 10);
+#endif
+
     }
     SECTION( "Group sees dimension")
     {

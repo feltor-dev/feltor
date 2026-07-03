@@ -22,7 +22,7 @@ int main(
 )
 {
 #ifdef WITH_MPI
-    MPI_Init( &argc, &argv);
+    dg::mpi_init( &argc, &argv);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 #endif
@@ -187,7 +187,7 @@ int main(
         ds.centered( fun, derivative);
     t.toc();
     double gbytes=fun.size()*sizeof(double)/1e9;
-    DG_RANK0 std::cout << t.diff()/10 << " #\t "<<gbytes*83*10/t.diff()<<"GB/s\n" ;
+    DG_RANK0 std::cout << t.diff()/10 << " #\t "<<gbytes*3*10/t.diff()<<"GB/s\n" ;
 
     for( auto bc : {dg::NEU, dg::DIR})
     {

@@ -5,13 +5,16 @@
 # don't technically matter but it does not block anything either
 set(MATRIX_HEADERS
   matrix.h
+  ../../matrix/contours.h
   ../../matrix/exp_runge_kutta.h
   ../../matrix/functors.h
   ../../matrix/lanczos.h
   ../../matrix/matrixfunction.h
   ../../matrix/matrix.h
+  ../../matrix/matrixprod.h
   ../../matrix/matrixsqrt.h
   ../../matrix/mcg.h
+  ../../matrix/optimise.h
   ../../matrix/polarization.h
   ../../matrix/polarization_init.h
   ../../matrix/sqrt_cauchy.h
@@ -25,16 +28,22 @@ set(MATRIX_HEADERS
 # Some can be compiled for MPI
 # find ../../matrix -name "*t.cpp" | sort
 set(MATRIX_TESTS
+  ../../matrix/contours_t.cpp
   ../../matrix/exp_runge_kutta_t.cpp
   ../../matrix/functors_t.cpp
+  ../../matrix/lanczos_t.cpp
+  ../../matrix/optimise_t.cpp
   ../../matrix/tridiaginv_t.cpp
 )
 
 # find ../../matrix -name "*b.cpp" | sort
 set(MATRIX_BENCHMARKS
+  ../../matrix/contours_b.cpp
   ../../matrix/lanczos_b.cpp
   #../../matrix/lanczos_mpib.cpp
   ../../matrix/matrixfunction_b.cpp
+  ../../matrix/matrixprodexp2_b.cpp
+  ../../matrix/matrixprodexp_b.cpp
   ../../matrix/matrixsqrt_b.cpp
   ../../matrix/polarization_b.cpp
   ../../matrix/polarization_init_b.cpp
@@ -44,6 +53,7 @@ set(MATRIX_BENCHMARKS
 # These targets need to link to netcdf
 # Test grep "file.h" * in matrix
 set( MATRIX_BENCHMARKS_WITH_FILE
+  ../../matrix/matrixprodexp2_b.cpp
   ../../matrix/polarization_b.cpp
   ../../matrix/polarization_init_b.cpp
 )

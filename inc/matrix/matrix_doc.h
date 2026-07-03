@@ -14,6 +14,8 @@
  *      @brief \f$ x \approx f(A)b \f$
  *     @defgroup exp_int Exponential integrators
  *      @brief \f$ \dot y = Ay + g(t,y)\f$
+ *     @defgroup opt Optimisation methods
+ *      @brief \f$ \min_{x} f(x)\f$
  * @}
  *
  * @defgroup matrixnumerical1 Level 4: Advanced numerical schemes

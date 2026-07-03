@@ -77,7 +77,7 @@ inline void mpi_reduce_communicator(MPI_Comm comm,
  * are involved. This function normalizes, reduces, normalizes, reduces and
  * broadcasts the result to all participating processes.  As usual the resulting
  * superaccumulator is unnormalized.
- * @param num_superacc number of Superaccumulators eaach process holds
+ * @param num_superacc number of Superaccumulators each process holds
  * @param in unnormalized input superaccumulators ( must be of size
  * num_superacc*\c exblas::BIN_COUNT, allocated on the cpu) (read/write,
  * undefined on out)
@@ -98,6 +98,14 @@ MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
     {
         int imin=exblas::IMIN, imax=exblas::IMAX;
         cpu::Normalize(&in[i*exblas::BIN_COUNT], imin, imax);
+    }
+    int size_comm, size_comm_mod;
+    MPI_Comm_size( comm, &size_comm);
+    MPI_Comm_size( comm_mod, &size_comm_mod);
+    if( size_comm == size_comm_mod) // size < 128
+    {
+        MPI_Allreduce( in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, comm);
+        return;
     }
 
     MPI_Reduce(in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, 0,

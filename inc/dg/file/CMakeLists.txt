@@ -97,7 +97,7 @@ if(FELTOR_FILE_WITH_JSONCPP)
   CPMAddPackage(
     NAME jsoncpp
     GITHUB_REPOSITORY open-source-parsers/jsoncpp
-    VERSION 1.9.5
+    GIT_TAG 1.9.5
     OPTIONS "JSONCPP_WITH_TESTS OFF"
     SYSTEM ON
     EXCLUDE_FROM_ALL ON

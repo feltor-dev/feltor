@@ -35,6 +35,16 @@ typedef ZERO NoLimiter;
 ///@cond
 namespace detail{
 
+template<class Container>
+struct Container2EllSparseBlockMat;
+
+// https://stackoverflow.com/questions/5052211/changing-value-type-of-a-given-stl-container
+template<class real_type, class ... Args, template <class...> class Vector>
+struct Container2EllSparseBlockMat<Vector<real_type, Args...>>
+{
+    using type = EllSparseBlockMat<real_type, Vector>;
+};
+
 static inline void parse_method( std::string method, std::string& i, std::string& p, std::string& f)
 {
     f = "dg";
@@ -197,6 +207,33 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
     }
 }
 
+// Add non-overlapping matrices from row blocks
+template<class real_type>
+void add_rowwise_from_sub( dg::IHMatrix_t<real_type>& mat, const dg::IHMatrix_t<real_type>& sub)
+{
+    // all matrices need same number of cols
+    if( sub.num_rows() != mat.num_rows())
+        throw dg::Error(dg::Message(_ping_)<<" Submatrix has "<<sub.num_rows()<<" but should have "<<mat.num_rows()<<" columns!");
+    if( sub.num_cols() != mat.num_cols())
+        throw dg::Error(dg::Message(_ping_)<<" Submatrix has "<<sub.num_cols()<<" but should have "<<mat.num_cols()<<" columns!");
+    dg::blas1::axpby( 1, sub.row_offsets(), 1, mat.row_offsets());
+    mat.column_indices().insert( mat.column_indices().end(),
+        sub.column_indices().begin(), sub.column_indices().end());
+    mat.values().insert( mat.values().end(),
+        sub.values().begin(), sub.values().end());
+}
+// Concatenate matrices from row blocks
+template<class real_type>
+void add_from_sub( dg::IHMatrix_t<real_type>& mat, const dg::IHMatrix_t<real_type>& sub, std::string method)
+{
+    if( mat.values().empty())
+        mat = sub;
+    else if( method != "linear")
+        add_rowwise_from_sub( mat, sub);
+    else
+        mat += sub;
+    return;
+}
 
 }//namespace detail
 ///@endcond
@@ -262,7 +299,7 @@ void integrate_all_fieldlines2d( const dg::geo::CylindricalVectorLvl1& vec,
 * @brief Create and manage interpolation matrices from fieldline integration
 *
 * @ingroup fieldaligned
-* @snippet ds_t.cpp doxygen
+* @snippet ds_b.cpp doxygen
 * @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
 * @tparam IMatrix The type of the interpolation matrix
     - \c dg::IHMatrix, or \c dg::IDMatrix, \c dg::MIHMatrix, or \c dg::MIDMatrix
@@ -376,9 +413,9 @@ struct Fieldaligned
      */
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
     {
-        dg::split( global, m_f, *m_g);
-        dg::blas1::axpby( scal_left,  m_f[0],      0, m_left);
-        dg::blas1::axpby( scal_right, m_f[m_Nz-1], 0, m_right);
+        dg::split( global, m_split_in, *m_g);
+        dg::blas1::axpby( scal_left,  m_split_in[0],      0, m_left);
+        dg::blas1::axpby( scal_right, m_split_in[m_Nz-1], 0, m_right);
         m_bcz = bcz;
     }
 
@@ -390,7 +427,7 @@ struct Fieldaligned
     * @param in input
     * @param out output may not equal input
     */
-    void operator()(enum whichMatrix which, const container& in, container& out);
+    void operator()(enum whichMatrix which, const container& in, container& out) const;
 
     double deltaPhi() const{return m_deltaPhi;}
     ///@brief Distance between the planes and the boundary \f$ (s_{k}-s_{b}^-) \f$
@@ -464,7 +501,7 @@ struct Fieldaligned
     * @return the input interpolated onto the grid given in the constructor
     * @note the interpolation weights are taken in the phi distance not the s-distance, which makes the interpolation linear in phi
     */
-    container interpolate_from_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse);
+    container interpolate_from_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse) const;
     /**
     * @brief Integrate a 2d function on the fine grid \f[ \frac{1}{\Delta\varphi} \int_{-\Delta\varphi}^{\Delta\varphi}d \varphi w(\varphi) f(R(\varphi), Z(\varphi) \f]
     *
@@ -474,7 +511,7 @@ struct Fieldaligned
     * @param coarse the 2d input vector
     * @param out the integral (2d vector, may alias coarse)
     */
-    void integrate_between_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse, container& out );
+    void integrate_between_coarse_grid( const ProductGeometry& grid_coarse, const container& coarse, container& out ) const;
 
 
     /**
@@ -513,10 +550,16 @@ struct Fieldaligned
     std::string method() const{return m_interpolation_method;}
 
     private:
-    void ePlus( enum whichMatrix which, const container& in, container& out);
-    void eMinus(enum whichMatrix which, const container& in, container& out);
-    void zero( enum whichMatrix which, const container& in, container& out);
-    IMatrix m_plus, m_zero, m_minus, m_plusT, m_minusT; //2d interpolation matrices
+    void ePlus( enum whichMatrix which, const container& in, container& out) const;
+    void eMinus(enum whichMatrix which, const container& in, container& out) const;
+    void zero( enum whichMatrix which, const container& in, container& out) const;
+    IMatrix m_plus, m_zero, m_minus; //2d interpolation matrices
+    mutable IMatrix m_plusT, m_minusT; // only allocated if necessary
+    // backproject
+    typename detail::Container2EllSparseBlockMat<container>::type m_bx, m_by, m_inv_bx, m_inv_by;
+    bool apply_backproject = false, apply_inv_backproject = false;
+    mutable container m_temp0, m_temp1; // 3d size
+    //
     container m_hbm, m_hbp;         //3d size
     container m_G, m_Gm, m_Gp; // 3d size
     container m_bphi, m_bphiM, m_bphiP; // 3d size
@@ -524,18 +567,18 @@ struct Fieldaligned
 
     container m_left, m_right;      //perp_size
     container m_limiter;            //perp_size
-    container m_ghostM, m_ghostP;   //perp_size
+    mutable container m_ghostM, m_ghostP;   //perp_size
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcx, m_bcy, m_bcz;
-    std::vector<dg::View<const container>> m_f;
-    std::vector<dg::View< container>> m_temp;
+    mutable std::vector<dg::View<const container>> m_split_in;
+    mutable std::vector<dg::View< container>> m_split_out;
     dg::ClonePtr<ProductGeometry> m_g;
     dg::InverseKroneckerTriDiagonal2d<container> m_inv_linear;
     double m_deltaPhi;
     std::string m_interpolation_method;
 
-    bool m_have_adjoint = false;
-    void updateAdjoint( )
+    mutable bool m_have_adjoint = false;
+    void updateAdjoint( ) const // only changes mutable m_plusT, m_minusT, m_have_adjoint
     {
         m_plusT = m_plus.transpose();
         m_minusT = m_minus.transpose();
@@ -559,7 +602,23 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 
     std::string inter_m, project_m, fine_m;
     detail::parse_method( interpolation_method, inter_m, project_m, fine_m);
-    if( benchmark) std::cout << "# Interpolation method: \""<<inter_m << "\" projection method: \""<<project_m<<"\" fine grid \""<<fine_m<<"\"\n";
+    // For project method "const" we round up to the nearest multiple of n
+    if( project_m != "dg" && fine_m == "dg")
+    {
+        unsigned rx = mx % grid.nx(), ry = my % grid.ny();
+        if( 0 != rx || 0 != ry)
+        {
+            std::cerr << "#Warning: for projection method \"const\" mx and my "
+            <<mx<<" "<<my<<" must be multiples of nx and ny "
+            <<grid.nx()<<" "<<grid.ny()<<" ! Rounding up for you ...\n";
+            mx = mx + grid.nx() - rx;
+            my = my + grid.ny() - ry;
+        }
+    }
+    if( benchmark)
+        std::cout << "# Interpolation method: \""<<inter_m
+            << "\" projection method: \""<<project_m
+            <<"\" fine grid \""<<fine_m<<"\"\n";
     ///Let us check boundary conditions:
     if( (grid.bcx() == PER && bcx != PER) || (grid.bcx() != PER && bcx == PER) )
         throw( dg::Error(dg::Message(_ping_)<<"Fieldaligned: Got conflicting periodicity in x. The grid says "<<bc2str(grid.bcx())<<" while the parameter says "<<bc2str(bcx)));
@@ -572,96 +631,158 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::Timer t;
     if( benchmark) t.tic();
     dg::ClonePtr<dg::aGeometry2d> grid_transform( grid.perp_grid()) ;
-    // We do not need metric of grid_equidist or or grid_fine
-    dg::RealGrid2d<double> grid_equidist( *grid_transform) ;
-    dg::RealGrid2d<double> grid_fine( *grid_transform);
-    grid_equidist.set( 1, grid.gx().size(), grid.gy().size());
-    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_transform;//INTEGRATE HIGH ORDER GRID
-    grid_magnetic->set( grid_transform->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
-    // For project method "const" we round up to the nearest multiple of n
-    if( project_m != "dg" && fine_m == "dg")
-    {
-        unsigned rx = mx % grid.nx(), ry = my % grid.ny();
-        if( 0 != rx || 0 != ry)
-        {
-            std::cerr << "#Warning: for projection method \"const\" mx and my must be multiples of nx and ny! Rounding up for you ...\n";
-            mx = mx + grid.nx() - rx;
-            my = my + grid.ny() - ry;
-        }
-    }
-    if( fine_m == "equi")
-        grid_fine = grid_equidist;
-    grid_fine.multiplyCellNumbers((double)mx, (double)my);
-    if( benchmark)
-    {
-        t.toc();
-        std::cout << "# DS: High order grid gen  took: "<<t.diff()<<"\n";
-        t.tic();
-    }
     ///%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%//
-    std::array<thrust::host_vector<double>,3> yp_trafo, ym_trafo, yp, ym;
+    std::array<thrust::host_vector<double>,3> yp_trafo, ym_trafo;
     thrust::host_vector<bool> in_boxp, in_boxm;
     thrust::host_vector<double> hbp, hbm;
     thrust::host_vector<double> vol = dg::tensor::volume(grid.metric()), vol2d0;
     auto vol2d = dg::split( vol, grid);
     dg::assign( vol2d[0], vol2d0);
+    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_transform;//INTEGRATE HIGH ORDER GRID
+    // grid_magnetic is only used for integrating in curvilinear coords
+    grid_magnetic->set( grid_transform->n() < 3 ? 4 : 7, grid_magnetic->Nx(), grid_magnetic->Ny());
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
             yp_trafo, vol2d0, hbp, in_boxp, deltaPhi, eps);
     detail::integrate_all_fieldlines2d( vec, *grid_magnetic, *grid_transform,
             ym_trafo, vol2d0, hbm, in_boxm, -deltaPhi, eps);
-    dg::HVec Xf = dg::evaluate(  dg::cooX2d, grid_fine);
-    dg::HVec Yf = dg::evaluate(  dg::cooY2d, grid_fine);
-    {
-    dg::IHMatrix interpolate = dg::create::interpolation( Xf, Yf,
-            *grid_transform, dg::NEU, dg::NEU, grid_transform->n() < 3 ? "cubic" : "dg");
-    yp.fill(dg::evaluate( dg::zero, grid_fine));
-    ym = yp;
-    for( int i=0; i<2; i++) //only R and Z get interpolated
-    {
-        dg::blas2::symv( interpolate, yp_trafo[i], yp[i]);
-        dg::blas2::symv( interpolate, ym_trafo[i], ym[i]);
-    }
-    } // release memory for interpolate matrix
     if( benchmark)
     {
         t.toc();
-        std::cout << "# DS: Computing all points took: "<<t.diff()<<"\n";
+        std::cout << "# DS: Fieldline integration took: "<<t.diff()<<"\n";
         t.tic();
     }
-    ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
-    { // free memory after use
-    dg::IHMatrix fine, projection, multi, temp;
-    if( project_m == "dg")
-        projection = dg::create::projection( *grid_transform, grid_fine);
-    else
+    // Assemble minus, zero and plus through sub-grids
+    // The idea for the sub-grids is that the fine interpolation matrix takes
+    // up a large chunk of memory which can be avoided by sub-dividing the
+    // fine grid along its rows
+    dg::IHMatrix plus, zero, minus;
+    dg::IHMatrix interpolate, zero_interpolate, projection;
+    for( unsigned sub = 0; sub < grid_transform->Ny(); sub++)
     {
-        projection = dg::create::inv_backproject( *grid_transform)*
-            dg::create::projection( grid_equidist, grid_fine, project_m);
-    }
-    std::array<dg::HVec*,3> xcomp{ &yp[0], &Xf, &ym[0]};
-    std::array<dg::HVec*,3> ycomp{ &yp[1], &Yf, &ym[1]};
-    std::array<IMatrix*,3> result{ &m_plus, &m_zero, &m_minus};
-
-    for( unsigned u=0; u<3; u++)
-    {
-        if( inter_m == "dg")
+        dg::RealGrid2d<double> grid_fine_sub(
+            grid_transform->x0(),
+            grid_transform->x1(),
+            grid_transform->y0() + sub*grid_transform->hy(),
+            // Fix: construction bug The local right boundary should be the same as the global right boundary
+            sub == grid_transform->Ny()-1 ? grid_transform->y1() :
+                grid_transform->y0() + (sub+1)*grid_transform->hy(),
+            grid_transform->n(), grid_transform->Nx(), 1,
+            grid_transform->bcx(), grid_transform->bcy());
+        // We do not need metric of grid_equidist or of grid_fine
+        dg::RealGrid2d<double> grid_equidist( *grid_transform) ;
+        grid_equidist.set( 1, grid_transform->shape(0), grid_transform->shape(1));
+        if( fine_m == "equi")
+            grid_fine_sub.set( 1, grid_fine_sub.shape(0), grid_fine_sub.shape(1));
+        grid_fine_sub.multiplyCellNumbers((double)mx, (double)my);
+        std::array<thrust::host_vector<double>,3> yp, ym;
+        dg::HVec Xf = dg::evaluate(  dg::cooX2d, grid_fine_sub);
+        dg::HVec Yf = dg::evaluate(  dg::cooY2d, grid_fine_sub);
+        // interpolate matrix is same in all sub the rows just shift ...
+        unsigned shift = grid_transform->shape(0) * grid_transform->n();
+        if( sub <= 1 || sub >= grid_transform->Ny() - 2 || grid_transform->n() < 3) // in latter case boundary conditions could destroy invariance
         {
-            *result[u] = projection*dg::create::interpolation( *xcomp[u], *ycomp[u],
-                *grid_transform, bcx, bcy, "dg");
+            interpolate = dg::create::interpolation( Xf, Yf,
+                *grid_transform, dg::NEU, dg::NEU, grid_transform->n() < 3 ? "cubic" : "dg");
+            zero_interpolate = dg::create::interpolation( Xf, Yf,
+                inter_m == "dg" ? dg::RealGrid2d<double>(*grid_transform) :
+                grid_equidist, bcx, bcy, inter_m);
         }
         else
         {
-            *result[u] = projection *  dg::create::interpolation( *xcomp[u], *ycomp[u],
-                grid_equidist, bcx, bcy, inter_m) *  dg::create::backproject(
-                *grid_transform); // from dg to equidist
+            dg::blas1::plus( interpolate.column_indices(), shift);
+            dg::blas1::plus( zero_interpolate.column_indices(), shift);
+        }
+        yp.fill(dg::evaluate( dg::zero, grid_fine_sub));
+        ym = yp;
+        for( int i=0; i<2; i++) //only R and Z get interpolated
+        {
+            dg::blas2::symv( interpolate, yp_trafo[i], yp[i]);
+            dg::blas2::symv( interpolate, ym_trafo[i], ym[i]);
+        }
+        ///%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%//
+        if( sub <= 1 || sub >= grid_transform->Ny() -2 )
+        {
+            if( project_m == "dg")
+            {
+                // Note that it is possible to project onto a bigger grid, the corresponding rows are just empty
+                projection = dg::create::projection( *grid_transform, grid_fine_sub);
+            }
+            else
+            {
+                projection = dg::create::projection( grid_equidist,
+                    grid_fine_sub, project_m);
+            }
+        }
+        else
+        {
+            // how to add to rows in csr formatted matrix:
+            projection.row_offsets().insert( projection.row_offsets().begin(),
+                shift, 0);
+            projection.row_offsets().erase( projection.row_offsets().end() -
+                shift, projection.row_offsets().end());
+        }
+        std::array<dg::HVec*,3> xcomp{ &yp[0], &Xf, &ym[0]};
+        std::array<dg::HVec*,3> ycomp{ &yp[1], &Yf, &ym[1]};
+        std::array<dg::IHMatrix*,3> result{ &plus, &zero, &minus};
+        dg::IHMatrix subresult;
+
+        for( unsigned u=0; u<3; u++)
+        {
+            if( u == 1)
+                subresult = projection*zero_interpolate;
+            else
+                subresult = projection*dg::create::interpolation( *xcomp[u], *ycomp[u],
+                    inter_m == "dg" ? dg::RealGrid2d<double>(*grid_transform) :
+                    grid_equidist, bcx, bcy, inter_m);
+            detail::add_from_sub( *result[u], subresult, project_m);
         }
     }
+    // 26.9.25: It turns out that directly sandwiching the interpolation
+    // matrices minus,zero,plus with B^{-1} I B makes the average number of
+    // non-zeros per row explode (for n=3 from 9 to up to 50 - 75!). Therefore
+    // it is faster to separately store B^{-1} and B and apply them before and
+    // after I. Separate benchmarks of B = Bx x By reveals that 2 of our
+    // sparseblockmat symv implementation (Bx and By separately) is faster than
+    // any attempt at merging the two kernels into one and certainly faster
+    // than the corresponding dg::IDMatrix symv kernel. In fact, the 2 symv
+    // kernels are almost as fast as just one axpby. So, here we go:
+    if( project_m != "dg")
+    {
+        apply_inv_backproject = true; // from equidist to dg
+        m_inv_bx = dg::create::fast_transform( 0,
+            dg::invert(dg::create::detail::square_backproject( grid.grid(0))),
+            grid);
+        m_inv_by = dg::create::fast_transform( 1,
+            dg::invert(dg::create::detail::square_backproject( grid.grid(1))),
+            grid);
     }
+    if( inter_m != "dg")
+    {
+        apply_backproject = true; // from dg to equidist
+        m_bx = dg::create::fast_transform( 0,
+            dg::create::detail::square_backproject( grid.grid(0)),
+            grid);
+        m_by = dg::create::fast_transform( 1,
+            dg::create::detail::square_backproject( grid.grid(1)),
+            grid);
+    }
+    dg::blas2::transfer( minus, m_minus);
+    dg::blas2::transfer( zero, m_zero);
+    dg::blas2::transfer( plus, m_plus);
+    m_have_adjoint = false;
 
     if( benchmark)
     {
         t.toc();
-        std::cout << "# DS: Multiplication PI    took: "<<t.diff()<<"\n";
+        std::cout << "# DS: Assembly of matrices  took: "<<t.diff()<<"\n";
+        std::streamsize ss = std::cout.precision();
+        std::cout << std::setprecision(1) << std::fixed;
+        std::cout << "# DS: Average nnz per row (plus | zero | minus): "
+                  //<<(double)backproject.num_nnz()/(double)backproject.num_rows()<<" | "
+                  <<(double)plus.num_nnz()/(double)plus.num_rows()<<" | "
+                  <<(double)zero.num_nnz()/(double)zero.num_rows()<<" | "
+                  <<(double)minus.num_nnz()/(double)minus.num_rows()<<"\n";
+        std::cout << std::defaultfloat << std::setprecision(ss);
     }
     ///%%%%%%%%%%%%%%%%%%%%copy into h vectors %%%%%%%%%%%%%%%%%%%//
     dg::HVec hbphi( yp_trafo[2]), hbphiP(hbphi), hbphiM(hbphi);
@@ -702,11 +823,13 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
     dg::blas1::pointwiseDot( m_Gm, weights, m_Gm);
 
     dg::assign( dg::evaluate( dg::zero, grid), m_hbm);
-    m_f     = dg::split( (const container&)m_hbm, grid);
-    m_temp  = dg::split( m_hbm, grid);
+    m_split_in     = dg::split( (const container&)m_hbm, grid);
+    m_split_out  = dg::split( m_hbm, grid);
     dg::assign3dfrom2d( hbp, m_hbp, grid);
     dg::assign3dfrom2d( hbm, m_hbm, grid);
     dg::blas1::scal( m_hbm, -1.);
+
+    m_temp0 = m_temp1 = m_hbm; // 3d size
 
     ///%%%%%%%%%%%%%%%%%%%%create mask vectors %%%%%%%%%%%%%%%%%%%//
     thrust::host_vector<double> bbm( in_boxp.size(),0.), bbo(bbm), bbp(bbm);
@@ -736,7 +859,7 @@ Fieldaligned<Geometry, IMatrix, container>::Fieldaligned(
 
 template<class G, class I, class container>
 container Fieldaligned<G, I,container>::interpolate_from_coarse_grid(
-        const G& grid, const container& in)
+        const G& grid, const container& in) const
 {
     //I think we need grid as input to split input vector and we need to interpret
     //the grid nodes as node centered not cell-centered!
@@ -747,16 +870,22 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid(
 
     container out = dg::evaluate( dg::zero, *m_g);
     container helper = dg::evaluate( dg::zero, *m_g);
-    dg::split( helper, m_temp, *m_g);
+    dg::split( helper, m_split_out, *m_g);
     std::vector<dg::View< container>> out_split = dg::split( out, *m_g);
     std::vector<dg::View< const container>> in_split = dg::split( in, grid);
+    if( apply_backproject)
+    {
+        dg::blas2::symv( m_bx, in, m_temp0);
+        dg::blas2::symv( m_by, m_temp0, m_temp1);
+        in_split = dg::split( m_temp1, grid);
+    }
     for ( int i=0; i<(int)Nz_coarse; i++)
     {
         //1. copy input vector to appropriate place in output
         dg::blas1::copy( in_split[i], out_split[i*cphi]);
-        dg::blas1::copy( in_split[i], m_temp[i*cphi]);
+        dg::blas1::copy( in_split[i], m_split_out[i*cphi]);
     }
-    //Step 1 needs to finish so that m_temp contains values everywhere
+    //Step 1 needs to finish so that m_split_out contains values everywhere
     //2. Now apply plus and minus T to fill in the rest
     for ( int i=0; i<(int)Nz_coarse; i++)
     {
@@ -765,7 +894,7 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid(
             //!!! The value of f at the plus plane is I^- of the current plane
             dg::blas2::symv( m_minus, out_split[i*cphi+j-1], out_split[i*cphi+j]);
             //!!! The value of f at the minus plane is I^+ of the current plane
-            dg::blas2::symv( m_plus, m_temp[(i*cphi+cphi+1-j)%Nz], m_temp[i*cphi+cphi-j]);
+            dg::blas2::symv( m_plus, m_split_out[(i*cphi+cphi+1-j)%Nz], m_split_out[i*cphi+cphi-j]);
         }
     }
     //3. Now add up with appropriate weights
@@ -774,29 +903,71 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid(
         {
             double alpha = (double)(cphi-j)/(double)cphi;
             double beta = (double)j/(double)cphi;
-            dg::blas1::axpby( alpha, out_split[i*cphi+j], beta, m_temp[i*cphi+j], out_split[i*cphi+j]);
+            dg::blas1::axpby( alpha, out_split[i*cphi+j], beta, m_split_out[i*cphi+j], out_split[i*cphi+j]);
         }
+    if( apply_inv_backproject)
+    {
+        dg::blas2::symv( m_inv_bx, out, m_temp0);
+        dg::blas2::symv( m_inv_by, m_temp0, out);
+    }
     return out;
 }
 template<class G, class I, class container>
-void Fieldaligned<G, I,container>::integrate_between_coarse_grid( const G& grid, const container& in, container& out)
+void Fieldaligned<G, I,container>::integrate_between_coarse_grid( const G& grid, const container& in, container& out) const
 {
+    // TODO: This function is missing a test
     assert( m_g->Nz() % grid.Nz() == 0);
     unsigned Nz_coarse = grid.Nz(), Nz = m_g->Nz();
     unsigned cphi = Nz / Nz_coarse;
 
     out = in;
     container helperP( in), helperM(in), tempP(in), tempM(in);
+    typename detail::Container2EllSparseBlockMat<container>::type bx, by, inv_bx, inv_by;
+    if( apply_backproject)
+    {
+        bx = dg::create::fast_transform( 0,
+            dg::create::detail::square_backproject( grid.grid(0)),
+            grid);
+        by = dg::create::fast_transform( 1,
+            dg::create::detail::square_backproject( grid.grid(1)),
+            grid);
+    }
+    if( apply_inv_backproject)
+    {
+        inv_bx = dg::create::fast_transform( 0,
+            dg::invert(dg::create::detail::square_backproject( grid.grid(0))),
+            grid);
+        inv_by = dg::create::fast_transform( 1,
+            dg::invert(dg::create::detail::square_backproject( grid.grid(1))),
+            grid);
+    }
 
     //1. Apply plus and minus T and sum up
     for( int j=1; j<(int)cphi; j++)
     {
+        if( apply_backproject)
+        {
+            dg::blas2::symv( bx, helperP, tempP);
+            dg::blas2::symv( by, tempP, helperP);
+            dg::blas2::symv( bx, helperM, tempM);
+            dg::blas2::symv( by, tempM, helperM);
+        }
         //!!! The value of f at the plus plane is I^- of the current plane
         dg::blas2::symv( m_minus, helperP, tempP);
+        if( apply_inv_backproject)
+        {
+            dg::blas2::symv( inv_bx, tempP, helperP);
+            dg::blas2::symv( inv_by, helperP, tempP);
+        }
         dg::blas1::axpby( (double)(cphi-j)/(double)cphi, tempP, 1., out  );
         helperP.swap(tempP);
         //!!! The value of f at the minus plane is I^+ of the current plane
         dg::blas2::symv( m_plus, helperM, tempM);
+        if( apply_inv_backproject)
+        {
+            dg::blas2::symv( inv_bx, tempM, helperM);
+            dg::blas2::symv( inv_by, helperM, tempM);
+        }
         dg::blas1::axpby( (double)(cphi-j)/(double)cphi, tempM, 1., out  );
         helperM.swap(tempM);
     }
@@ -804,7 +975,7 @@ void Fieldaligned<G, I,container>::integrate_between_coarse_grid( const G& grid,
 }
 
 template<class G, class I, class container>
-void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const container& f, container& fe)
+void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const container& f, container& fe) const
 {
     if(     which == einsPlus  || which == einsMinusT ) ePlus(  which, f, fe);
     else if(which == einsMinus || which == einsPlusT  ) eMinus( which, f, fe);
@@ -815,99 +986,133 @@ void Fieldaligned<G, I, container >::operator()(enum whichMatrix which, const co
 
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::zero( enum whichMatrix which,
-        const container& f, container& f0)
+        const container& f, container& f0) const
 {
-    dg::split( f, m_f, *m_g);
-    dg::split( f0, m_temp, *m_g);
-    //1. compute 2d interpolation in every plane and store in m_temp
+    dg::split( f, m_split_in, *m_g);
+    dg::split( f0, m_split_out, *m_g);
+    if( apply_backproject)
+    {
+        dg::blas2::symv( m_bx, f, m_temp0);
+        dg::blas2::symv( m_by, m_temp0, m_temp1);
+        dg::split( (const container&)m_temp1, m_split_in, *m_g);
+    }
+    //1. compute 2d interpolation in every plane and store in m_split_out
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
         if(which == zeroPlus)
-            dg::blas2::symv( m_plus,   m_f[i0], m_temp[i0]);
+            dg::blas2::symv( m_plus,   m_split_in[i0], m_split_out[i0]);
         else if(which == zeroMinus)
-            dg::blas2::symv( m_minus,  m_f[i0], m_temp[i0]);
+            dg::blas2::symv( m_minus,  m_split_in[i0], m_split_out[i0]);
         else if(which == zeroPlusT)
         {
             if( ! m_have_adjoint) updateAdjoint( );
-            dg::blas2::symv( m_plusT,  m_f[i0], m_temp[i0]);
+            dg::blas2::symv( m_plusT,  m_split_in[i0], m_split_out[i0]);
         }
         else if(which == zeroMinusT)
         {
             if( ! m_have_adjoint) updateAdjoint( );
-            dg::blas2::symv( m_minusT, m_f[i0], m_temp[i0]);
+            dg::blas2::symv( m_minusT, m_split_in[i0], m_split_out[i0]);
         }
         else if( which == zeroForw)
         {
             if ( m_interpolation_method != "dg" )
             {
-                dg::blas2::symv( m_zero, m_f[i0], m_temp[i0]);
+                dg::blas2::symv( m_zero, m_split_in[i0], m_split_out[i0]);
             }
             else
-                dg::blas1::copy( m_f[i0], m_temp[i0]);
+                dg::blas1::copy( m_split_in[i0], m_split_out[i0]);
         }
+    }
+    if( apply_inv_backproject)
+    {
+        dg::blas2::symv( m_inv_bx, f0, m_temp0);
+        dg::blas2::symv( m_inv_by, m_temp0, f0);
     }
 }
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which,
-        const container& f, container& fpe)
+        const container& f, container& fpe) const
 {
-    dg::split( f, m_f, *m_g);
-    dg::split( fpe, m_temp, *m_g);
-    //1. compute 2d interpolation in every plane and store in m_temp
+    dg::split( f, m_split_in, *m_g);
+    dg::split( fpe, m_split_out, *m_g);
+    if( apply_backproject)
+    {
+        dg::blas2::symv( m_bx, f, m_temp0);
+        dg::blas2::symv( m_by, m_temp0, m_temp1);
+        dg::split( (const container&)m_temp1, m_split_in, *m_g);
+    }
+    //1. compute 2d interpolation in every plane and store in m_split_out
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
         unsigned ip = (i0==m_Nz-1) ? 0:i0+1;
         if(which == einsPlus)
-            dg::blas2::symv( m_plus,   m_f[ip], m_temp[i0]);
+            dg::blas2::symv( m_plus,   m_split_in[ip], m_split_out[i0]);
         else if(which == einsMinusT)
         {
             if( ! m_have_adjoint) updateAdjoint( );
-            dg::blas2::symv( m_minusT, m_f[ip], m_temp[i0]);
+            dg::blas2::symv( m_minusT, m_split_in[ip], m_split_out[i0]);
         }
+    }
+    if( apply_inv_backproject)
+    {
+        dg::blas2::symv( m_inv_bx, fpe, m_temp0);
+        dg::blas2::symv( m_inv_by, m_temp0, fpe);
     }
     //2. apply right boundary conditions in last plane
     unsigned i0=m_Nz-1;
     if( m_bcz != dg::PER)
     {
+        dg::split( f, m_split_in, *m_g);
         if( m_bcz == dg::DIR || m_bcz == dg::NEU_DIR)
-            dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
+            dg::blas1::axpby( 2, m_right, -1., m_split_in[i0], m_ghostP);
         if( m_bcz == dg::NEU || m_bcz == dg::DIR_NEU)
-            dg::blas1::axpby( m_deltaPhi, m_right, 1., m_f[i0], m_ghostP);
+            dg::blas1::axpby( m_deltaPhi, m_right, 1., m_split_in[i0], m_ghostP);
         //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
-        dg::blas1::axpby( 1., m_ghostP, -1., m_temp[i0], m_ghostP);
-        dg::blas1::pointwiseDot( 1., m_limiter, m_ghostP, 1., m_temp[i0]);
+        dg::blas1::axpby( 1., m_ghostP, -1., m_split_out[i0], m_ghostP);
+        dg::blas1::pointwiseDot( 1., m_limiter, m_ghostP, 1., m_split_out[i0]);
     }
 }
 
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which,
-        const container& f, container& fme)
+        const container& f, container& fme) const
 {
-    dg::split( f, m_f, *m_g);
-    dg::split( fme, m_temp, *m_g);
-    //1. compute 2d interpolation in every plane and store in m_temp
+    dg::split( f, m_split_in, *m_g);
+    dg::split( fme, m_split_out, *m_g);
+    if( apply_backproject)
+    {
+        dg::blas2::symv( m_bx, f, m_temp0);
+        dg::blas2::symv( m_by, m_temp0, m_temp1);
+        dg::split( (const container&)m_temp1, m_split_in, *m_g);
+    }
+    //1. compute 2d interpolation in every plane and store in m_split_out
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
         unsigned im = (i0==0) ? m_Nz-1:i0-1;
         if(which == einsPlusT)
         {
             if( ! m_have_adjoint) updateAdjoint( );
-            dg::blas2::symv( m_plusT, m_f[im], m_temp[i0]);
+            dg::blas2::symv( m_plusT, m_split_in[im], m_split_out[i0]);
         }
         else if (which == einsMinus)
-            dg::blas2::symv( m_minus, m_f[im], m_temp[i0]);
+            dg::blas2::symv( m_minus, m_split_in[im], m_split_out[i0]);
+    }
+    if( apply_inv_backproject)
+    {
+        dg::blas2::symv( m_inv_bx, fme, m_temp0);
+        dg::blas2::symv( m_inv_by, m_temp0, fme);
     }
     //2. apply left boundary conditions in first plane
     unsigned i0=0;
     if( m_bcz != dg::PER)
     {
         if( m_bcz == dg::DIR || m_bcz == dg::DIR_NEU)
-            dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);
+            dg::blas1::axpby( 2., m_left,  -1., m_split_in[i0], m_ghostM);
         if( m_bcz == dg::NEU || m_bcz == dg::NEU_DIR)
-            dg::blas1::axpby( -m_deltaPhi, m_left, 1., m_f[i0], m_ghostM);
+            dg::blas1::axpby( -m_deltaPhi, m_left, 1., m_split_in[i0], m_ghostM);
         //interlay ghostcells with periodic cells: L*g + (1-L)*fme
-        dg::blas1::axpby( 1., m_ghostM, -1., m_temp[i0], m_ghostM);
-        dg::blas1::pointwiseDot( 1., m_limiter, m_ghostM, 1., m_temp[i0]);
+        dg::blas1::axpby( 1., m_ghostM, -1., m_split_out[i0], m_ghostM);
+        dg::blas1::pointwiseDot( 1., m_limiter, m_ghostM, 1., m_split_out[i0]);
     }
 }
 
@@ -922,6 +1127,25 @@ container Fieldaligned<G, I,container>::evaluate( BinaryOp binary,
     const dg::ClonePtr<aGeometry2d> g2d = m_g->perp_grid();
     container init2d = dg::pullback( binary, *g2d);
     container zero2d = dg::evaluate( dg::zero, *g2d);
+    typename detail::Container2EllSparseBlockMat<container>::type bx, by, inv_bx, inv_by;
+    if( apply_backproject)
+    {
+        bx = dg::create::fast_transform( 0,
+            dg::create::detail::square_backproject( g2d->grid(0)),
+            *g2d);
+        by = dg::create::fast_transform( 1,
+            dg::create::detail::square_backproject( g2d->grid(1)),
+            *g2d);
+    }
+    if( apply_inv_backproject)
+    {
+        inv_bx = dg::create::fast_transform( 0,
+            dg::invert(dg::create::detail::square_backproject( g2d->grid(0))),
+            *g2d);
+        inv_by = dg::create::fast_transform( 1,
+            dg::invert(dg::create::detail::square_backproject( g2d->grid(1))),
+            *g2d);
+    }
 
     container temp(init2d), tempP(init2d), tempM(init2d);
     container vec3d = dg::evaluate( dg::zero, *m_g);
@@ -937,11 +1161,28 @@ container Fieldaligned<G, I,container>::evaluate( BinaryOp binary,
             unsigned rep = r*m_Nz + i0;
             for(unsigned k=0; k<rep; k++)
             {
+                if( apply_backproject)
+                {
+                    dg::blas2::symv( bx, tempP, temp);
+                    dg::blas2::symv( by, temp, tempP);
+                    dg::blas2::symv( bx, tempM, temp);
+                    dg::blas2::symv( by, temp, tempM);
+                }
                 //!!! The value of f at the plus plane is I^- of the current plane
                 dg::blas2::symv( m_minus, tempP, temp);
+                if( apply_inv_backproject)
+                {
+                    dg::blas2::symv( inv_bx, temp, tempP);
+                    dg::blas2::symv( inv_by, tempP, temp);
+                }
                 temp.swap( tempP);
                 //!!! The value of f at the minus plane is I^+ of the current plane
                 dg::blas2::symv( m_plus, tempM, temp);
+                if( apply_inv_backproject)
+                {
+                    dg::blas2::symv( inv_bx, temp, tempM);
+                    dg::blas2::symv( inv_by, tempM, temp);
+                }
                 temp.swap( tempM);
             }
             dg::blas1::scal( tempP, unary(  (double)rep*m_deltaPhi ) );

@@ -276,6 +276,10 @@ inline void doSymv( MatrixType&& M,
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag
  * @attention If y on input contains a NaN or Inf, it may contain NaN or Inf on
  * output as well even if beta is zero.
+ * Our own matrix formats \c EllSparseBlockMat and \c CooSparseBlockMat
+ * overwrite \c y if \c beta is zero and work correctly (i.e. NaN or Inf are removed).
+ * The \c SparseMatrix format makes no guarantee on correctness
+ * and for third-party libraries it is worth double-checking.
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
  */
@@ -314,10 +318,12 @@ inline void symv( get_value_type<ContainerType1> alpha,
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
- * @attention If y on input contains a NaN or Inf it is not a prioriy clear
- * if it will contain a NaN or Inf on output as well.
- * Our own matrix formats overwrite y and work correctly but for third-party
- * libraries it is worth double-checking.
+ * @attention If y on input contains a NaN or Inf it may or may not
+ * contain a NaN or Inf on output as well.
+ * Our own matrix formats \c EllSparseBlockMat and \c CooSparseBlockMat
+ * overwrite \c y and work correctly (i.e. NaN or Inf are removed).
+ * The \c SparseMatrix format makes no guarantee on correctness
+ * and for third-party libraries it is worth double-checking.
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
  */

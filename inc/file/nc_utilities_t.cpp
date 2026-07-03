@@ -205,8 +205,7 @@ TEST_CASE( "Input Output test of the NcFile class")
         for(unsigned i=0; i<2; i++)
         {
             INFO("Read timestep "<<i<<"\n");
-            double time;
-            file.get_var( "ptime", {i}, time);
+            double time = file.get_var_as<double>( "ptime", {i});
             CHECK ( time == (double)i*Tmax/2.);
 
             for( auto& record : records)
@@ -220,6 +219,12 @@ TEST_CASE( "Input Output test of the NcFile class")
                 dg::blas1::axpby( 1.,tmp,-1., data);
                 // ... and communicator is set
                 double result = sqrt(dg::blas1::dot( data, data));
+                CHECK( result < 1e-15);
+
+                //or
+                data = file.get_var_as<dg::x::DVec>( record.name, {i, slab});
+                dg::blas1::axpby( 1.,tmp,-1., data);
+                result = sqrt(dg::blas1::dot( data, data));
                 CHECK( result < 1e-15);
             }
         }
@@ -245,14 +250,15 @@ TEST_CASE( "Input Output test of the NcFile class")
         auto mode = GENERATE( dg::file::nc_nowrite, dg::file::nc_write);
         INFO("TEST "<<( mode == dg::file::nc_write ? "WRITE" : "READ")<<" OPEN MODE\n");
         file.open( "inout.nc", mode);
-        dg::x::HVec result = dg::evaluate( dg::zero, grid2d), ana(result);
+        dg::x::HVec ana = dg::evaluate( dg::zero, grid2d);
         // ATTENTION sliced_data[0] is not the same on all ranks
         //dg::blas1::copy( sliced_data[0], ana);
         dg::blas1::kronecker( ana, dg::equals(), gradientX,
             grid2d.abscissas(0), grid2d.abscissas(1), grid.hz()/2.);
 
         // In MPI when mode == nc_write only the group containing rank 0 in file comm reads
-        file.get_var( "test", grid2d, result);
+        // Also test get_var_as function here implicitly testing get_var as well
+        auto result = file.get_var_as<dg::x::HVec>( "test", grid2d);
         dg::blas1::axpby( 1.,ana, -1., result);
         double norm = sqrt(dg::blas1::dot( result, result));
         if( mode == dg::file::nc_write)
@@ -330,8 +336,20 @@ TEST_CASE( "Documentation")
     std::string title = file.get_att_as<std::string>( "title");
     //![get_var]
     // In MPI all ranks automatically get the right chunk of data
-    file.get_var( "variable", grid, data);
+    auto read_data = file.get_var_as<dg::x::DVec>( "variable", grid);
+    // or
+    file.get_var( "variable", grid, read_data);
+    // or
+#ifndef MPI_VERSION
+    // Shared memory version can automatically read dimension size
+    auto read_data_shared = file.get_var_as<dg::DVec>( "variable");
+#endif
     //![get_var]
+#ifndef MPI_VERSION
+    dg::blas1::axpby( 1., read_data, -1., read_data_shared);
+    double result_shared = sqrt( dg::blas1::dot( read_data_shared, read_data_shared));
+    CHECK( result_shared < 1e-15);
+#endif
     //![get_dim_size]
     unsigned NT = file.get_dim_size( "time");
     CHECK( NT == 3);

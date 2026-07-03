@@ -21,6 +21,7 @@ set( FELTOR_TARGETS
 
 
 feltor_add_executable( ${project} "feltor.cpp" feltor_pol "${FELTOR_HEADERS}" ${FELTOR_WITH_MPI} ON ON OFF OFF)
+target_compile_definitions(feltor_feltor_pol PRIVATE WRITE_POL_FILE)
 feltor_add_executable( ${project} "feltor.cpp" feltor     "${FELTOR_HEADERS}" ${FELTOR_WITH_MPI} ON ON OFF ${FELTOR_WITH_GLFW})
 
 foreach( target IN LISTS FELTOR_TARGETS)

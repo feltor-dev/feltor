@@ -12,6 +12,81 @@ As of v8.0 we try to follow [Semantic versioning](https://semver.org/) i.e. majo
 > Only changes in code are reported here, we do not track changes in the
 > doxygen documentation, READMEs or tex writeups.
 > As of v7.0 we also stop reporting changes in test and benchmark programs.
+> Don't forget to bump the version number in `CMakeLists.txt`
+## [v8.3] Thermal code alpha
+### Fixed
+ - Fix CMakePresets for "mpi-omp"
+ - Make `dg::exblas::reduce_mpi_cpu` avoid multiple reduce/Normalize when size < 128
+ - Fix blas1 functions for all double / complex container combinations
+ - Fix blas1 functions for integer containers
+ - Fix a performance issue in index manipulation for mpi matrix assembly
+ - Fix size 1 communicators in mpi matrix assembly
+ - Fix version tag in CPM package command for `jsoncpp` in file's CMakeLists
+ - Fix possible NaN infection in `dg::Average` through write-only output
+   parameter
+ - Fix duplicate calls to `std::lower_bound` in interpolation routines
+ - Fix templated and file constructor of `dg::file::NcHyperslab` classes
+ - Fix extreme Eigenvalue computation in `dg::mat` classes and functions
+   (extreme EV computation is more subtle than one would expect)
+### Added
+ - Cuda unaware MPI communication can be set explicitly by the user through the
+   new `FELTOR_CUDA_UNAWARE_MPI` cmake variable (by default we assume mpi is
+   cuda aware when compiling for GPUs)
+ - Experimental support for the cuda nccl library replacing MPI communications;
+   can be activated with the `FELTOR_WITH_NCCL` dependent cmake variable (only
+   available with MPI and GPU) NCCL is however not fully integrated in cmake
+   yet and may not actually be faster than cuda-aware mpi so use with caution
+ - Add integer vector typedefs `dg::iHVec` `dg::iDVec` etc.
+ - `dg::Sparsematrix`: add write access to `num_rows`, `num_cols`, `row_offsets`
+   and `column_indices` for easier assembly
+ - Add a `print` function for `dg::Sparsematrix`
+ - Add 2nd container-type parameter to `dg::Elliptic` classes. This adds
+   complex vector support in all `dg::Elliptic` and `dg::Helmholtz` classes,
+   i.e. a real Laplacian can be applied to a complex vector
+ - Add another `symv` function for custom `sigma` values in `dg::Elliptic` classes
+ - Add `get_tau` and `get_sigma` functions in `dg::Elliptic` classes
+ - `real_type` template parameter in `dg::Extrapolation`: can now be used with
+   complex containers and real times
+ - `dg::RandomNumbers` and `dg::Horner1d` functors
+ - A `dg::ComplexMode` template parameter in `dg::PCG` and `dg::MultigridCG2d`
+   to distinguish between complex symemtric and complex hermitian matrices
+ - Add `isString()` member to `dg::file::WrappedJsonValue`
+ - Add `get_format()` member to `dg::file::NcFile` classes
+ - Add `get_var_as` member functions to `dg::file::NcFile` classes to be
+   consistent with `get_att_as` members
+ - Add Toroidal field approximated magnetic functors in `dg::geo::`
+ - Add `verbose` to `dg::geo::SimpleOrthogonal`
+ - Make `dg::geo::SimpleOrthgonal` more resilient in case of non-convergence
+ - New functor `dg::mat::DGyrolagK`
+ - New error norms `compute_extreme_EV` and `compute_max_EV` in `dg::mat::Lanczos`
+ - New class `dg::mat::ProductMatrixFunction` and `dg::mat::CauchyMatrixProduct`
+ - New function `dg::mat::levenberg_marquardt` for nonlinear optimisation
+ - A new "flutemode" curvature approximation for the 3d feltor code
+ - A new "polynomial-aligned" initial condition for the 3d feltor code
+ - The `src/thermal` project containing the alpha version of thermal feltor
+ - Experimental FLR mode 2 in feltorSH project
+### Changed
+ - `FELTOR_WITH_GLFW` is now a dependent cmake option whose value will be
+   printed
+ - Transposed ranks in MPI Cartesian communicators created through
+   `dg::mpi_cart_create`, i.e. ranks vary fastest in the first dimension
+   instead of the last. This makes it consistent with the memory layout of our
+   topologies (where the first dimension also varies fastest in memory) and
+   makes it more probable that close memory locations share a node on a compute
+   cluster.
+ - The `dg::mpi_init` function interface is made consistent with `MPI_Init`
+   i.e. uses pointers
+ - call functions in `dg::Elliptic` classes are now `const` i.e. `const
+   dg::Elliptic` can now be used in `dg::blas2::symv` functions
+ - `dg::geo::DS` and `dg::geo::FieldAlgigned` call members are `const`
+ - `dg::geo::FieldAligned` classes use partitioned matrix assembly for
+   optimised memory consumption (and now allow much larger resolutions)
+ - Sign definition in `dg::mat::GyrolagK`
+ - More modular code separation of `src/feltor` project
+### Removed
+ - `dg::EVE` was removed due to unreliabilty (i.e. it prints wrong Eigenvalues)
+ - `dg::gcd` and `dg::lcm` since they are replaced by `std::gcd` and `std::lcm`
+ - `dg::mat::DLnGyrolagK` and `dg::mat::DDLnGyrolagK`
 ## [v8.2.2] MSVC + OpenMP
 ### Fixed
  - Fix non-standard use of uint

@@ -17,9 +17,8 @@ namespace dg{
  * @ingroup matrixoperators
  *
  * where \f$ \chi\f$ is a vector and \f$\alpha\f$ a scalar and \f$F\f$ is an operator.
- * @attention If \f$ F\f$ is the \c Elliptic operator then the Laplacian in
- * this formula becomes positive as opposed to the negative sign in the \c Elliptic
- * operator
+ * @attention Beware the sign: if \f$ F\f$ is the \c Elliptic operator then
+ * \f$ F = -\Delta\f$ and thus \f$ (\chi + \alpha \Delta)\f$ is computed
  *
  * Can be used by the \c dg::PCG class. The following example shows how the class can be used to act as a \c Helmholtz2 operator:
  @snippet helmholtzg2_b.cpp doxygen
@@ -120,26 +119,26 @@ struct GeneralHelmholtz
     Container m_chi;
 };
 
-///@brief a 2d Helmholtz opereator \f$ (\chi - \alpha F)\f$ with \f$ F = -\Delta\f$
+///@brief A GeneralHelmholtz operator \f$ (\chi - \alpha F)\f$ with \f$ F = -\Delta\f$ in 2d
 ///@copydetails GeneralHelmholtz
 ///@ingroup matrixoperators
-template<class Geometry, class Matrix, class Container>
-using Helmholtz = GeneralHelmholtz<dg::Elliptic2d<Geometry,Matrix,Container>, Container>;
+template<class Geometry, class Matrix, class Container, class ContainerTmp = Container>
+using Helmholtz = GeneralHelmholtz<dg::Elliptic2d<Geometry,Matrix,Container,ContainerTmp>, Container>;
 ///@brief a 1d Helmholtz opereator \f$ (\chi - \alpha F)\f$ with \f$ F = -\partial_x^2\f$
 ///@copydetails GeneralHelmholtz
 ///@ingroup matrixoperators
-template<class Geometry, class Matrix, class Container>
-using Helmholtz1d = GeneralHelmholtz<dg::Elliptic1d<Geometry,Matrix,Container>, Container>;
+template<class Geometry, class Matrix, class Container, class ContainerTmp = Container>
+using Helmholtz1d = GeneralHelmholtz<dg::Elliptic1d<Geometry,Matrix,Container,ContainerTmp>, Container>;
 ///@brief a 2d Helmholtz opereator \f$ (\chi - \alpha F)\f$ with \f$ F = -\Delta\f$
 ///@copydetails GeneralHelmholtz
 ///@ingroup matrixoperators
-template<class Geometry, class Matrix, class Container>
-using Helmholtz2d = GeneralHelmholtz<dg::Elliptic2d<Geometry,Matrix,Container>, Container>;
+template<class Geometry, class Matrix, class Container, class ContainerTmp = Container>
+using Helmholtz2d = GeneralHelmholtz<dg::Elliptic2d<Geometry,Matrix,Container,ContainerTmp>, Container>;
 ///@brief a 3d Helmholtz opereator \f$ (\chi - \alpha F)\f$ with \f$ F = -\Delta\f$
 ///@copydetails GeneralHelmholtz
 ///@ingroup matrixoperators
-template<class Geometry, class Matrix, class Container>
-using Helmholtz3d = GeneralHelmholtz<dg::Elliptic3d<Geometry,Matrix,Container>, Container>;
+template<class Geometry, class Matrix, class Container, class ContainerTmp = Container>
+using Helmholtz3d = GeneralHelmholtz<dg::Elliptic3d<Geometry,Matrix,Container,ContainerTmp>, Container>;
 
 /**
  * @brief DEPRECATED, Matrix class that represents a more general Helmholtz-type operator
@@ -190,7 +189,7 @@ struct Helmholtz2
      */
     Helmholtz2( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1., direction dir = dg::forward, value_type jfactor=1.)
     {
-              construct( g, bcx, bcy, alpha, dir, jfactor);
+        construct( g, bcx, bcy, alpha, dir, jfactor);
     }
     ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,bc,bc,value_type,direction,value_type)
     void construct( const Geometry& g, bc bcx, bc bcy, value_type alpha = 1, direction dir = dg::forward, value_type jfactor = 1.)

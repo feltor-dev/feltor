@@ -235,6 +235,7 @@ void construct_rz( Nemov nemov,
     double eps = 1e10, eps_old=2e10;
     std::array<thrust::host_vector<double>,3> begin;
     thrust::host_vector<double> h_init( r_init.size(), 0.);
+    if(verbose)std::cout << "Initialize Nemov ...\n";
     nemov.initialize( r_init, z_init, h_init);
     begin[0] = r_init, begin[1] = z_init, begin[2] = h_init;
     //now we have the starting values
@@ -246,18 +247,35 @@ void construct_rz( Nemov nemov,
     thrust::host_vector<double> r_new(r_init), r_old(r_init), r_diff(r_init);
     thrust::host_vector<double> z_new(z_init), z_old(z_init), z_diff(z_init);
     thrust::host_vector<double> h_new(h_init); //, h_old(h_init), h_diff(h_init);
-    for( unsigned i=0; i<sizeX; i++)
+    if(verbose)std::cout << "Start integration ...\n";
+    auto x_first = std::find_if( x_vec.begin(), x_vec.end(), [x_0](double x){ return x >= x_0;});
+    unsigned first_i = std::distance( x_vec.begin(), x_first);
+    // We have x_vec[first_i-1] < x_0 < x_vec[first_i];
+    for( unsigned kk=0; kk<sizeX; kk++)
     {
+        // With this construct we can keep one single for loop over kk
+        unsigned i; // integration end index (is needed further down)
+        if( first_i + kk < sizeX)
+        {
+            i = first_i + kk;
+            // 1. integrate all points right of x_0 ->
+            x0 = kk==0 ? x_0 : x_vec[i-1], x1 = x_vec[i];
+        }
+        else
+        {
+            i = sizeX - kk - 1;
+            // 2. integrate all points left of x_0 <-
+            x0 = first_i + kk==sizeX ? x_0 : x_vec[i+1], x1 = x_vec[i];
+        }
+        //std::cout << "kk "<<kk<<" "<<i<<" "<<x0<<" "<<x1<<"\n";
+        temp = x0 == x_0 ? begin : end;
         N = 1;
         eps = 1e10, eps_old=2e10;
-        begin = temp;
+        // integrate from (x0,temp) to (x1,end)
         while( (eps < eps_old || eps > 1e-6) && eps > rtol)
         {
             r_old = r_new, z_old = z_new; eps_old = eps;
             //h_old = h_new;
-            temp = begin;
-            //////////////////////////////////////////////////
-            x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
             using Vec = std::array<thrust::host_vector<double>,3>;
             dg::RungeKutta<Vec> rk( "Feagin-17-8-10", temp);
@@ -269,7 +287,6 @@ void construct_rz( Nemov nemov,
                 h_new[j] = end[2][j];
             }
             //////////////////////////////////////////////////
-            temp = end;
             dg::blas1::axpby( 1., r_new, -1., r_old, r_diff);
             dg::blas1::axpby( 1., z_new, -1., z_old, z_diff);
             //dg::blas1::axpby( 1., h_new, -1., h_old, h_diff);
@@ -284,16 +301,18 @@ void construct_rz( Nemov nemov,
                 //if(verbose)std::cout << "Effective Relative diff-h error is "<<eps_h<<" with "<<N<<" steps\n";
             } catch ( dg::Error& )
             {
-                eps = eps_old;
+                // Remove Nan from end
+                end = begin;
+                eps = eps_old; //make eps equal eps_old to trigger throw below
                 r_new = r_old , z_new = z_old;
                 //h_new = h_old;
             }
-            if(verbose)std::cout << "Effective Absolute diff-r error is "<<eps<<" with "<<N<<" steps\n";
+            //if(verbose)std::cout << "Effective Absolute diff-r error is "<<eps<<" with "<<N<<" steps\n";
             N*=2;
-            if( (eps > eps_old && N > 1024 && eps > 1e-6) || N > 64000)
+            if( (eps >= eps_old && N > 1024 && eps > 1e-6) || N > 64000)
                 throw dg::Error(dg::Message(_ping_) <<
-                "Grid generator encountered loss of convergence integrating from x = "
-                <<x0<<" to x = "<<x1);
+                "Grid generator encountered loss of convergence integrating between x = "
+                <<x0<<" and x = "<<x1<<"! One possible cause is integration in a region where Psi is not well defined. Reconsider the grid boundaries!" );
         }
         for( unsigned j=0; j<sizeY; j++)
         {
@@ -324,7 +343,7 @@ void construct_rz( Nemov nemov,
  * Psi is the radial coordinate and you can choose various discretizations of
  * the first line
  * @ingroup generators_geo
- * @snippet flux_t.cpp doxygen
+ * @snippet flux_b.cpp doxygen
  */
 struct SimpleOrthogonal : public aGenerator2d
 {
@@ -340,12 +359,16 @@ struct SimpleOrthogonal : public aGenerator2d
      * closed flux surface)
      * @param mode Indicate mode used to create
      * the first line discretization: 0 is conformal, 1 is an equalarc adaption
+     * @param eps Accuracy of rz integration
+     * @param verbose If true print intermediate results to std::cout
      */
     SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, double psi_0, double
-            psi_1, double x0, double y0, double psi_firstline, int mode =0
+            psi_1, double x0, double y0, double psi_firstline, int mode =0,
+            double eps = 1e-13,
+            bool verbose = false
             ):
         SimpleOrthogonal( psi, CylindricalSymmTensorLvl1(), psi_0, psi_1, x0, y0,
-                psi_firstline, mode)
+                psi_firstline, mode, eps, verbose)
     {
         m_orthogonal = true;
     }
@@ -362,21 +385,27 @@ struct SimpleOrthogonal : public aGenerator2d
      * closed flux surface)
      * @param mode Indicate mode used to create
      * the first line discretization: 0 is conformal, 1 is an equalarc adaption
+     * @param eps Accuracy of rz integration
+     * @param verbose If true print intermediate results to std::cout
      */
     SimpleOrthogonal(const CylindricalFunctorsLvl2& psi, const
             CylindricalSymmTensorLvl1& chi, double psi_0, double psi_1,
-            double x0, double y0, double psi_firstline, int mode = 0
+            double x0, double y0, double psi_firstline, int mode = 0,
+            double eps = 1e-13,
+            bool verbose = false
             ):
-        psi_(psi), chi_(chi)
+        psi_(psi), chi_(chi), m_eps(eps)
     {
         assert( psi_1 != psi_0);
         m_firstline = mode;
         orthogonal::detail::Fpsi fpsi(psi, chi, x0, y0, mode);
         f0_ = fabs( fpsi.construct_f( psi_firstline, R0_, Z0_));
+        if(verbose)std::cout << "SimpleOrthogonal constructed Fpsi "<<f0_<<"\n";
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
         m_orthogonal = false;
         m_zeta_first = f0_*(psi_firstline-psi_0);
+        m_verbose = verbose;
     }
 
     /**
@@ -403,12 +432,14 @@ struct SimpleOrthogonal : public aGenerator2d
          thrust::host_vector<double>& etaY) const override final
     {
         thrust::host_vector<double> r_init, z_init;
+        if( m_verbose)std::cout << "Compute Firstline...\n";
         orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init,
                 R0_, Z0_, f0_, m_firstline);
         orthogonal::detail::Nemov nemov(psi_, chi_, f0_, m_firstline);
         thrust::host_vector<double> h;
+        if( m_verbose)std::cout << "Construct rz...\n";
         orthogonal::detail::construct_rz(nemov, m_zeta_first, zeta1d, r_init,
-                z_init, x, y, h);
+                z_init, x, y, h, m_eps, m_verbose);
         unsigned size = x.size();
         for( unsigned idx=0; idx<size; idx++)
         {
@@ -428,7 +459,9 @@ struct SimpleOrthogonal : public aGenerator2d
     double f0_, lz_, R0_, Z0_;
     int m_firstline;
     double m_zeta_first;
+    double m_eps;
     bool m_orthogonal;
+    bool m_verbose;
 };
 
 }//namespace geo

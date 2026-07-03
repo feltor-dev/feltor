@@ -17,6 +17,13 @@ namespace geo
  direction lies within the
  R-Z planes of a cylindrical grid (The plane \f$ \perp \hat{ e}_\varphi\f$ )
  */
+/*!@class hide_toroidal_approximation2_note
+ @note We implicitly assume the toroidal field line approximation, i.e. all curvature
+ and other perpendicular terms assume that the perpendicular
+ direction lies within the
+ R-Z planes of a cylindrical grid (The plane \f$ \perp \hat{ e}_\varphi\f$ ).
+ Additionally, in this version the magnetic field strength is simply the toroidal component of the magnetic field.
+ */
 
 ///@addtogroup magnetic
 ///@{
@@ -159,7 +166,7 @@ struct MagneticFieldParameters
  \f$
  where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the poloidal current
  and \f$ \psi_p\f$ the poloidal flux function.
- @snippet ds_t.cpp doxygen
+ @snippet ds_b.cpp doxygen
 */
 struct TokamakMagneticField
 {
@@ -280,6 +287,21 @@ struct Bmodule : public aCylindricalFunctor<Bmodule>
     TokamakMagneticField m_mag;
 };
 
+///@brief \f$   B_{tor} = \vec B\cdot \vec \varphi = R_0 I/R   \f$
+/// @note Can be positive and negative
+struct Btor : public aCylindricalFunctor<Btor>
+{
+    Btor( const TokamakMagneticField& mag): m_mag(mag)  { }
+    double do_compute(double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z);
+        return m_mag.R0()*ipol/R;
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
+
 /**
  * @brief \f$  |B|^{-1} = R/R_0\sqrt{I^2+(\nabla\psi)^2}    \f$
 
@@ -294,6 +316,20 @@ struct InvB : public aCylindricalFunctor<InvB>
     {
         double psipR = m_mag.psipR()(R,Z), psipZ = m_mag.psipZ()(R,Z), ipol = m_mag.ipol()(R,Z);
         return R/(m_mag.R0()*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief \f$   B_{tor}^{-1} = 1/\vec B\cdot \vec \varphi = R/(R_0 I)   \f$
+/// @note Can be positive and negative
+struct InvBtor : public aCylindricalFunctor<InvBtor>
+{
+    InvBtor( const TokamakMagneticField& mag): m_mag(mag)  { }
+    double do_compute(double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z);
+        return R/m_mag.R0()/ipol;
     }
   private:
     TokamakMagneticField m_mag;
@@ -361,6 +397,40 @@ struct BZ: public aCylindricalFunctor<BZ>
   private:
     TokamakMagneticField m_mag;
     InvB m_invB;
+};
+
+/**
+ * @brief \f$  \frac{\partial B_{\hat \varphi }{ \partial R}  \f$
+ *
+ \f$  \frac{\partial B_{\hat \varphi} }{ \partial R} =
+      \frac{R_0 }{R} \frac{\partial I}{\partial R}-\frac{R_0 I}{R^2} \f$
+ */
+struct ToroidalBR: public aCylindricalFunctor<ToroidalBR>
+{
+    ToroidalBR(const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute(double R, double Z) const
+    {
+        return m_mag.R0() / R *m_mag.ipolR()(R,Z) - m_mag.R0() * m_mag.ipol()(R,Z)/ R / R;
+    }
+  private:
+    TokamakMagneticField m_mag;
+};
+
+/**
+ * @brief \f$  \frac{\partial B_{\hat \varphi }{ \partial Z}  \f$
+ *
+ \f$  \frac{\partial B_{\hat \varphi} }{ \partial Z} =
+      \frac{R_0 }{R} \frac{\partial I}{\partial Z} \f$
+ */
+struct ToroidalBZ: public aCylindricalFunctor<ToroidalBZ>
+{
+    ToroidalBZ(const TokamakMagneticField& mag ): m_mag(mag) { }
+    double do_compute(double R, double Z) const
+    {
+        return m_mag.R0() / R *m_mag.ipolZ()(R,Z);
+    }
+  private:
+    TokamakMagneticField m_mag;
 };
 
 ///@brief Approximate \f$ \mathcal{K}^{R}_{\nabla B} \f$
@@ -606,6 +676,86 @@ struct TrueDivCurvatureNablaB: public aCylindricalFunctor<TrueDivCurvatureNablaB
     private:
     TrueDivCurvatureKappa m_div;
 };
+////////////////////////////////////////////////////////////////////////////////
+///@brief Toroidal Approximate \f$ \mathcal{K}^{R}_{\nabla B} \f$
+///
+/// \f$ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureNablaBR: public aCylindricalFunctor<ToroidalCurvatureNablaBR>
+{
+    ToroidalCurvatureNablaBR(const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolZ = m_mag.ipolZ()(R,Z);
+        return -R*ipolZ/m_mag.R0()/ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief Toroidal Approximate \f$  \mathcal{K}^{Z}_{\nabla B}  \f$
+///
+/// \f$  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ B_{\hat \varphi}}   \left( \partial_R \ln I - \partial_R \ln R \right)\f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureNablaBZ: public aCylindricalFunctor<ToroidalCurvatureNablaBZ>
+{
+    ToroidalCurvatureNablaBZ( const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z);
+        return +R*ipolR/m_mag.R0()/ipol/ipol - 1./m_mag.R0()/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief Toroidal Approximate \f$ \mathcal{K}^{R}_{\vec{\kappa}}=0 \f$
+///
+/// \f$ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} =0  \f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureKappaR: public aCylindricalFunctor<ToroidalCurvatureKappaR>
+{
+    ToroidalCurvatureKappaR( ){ }
+    ToroidalCurvatureKappaR( const TokamakMagneticField&){ }
+    double do_compute( double, double) const
+    {
+        return  0.;
+    }
+    private:
+};
+
+///@brief Toroidal Approximate \f$  \mathcal{K}^{Z}_{\vec{\kappa}}  \f$
+///
+/// \f$  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalCurvatureKappaZ: public aCylindricalFunctor<ToroidalCurvatureKappaZ>
+{
+    ToroidalCurvatureKappaZ( const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z);
+        return -1/m_mag.R0()/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief Toroidal  Approximate \f$  \vec{\nabla}\cdot \mathcal{K}_{\vec{\kappa}}  \f$
+///
+///  \f$  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{R_0 I^2} \partial_{Z} I\f$
+///@copydoc hide_toroidal_approximation2_note
+struct ToroidalDivCurvatureKappa: public aCylindricalFunctor<ToroidalDivCurvatureKappa>
+{
+    ToroidalDivCurvatureKappa( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolZ = m_mag.ipolZ()(R,Z);
+        return ipolZ / m_mag.R0()/ ipol/ipol;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * @brief \f$  \nabla_\parallel \ln{(B)} \f$
@@ -641,6 +791,39 @@ struct Divb: public aCylindricalFunctor<Divb>
     }
     private:
     GradLnB m_gradLnB;
+};
+
+/**
+ * @brief \f$  \frac{\vec B}{B_{\hat \varphi} \ln{(B_{\hat \varphi})} \f$
+ *
+ *    \f$  = \frac{\partial_R I \partial_Z \psi_p}{I^2 } - \frac{\partial_Z \psi_p}{I R} \f$
+ */
+struct ToroidalGradLnB: public aCylindricalFunctor<ToroidalGradLnB>
+{
+    ToroidalGradLnB( const TokamakMagneticField& mag): m_mag(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        double ipol = m_mag.ipol()(R,Z), ipolR = m_mag.ipolR()(R,Z), psipZ = m_mag.psipZ()(R,Z);
+        return ipolR * psipZ / ipol /ipol - psipZ/ipol/R;
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+/**
+ * @brief \f$  \nabla \cdot \frac{\vec B}{B_{\hat \varphi}} \f$
+ *
+ * \f$  \nabla\cdot \frac{\vec B}{B_{\hat \varphi}} = -\frac{\vec B}{B_{\hat \varphi}}\cdot \nabla \ln B_{\hat \varphi} \f$
+ * @sa \c ToroidalGradLnB
+ */
+struct ToroidalDivb: public aCylindricalFunctor<ToroidalDivb>
+{
+    ToroidalDivb( const TokamakMagneticField& mag): m_torgradLnB(mag) { }
+    double do_compute( double R, double Z) const
+    {
+        return -m_torgradLnB(R,Z);
+    }
+    private:
+    ToroidalGradLnB m_torgradLnB;
 };
 
 ///@brief \f$ B^\varphi = R_0I/R^2\f$
@@ -734,6 +917,43 @@ struct BHatP: public aCylindricalFunctor<BHatP>
     private:
     TokamakMagneticField m_mag;
     InvB m_invB;
+};
+
+///@brief \f$ b^R = B^R/B_{\hat \varphi}\f$
+struct ToroidalBHatR: public aCylindricalFunctor<ToroidalBHatR>
+{
+    ToroidalBHatR( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        return  m_mag.psipZ()(R,Z)/m_mag.ipol()(R,Z);
+    }
+    private:
+    TokamakMagneticField m_mag;
+
+};
+
+///@brief \f$ b^Z = B^Z/B_{\hat \varphi}\f$
+struct ToroidalBHatZ: public aCylindricalFunctor<ToroidalBHatZ>
+{
+    ToroidalBHatZ( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double Z) const
+    {
+        return  -m_mag.psipR()(R,Z)/m_mag.ipol()(R,Z);
+    }
+    private:
+    TokamakMagneticField m_mag;
+};
+
+///@brief \f$ \hat b^\varphi = B^\varphi/B_{\hat \varphi}\f$
+struct ToroidalBHatP: public aCylindricalFunctor<ToroidalBHatP>
+{
+    ToroidalBHatP( const TokamakMagneticField& mag): m_mag(mag){ }
+    double do_compute( double R, double) const
+    {
+        return 1./R;
+    }
+    private:
+    TokamakMagneticField m_mag;
 };
 
 
@@ -934,6 +1154,17 @@ struct DivVVP: public aCylindricalFunctor<DivVVP>
 inline CylindricalVectorLvl1 createBHat( const TokamakMagneticField& mag){
     return CylindricalVectorLvl1( BHatR(mag), BHatZ(mag), BHatP(mag),
             Divb(mag), DivVVP(mag)
+           );
+}
+/**
+ * @brief Contravariant components of the magnetic toroidal unit vector field
+ * and its Divergence and derivative in cylindrical coordinates.
+ * @param mag the tokamak magnetic field
+ * @return the tuple ToroidalBHatR, ToroidalBHatZ, ToroidalBHatP, ToroidalDivb, DivVVP constructed from mag
+ */
+inline CylindricalVectorLvl1 createToroidalBHat( const TokamakMagneticField& mag){
+    return CylindricalVectorLvl1( ToroidalBHatR(mag), ToroidalBHatZ(mag), ToroidalBHatP(mag),
+            ToroidalDivb(mag), DivVVP(mag)
            );
 }
 

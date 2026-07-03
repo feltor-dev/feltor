@@ -109,7 +109,7 @@ void spadd_cpu_kernel(
     // https://commit.csail.mit.edu/papers/2018/kjolstad-18-workspaces.pdf
     //
     // 1. (No Figure) assemble sparsity structure of A
-    // (Theoretically this could be cached if we did the same multiplication multiple times)
+    // (Theoretically this could be cached if we did the same addition multiple times)
     A_pos.resize( B_num_rows+1);
     A_pos[0] = 0;
     std::vector<bool> w( B_num_cols, false); // A dense work array

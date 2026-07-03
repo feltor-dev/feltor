@@ -29,9 +29,8 @@ bool is_communicating(
     MPI_Comm_size( comm, &comm_size);
     thrust::host_vector<int> sendTo( comm_size, 0 );
     thrust::host_vector<int> global( comm_size*comm_size);
-    auto flat_vals = detail::flatten_values( messages);
-    for( auto& send : flat_vals)
-        sendTo[send.first] = send.second.size();
+    for( auto& send : messages)
+        sendTo[send.first] = 1; // just indicate that a message is being sent
     // everyone knows howmany messages everyone is sending
     MPI_Allgather( sendTo.data(), comm_size, MPI_INT,
                    global.data(), comm_size, MPI_INT,

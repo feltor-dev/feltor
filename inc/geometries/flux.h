@@ -167,7 +167,7 @@ struct Fpsi
  * The symmetry refers to the symmetry in the toroidal angle while flux coordinates allow the representation
  * of the magnetic field in Clebsch form
  * @ingroup generators_geo
- * @snippet flux_t.cpp doxygen
+ * @snippet flux_b.cpp doxygen
  */
 struct FluxGenerator : public aGenerator2d
 {
@@ -274,7 +274,7 @@ struct FluxGenerator : public aGenerator2d
  * \frac{d R}{d \eta} &=  \frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial Z} \\
  * \frac{d Z}{d \eta} &= -\frac{ 1}{f(\psi_p)|\nabla\psi_p|} \frac{\partial \psi_p}{\partial R} \f},
  * @ingroup generators_geo
- * @snippet flux_t.cpp doxygen
+ * @snippet flux_b.cpp doxygen
  */
 struct RibeiroFluxGenerator : public aGenerator2d
 {

@@ -75,8 +75,9 @@ int main()
     //double max_weights = dg::blas1::reduce(A.weights(), 0., dg::AbsMax<double>() );
     //double min_weights = dg::blas1::reduce(A.weights(), max_weights, dg::AbsMin<double>() );
     //double kappa = sqrt(max_weights/min_weights); //condition number of weight matrix
-    dg::mat::UniversalLanczos<Container> lanczos( A.weights(), 20);
-    auto T = lanczos.tridiag( A, A.weights(), A.weights());
+    dg::mat::UniversalLanczos<Container> lanczos( A.weights(), 2000);
+    const Container rnd = dg::evaluate( dg::RandomNumbers<double>(0,1), g);
+    auto T = lanczos.tridiag( A, rnd, A.weights());
     auto extremeEVs = dg::mat::compute_extreme_EV( T);
     lanczos.set_max( max_iter);
 

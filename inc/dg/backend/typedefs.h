@@ -65,9 +65,11 @@ using MHVec_t   = dg::MPI_Vector<dg::HVec_t<T> >; //!< MPI Host Vector s.a. dg::
 using MHVec     = dg::MPI_Vector<dg::HVec >; //!< MPI Host Vector s.a. dg::HVec
 using cMHVec    = dg::MPI_Vector<dg::cHVec >; //!< MPI Host Vector s.a. dg::cHVec
 using fMHVec    = dg::MPI_Vector<dg::fHVec >; //!< MPI Host Vector s.a. dg::fHVec
+using iMHVec    = dg::MPI_Vector<dg::iHVec >; //!< MPI Host Vector s.a. dg::iHVec
 using MDVec     = dg::MPI_Vector<dg::DVec >; //!< MPI Device Vector s.a. dg::DVec
 using cMDVec    = dg::MPI_Vector<dg::cDVec >; //!< MPI Device Vector s.a. dg::cDVec
 using fMDVec    = dg::MPI_Vector<dg::fDVec >; //!< MPI Device Vector s.a. dg::fDVec
+using iMDVec    = dg::MPI_Vector<dg::iDVec >; //!< MPI Device Vector s.a. dg::iDVec
 
 // TODO These may be private
 template< class T>
@@ -106,10 +108,12 @@ namespace x{
 using HVec  = MHVec;
 using cHVec = cMHVec;
 using fHVec = fMHVec;
+using iHVec = iMHVec;
 
 using DVec  = MDVec;
 using cDVec = cMDVec;
 using fDVec = fMDVec;
+using iDVec = iMDVec;
 
 //derivative matrices
 using HMatrix = MHMatrix;
@@ -123,10 +127,12 @@ using IDMatrix = MIDMatrix;
 using HVec  = HVec;
 using cHVec = cHVec;
 using fHVec = fHVec;
+using iHVec = iHVec;
 
 using DVec  = DVec;
 using cDVec = cDVec;
 using fDVec = fDVec;
+using iDVec = iDVec;
 
 //derivative matrices
 using HMatrix = HMatrix;

@@ -26,11 +26,15 @@ namespace dg
  * @note the parameters given in the constructor are global parameters
  */
 /*! @class hide_comm_parameters2d
- * @param comm a two-dimensional Cartesian communicator
+ * @param comm a two-dimensional Cartesian communicator. Note that the
+ * y-direction is the first dimension in the Cartesian communicator (ranks vary
+ * slowest) and the x-direction is the last (ranks vary fastest).
  * @note the parameters given in the constructor are global parameters
  */
 /*! @class hide_comm_parameters3d
- * @param comm a three-dimensional Cartesian communicator
+ * @param comm a three-dimensional Cartesian communicator. Note that the
+ * z-direction is the first dimension in the Cartesian communicator (ranks vary
+ * slowest) and the x-direction is the last (ranks vary fastest).
  * @note the parameters given in the constructor are global parameters
  */
 
@@ -122,7 +126,7 @@ struct aRealMPITopology
         // We want to be binary exact
         // Therefore we can't just call local abscissas
         int dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        mpi_cart_get( m_comm, Nd, dims, periods, coords);
         real_type global_x0 = m_g.p(u);
         real_type global_hx = m_g.h(u);
         thrust::host_vector<real_type> abs(m_l.shape(u));
@@ -242,8 +246,13 @@ struct aRealMPITopology
     std::enable_if_t<Md==1,MPI_Comm> comm() const { return m_comms.at(0);}
     /**
      * @brief Return Nd dimensional MPI cartesian communicator that is used in
-     * this grid
-     * @return Communicator
+     * this grid.
+     * @attention the dimensions in this communicator are reversed compared to
+     * the \c get_comms() member.  This is because ranks in MPI Cartesian
+     * communicators have row-major ordering, i.e. the last dimension varies
+     * fastest so in order to make it consistent with our grid ordering
+     * (x-direction varies fastes in memmory) we transpose it
+     * @return Communicator with Cartesian topology
      */
     MPI_Comm communicator() const{return m_comm;}
 
@@ -477,6 +486,7 @@ struct aRealMPITopology
      * @param rank Rank of the process that contains the localIdx
      * @param globalIdx (write only) Global index of the element
      * @sa The main usage of this function is dg::make_mpi_matrix and dg::global2local
+     * @return true if succesful, false else
      */
     bool local2globalIdx( int localIdx, int rank, int& globalIdx)const
     {
@@ -486,10 +496,10 @@ struct aRealMPITopology
         if( localIdx < 0 || localIdx >= (int)m_g.size()) return false;
 
         int dims[Nd], periods[Nd], coords[Nd]; // we need the dims
-        if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
+        if( mpi_cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
             return false;
         // and the coords associated to rank
-        if( MPI_Cart_coords( m_comm, rank, Nd, coords) != MPI_SUCCESS)
+        if( mpi_cart_coords( m_comm, rank, Nd, coords) != MPI_SUCCESS)
             return false;
         int gIdx[Nd];
         int current = localIdx;
@@ -516,6 +526,7 @@ struct aRealMPITopology
      * @param localIdx (write only) Index in a local chunk of a vector
      * @param rank (write only) Rank of the process that contains the globalIdx
      * @sa The main usage of this function is dg::make_mpi_matrix and dg::global2local
+     * @return true if succesful, false else
      */
     bool global2localIdx( int globalIdx, int& localIdx, int& rank)const
     {
@@ -523,7 +534,7 @@ struct aRealMPITopology
         if( globalIdx < 0 || globalIdx >= (int)m_g.size()) return false;
 
         int dims[Nd], periods[Nd], coords[Nd];
-        if( MPI_Cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
+        if( dg::mpi_cart_get( m_comm, Nd, dims, periods, coords) != MPI_SUCCESS)
             return false;
 
         int lIdx[Nd] = {0}, local_shape[Nd] = {0};
@@ -549,7 +560,7 @@ struct aRealMPITopology
         for( int u=int(Nd)-2; u>=0; u--)
             localIdx = localIdx*local_shape[u] + lIdx[u];
 
-        if( MPI_Cart_rank( m_comm, coords, &rank) == MPI_SUCCESS )
+        if( mpi_cart_rank( m_comm, coords, &rank) == MPI_SUCCESS )
             return true;
         else
             return false;
@@ -567,7 +578,7 @@ struct aRealMPITopology
     std::array<unsigned, Nd> start() const
     {
         int dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        mpi_cart_get( m_comm, Nd, dims, periods, coords);
         std::array<unsigned, Nd> start;
         for( unsigned u=0;u<Nd; u++)
         {
@@ -613,16 +624,16 @@ struct aRealMPITopology
         int ndims;
         for ( unsigned u=0; u<Nd;u++)
         {
-            MPI_Cartdim_get( m_comms[u], &ndims);
+            mpi_cartdim_get( m_comms[u], &ndims);
             assert( (unsigned)ndims == 1);
         }
         m_comm = dg::mpi_cart_kron( m_comms);
-        MPI_Cartdim_get( m_comm, &ndims);
+        mpi_cartdim_get( m_comm, &ndims);
         assert( (unsigned)ndims == Nd);
         // The idea is that every grid gets the same amount and the
         // rest is distributed to the lowest rank grids
         int dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        mpi_cart_get( m_comm, Nd, dims, periods, coords);
         for( unsigned u=0;u<Nd; u++)
         {
             auto idx = increment(partition( m_g.N(u), dims[u]));
@@ -697,7 +708,7 @@ struct aRealMPITopology
         if constexpr ( Nd > 0) // avoid zero sized array warnings
         {
             int rank, dims[Nd], periods[Nd], coords[Nd];
-            MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+            mpi_cart_get( m_comm, Nd, dims, periods, coords);
             MPI_Comm_rank( m_comm, &rank);
             if( rank == 0)
             {
@@ -744,7 +755,7 @@ void aRealMPITopology<real_type,Nd>::do_set( std::array<unsigned,Nd> new_n, std:
     {
         m_g.set(new_n, new_N);
         int dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        mpi_cart_get( m_comm, Nd, dims, periods, coords);
         std::array<unsigned, Nd> N;
         for( unsigned u=0;u<Nd; u++)
         {
@@ -762,7 +773,7 @@ void aRealMPITopology<real_type,Nd>::do_set_pq( std::array<real_type, Nd> x0, st
     {
         m_g.set_pq( x0, x1);
         int dims[Nd], periods[Nd], coords[Nd];
-        MPI_Cart_get( m_comm, Nd, dims, periods, coords);
+        mpi_cart_get( m_comm, Nd, dims, periods, coords);
         std::array<real_type,Nd> p, q;
         for( unsigned u=0;u<Nd; u++)
         {
