@@ -73,9 +73,10 @@ I coo2csr( unsigned num_rows, const I& coo)
 
 /*! @brief A CSR formatted sparse matrix
  *
- * This class was designed to replace our dependency on \c cusp::csr_matrix. On
- * the host arithmetic operators like + and \* are overloaded allowing for
- * expressive code to concisely assemble the matrix:
+ * This class was designed to replace our dependency on \c cusp::csr_matrix,
+ * which is no longer maintained. On the host arithmetic operators like + and
+ * \* are overloaded allowing for expressive code to concisely assemble the
+ * matrix:
  * @snippet{trimleft} sparsematrix_t.cpp summary
  *
  * On the device like OpenMP or GPU the only currently allowed operations are \c transpose and the

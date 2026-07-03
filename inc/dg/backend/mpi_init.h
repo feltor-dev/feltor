@@ -31,9 +31,16 @@ namespace dg
     error = MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
     assert( error == MPI_SUCCESS && "Threaded MPI lib required!\n");
 #else
-    MPI_Init(&argc, &argv);
+    MPI_Init(argc, argv);
 #endif
-    //... init cuda devices if THRUST_DEVICE_SYSTEM_CUDA
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    cudaSetDevice( device);
+#endif
  * @endcode
  * @note Also sets the GPU a process should use via <tt> cudaSetDevice( rank
  * \% num_devices_per_node) </tt> if <tt> THRUST_DEVICE_SYSTEM ==
@@ -47,6 +54,9 @@ namespace dg
  */
 inline void mpi_init( int *argc, char **argv[])
 {
+    // Interface rationale: MPI_Init can change argc and argv so we need
+    // to also have pointers in our interface
+    // https://stackoverflow.com/questions/2642996/why-does-mpi-init-accept-pointers-to-argc-and-argv
 #ifdef _OPENMP
     int provided, error;
     error = MPI_Init_thread(argc, argv, MPI_THREAD_FUNNELED, &provided);

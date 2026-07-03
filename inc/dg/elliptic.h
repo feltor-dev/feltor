@@ -476,8 +476,8 @@ class Elliptic2d
      * @brief Compute elliptic term and add to output
      *
      * i.e. \c y=alpha*M*x+beta*y.
-     * This version replaces the internally stored \c sigma and \c jfactor with the ones given.
-     * Equivalent to the following
+     * This version uses the given \c sigma and \c jfactor instead of the
+     * internally stored ones.  Equivalent to the following
      * @code{.cpp}
      * auto old_jfactor = elliptic.get_jfactor();
      * const auto& old_sigma = elliptic.get_sigma();
