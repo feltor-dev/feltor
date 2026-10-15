@@ -12,12 +12,6 @@
 #define FELTORPARALLEL 1
 #define FELTORPERP 1
 
-#ifdef WRITE_POL_FILE
-int counter = 0;
-dg::file::NcFile pol_file;
-#endif // WRITE_POL_FILE
-
-
 //Latest measurement: m = 10.000 per step
 
 namespace feltor

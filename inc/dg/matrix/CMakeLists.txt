@@ -24,14 +24,14 @@ set(MATRIX_HEADERS
   ../../matrix/tridiaginv.h
 )
 
-# Not setup for catch2 yet
-# Some can be compiled for MPI
+# None are compiled for MPI
 # find ../../matrix -name "*t.cpp" | sort
 set(MATRIX_TESTS
   ../../matrix/contours_t.cpp
   ../../matrix/exp_runge_kutta_t.cpp
   ../../matrix/functors_t.cpp
   ../../matrix/lanczos_t.cpp
+  ../../matrix/matrixsqrt_t.cpp
   ../../matrix/optimise_t.cpp
   ../../matrix/tridiaginv_t.cpp
 )

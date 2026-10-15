@@ -861,6 +861,7 @@ template<class G, class I, class container>
 container Fieldaligned<G, I,container>::interpolate_from_coarse_grid(
         const G& grid, const container& in) const
 {
+    // TODO: This function is missing a test
     //I think we need grid as input to split input vector and we need to interpret
     //the grid nodes as node centered not cell-centered!
     //idea: apply I+/I- cphi - 1 times in each direction and then apply interpolation formula
@@ -877,7 +878,7 @@ container Fieldaligned<G, I,container>::interpolate_from_coarse_grid(
     {
         dg::blas2::symv( m_bx, in, m_temp0);
         dg::blas2::symv( m_by, m_temp0, m_temp1);
-        in_split = dg::split( m_temp1, grid);
+        in_split = dg::split( (const container&)m_temp1, grid);
     }
     for ( int i=0; i<(int)Nz_coarse; i++)
     {

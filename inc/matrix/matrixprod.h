@@ -606,6 +606,10 @@ struct CauchyMatrixProduct
     template<class MatrixType>
     void update_extremeEVs(std::vector<MatrixType>& ops )
     {
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif //MPI
         dg::mat::UniversalLanczos<ComplexContainer> lanczos( ops[0].weights(), 2000);
         if( m_verbose)
             lanczos.set_verbose(true);
